@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  email            String            @unique
+  name             String?
+  image            String?
+  password         String?
+  role             Role?
+  isManagedAccount Boolean           @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assignments      Assignment[]
+  classesCreated   Class[]           @relation("TeacherClasses")
+  enrollments      ClassEnrollment[]
+  lessons          Lesson[]
+  purchases        Purchase[]
+  submissions      Submission[]
+}
+
+model Class {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  gradeLevel  String?
+  classCode   String            @unique
+  joinCode    String            @unique
+  isJoinable  Boolean           @default(true)
+  teacherId   String
+  deletedAt   DateTime?
+  createdAt   DateTime          @default(now())
+  assignments AssignmentClass[]
+  teacher     User              @relation("TeacherClasses", fields: [teacherId], references: [id])
+  enrollments ClassEnrollment[]
+}
+
+model ClassEnrollment {
+  studentId String
+  classId   String
+  status    EnrollmentStatus @default(ACTIVE)
+  joinedAt  DateTime         @default(now())
+  nickname  String?
+  class     Class            @relation(fields: [classId], references: [id])
+  student   User             @relation(fields: [studentId], references: [id])
+
+  @@id([studentId, classId])
+}
+
+model Assignment {
+  id                  String            @id @default(cuid())
+  title               String
+  status              MaterialStatus    @default(DRAFT)
+  materialType        MaterialType      @default(EXERCISE)
+  teacherId           String
+  defaultPoints       Float             @default(1.0)
+  coefficient         Int               @default(1)
+  allowLateSubmission Boolean           @default(false)
+  timeLimit           Int?
+  startTime           DateTime?
+  deadline            DateTime?
+  maxAttempts         Int               @default(1)
+  focusMode           Boolean           @default(false)
+  showAnswers         Boolean           @default(true)
+  reviewMode          ReviewMode        @default(AFTER_ALL_ATTEMPTS_EXHAUSTED)
+  themeColor          String?           @default("#00adef")
+  isAiGenerated       Boolean           @default(false)
+  aiPrompt            String?
+  deletedAt           DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  readingText         String?
+  gradeLevel          String?
+  subject             String?
+  thumbnail           String?
+  teacher             User              @relation(fields: [teacherId], references: [id])
+  targetClasses       AssignmentClass[]
+  flashcardDeck       FlashcardDeck?
+  lesson              Lesson?
+  questions           Question[]
+  submissions         Submission[]
+}
+
+model FlashcardDeck {
+  id           String          @id @default(cuid())
+  assignmentId String          @unique
+  assignment   Assignment      @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  cards        FlashcardItem[]
+}
+
+model FlashcardItem {
+  id         String        @id @default(cuid())
+  deckId     String
+  frontText  String
+  backText   String
+  imageUrl   String?
+  orderIndex Int
+  deck       FlashcardDeck @relation(fields: [deckId], references: [id], onDelete: Cascade)
+}
+
+model AssignmentClass {
+  assignmentId String
+  classId      String
+  assignedAt   DateTime   @default(now())
+  startDate    DateTime?
+  dueDate      DateTime?
+  timeLimit    Int?
+  maxAttempts  Int?       @default(1)
+  focusMode    Boolean    @default(false)
+  allowLateSubmission Boolean @default(false)
+
+  class        Class      @relation(fields: [classId], references: [id])
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+
+  @@id([assignmentId, classId])
+}
+
+model Question {
+  id            String             @id @default(cuid())
+  assignmentId  String
+  type          QuestionType
+  orderIndex    Int
+  points        Float
+  explanation   String?
+  content       String
+  mediaType     MediaType          @default(NONE)
+  mediaUrl      String?
+  imageUrl      String?
+  audioUrl      String?
+  videoUrl      String?
+  isAiGenerated Boolean            @default(false)
+  aiPrompt      String?
+  assignment    Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  answers       SubmissionAnswer[]
+}
+
+model Submission {
+  id             String             @id @default(cuid())
+  assignmentId   String
+  studentId      String
+  startedAt      DateTime           @default(now())
+  submittedAt    DateTime?
+  attemptNumber  Int                @default(1)
+  forceSubmitted Boolean            @default(false)
+  cheatCount     Int                @default(0)
+  answersDraft   String?
+  score          Float?
+  feedback       String?
+  student        User               @relation(fields: [studentId], references: [id])
+  assignment     Assignment         @relation(fields: [assignmentId], references: [id])
+  answers        SubmissionAnswer[]
+}
+
+model SubmissionAnswer {
+  id            String     @id @default(cuid())
+  submissionId  String
+  questionId    String
+  studentAnswer String
+  isCorrect     Boolean
+  pointsAwarded Float
+  question      Question   @relation(fields: [questionId], references: [id])
+  submission    Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+model Lesson {
+  id             String      @id @default(cuid())
+  title          String
+  description    String?
+  videoUrl       String?
+  isPremium      Boolean     @default(false)
+  price          Float       @default(0)
+  viewsCount     Int         @default(0)
+  purchasesCount Int         @default(0)
+  isEditorChoice Boolean     @default(false)
+  teacherId      String
+  assignmentId   String?     @unique
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+  assignment     Assignment? @relation(fields: [assignmentId], references: [id])
+  teacher        User        @relation(fields: [teacherId], references: [id])
+  purchases      Purchase[]
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  studentId String
+  lessonId  String
+  amount    Float
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  email     String
+  message   String
+  status    String   @default("OPEN")
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+  ADMIN
+}
+
+enum EnrollmentStatus {
+  INVITED
+  ACTIVE
+  BLOCKED
+}
+
+enum MaterialType {
+  EXERCISE
+  READING
+  FLASHCARD
+}
+
+enum MaterialStatus {
+  DRAFT
+  PRIVATE
+  PUBLIC
+}
+
+enum ReviewMode {
+  NEVER
+  AFTER_EACH_ATTEMPT
+  AFTER_ALL_ATTEMPTS_EXHAUSTED
+  AFTER_DEADLINE
+}
+
+enum MediaType {
+  NONE
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  CLOZE_TEST
+  MATCHING
+  TRUE_FALSE
+  REORDER
+}

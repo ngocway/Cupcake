@@ -39,13 +39,40 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-3xl: 2.5rem;
+  --radius-4xl: 3rem;
+  --color-primary-dark: #367070;
+  --color-primary-light: #f0f7f7;
+  --color-accent: #9a8fcc;
+  --color-background-warm: #fcfaf8;
+  --color-content-border: #e8e4e1;
+  --color-magazine-green: #2d6a4f;
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #101922;
+  --font-display: var(--font-display);
+  --font-lexend: var(--font-lexend);
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-family: 'Material Symbols Outlined' !important;
+}
+
+.teacher-theme {
+  --primary: #137fec;
+  --primary-foreground: #ffffff;
+  --background: #f6f7f8;
+  --background-light: #f6f7f8;
+  --background-dark: #101922;
+  font-family: var(--font-lexend), var(--font-sans);
+}
+.teacher-theme.dark {
+  --background: #101922;
 }
 
 :root {
@@ -55,7 +82,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: #458e8e;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -126,5 +153,34 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@utility magazine-shadow { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05); }
+@utility no-scrollbar {
+  &::-webkit-scrollbar { display: none; }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+@utility border-sep { border-bottom: 1px solid var(--color-content-border); }
+@utility hero-rounded { border-radius: 3rem; }
+@utility search-shadow { box-shadow: 0 20px 50px -12px rgba(69, 142, 142, 0.15); }
+
+@utility active-nav { background-color: #137fec20; color: #137fec; }
+@utility badge-draft { background-color: #fef3c7; color: #92400e; }
+.dark .badge-draft { background-color: #78350f; color: #fef3c7; }
+@utility status-registered { @apply bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400; }
+@utility status-invited { @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400; }
+@utility tab-active { @apply text-primary border-b-2 border-primary; }
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
   }
 }
