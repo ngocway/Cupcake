@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 
 import { AssignContentModal } from './AssignContentModal';
 
@@ -42,9 +43,10 @@ export function AssignmentsTab({
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ongoing' | 'ended' | 'draft'>('all');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchAssignments = async () => {
@@ -83,14 +85,14 @@ export function AssignmentsTab({
     const matchesSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'open' && a.isOpen) ||
-      (statusFilter === 'closed' && !a.isOpen);
+      (statusFilter === 'ongoing' && a.isOpen) ||
+      (statusFilter === 'ended' && !a.isOpen) ||
+      (statusFilter === 'draft' && false);
     return matchesSearch && matchesStatus;
   });
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-      {/* Search + Filter + Button */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
           <div className="relative max-w-sm w-full">
@@ -105,27 +107,37 @@ export function AssignmentsTab({
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative">
-            <select
-              className="appearance-none block w-40 rounded-xl border border-[#f0f2f4] dark:border-gray-700 bg-white dark:bg-gray-800 py-2.5 pl-4 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer outline-none"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'open' | 'closed')}
-            >
-              <option value="all">Tất cả</option>
-              <option value="open">Đang diễn ra</option>
-              <option value="closed">Đã đóng</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-[#617589]">
-              <span className="material-symbols-outlined text-[20px]">expand_more</span>
-            </div>
-          </div>
         </div>
         <button 
           onClick={() => setShowAssignModal(true)}
-          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm shrink-0"
+          className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-primary/90 transition-all active:scale-95 shrink-0"
         >
           <span className="material-symbols-outlined text-[20px]">add</span>
           <span>Giao bài mới</span>
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-8 border-b border-[#f0f2f4] dark:border-gray-800">
+        <button 
+          onClick={() => setStatusFilter('all')}
+          className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'all' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}>
+          Tất cả
+        </button>
+        <button 
+          onClick={() => setStatusFilter('ongoing')}
+          className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'ongoing' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}>
+          Đang diễn ra
+        </button>
+        <button 
+          onClick={() => setStatusFilter('ended')}
+          className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'ended' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}>
+          Đã kết thúc
+        </button>
+        <button 
+          onClick={() => setStatusFilter('draft')}
+          className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'draft' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}>
+          Bản nháp
         </button>
       </div>
 
@@ -134,7 +146,11 @@ export function AssignmentsTab({
         <AssignContentModal 
           classId={classId} 
           onClose={() => setShowAssignModal(false)} 
-          onAssigned={() => fetchAssignments()}
+          onAssigned={() => {
+            fetchAssignments();
+            setShowSuccessToast(true);
+            setTimeout(() => setShowSuccessToast(false), 3000);
+          }}
         />
       )}
 
@@ -211,12 +227,12 @@ export function AssignmentsTab({
                       <span className="text-green-600">
                         {assignment.submittedCount}/{assignment.totalStudents} đã nộp
                       </span>
-                      <span className="text-[#617589]">{assignment.percentage}%</span>
+                      <span className="text-[#617589]">{Math.round(assignment.percentage || 0)}%</span>
                     </div>
                     <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-green-500 rounded-full transition-all duration-500"
-                        style={{ width: `${assignment.percentage}%` }}
+                        style={{ width: `${Math.round(assignment.percentage || 0)}%` }}
                       />
                     </div>
                   </div>
@@ -232,6 +248,13 @@ export function AssignmentsTab({
 
                     {openMenuId === assignment.id && (
                       <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-[#f0f2f4] dark:border-gray-700 py-1.5 z-20 animate-in fade-in zoom-in-95 duration-150">
+                        <Link
+                          href={`/teacher/classes/${classId}/assignments/${assignment.id}`}
+                          className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm font-bold text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">send</span>
+                          Gửi bài
+                        </Link>
                         <button className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
                           <span className="material-symbols-outlined text-[20px] text-[#617589]">edit</span>
                           Chỉnh sửa
@@ -258,6 +281,27 @@ export function AssignmentsTab({
           })
         )}
       </div>
+
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <div className="fixed top-6 right-6 z-[100] animate-in slide-in-from-top-4 fade-in duration-300">
+          <div className="bg-emerald-500 text-white px-5 py-4 rounded-xl shadow-[0_8px_30px_rgb(16,185,129,0.3)] flex items-center gap-4 min-w-[320px] border border-white/20">
+            <div className="flex-shrink-0 size-8 bg-white/20 rounded-full flex items-center justify-center">
+              <span className="material-symbols-outlined text-white text-[20px] font-bold">check</span>
+            </div>
+            <div className="flex-1 mr-2">
+              <p className="text-sm font-bold">Thành công!</p>
+              <p className="text-xs font-medium text-white/90">Giao bài tập thành công!</p>
+            </div>
+            <button 
+              onClick={() => setShowSuccessToast(false)}
+              className="p-1 hover:bg-black/10 rounded-lg transition-colors flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

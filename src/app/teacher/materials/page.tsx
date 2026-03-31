@@ -17,6 +17,7 @@ type Assignment = {
   questionCount: number;
   assignedCount: number;
   createdAt: string;
+  classes?: any[];
 };
 
 export default function MaterialLibraryPage() {
@@ -45,7 +46,6 @@ export default function MaterialLibraryPage() {
     setLoading(true);
     try {
       const url = new URL('/api/assignments', window.location.origin);
-      if (statusFilter !== 'ALL') url.searchParams.set('status', statusFilter);
       url.searchParams.set('sort', sortOrder);
       
       const res = await fetch(url.toString());
@@ -65,9 +65,24 @@ export default function MaterialLibraryPage() {
     setCurrentPage(1); // Reset page on filter/sort change
   }, [statusFilter, sortOrder]);
 
-  const filteredAssignments = assignments.filter(a => 
-    a.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAssignments = assignments.filter(a => {
+    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    let matchesTab = true;
+    const now = new Date().getTime();
+
+    if (statusFilter === 'DRAFT') {
+      matchesTab = a.status === 'DRAFT';
+    } else if (statusFilter === 'ONGOING') {
+      matchesTab = Boolean((a.status === 'PUBLIC' || a.status === 'PRIVATE') &&
+             (!a.classes?.length || a.classes.some(c => !c.dueDate || new Date(c.dueDate).getTime() > now)));
+    } else if (statusFilter === 'ENDED') {
+      matchesTab = Boolean((a.status === 'PUBLIC' || a.status === 'PRIVATE') &&
+             (a.classes && a.classes.length > 0 && a.classes.every(c => c.dueDate && new Date(c.dueDate).getTime() < now)));
+    }
+
+    return matchesSearch && matchesTab;
+  });
   
   const itemsPerPage = 9; // 9 items + 1 create card = 10 cells (even grid)
   const totalPages = Math.ceil(filteredAssignments.length / itemsPerPage);
@@ -111,27 +126,14 @@ export default function MaterialLibraryPage() {
 
       {/* Main Content Area */}
       <div className="flex flex-col gap-6">
-        <div className="flex items-end justify-between border-b border-[#f0f2f4] dark:border-gray-800 pb-6">
+        <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-extrabold tracking-tight">Tất cả bài tập</h1>
-            <p className="text-[#617589] dark:text-gray-400">
-              {loading ? 'Đang tải...' : `Bạn đang quản lý ${assignments.length} bộ bài tập và tài liệu học tập.`}
+            <p className="text-[#617589] dark:text-gray-400 text-sm mt-1">
+              Bạn đang quản lý {filteredAssignments.length} bộ bài tập và tài liệu học tập.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <select 
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-[#f0f2f4] dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-[#f0f2f4] transition-colors outline-none pr-10"
-              >
-                <option value="ALL">Lọc</option>
-                <option value="DRAFT">Bản nháp</option>
-                <option value="PUBLIC">Công khai</option>
-                <option value="PRIVATE">Riêng tư</option>
-              </select>
-              <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[18px] pointer-events-none text-[#617589]">filter_list</span>
-            </div>
             <div className="relative">
               <select 
                 value={sortOrder}
@@ -144,6 +146,34 @@ export default function MaterialLibraryPage() {
               <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-[18px] pointer-events-none text-[#617589]">sort</span>
             </div>
           </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-8 border-b border-[#f0f2f4] dark:border-gray-800">
+          <button 
+            onClick={() => setStatusFilter('ALL')}
+            className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'ALL' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}
+          >
+            Tất cả
+          </button>
+          <button 
+            onClick={() => setStatusFilter('ONGOING')}
+            className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'ONGOING' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}
+          >
+            Đang diễn ra
+          </button>
+          <button 
+            onClick={() => setStatusFilter('ENDED')}
+            className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'ENDED' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}
+          >
+            Đã kết thúc
+          </button>
+          <button 
+            onClick={() => setStatusFilter('DRAFT')}
+            className={`pb-4 text-sm font-bold transition-colors ${statusFilter === 'DRAFT' ? 'text-primary border-b-2 border-primary' : 'text-[#617589] hover:text-primary'}`}
+          >
+            Bản nháp
+          </button>
         </div>
 
         {/* Assignment List */}

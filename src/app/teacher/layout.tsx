@@ -20,6 +20,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   ];
 
   const libraryItems = [
+    { name: "Tất cả bài học", href: "/teacher/lessons", icon: "menu_book" },
     { name: "Tất cả bài tập", href: "/teacher/materials", icon: "grid_view" },
     { name: "Gần đây", href: "#", icon: "schedule" },
     { name: "Đã chia sẻ", href: "#", icon: "share" },
