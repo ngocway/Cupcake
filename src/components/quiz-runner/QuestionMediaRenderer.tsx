@@ -2,37 +2,48 @@ import React from 'react';
 
 export function QuestionMediaRenderer({ question }: { question: any }) {
   if (!question) return null;
-  const hasImage = !!question.imageUrl || (question.mediaType === 'IMAGE' && !!question.mediaUrl);
-  const hasAudio = !!question.audioUrl || (question.mediaType === 'AUDIO' && !!question.mediaUrl);
-  const hasVideo = question.mediaType === 'VIDEO' && !!question.mediaUrl;
+  
+  const videoSrc = question.videoUrl || (question.mediaType === 'VIDEO' ? question.mediaUrl : null);
+  const audioSrc = question.audioUrl || (question.mediaType === 'AUDIO' ? question.mediaUrl : null);
+  const imageSrc = question.imageUrl || (question.mediaType === 'IMAGE' ? question.mediaUrl : null);
 
-  if (!hasImage && !hasAudio && !hasVideo) return null;
+  if (!videoSrc && !audioSrc && !imageSrc) return null;
 
   return (
-    <div className="my-6 flex flex-col items-center gap-6 w-full">
-      {hasImage && (
-        <img 
-          src={question.imageUrl || question.mediaUrl} 
-          alt="Question Media" 
-          className="w-full max-h-[40vh] object-contain mx-auto rounded-xl bg-slate-50 border border-slate-100 shadow-sm"
-        />
+    <div className="my-6 flex flex-col items-center gap-6 w-full animate-in fade-in slide-in-from-top-2 duration-700">
+      {imageSrc && (
+        <div className="w-full relative group">
+          <img 
+            src={imageSrc} 
+            alt="Question Image" 
+            className="w-full max-h-[50vh] object-contain mx-auto rounded-3xl bg-slate-50 border border-slate-100 shadow-xl"
+          />
+        </div>
       )}
       
-      {hasVideo && (
-        <video 
-          controls 
-          preload="metadata"
-          src={question.videoUrl || (question.mediaType === 'VIDEO' ? question.mediaUrl : undefined)} 
-          className="w-full max-h-[40vh] mx-auto rounded-xl bg-black shadow-md outline-none"
-        />
+      {videoSrc && (
+        <div className="w-full rounded-3xl overflow-hidden shadow-2xl bg-black aspect-video max-h-[50vh] flex items-center justify-center">
+          <video 
+            controls 
+            preload="metadata"
+            src={videoSrc} 
+            className="w-full h-full max-h-[50vh] outline-none"
+          />
+        </div>
       )}
       
-      {hasAudio && (
-        <audio 
-          controls 
-          src={question.audioUrl || question.mediaUrl} 
-          className="w-full max-w-md mx-auto outline-none"
-        />
+      {audioSrc && (
+        <div className="w-full max-w-xl mx-auto p-4 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
+             <span className="material-symbols-outlined text-[18px]">volume_up</span>
+             Âm thanh đính kèm
+          </div>
+          <audio 
+            controls 
+            src={audioSrc} 
+            className="w-full h-10 outline-none"
+          />
+        </div>
       )}
     </div>
   );

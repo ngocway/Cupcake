@@ -12,12 +12,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const sort = searchParams.get('sort') || 'desc'; // 'asc' or 'desc'
     const status = searchParams.get('status'); // DRAFT, PRIVATE, PUBLIC
+    const type = searchParams.get('type'); // READING, EXERCISE, FLASHCARD
     const isTrash = searchParams.get('trash') === 'true';
 
     const assignments = await prisma.assignment.findMany({
       where: {
         teacherId: session.user.id,
         ...(status ? { status: status as any } : {}),
+        ...(type ? { materialType: type as any } : {}),
         deletedAt: isTrash ? { not: null } : null,
       },
       include: {

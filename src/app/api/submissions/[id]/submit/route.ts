@@ -153,8 +153,22 @@ export async function POST(
           answers: {
             create: studentAnswersToCreate
           }
+        },
+        include: {
+          assignment: true
         }
       })
+
+      // Send completion notification
+      const { createNotification } = await import('@/actions/notification-actions');
+      await createNotification(
+        session.user.id,
+        'GRADING_UPDATE',
+        'Bài tập đã hoàn thành',
+        `Bạn đã hoàn thành bài tập "${sub.assignment.title}" với điểm số ${final_score.toFixed(2)}/10.0`,
+        `/student/assignments/${sub.assignmentId}/run`
+      );
+
       return sub
     })
 

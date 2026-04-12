@@ -10,26 +10,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    const assignment = await prisma.assignment.findUnique({
-      where: { id, teacherId: session.user.id },
-      include: { questions: { orderBy: { orderIndex: 'asc' } } }
-    });
+    const assignments = await prisma.$queryRaw<any[]>`
+      SELECT * FROM Assignment 
+      WHERE id = ${id} AND teacherId = ${session.user.id} AND deletedAt IS NULL
+    `;
+    
+    const baseAssignment = assignments[0];
 
-    if (!assignment) {
+    if (!baseAssignment) {
       return NextResponse.json({ error: 'Không tìm thấy bài tập' }, { status: 404 });
     }
 
+    // Fetch questions using standard prisma as it's not changes
+    const questions = await prisma.question.findMany({
+      where: { assignmentId: id },
+      orderBy: { orderIndex: 'asc' }
+    });
+
     return NextResponse.json({
       assignment: {
-        id: assignment.id,
-        title: assignment.title,
-        status: assignment.status,
-        questions: assignment.questions.map(q => {
+        id: baseAssignment.id,
+        title: baseAssignment.title,
+        status: baseAssignment.status,
+        readingText: baseAssignment.readingText,
+        videoUrl: baseAssignment.videoUrl || null,
+        audioUrl: baseAssignment.audioUrl || null,
+        questions: questions.map(q => {
           // Parse the stringified JSON from the database
           const parsed = JSON.parse(q.content);
           return {
             ...parsed,
-            id: q.id, // Use DB id if available, or stay as is
+            id: q.id,
             type: q.type,
             points: q.points,
             explanation: q.explanation,

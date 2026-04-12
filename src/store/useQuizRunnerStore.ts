@@ -7,6 +7,7 @@ interface QuizRunnerState {
   lastSyncedAt: Date | null
   
   initDraft: (answers: Record<string, any>, cheatCount: number) => void
+  setAnswers: (questionId: string, selected: any) => void
   setAnswer: (submissionId: string, questionId: string, answer: any) => void
   incrementCheatCount: (submissionId: string) => void
   syncDraft: (submissionId: string) => Promise<void>
@@ -21,7 +22,13 @@ export const useQuizRunnerStore = create<QuizRunnerState>((set, get) => ({
   lastSyncedAt: null,
 
   initDraft: (answers, cheatCount) => {
-    set({ answers, cheatCount })
+    set({ answers, cheatCount });
+  },
+
+  setAnswers: (questionId: string, selected: any) => {
+    set((state) => ({
+      answers: { ...state.answers, [questionId]: selected },
+    }));
   },
 
   setAnswer: (submissionId, questionId, answer) => {

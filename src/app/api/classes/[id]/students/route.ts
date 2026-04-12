@@ -50,7 +50,7 @@ export async function GET(
 
     return NextResponse.json({
       students,
-      class: { id: cls.id, name: cls.name, joinCode: cls.joinCode },
+      class: { id: cls.id, name: cls.name, joinCode: cls.joinCode, isJoinable: cls.isJoinable },
     });
   } catch (err) {
     console.error('[GET /api/classes/[id]/students]', err);

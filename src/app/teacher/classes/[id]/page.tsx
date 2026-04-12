@@ -7,6 +7,7 @@ import { AddStudentModal } from './_components/AddStudentModal';
 import { StudentUpdateModal } from './_components/StudentUpdateModal';
 import { ClassQRModal } from './_components/ClassQRModal';
 import { AssignmentsTab } from './_components/AssignmentsTab';
+import { updateEnrollmentStatus, removeEnrollment, bulkUpdateEnrollments, bulkRemoveEnrollments, toggleClassJoinability } from './actions';
 
 type Student = {
   id: string;
@@ -35,6 +36,11 @@ export default function ClassDashboard() {
   const [isCopied, setIsCopied] = useState(false);
   const [openAssignmentCount, setOpenAssignmentCount] = useState(0);
 
+  // New states for Join Requests features
+  const [isJoinable, setIsJoinable] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
   const handleCopyJoinLink = async () => {
     const url = `${window.location.origin}/join/${joinCode}`;
     try {
@@ -58,6 +64,9 @@ export default function ClassDashboard() {
         setStudents(data.students ?? []);
         setJoinCode(data.class?.joinCode ?? '');
         setClassName(data.class?.name ?? 'Lớp học');
+        if (data.class?.isJoinable !== undefined) {
+          setIsJoinable(data.class.isJoinable);
+        }
       }
     } catch (err) {
       console.error('Failed to load students', err);
@@ -89,6 +98,45 @@ export default function ClassDashboard() {
       setSelectedStudents([]);
     }
   };
+
+  const handleBulkAction = async (action: 'approve' | 'reject' | 'block' | 'unblock' | 'remove') => {
+    if (selectedStudents.length === 0) return;
+    setActionLoading(true);
+    try {
+      if (action === 'approve') await bulkUpdateEnrollments(classId, selectedStudents, 'ACTIVE');
+      else if (action === 'block') await bulkUpdateEnrollments(classId, selectedStudents, 'BLOCKED');
+      else if (action === 'unblock') await bulkUpdateEnrollments(classId, selectedStudents, 'ACTIVE');
+      else if (action === 'reject' || action === 'remove') await bulkRemoveEnrollments(classId, selectedStudents);
+      
+      setSelectedStudents([]);
+      await fetchStudents();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRowAction = async (studentId: string, action: 'approve' | 'reject' | 'block' | 'unblock' | 'remove') => {
+    setOpenMenuId(null);
+    setActionLoading(true);
+    try {
+      if (action === 'approve') await updateEnrollmentStatus(classId, studentId, 'ACTIVE');
+      else if (action === 'block') await updateEnrollmentStatus(classId, studentId, 'BLOCKED');
+      else if (action === 'unblock') await updateEnrollmentStatus(classId, studentId, 'ACTIVE');
+      else if (action === 'reject' || action === 'remove') await removeEnrollment(classId, studentId);
+      
+      await fetchStudents();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleJoinable = async () => {
+    const newState = !isJoinable;
+    setIsJoinable(newState); // optimistic update
+    await toggleClassJoinability(classId, newState);
+    fetchStudents();
+  };
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -155,6 +203,13 @@ export default function ClassDashboard() {
                 </button>
               </div>
               <button
+                onClick={handleToggleJoinable}
+                className={`flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-[#f0f2f4] dark:border-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shrink-0 ${!isJoinable ? 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100' : 'text-[#617589]'}`}
+              >
+                <span className="material-symbols-outlined text-[20px]">{isJoinable ? 'lock_open' : 'lock'}</span>
+                {isJoinable ? 'Mở' : 'Khóa'}
+              </button>
+              <button
                 onClick={() => setIsQRModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-[#f0f2f4] dark:border-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 hover:border-primary/30 hover:text-primary transition-colors shrink-0"
               >
@@ -217,13 +272,21 @@ export default function ClassDashboard() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-primary">Đã chọn {selectedStudents.length} học sinh</span>
                           <div className="flex gap-2">
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                              <span className="material-symbols-outlined text-[20px]">delete</span>
-                              <span>Xoá</span>
+                            <button onClick={() => handleBulkAction('approve')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                              <span>Duyệt</span>
                             </button>
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-primary hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors">
-                              <span className="material-symbols-outlined text-[20px]">mail</span>
-                              <span>Gửi mail</span>
+                            <button onClick={() => handleBulkAction('unblock')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                              <span className="material-symbols-outlined text-[18px]">lock_open</span>
+                              <span>Gỡ chặn</span>
+                            </button>
+                            <button onClick={() => handleBulkAction('block')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+                              <span className="material-symbols-outlined text-[18px]">block</span>
+                              <span>Chặn</span>
+                            </button>
+                            <button onClick={() => handleBulkAction('remove')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                              <span>Từ chối / Xoá</span>
                             </button>
                           </div>
                         </div>
@@ -298,17 +361,79 @@ export default function ClassDashboard() {
                           <td className="px-6 py-4">
                             {student.status === 'ACTIVE' ? (
                               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold status-registered">ĐÃ ĐĂNG KÝ</span>
+                            ) : student.status === 'PENDING' ? (
+                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">CHỜ DUYỆT</span>
+                            ) : student.status === 'BLOCKED' ? (
+                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700">BỊ CHẶN</span>
                             ) : (
                               <span className="px-2.5 py-1 rounded-full text-[11px] font-bold status-invited">ĐÃ MỜI</span>
                             )}
                           </td>
-                          <td className="px-6 py-4">
-                            <button 
-                              onClick={() => setSelectedStudentForUpdate(student)}
-                              className="text-[#617589] hover:text-[#111418] dark:hover:text-white transition-colors"
-                            >
-                              <span className="material-symbols-outlined">more_horiz</span>
-                            </button>
+                          <td className="px-6 py-4 relative">
+                            <div className="flex items-center gap-2">
+                              {student.status === 'PENDING' && (
+                                <>
+                                  <button
+                                    onClick={() => handleRowAction(student.id, 'approve')}
+                                    disabled={actionLoading}
+                                    className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded"
+                                  >
+                                    Duyệt
+                                  </button>
+                                  <button
+                                    onClick={() => handleRowAction(student.id, 'reject')}
+                                    disabled={actionLoading}
+                                    className="text-xs px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 font-bold rounded"
+                                  >
+                                    Từ chối
+                                  </button>
+                                </>
+                              )}
+                              {student.status === 'BLOCKED' && (
+                                <button
+                                  onClick={() => handleRowAction(student.id, 'unblock')}
+                                  disabled={actionLoading}
+                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 font-bold rounded"
+                                >
+                                  Gỡ chặn
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => setOpenMenuId(openMenuId === student.id ? null : student.id)}
+                                className="text-[#617589] hover:text-[#111418] dark:hover:text-white transition-colors"
+                              >
+                                <span className="material-symbols-outlined">more_horiz</span>
+                              </button>
+                              
+                              {/* Action Menu Dropdown */}
+                              {openMenuId === student.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)}></div>
+                                  <div className="absolute right-6 top-10 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-20 py-1">
+                                    <button 
+                                      onClick={() => { setOpenMenuId(null); setSelectedStudentForUpdate(student); }}
+                                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">edit</span> Sửa thông tin
+                                    </button>
+                                    {student.status === 'ACTIVE' && (
+                                      <button 
+                                        onClick={() => handleRowAction(student.id, 'block')}
+                                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-2 text-sm text-amber-600 font-medium border-t border-gray-50"
+                                      >
+                                        <span className="material-symbols-outlined text-[18px]">block</span> Chặn
+                                      </button>
+                                    )}
+                                    <button 
+                                      onClick={() => handleRowAction(student.id, 'remove')}
+                                      className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600 font-medium border-t border-gray-50"
+                                    >
+                                      <span className="material-symbols-outlined text-[18px]">person_remove</span> Xóa khỏi lớp
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

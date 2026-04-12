@@ -45,7 +45,7 @@ export function LoginButton({ children, className }: LoginButtonProps) {
               
               <div className="flex flex-col gap-4">
                 <button 
-                  onClick={() => router.push("/login")}
+                  onClick={() => router.push("/teacher/login")}
                   className="flex items-center gap-6 p-6 border-2 border-neutral-200 dark:border-gray-800 rounded-2xl hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-gray-800 dark:hover:border-blue-500 hover:shadow-md transition-all group text-left"
                 >
                   <div className="size-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-4xl shrink-0 group-hover:scale-110 transition-transform duration-300">
@@ -58,7 +58,7 @@ export function LoginButton({ children, className }: LoginButtonProps) {
                 </button>
 
                 <button 
-                  onClick={() => alert("Học sinh vui lòng truy cập qua Mã lớp học (Join Code) do giáo viên cung cấp!")}
+                  onClick={() => router.push("/student/login")}
                   className="flex items-center gap-6 p-6 border-2 border-neutral-200 dark:border-gray-800 rounded-2xl hover:border-green-500 hover:bg-green-50/50 dark:hover:bg-gray-800 dark:hover:border-green-500 hover:shadow-md transition-all group text-left"
                 >
                   <div className="size-16 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-4xl shrink-0 group-hover:scale-110 transition-transform duration-300">

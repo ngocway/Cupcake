@@ -3,15 +3,60 @@
 import { usePathname } from "next/navigation"
 import { Lexend } from "next/font/google"
 import Link from "next/link"
-import React from "react"
+import React, { useState, useRef, useEffect } from "react"
+import { signOut, useSession, SessionProvider } from "next-auth/react"
 
 const lexend = Lexend({
   variable: "--font-lexend",
   subsets: ["latin"],
 });
 
+function TeacherProfile() {
+  const { data: session } = useSession()
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button 
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        className="flex items-center gap-3 focus:outline-none"
+      >
+        <div className="size-10 rounded-full bg-cover bg-center border-2 border-primary/20 cursor-pointer hover:border-primary/50 transition-colors" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB1Zf9RjuWzeL1szre4pXTwbbp2PXCUB5X_IFJkoc0sEef2cuvkpg85dEkKkr4_Lgr1oclyfiukzcMGXWpaa1jWmxRd7-fYisZMxeIB6RqtGl8jtZGe2AX6NvrO0LhGfXOWhnbU5ytRpY2k5t9uZG6xF9HQF2xRqevJ5ztANtym4kKf3du5hYfxmhI2WAM80p7U44cBai5c3uqR-3Io1S6UJlhVEllfGPjrg0MGZGTYYjTGxFM31B35FXYb-K3Qyd6F8CovyIq6c8KL")' }}></div>
+      </button>
+      
+      {isDropdownOpen && (
+        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-[#f0f2f4] dark:border-gray-700 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+          <div className="px-4 py-3 border-b border-[#f0f2f4] dark:border-gray-700">
+            <p className="text-sm font-bold text-[#111418] dark:text-white truncate">{session?.user?.name || "Giáo viên"}</p>
+            <p className="text-xs text-[#617589] dark:text-gray-400 truncate">{session?.user?.email || "teacher@clarified.com"}</p>
+          </div>
+          <button 
+            onClick={() => signOut({ callbackUrl: '/teacher/login' })}
+            className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium flex items-center gap-2 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            Đăng xuất
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+
   
   const navItems = [
     { name: "Khám phá", href: "/teacher/dashboard", icon: "explore" },
@@ -28,7 +73,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
-    <div className={`teacher-theme ${lexend.variable} font-display bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
+    <SessionProvider>
+      <div className={`teacher-theme ${lexend.variable} font-display bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
       <header className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-[#f0f2f4] dark:border-gray-800 px-6 py-3">
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
           <div className="flex items-center gap-8 flex-1">
@@ -43,14 +89,30 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#617589]">
                   <span className="material-symbols-outlined text-[20px]">search</span>
                 </div>
-                <input className="block w-full rounded-xl border-none bg-[#f0f2f4] dark:bg-gray-800 py-2.5 pl-10 pr-4 text-base placeholder-[#617589] focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Tìm kiếm bài tập..." type="text"/>
+                <input 
+                  className="block w-full rounded-xl border-none bg-[#f0f2f4] dark:bg-gray-800 py-2.5 pl-10 pr-4 text-base placeholder-[#617589] focus:ring-2 focus:ring-primary/50 transition-all font-medium" 
+                  placeholder="Tìm kiếm bài tập, tài liệu..." 
+                  type="text"
+                  defaultValue={new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('q') || ''}
+                  onChange={(e) => {
+                    const params = new URLSearchParams(window.location.search);
+                    if (e.target.value) {
+                      params.set('q', e.target.value);
+                    } else {
+                      params.delete('q');
+                    }
+                    // Use window.history to avoid full page reload/flicker if on the same page
+                    const newPath = `${window.location.pathname}?${params.toString()}`;
+                    window.history.replaceState({}, '', newPath);
+                    // Dispatch a custom event to notify listeners (like the Materials page)
+                    window.dispatchEvent(new Event('search-change'));
+                  }}
+                />
               </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-cover bg-center border-2 border-primary/20" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuB1Zf9RjuWzeL1szre4pXTwbbp2PXCUB5X_IFJkoc0sEef2cuvkpg85dEkKkr4_Lgr1oclyfiukzcMGXWpaa1jWmxRd7-fYisZMxeIB6RqtGl8jtZGe2AX6NvrO0LhGfXOWhnbU5ytRpY2k5t9uZG6xF9HQF2xRqevJ5ztANtym4kKf3du5hYfxmhI2WAM80p7U44cBai5c3uqR-3Io1S6UJlhVEllfGPjrg0MGZGTYYjTGxFM31B35FXYb-K3Qyd6F8CovyIq6c8KL")' }}></div>
-            </div>
+            <TeacherProfile />
           </div>
         </div>
       </header>
@@ -97,6 +159,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           {children}
         </main>
       </div>
-    </div>
+      </div>
+    </SessionProvider>
   )
 }

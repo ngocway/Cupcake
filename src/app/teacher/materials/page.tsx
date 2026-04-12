@@ -25,8 +25,24 @@ export default function MaterialLibraryPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  useEffect(() => {
+    // Initial load from URL
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (q) setSearchQuery(q);
+
+    const handleSearchChange = () => {
+      const p = new URLSearchParams(window.location.search);
+      setSearchQuery(p.get('q') || '');
+    };
+
+    window.addEventListener('search-change', handleSearchChange);
+    return () => window.removeEventListener('search-change', handleSearchChange);
+  }, []);
   const [isCreating, setIsCreating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -63,25 +79,33 @@ export default function MaterialLibraryPage() {
   useEffect(() => {
     fetchAssignments();
     setCurrentPage(1); // Reset page on filter/sort change
-  }, [statusFilter, sortOrder]);
+  }, [statusFilter, typeFilter, sortOrder]);
 
   const filteredAssignments = assignments.filter(a => {
     const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase());
     
-    let matchesTab = true;
+    // Exclude READING materials from this page as they should be in the Lessons page
+    if (a.materialType === 'READING') return false;
+
+    let matchesType = true;
+    if (typeFilter !== 'ALL') {
+      matchesType = a.materialType === typeFilter;
+    }
+
+    let matchesStatus = true;
     const now = new Date().getTime();
 
     if (statusFilter === 'DRAFT') {
-      matchesTab = a.status === 'DRAFT';
+      matchesStatus = a.status === 'DRAFT';
     } else if (statusFilter === 'ONGOING') {
-      matchesTab = Boolean((a.status === 'PUBLIC' || a.status === 'PRIVATE') &&
-             (!a.classes?.length || a.classes.some(c => !c.dueDate || new Date(c.dueDate).getTime() > now)));
+      matchesStatus = Boolean((a.status === 'PUBLIC' || a.status === 'PRIVATE') &&
+             (!a.classes?.length || a.classes.some((c: any) => !c.dueDate || new Date(c.dueDate).getTime() > now)));
     } else if (statusFilter === 'ENDED') {
-      matchesTab = Boolean((a.status === 'PUBLIC' || a.status === 'PRIVATE') &&
-             (a.classes && a.classes.length > 0 && a.classes.every(c => c.dueDate && new Date(c.dueDate).getTime() < now)));
+      matchesStatus = Boolean((a.status === 'PUBLIC' || a.status === 'PRIVATE') &&
+             (a.classes && a.classes.length > 0 && a.classes.every((c: any) => c.dueDate && new Date(c.dueDate).getTime() < now)));
     }
 
-    return matchesSearch && matchesTab;
+    return matchesSearch && matchesType && matchesStatus;
   });
   
   const itemsPerPage = 9; // 9 items + 1 create card = 10 cells (even grid)
@@ -174,6 +198,28 @@ export default function MaterialLibraryPage() {
           >
             Bản nháp
           </button>
+        </div>
+
+        {/* Type Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          {[
+            { id: 'ALL', label: 'Tất cả loại', icon: 'filter_list' },
+            { id: 'EXERCISE', label: 'Quiz', icon: 'quiz' },
+            { id: 'FLASHCARD', label: 'Flashcards', icon: 'style' }
+          ].map(type => (
+            <button
+              key={type.id}
+              onClick={() => setTypeFilter(type.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                typeFilter === type.id 
+                  ? 'bg-primary text-white border-primary shadow-md transform scale-105' 
+                  : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">{type.icon}</span>
+              {type.label}
+            </button>
+          ))}
         </div>
 
         {/* Assignment List */}

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { MaterialStatus, MaterialType } from '@prisma/client';
-import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass } from '@/actions/material-actions';
+import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
 import { useRouter } from 'next/navigation';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
 
@@ -44,11 +44,15 @@ const SUBJECT_CONFIG: Record<string, string> = {
 export function MaterialListItem({ 
   assignment, 
   onDelete, 
-  onRefresh 
+  onEdit,
+  onRefresh,
+  isTrash
 }: { 
   assignment: Assignment, 
   onDelete: () => void,
-  onRefresh?: () => void
+  onEdit?: (id: string) => void,
+  onRefresh?: () => void,
+  isTrash?: boolean
 }) {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,6 +63,33 @@ export function MaterialListItem({
   const [teacherClasses, setTeacherClasses] = useState<ClassOption[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const handleRestore = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsProcessing(true);
+    try {
+      await restoreMaterial(assignment.id);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi khôi phục bài tập');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    setIsProcessing(true);
+    setShowDeleteModal(false);
+    try {
+      await permanentlyDeleteMaterial(assignment.id);
+      if (onDelete) onDelete();
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Lỗi khi xóa vĩnh viễn');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -75,15 +106,29 @@ export function MaterialListItem({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isMenuOpen, showClassesPopup]);
 
-  const handleEdit = () => {
-    if (assignment.assignedCount > 0) {
-      alert('Không thể chỉnh sửa bài tập đã được giao cho lớp học. Vui lòng gỡ bài tập khỏi lớp học trước khi sửa.');
+  const handleEdit = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    
+    if (isTrash) {
+      alert('Không thể chỉnh sửa bài tập trong thùng rác. Vui lòng khôi phục trước.');
       return;
     }
-    router.push(`/teacher/materials/${assignment.id}/edit`);
+    
+    if (onEdit) {
+      onEdit(assignment.id);
+    } else {
+      const typeMap: Record<string, string> = {
+        'EXERCISE': 'quiz',
+        'READING': 'reading',
+        'FLASHCARD': 'flashcard'
+      };
+      const typeParam = typeMap[assignment.materialType] || 'quiz';
+      router.push(`/teacher/materials/${assignment.id}/edit?type=${typeParam}`);
+    }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setIsProcessing(true);
     setShowDeleteModal(false);
     try {
@@ -97,7 +142,8 @@ export function MaterialListItem({
     }
   };
 
-  const handleUnassign = async (classId: string) => {
+  const handleUnassign = async (classId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!confirm('Bạn có chắc chắn muốn hủy giao bài cho lớp này?')) return;
     setIsProcessing(true);
     try {
@@ -123,7 +169,8 @@ export function MaterialListItem({
     }
   };
 
-  const handleStatusChange = async (newStatus: MaterialStatus) => {
+  const handleStatusChange = async (newStatus: MaterialStatus, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (newStatus === assignment.status) {
       setIsMenuOpen(false);
       return;
@@ -141,7 +188,8 @@ export function MaterialListItem({
     }
   };
 
-  const openAssignModal = async () => {
+  const openAssignModal = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (assignment.status === 'DRAFT') {
       alert('Không thể giao bài tập đang ở trạng thái Bản nháp. Vui lòng chuyển sang trạng thái Riêng tư hoặc Công khai trước khi giao bài.');
       return;
@@ -156,12 +204,17 @@ export function MaterialListItem({
     }
   };
 
-  const handleDuplicate = async () => {
+  const handleDuplicate = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setIsProcessing(true);
     try {
       const newId = await duplicateMaterial(assignment.id);
       setIsMenuOpen(false);
-      router.push(`/teacher/materials/${newId}/edit`);
+      if (onEdit) {
+        onEdit(newId);
+      } else {
+        router.push(`/teacher/materials/${newId}/edit`);
+      }
     } catch (err: any) {
       alert(err.message || 'Lỗi khi nhân bản');
     } finally {
@@ -174,12 +227,14 @@ export function MaterialListItem({
 
   return (
     <>
-      <div className={`bg-white dark:bg-gray-800 p-5 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg transition-all group flex flex-col gap-4 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div 
+        onClick={() => handleEdit()}
+        className={`bg-white dark:bg-gray-800 p-5 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg transition-all group flex flex-col gap-4 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 
-                onClick={handleEdit}
+                onClick={(e) => { e.stopPropagation(); handleEdit(); }}
                 className="font-bold text-lg text-[#111418] dark:text-white truncate group-hover:text-primary transition-colors cursor-pointer"
               >
                 {assignment.title}
@@ -201,9 +256,10 @@ export function MaterialListItem({
               )}
             </div>
           </div>
-          <div className="relative group/menu shrink-0" ref={menuRef}>
+          {!isTrash && (
+            <div className="relative group/menu shrink-0" ref={menuRef}>
             <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
               className="size-8 flex items-center justify-center rounded-lg hover:bg-[#f0f2f4] dark:hover:bg-gray-700 transition-colors text-[#617589]"
             >
               <span className="material-symbols-outlined text-[20px]">more_horiz</span>
@@ -214,7 +270,7 @@ export function MaterialListItem({
                   <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Trạng thái</span>
                 </div>
                 <button 
-                  onClick={() => handleStatusChange('DRAFT')}
+                  onClick={(e) => handleStatusChange('DRAFT', e)}
                   disabled={assignment.assignedCount > 0}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between gap-2 ${
                     assignment.status === 'DRAFT' 
@@ -229,13 +285,13 @@ export function MaterialListItem({
                   {assignment.assignedCount > 0 && <span className="material-symbols-outlined text-[14px]">lock</span>}
                 </button>
                 <button 
-                  onClick={() => handleStatusChange('PRIVATE')}
+                  onClick={(e) => handleStatusChange('PRIVATE', e)}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PRIVATE' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
                 >
                   <span className="material-symbols-outlined text-[18px]">lock</span> Riêng tư
                 </button>
                 <button 
-                  onClick={() => handleStatusChange('PUBLIC')}
+                  onClick={(e) => handleStatusChange('PUBLIC', e)}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PUBLIC' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
                 >
                   <span className="material-symbols-outlined text-[18px]">public</span> Công khai
@@ -249,6 +305,7 @@ export function MaterialListItem({
                 <Link 
                   href={`/student/assignments/${assignment.id}/run`}
                   target="_blank"
+                  onClick={(e) => e.stopPropagation()}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">visibility</span> Xem trước
@@ -260,13 +317,20 @@ export function MaterialListItem({
                   <span className="material-symbols-outlined text-[18px]">content_copy</span> Nhân bản
                 </button>
                 <button 
+                  onClick={(e) => { e.stopPropagation(); router.push(`/student/assignments/${assignment.id}/run?direct=true`); }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2 text-indigo-600 font-semibold"
+                >
+                  <span className="material-symbols-outlined text-[18px]">school</span> Học ngay
+                </button>
+                <button 
                   onClick={handleEdit}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span> Chỉnh sửa
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowDeleteModal(true);
                     setIsMenuOpen(false);
                   }}
@@ -277,6 +341,7 @@ export function MaterialListItem({
               </div>
             )}
           </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#f0f2f4] dark:border-gray-700/50">
@@ -397,12 +462,43 @@ export function MaterialListItem({
               <span className="material-symbols-outlined text-[18px]">calendar_today</span> {dateStr}
             </div>
           </div>
-          <button 
-            onClick={openAssignModal}
-            className="bg-primary text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
-          >
-            Giao bài
-          </button>
+          <div className="flex items-center gap-2">
+            {isTrash ? (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
+                  className="px-3 h-9 rounded-lg border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center shadow-sm"
+                  title="Xóa vĩnh viễn"
+                >
+                  <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                </button>
+                <button 
+                  onClick={handleRestore}
+                  className="bg-emerald-600 dark:bg-emerald-700 text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">restore</span>
+                  Khôi phục
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); router.push(`/student/assignments/${assignment.id}/run?direct=true`); }}
+                  className="bg-indigo-50 text-indigo-600 border border-indigo-100 h-9 px-4 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">school</span>
+                  Học ngay
+                </button>
+                <button 
+                  onClick={openAssignModal}
+                  className="bg-primary text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">send</span>
+                  Giao bài
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -414,11 +510,19 @@ export function MaterialListItem({
               <div className="size-16 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mb-6">
                 <span className="material-symbols-outlined text-[32px]">delete_forever</span>
               </div>
-              <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">Xóa bài tập?</h3>
+              <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">{isTrash ? 'Xóa vĩnh viễn?' : 'Xóa bài tập?'}</h3>
               <p className="text-[#617589] dark:text-gray-400 text-sm">
-                Bạn có chắc chắn muốn chuyển bài tập <strong className="text-[#111418] dark:text-white">"{assignment.title}"</strong> vào thùng rác? 
-                {assignment.assignedCount > 0 && <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">Lưu ý: Bài tập này đang được giao cho {assignment.assignedCount} lớp. Việc xóa sẽ làm bài tập này không còn hiển thị với học sinh.</span>}
-                <span className="block mt-2">Bạn có thể khôi phục lại bài tập này trong mục Thùng rác.</span>
+                {isTrash ? (
+                  <>Hành động này sẽ xóa vĩnh viễn bài tập <strong className="text-[#111418] dark:text-white">"{assignment.title}"</strong> và không thể khôi phục lại.</>
+                ) : (
+                  <>Bạn có chắc chắn muốn chuyển bài tập <strong className="text-[#111418] dark:text-white">"{assignment.title}"</strong> vào thùng rác?</>
+                )}
+                {assignment.assignedCount > 0 && !isTrash && (
+                  <span className="block mt-2 text-amber-600 dark:text-amber-400 font-medium">
+                    Lưu ý: Bài tập này đang được giao cho {assignment.assignedCount} lớp. Việc xóa sẽ làm bài tập này không còn hiển thị với học sinh.
+                  </span>
+                )}
+                {!isTrash && <span className="block mt-2">Bạn có thể khôi phục lại bài tập này trong mục Thùng rác.</span>}
               </p>
             </div>
             <div className="flex border-t border-[#f0f2f4] dark:border-gray-700">
@@ -430,11 +534,11 @@ export function MaterialListItem({
                 Hủy bỏ
               </button>
               <button 
-                onClick={handleDelete}
+                onClick={isTrash ? handlePermanentDelete : handleDelete}
                 className="flex-1 px-4 py-4 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border-l border-[#f0f2f4] dark:border-gray-700 flex items-center justify-center gap-2"
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Đang xóa...' : 'Xác nhận xóa'}
+                {isProcessing ? 'Đang lý...' : (isTrash ? 'Xác nhận xóa vĩnh viễn' : 'Xác nhận xóa')}
               </button>
             </div>
           </div>
