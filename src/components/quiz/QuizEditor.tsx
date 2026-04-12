@@ -34,6 +34,12 @@ export function QuizEditor() {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const [title, setTitle] = useState('Toán lớp 5 - Tuần 12');
+  const [subject, setSubject] = useState('Toán học');
+  const [gradeLevel, setGradeLevel] = useState('Lớp 5');
+  const [shortDescription, setShortDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
   const [loading, setLoading] = useState(id !== 'new');
 
@@ -47,6 +53,11 @@ export function QuizEditor() {
         const data = await res.json();
         if (data.assignment) {
           setTitle(data.assignment.title);
+          setSubject(data.assignment.subject || 'Khác');
+          setGradeLevel(data.assignment.gradeLevel || 'Khác');
+          setShortDescription(data.assignment.shortDescription || '');
+          setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
+          
           if (data.assignment.questions?.length > 0) {
             setQuestions(data.assignment.questions);
             setActiveId(data.assignment.questions[0].id);
@@ -73,7 +84,11 @@ export function QuizEditor() {
           id,
           title,
           type: 'EXERCISE',
-          questions
+          questions,
+          subject,
+          gradeLevel,
+          shortDescription,
+          tags: tags.join(',')
         });
         setSaveStatus('SAVED');
       } catch (err) {
@@ -101,7 +116,11 @@ export function QuizEditor() {
           id, 
           title, 
           type: 'EXERCISE', 
-          questions: validQuestions 
+          questions: validQuestions,
+          subject,
+          gradeLevel,
+          shortDescription,
+          tags: tags.join(',')
         });
         
         // If we came from a class assignment flow, assign it now
@@ -385,6 +404,13 @@ export function QuizEditor() {
                  saveStatus === 'ERROR' ? 'Lỗi khi lưu' : 'Đã lưu tự động'}
               </span>
             </div>
+            <button 
+              onClick={() => setShowSettingsModal(true)}
+              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">settings</span>
+              Thiết lập
+            </button>
             <button 
               onClick={handleFinish}
               className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold text-sm transition-colors shadow-sm"
@@ -793,6 +819,137 @@ export function QuizEditor() {
                 className="px-6 py-2.5 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition-colors"
               >
                 Hủy bỏ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-10 w-full max-w-2xl shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                  <span className="material-symbols-outlined text-[28px]">settings</span>
+                </div>
+                <div>
+                   <h3 className="text-2xl font-black text-slate-950 font-headline italic">Thiết lập học liệu</h3>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tối ưu hóa nội dung cho Thư viện cộng đồng</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowSettingsModal(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-gray-700 rounded-full text-slate-400 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-8">
+              {/* Basic Metadata */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Môn học</label>
+                    <select 
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className="w-full p-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold text-slate-900 focus:ring-primary focus:border-primary outline-none appearance-none"
+                    >
+                       {['Tiếng Anh', 'Toán học', 'Ngữ Văn', 'Khoa học', 'Lịch sử', 'Công nghệ', 'Khác'].map(s => (
+                         <option key={s} value={s}>{s}</option>
+                       ))}
+                    </select>
+                 </div>
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Khối lớp</label>
+                    <select 
+                      value={gradeLevel}
+                      onChange={(e) => setGradeLevel(e.target.value)}
+                      className="w-full p-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold text-slate-900 focus:ring-primary focus:border-primary outline-none appearance-none"
+                    >
+                       {['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Khác'].map(g => (
+                         <option key={g} value={g}>{g}</option>
+                       ))}
+                    </select>
+                 </div>
+              </div>
+
+              {/* Short Description */}
+              <div className="space-y-2">
+                 <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Mô tả ngắn (Hiển thị ở Thư viện)</label>
+                    <span className={`text-[10px] font-bold ${shortDescription.length > 200 ? 'text-red-500' : 'text-slate-400'}`}>
+                      {shortDescription.length} / 200
+                    </span>
+                 </div>
+                 <textarea 
+                    value={shortDescription}
+                    onChange={(e) => setShortDescription(e.target.value.slice(0, 200))}
+                    placeholder="Nhập mô tả ngắn để học sinh dễ dàng tìm thấy bài tập của bạn..."
+                    className="w-full p-5 rounded-3xl border border-slate-200 bg-slate-50 min-h-[120px] focus:ring-primary focus:border-primary outline-none text-slate-700 font-medium leading-relaxed resize-none"
+                 />
+              </div>
+
+              {/* Tagging System */}
+              <div className="space-y-4">
+                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Gắn thẻ bài học (Tags)</label>
+                 
+                 <div className="flex flex-wrap gap-2">
+                    {['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].map(tag => (
+                      <button 
+                        key={tag}
+                        onClick={() => {
+                          if (tags.includes(tag)) setTags(tags.filter(t => t !== tag));
+                          else setTags([...tags, tag]);
+                        }}
+                        className={`px-5 py-2 rounded-full text-[11px] font-bold transition-all ${
+                          tags.includes(tag) 
+                          ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' 
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                      >
+                         {tag}
+                      </button>
+                    ))}
+                 </div>
+
+                 <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-[24px] border border-slate-100">
+                    <input 
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const val = (e.target as HTMLInputElement).value.trim();
+                          if (val && !tags.includes(val)) {
+                            setTags([...tags, val]);
+                            (e.target as HTMLInputElement).value = '';
+                          }
+                        }
+                      }}
+                      placeholder="Nhập thẻ riêng và nhấn Enter..."
+                      className="bg-transparent border-none outline-none text-sm flex-1 px-4 py-2 font-medium"
+                    />
+                    <div className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest">Custom</div>
+                 </div>
+
+                 {/* Custom tags preview with delete */}
+                 <div className="flex flex-wrap gap-3 mt-2">
+                    {tags.filter(t => !['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].includes(t)).map(t => (
+                      <div key={t} className="px-4 py-1.5 bg-yellow-400/10 text-yellow-600 rounded-lg text-xs font-bold border border-yellow-400/20 flex items-center gap-2">
+                         #{t}
+                         <button onClick={() => setTags(tags.filter(tag => tag !== t))} className="p-0.5 hover:bg-yellow-400/20 rounded-full">
+                           <span className="material-symbols-outlined text-[14px]">close</span>
+                         </button>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            </div>
+
+            <div className="mt-12 flex justify-end gap-3 pt-8 border-t border-slate-100">
+              <button 
+                onClick={() => setShowSettingsModal(false)}
+                className="px-10 py-4 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+              >
+                Lưu thiết lập
               </button>
             </div>
           </div>

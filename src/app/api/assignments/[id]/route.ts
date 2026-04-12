@@ -35,6 +35,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         readingText: baseAssignment.readingText,
         videoUrl: baseAssignment.videoUrl || null,
         audioUrl: baseAssignment.audioUrl || null,
+        subject: baseAssignment.subject || null,
+        gradeLevel: baseAssignment.gradeLevel || null,
+        shortDescription: baseAssignment.shortDescription || null,
+        tags: baseAssignment.tags || "",
         questions: questions.map(q => {
           // Parse the stringified JSON from the database
           const parsed = JSON.parse(q.content);

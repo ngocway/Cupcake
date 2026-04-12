@@ -30,6 +30,13 @@ export function ReadingExerciseBuilder({
   const [audioUrl, setAudioUrl] = useState('');
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
+  // Metadata States
+  const [subject, setSubject] = useState('Toán học');
+  const [gradeLevel, setGradeLevel] = useState('Lớp 10');
+  const [shortDescription, setShortDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
   const [imageControlPos, setImageControlPos] = useState({ top: 0, left: 0 });
   const [textToolbarPos, setTextToolbarPos] = useState({ top: 0, left: 0, show: false });
@@ -140,6 +147,12 @@ export function ReadingExerciseBuilder({
               if (hasMarkers) setVocabEnabled(true);
             }
           }
+          if (data.assignment.subject) setSubject(data.assignment.subject);
+          if (data.assignment.gradeLevel) setGradeLevel(data.assignment.gradeLevel);
+          if (data.assignment.shortDescription) setShortDescription(data.assignment.shortDescription);
+          if (data.assignment.tags) {
+             setTags(data.assignment.tags.split(',').filter(Boolean));
+          }
         }
       } catch (err) {
         console.error('Initial fetch failed:', err);
@@ -190,7 +203,11 @@ export function ReadingExerciseBuilder({
         questions: questions, 
         readingText: contentHtml,
         videoUrl: videoUrl,
-        audioUrl: audioUrl
+        audioUrl: audioUrl,
+        subject,
+        gradeLevel,
+        shortDescription,
+        tags: tags.join(',')
       });
       
       setSavingStatus('saved');
@@ -666,6 +683,15 @@ export function ReadingExerciseBuilder({
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="px-5 py-2 rounded-lg flex items-center border border-slate-200 dark:border-gray-700 hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
+            >
+              <span className="flex items-center gap-2 text-[13px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                <span className="material-symbols-outlined text-[18px] group-hover:rotate-45 transition-transform">settings</span> Thiết lập
+              </span>
+            </button>
+
             <div className="px-5 py-2 rounded-lg flex items-center border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer" onMouseDown={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}>
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageInsert} />
               <span className="flex items-center gap-2 text-[13px] font-bold text-primary dark:text-primary-fixed uppercase tracking-wide">
@@ -1148,12 +1174,140 @@ export function ReadingExerciseBuilder({
                 </div>
 
                 <button 
-                  onClick={() => setValidationModal({ ...validationModal, show: false })}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm editorial-shadow hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+                   onClick={() => setValidationModal({ ...validationModal, show: false })}
+                   className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm editorial-shadow hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
                 >
                   ĐÃ HIỂU, ĐỂ TÔI NHẬP LẠI
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Modal */}
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-gray-900 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-white/10 flex flex-col max-h-[90vh]">
+               {/* Modal Header */}
+               <div className="p-8 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-4">
+                     <div className="size-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+                        <span className="material-symbols-outlined">settings</span>
+                     </div>
+                     <div>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white font-headline">Thiết lập học liệu</h2>
+                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Cấu hình thông tin hiển thị công khai</p>
+                     </div>
+                  </div>
+                  <button onClick={() => { setIsSettingsOpen(false); handleSave(); }} className="size-10 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 flex items-center justify-center transition-all group">
+                     <span className="material-symbols-outlined text-slate-400 group-hover:rotate-90 transition-transform">close</span>
+                  </button>
+               </div>
+
+               {/* Modal Content */}
+               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+                  <div className="grid grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Môn học</label>
+                        <select 
+                          value={subject}
+                          onChange={(e) => setSubject(e.target.value)}
+                          className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm"
+                        >
+                           {['Toán học', 'Tiếng Anh', 'Ngữ Văn', 'Vật Lý', 'Hóa Học', 'Sinh Học', 'Lịch Sử', 'Địa Lý', 'GDCD', 'Tin Học'].map(s => (
+                             <option key={s} value={s}>{s}</option>
+                           ))}
+                        </select>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Khối lớp</label>
+                        <select 
+                          value={gradeLevel}
+                          onChange={(e) => setGradeLevel(e.target.value)}
+                          className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm"
+                        >
+                           {['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi Đại học'].map(g => (
+                             <option key={g} value={g}>{g}</option>
+                           ))}
+                        </select>
+                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                     <div className="flex justify-between items-center px-1">
+                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">Mô tả ngắn</label>
+                        <span className={`text-[10px] font-bold ${shortDescription.length > 180 ? 'text-red-500' : 'text-slate-400'}`}>{shortDescription.length}/200</span>
+                     </div>
+                     <textarea 
+                        value={shortDescription}
+                        onChange={(e) => setShortDescription(e.target.value.slice(0, 200))}
+                        placeholder="Một mô tả ngắn gọn giúp học sinh hiểu nội dung bài học này (khoảng 2 câu)..."
+                        className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-medium text-sm min-h-[100px] resize-none"
+                     />
+                  </div>
+
+                  <div className="space-y-4">
+                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Gắn thẻ (Tags)</label>
+                     <div className="flex flex-wrap gap-2">
+                        {['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => {
+                              if (tags.includes(tag)) setTags(tags.filter(t => t !== tag));
+                              else setTags([...tags, tag]);
+                            }}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                              tags.includes(tag) 
+                              ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105' 
+                              : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                     </div>
+
+                     <div className="relative">
+                        <input 
+                           type="text"
+                           placeholder="Nhập thẻ tự chọn và nhấn Enter..."
+                           className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm pr-12"
+                           onKeyDown={(e) => {
+                             if (e.key === 'Enter') {
+                               const val = (e.target as HTMLInputElement).value.trim();
+                               if (val && !tags.includes(val)) {
+                                 setTags([...tags, val]);
+                                 (e.target as HTMLInputElement).value = '';
+                               }
+                             }
+                           }}
+                        />
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">add</span>
+                     </div>
+                     
+                     {/* Custom tags preview with delete */}
+                     <div className="flex flex-wrap gap-3 mt-2">
+                        {tags.filter(t => !['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].includes(t)).map(t => (
+                          <div key={t} className="px-4 py-1.5 bg-yellow-400/10 text-yellow-600 rounded-lg text-xs font-bold border border-yellow-400/20 flex items-center gap-2">
+                             #{t}
+                             <button onClick={() => setTags(tags.filter(tag => tag !== t))} className="p-0.5 hover:bg-yellow-400/20 rounded-full">
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                             </button>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+
+               {/* Modal Footer */}
+               <div className="p-8 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-800 shrink-0">
+                  <button 
+                    onClick={() => { setIsSettingsOpen(false); handleSave(); }}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-900/20"
+                  >
+                     Xác nhận & Lưu thiết lập
+                  </button>
+               </div>
             </div>
           </div>
         )}

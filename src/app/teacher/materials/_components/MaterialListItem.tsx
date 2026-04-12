@@ -17,6 +17,9 @@ type Assignment = {
   thumbnail: string | null;
   questionCount: number;
   assignedCount: number;
+  viewCount: number;
+  publicSubmissionCount: number;
+  tags: string[];
   classes?: { 
     id: string; 
     name: string;
@@ -229,8 +232,23 @@ export function MaterialListItem({
     <>
       <div 
         onClick={() => handleEdit()}
-        className={`bg-white dark:bg-gray-800 p-5 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg transition-all group flex flex-col gap-4 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
-        <div className="flex items-start justify-between gap-3">
+        className={`bg-white dark:bg-gray-800 p-0 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg transition-all group flex flex-col ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+        
+        <div className="flex gap-4 p-5">
+          <div 
+            onClick={(e) => { e.stopPropagation(); handleEdit(); }}
+            className="size-24 rounded-xl bg-slate-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 cursor-pointer border border-slate-100 dark:border-gray-600 relative group/thumb"
+          >
+            <img 
+              src={assignment.thumbnail || `https://api.dicebear.com/7.x/identicon/svg?seed=${assignment.id}&backgroundColor=f0f2f4`} 
+              alt={assignment.title}
+              className="size-full object-cover group-hover/thumb:scale-110 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all">
+              <span className="material-symbols-outlined text-white">edit</span>
+            </div>
+          </div>
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 
@@ -254,7 +272,15 @@ export function MaterialListItem({
                   {assignment.gradeLevel}
                 </span>
               )}
+              {assignment.tags?.slice(0, 3).map(tag => (
+                <span key={tag} className="px-2 py-0.5 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 text-[10px] font-bold rounded-md border border-yellow-100 dark:border-yellow-800/30">
+                   #{tag}
+                </span>
+              ))}
             </div>
+            {assignment.tags?.length > 3 && (
+              <span className="text-[10px] text-slate-400 font-bold mt-1 px-1">+{assignment.tags.length - 3} thẻ khác</span>
+            )}
           </div>
           {!isTrash && (
             <div className="relative group/menu shrink-0" ref={menuRef}>
@@ -346,10 +372,21 @@ export function MaterialListItem({
 
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#f0f2f4] dark:border-gray-700/50">
           <div className="flex items-center gap-3 text-sm text-[#617589]">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" title="Số câu hỏi">
               <span className="material-symbols-outlined text-[18px]">quiz</span> {assignment.questionCount}
             </div>
+
+            <div className="w-[1px] h-3 bg-slate-200 dark:bg-gray-700 mx-1"></div>
+
+            <div className="flex items-center gap-1" title="Lượt xem công khai">
+              <span className="material-symbols-outlined text-[18px]">visibility</span> {assignment.viewCount || 0}
+            </div>
+
+            <div className="flex items-center gap-1" title="Lượt làm bài công khai">
+              <span className="material-symbols-outlined text-[18px]">task_alt</span> {assignment.publicSubmissionCount || 0}
+            </div>
             
+            <div className="w-[1px] h-3 bg-slate-200 dark:bg-gray-700 mx-1"></div>
             {assignment.assignedCount > 0 && (
               <div className="relative">
                 <button 

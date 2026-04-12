@@ -54,6 +54,9 @@ export async function GET(req: NextRequest) {
         thumbnail: a.thumbnail,
         questionCount: a._count.questions,
         assignedCount: a._count.targetClasses,
+        viewCount: a.viewCount,
+        publicSubmissionCount: a.publicSubmissionCount,
+        tags: a.tags ? a.tags.split(',') : [],
         classes: a.targetClasses.map(tc => ({
           id: tc.class.id,
           name: tc.class.name,

@@ -16,6 +16,9 @@ type Assignment = {
   thumbnail: string | null;
   questionCount: number;
   assignedCount: number;
+  viewCount: number;
+  publicSubmissionCount: number;
+  tags: string[];
   createdAt: string;
   classes?: any[];
 };
