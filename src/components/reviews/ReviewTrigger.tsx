@@ -1,0 +1,115 @@
+"use client"
+
+import { useState } from "react"
+import { Star, MessageSquare, Send, X, CheckCircle2, Loader2 } from "lucide-react"
+import { submitAssignmentReview, submitLessonReview } from "@/actions/reviews"
+
+interface ReviewTriggerProps {
+    type: 'assignment' | 'lesson'
+    id: string
+    isLoggedIn: boolean
+}
+
+export function ReviewTrigger({ type, id, isLoggedIn }: ReviewTriggerProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleSubmit = async () => {
+        if (rating === 0) return;
+        setLoading(true);
+        try {
+            const action = type === 'assignment' ? submitAssignmentReview : submitLessonReview;
+            const res = await action({ 
+                [type === 'assignment' ? 'assignmentId' : 'lessonId']: id, 
+                rating, 
+                comment 
+            } as any);
+
+            if (res.success) {
+                setSubmitted(true);
+                setTimeout(() => setIsOpen(false), 2000);
+            } else {
+                alert(res.error);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isLoggedIn) return null;
+
+    return (
+        <div className="fixed bottom-10 right-10 z-[100] flex flex-col items-end gap-3">
+            {isOpen ? (
+                <div className="bg-white p-8 rounded-[40px] shadow-2xl border border-slate-100 w-[350px] animate-in slide-in-from-bottom-10 fade-in duration-500">
+                    <button onClick={() => setIsOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-colors">
+                        <X className="w-5 h-5" />
+                    </button>
+
+                    {submitted ? (
+                        <div className="py-10 text-center space-y-4">
+                            <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto">
+                                <CheckCircle2 className="w-10 h-10" />
+                            </div>
+                            <h4 className="text-xl font-black italic">Cảm ơn bạn!</h4>
+                            <p className="text-sm text-slate-500 font-medium">Đánh giá của bạn đã giúp cộng đồng học tập tốt hơn.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            <div>
+                                <h4 className="text-2xl font-black font-headline italic">Đánh giá {type === 'assignment' ? 'bài tập' : 'bài học'}?</h4>
+                                <p className="text-sm text-slate-500 font-medium mt-1">Phản hồi của bạn thực sự quý giá với giáo viên.</p>
+                            </div>
+
+                            <div className="flex justify-center gap-3">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <button 
+                                        key={star} 
+                                        onClick={() => setRating(star)}
+                                        className="transition-transform active:scale-90"
+                                    >
+                                        <Star className={`w-10 h-10 ${rating >= star ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'} transition-colors`} />
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    <MessageSquare className="w-3 h-3" /> Bình luận (Tùy chọn)
+                                </div>
+                                <textarea 
+                                    className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
+                                    value={comment}
+                                    onChange={e => setComment(e.target.value)}
+                                    placeholder="Viết cảm nhận của bạn..."
+                                />
+                            </div>
+
+                            <button 
+                                onClick={handleSubmit}
+                                disabled={rating === 0 || loading}
+                                className="w-full h-14 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-primary transition-all disabled:opacity-30 disabled:hover:bg-slate-950"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Gửi đánh giá"}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <button 
+                    onClick={() => setIsOpen(true)}
+                    className="w-16 h-16 bg-white border border-slate-100 text-slate-400 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 hover:text-yellow-400 hover:border-yellow-100 transition-all group relative"
+                >
+                    <Star className="w-8 h-8 group-hover:fill-yellow-400" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full animate-ping"></div>
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full"></div>
+                </button>
+            )}
+        </div>
+    );
+}

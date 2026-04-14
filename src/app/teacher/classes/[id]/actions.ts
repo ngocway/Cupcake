@@ -97,3 +97,106 @@ export async function toggleClassJoinability(classId: string, isJoinable: boolea
   revalidatePath(`/teacher/classes/${classId}`);
   return { success: true };
 }
+
+export async function updateStudentNote(classId: string, studentId: string, notes: string) {
+  await requireTeacherClass(classId);
+
+  await prisma.classEnrollment.update({
+    where: { studentId_classId: { studentId, classId } },
+    data: { notes }
+  });
+
+  return { success: true };
+}
+
+export async function getAnnouncements(classId: string) {
+  await requireTeacherClass(classId);
+
+  const announcements = await prisma.announcement.findMany({
+    where: { classId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return announcements;
+}
+
+export async function createAnnouncement(classId: string, content: string, attachments?: string) {
+  const cls = await requireTeacherClass(classId);
+
+  const announcement = await prisma.announcement.create({
+    data: {
+      classId,
+      content,
+      authorId: cls.teacherId,
+      attachments,
+    }
+  });
+
+  // Notify students
+  const { createNotification } = await import('@/actions/notification-actions');
+  const enrollments = await prisma.classEnrollment.findMany({
+    where: { classId, status: 'ACTIVE' },
+    select: { studentId: true }
+  });
+
+  for (const e of enrollments) {
+    await createNotification(
+      e.studentId,
+      'GENERAL',
+      `Thông báo mới từ lớp ${cls.name}`,
+      content.length > 100 ? content.substring(0, 97) + '...' : content,
+      `/student/classes/${classId}`
+    );
+  }
+
+  return { success: true, announcement };
+}
+
+export async function remindPendingSubmissions(classId: string, assignmentId: string) {
+  const cls = await requireTeacherClass(classId);
+
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    select: { title: true }
+  });
+
+  if (!assignment) throw new Error("Assignment not found");
+
+  // Find students who haven't submitted
+  const enrolledStudents = await prisma.classEnrollment.findMany({
+    where: { classId, status: 'ACTIVE' },
+    select: { studentId: true }
+  });
+
+  const submissions = await prisma.submission.findMany({
+    where: { 
+      assignmentId, 
+      studentId: { in: enrolledStudents.map(e => e.studentId) },
+      submittedAt: { not: null }
+    },
+    select: { studentId: true }
+  });
+
+  const submittedStudentIds = new Set(submissions.map(s => s.studentId));
+  const pendingStudentIds = enrolledStudents
+    .map(e => e.studentId)
+    .filter(id => !submittedStudentIds.has(id));
+
+  if (pendingStudentIds.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  // Notify them
+  const { createNotification } = await import('@/actions/notification-actions');
+  for (const studentId of pendingStudentIds) {
+    await createNotification(
+      studentId,
+      'DUE_REMINDER',
+      `Nhắc nhở nộp bài: ${assignment.title}`,
+      `Bạn vẫn chưa nộp bài tập "${assignment.title}" của lớp ${cls.name}. Hãy hoàn thành sớm nhé!`,
+      `/student/assignments/${assignmentId}/run`
+    );
+  }
+
+  return { success: true, count: pendingStudentIds.length };
+}

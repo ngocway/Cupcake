@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { ReviewTrigger } from "@/components/reviews/ReviewTrigger";
 
 export default async function LessonDetailPage({ 
   params 
@@ -230,8 +231,10 @@ export default async function LessonDetailPage({
                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12 group-hover:scale-110 transition-transform"></div>
             </div>
           )}
-        </div>
       </div>
+
+      {/* Voluntary Review Trigger (UC 11) */}
+      <ReviewTrigger type="lesson" id={id} isLoggedIn={!!session} />
     </div>
   );
 }

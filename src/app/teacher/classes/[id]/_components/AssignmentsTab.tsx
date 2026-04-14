@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 import { AssignContentModal } from './AssignContentModal';
+import { remindPendingSubmissions } from '../actions';
 
 type Assignment = {
   id: string;
@@ -47,6 +48,8 @@ export function AssignmentsTab({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [isReminding, setIsReminding] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchAssignments = async () => {
@@ -90,6 +93,24 @@ export function AssignmentsTab({
       (statusFilter === 'draft' && false);
     return matchesSearch && matchesStatus;
   });
+  
+  const handleRemind = async (assignmentId: string) => {
+    setOpenMenuId(null);
+    setIsReminding(true);
+    try {
+      const res = await remindPendingSubmissions(classId, assignmentId);
+      if (res.success) {
+        setToastMessage(`Đã gửi nhắc nhở cho ${res.count} học sinh chưa nộp bài.`);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Không thể gửi nhắc nhở');
+    } finally {
+      setIsReminding(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
@@ -259,7 +280,11 @@ export function AssignmentsTab({
                           <span className="material-symbols-outlined text-[20px] text-[#617589]">edit</span>
                           Chỉnh sửa
                         </button>
-                        <button className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left">
+                        <button 
+                          onClick={() => handleRemind(assignment.id)}
+                          disabled={isReminding}
+                          className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left disabled:opacity-50"
+                        >
                           <span className="material-symbols-outlined text-[20px] text-[#617589]">notifications</span>
                           Nhắc nhở
                         </button>
@@ -291,7 +316,7 @@ export function AssignmentsTab({
             </div>
             <div className="flex-1 mr-2">
               <p className="text-sm font-bold">Thành công!</p>
-              <p className="text-xs font-medium text-white/90">Giao bài tập thành công!</p>
+              <p className="text-xs font-medium text-white/90">{toastMessage || 'Giao bài tập thành công!'}</p>
             </div>
             <button 
               onClick={() => setShowSuccessToast(false)}

@@ -46,6 +46,7 @@ export async function GET(
       status: e.status,
       isManagedAccount: e.student.isManagedAccount,
       pin: e.student.isManagedAccount ? e.student.password ?? '' : undefined,
+      notes: e.notes ?? '',
     }));
 
     return NextResponse.json({

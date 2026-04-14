@@ -262,7 +262,7 @@ export function ReadingExerciseBuilder({
   useEffect(() => {
     const timer = setTimeout(() => handleSave(), 3000);
     return () => clearTimeout(timer);
-  }, [title, questions]);
+  }, [title, questions, subject, gradeLevel, shortDescription, tags]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

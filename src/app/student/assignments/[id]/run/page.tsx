@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { ReviewTrigger } from '@/components/reviews/ReviewTrigger';
 
 export default async function StudentLobbyPage({ 
   params,
@@ -51,6 +52,15 @@ export default async function StudentLobbyPage({
         </div>
       </div>
     );
+  }
+
+  // Increment view count (Simple tracking)
+  // Only increment if not the teacher
+  if (session.user.id !== assignment.teacherId) {
+    await prisma.assignment.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } }
+    });
   }
 
   const submissions = await prisma.submission.findMany({
@@ -242,6 +252,9 @@ export default async function StudentLobbyPage({
            </div>
         </div>
       </div>
+      
+      {/* Voluntary Review Trigger (UC 11) */}
+      <ReviewTrigger type="assignment" id={id} isLoggedIn={!!session} />
     </div>
   );
 }

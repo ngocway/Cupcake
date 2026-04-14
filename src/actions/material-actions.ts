@@ -533,3 +533,82 @@ export async function assignToClass(assignmentId: string, classId: string, paylo
   revalidatePath(`/teacher/classes/${classId}`);
   return { success: true };
 }
+export async function saveToQuestionBank(question: any, meta: { subject?: string; gradeLevel?: string; tags?: string }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  await prisma.questionBank.create({
+    data: {
+      teacherId: session.user.id,
+      type: question.type,
+      points: question.points,
+      explanation: question.explanation,
+      content: typeof question.content === 'object' ? JSON.stringify(question.content) : question.content,
+      mediaType: question.mediaType,
+      mediaUrl: question.mediaUrl,
+      imageUrl: question.imageUrl || null,
+      audioUrl: question.audioUrl || null,
+      videoUrl: question.videoUrl || null,
+      subject: meta.subject,
+      gradeLevel: meta.gradeLevel,
+      tags: meta.tags
+    }
+  });
+
+  return { success: true };
+}
+
+export async function getMaterialAnalytics(assignmentId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const submissions = await prisma.submission.findMany({
+    where: { assignmentId, submittedAt: { not: null } },
+    include: { answers: true }
+  });
+
+  const questions = await prisma.question.findMany({
+    where: { assignmentId },
+    orderBy: { orderIndex: 'asc' }
+  });
+
+  const stats = questions.map(q => {
+    const qAnswers = submissions.flatMap(s => s.answers.filter(a => a.questionId === q.id));
+    const correctCount = qAnswers.filter(a => a.isCorrect).length;
+    const totalCount = qAnswers.length;
+    
+    return {
+      questionId: q.id,
+      type: q.type,
+      correctRate: totalCount > 0 ? (correctCount / totalCount) * 100 : 0,
+      totalResponses: totalCount,
+      isHard: totalCount > 5 && (correctCount / totalCount) < 0.3
+    };
+  });
+
+  return {
+    totalSubmissions: submissions.length,
+    averageScore: submissions.length > 0 ? submissions.reduce((acc, s) => acc + (s.score || 0), 0) / submissions.length : 0,
+    questionStats: stats
+  };
+}
+
+export async function bulkAssignMaterial(assignmentId: string, payload: { classIds: string[]; startDate?: Date; deadline?: Date; timeLimit?: number }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const { classIds, ...settings } = payload;
+  
+  for (const classId of classIds) {
+    await assignToClass(assignmentId, classId, settings);
+  }
+  return { success: true };
+}
+
+export async function trackMaterialView(id: string) {
+  await prisma.assignment.update({
+    where: { id },
+    data: { viewCount: { increment: 1 } }
+  });
+  return { success: true };
+}

@@ -6,6 +6,7 @@ import { MaterialStatus, MaterialType } from '@prisma/client';
 import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
 import { useRouter } from 'next/navigation';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
+import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';
 
 type Assignment = {
   id: string;
@@ -63,6 +64,7 @@ export function MaterialListItem({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showClassesPopup, setShowClassesPopup] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [teacherClasses, setTeacherClasses] = useState<ClassOption[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -272,7 +274,7 @@ export function MaterialListItem({
                   {assignment.gradeLevel}
                 </span>
               )}
-              {assignment.tags?.slice(0, 3).map(tag => (
+              {Array.isArray(assignment.tags) && assignment.tags.slice(0, 3).map(tag => (
                 <span key={tag} className="px-2 py-0.5 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 text-[10px] font-bold rounded-md border border-yellow-100 dark:border-yellow-800/30">
                    #{tag}
                 </span>
@@ -353,6 +355,16 @@ export function MaterialListItem({
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span> Chỉnh sửa
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAnalyticsModal(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">analytics</span> Thống kê
                 </button>
                 <button 
                   onClick={(e) => {
@@ -588,6 +600,13 @@ export function MaterialListItem({
         onAssign={handleSyncClasses}
         classes={teacherClasses}
         initialSelectedIds={assignment.classes?.map(c => c.id) || []}
+      />
+
+      <MaterialAnalyticsModal
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+        assignmentId={assignment.id}
+        title={assignment.title}
       />
     </>
   );

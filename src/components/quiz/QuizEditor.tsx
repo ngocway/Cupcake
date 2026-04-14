@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
-import { autoSaveMaterial, syncAssignmentClasses } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank } from '@/actions/material-actions';
 import { MultipleChoiceBuilder } from './MultipleChoiceBuilder';
 import { ClozeTestBuilder } from './ClozeTestBuilder';
 import { MatchingBuilder } from './MatchingBuilder';
 import { TrueFalseBuilder } from './TrueFalseBuilder';
 import { ReorderBuilder } from './ReorderBuilder';
+import { QuestionBankModal } from './QuestionBankModal';
+import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from '@/components/ui/button';
 
@@ -41,6 +43,7 @@ export function QuizEditor() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
+  const [showBankModal, setShowBankModal] = useState(false);
   const [loading, setLoading] = useState(id !== 'new');
 
   // Initial fetch
@@ -98,7 +101,7 @@ export function QuizEditor() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [questions, title, id, loading]);
+  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags]);
 
   const handleFinish = async () => {
     const validQuestions = questions.filter(q => isQuestionValid(q));
@@ -154,6 +157,30 @@ export function QuizEditor() {
 
   const activeQuestion = questions.find(q => q.id === activeId);
   const activeIdx = questions.findIndex(q => q.id === activeId);
+
+  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (Array.isArray(data)) {
+          const newQs = data.map(q => ({
+            ...q,
+            id: uuidv4(),
+            orderIndex: questions.length
+          }));
+          setQuestions([...questions, ...newQs]);
+          alert(`Đã nhập thành công ${newQs.length} câu hỏi!`);
+        }
+      } catch (err) {
+        alert('File không đúng định dạng JSON.');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const handleAddQuestion = () => {
     const id = Date.now().toString();
@@ -220,6 +247,33 @@ export function QuizEditor() {
     newQuestions.splice(idx + 1, 0, { ...q, id: newId });
     setQuestions(newQuestions);
     setActiveId(newId);
+  };
+
+  const handleMoveQuestion = (id: string, direction: 'UP' | 'DOWN') => {
+    const idx = questions.findIndex(q => q.id === id);
+    if (direction === 'UP' && idx > 0) {
+      const newQ = [...questions];
+      [newQ[idx - 1], newQ[idx]] = [newQ[idx], newQ[idx - 1]];
+      setQuestions(newQ);
+    } else if (direction === 'DOWN' && idx < questions.length - 1) {
+      const newQ = [...questions];
+      [newQ[idx], newQ[idx + 1]] = [newQ[idx + 1], newQ[idx]];
+      setQuestions(newQ);
+    }
+  };
+
+  const [savingToBank, setSavingToBank] = useState<string | null>(null);
+  const handleSaveToBank = async (q: BaseQuestionProps) => {
+    setSavingToBank(q.id);
+    try {
+      await saveToQuestionBank(q, { subject, gradeLevel, tags: tags.join(',') });
+      alert('Đã lưu câu hỏi vào ngân hàng cá nhân!');
+    } catch (err) {
+      console.error(err);
+      alert('Không thể lưu vào ngân hàng');
+    } finally {
+      setSavingToBank(null);
+    }
   };
 
   const updateActiveQuestion = (data: Partial<BaseQuestionProps>) => {
@@ -426,29 +480,64 @@ export function QuizEditor() {
       <div className="flex flex-1 w-full px-6 py-8 gap-8">
         {/* Sidebar */}
         <aside className="w-1/5 shrink-0 flex flex-col gap-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Danh sách câu hỏi</h3>
-            <span className="text-xs font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-600">{questions.length}/15</span>
+          <div className="flex flex-col gap-2 mb-2">
+            <button 
+              onClick={() => setShowBankModal(true)}
+              className="w-full h-11 flex items-center gap-2 px-4 bg-amber-50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-xl font-bold text-sm hover:bg-amber-100 transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+              Ngân hàng câu hỏi
+            </button>
+            <label className="w-full h-11 flex items-center gap-2 px-4 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl font-bold text-sm hover:bg-emerald-100 transition-colors cursor-pointer shadow-sm">
+              <span className="material-symbols-outlined text-[20px]">upload_file</span>
+              Nhập từ File (JSON)
+              <input type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
+            </label>
           </div>
-          <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-200px)] custom-scrollbar pr-2">
+
+          <div className="flex items-center justify-between mt-2 mb-2">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Danh sách câu hỏi</h3>
+            <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-600">{questions.length}/15</span>
+          </div>
+          <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar pr-2">
             {questions.map((q, idx) => (
               <button 
                 key={q.id}
                 onClick={() => setActiveId(q.id)}
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
+                className={`flex items-start gap-3 p-3 rounded-xl border transition-all group ${
                   activeId === q.id 
                     ? 'bg-primary/5 border-2 border-primary' 
                     : 'bg-white border-slate-200 shadow-sm hover:border-primary/30'
                 } text-left`}
               >
-                <span className={`flex-shrink-0 size-6 rounded-md flex items-center justify-center text-xs font-bold ${
-                  activeId === q.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {idx + 1}
-                </span>
-                <p className={`text-sm ${activeId === q.id ? 'font-bold text-primary' : 'font-medium'} line-clamp-2`}>
-                  {getQuestionPreviewText(q, idx)}
-                </p>
+                <div className="flex-1 flex gap-3 min-w-0">
+                  <span className={`flex-shrink-0 size-6 rounded-md flex items-center justify-center text-xs font-bold ${
+                    activeId === q.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {idx + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${activeId === q.id ? 'font-bold text-primary' : 'font-medium'} line-clamp-2`}>
+                      {getQuestionPreviewText(q, idx)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleMoveQuestion(q.id, 'UP'); }}
+                      disabled={idx === 0}
+                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">expand_less</span>
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleMoveQuestion(q.id, 'DOWN'); }}
+                      disabled={idx === questions.length - 1}
+                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">expand_more</span>
+                    </button>
+                  </div>
+                </div>
               </button>
             ))}
             <button 
@@ -559,16 +648,20 @@ export function QuizEditor() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                  <span className="uppercase tracking-wider text-xs font-bold">Điểm:</span>
-                  <input 
-                    className="w-16 h-9 rounded-lg border-slate-200 text-center font-bold text-primary focus:ring-primary focus:border-primary" 
-                    step="0.1" 
-                    type="number" 
-                    value={activeQuestion?.points}
                     onChange={(e) => updateActiveQuestion({ points: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
+                <button 
+                  onClick={() => activeQuestion && handleSaveToBank(activeQuestion)}
+                  disabled={savingToBank === activeId || !isValid}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    savingToBank === activeId ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+                  }`}
+                  title="Lưu câu hỏi này vào ngân hàng để tái sử dụng"
+                >
+                  <span className="material-symbols-outlined text-[18px]">{savingToBank === activeId ? 'sync' : 'account_balance_wallet'}</span>
+                  {savingToBank === activeId ? 'Đang lưu...' : 'Lưu vào Ngân hàng'}
+                </button>
               </div>
             </div>
             
@@ -955,6 +1048,16 @@ export function QuizEditor() {
           </div>
         </div>
       )}
+      <QuestionBankModal 
+        isOpen={showBankModal}
+        onClose={() => setShowBankModal(false)}
+        onSelect={(q) => {
+          const newId = uuidv4();
+          setQuestions([...questions, { ...q, id: newId, orderIndex: questions.length }]);
+          setActiveId(newId);
+          setShowBankModal(false);
+        }}
+      />
     </div>
   );
 }

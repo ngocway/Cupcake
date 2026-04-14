@@ -31,6 +31,7 @@ export default function MaterialLibraryPage() {
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showTrash, setShowTrash] = useState(false);
   
   useEffect(() => {
     // Initial load from URL
@@ -45,6 +46,11 @@ export default function MaterialLibraryPage() {
 
     window.addEventListener('search-change', handleSearchChange);
     return () => window.removeEventListener('search-change', handleSearchChange);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('trash') === 'true') setShowTrash(true);
   }, []);
   const [isCreating, setIsCreating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,6 +72,7 @@ export default function MaterialLibraryPage() {
     try {
       const url = new URL('/api/assignments', window.location.origin);
       url.searchParams.set('sort', sortOrder);
+      url.searchParams.set('trash', showTrash.toString());
       
       const res = await fetch(url.toString());
       const data = await res.json();
@@ -82,7 +89,7 @@ export default function MaterialLibraryPage() {
   useEffect(() => {
     fetchAssignments();
     setCurrentPage(1); // Reset page on filter/sort change
-  }, [statusFilter, typeFilter, sortOrder]);
+  }, [statusFilter, typeFilter, sortOrder, showTrash]);
 
   const filteredAssignments = assignments.filter(a => {
     const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -161,6 +168,17 @@ export default function MaterialLibraryPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowTrash(!showTrash)}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all border ${
+                showTrash 
+                  ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-gray-800 dark:text-white dark:border-gray-700' 
+                  : 'text-[#617589] border-[#f0f2f4] dark:border-gray-700 hover:bg-slate-50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px]">{showTrash ? 'arrow_back' : 'delete'}</span>
+              {showTrash ? 'Quay lại' : 'Thùng rác'}
+            </button>
             <div className="relative">
               <select 
                 value={sortOrder}
@@ -238,10 +256,9 @@ export default function MaterialLibraryPage() {
                 <MaterialListItem 
                   key={assignment.id} 
                   assignment={assignment} 
-                  onDelete={() => {
-                    setAssignments(prev => prev.filter(a => a.id !== assignment.id));
-                  }}
+                  onDelete={fetchAssignments}
                   onRefresh={fetchAssignments}
+                  isTrash={showTrash}
                 />
               ))}
               

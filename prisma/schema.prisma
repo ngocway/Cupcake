@@ -26,8 +26,85 @@ model User {
   lessons          Lesson[]
   purchases        Purchase[]
   submissions      Submission[]
+  bio              String?
+  professionalTitle String?
+  coverImage       String?
+  socialLinks      String?           // JSON string of social links
+  expertiseTags    String?           @default("")
+  
+  // Teacher Portfolio Settings
+  isPortfolioPublished Boolean       @default(false)
+  hourlyRate       Float?
+  location         String?           // For offline tutoring
+  education        String?           // JSON or Markdown
+  teachingExperience String?         // Markdown long text
+  studentViewTheme String?           @default("DYNAMIC") // DYNAMIC (Sinh động) or PROFESSIONAL (Chuyên nghiệp)
+  certificates     Certificate[]
+  inquiries        TeachingInquiry[]
+
+
+  // Teacher Settings
+  themeColor       String?           @default("#00adef")
+  logoUrl          String?
+  isIncognito      Boolean           @default(false)
+  notifySubmission Boolean           @default(true)
+  notifyReview     Boolean           @default(true)
+  notifyWeekly     Boolean           @default(false)
+  blockedUserIds   String?           @default("") // Comma separated IDs
+  
+  following        Follower[]        @relation("Following")
+  followers        Follower[]        @relation("Followers")
+  
   notifications    Notification[]
   favoriteLessons  FavoriteLesson[]
+  favoriteAssignments FavoriteAssignment[]
+  assignmentReviews   AssignmentReview[]
+  lessonReviews       LessonReview[]
+
+  // Admin Dynamic RBAC
+  adminRoleId      String?
+  adminRole        AdminRole?        @relation("UserAdminRole", fields: [adminRoleId], references: [id])
+}
+
+model AdminRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String   // JSON string: ["dashboard.view", "users.manage", ...]
+  users       User[]   @relation("UserAdminRole")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Certificate {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  issuer    String
+  issueDate DateTime?
+  imageUrl  String
+  isVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeachingInquiry {
+  id        String   @id @default(cuid())
+  teacherId String
+  studentId String
+  message   String
+  status    String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  createdAt DateTime @default(now())
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+}
+
+
+model Follower {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+  @@id([followerId, followingId])
 }
 
 model Class {
@@ -42,6 +119,7 @@ model Class {
   deletedAt   DateTime?
   createdAt   DateTime          @default(now())
   assignments AssignmentClass[]
+  announcements Announcement[]
   teacher     User              @relation("TeacherClasses", fields: [teacherId], references: [id])
   enrollments ClassEnrollment[]
 }
@@ -52,6 +130,7 @@ model ClassEnrollment {
   status    EnrollmentStatus @default(ACTIVE)
   joinedAt  DateTime         @default(now())
   nickname  String?
+  notes     String?
   class     Class            @relation(fields: [classId], references: [id])
   student   User             @relation(fields: [studentId], references: [id])
 
@@ -96,6 +175,8 @@ model Assignment {
   lesson              Lesson?
   questions           Question[]
   submissions         Submission[]
+  favoriteAssignments FavoriteAssignment[]
+  reviews             AssignmentReview[]
 }
 
 model FlashcardDeck {
@@ -147,8 +228,29 @@ model Question {
   videoUrl      String?
   isAiGenerated Boolean            @default(false)
   aiPrompt      String?
+  isBanked      Boolean            @default(false)
+  originalId    String?            // Reference to QuestionBank if cloned from there
   assignment    Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   answers       SubmissionAnswer[]
+}
+
+model QuestionBank {
+  id            String             @id @default(cuid())
+  teacherId     String
+  type          QuestionType
+  points        Float
+  explanation   String?
+  content       String
+  mediaType     MediaType          @default(NONE)
+  mediaUrl      String?
+  imageUrl      String?
+  audioUrl      String?
+  videoUrl      String?
+  subject       String?
+  gradeLevel    String?
+  tags          String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
 }
 
 model Submission {
@@ -198,6 +300,7 @@ model Lesson {
   teacher        User        @relation(fields: [teacherId], references: [id])
   purchases      Purchase[]
   favorites      FavoriteLesson[]
+  reviews        LessonReview[]
 }
 
 model FavoriteLesson {
@@ -322,4 +425,50 @@ model Notification {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  classId   String
+  content   String
+  authorId  String
+  attachments String? // JSON string of attachments
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+model FavoriteAssignment {
+  studentId    String
+  assignmentId String
+  createdAt    DateTime @default(now())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, assignmentId])
+}
+
+model AssignmentReview {
+  id           String     @id @default(cuid())
+  studentId    String
+  assignmentId String
+  rating       Int        // 1 to 5
+  comment      String?
+  createdAt    DateTime   @default(now())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  @@unique([studentId, assignmentId])
+}
+
+model LessonReview {
+  id        String   @id @default(cuid())
+  studentId String
+  lessonId  String
+  rating    Int      // 1 to 5
+  comment   String?
+  createdAt DateTime @default(now())
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  @@unique([studentId, lessonId])
 }

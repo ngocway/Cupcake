@@ -5,8 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AddStudentModal } from './_components/AddStudentModal';
 import { StudentUpdateModal } from './_components/StudentUpdateModal';
+import { StudentNoteModal } from './_components/StudentNoteModal';
 import { ClassQRModal } from './_components/ClassQRModal';
 import { AssignmentsTab } from './_components/AssignmentsTab';
+import { GradesTab } from './_components/GradesTab';
+import { ClassFeedTab } from './_components/ClassFeedTab';
 import { updateEnrollmentStatus, removeEnrollment, bulkUpdateEnrollments, bulkRemoveEnrollments, toggleClassJoinability } from './actions';
 
 type Student = {
@@ -16,6 +19,7 @@ type Student = {
   status: string;
   isManagedAccount: boolean;
   pin?: string;
+  notes: string;
 };
 
 export default function ClassDashboard() {
@@ -25,7 +29,7 @@ export default function ClassDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [className, setClassName] = useState('Lớp học');
-  const [activeTab, setActiveTab] = useState<'students' | 'assignments' | 'grades'>('students');
+  const [activeTab, setActiveTab] = useState<'feed' | 'students' | 'assignments' | 'grades'>('feed');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -33,6 +37,7 @@ export default function ClassDashboard() {
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [selectedStudentForUpdate, setSelectedStudentForUpdate] = useState<Student | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [selectedStudentForNote, setSelectedStudentForNote] = useState<Student | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [openAssignmentCount, setOpenAssignmentCount] = useState(0);
 
@@ -172,11 +177,17 @@ export default function ClassDashboard() {
       {/* Tabs */}
       <div className="border-b border-[#f0f2f4] dark:border-gray-800 -mt-2">
         <nav className="flex gap-8">
+          <button onClick={() => setActiveTab('feed')} className={`py-4 text-sm transition-all ${activeTab === 'feed' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Bảng tin</button>
           <button onClick={() => setActiveTab('students')} className={`py-4 text-sm transition-all ${activeTab === 'students' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Học sinh</button>
           <button onClick={() => setActiveTab('assignments')} className={`py-4 text-sm transition-all ${activeTab === 'assignments' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Bài tập</button>
           <button onClick={() => setActiveTab('grades')} className={`py-4 text-sm transition-all ${activeTab === 'grades' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Bảng điểm</button>
         </nav>
       </div>
+
+      {/* Tab: FEED */}
+      {activeTab === 'feed' && (
+        <ClassFeedTab classId={classId} />
+      )}
 
       {/* Tab: STUDENTS */}
       {activeTab === 'students' && (
@@ -256,6 +267,7 @@ export default function ClassDashboard() {
                       <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Email</th>
                       <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Mã PIN</th>
                       <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Trạng thái</th>
+                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Ghi chú</th>
                       <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider w-10"></th>
                     </tr>
                   ) : (
@@ -399,6 +411,13 @@ export default function ClassDashboard() {
                                 </button>
                               )}
                               <button 
+                                onClick={() => setSelectedStudentForNote(student)}
+                                className={`flex items-center justify-center p-1.5 rounded-lg transition-colors ${student.notes ? 'text-primary bg-primary/10' : 'text-[#617589] hover:bg-gray-100'}`}
+                                title={student.notes ? 'Xem ghi chú' : 'Thêm ghi chú'}
+                              >
+                                <span className="material-symbols-outlined text-[20px]">{student.notes ? 'speaker_notes' : 'note_add'}</span>
+                              </button>
+                              <button 
                                 onClick={() => setOpenMenuId(openMenuId === student.id ? null : student.id)}
                                 className="text-[#617589] hover:text-[#111418] dark:hover:text-white transition-colors"
                               >
@@ -467,26 +486,9 @@ export default function ClassDashboard() {
         <AssignmentsTab classId={classId} onOpenCountChange={setOpenAssignmentCount} />
       )}
 
-      {/* Tab: GRADES Placeholder */}
+      {/* Tab: GRADES */}
       {activeTab === 'grades' && (
-        <div className="animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-gray-800 border border-[#f0f2f4] dark:border-gray-700 rounded-2xl p-5 shadow-sm text-center py-20 text-[#617589]">
-            <h3 className="font-bold text-[#111418] dark:text-white text-lg mb-2">Bảng điểm</h3>
-            <p className="max-w-md mx-auto mb-6 text-sm">Tính năng Bảng điểm đang được phát triển. Dưới đây là ví dụ hiển thị trạng thái nộp bài.</p>
-            
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="flex flex-col items-center bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-[#f0f2f4] dark:border-gray-700 min-w-32">
-                 <span className="font-bold text-[#111418] dark:text-white text-sm">Nguyễn Văn An</span>
-                 <span className="text-emerald-600 font-bold mt-2">9.5 đ</span>
-              </div>
-              <div className="flex flex-col items-center bg-orange-50/50 dark:bg-orange-900/20 p-4 rounded-xl border border-orange-100 dark:border-orange-900/50 min-w-32 relative">
-                 <div className="absolute -top-3 right-[-10px] bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">Nộp muộn</div>
-                 <span className="font-bold text-[#111418] dark:text-white text-sm">Lê Hoàng Cường</span>
-                 <span className="text-[#617589] font-bold mt-2">7.2 đ</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <GradesTab classId={classId} />
       )}
 
       <AddStudentModal 
@@ -516,6 +518,18 @@ export default function ClassDashboard() {
         onClose={() => setIsQRModalOpen(false)}
         className={className}
         joinCode={joinCode}
+      />
+
+      <StudentNoteModal
+        isOpen={!!selectedStudentForNote}
+        onClose={() => setSelectedStudentForNote(null)}
+        student={selectedStudentForNote}
+        classId={classId}
+        onSuccess={(newNotes) => {
+          setStudents(prev => prev.map(s => 
+            s.id === selectedStudentForNote?.id ? { ...s, notes: newNotes } : s
+          ));
+        }}
       />
 
     </div>

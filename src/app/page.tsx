@@ -2,41 +2,65 @@ import { auth } from "@/auth"
 import { getPublicMaterials } from "@/actions/public-materials"
 import Link from "next/link"
 import { LoginButton } from "@/components/LoginButton"
-import { Search, BookOpen, GraduationCap, ChevronRight, Play, Star, BookMarked, Users, Globe } from "lucide-react"
+import { Search, BookOpen, GraduationCap, ChevronRight, Play, Star, BookMarked, Users, Globe, LayoutGrid, Sparkles } from "lucide-react"
+import { BookmarkButton } from "@/components/public/BookmarkButton"
 
-export default async function HomePage() {
-  const session = await auth()
-  const { assignments, lessons } = await getPublicMaterials()
+export default async function HomePage({
+  searchParams
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const session = await auth();
+  const sp = await searchParams;
   
+  const search = sp.search as string || "";
+  const category = sp.category as string || "Tất cả";
+  const sort = (sp.sort as 'newest' | 'popular' | 'trending') || 'newest';
+  const page = Number(sp.page) || 1;
+
+  const { assignments, lessons, total, hasMore } = await getPublicMaterials({
+    search,
+    category,
+    sort,
+    page
+  });
+  
+  const stats = {
+    students: "12,480+",
+    teachers: "840+",
+    publicMaterials: "3,250+",
+    activeClasses: "1,200+"
+  };
+
   return (
     <div className="min-h-screen bg-[#fafbff] font-body text-slate-900 overflow-x-hidden">
-      {/* Top Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-2xl border-b border-slate-100 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-12">
           <Link href="/" className="text-2xl font-black tracking-tighter text-slate-950 font-headline italic">
             Scholar Script
           </Link>
           <div className="hidden lg:flex items-center gap-8 border-l border-slate-200 pl-8">
-            <Link className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors flex items-center gap-2" href="#">
+            <Link className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors flex items-center gap-2" href="#library">
               Thư viện cộng đồng
             </Link>
             <Link className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors" href="#">
               Giáo viên
             </Link>
-            <Link className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors" href="#">
-              Về chúng tôi
-            </Link>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-full border border-slate-200/50 group focus-within:ring-2 focus-within:ring-primary/10 transition-all mr-4">
+          <form action="/" method="GET" className="hidden md:flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-full border border-slate-200/50 group focus-within:ring-2 focus-within:ring-primary/10 transition-all mr-4">
             <Search className="w-4 h-4 text-slate-400 group-focus-within:text-primary" />
             <input 
+              name="search"
+              defaultValue={search}
               placeholder="Tìm bài học công khai..." 
               className="bg-transparent border-none outline-none text-sm w-48 font-medium placeholder:text-slate-400"
             />
-          </div>
+            {category !== "Tất cả" && <input type="hidden" name="category" value={category} />}
+            {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
+          </form>
 
           {session ? (
             <div className="flex items-center gap-4">
@@ -60,7 +84,6 @@ export default async function HomePage() {
       </nav>
 
       <main className="pt-24 pb-12">
-        {/* Dynamic Hero Section */}
         <section className="relative px-6 py-16 md:py-24 overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 relative z-10">
             <div className="lg:w-1/2 space-y-8 animate-in fade-in slide-in-from-left-8 duration-700">
@@ -85,19 +108,20 @@ export default async function HomePage() {
                     </LoginButton>
                  )}
               </div>
+              
               <div className="flex items-center gap-6 pt-6 grayscale opacity-60">
                  <div className="flex flex-col">
-                   <span className="text-2xl font-black">10K+</span>
+                   <span className="text-2xl font-black">{stats.students}</span>
                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Học viên</span>
                  </div>
                  <div className="w-1 h-8 bg-slate-200"></div>
                  <div className="flex flex-col">
-                   <span className="text-2xl font-black">500+</span>
+                   <span className="text-2xl font-black">{stats.teachers}</span>
                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Giáo viên</span>
                  </div>
                  <div className="w-1 h-8 bg-slate-200"></div>
                  <div className="flex flex-col">
-                   <span className="text-2xl font-black">2.5K+</span>
+                   <span className="text-2xl font-black">{stats.publicMaterials}</span>
                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Bài tập công khai</span>
                  </div>
               </div>
@@ -121,7 +145,6 @@ export default async function HomePage() {
                         <h4 className="text-2xl font-bold">Khám phá tiềm năng của bạn mỗi ngày.</h4>
                      </div>
                   </div>
-                  {/* Floating badge */}
                   <div className="absolute -top-6 -right-6 bg-white p-5 rounded-3xl shadow-xl border border-slate-50 flex flex-col items-center gap-1 -rotate-6 animate-bounce duration-3000">
                      <div className="p-3 bg-yellow-400 text-white rounded-2xl">
                         <Play className="w-5 h-5 fill-white" />
@@ -131,22 +154,56 @@ export default async function HomePage() {
                </div>
             </div>
           </div>
-          {/* Decorative shapes */}
           <div className="absolute top-1/2 left-0 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl -ml-32"></div>
         </section>
 
-        {/* Categories Section */}
         <section className="px-6 py-12">
            <div className="max-w-7xl mx-auto flex flex-wrap gap-4 justify-center">
-              {["English", "Math", "Science", "History", "Coding", "Art"].map(cat => (
-                <button key={cat} className="px-8 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-bold text-slate-600 hover:border-primary/30 hover:text-primary hover:shadow-sm transition-all">
+              {["Tất cả", "English", "Math", "Science", "History", "Coding", "Art"].map(cat => (
+                <Link 
+                  key={cat} 
+                  href={`/?category=${cat}${search ? `&search=${search}` : ''}`}
+                  className={`px-8 py-3 bg-white border rounded-2xl text-sm font-bold transition-all ${
+                    category === cat ? 'border-primary text-primary shadow-sm bg-primary/5' : 'border-slate-100 text-slate-600 hover:border-primary/30'
+                  }`}
+                >
                    {cat}
-                </button>
+                </Link>
               ))}
            </div>
         </section>
 
-        {/* Public Library Section */}
+        <section className="px-6 py-12 bg-slate-50/30">
+           <div className="max-w-7xl mx-auto">
+              <div className="flex items-center gap-4 mb-8">
+                 <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+                    <LayoutGrid className="w-6 h-6" />
+                 </div>
+                 <h3 className="text-2xl font-black text-slate-950 font-headline italic">Khám phá theo khối lớp</h3>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                 {[
+                   { label: "Mầm non", icon: "🧸" },
+                   { label: "Lớp 1-5", icon: "🎒" },
+                   { label: "Lớp 6-9", icon: "📚" },
+                   { label: "Lớp 10-12", icon: "🎓" },
+                   { label: "Đại học", icon: "🏛️" },
+                   { label: "Kỹ năng soft", icon: "✨" }
+                 ].map(grade => (
+                    <Link 
+                      key={grade.label} 
+                      href={`/?search=${grade.label}`}
+                      className="group flex flex-col items-center p-6 bg-white border border-slate-100 rounded-[32px] hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all text-center"
+                    >
+                       <span className="text-3xl mb-3 group-hover:scale-125 transition-transform">{grade.icon}</span>
+                       <span className="text-xs font-black uppercase tracking-widest text-slate-900">{grade.label}</span>
+                       <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">Xem tài liệu</span>
+                    </Link>
+                 ))}
+              </div>
+           </div>
+        </section>
+
         <section id="library" className="px-6 py-20 bg-white">
           <div className="max-w-7xl mx-auto">
              <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
@@ -160,13 +217,25 @@ export default async function HomePage() {
                    </h2>
                    <p className="text-slate-500 font-medium max-w-xl">Học mọi lúc mọi nơi - Không giới hạn quyền truy cập cho dù bạn là ai.</p>
                 </div>
-                <div className="flex gap-4">
-                   <button className="p-3 border border-slate-100 rounded-2xl hover:bg-slate-50 transition-colors">
-                      <Search className="w-5 h-5" />
-                   </button>
-                   <button className="px-8 py-3 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-colors flex items-center gap-3">
-                      Xem tất cả <ChevronRight className="w-4 h-4" />
-                   </button>
+                
+                <div className="flex gap-3">
+                   <div className="bg-slate-50 p-1.5 rounded-2xl border border-slate-100 flex gap-1">
+                      {[
+                        { label: 'Mới nhất', value: 'newest' },
+                        { label: 'Xem nhiều', value: 'popular' },
+                        { label: 'Thịnh hành', value: 'trending' }
+                      ].map(s => (
+                        <Link 
+                          key={s.value}
+                          href={`/?sort=${s.value}${category !== 'Tất cả' ? `&category=${category}` : ''}${search ? `&search=${search}` : ''}`}
+                          className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                            sort === s.value ? 'bg-white text-primary shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          {s.label}
+                        </Link>
+                      ))}
+                   </div>
                 </div>
              </div>
 
@@ -184,6 +253,11 @@ export default async function HomePage() {
                               <Globe className="w-3 h-3" /> Công khai
                            </span>
                         </div>
+                        <BookmarkButton 
+                          assignmentId={assignment.id} 
+                          initialIsBookmarked={assignment.isBookmarked}
+                          isLoggedIn={!!session}
+                        />
                      </div>
                      <div className="p-8 flex-1 flex flex-col space-y-4">
                         <div className="flex items-center justify-between">
@@ -205,36 +279,50 @@ export default async function HomePage() {
                           </p>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          {(assignment.tags?.split(',') || []).slice(0, 3).filter(Boolean).map((tag: string) => (
+                          {(assignment.tags || []).slice(0, 3).map((tag: string) => (
                             <span key={tag} className="text-[9px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100">
                                #{tag}
                             </span>
                           ))}
                         </div>
-                        <div className="flex items-center gap-3 py-2 border-slate-50">
+                        
+                        <div className="flex items-center gap-3 py-2 border-slate-50 group/teacher relative">
                            <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-100">
                               <img src={assignment.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.teacher?.name}`} alt="Teacher" />
                            </div>
                            <div className="flex flex-col">
-                             <span className="text-xs font-bold text-slate-700 uppercase tracking-tight">{assignment.teacher?.name || 'Giáo viên'}</span>
+                             <span className="text-xs font-bold text-slate-700 uppercase tracking-tight hover:text-primary cursor-pointer transition-colors">{assignment.teacher?.name || 'Giáo viên'}</span>
                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Educator</span>
                            </div>
+                           
+                           <div className="absolute bottom-full left-0 mb-4 w-64 bg-slate-950 text-white p-6 rounded-3xl shadow-2xl opacity-0 translate-y-2 group-hover/teacher:opacity-100 group-hover/teacher:translate-y-0 transition-all pointer-events-none z-50">
+                              <div className="flex items-center gap-4 mb-4">
+                                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl overflow-hidden">
+                                     <img src={assignment.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.teacher?.name}`} alt="T" />
+                                 </div>
+                                 <div className="flex flex-col">
+                                    <span className="text-sm font-bold">{assignment.teacher?.name}</span>
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Giáo viên tâm tâm</span>
+                                 </div>
+                              </div>
+                              <p className="text-[11px] text-slate-400 line-clamp-3 leading-relaxed mb-4">
+                                 {assignment.teacher?.bio || "Một nhà giáo giáo dục luôn hướng tới việc tạo ra các nội dung học tập sáng tạo."}
+                              </p>
+                           </div>
                         </div>
+                        
                         <div className="pt-4 flex items-center justify-between border-t border-slate-100 mt-auto">
                            <div className="flex items-center gap-4 text-slate-400">
-                              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest" title="Số câu hỏi">
+                              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest">
                                  <BookOpen className="w-4 h-4" /> {assignment._count?.questions || 0}
                               </span>
-                              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest" title="Lượt xem">
+                              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest">
                                  <Globe className="w-4 h-4" /> {assignment.viewCount || 0}
-                              </span>
-                              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest" title="Lượt làm bài">
-                                 <Users className="w-4 h-4" /> {assignment.publicSubmissionCount || 0}
                               </span>
                            </div>
                            <Link 
                              href={session ? `/student/assignments/${assignment.id}/run` : `/join/${assignment.id}`}
-                             className="w-12 h-12 bg-slate-950 text-white rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group-hover:bg-primary shadow-xl shadow-slate-200"
+                             className="w-12 h-12 bg-slate-950 text-white rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group-hover:bg-primary"
                            >
                               <Play className="w-5 h-5 fill-white" />
                            </Link>
@@ -242,48 +330,54 @@ export default async function HomePage() {
                      </div>
                    </div>
                 )) : (
-                  <div className="col-span-3 py-20 text-center space-y-4 opacity-50">
-                     <BookMarked className="w-16 h-16 mx-auto text-slate-200" />
-                     <p className="font-bold text-slate-400 uppercase tracking-widest">Chưa có bài tập công khai nào được chia sẻ.</p>
-                  </div>
+                   <div className="col-span-3 py-20 text-center space-y-4 opacity-50">
+                      <BookMarked className="w-16 h-16 mx-auto text-slate-200" />
+                      <p className="font-bold text-slate-400 uppercase tracking-widest">Không tìm thấy kết quả nào phù hợp.</p>
+                   </div>
                 )}
              </div>
+             
+             {hasMore && (
+               <div className="mt-20 flex justify-center">
+                  <Link 
+                    href={`/?page=${page + 1}${category !== 'Tất cả' ? `&category=${category}` : ''}${sort !== 'newest' ? `&sort=${sort}` : ''}${search ? `&search=${search}` : ''}`}
+                    className="px-12 py-4 bg-slate-50 text-slate-900 border border-slate-200 font-black text-xs uppercase tracking-[0.2em] rounded-full hover:bg-slate-900 hover:text-white"
+                  >
+                    Xem thêm
+                  </Link>
+               </div>
+             )}
           </div>
         </section>
 
-        {/* Featured Lessons Section */}
         <section className="px-6 py-20 overflow-hidden bg-slate-50/50">
            <div className="max-w-7xl mx-auto">
               <div className="flex items-center justify-between mb-16">
                  <h2 className="text-3xl font-black text-slate-950 font-headline italic">Bài học tiêu điểm</h2>
                  <Link href="#" className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2 hover:translate-x-2 transition-all">
-                   Khám phá khóa học <ChevronRight className="w-4 h-4" />
+                    Khám phá khóa học <ChevronRight className="w-4 h-4" />
                  </Link>
               </div>
               <div className="flex overflow-x-auto no-scrollbar gap-8 pb-8">
                  {lessons.map((lesson: any) => (
-                    <div key={lesson.id} className="min-w-[320px] md:min-w-[400px] bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm group cursor-pointer hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500">
-                       <div className="h-56 rounded-2xl overflow-hidden mb-6 relative">
+                    <div key={lesson.id} className="min-w-[320px] md:min-w-[400px] bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-500">
+                       <div className="h-56 rounded-2xl overflow-hidden mb-6 relative group cursor-pointer">
                           <img 
                             src={lesson.videoUrl ? `https://img.youtube.com/vi/${lesson.videoUrl.split('v=')[1]}/hqdefault.jpg` : "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800"} 
                             alt={lesson.title} 
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 backdrop-blur-sm">
-                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl scale-50 group-hover:scale-100 transition-transform">
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl">
                                 <Play className="w-6 h-6 text-primary fill-primary" />
                              </div>
                           </div>
                        </div>
-                       <h4 className="text-xl font-bold text-slate-900 leading-tight mb-3 line-clamp-2">
-                          {lesson.title}
-                       </h4>
+                       <h4 className="text-xl font-bold text-slate-900 leading-tight mb-3 line-clamp-2">{lesson.title}</h4>
                        <p className="text-sm text-slate-500 line-clamp-2 mb-6">{lesson.description}</p>
-                       <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                           <div className="flex items-center gap-2">
-                             <div className="w-6 h-6 rounded-full overflow-hidden bg-slate-100">
-                                <img src={lesson.teacher.image || "https://i.pravatar.cc/100?img=1"} alt="Teacher" />
-                             </div>
+                             <img src={lesson.teacher.image || "https://i.pravatar.cc/100?img=1"} alt="T" className="w-6 h-6 rounded-full" />
                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{lesson.teacher.name}</span>
                           </div>
                           <span className="text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full">Free</span>
@@ -294,27 +388,17 @@ export default async function HomePage() {
            </div>
         </section>
 
-        {/* Conversion Hook Section */}
         {!session && (
           <section className="px-6 py-20 pb-32">
             <div className="max-w-7xl mx-auto bg-slate-950 rounded-[60px] p-12 md:p-24 relative overflow-hidden shadow-2xl">
                <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }}></div>
                <div className="relative z-10 text-center md:text-left space-y-10 max-w-2xl">
                   <span className="text-xs font-bold uppercase tracking-[0.5em] text-primary">Hành trình mới</span>
-                  <h2 className="text-5xl md:text-7xl font-black text-white leading-tight tracking-tighter">
-                     Sẵn sàng để trở <br/> thành <span className="text-primary italic">chuyên gia?</span>
-                  </h2>
-                  <p className="text-slate-400 text-lg md:text-xl leading-relaxed">
-                     Tham gia cùng hơn 10.000 học viên để lưu lại kết quả, chứng chỉ và nhận các lộ trình học tập tối ưu nhất.
-                  </p>
-                  <div className="flex flex-wrap gap-6 justify-center md:justify-start">
-                     <LoginButton className="h-16 px-12 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl shadow-primary/40 hover:scale-105 transition-all active:scale-95">
-                        Tạo tài khoản học tập miễn phí
-                     </LoginButton>
-                  </div>
+                  <h2 className="text-5xl md:text-7xl font-black text-white leading-tight">Sẵn sàng trở thành <span className="text-primary italic">chuyên gia?</span></h2>
+                  <p className="text-slate-400 text-lg md:text-xl">Tham gia cùng hơn 10.000 học viên để lưu lại kết quả và lộ trình học tập tối ưu.</p>
+                  <LoginButton className="h-16 px-12 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl">Bắt đầu ngay</LoginButton>
                </div>
-               {/* Visual elements */}
-               <div className="absolute right-24 bottom-0 hidden lg:block translate-y-20 animate-bounce duration-3000">
+               <div className="absolute right-24 bottom-0 hidden lg:block translate-y-20">
                   <div className="w-80 h-96 bg-white/5 rounded-t-[100px] border-x border-t border-white/10 p-10 flex flex-col items-center gap-6">
                      <GraduationCap className="w-20 h-20 text-primary" />
                      <div className="w-full h-2 bg-white/10 rounded-full"></div>
@@ -327,49 +411,36 @@ export default async function HomePage() {
         )}
       </main>
 
-      {/* Modern Footer */}
       <footer className="bg-white border-t border-slate-100 pt-24 pb-12 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
            <div className="space-y-6">
               <h2 className="text-3xl font-black tracking-tighter text-slate-950 italic">Scholar Script</h2>
-              <p className="text-slate-500 text-sm leading-relaxed">
-                 Nền tảng giáo dục cộng đồng hiện đại, giúp kết nối tri thức giữa giáo viên và học sinh trên toàn cầu thông qua các bài học tương tác đỉnh cao.
-              </p>
+              <p className="text-slate-500 text-sm">Nền tảng giáo dục cộng đồng hiện đại, kết nối tri thức đỉnh cao.</p>
            </div>
            <div>
               <h5 className="text-xs font-bold uppercase tracking-widest text-slate-900 mb-8">Nền tảng</h5>
               <ul className="space-y-4">
                  <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Thư viện</Link></li>
-                 <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Lớp học trực tuyến</Link></li>
-                 <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Cộng đồng giáo viên</Link></li>
+                 <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Lớp học</Link></li>
               </ul>
            </div>
            <div>
               <h5 className="text-xs font-bold uppercase tracking-widest text-slate-900 mb-8">Hỗ trợ</h5>
               <ul className="space-y-4">
                  <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Trung tâm trợ giúp</Link></li>
-                 <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Điều khoản dịch vụ</Link></li>
-                 <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Quyền riêng tư</Link></li>
+                 <li><Link href="#" className="text-sm text-slate-500 hover:text-primary">Điều khoản</Link></li>
               </ul>
            </div>
            <div>
               <h5 className="text-xs font-bold uppercase tracking-widest text-slate-900 mb-8">Liên hệ</h5>
-              <p className="text-sm text-slate-500 mb-4">Nhận thông tin cập nhật mới nhất từ Scholar Script.</p>
               <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-                 <input className="bg-transparent border-none outline-none text-xs flex-1 px-4" placeholder="Email của bạn..." />
-                 <button className="bg-slate-900 text-white p-3 rounded-xl hover:bg-slate-800 transition-colors">
-                    <ChevronRight className="w-4 h-4" />
-                 </button>
+                 <input className="bg-transparent border-none outline-none text-xs flex-1 px-4" placeholder="Email..." />
+                 <button className="bg-slate-900 text-white p-3 rounded-xl"><ChevronRight className="w-4 h-4" /></button>
               </div>
            </div>
         </div>
         <div className="max-w-7xl mx-auto pt-12 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6">
-           <p className="text-xs text-slate-400 font-medium">© 2026 Scholar Script Platform. All rights reserved.</p>
-           <div className="flex gap-8">
-              <Link href="#" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary">Facebook</Link>
-              <Link href="#" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary">Twitter</Link>
-              <Link href="#" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary">LinkedIn</Link>
-           </div>
+           <p className="text-xs text-slate-400">© 2026 Scholar Script Platform. All rights reserved.</p>
         </div>
       </footer>
     </div>
