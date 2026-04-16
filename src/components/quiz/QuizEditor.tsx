@@ -10,7 +10,9 @@ import { MatchingBuilder } from './MatchingBuilder';
 import { TrueFalseBuilder } from './TrueFalseBuilder';
 import { ReorderBuilder } from './ReorderBuilder';
 import { QuestionBankModal } from './QuestionBankModal';
-import { v4 as uuidv4 } from 'uuid';
+// Use native crypto.randomUUID instead of external uuid library for stability
+const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+
 
 import { Button } from '@/components/ui/button';
 
@@ -30,7 +32,17 @@ export function QuizEditor() {
   const assignToClassId = searchParams.get('assignToClass');
 
   const [questions, setQuestions] = useState<BaseQuestionProps[]>([
-    { id: '1', type: 'MULTIPLE_CHOICE', points: 1.0 }
+    { 
+      id: '1', 
+      type: 'MULTIPLE_CHOICE', 
+      points: 1.0,
+      isBanked: true,
+      content: { 
+        questionText: '', 
+        allowMultipleAnswers: false, 
+        options: [{ id: '1', text: '', isCorrect: true }, { id: '2', text: '', isCorrect: false }] 
+      } as any
+    }
   ]);
   const [activeId, setActiveId] = useState<string>('1');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
@@ -45,6 +57,7 @@ export function QuizEditor() {
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
   const [showBankModal, setShowBankModal] = useState(false);
   const [loading, setLoading] = useState(id !== 'new');
+  const [fetchError, setFetchError] = useState(false);
 
   // Initial fetch
   useEffect(() => {
@@ -68,6 +81,8 @@ export function QuizEditor() {
         }
       } catch (err) {
         console.error('Failed to fetch assignment:', err);
+        setFetchError(true);
+        alert('Không thể nạp dữ liệu bài tập từ máy chủ. Vui lòng không chỉnh sửa để tránh mất dữ liệu.');
       } finally {
         setLoading(false);
       }
@@ -78,7 +93,7 @@ export function QuizEditor() {
 
   // Auto-save logic
   useEffect(() => {
-    if (!id || id === 'new' || loading) return;
+    if (!id || id === 'new' || loading || fetchError) return;
 
     const timer = setTimeout(async () => {
       setSaveStatus('SAVING');
@@ -113,6 +128,20 @@ export function QuizEditor() {
 
     setSaveStatus('SAVING');
     try {
+      // 1. Save all questions marked for banking
+      const questionsToBank = validQuestions.filter(q => q.isBanked !== false);
+      if (questionsToBank.length > 0) {
+        for (const q of questionsToBank) {
+          try {
+            await saveToQuestionBank(q, { subject, gradeLevel, tags: tags.join(',') });
+          } catch (bankErr) {
+            console.error('Failed to bank question:', q.id, bankErr);
+            // Non-blocking error for individual questions
+          }
+        }
+      }
+
+      // 2. Save the assignment version
       if (id && id !== 'new') {
         // Save only valid questions for the final version
         await autoSaveMaterial({ 
@@ -128,9 +157,11 @@ export function QuizEditor() {
         
         // If we came from a class assignment flow, assign it now
         if (assignToClassId) {
-          await syncAssignmentClasses(id, [assignToClassId]);
+          await syncAssignmentClasses(id, { classIds: [assignToClassId] });
         }
       }
+      
+      alert('Chúc mừng! Bài tập đã được hoàn tất và các câu hỏi đã được cập nhật vào ngân hàng cá nhân của bạn.');
       
       // If we came from a class, go back to that class
       if (assignToClassId) {
@@ -145,14 +176,51 @@ export function QuizEditor() {
     }
   };
 
-  const handleBack = () => {
-    const validQuestions = questions.filter(q => isQuestionValid(q));
-    if (validQuestions.length === 0) {
-      if (!confirm('Bài tập chưa có câu hỏi nào hoàn thiện. Bạn có muốn thoát ra không? (Bài tập sẽ được lưu dưới dạng Bản nháp và có thể được chỉnh sửa sau)')) {
+  /**
+   * USE CASE: Safe Exit (Back Button)
+   * Ensures data is saved and redirects user to the correct context.
+   */
+  const handleBack = async () => {
+    // 1. Check if there are any questions at all. If completely empty, ask if they want to discard.
+    if (questions.length === 0 || (questions.length === 1 && !questions[0].content)) {
+      if (!confirm('Bài tập chưa có nội dung. Bạn có muốn thoát mà không lưu không?')) {
         return;
       }
+      router.push('/teacher/materials');
+      return;
     }
-    router.back();
+
+    // 2. Perform a final save to ensure the last few seconds of changes are captured
+    setSaveStatus('SAVING');
+    try {
+      await autoSaveMaterial({
+        id,
+        title,
+        type: 'EXERCISE',
+        questions,
+        subject,
+        gradeLevel,
+        shortDescription,
+        tags: tags.join(',')
+      });
+      setSaveStatus('SAVED');
+      
+      // Give a tiny delay for visual feedback if it was saving
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 3. Smart redirection based on origin
+      if (assignToClassId) {
+        router.push(`/teacher/classes/${assignToClassId}`);
+      } else {
+        router.push('/teacher/materials');
+      }
+    } catch (err) {
+      console.error('Final save failed:', err);
+      setSaveStatus('ERROR');
+      if (confirm('Lỗi khi lưu thay đổi cuối cùng. Bạn vẫn muốn thoát chứ?')) {
+        router.push('/teacher/materials');
+      }
+    }
   };
 
   const activeQuestion = questions.find(q => q.id === activeId);
@@ -183,8 +251,18 @@ export function QuizEditor() {
   };
 
   const handleAddQuestion = () => {
-    const id = Date.now().toString();
-    setQuestions([...questions, { id, type: 'MULTIPLE_CHOICE', points: 1.0 }]);
+    const id = uuidv4();
+    setQuestions([...questions, { 
+      id, 
+      type: 'MULTIPLE_CHOICE', 
+      points: 1.0,
+      saveToBank: true,
+      content: { 
+        questionText: '', 
+        allowMultipleAnswers: false, 
+        options: [{ id: '1', text: '', isCorrect: true }, { id: '2', text: '', isCorrect: false }] 
+      } as any
+    }]);
     setActiveId(id);
   };
 
@@ -501,10 +579,10 @@ export function QuizEditor() {
           </div>
           <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar pr-2">
             {questions.map((q, idx) => (
-              <button 
+              <div 
                 key={q.id}
                 onClick={() => setActiveId(q.id)}
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-all group ${
+                className={`flex items-start gap-3 p-3 rounded-xl border transition-all group cursor-pointer ${
                   activeId === q.id 
                     ? 'bg-primary/5 border-2 border-primary' 
                     : 'bg-white border-slate-200 shadow-sm hover:border-primary/30'
@@ -525,20 +603,22 @@ export function QuizEditor() {
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleMoveQuestion(q.id, 'UP'); }}
                       disabled={idx === 0}
-                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20"
+                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20 transition-colors"
+                      title="Di chuyển lên"
                     >
                       <span className="material-symbols-outlined text-[16px]">expand_less</span>
                     </button>
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleMoveQuestion(q.id, 'DOWN'); }}
                       disabled={idx === questions.length - 1}
-                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20"
+                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20 transition-colors"
+                      title="Di chuyển xuống"
                     >
                       <span className="material-symbols-outlined text-[16px]">expand_more</span>
                     </button>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
             <button 
               disabled={!isValid}
@@ -581,19 +661,37 @@ export function QuizEditor() {
                                 let defaultContent = {};
                                 switch(t.value) {
                                   case 'MULTIPLE_CHOICE':
-                                    defaultContent = { questionText: '', options: [{ id: '1', text: '', isCorrect: true }, { id: '2', text: '', isCorrect: false }] };
+                                    defaultContent = { 
+                                      questionText: '', 
+                                      allowMultipleAnswers: false,
+                                      options: [{ id: '1', text: '', isCorrect: true }, { id: '2', text: '', isCorrect: false }] 
+                                    };
                                     break;
                                   case 'TRUE_FALSE':
                                     defaultContent = { statement: '', isTrue: true, displayStyle: 'TRUE_FALSE' };
                                     break;
                                   case 'CLOZE_TEST':
-                                    defaultContent = { textWithBlanks: '' };
+                                    defaultContent = { textWithBlanks: '', caseSensitive: false };
                                     break;
                                   case 'MATCHING':
-                                    defaultContent = { instruction: '', pairs: [] };
+                                    defaultContent = { 
+                                      instruction: 'Hãy nối các đáp án sau sao cho đúng...', 
+                                      presentationType: 'IMAGE_ANSWER', 
+                                      isBanked: true,
+                                      pairs: [
+                                        { id: 'p1', leftImageUrl: '', leftText: '', rightText: '' },
+                                        { id: 'p2', leftImageUrl: '', leftText: '', rightText: '' }
+                                      ] 
+                                    };
                                     break;
                                   case 'REORDER':
-                                    defaultContent = { instruction: '', items: [] };
+                                    defaultContent = { 
+                                      instruction: 'Hãy sắp xếp các mục sau theo đúng thứ tự...', 
+                                      items: [
+                                        { id: 'r1', text: '', orderIndex: 0 },
+                                        { id: 'r2', text: '', orderIndex: 1 }
+                                      ] 
+                                    };
                                     break;
                                 }
 
@@ -648,20 +746,36 @@ export function QuizEditor() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                    onChange={(e) => updateActiveQuestion({ points: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <button 
-                  onClick={() => activeQuestion && handleSaveToBank(activeQuestion)}
-                  disabled={savingToBank === activeId || !isValid}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    savingToBank === activeId ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                  }`}
-                  title="Lưu câu hỏi này vào ngân hàng để tái sử dụng"
-                >
-                  <span className="material-symbols-outlined text-[18px]">{savingToBank === activeId ? 'sync' : 'account_balance_wallet'}</span>
-                  {savingToBank === activeId ? 'Đang lưu...' : 'Lưu vào Ngân hàng'}
-                </button>
+                <span className="text-xs font-bold text-slate-400 uppercase">Điểm:</span>
+                <input 
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  className="w-16 p-1.5 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-lg text-sm font-bold text-center outline-none focus:ring-2 focus:ring-primary/20"
+                  value={activeQuestion?.points || 1}
+                  onChange={(e) => updateActiveQuestion({ points: parseFloat(e.target.value) || 0 })}
+                />
+                {/* Banking Toggle - Hide if already from bank */}
+                {!activeQuestion.originalId && (
+                  <button 
+                    onClick={() => updateActiveQuestion({ isBanked: !activeQuestion.isBanked })}
+                    disabled={!isValid}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                      activeQuestion.isBanked !== false 
+                        ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                        : 'bg-slate-100 text-slate-400 border border-slate-200'
+                    }`}
+                    title={activeQuestion.isBanked !== false ? "Câu hỏi này sẽ được tự động lưu vào ngân hàng" : "Câu hỏi này sẽ KHÔNG được lưu vào ngân hàng"}
+                  >
+                    <span className={`material-symbols-outlined text-[18px] transition-transform ${activeQuestion.isBanked !== false ? 'scale-110' : 'scale-90'}`}>
+                      {activeQuestion.isBanked !== false ? 'bookmark_added' : 'bookmark_add'}
+                    </span>
+                    <span>Lưu vào Ngân hàng</span>
+                    <div className={`w-8 h-4 rounded-full relative transition-colors ${activeQuestion.isBanked !== false ? 'bg-amber-500' : 'bg-slate-300'}`}>
+                      <div className={`absolute top-0.5 size-3 bg-white rounded-full transition-all ${activeQuestion.isBanked !== false ? 'left-[18px]' : 'left-0.5'}`}></div>
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
             
@@ -1053,7 +1167,12 @@ export function QuizEditor() {
         onClose={() => setShowBankModal(false)}
         onSelect={(q) => {
           const newId = uuidv4();
-          setQuestions([...questions, { ...q, id: newId, orderIndex: questions.length }]);
+          setQuestions([...questions, { 
+            ...q, 
+            id: newId, 
+            originalId: q.id, // Track that this came from the bank
+            orderIndex: questions.length 
+          }]);
           setActiveId(newId);
           setShowBankModal(false);
         }}

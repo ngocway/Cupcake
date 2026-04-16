@@ -69,6 +69,20 @@ export function ReorderBuilder({ initialData, onChange }: { initialData?: Reorde
     ]
   });
 
+  React.useEffect(() => {
+    // Normalize items: ensure all have IDs
+    if (initialData?.items) {
+      const needsNormalization = initialData.items.some(i => !i.id);
+      if (needsNormalization) {
+        const normalizedItems = initialData.items.map((i, idx) => ({
+          ...i,
+          id: i.id || `reorder-${Date.now()}-${idx}`
+        }));
+        setData(prev => ({ ...prev, items: normalizedItems }));
+      }
+    }
+  }, [initialData]);
+
   const [quickSplitText, setQuickSplitText] = useState('');
 
   const sensors = useSensors(

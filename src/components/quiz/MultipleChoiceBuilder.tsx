@@ -21,10 +21,24 @@ export function MultipleChoiceBuilder({ initialData, onChange }: MultipleChoiceB
   });
 
   useEffect(() => {
+    // Normalize data: ensure all options have IDs
+    if (initialData?.options) {
+      const needsNormalization = initialData.options.some(o => !o.id);
+      if (needsNormalization) {
+        const normalizedOptions = initialData.options.map((o, idx) => ({
+          ...o,
+          id: o.id || `opt-${Date.now()}-${idx}`
+        }));
+        const updated = { ...data, options: normalizedOptions };
+        setData(updated);
+        if (onChange) onChange(updated);
+      }
+    }
+
     if (!initialData && onChange) {
       onChange(data);
     }
-  }, []);
+  }, [initialData]);
 
   const handleChange = (newData: Partial<MultipleChoiceContent>) => {
     const updated = { ...data, ...newData };
@@ -81,7 +95,7 @@ export function MultipleChoiceBuilder({ initialData, onChange }: MultipleChoiceB
           <div className="flex items-center gap-3">
             <span className="text-xs font-bold text-slate-600">Nhiều đáp án đúng</span>
             <Switch 
-              checked={data.allowMultipleAnswers}
+              checked={!!data.allowMultipleAnswers}
               onCheckedChange={(checked) => handleChange({ allowMultipleAnswers: checked })}
             />
           </div>
@@ -95,7 +109,7 @@ export function MultipleChoiceBuilder({ initialData, onChange }: MultipleChoiceB
                 <input 
                   type="checkbox" 
                   className="peer hidden" 
-                  checked={option.isCorrect}
+                  checked={!!option.isCorrect}
                   onChange={() => toggleCorrect(option.id)}
                 />
                 <div className="size-9 rounded-lg border-2 border-primary/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center text-white transition-all">

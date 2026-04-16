@@ -2,36 +2,37 @@
 
 import React, { useState, useEffect } from 'react';
 import { BaseQuestionProps } from './types';
+import { getQuestionBank } from '@/actions/material-actions';
 
 export function QuestionBankModal({ isOpen, onClose, onSelect }: { isOpen: boolean; onClose: () => void; onSelect: (q: any) => void }) {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const fetchQuestions = async () => {
+    setLoading(true);
+    try {
+      const data = await getQuestionBank(searchTerm);
+      setQuestions(data);
+    } catch (err) {
+      console.error('Failed to fetch from question bank:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
-      setLoading(true);
-      // Simulate fetching from QuestionBank
-      setTimeout(() => {
-        setQuestions([
-          {
-            id: 'bank-1',
-            type: 'MULTIPLE_CHOICE',
-            points: 1,
-            explanation: 'Explain...',
-            content: { questionText: 'What is the capital of France?', options: [{ text: 'Paris', isCorrect: true }, { text: 'London', isCorrect: false }] }
-          },
-          {
-            id: 'bank-2',
-            type: 'TRUE_FALSE',
-            points: 1,
-            content: { statement: 'React is a backend framework.', isTrue: false }
-          }
-        ]);
-        setLoading(false);
-      }, 500);
+      fetchQuestions();
     }
   }, [isOpen]);
+
+  // Handle Enter to search
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      fetchQuestions();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -52,15 +53,24 @@ export function QuestionBankModal({ isOpen, onClose, onSelect }: { isOpen: boole
         </div>
 
         <div className="p-4 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
-           <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-              <input 
-                type="text"
-                placeholder="Tìm kiếm câu hỏi trong kho..."
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+           <div className="relative flex gap-2">
+              <div className="relative flex-1">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                <input 
+                  type="text"
+                  placeholder="Tìm kiếm câu hỏi (nhấn Enter)..."
+                  className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-primary/20"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                />
+              </div>
+              <button 
+                onClick={fetchQuestions}
+                className="px-4 py-2 bg-amber-500 text-white font-bold text-xs rounded-xl hover:bg-amber-600 transition-all"
+              >
+                Tìm kiếm
+              </button>
            </div>
         </div>
 
@@ -83,7 +93,10 @@ export function QuestionBankModal({ isOpen, onClose, onSelect }: { isOpen: boole
                        <span className="text-[10px] font-bold text-gray-400">{q.points} điểm</span>
                     </div>
                     <p className="text-sm font-medium text-slate-700 dark:text-gray-200 line-clamp-2">
-                      {q.type === 'MULTIPLE_CHOICE' ? q.content.questionText : q.content.statement}
+                      {q.type === 'MULTIPLE_CHOICE' ? q.content.questionText : 
+                       q.type === 'TRUE_FALSE' ? q.content.statement :
+                       q.type === 'CLOZE_TEST' ? q.content.textWithBlanks :
+                       q.content.instruction || 'Câu hỏi không có tiêu đề'}
                     </p>
                   </div>
                   <button 

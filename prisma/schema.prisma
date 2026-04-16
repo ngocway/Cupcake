@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -208,7 +209,7 @@ model AssignmentClass {
   allowLateSubmission Boolean @default(false)
 
   class        Class      @relation(fields: [classId], references: [id])
-  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
   @@id([assignmentId, classId])
 }
@@ -266,7 +267,7 @@ model Submission {
   score          Float?
   feedback       String?
   student        User               @relation(fields: [studentId], references: [id])
-  assignment     Assignment         @relation(fields: [assignmentId], references: [id])
+  assignment     Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   answers        SubmissionAnswer[]
 }
 

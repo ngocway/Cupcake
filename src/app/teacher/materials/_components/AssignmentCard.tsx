@@ -3,8 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { MaterialStatus, MaterialType } from '@prisma/client';
-import { syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass } from '@/actions/material-actions';
+import { syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, duplicateMaterial, deleteMaterial } from '@/actions/material-actions';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
+import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';
 import { useRouter } from 'next/navigation';
 
 type Assignment = {
@@ -45,6 +46,7 @@ export function AssignmentCard({ assignment }: { assignment: Assignment }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showClassesPopup, setShowClassesPopup] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [teacherClasses, setTeacherClasses] = useState<ClassOption[]>([]);
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -182,8 +184,26 @@ export function AssignmentCard({ assignment }: { assignment: Assignment }) {
                 <div className="px-4 py-1.5 bg-slate-50/30 dark:bg-gray-800/30">
                   <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Thao tác</span>
                 </div>
-                <button className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2">
+                <Link 
+                  href={`/student/assignments/${assignment.id}/run`}
+                  target="_blank"
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">visibility</span> Xem trước
+                </Link>
+                <button 
+                  onClick={() => {
+                    duplicateMaterial(assignment.id).then(newId => router.push(`/teacher/materials/${newId}/edit`));
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                >
                   <span className="material-symbols-outlined text-[18px]">content_copy</span> Nhân bản
+                </button>
+                <button 
+                  onClick={() => router.push(`/student/assignments/${assignment.id}/run?direct=true`)}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2 text-indigo-600 font-semibold"
+                >
+                  <span className="material-symbols-outlined text-[18px]">school</span> Học ngay
                 </button>
                 <Link 
                   href={`/teacher/materials/${assignment.id}/edit`}
@@ -191,7 +211,24 @@ export function AssignmentCard({ assignment }: { assignment: Assignment }) {
                 >
                   <span className="material-symbols-outlined text-[18px]">edit</span> Chỉnh sửa
                 </Link>
-                <button className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setShowAnalyticsModal(true);
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">analytics</span> Thống kê
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (confirm('Bạn có chắc chắn muốn xóa bài tập này?')) {
+                      await deleteMaterial(assignment.id);
+                      router.refresh();
+                    }
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                >
                   <span className="material-symbols-outlined text-[18px]">delete</span> Xóa
                 </button>
               </div>
@@ -361,6 +398,12 @@ export function AssignmentCard({ assignment }: { assignment: Assignment }) {
         onAssign={handleSyncClasses}
         classes={teacherClasses}
         initialSelectedIds={assignment.classes?.map(c => c.id) || []}
+      />
+      <MaterialAnalyticsModal
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+        assignmentId={assignment.id}
+        title={assignment.title}
       />
     </div>
   );

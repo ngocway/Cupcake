@@ -10,12 +10,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    const assignments = await prisma.$queryRaw<any[]>`
-      SELECT * FROM Assignment 
-      WHERE id = ${id} AND teacherId = ${session.user.id} AND deletedAt IS NULL
-    `;
-    
-    const baseAssignment = assignments[0];
+    const baseAssignment = await prisma.assignment.findFirst({
+      where: {
+        id: id,
+        teacherId: session.user.id,
+        deletedAt: null
+      }
+    });
 
     if (!baseAssignment) {
       return NextResponse.json({ error: 'Không tìm thấy bài tập' }, { status: 404 });
@@ -40,14 +41,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         shortDescription: baseAssignment.shortDescription || null,
         tags: baseAssignment.tags || "",
         questions: questions.map(q => {
-          // Parse the stringified JSON from the database
-          const parsed = JSON.parse(q.content);
+          // Parse the stringified JSON from the database with safety
+          let parsed = {};
+          try {
+            parsed = JSON.parse(q.content);
+          } catch (e) {
+            console.error('Failed to parse question content:', q.id, e);
+          }
+          
           return {
-            ...parsed,
             id: q.id,
             type: q.type,
             points: q.points,
             explanation: q.explanation,
+            content: parsed,
             mediaType: q.mediaType,
             mediaUrl: q.mediaUrl,
             imageUrl: q.imageUrl,

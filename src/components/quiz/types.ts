@@ -25,6 +25,8 @@ export type BaseQuestionProps = {
   imageUrl?: string;
   audioUrl?: string;
   videoUrl?: string;
+  isBanked?: boolean;
+  originalId?: string;
 };
 
 export type MultipleChoiceContent = {
@@ -46,12 +48,13 @@ export type MatchingPair = {
   id: string;
   leftImageUrl?: string;
   leftText?: string;
-  rightText: string;
+  rightText?: string;
+  rightImageUrl?: string;
 };
 
 export type MatchingContent = {
   instruction: string;
-  presentationType: "IMAGE_ANSWER" | "QUESTION_ANSWER";
+  presentationType: "IMAGE_ANSWER" | "QUESTION_ANSWER" | "IMAGE_IMAGE";
   pairs: MatchingPair[];
 };
 

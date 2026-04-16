@@ -31,10 +31,10 @@ type Assignment = {
   createdAt: string;
 };
 
-const STATUS_CONFIG: Record<MaterialStatus, { label: string; className: string }> = {
-  DRAFT: { label: 'BẢN NHÁP', className: 'badge-draft' },
-  PUBLIC: { label: 'CÔNG KHAI', className: 'bg-green-500 text-white' },
-  PRIVATE: { label: 'RIÊNG TƯ', className: 'bg-gray-500 text-white' },
+const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: string; className: string }> = {
+  DRAFT: { label: 'BẢN NHÁP', icon: 'edit_note', className: 'badge-draft' },
+  PUBLIC: { label: 'CÔNG KHAI', icon: 'public', className: 'bg-green-500 text-white' },
+  PRIVATE: { label: 'RIÊNG TƯ', icon: 'lock', className: 'bg-gray-500 text-white' },
 };
 
 const SUBJECT_CONFIG: Record<string, string> = {
@@ -259,7 +259,8 @@ export function MaterialListItem({
               >
                 {assignment.title}
               </h3>
-              <span className={`${status.className} text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase`}>
+              <span className={`${status.className} text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase flex items-center gap-1`}>
+                <span className="material-symbols-outlined text-[12px]">{status.icon}</span>
                 {status.label}
               </span>
             </div>

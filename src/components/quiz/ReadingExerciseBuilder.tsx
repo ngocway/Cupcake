@@ -16,11 +16,40 @@ export function ReadingExerciseBuilder({
   const router = useRouter();
   const [assignmentId, setAssignmentId] = useState<string>(initialId || 'clp_reading_001');
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (onBack) {
       onBack();
-    } else {
-      router.back();
+      return;
+    }
+
+    setSavingStatus('saving');
+    try {
+      // Final save
+      const editor = document.getElementById('rich-text-editor');
+      const contentHtml = editor?.innerHTML || '';
+      
+      await autoSaveMaterial({
+        id: assignmentId || initialId || 'clp_reading_001',
+        title,
+        type: 'READING',
+        questions: questions, 
+        readingText: contentHtml,
+        videoUrl: videoUrl,
+        audioUrl: audioUrl,
+        subject,
+        gradeLevel,
+        shortDescription,
+        tags: tags.join(',')
+      });
+      setSavingStatus('saved');
+      
+      // Smart redirect
+      router.push('/teacher/materials');
+    } catch (error) {
+      console.error('Final save failed:', error);
+      if (confirm('Lỗi khi lưu thay đổi cuối cùng. Bạn vẫn muốn thoát chứ?')) {
+        router.push('/teacher/materials');
+      }
     }
   };
   const [title, setTitle] = useState('Reading Exercise: Modern Ethics');

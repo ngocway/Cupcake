@@ -35,7 +35,7 @@ export default async function StudentDashboardPage() {
   for (const assi of upcomingAssignments) {
     // Check if notification already exists using raw query since types might be missing
     const results: any = await prisma.$queryRawUnsafe(
-      `SELECT id FROM Notification WHERE userId = ? AND type = 'DUE_REMINDER' AND message LIKE ?`,
+      `SELECT id FROM "Notification" WHERE "userId" = $1 AND type = 'DUE_REMINDER' AND message LIKE $2`,
       userId, `%${assi.title}%`
     );
 

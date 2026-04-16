@@ -131,7 +131,7 @@ export function ClozeTestBuilder({ initialData, onChange }: ClozeTestBuilderProp
         
         <label className="flex items-center gap-3 cursor-pointer w-fit group">
           <Checkbox 
-            checked={data.caseSensitive}
+            checked={!!data.caseSensitive}
             onCheckedChange={(checked) => handleChange({ caseSensitive: checked === true })}
             className="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary/20 transition-all"
           />

@@ -19,6 +19,20 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
     ]
   });
 
+  React.useEffect(() => {
+    // Normalize pairs: ensure all have IDs
+    if (initialData?.pairs) {
+      const needsNormalization = initialData.pairs.some(p => !p.id);
+      if (needsNormalization) {
+        const normalizedPairs = initialData.pairs.map((p, idx) => ({
+          ...p,
+          id: p.id || `pair-${Date.now()}-${idx}`
+        }));
+        setData(prev => ({ ...prev, pairs: normalizedPairs }));
+      }
+    }
+  }, [initialData]);
+
   const handleChange = (newData: Partial<MatchingContent>) => {
     const updated = { ...data, ...newData };
     setData(updated);
@@ -41,6 +55,22 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
     handleChange({ pairs: newPairs });
   };
 
+  const handleImageUpload = (id: string, field: 'leftImageUrl' | 'rightImageUrl', e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Dung lượng ảnh quá lớn (tối đa 5MB)');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      updatePair(id, field, event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="p-0 flex flex-col gap-8 flex-1">
       {/* Instruction */}
@@ -60,7 +90,7 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
       </div>
 
       {/* Format Toggle */}
-      <div className="flex items-center gap-6 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+      <div className="flex flex-wrap items-center gap-6 p-4 bg-slate-50/50 rounded-xl border border-slate-100">
         <label className="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2">Định dạng câu hỏi:</label>
         <label className="flex items-center gap-2 cursor-pointer group">
           <input 
@@ -84,6 +114,17 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
           />
           <span className="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">Câu hỏi - đáp án</span>
         </label>
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <input 
+            className="w-4 h-4 text-primary border-slate-300 focus:ring-primary/20" 
+            type="radio"
+            name="presentationType"
+            value="IMAGE_IMAGE"
+            checked={data.presentationType === 'IMAGE_IMAGE'}
+            onChange={() => handleChange({ presentationType: 'IMAGE_IMAGE' })}
+          />
+          <span className="text-sm font-semibold text-slate-700 group-hover:text-primary transition-colors">Hình ảnh - Hình ảnh</span>
+        </label>
       </div>
 
       {/* Pairs List */}
@@ -99,33 +140,45 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
           {data.pairs.map((pair) => (
             <div key={pair.id} className="flex items-center gap-4 group animate-in fade-in slide-in-from-left-2 duration-300">
               {/* Left Column (A) */}
-              <div className="flex-1 flex items-center gap-2 p-1 bg-white border border-slate-200 rounded-xl shadow-sm focus-within:border-primary transition-all">
-                {data.presentationType === 'IMAGE_ANSWER' && (
-                  <div className="flex flex-col gap-2 pl-2">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[20px] text-slate-400">image</span>
-                      <input 
-                        type="text" 
-                        placeholder="Link ảnh..."
-                        className="text-xs border-b border-slate-100 focus:border-primary outline-none py-1 w-24"
-                        value={pair.leftImageUrl || ''}
-                        onChange={(e) => updatePair(pair.id, 'leftImageUrl', e.target.value)}
-                      />
+              <div className="flex-1 flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-xl shadow-sm focus-within:border-primary transition-all min-h-[64px]">
+                {data.presentationType === 'IMAGE_ANSWER' || data.presentationType === 'IMAGE_IMAGE' ? (
+                  <div className="flex items-center gap-4 w-full px-2">
+                    <div className="relative group/img size-14 shrink-0 bg-slate-50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
+                      {pair.leftImageUrl ? (
+                        <>
+                          <img alt="Match" className="w-full h-full object-cover" src={pair.leftImageUrl} />
+                          <button 
+                            onClick={() => updatePair(pair.id, 'leftImageUrl', '')}
+                            className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        </>
+                      ) : (
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => handleImageUpload(pair.id, 'leftImageUrl', e)}
+                          />
+                          <span className="material-symbols-outlined text-slate-400 text-[24px]">add_a_photo</span>
+                        </label>
+                      )}
                     </div>
-                    {pair.leftImageUrl && (
-                      <div className="size-12 rounded-md bg-slate-100 overflow-hidden border border-slate-200">
-                        <img alt={pair.leftText} className="w-full h-full object-cover" src={pair.leftImageUrl} />
-                      </div>
-                    )}
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {pair.leftImageUrl ? "Đã tải ảnh lên" : "Tải ảnh cột A"}
+                    </span>
                   </div>
+                ) : (
+                  <input 
+                    className="flex-1 border-none focus:ring-0 text-sm font-medium text-slate-700 px-3 py-2" 
+                    type="text" 
+                    placeholder="Nhập nội dung cột A..."
+                    value={pair.leftText}
+                    onChange={(e) => updatePair(pair.id, 'leftText', e.target.value)}
+                  />
                 )}
-                <input 
-                  className="flex-1 border-none focus:ring-0 text-sm font-medium text-slate-700 px-3 py-2" 
-                  type="text" 
-                  placeholder={data.presentationType === 'IMAGE_ANSWER' ? "Tên hình ảnh..." : "Nhập nội dung cột A..."}
-                  value={pair.leftText}
-                  onChange={(e) => updatePair(pair.id, 'leftText', e.target.value)}
-                />
               </div>
 
               {/* Link Icon */}
@@ -134,14 +187,45 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
               </div>
 
               {/* Right Column (B) */}
-              <div className="flex-1 flex items-center gap-2 p-1 bg-white border border-slate-200 rounded-xl shadow-sm focus-within:border-primary transition-all">
-                <input 
-                  className="flex-1 border-none focus:ring-0 text-sm font-medium text-slate-700 px-3 py-2" 
-                  type="text" 
-                  placeholder="Nhập nội dung cột B..."
-                  value={pair.rightText}
-                  onChange={(e) => updatePair(pair.id, 'rightText', e.target.value)}
-                />
+              <div className="flex-1 flex items-center gap-2 p-1.5 bg-white border border-slate-200 rounded-xl shadow-sm focus-within:border-primary transition-all min-h-[64px]">
+                {data.presentationType === 'IMAGE_IMAGE' ? (
+                  <div className="flex items-center gap-4 w-full px-2">
+                    <div className="relative group/img size-14 shrink-0 bg-slate-50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
+                      {pair.rightImageUrl ? (
+                        <>
+                          <img alt="Match" className="w-full h-full object-cover" src={pair.rightImageUrl} />
+                          <button 
+                            onClick={() => updatePair(pair.id, 'rightImageUrl', '')}
+                            className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-all"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          </button>
+                        </>
+                      ) : (
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => handleImageUpload(pair.id, 'rightImageUrl', e)}
+                          />
+                          <span className="material-symbols-outlined text-slate-400 text-[24px]">add_a_photo</span>
+                        </label>
+                      )}
+                    </div>
+                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      {pair.rightImageUrl ? "Đã tải ảnh lên" : "Tải ảnh cột B"}
+                    </span>
+                  </div>
+                ) : (
+                  <input 
+                    className="flex-1 border-none focus:ring-0 text-sm font-medium text-slate-700 px-3 py-2" 
+                    type="text" 
+                    placeholder="Nhập nội dung cột B..."
+                    value={pair.rightText || ''}
+                    onChange={(e) => updatePair(pair.id, 'rightText', e.target.value)}
+                  />
+                )}
               </div>
 
               {/* Delete Button */}
