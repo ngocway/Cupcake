@@ -30,3 +30,17 @@ export async function createSubAdmin(data: {
     return { success: false, error: "Email đã tồn tại hoặc lỗi hệ thống." }
   }
 }
+
+export async function adminToggleBlockUser(id: string, isBlocked: boolean) {
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { isBlocked }
+    })
+    revalidatePath("/admin/users")
+    return { success: true }
+  } catch (error) {
+    console.error("Toggle Block User Error:", error)
+    return { success: false, error: "Lỗi Server" }
+  }
+}

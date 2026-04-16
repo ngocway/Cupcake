@@ -226,30 +226,6 @@ export function QuizEditor() {
   const activeQuestion = questions.find(q => q.id === activeId);
   const activeIdx = questions.findIndex(q => q.id === activeId);
 
-  const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target?.result as string);
-        if (Array.isArray(data)) {
-          const newQs = data.map(q => ({
-            ...q,
-            id: uuidv4(),
-            orderIndex: questions.length
-          }));
-          setQuestions([...questions, ...newQs]);
-          alert(`Đã nhập thành công ${newQs.length} câu hỏi!`);
-        }
-      } catch (err) {
-        alert('File không đúng định dạng JSON.');
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const handleAddQuestion = () => {
     const id = uuidv4();
     setQuestions([...questions, { 
@@ -566,16 +542,11 @@ export function QuizEditor() {
               <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
               Ngân hàng câu hỏi
             </button>
-            <label className="w-full h-11 flex items-center gap-2 px-4 bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl font-bold text-sm hover:bg-emerald-100 transition-colors cursor-pointer shadow-sm">
-              <span className="material-symbols-outlined text-[20px]">upload_file</span>
-              Nhập từ File (JSON)
-              <input type="file" accept=".json" className="hidden" onChange={handleImportJSON} />
-            </label>
           </div>
 
           <div className="flex items-center justify-between mt-2 mb-2">
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Danh sách câu hỏi</h3>
-            <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-600">{questions.length}/15</span>
+            <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-600">Tổng: {questions.length}</span>
           </div>
           <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar pr-2">
             {questions.map((q, idx) => (
@@ -1165,15 +1136,18 @@ export function QuizEditor() {
       <QuestionBankModal 
         isOpen={showBankModal}
         onClose={() => setShowBankModal(false)}
-        onSelect={(q) => {
-          const newId = uuidv4();
-          setQuestions([...questions, { 
-            ...q, 
-            id: newId, 
+        onSelect={(selectedQs) => {
+          const newQs = selectedQs.map((q: any, i: number) => ({
+            ...q,
+            id: uuidv4(),
             originalId: q.id, // Track that this came from the bank
-            orderIndex: questions.length 
-          }]);
-          setActiveId(newId);
+            orderIndex: questions.length + i
+          }));
+          
+          setQuestions([...questions, ...newQs]);
+          if (newQs.length > 0) {
+            setActiveId(newQs[newQs.length - 1].id);
+          }
           setShowBankModal(false);
         }}
       />

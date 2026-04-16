@@ -226,6 +226,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const libraryItems = [
     { name: "Tất cả bài học", href: "/teacher/lessons", icon: "menu_book" },
     { name: "Tất cả bài tập", href: "/teacher/materials", icon: "grid_view" },
+    { name: "Ngân hàng câu hỏi", href: "/teacher/question-bank", icon: "inventory_2" },
     { name: "Gần đây", href: "#", icon: "schedule" },
     { name: "Đã chia sẻ", href: "#", icon: "share" },
     { name: "Thùng rác", href: "/teacher/materials/trash", icon: "delete" },

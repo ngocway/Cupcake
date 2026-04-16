@@ -16,6 +16,7 @@ model User {
   password         String?
   role             Role?             @default(STUDENT)
   isManagedAccount Boolean           @default(false)
+  isBlocked        Boolean           @default(false)
   deletedAt        DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -117,6 +118,7 @@ model Class {
   joinCode    String            @unique
   isJoinable  Boolean           @default(true)
   teacherId   String
+  isBlocked   Boolean           @default(false)
   deletedAt   DateTime?
   createdAt   DateTime          @default(now())
   assignments AssignmentClass[]
@@ -157,6 +159,7 @@ model Assignment {
   themeColor          String?           @default("#00adef")
   isAiGenerated       Boolean           @default(false)
   aiPrompt            String?
+  isBlocked           Boolean           @default(false)
   deletedAt           DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
@@ -294,6 +297,7 @@ model Lesson {
   isEditorChoice Boolean     @default(false)
   teacherId      String
   assignmentId   String?     @unique
+  isBlocked      Boolean     @default(false)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   deletedAt      DateTime?

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { AdminClassItem } from "./AdminClassItem"
 
 export default async function AdminClassesPage({
   searchParams,
@@ -54,39 +55,7 @@ export default async function AdminClassesPage({
           </div>
         ) : (
           classes.map((cls) => (
-            <div key={cls.id} className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-neutral-700 transition-all group">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                    <span className="material-symbols-outlined text-blue-500">school</span>
-                  </div>
-                  <span className="px-3 py-1 bg-neutral-800 text-neutral-400 text-[10px] font-bold rounded-lg border border-neutral-700">
-                    ID: {cls.classCode}
-                  </span>
-                </div>
-                
-                <h3 className="text-white font-bold text-lg mb-1 group-hover:text-blue-500 transition-colors">{cls.name}</h3>
-                <p className="text-neutral-500 text-sm mb-4">Giảng viên: <span className="text-neutral-300 font-medium">{cls.teacher.name || cls.teacher.email}</span></p>
-
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                   <div className="bg-neutral-800/50 p-3 rounded-2xl border border-neutral-800">
-                      <p className="text-[10px] text-neutral-500 font-bold uppercase mb-1">Học sinh</p>
-                      <p className="text-white font-bold">{cls._count.enrollments}</p>
-                   </div>
-                   <div className="bg-neutral-800/50 p-3 rounded-2xl border border-neutral-800">
-                      <p className="text-[10px] text-neutral-500 font-bold uppercase mb-1">Mã tham gia</p>
-                      <p className="text-blue-500 font-bold">{cls.joinCode}</p>
-                   </div>
-                </div>
-
-                <div className="flex gap-2">
-                   <button className="flex-grow py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold rounded-xl transition-all border border-neutral-700">Xem chi tiết</button>
-                   <button className="w-12 h-12 bg-neutral-800 hover:bg-rose-500/10 text-neutral-500 hover:text-rose-500 rounded-xl transition-all border border-neutral-700 hover:border-rose-500/20 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-xl">delete</span>
-                   </button>
-                </div>
-              </div>
-            </div>
+            <AdminClassItem key={cls.id} cls={cls} />
           ))
         )}
       </div>

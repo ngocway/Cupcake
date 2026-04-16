@@ -691,3 +691,34 @@ export async function getQuestionBank(searchTerm?: string) {
     content: typeof q.content === 'string' ? JSON.parse(q.content) : q.content
   }));
 }
+
+export async function deleteFromQuestionBank(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  
+  await prisma.questionBank.deleteMany({
+    where: {
+      id,
+      teacherId: session.user.id
+    }
+  });
+  
+  return { success: true };
+}
+
+export async function updateQuestionBankTags(id: string, tags: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  
+  await prisma.questionBank.updateMany({
+    where: {
+      id,
+      teacherId: session.user.id
+    },
+    data: {
+      tags
+    }
+  });
+  
+  return { success: true };
+}

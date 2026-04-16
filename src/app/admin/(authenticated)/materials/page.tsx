@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import Link from "next/link"
+import { AdminMaterialItem } from "./AdminMaterialItem"
 
 export default async function AdminMaterialsPage({
   searchParams,
@@ -12,13 +13,13 @@ export default async function AdminMaterialsPage({
 
   const data = isLessons 
     ? await prisma.lesson.findMany({
-        where: { ...(q && { title: { contains: q } }) },
+        where: { deletedAt: null, ...(q && { title: { contains: q } }) },
         include: { teacher: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 50,
       })
     : await prisma.assignment.findMany({
-        where: { ...(q && { title: { contains: q } }) },
+        where: { deletedAt: null, ...(q && { title: { contains: q } }) },
         include: { teacher: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -75,53 +76,7 @@ export default async function AdminMaterialsPage({
           </div>
         ) : (
           data.map((item: any) => (
-            <div key={item.id} className="bg-neutral-900 border border-neutral-800 p-6 rounded-3xl hover:border-neutral-700 transition-all flex items-center justify-between group">
-              <div className="flex items-center gap-6">
-                 <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center border border-neutral-700 shadow-inner">
-                    {isLessons ? (
-                      <span className="material-symbols-outlined text-blue-500">play_circle</span>
-                    ) : (
-                      <span className="material-symbols-outlined text-emerald-500">assignment</span>
-                    )}
-                 </div>
-                 <div>
-                    <h3 className="text-white font-black text-lg mb-1">{item.title}</h3>
-                    <div className="flex items-center gap-3 text-xs font-medium">
-                       <span className="text-neutral-500">Người tạo: <span className="text-blue-500 font-bold">{item.teacher.name}</span></span>
-                       <span className="text-neutral-700">|</span>
-                       <span className="text-neutral-500">{new Date(item.createdAt).toLocaleDateString('vi-VN')}</span>
-                       <span className="text-neutral-700">|</span>
-                       {isLessons ? (
-                         <span className="flex items-center gap-1 text-neutral-500">
-                            <span className="material-symbols-outlined text-xs">visibility</span>
-                            {item.viewsCount} lượt xem
-                         </span>
-                       ) : (
-                         <span className="px-2 py-0.5 bg-neutral-800 text-neutral-400 rounded text-[9px] uppercase font-black tracking-widest">
-                            {item.materialType}
-                         </span>
-                       )}
-                    </div>
-                 </div>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                 {isLessons && item.isPremium && (
-                   <span className="px-3 py-1 bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase border border-amber-500/10 rounded-full tracking-widest">Premium Content</span>
-                 )}
-                 {!isLessons && item.status === 'DRAFT' && (
-                   <span className="px-3 py-1 bg-neutral-800 text-neutral-500 text-[9px] font-black uppercase rounded-full tracking-widest">Bản nháp</span>
-                 )}
-                 <div className="flex gap-2">
-                    <button className="w-10 h-10 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-500 hover:text-white flex items-center justify-center transition-all border border-neutral-700">
-                       <span className="material-symbols-outlined text-lg">edit</span>
-                    </button>
-                    <button className="w-10 h-10 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-500 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700">
-                       <span className="material-symbols-outlined text-lg">block</span>
-                    </button>
-                 </div>
-              </div>
-            </div>
+            <AdminMaterialItem key={item.id} item={item} isLessons={isLessons} />
           ))
         )}
       </div>

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { AdminUserItem } from "./AdminUserItem"
 
 export default async function AdminUsersPage({
   searchParams,
@@ -64,40 +65,7 @@ export default async function AdminUsersPage({
           </thead>
           <tbody className="divide-y divide-neutral-800">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-neutral-800/30 transition-colors group">
-                <td className="p-5 pl-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center border border-neutral-700">
-                      <span className="material-symbols-outlined text-neutral-500">person</span>
-                    </div>
-                    <div>
-                      <p className="text-white font-black text-sm">{user.name || "Không tên"}</p>
-                      <p className="text-neutral-500 text-xs font-medium">{user.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-5">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    user.role === 'TEACHER' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                    'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                  }`}>
-                    {user.role}
-                  </span>
-                </td>
-                <td className="p-5 text-sm text-neutral-500 font-medium">
-                  {new Date(user.createdAt).toLocaleDateString('vi-VN')}
-                </td>
-                <td className="p-5 pr-8 text-right">
-                  <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-500 hover:text-white flex items-center justify-center transition-all border border-neutral-700">
-                      <span className="material-symbols-outlined text-sm">settings</span>
-                    </button>
-                    <button className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-500 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700">
-                      <span className="material-symbols-outlined text-sm">block</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
+              <AdminUserItem key={user.id} user={user} />
             ))}
           </tbody>
         </table>
