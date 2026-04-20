@@ -4,12 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { ReadingExerciseBuilder } from '@/components/quiz/ReadingExerciseBuilder';
 import { createDraftMaterial } from '@/actions/material-actions';
 import { MaterialListItem } from '../materials/_components/MaterialListItem';
+import { AiGeneratorModal } from './_components/AiGeneratorModal';
+import Link from 'next/link';
 
 export default function LessonsPage() {
   const [lessons, setLessons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
 
   const fetchLessons = async () => {
@@ -41,6 +44,10 @@ export default function LessonsPage() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleAiAssistant = () => {
+    setShowAiModal(true);
   };
 
   const handleEdit = (id: string) => {
@@ -79,6 +86,13 @@ export default function LessonsPage() {
           >
             <span className="material-symbols-outlined">{showTrash ? 'arrow_back' : 'delete'}</span>
             {showTrash ? 'Quay lại' : 'Thùng rác'}
+          </button>
+          <button
+            onClick={handleAiAssistant}
+            className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-blue-400 border border-neutral-700 rounded-xl font-bold text-sm hover:bg-neutral-700 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-xl">auto_awesome</span>
+            AI Assistant
           </button>
           {!showTrash && (
             <button 
@@ -131,6 +145,12 @@ export default function LessonsPage() {
           </>
         )}
       </div>
+      {showAiModal && (
+        <AiGeneratorModal 
+          onClose={() => setShowAiModal(false)}
+          onSuccess={fetchLessons}
+        />
+      )}
     </div>
   );
 }

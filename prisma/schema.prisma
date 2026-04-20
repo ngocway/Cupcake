@@ -9,84 +9,75 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(cuid())
-  email            String            @unique
-  name             String?
-  image            String?
-  password         String?
-  role             Role?             @default(STUDENT)
-  isManagedAccount Boolean           @default(false)
-  isBlocked        Boolean           @default(false)
-  deletedAt        DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  accounts         Account[]
-  sessions         Session[]
-  assignments      Assignment[]
-  classesCreated   Class[]           @relation("TeacherClasses")
-  enrollments      ClassEnrollment[]
-  lessons          Lesson[]
-  purchases        Purchase[]
-  submissions      Submission[]
-  bio              String?
-  professionalTitle String?
-  coverImage       String?
-  socialLinks      String?           // JSON string of social links
-  expertiseTags    String?           @default("")
-  
-  // Teacher Portfolio Settings
-  isPortfolioPublished Boolean       @default(false)
-  hourlyRate       Float?
-  location         String?           // For offline tutoring
-  education        String?           // JSON or Markdown
-  teachingExperience String?         // Markdown long text
-  studentViewTheme String?           @default("DYNAMIC") // DYNAMIC (Sinh động) or PROFESSIONAL (Chuyên nghiệp)
-  certificates     Certificate[]
-  inquiries        TeachingInquiry[]
-
-
-  // Teacher Settings
-  themeColor       String?           @default("#00adef")
-  logoUrl          String?
-  isIncognito      Boolean           @default(false)
-  notifySubmission Boolean           @default(true)
-  notifyReview     Boolean           @default(true)
-  notifyWeekly     Boolean           @default(false)
-  blockedUserIds   String?           @default("") // Comma separated IDs
-  
-  following        Follower[]        @relation("Following")
-  followers        Follower[]        @relation("Followers")
-  
-  notifications    Notification[]
-  favoriteLessons  FavoriteLesson[]
-  favoriteAssignments FavoriteAssignment[]
-  assignmentReviews   AssignmentReview[]
-  lessonReviews       LessonReview[]
-
-  // Admin Dynamic RBAC
-  adminRoleId      String?
-  adminRole        AdminRole?        @relation("UserAdminRole", fields: [adminRoleId], references: [id])
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  name                 String?
+  image                String?
+  password             String?
+  role                 Role?                @default(STUDENT)
+  isManagedAccount     Boolean              @default(false)
+  deletedAt            DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  bio                  String?
+  professionalTitle    String?
+  coverImage           String?
+  socialLinks          String?
+  expertiseTags        String?              @default("")
+  isPortfolioPublished Boolean              @default(false)
+  hourlyRate           Float?
+  location             String?
+  education            String?
+  teachingExperience   String?
+  studentViewTheme     String?              @default("DYNAMIC")
+  themeColor           String?              @default("#00adef")
+  logoUrl              String?
+  isIncognito          Boolean              @default(false)
+  notifySubmission     Boolean              @default(true)
+  notifyReview         Boolean              @default(true)
+  notifyWeekly         Boolean              @default(false)
+  blockedUserIds       String?              @default("")
+  adminRoleId          String?
+  isBlocked            Boolean              @default(false)
+  accounts             Account[]
+  assignments          Assignment[]
+  assignmentReviews    AssignmentReview[]
+  certificates         Certificate[]
+  classesCreated       Class[]              @relation("TeacherClasses")
+  enrollments          ClassEnrollment[]
+  favoriteAssignments  FavoriteAssignment[]
+  favoriteLessons      FavoriteLesson[]
+  following            Follower[]           @relation("Following")
+  followers            Follower[]           @relation("Followers")
+  lessons              Lesson[]
+  lessonReviews        LessonReview[]
+  notifications        Notification[]
+  purchases            Purchase[]
+  sessions             Session[]
+  submissions          Submission[]
+  inquiries            TeachingInquiry[]
+  adminRole            AdminRole?           @relation("UserAdminRole", fields: [adminRoleId], references: [id])
 }
 
 model AdminRole {
   id          String   @id @default(cuid())
   name        String   @unique
-  permissions String   // JSON string: ["dashboard.view", "users.manage", ...]
-  users       User[]   @relation("UserAdminRole")
+  permissions String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  users       User[]   @relation("UserAdminRole")
 }
 
 model Certificate {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String
-  issuer    String
-  issueDate DateTime?
-  imageUrl  String
-  isVerified Boolean @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(cuid())
+  userId     String
+  title      String
+  issuer     String
+  issueDate  DateTime?
+  imageUrl   String
+  isVerified Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model TeachingInquiry {
@@ -94,37 +85,37 @@ model TeachingInquiry {
   teacherId String
   studentId String
   message   String
-  status    String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  status    String   @default("PENDING")
   createdAt DateTime @default(now())
   teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 }
-
 
 model Follower {
   followerId  String
   followingId String
   createdAt   DateTime @default(now())
-  follower    User @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
-  following   User @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+  follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
   @@id([followerId, followingId])
 }
 
 model Class {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  gradeLevel  String?
-  classCode   String            @unique
-  joinCode    String            @unique
-  isJoinable  Boolean           @default(true)
-  teacherId   String
-  isBlocked   Boolean           @default(false)
-  deletedAt   DateTime?
-  createdAt   DateTime          @default(now())
-  assignments AssignmentClass[]
+  id            String            @id @default(cuid())
+  name          String
+  description   String?
+  gradeLevel    String?
+  classCode     String            @unique
+  joinCode      String            @unique
+  isJoinable    Boolean           @default(true)
+  teacherId     String
+  deletedAt     DateTime?
+  createdAt     DateTime          @default(now())
+  isBlocked     Boolean           @default(false)
   announcements Announcement[]
-  teacher     User              @relation("TeacherClasses", fields: [teacherId], references: [id])
-  enrollments ClassEnrollment[]
+  assignments   AssignmentClass[]
+  teacher       User              @relation("TeacherClasses", fields: [teacherId], references: [id])
+  enrollments   ClassEnrollment[]
 }
 
 model ClassEnrollment {
@@ -141,46 +132,47 @@ model ClassEnrollment {
 }
 
 model Assignment {
-  id                  String            @id @default(cuid())
-  title               String
-  status              MaterialStatus    @default(DRAFT)
-  materialType        MaterialType      @default(EXERCISE)
-  teacherId           String
-  defaultPoints       Float             @default(1.0)
-  coefficient         Int               @default(1)
-  allowLateSubmission Boolean           @default(false)
-  timeLimit           Int?
-  startTime           DateTime?
-  deadline            DateTime?
-  maxAttempts         Int               @default(1)
-  focusMode           Boolean           @default(false)
-  showAnswers         Boolean           @default(true)
-  reviewMode          ReviewMode        @default(AFTER_ALL_ATTEMPTS_EXHAUSTED)
-  themeColor          String?           @default("#00adef")
-  isAiGenerated       Boolean           @default(false)
-  aiPrompt            String?
-  isBlocked           Boolean           @default(false)
-  deletedAt           DateTime?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  readingText         String?
-  gradeLevel          String?
-  subject             String?
-  shortDescription    String?
-  tags                String?           @default("")
-  thumbnail           String?
-  videoUrl            String?
-  audioUrl            String?
-  viewCount           Int               @default(0)
-  publicSubmissionCount Int             @default(0)
-  teacher             User              @relation(fields: [teacherId], references: [id])
-  targetClasses       AssignmentClass[]
-  flashcardDeck       FlashcardDeck?
-  lesson              Lesson?
-  questions           Question[]
-  submissions         Submission[]
-  favoriteAssignments FavoriteAssignment[]
-  reviews             AssignmentReview[]
+  id                    String               @id @default(cuid())
+  title                 String
+  status                MaterialStatus       @default(DRAFT)
+  materialType          MaterialType         @default(EXERCISE)
+  teacherId             String
+  defaultPoints         Float                @default(1.0)
+  coefficient           Int                  @default(1)
+  allowLateSubmission   Boolean              @default(false)
+  timeLimit             Int?
+  startTime             DateTime?
+  deadline              DateTime?
+  maxAttempts           Int                  @default(1)
+  focusMode             Boolean              @default(false)
+  showAnswers           Boolean              @default(true)
+  reviewMode            ReviewMode           @default(AFTER_ALL_ATTEMPTS_EXHAUSTED)
+  themeColor            String?              @default("#00adef")
+  isAiGenerated         Boolean              @default(false)
+  aiPrompt              String?
+  deletedAt             DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  readingText           String?
+  gradeLevel            String?
+  subject               String?
+  instructions          String?
+  shortDescription      String?
+  tags                  String?              @default("")
+  thumbnail             String?
+  videoUrl              String?
+  audioUrl              String?
+  viewCount             Int                  @default(0)
+  publicSubmissionCount Int                  @default(0)
+  isBlocked             Boolean              @default(false)
+  teacher               User                 @relation(fields: [teacherId], references: [id])
+  targetClasses         AssignmentClass[]
+  reviews               AssignmentReview[]
+  favoriteAssignments   FavoriteAssignment[]
+  flashcardDeck         FlashcardDeck?
+  lesson                Lesson?
+  questions             Question[]
+  submissions           Submission[]
 }
 
 model FlashcardDeck {
@@ -201,18 +193,17 @@ model FlashcardItem {
 }
 
 model AssignmentClass {
-  assignmentId String
-  classId      String
-  assignedAt   DateTime   @default(now())
-  startDate    DateTime?
-  dueDate      DateTime?
-  timeLimit    Int?
-  maxAttempts  Int?       @default(1)
-  focusMode    Boolean    @default(false)
-  allowLateSubmission Boolean @default(false)
-
-  class        Class      @relation(fields: [classId], references: [id])
-  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId        String
+  classId             String
+  assignedAt          DateTime   @default(now())
+  startDate           DateTime?
+  dueDate             DateTime?
+  timeLimit           Int?
+  maxAttempts         Int?       @default(1)
+  focusMode           Boolean    @default(false)
+  allowLateSubmission Boolean    @default(false)
+  assignment          Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  class               Class      @relation(fields: [classId], references: [id])
 
   @@id([assignmentId, classId])
 }
@@ -233,28 +224,28 @@ model Question {
   isAiGenerated Boolean            @default(false)
   aiPrompt      String?
   isBanked      Boolean            @default(false)
-  originalId    String?            // Reference to QuestionBank if cloned from there
+  originalId    String?
   assignment    Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   answers       SubmissionAnswer[]
 }
 
 model QuestionBank {
-  id            String             @id @default(cuid())
-  teacherId     String
-  type          QuestionType
-  points        Float
-  explanation   String?
-  content       String
-  mediaType     MediaType          @default(NONE)
-  mediaUrl      String?
-  imageUrl      String?
-  audioUrl      String?
-  videoUrl      String?
-  subject       String?
-  gradeLevel    String?
-  tags          String?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id          String       @id @default(cuid())
+  teacherId   String
+  type        QuestionType
+  points      Float
+  explanation String?
+  content     String
+  mediaType   MediaType    @default(NONE)
+  mediaUrl    String?
+  imageUrl    String?
+  audioUrl    String?
+  videoUrl    String?
+  subject     String?
+  gradeLevel  String?
+  tags        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Submission {
@@ -269,8 +260,8 @@ model Submission {
   answersDraft   String?
   score          Float?
   feedback       String?
-  student        User               @relation(fields: [studentId], references: [id])
   assignment     Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student        User               @relation(fields: [studentId], references: [id])
   answers        SubmissionAnswer[]
 }
 
@@ -286,26 +277,26 @@ model SubmissionAnswer {
 }
 
 model Lesson {
-  id             String      @id @default(cuid())
+  id             String           @id @default(cuid())
   title          String
   description    String?
   videoUrl       String?
-  isPremium      Boolean     @default(false)
-  price          Float       @default(0)
-  viewsCount     Int         @default(0)
-  purchasesCount Int         @default(0)
-  isEditorChoice Boolean     @default(false)
+  isPremium      Boolean          @default(false)
+  price          Float            @default(0)
+  viewsCount     Int              @default(0)
+  purchasesCount Int              @default(0)
+  isEditorChoice Boolean          @default(false)
   teacherId      String
-  assignmentId   String?     @unique
-  isBlocked      Boolean     @default(false)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  assignmentId   String?          @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   deletedAt      DateTime?
-  assignment     Assignment? @relation(fields: [assignmentId], references: [id])
-  teacher        User        @relation(fields: [teacherId], references: [id])
-  purchases      Purchase[]
+  isBlocked      Boolean          @default(false)
   favorites      FavoriteLesson[]
+  assignment     Assignment?      @relation(fields: [assignmentId], references: [id])
+  teacher        User             @relation(fields: [teacherId], references: [id])
   reviews        LessonReview[]
+  purchases      Purchase[]
 }
 
 model FavoriteLesson {
@@ -335,6 +326,100 @@ model SupportTicket {
   message   String
   status    String   @default("OPEN")
   createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  link      String?  @map("actionLink")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  classId     String
+  content     String
+  authorId    String
+  attachments String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  class       Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+model FavoriteAssignment {
+  studentId    String
+  assignmentId String
+  createdAt    DateTime   @default(now())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([studentId, assignmentId])
+}
+
+model AssignmentReview {
+  id           String     @id @default(cuid())
+  studentId    String
+  assignmentId String
+  rating       Int
+  comment      String?
+  createdAt    DateTime   @default(now())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, assignmentId])
+}
+
+model LessonReview {
+  id         String   @id @default(cuid())
+  studentId  String
+  lessonId   String
+  rating     Int
+  comment    String?
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student    User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
 }
 
 enum Role {
@@ -382,98 +467,4 @@ enum QuestionType {
   MATCHING
   TRUE_FALSE
   REORDER
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      String   // NEW_ASSIGNMENT, ENROLLMENT_APPROVED, DUE_REMINDER, GENERAL
-  link      String?  @map("actionLink")
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Announcement {
-  id        String   @id @default(cuid())
-  classId   String
-  content   String
-  authorId  String
-  attachments String? // JSON string of attachments
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
-}
-
-model FavoriteAssignment {
-  studentId    String
-  assignmentId String
-  createdAt    DateTime @default(now())
-  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@id([studentId, assignmentId])
-}
-
-model AssignmentReview {
-  id           String     @id @default(cuid())
-  studentId    String
-  assignmentId String
-  rating       Int        // 1 to 5
-  comment      String?
-  createdAt    DateTime   @default(now())
-  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  @@unique([studentId, assignmentId])
-}
-
-model LessonReview {
-  id        String   @id @default(cuid())
-  studentId String
-  lessonId  String
-  rating    Int      // 1 to 5
-  comment   String?
-  createdAt DateTime @default(now())
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  @@unique([studentId, lessonId])
 }

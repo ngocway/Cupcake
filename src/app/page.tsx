@@ -2,8 +2,10 @@ import { auth } from "@/auth"
 import { getPublicMaterials } from "@/actions/public-materials"
 import Link from "next/link"
 import { LoginButton } from "@/components/LoginButton"
-import { Search, BookOpen, GraduationCap, ChevronRight, Play, Star, BookMarked, Users, Globe, LayoutGrid, Sparkles } from "lucide-react"
+import { Search, BookOpen, GraduationCap, ChevronRight, Play, Star, BookMarked, Users, Globe, LayoutGrid, Sparkles, ChevronDown, Languages } from "lucide-react"
 import { BookmarkButton } from "@/components/public/BookmarkButton"
+
+import { LanguageToggle } from "@/components/LanguageToggle"
 
 export default async function HomePage({
   searchParams
@@ -40,12 +42,19 @@ export default async function HomePage({
             Scholar Script
           </Link>
           <div className="hidden lg:flex items-center gap-8 border-l border-slate-200 pl-8">
-            <Link className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors flex items-center gap-2" href="#library">
-              Thư viện cộng đồng
-            </Link>
-            <Link className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors" href="#">
-              Giáo viên
-            </Link>
+            <div className="relative group">
+              <button className="text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
+                Khám phá <ChevronDown className="w-4 h-4" />
+              </button>
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all py-2 z-[60] overflow-hidden">
+                <Link className="block px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-primary transition-colors" href="#library">
+                  Bài học
+                </Link>
+                <Link className="block px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50 hover:text-primary transition-colors" href="#library">
+                  Bài tập
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -75,10 +84,10 @@ export default async function HomePage({
                </div>
             </div>
           ) : (
-            <>
-              <LoginButton className="text-xs font-bold uppercase tracking-widest px-6 py-3 hover:bg-slate-100 rounded-full transition-all">Đăng nhập</LoginButton>
-              <LoginButton className="bg-primary text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 rounded-full shadow-lg shadow-primary/20 hover:scale-105 transition-all">Bắt đầu ngay</LoginButton>
-            </>
+            <div className="flex items-center gap-3">
+              <LanguageToggle />
+              <LoginButton className="bg-primary text-white text-xs font-bold uppercase tracking-widest px-8 py-3.5 rounded-full shadow-lg shadow-primary/20 hover:scale-105 transition-all">Đăng nhập</LoginButton>
+            </div>
           )}
         </div>
       </nav>
@@ -396,7 +405,7 @@ export default async function HomePage({
                   <span className="text-xs font-bold uppercase tracking-[0.5em] text-primary">Hành trình mới</span>
                   <h2 className="text-5xl md:text-7xl font-black text-white leading-tight">Sẵn sàng trở thành <span className="text-primary italic">chuyên gia?</span></h2>
                   <p className="text-slate-400 text-lg md:text-xl">Tham gia cùng hơn 10.000 học viên để lưu lại kết quả và lộ trình học tập tối ưu.</p>
-                  <LoginButton className="h-16 px-12 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl">Bắt đầu ngay</LoginButton>
+                  <LoginButton className="h-16 px-12 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl">Đăng nhập</LoginButton>
                </div>
                <div className="absolute right-24 bottom-0 hidden lg:block translate-y-20">
                   <div className="w-80 h-96 bg-white/5 rounded-t-[100px] border-x border-t border-white/10 p-10 flex flex-col items-center gap-6">

@@ -1,0 +1,143 @@
+
+"use client";
+
+import React, { useState } from "react";
+import { Star, Send, ShieldCheck, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { submitLessonReview } from "@/actions/reviews";
+
+interface Props {
+  lessonId: string;
+  isLoggedIn: boolean;
+  isPublic: boolean;
+  onSuccess?: () => void;
+}
+
+export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }: Props) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!isLoggedIn) {
+    return (
+      <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 text-center space-y-4">
+        <p className="text-slate-500 font-bold">Vui lòng đăng nhập để đánh giá bài học này.</p>
+      </div>
+    );
+  }
+
+  if (!isPublic) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 text-center space-y-4 flex flex-col items-center">
+        <AlertCircle className="w-8 h-8 text-amber-500" />
+        <p className="text-amber-700 font-bold">Chỉ có thể đánh giá các bài học công khai (Public).</p>
+      </div>
+    );
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating === 0) {
+      toast.error("Vui lòng chọn số sao đánh giá!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await submitLessonReview(lessonId, rating, comment);
+      if (result.success) {
+        toast.success(result.message);
+        setRating(0);
+        setComment("");
+        if (onSuccess) onSuccess();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      toast.error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white border border-primary/20 rounded-[2.5rem] p-8 lg:p-10 shadow-xl shadow-primary/5 space-y-8">
+      <div className="space-y-4">
+        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+           Viết đánh giá của bạn
+           <div className="h-1 flex-1 bg-slate-100 rounded-full" />
+        </h3>
+        <p className="text-sm text-slate-500 font-medium">
+           Chia sẻ trải nghiệm của bạn về bài học này để giúp các học viên khác nhé!
+        </p>
+      </div>
+
+      <div className="space-y-6">
+        {/* Star Rating */}
+        <div className="flex flex-col items-center gap-3 py-4 bg-slate-50 rounded-3xl border border-slate-100">
+           <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Mức độ hài lòng</p>
+           <div className="flex items-center gap-2">
+             {[...Array(5)].map((_, i) => {
+               const starValue = i + 1;
+               return (
+                 <button
+                   type="button"
+                   key={i}
+                   className="transition-transform active:scale-90"
+                   onClick={() => setRating(starValue)}
+                   onMouseEnter={() => setHover(starValue)}
+                   onMouseLeave={() => setHover(0)}
+                 >
+                   <Star 
+                     className={`w-10 h-10 transition-colors ${
+                       starValue <= (hover || rating) 
+                         ? 'text-amber-400 fill-amber-400' 
+                         : 'text-slate-200'
+                     }`} 
+                   />
+                 </button>
+               );
+             })}
+           </div>
+           {rating > 0 && (
+              <p className="text-sm font-black text-primary animate-in fade-in zoom-in duration-300">
+                 {rating === 5 ? 'Tuyệt vời!' : rating === 4 ? 'Rất tốt' : rating === 3 ? 'Bình thường' : rating === 2 ? 'Kém' : 'Rất kém'}
+              </p>
+           )}
+        </div>
+
+        {/* Comment Textarea */}
+        <div className="space-y-2">
+           <textarea
+             value={comment}
+             onChange={(e) => setComment(e.target.value)}
+             placeholder="Nhập nhận xét của bạn tại đây..."
+             className="w-full min-h-[120px] p-6 bg-slate-50 border border-slate-100 rounded-3xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/30 transition-all font-medium"
+           />
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4 border-t border-slate-50">
+         <div className="flex items-center gap-2 text-slate-400 bg-slate-50 px-4 py-2 rounded-full">
+            <ShieldCheck className="w-4 h-4 text-green-500" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Đánh giá sẽ được Admin duyệt trước khi hiển thị</span>
+         </div>
+         <button
+           type="submit"
+           disabled={isSubmitting}
+           className="w-full md:w-auto flex items-center justify-center gap-3 px-10 py-4 bg-primary text-white rounded-2xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
+         >
+           {isSubmitting ? (
+             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+           ) : (
+             <>
+               GỬI ĐÁNH GIÁ
+               <Send className="w-4 h-4" />
+             </>
+           )}
+         </button>
+      </div>
+    </form>
+  );
+}

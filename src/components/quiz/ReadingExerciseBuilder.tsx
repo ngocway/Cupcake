@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { autoSaveMaterial } from '@/actions/material-actions';
+import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { DUMMY_DICTIONARY } from '@/lib/dictionary-data';
 
@@ -39,6 +40,7 @@ export function ReadingExerciseBuilder({
         subject,
         gradeLevel,
         shortDescription,
+        instructions,
         tags: tags.join(',')
       });
       setSavingStatus('saved');
@@ -53,10 +55,13 @@ export function ReadingExerciseBuilder({
     }
   };
   const [title, setTitle] = useState('Reading Exercise: Modern Ethics');
+  const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [assignmentStatus, setAssignmentStatus] = useState<'DRAFT' | 'PRIVATE' | 'PUBLIC'>('DRAFT');
   const [validationModal, setValidationModal] = useState<{show: boolean, missingTitle: boolean, missingContent: boolean}>({show: false, missingTitle: false, missingContent: false});
   const [videoUrl, setVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
@@ -165,8 +170,27 @@ export function ReadingExerciseBuilder({
           setVideoUrl(data.assignment.videoUrl || '');
           setAudioUrl(data.assignment.audioUrl || '');
           if (data.assignment.questions) {
-            setQuestions(data.assignment.questions);
+            const normalizedQuestions = data.assignment.questions.map((q: any) => {
+              const content = q.content || {};
+              const rawOptions = content.options || q.options || [];
+              const options = rawOptions.map((opt: any, oIdx: number) => ({
+                id: opt.id || `opt-${oIdx}-${Math.random().toString(36).substr(2, 9)}`,
+                ...opt
+              }));
+              
+              return {
+                ...q,
+                questionText: content.questionText || content.statement || q.questionText || '',
+                options: options,
+                correctAnswer: q.type === 'TRUE_FALSE' 
+                  ? (content.isTrue === false ? 'false' : 'true') 
+                  : (q.correctAnswer || '')
+              };
+            });
+
+            setQuestions(normalizedQuestions);
           }
+
           if (data.assignment.readingText) {
             const editor = document.getElementById('rich-text-editor');
             if (editor) {
@@ -179,9 +203,12 @@ export function ReadingExerciseBuilder({
           if (data.assignment.subject) setSubject(data.assignment.subject);
           if (data.assignment.gradeLevel) setGradeLevel(data.assignment.gradeLevel);
           if (data.assignment.shortDescription) setShortDescription(data.assignment.shortDescription);
+          if (data.assignment.instructions) setInstructions(data.assignment.instructions);
           if (data.assignment.tags) {
              setTags(data.assignment.tags.split(',').filter(Boolean));
           }
+          
+          setIsInitialLoadDone(true);
         }
       } catch (err) {
         console.error('Initial fetch failed:', err);
@@ -236,6 +263,7 @@ export function ReadingExerciseBuilder({
         subject,
         gradeLevel,
         shortDescription,
+        instructions,
         tags: tags.join(',')
       });
       
@@ -289,9 +317,10 @@ export function ReadingExerciseBuilder({
   };
 
   useEffect(() => {
+    if (!isInitialLoadDone) return;
     const timer = setTimeout(() => handleSave(), 3000);
     return () => clearTimeout(timer);
-  }, [title, questions, subject, gradeLevel, shortDescription, tags]);
+  }, [title, questions, subject, gradeLevel, shortDescription, tags, instructions, isInitialLoadDone]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -572,6 +601,13 @@ export function ReadingExerciseBuilder({
 
   return (
     <div className="flex bg-surface font-body text-on-surface h-[calc(100vh-120px)] overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm relative">
+      {showInstructionsModal && (
+        <InstructionsModal 
+          initialValue={instructions}
+          onClose={() => setShowInstructionsModal(false)}
+          onSave={(val) => setInstructions(val)}
+        />
+      )}
       <style>{`
         .editorial-shadow { box-shadow: 0 8px 24px rgba(25, 27, 35, 0.06); }
         .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(67, 70, 85, 0.1); }
@@ -631,6 +667,17 @@ export function ReadingExerciseBuilder({
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">quiz</span> Question Bank
+          </button>
+          
+          <button 
+            onClick={() => setShowInstructionsModal(true)}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
+              showInstructionsModal 
+                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
+                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">menu_book</span> Hướng dẫn làm bài
           </button>
           {/* Multimedia Attachments */}
           <div className="px-4 mt-8 space-y-6">
@@ -1341,25 +1388,55 @@ export function ReadingExerciseBuilder({
           </div>
         )}
       </main>
+      {showInstructionsModal && (
+        <InstructionsModal 
+          initialValue={instructions}
+          onClose={() => setShowInstructionsModal(false)}
+          onSave={(val) => setInstructions(val)}
+        />
+      )}
     </div>
   );
 }
 
 function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData }: any) {
-  const [formData, setFormData] = useState<any>(initialData || {
-    questionText: '',
-    type: type,
-    isMultiple: isMultiple,
-    options: type === 'TRUE_FALSE' ? [] : [
-      { id: '1', text: '', isCorrect: false },
-      { id: '2', text: '', isCorrect: false },
-      { id: '3', text: '', isCorrect: false },
-      { id: '4', text: '', isCorrect: false }
-    ],
-    correctAnswer: type === 'TRUE_FALSE' ? 'true' : '',
-    points: 1,
-    explanation: ''
+  const [formData, setFormData] = useState<any>(() => {
+    if (initialData) {
+      const content = initialData.content || {};
+      const qType = initialData.type || type;
+      return {
+        ...initialData,
+        questionText: content.questionText || content.statement || initialData.questionText || '',
+        options: (content.options || initialData.options || (qType === 'TRUE_FALSE' ? [] : [
+          { id: '1', text: '', isCorrect: false },
+          { id: '2', text: '', isCorrect: false },
+          { id: '3', text: '', isCorrect: false },
+          { id: '4', text: '', isCorrect: false }
+        ])).map((o: any, i: number) => ({ ...o, id: o.id || `opt-${i}` })),
+
+        correctAnswer: qType === 'TRUE_FALSE' 
+          ? (content.isTrue === false ? 'false' : 'true') 
+          : (initialData.correctAnswer || ''),
+        points: initialData.points || 1,
+        explanation: initialData.explanation || ''
+      };
+    }
+    return {
+      questionText: '',
+      type: type,
+      isMultiple: isMultiple,
+      options: type === 'TRUE_FALSE' ? [] : [
+        { id: '1', text: '', isCorrect: false },
+        { id: '2', text: '', isCorrect: false },
+        { id: '3', text: '', isCorrect: false },
+        { id: '4', text: '', isCorrect: false }
+      ],
+      correctAnswer: type === 'TRUE_FALSE' ? 'true' : '',
+      points: 1,
+      explanation: ''
+    };
   });
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1426,8 +1503,9 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
           ) : (
             <div className="space-y-4">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">Các lựa chọn đáp án</label>
-              {formData.options.map((opt: any, idx: number) => (
-                <div key={opt.id} className="flex items-center gap-4">
+              {formData.options?.map((opt: any, idx: number) => (
+                <div key={opt.id || idx} className="flex items-center gap-4">
+
                   <button 
                     type="button"
                     onClick={() => {

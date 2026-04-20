@@ -8,14 +8,17 @@ export default async function StudentLayout({ children }: { children: React.Reac
   const session = await auth()
   
   if (!session) {
-    redirect("/login")
+    // proxy.ts already redirects non-login pages to /student/login
+    // So if we reach here without a session, we must be on /student/login
+    return <>{children}</>
   }
   
   if (!session.user.role) {
     redirect("/role-select")
   }
   
-  if (session.user.role !== "STUDENT" && session.user.role !== "TEACHER") {
+  // Allow both STUDENT and ADMIN (for testing), redirect teachers away
+  if (session.user.role !== "STUDENT" && session.user.role !== "ADMIN") {
     redirect("/teacher/dashboard")
   }
 

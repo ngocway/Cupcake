@@ -73,6 +73,7 @@ export async function autoSaveMaterial(payload: {
   gradeLevel?: string;
   shortDescription?: string;
   tags?: string;
+  instructions?: string;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -117,6 +118,7 @@ export async function autoSaveMaterial(payload: {
         gradeLevel: payload.gradeLevel || null,
         shortDescription: payload.shortDescription || null,
         tags: payload.tags || "",
+        instructions: payload.instructions || null,
         updatedAt: new Date(),
       },
       create: {
@@ -130,6 +132,7 @@ export async function autoSaveMaterial(payload: {
         gradeLevel: payload.gradeLevel || null,
         shortDescription: payload.shortDescription || null,
         tags: payload.tags || "",
+        instructions: payload.instructions || null,
         teacherId: session.user.id,
         materialType: (payload.type as any) || 'READING',
         status: 'DRAFT',
@@ -157,6 +160,7 @@ export async function autoSaveMaterial(payload: {
         audioUrl: q.audioUrl || null,
         videoUrl: q.videoUrl || null,
         isBanked: q.isBanked !== undefined ? q.isBanked : true,
+        isAiGenerated: q.isAiGenerated || false,
         originalId: q.originalId || null
       }));
 
@@ -372,6 +376,7 @@ export async function duplicateMaterial(id: string) {
       gradeLevel: source.gradeLevel,
       shortDescription: source.shortDescription,
       tags: source.tags,
+      instructions: source.instructions,
       readingText: source.readingText,
       videoUrl: (source as any).videoUrl || null,
       audioUrl: (source as any).audioUrl || null,

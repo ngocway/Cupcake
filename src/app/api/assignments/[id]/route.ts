@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'TEACHER') {
+    if (!session || (session.user?.role !== 'TEACHER' && session.user?.role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -60,6 +60,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             imageUrl: q.imageUrl,
             audioUrl: q.audioUrl,
             videoUrl: q.videoUrl,
+            isAiGenerated: q.isAiGenerated
           };
         })
       }

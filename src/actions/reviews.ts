@@ -1,107 +1,62 @@
-"use server"
 
-import prisma from "@/lib/prisma"
-import { auth } from "@/auth"
-import { revalidatePath } from "next/cache"
+"use server";
 
-export async function submitAssignmentReview(data: {
-    assignmentId: string,
-    rating: number,
-    comment?: string
-}) {
-    try {
-        const session = await auth();
-        if (!session?.user?.id) return { error: "Cần đăng nhập để đánh giá" };
+import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 
-        const userId = session.user.id;
-
-        // Check if already reviewed
-        const existing = await prisma.assignmentReview.findUnique({
-            where: {
-                studentId_assignmentId: {
-                    studentId: userId,
-                    assignmentId: data.assignmentId
-                }
-            }
-        });
-
-        if (existing) return { error: "Bạn đã đánh giá bài tập này rồi" };
-
-        await prisma.assignmentReview.create({
-            data: {
-                studentId: userId,
-                assignmentId: data.assignmentId,
-                rating: data.rating,
-                comment: data.comment
-            }
-        });
-
-        revalidatePath(`/join/${data.assignmentId}`);
-        return { success: true };
-    } catch (error) {
-        console.error("Error submitting assignment review:", error);
-        return { error: "Lỗi hệ thống khi gửi đánh giá" };
+export async function submitLessonReview(lessonId: string, rating: number, comment: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, message: "Bạn cần đăng nhập để thực hiện chức năng này." };
     }
-}
 
-export async function submitLessonReview(data: {
-    lessonId: string,
-    rating: number,
-    comment?: string
-}) {
-    try {
-        const session = await auth();
-        if (!session?.user?.id) return { error: "Cần đăng nhập để đánh giá" };
+    const studentId = session.user.id;
 
-        const userId = session.user.id;
+    // 1. Check if lesson is PUBLIC
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: { assignment: { select: { status: true } } }
+    });
 
-        const existing = await prisma.lessonReview.findUnique({
-            where: {
-                studentId_lessonId: {
-                    studentId: userId,
-                    lessonId: data.lessonId
-                }
-            }
-        });
-
-        if (existing) return { error: "Bạn đã đánh giá bài học này rồi" };
-
-        await prisma.lessonReview.create({
-            data: {
-                studentId: userId,
-                lessonId: data.lessonId,
-                rating: data.rating,
-                comment: data.comment
-            }
-        });
-
-        revalidatePath(`/lessons/${data.lessonId}`);
-        return { success: true };
-    } catch (error) {
-        console.error("Error submitting lesson review:", error);
-        return { error: "Lỗi hệ thống" };
+    if (!lesson || lesson.assignment?.status !== "PUBLIC") {
+      return { success: false, message: "Chỉ có thể đánh giá bài học công khai." };
     }
-}
 
-export async function getReviews(type: 'assignment' | 'lesson', id: string) {
-    try {
-        if (type === 'assignment') {
-            const reviews = await prisma.assignmentReview.findMany({
-                where: { assignmentId: id },
-                include: { student: { select: { name: true, image: true } } },
-                orderBy: { createdAt: 'desc' }
-            });
-            return reviews;
-        } else {
-            const reviews = await prisma.lessonReview.findMany({
-                where: { lessonId: id },
-                include: { student: { select: { name: true, image: true } } },
-                orderBy: { createdAt: 'desc' }
-            });
-            return reviews;
+    // 2. Check if student already reviewed
+    const existingReview = await prisma.lessonReview.findUnique({
+      where: {
+        studentId_lessonId: {
+          studentId,
+          lessonId
         }
-    } catch (error) {
-        console.error("Error fetching reviews:", error);
-        return [];
+      }
+    });
+
+    if (existingReview) {
+      return { success: false, message: "Bạn đã đánh giá bài học này rồi." };
     }
+
+    // 3. Create review (isApproved = false by default)
+    await prisma.lessonReview.create({
+      data: {
+        lessonId,
+        studentId,
+        rating,
+        comment,
+        isApproved: false
+      }
+    });
+
+    revalidatePath(`/public/lessons/${lessonId}`);
+    return { 
+      success: true, 
+      message: "Đánh giá của bạn đã được gửi và đang chờ quản trị viên phê duyệt." 
+    };
+
+  } catch (error) {
+    console.error("Error submitting review:", error);
+    return { success: false, message: "Đã có lỗi xảy ra. Vui lòng thử lại sau." };
+  }
 }

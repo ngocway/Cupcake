@@ -10,6 +10,8 @@ import { MatchingBuilder } from './MatchingBuilder';
 import { TrueFalseBuilder } from './TrueFalseBuilder';
 import { ReorderBuilder } from './ReorderBuilder';
 import { QuestionBankModal } from './QuestionBankModal';
+import { AIGeneratorModal } from './AIGeneratorModal';
+import { InstructionsModal } from './InstructionsModal';
 // Use native crypto.randomUUID instead of external uuid library for stability
 const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
 
@@ -56,6 +58,9 @@ export function QuizEditor() {
 
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(searchParams.get('ai') === 'true');
+  const [instructions, setInstructions] = useState('');
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [loading, setLoading] = useState(id !== 'new');
   const [fetchError, setFetchError] = useState(false);
 
@@ -72,6 +77,7 @@ export function QuizEditor() {
           setSubject(data.assignment.subject || 'Khác');
           setGradeLevel(data.assignment.gradeLevel || 'Khác');
           setShortDescription(data.assignment.shortDescription || '');
+          setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           
           if (data.assignment.questions?.length > 0) {
@@ -106,6 +112,7 @@ export function QuizEditor() {
           subject,
           gradeLevel,
           shortDescription,
+          instructions,
           tags: tags.join(',')
         });
         setSaveStatus('SAVED');
@@ -116,7 +123,7 @@ export function QuizEditor() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags]);
+  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags, instructions]);
 
   const handleFinish = async () => {
     const validQuestions = questions.filter(q => isQuestionValid(q));
@@ -152,6 +159,7 @@ export function QuizEditor() {
           subject,
           gradeLevel,
           shortDescription,
+          instructions,
           tags: tags.join(',')
         });
         
@@ -201,6 +209,7 @@ export function QuizEditor() {
         subject,
         gradeLevel,
         shortDescription,
+        instructions,
         tags: tags.join(',')
       });
       setSaveStatus('SAVED');
@@ -247,6 +256,51 @@ export function QuizEditor() {
     const newQ = questions.filter(q => q.id !== id);
     setQuestions(newQ);
     if (activeId === id) setActiveId(newQ[0].id);
+  };
+
+  const handleAIGeneratedQuestions = (generatedData: any[], type: QuestionType) => {
+    const aiQuestions = generatedData.map((gq, i) => {
+      const id = uuidv4();
+      let content: any = { ...gq };
+      
+      // If MULTIPLE_CHOICE, Gemini returns options directly, but each option might need a generated string ID
+      if (type === 'MULTIPLE_CHOICE' && content.options) {
+        content.options = content.options.map((opt: any) => ({
+          ...opt,
+          id: uuidv4()
+        }));
+        content.allowMultipleAnswers = content.options.filter((o:any)=>o.isCorrect).length > 1;
+      }
+      
+      if (type === 'TRUE_FALSE') {
+          content.displayStyle = 'TRUE_FALSE';
+      }
+
+      const explanation = content.explanation;
+      delete content.explanation;
+
+      return {
+        id,
+        type,
+        points: 1.0,
+        isBanked: true,
+        isAiGenerated: true,
+        explanation: explanation || '',
+        content
+      };
+    });
+
+    setQuestions((prev) => {
+      // If there's only 1 question and it's a completely blank template
+      const isDefaultBlank = prev.length === 1 && (!prev[0].content || !prev[0].content.questionText || prev[0].content.questionText.trim() === '');
+      if (isDefaultBlank) {
+        return aiQuestions;
+      }
+      return [...prev, ...aiQuestions];
+    });
+
+    setActiveId(aiQuestions[0].id);
+    setShowAIModal(false);
   };
 
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
@@ -473,6 +527,19 @@ export function QuizEditor() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased">
+      {showAIModal && (
+        <AIGeneratorModal 
+          onClose={() => setShowAIModal(false)}
+          onQuestionsGenerated={handleAIGeneratedQuestions}
+        />
+      )}
+      {showInstructionsModal && (
+        <InstructionsModal 
+          initialValue={instructions}
+          onClose={() => setShowInstructionsModal(false)}
+          onSave={(val) => setInstructions(val)}
+        />
+      )}
       {/* Header */}
       <header className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-gray-800 px-6 py-3">
         <div className="max-w-full mx-auto flex items-center justify-between gap-8">
@@ -535,6 +602,20 @@ export function QuizEditor() {
         {/* Sidebar */}
         <aside className="w-1/5 shrink-0 flex flex-col gap-4">
           <div className="flex flex-col gap-2 mb-2">
+            <button 
+              onClick={() => setShowAIModal(true)}
+              className="w-full h-11 flex items-center justify-center gap-2 px-4 bg-indigo-50 dark:bg-indigo-900/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/30 rounded-xl font-bold text-sm hover:bg-indigo-100 transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
+              Tạo bằng AI (Beta)
+            </button>
+            <button 
+              onClick={() => setShowInstructionsModal(true)}
+              className="w-full h-11 flex items-center gap-2 px-4 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[20px]">menu_book</span>
+              Hướng dẫn làm bài
+            </button>
             <button 
               onClick={() => setShowBankModal(true)}
               className="w-full h-11 flex items-center gap-2 px-4 bg-amber-50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-xl font-bold text-sm hover:bg-amber-100 transition-colors shadow-sm"
@@ -1151,6 +1232,13 @@ export function QuizEditor() {
           setShowBankModal(false);
         }}
       />
+      {showInstructionsModal && (
+        <InstructionsModal 
+          initialValue={instructions}
+          onClose={() => setShowInstructionsModal(false)}
+          onSave={(val) => setInstructions(val)}
+        />
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createPortal } from "react-dom"
+import Link from "next/link"
 
 interface LoginButtonProps {
   children: React.ReactNode
@@ -44,8 +45,9 @@ export function LoginButton({ children, className }: LoginButtonProps) {
               </p>
               
               <div className="flex flex-col gap-4">
-                <button 
-                  onClick={() => router.push("/teacher/login")}
+                <Link 
+                  href="/teacher/login"
+                  onClick={() => setIsOpen(false)}
                   className="flex items-center gap-6 p-6 border-2 border-neutral-200 dark:border-gray-800 rounded-2xl hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-gray-800 dark:hover:border-blue-500 hover:shadow-md transition-all group text-left"
                 >
                   <div className="size-16 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-4xl shrink-0 group-hover:scale-110 transition-transform duration-300">
@@ -55,10 +57,11 @@ export function LoginButton({ children, className }: LoginButtonProps) {
                     <h3 className="font-bold text-lg text-neutral-800 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">Giáo viên</h3>
                     <p className="text-sm text-neutral-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">Truy cập bảng điều khiển, tạo bài tập, theo dõi lớp học và đánh giá quá trình.</p>
                   </div>
-                </button>
+                </Link>
 
-                <button 
-                  onClick={() => router.push("/student/login")}
+                <Link 
+                  href="/student/login"
+                  onClick={() => setIsOpen(false)}
                   className="flex items-center gap-6 p-6 border-2 border-neutral-200 dark:border-gray-800 rounded-2xl hover:border-green-500 hover:bg-green-50/50 dark:hover:bg-gray-800 dark:hover:border-green-500 hover:shadow-md transition-all group text-left"
                 >
                   <div className="size-16 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-4xl shrink-0 group-hover:scale-110 transition-transform duration-300">
@@ -68,7 +71,7 @@ export function LoginButton({ children, className }: LoginButtonProps) {
                     <h3 className="font-bold text-lg text-neutral-800 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">Học sinh</h3>
                     <p className="text-sm text-neutral-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">Sử dụng mã lớp học hoặc quét mã QR để tham gia và bắt đầu làm bài tập ngay.</p>
                   </div>
-                </button>
+                </Link>
               </div>
             </div>
             

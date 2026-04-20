@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { MaterialListItem } from './_components/MaterialListItem';
 import { MaterialStatus } from '@prisma/client';
 import { createDraftMaterial } from '@/actions/material-actions';
+import { useSession } from 'next-auth/react';
 
 type Assignment = {
   id: string;
@@ -25,6 +26,7 @@ type Assignment = {
 
 export default function MaterialLibraryPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -60,6 +62,22 @@ export default function MaterialLibraryPage() {
     try {
       const id = await createDraftMaterial('EXERCISE');
       router.push(`/teacher/materials/${id}/edit`);
+    } catch (err) {
+      console.error('Failed to create material:', err);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleCreateAI = async () => {
+    if (session?.user?.role !== 'ADMIN') {
+      alert('Chức năng Tạo bằng AI hiện tại chỉ dành cho Super Admin trải nghiệm.');
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const id = await createDraftMaterial('EXERCISE');
+      router.push(`/teacher/materials/${id}/edit?ai=true`);
     } catch (err) {
       console.error('Failed to create material:', err);
     } finally {
@@ -145,7 +163,11 @@ export default function MaterialLibraryPage() {
             </div>
           </button>
           
-          <button className="relative flex items-center gap-5 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:shadow-md transition-all text-left group overflow-hidden">
+          <button 
+            disabled={isCreating}
+            onClick={handleCreateAI}
+            className="relative flex items-center gap-5 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:shadow-md transition-all text-left group overflow-hidden disabled:opacity-50"
+          >
             <div className="size-14 bg-indigo-500 rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform">
               <span className="material-symbols-outlined text-[32px]">auto_awesome</span>
             </div>
@@ -153,7 +175,12 @@ export default function MaterialLibraryPage() {
               <h3 className="text-lg font-bold">Tạo bằng AI</h3>
               <p className="text-sm text-[#617589]">Tự động tạo từ tài liệu của bạn</p>
             </div>
-            <span className="absolute top-3 right-3 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-700">COMING SOON</span>
+            {session?.user?.role !== 'ADMIN' && (
+              <span className="absolute top-3 right-3 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-700">COMING SOON</span>
+            )}
+            {session?.user?.role === 'ADMIN' && (
+              <span className="absolute top-3 right-3 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 dark:border-green-700">BETA (ADMIN)</span>
+            )}
           </button>
         </div>
       </section>

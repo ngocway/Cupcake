@@ -232,6 +232,15 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { name: "Thùng rác", href: "/teacher/materials/trash", icon: "delete" },
   ];
 
+  // Skip layout chrome for login page
+  if (pathname === '/teacher/login') {
+    return (
+      <SessionProvider>
+        {children}
+      </SessionProvider>
+    )
+  }
+
   return (
     <SessionProvider>
       <div className={`teacher-theme ${lexend.variable} font-display bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
