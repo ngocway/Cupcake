@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import AddAdminModal from "./AddAdminModal"
+import { ImpersonateButtons } from "./ImpersonateButtons"
 
 export default async function AdminStaffPage({
   searchParams,
@@ -59,6 +60,7 @@ export default async function AdminStaffPage({
               <th className="p-4 text-xs font-black text-neutral-500 uppercase tracking-widest">Loại Admin</th>
               <th className="p-4 text-xs font-black text-neutral-500 uppercase tracking-widest">Gói phân quyền</th>
               <th className="p-4 text-xs font-black text-neutral-500 uppercase tracking-widest">Ngày gia nhập</th>
+              <th className="p-4 text-xs font-black text-neutral-500 uppercase tracking-widest">Xem như</th>
               <th className="p-4 text-xs font-black text-neutral-500 uppercase tracking-widest pr-8 text-right">Quản trị</th>
             </tr>
           </thead>
@@ -97,6 +99,11 @@ export default async function AdminStaffPage({
                 <td className="p-6 text-sm text-neutral-400 font-medium">
                   {new Date(user.createdAt).toLocaleDateString('vi-VN')}
                 </td>
+                <td className="p-6">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ImpersonateButtons />
+                  </div>
+                </td>
                 <td className="p-6 pr-8 text-right">
                   <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button className="w-10 h-10 rounded-2xl bg-neutral-800 hover:bg-blue-600 text-neutral-500 hover:text-white flex items-center justify-center transition-all border border-neutral-700">
@@ -111,7 +118,7 @@ export default async function AdminStaffPage({
             ))}
             {staff.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-20 text-center">
+                <td colSpan={6} className="p-20 text-center">
                    <span className="material-symbols-outlined text-neutral-700 text-6xl mb-4">no_accounts</span>
                    <p className="text-neutral-500 font-bold">Không tìm thấy nhân sự nào.</p>
                 </td>

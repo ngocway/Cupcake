@@ -74,14 +74,14 @@ export default function PublicQuestionViewer({
 
   if (!questionData) {
     return (
-       <div className="p-10 bg-slate-50 rounded-3xl text-center text-slate-400 font-bold border-2 border-dashed border-slate-200">
+       <div className="p-10 bg-slate-50 rounded-xl text-center text-slate-400 font-bold border-2 border-dashed border-slate-200">
           Dữ liệu câu hỏi bị lỗi
        </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+    <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
       {/* Question Header */}
       <div className="bg-slate-50 px-8 py-4 border-b border-slate-100 flex items-center justify-between">
          <div className="flex items-center gap-2">
@@ -128,7 +128,7 @@ export default function PublicQuestionViewer({
                           key={opt.id}
                           disabled={hasAnswered}
                           onClick={() => handleSelect(currentQuestion.id, opt.id, opt.isCorrect)}
-                          className={`p-5 rounded-2xl border-2 text-left transition-all group relative ${stateClasses}`}
+                          className={`p-5 rounded-lg border-2 text-left transition-all group relative ${stateClasses}`}
                         >
                           <div className="flex items-center justify-between">
                              <span className="font-bold">{opt.text}</span>
@@ -167,7 +167,7 @@ export default function PublicQuestionViewer({
                           key={opt.id}
                           disabled={hasAnswered}
                           onClick={() => handleSelect(currentQuestion.id, opt.id, isCorrect)}
-                          className={`p-6 rounded-3xl border-2 font-black tracking-widest transition-all ${stateClasses}`}
+                          className={`p-6 rounded-xl border-2 font-black tracking-widest transition-all ${stateClasses}`}
                         >
                            {opt.text.toUpperCase()}
                         </button>
@@ -178,7 +178,7 @@ export default function PublicQuestionViewer({
 
                {/* OTHER TYPES (Matching, etc.) */}
                {currentQuestion.type !== 'MULTIPLE_CHOICE' && currentQuestion.type !== 'TRUE_FALSE' && (
-                 <div className="p-8 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 text-center">
+                 <div className="p-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-center">
                     <p className="text-slate-400 font-bold italic">
                        Loại câu hỏi {currentQuestion.type} đang được cập nhật...
                     </p>
@@ -189,7 +189,7 @@ export default function PublicQuestionViewer({
 
          {/* Explanation Box */}
          {showExplanation[currentQuestion.id] && (
-           <div className="animate-in fade-in slide-in-from-top-2 duration-500 bg-blue-50/50 rounded-3xl p-8 border border-blue-100 space-y-3">
+           <div className="animate-in fade-in slide-in-from-top-2 duration-500 bg-blue-50/50 rounded-xl p-8 border border-blue-100 space-y-3">
               <div className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest">
                  <HelpCircle className="w-4 h-4" />
                  Giải thích đáp án
@@ -206,7 +206,7 @@ export default function PublicQuestionViewer({
          <button
            onClick={handlePrev}
            disabled={currentIndex === 0}
-           className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm text-slate-500 hover:bg-white disabled:opacity-30 transition-all"
+           className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-slate-500 hover:bg-white disabled:opacity-30 transition-all"
          >
             <ChevronLeft className="w-5 h-5" />
             Câu trước
@@ -227,7 +227,7 @@ export default function PublicQuestionViewer({
             showSubmitButton && (
               <button
                  onClick={() => alert('Chức năng nộp bài đang được hoàn thiện!')}
-                 className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/10"
+                 className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-lg font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/10"
               >
                  HOÀN THÀNH
               </button>
@@ -235,7 +235,7 @@ export default function PublicQuestionViewer({
          ) : (
             <button
               onClick={handleNext}
-              className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-2xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+              className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-lg font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
             >
                CÂU TIẾP THEO
                <ChevronRight className="w-5 h-5" />

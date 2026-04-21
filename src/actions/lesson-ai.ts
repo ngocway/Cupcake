@@ -111,14 +111,6 @@ export async function generateAILesson({
   }
 
   try {
-    const model = genAI.getGenerativeModel({
-      model: "gemini-flash-latest",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: lessonSchema as any,
-      }
-    });
-
     const isVietnamese = language === "Tiếng Việt";
 
     const prompt = `Create a complete lesson for students in the ${language} language on the topic: "${topic}".
@@ -140,8 +132,38 @@ export async function generateAILesson({
     Follow the JSON schema exactly.`;
 
 
-    logProgress(`Calling Gemini API (Flash Latest)...`);
-    const result = await model.generateContent(prompt);
+    const maxRetries = 2;
+    let retryCount = 0;
+    let result;
+
+    while (retryCount <= maxRetries) {
+      try {
+        logProgress(`Calling Gemini API (1.5 Flash) - Attempt ${retryCount + 1}...`);
+        const model = genAI.getGenerativeModel({
+          model: "gemini-1.5-flash",
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: lessonSchema as any,
+          }
+        });
+
+        result = await model.generateContent(prompt);
+        break; // Success
+      } catch (error: any) {
+        if (error.message?.includes("503") || error.message?.includes("high demand") || error.message?.includes("Service Unavailable")) {
+          retryCount++;
+          if (retryCount <= maxRetries) {
+            logProgress(`Gemini 503 detected, retrying in 2s...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+        }
+        throw error;
+      }
+    }
+
+    if (!result) throw new Error("Failed to get response from Gemini.");
+
     const response = await result.response;
     const text = response.text();
     
@@ -151,6 +173,11 @@ export async function generateAILesson({
   } catch (error: any) {
     logProgress(`Gemini API Error: ${error.message}`);
     console.error("AI Lesson Gen Error:", error);
+    
+    if (error.message?.includes("503") || error.message?.includes("high demand") || error.message?.includes("Service Unavailable")) {
+      return { error: "Hệ thống AI của Google đang quá tải (503). Vui lòng thử lại sau vài giây." };
+    }
+    
     return { error: error.message || "Failed to generate lesson content." };
   }
 }

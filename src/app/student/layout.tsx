@@ -24,6 +24,24 @@ export default async function StudentLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-surface font-body text-on-surface">
+      {/* Admin Impersonation Banner */}
+      {session.user.role === 'ADMIN' && (
+        <div className="sticky top-0 z-[100] w-full bg-amber-500 text-amber-950 flex items-center justify-between px-6 py-2.5 shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+            <span className="text-xs font-black uppercase tracking-widest">
+              Admin đang xem giao diện Học sinh
+            </span>
+          </div>
+          <a
+            href="/admin/staff"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-950/10 hover:bg-amber-950/20 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all border border-amber-950/20"
+          >
+            <span className="material-symbols-outlined text-sm">arrow_back</span>
+            Thoát về Admin
+          </a>
+        </div>
+      )}
       {/* TopNavBar */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl flex justify-between items-center px-6 py-3">
         <div className="flex items-center gap-8">

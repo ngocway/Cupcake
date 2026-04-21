@@ -5,6 +5,7 @@ import { Lexend } from "next/font/google"
 import Link from "next/link"
 import React, { useState, useRef, useEffect } from "react"
 import { signOut, useSession, SessionProvider } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 const lexend = Lexend({
   variable: "--font-lexend",
@@ -211,17 +212,33 @@ function TeacherProfile() {
   )
 }
 
-export default function TeacherLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
+function AdminModeBanner({ mode }: { mode: 'TEACHER' | 'STUDENT' }) {
+  const router = useRouter()
+  return (
+    <div className="sticky top-0 z-[100] w-full bg-amber-500 text-amber-950 flex items-center justify-between px-6 py-2.5 shadow-lg">
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+        <span className="text-xs font-black uppercase tracking-widest">
+          Admin đang xem giao diện {mode === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}
+        </span>
+      </div>
+      <button
+        onClick={() => router.push('/admin/staff')}
+        className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-950/10 hover:bg-amber-950/20 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all border border-amber-950/20"
+      >
+        <span className="material-symbols-outlined text-sm">arrow_back</span>
+        Thoát về Admin
+      </button>
+    </div>
+  )
+}
 
-  
+function TeacherLayoutContent({ children, session, pathname }: { children: React.ReactNode, session: any, pathname: string }) {
   const navItems = [
     { name: "Bảng điều khiển", href: "/teacher/dashboard", icon: "grid_view" },
     { name: "Lớp học", href: "/teacher/classes", icon: "school" },
     { name: "Hồ sơ năng lực", href: "/teacher/profile", icon: "contact_page" },
   ];
-
-
 
   const libraryItems = [
     { name: "Tất cả bài học", href: "/teacher/lessons", icon: "menu_book" },
@@ -232,18 +249,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { name: "Thùng rác", href: "/teacher/materials/trash", icon: "delete" },
   ];
 
-  // Skip layout chrome for login page
-  if (pathname === '/teacher/login') {
-    return (
-      <SessionProvider>
-        {children}
-      </SessionProvider>
-    )
-  }
-
   return (
-    <SessionProvider>
-      <div className={`teacher-theme ${lexend.variable} font-display bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
+    <div className={`teacher-theme ${lexend.variable} font-display bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
+      {session?.user?.role === 'ADMIN' && <AdminModeBanner mode="TEACHER" />}
       <header className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-[#f0f2f4] dark:border-gray-800 px-6 py-3">
         <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
           <div className="flex items-center gap-8 flex-1">
@@ -270,10 +278,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                     } else {
                       params.delete('q');
                     }
-                    // Use window.history to avoid full page reload/flicker if on the same page
                     const newPath = `${window.location.pathname}?${params.toString()}`;
                     window.history.replaceState({}, '', newPath);
-                    // Dispatch a custom event to notify listeners (like the Materials page)
                     window.dispatchEvent(new Event('search-change'));
                   }}
                 />
@@ -286,7 +292,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           </div>
         </div>
       </header>
-
 
       <div className="flex flex-1 max-w-[1440px] mx-auto w-full px-6 py-8 gap-8">
         <aside className="w-64 shrink-0 hidden md:flex flex-col gap-6">
@@ -330,7 +335,33 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           {children}
         </main>
       </div>
-      </div>
+    </div>
+  )
+}
+
+function TeacherLayoutWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const { data: session } = useSession()
+  return <TeacherLayoutContent children={children} session={session} pathname={pathname} />
+}
+
+export default function TeacherLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+
+  // Skip layout chrome for login page
+  if (pathname === '/teacher/login') {
+    return (
+      <SessionProvider>
+        {children}
+      </SessionProvider>
+    )
+  }
+
+  return (
+    <SessionProvider>
+      <TeacherLayoutWrapper>
+        {children}
+      </TeacherLayoutWrapper>
     </SessionProvider>
   )
 }

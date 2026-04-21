@@ -60,3 +60,58 @@ export async function submitLessonReview(lessonId: string, rating: number, comme
     return { success: false, message: "Đã có lỗi xảy ra. Vui lòng thử lại sau." };
   }
 }
+
+export async function submitAssignmentReview(assignmentId: string, rating: number, comment: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, message: "Bạn cần đăng nhập để thực hiện chức năng này." };
+    }
+
+    const studentId = session.user.id;
+
+    // 1. Check if assignment is PUBLIC
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: { status: true }
+    });
+
+    if (!assignment || assignment.status !== "PUBLIC") {
+      return { success: false, message: "Chỉ có thể đánh giá bài tập công khai." };
+    }
+
+    // 2. Check if student already reviewed
+    const existingReview = await prisma.assignmentReview.findUnique({
+      where: {
+        studentId_assignmentId: {
+          studentId,
+          assignmentId
+        }
+      }
+    });
+
+    if (existingReview) {
+      return { success: false, message: "Bạn đã đánh giá bài tập này rồi." };
+    }
+
+    // 3. Create review (AssignmentReview doesn't have isApproved in schema)
+    await prisma.assignmentReview.create({
+      data: {
+        assignmentId,
+        studentId,
+        rating,
+        comment: comment || null,
+      }
+    });
+
+    revalidatePath(`/public/assignments/${assignmentId}`);
+    return { 
+      success: true, 
+      message: "Cảm ơn bạn đã gửi đánh giá!" 
+    };
+
+  } catch (error) {
+    console.error("Error submitting assignment review:", error);
+    return { success: false, message: "Đã có lỗi xảy ra. Vui lòng thử lại sau." };
+  }
+}

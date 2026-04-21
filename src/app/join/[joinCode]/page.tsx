@@ -7,18 +7,34 @@ import Link from 'next/link';
 export default async function JoinClassPage({ params }: { params: Promise<{ joinCode: string }> }) {
   const { joinCode } = await params;
 
-  // 1. Check if class exists by join_code
-  const classObj = await prisma.class.findUnique({
-    where: { joinCode },
+  // 1. Check if class exists by joinCode, classCode, OR id
+  const classObj = await prisma.class.findFirst({
+    where: {
+      OR: [
+        { joinCode: joinCode },
+        { classCode: joinCode },
+        { id: joinCode }
+      ],
+      deletedAt: null
+    },
     include: { teacher: true }
   });
 
   if (!classObj) {
+    // 1.1 Check if it's an assignment ID
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: joinCode }
+    });
+
+    if (assignment) {
+      redirect(`/public/assignments/${joinCode}`);
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Mã lớp không hợp lệ</h1>
-          <p className="text-slate-500">Vui lòng kiểm tra lại liên kết hoặc quét lại mã QR.</p>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Mã không hợp lệ</h1>
+          <p className="text-slate-500">Chúng tôi không tìm thấy lớp học hoặc bài tập nào với mã này.</p>
         </div>
       </div>
     );

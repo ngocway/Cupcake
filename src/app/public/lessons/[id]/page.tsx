@@ -1,31 +1,27 @@
 
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { 
-  ChevronLeft, 
-  User, 
-  Calendar,
-  Eye,
-  BookOpen,
-  Share2,
-  Bookmark,
-  Lock,
-  Tag,
-  ArrowRight
-} from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import PublicQuestionViewer from "@/components/lessons/PublicQuestionViewer";
 import LessonReviewSection from "@/components/lessons/LessonReviewSection";
+import { PublicHeader } from "@/components/public/PublicHeader";
 
 export default async function PublicLessonPage({ 
   params 
 }: { 
   params: Promise<{ id: string }> 
 }) {
-  const session = await auth();
+  const sessionData = await auth();
+  const session = sessionData?.user ? {
+    id: sessionData.user.id!,
+    name: sessionData.user.name ?? null,
+    image: sessionData.user.image ?? null,
+    role: sessionData.user.role ?? null,
+  } : null;
+  
   const { id } = await params;
 
   const lesson = await prisma.lesson.findUnique({
@@ -62,30 +58,27 @@ export default async function PublicLessonPage({
 
   if (!lesson) notFound();
 
-  // ACCESS CONTROL
   const isPublic = lesson.assignment?.status === "PUBLIC";
-  const isLoggedIn = !!session?.user;
-  const isStudent = session?.user?.role === "STUDENT";
+  const isLoggedIn = !!session; // Fixed logic
 
-  // Guest cannot view PRIVATE lessons
   if (!isPublic && !isLoggedIn) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-container-low/20 p-6">
-        <div className="max-w-md w-full bg-white rounded-[2rem] p-10 border border-outline-variant/30 text-center space-y-6 shadow-xl">
+      <div className="min-h-screen flex items-center justify-center bg-background p-6 font-body">
+        <div className="max-w-md w-full bg-surface-container-lowest rounded-[2rem] p-10 border border-white/20 text-center space-y-6 shadow-2xl shadow-on-surface/5">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-            <Lock className="w-10 h-10 text-primary" />
+            <span className="material-symbols-outlined text-4xl text-primary">lock</span>
           </div>
-          <h1 className="text-2xl font-black text-on-surface">Bài học riêng tư</h1>
-          <p className="text-on-surface-variant leading-relaxed">
-            Bài học này đã được đặt ở chế độ riêng tư bởi giáo viên. Vui lòng đăng nhập bằng tài khoản học sinh để tiếp tục.
+          <h1 className="text-3xl font-black text-on-surface font-headline uppercase italic">Bài học riêng tư</h1>
+          <p className="text-on-surface-variant leading-relaxed font-medium">
+            Bài học này đã được đặt ở chế độ riêng tư bởi giáo viên. Vui lòng đăng nhập để tiếp tục khám phá tri thức.
           </p>
           <Link 
             href="/student/login"
-            className="block w-full py-4 bg-primary text-white rounded-2xl font-black tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
+            className="block w-full py-4 bg-primary text-on-primary rounded-full font-black tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20 uppercase text-sm"
           >
-            ĐĂNG NHẬP NGAY
+            Đăng nhập ngay
           </Link>
-          <Link href="/" className="block text-sm font-bold text-outline hover:text-primary transition-colors">
+          <Link href="/" className="block text-xs font-black text-primary hover:underline transition-colors uppercase tracking-widest">
             Quay lại trang chủ
           </Link>
         </div>
@@ -93,7 +86,6 @@ export default async function PublicLessonPage({
     );
   }
 
-  // Related Lessons Logic
   const currentTags = lesson.assignment?.tags?.split(',').map(t => t.trim()).filter(Boolean) || [];
   let relatedLessons: any[] = [];
   
@@ -108,273 +100,237 @@ export default async function PublicLessonPage({
           }))
         }
       },
-      take: 4,
       include: {
         teacher: { select: { name: true } },
-        assignment: { select: { thumbnail: true, tags: true } }
-      }
+        assignment: { select: { thumbnail: true } }
+      },
+      take: 3
     });
-  }
-
-  // Parse Youtube ID
-  const getYoutubeId = (url: string | null) => {
-    if (!url) return null;
-    const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    return match ? match[1] : null;
-  };
-
-  const videoId = getYoutubeId(lesson.videoUrl);
-
-  // --- CHECK IF ASSIGNED TO STUDENT'S CLASS ---
-  let isAssignedToUser = false;
-  if (session?.user?.id) {
-    const studentClasses = await prisma.classEnrollment.findMany({
-      where: { studentId: session.user.id, status: 'ACTIVE' },
-      select: { classId: true }
-    });
-    
-    const classIds = studentClasses.map(c => c.classId);
-    
-    if (classIds.length > 0) {
-      const assignmentInClass = await prisma.assignmentClass.findFirst({
-        where: {
-          assignmentId: lesson.assignmentId!,
-          classId: { in: classIds }
-        }
-      });
-      isAssignedToUser = !!assignmentInClass;
-    }
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Sticky Header */}
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-black group-hover:rotate-12 transition-transform">
-              C
-            </div>
-            <span className="font-black text-xl tracking-tighter text-slate-900">CUPCAKES</span>
-          </Link>
-          <div className="flex items-center gap-4">
-             <button className="p-2 hover:bg-slate-100 rounded-full text-slate-500"><Bookmark className="w-5 h-5" /></button>
-             <button className="p-2 hover:bg-slate-100 rounded-full text-slate-500"><Share2 className="w-5 h-5" /></button>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-background text-on-background font-body">
+      <PublicHeader session={session} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          
-          {/* Left Column: Video & Description & Questions */}
-          <div className="lg:col-span-8 space-y-12">
-            
-            {/* 1. Video Player */}
-            <section className="space-y-6">
-              <div className="aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl ring-1 ring-slate-200">
-                {videoId ? (
-                  <iframe
-                    className="w-full h-full"
-                    src={`https://www.youtube.com/embed/${videoId}?rel=0`}
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-4">
-                    <BookOpen className="w-16 h-16 opacity-20" />
-                    <p className="font-bold">Nội dung bài học không có video</p>
-                  </div>
-                )}
-              </div>
+      <main className="w-full max-w-[1600px] mx-auto pb-24 md:pb-12 pt-0 md:pt-4">
+        {/* Hero Section */}
+        <section className="w-full relative bg-surface-container-low pt-24 md:pt-28 pb-16 px-4 md:px-8 xl:px-16 rounded-b-xl md:rounded-b-[4rem] mb-12 shadow-sm">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-10">
+              <span className="inline-block px-4 py-1.5 bg-tertiary-container text-on-tertiary-container rounded-md font-label text-xs font-black uppercase tracking-widest mb-4">
+                Khoá Học Cao Cấp
+              </span>
+              <h1 className="text-4xl md:text-6xl lg:text-[4.5rem] leading-[1.1] font-headline font-extrabold text-on-background tracking-[-0.03em] mb-6 uppercase italic">
+                {lesson.title}
+              </h1>
+              <p className="text-lg md:text-xl text-on-surface-variant font-body max-w-3xl leading-relaxed">
+                {lesson.description || "Làm chủ kiến thức chuyên sâu và ứng dụng thực tế để nâng tầm kỹ năng của bạn trong môi trường chuyên nghiệp."}
+              </p>
+            </div>
+
+            <div className="relative w-full aspect-video rounded-xl md:rounded-[3rem] overflow-hidden shadow-[0px_40px_80px_rgba(0,51,68,0.15)] bg-slate-900 flex items-center justify-center group">
+              {/* Video Thumbnail / Placeholder */}
+              <img 
+                alt={lesson.title} 
+                className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-1000" 
+                src={lesson.assignment?.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=1200"} 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-80"></div>
               
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                   <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${isPublic ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {isPublic ? 'Public Lesson' : 'Private Lesson'}
-                   </span>
-                   <div className="flex items-center gap-2 text-slate-400 text-xs font-bold">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {format(lesson.createdAt, "dd MMMM, yyyy", { locale: vi })}
-                   </div>
+              <button className="relative z-10 w-20 h-20 md:w-32 md:h-32 bg-primary/90 backdrop-blur-md rounded-full flex items-center justify-center hover:scale-110 transition-all duration-500 shadow-[0px_20px_40px_rgba(0,100,119,0.4)] border border-white/20">
+                <span className="material-symbols-outlined text-on-primary text-5xl md:text-7xl ml-2 drop-shadow-lg" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+              </button>
+
+              <div className="absolute bottom-6 left-8 right-8 flex justify-between items-end z-10">
+                <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-lg text-white font-label text-xs font-bold border border-white/10 tracking-widest uppercase">
+                   Bài giảng: {lesson.title}
                 </div>
-                <h1 className="text-3xl md:text-5xl font-black text-slate-900 leading-tight">
-                  {lesson.title}
-                </h1>
+                <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-lg text-white font-label text-xs font-bold border border-white/10 tracking-widest uppercase">
+                   {lesson.assignment?.materialType === 'READING' ? 'Bản tài liệu' : 'Video 4K'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                {/* Tags Display (New Requirement) */}
-                {currentTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2">
-                     {currentTags.map((tag, idx) => (
-                       <Link 
-                         key={idx} 
-                         href={`/public/tags/${encodeURIComponent(tag)}`}
-                         className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold border border-slate-200 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
-                       >
-                          <Tag className="w-3 h-3" />
-                          {tag}
-                       </Link>
-                     ))}
-                  </div>
-                )}
+        {/* Main Content & Sidebar */}
+        <div className="max-w-7xl mx-auto px-4 md:px-8 xl:px-16 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+          
+          {/* Left Column (Main Content) */}
+          <div className="lg:col-span-8 flex flex-col gap-12">
+            
+            {/* Lesson Content Section */}
+            <section className="bg-surface-container-lowest p-8 md:p-12 rounded-xl shadow-xl shadow-on-surface/5 border border-white/20 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+              
+              <div className="relative z-10">
+                <h2 className="text-3xl font-headline font-black mb-8 text-on-background flex items-center gap-3 italic uppercase tracking-tighter">
+                  <span className="w-10 h-10 bg-primary text-on-primary rounded-xl flex items-center justify-center text-sm font-black italic shadow-lg shadow-primary/20">01</span>
+                  TỔNG QUAN BÀI HỌC
+                </h2>
+                
+                <div className="prose prose-slate max-w-none font-body text-on-surface-variant text-lg leading-relaxed mb-10">
+                   {lesson.assignment?.instructions ? (
+                     <div dangerouslySetInnerHTML={{ __html: lesson.assignment.instructions }} />
+                   ) : (
+                     <p>Bài giảng này cung cấp kiến thức nền tảng và các ứng dụng thực tế giúp bạn đạt được mục tiêu học tập một cách tối ưu nhất.</p>
+                   )}
+                </div>
 
-                <div className="flex items-center gap-6 py-2">
-                   <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-                      <Eye className="w-4 h-4 text-primary" />
-                      {lesson.viewsCount.toLocaleString()} lượt xem
-                   </div>
-                   <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-                      <BookOpen className="w-4 h-4 text-primary" />
-                      {lesson.assignment?.questions.length || 0} câu hỏi
-                   </div>
+                <div className="flex flex-wrap gap-4 pt-8 border-t border-surface-container">
+                  <a className="inline-flex items-center gap-3 bg-gradient-to-r from-primary to-primary-dim text-on-primary px-10 py-5 rounded-full font-label font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform shadow-xl shadow-primary/20" href="#">
+                    <span className="material-symbols-outlined text-[20px]">description</span>
+                    Tải Tài Liệu (PDF)
+                  </a>
+                  {lesson.assignment && (
+                    <Link className="inline-flex items-center gap-3 bg-secondary-container text-on-secondary-container px-10 py-5 rounded-full font-label font-black text-xs uppercase tracking-widest hover:scale-105 transition-transform border border-secondary/10" href={`/public/assignments/${lesson.assignment.id}`}>
+                      <span className="material-symbols-outlined text-[20px]">assignment</span>
+                      Làm Bài Tập
+                    </Link>
+                  )}
                 </div>
               </div>
             </section>
 
-            {/* 2. Description */}
-            <section className="bg-white rounded-[2.5rem] p-8 lg:p-10 border border-slate-200 shadow-sm space-y-6">
-               <h2 className="text-2xl font-black text-slate-900">Về bài học này</h2>
-               <div className="text-slate-600 leading-relaxed text-lg whitespace-pre-wrap font-medium">
-                  {lesson.description || "Chưa có mô tả cho bài học này."}
-               </div>
-            </section>
-
-            {/* 3. Questions (UC-03) */}
-            <section id="questions" className="space-y-8">
-               <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-black text-slate-900">Câu hỏi luyện tập</h2>
-                  {!isLoggedIn && (
-                    <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full">
-                       Đăng nhập để lưu kết quả
-                    </span>
-                  )}
-               </div>
-               
-               {lesson.assignment ? (
-                 <PublicQuestionViewer 
-                   questions={lesson.assignment.questions} 
-                   assignmentId={lesson.assignment.id}
-                   isLoggedIn={isLoggedIn}
-                   showSubmitButton={isAssignedToUser}
-                 />
-               ) : (
-                 <div className="p-10 bg-slate-50 rounded-3xl text-center text-slate-400 font-bold border-2 border-dashed border-slate-200">
-                    Không có câu hỏi đính kèm
-                 </div>
-               )}
-            </section>
-
-            {/* 4. Reviews (UC-02.4) */}
-            <LessonReviewSection 
-              reviews={lesson.reviews} 
-              lessonId={lesson.id}
-              isLoggedIn={isLoggedIn}
-              isPublic={isPublic}
-            />
-
-          </div>
-
-          {/* Right Column: Instructor & Related Lessons (New Requirement) */}
-          <div className="lg:col-span-4 space-y-8">
-            
-            {/* Instructor Card */}
-            <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
-               <div className="space-y-6">
-                  <div className="flex items-center gap-4">
-                     <div className="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden ring-2 ring-primary/10">
-                        {lesson.teacher.image ? (
-                          <img src={lesson.teacher.image} alt={lesson.teacher.name || ""} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center"><User className="w-8 h-8 text-slate-300" /></div>
-                        )}
-                     </div>
-                     <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Giáo viên</p>
-                        <h3 className="text-xl font-black text-slate-900">{lesson.teacher.name}</h3>
-                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                     <p className="text-sm font-bold text-primary">{lesson.teacher.professionalTitle}</p>
-                     <p className="text-sm text-slate-500 leading-relaxed italic">
-                        "{lesson.teacher.bio?.substring(0, 100)}..."
-                     </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-400">
-                     <Link 
-                        href={`/public/teachers/${lesson.teacher.id}/lessons`}
-                        className="hover:text-primary transition-colors flex items-center gap-1 underline decoration-dotted underline-offset-4"
-                     >
-                        {lesson.teacher._count.lessons} bài giảng
-                     </Link>
-                     <Link href={`/profile/${lesson.teacher.id}`} className="text-primary hover:underline font-black">Xem hồ sơ</Link>
-                  </div>
-               </div>
-            </div>
-
-            {/* Related Lessons Section (Marked in Red) */}
-            <div className="space-y-6">
-               <h3 className="text-xl font-black text-slate-900 px-2 flex items-center gap-2">
-                  Bài học liên quan
-                  <div className="h-1 flex-1 bg-slate-100 rounded-full" />
-               </h3>
-               
-               {relatedLessons.length > 0 ? (
-                 <div className="space-y-4">
-                    {relatedLessons.map((rel) => (
-                      <Link 
-                        key={rel.id} 
-                        href={`/public/lessons/${rel.id}`}
-                        className="group flex gap-4 p-4 bg-white rounded-3xl border border-slate-100 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all"
-                      >
-                         <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden shrink-0 ring-1 ring-slate-200">
-                            {rel.assignment?.thumbnail ? (
-                              <img src={rel.assignment.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300"><BookOpen className="w-8 h-8" /></div>
-                            )}
-                         </div>
-                         <div className="flex flex-col justify-center gap-1 overflow-hidden">
-                            <h4 className="font-black text-slate-900 text-sm line-clamp-2 leading-tight group-hover:text-primary transition-colors">
-                               {rel.title}
-                            </h4>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
-                               {rel.teacher.name}
-                            </p>
-                         </div>
-                      </Link>
-                    ))}
-                 </div>
-               ) : (
-                 <div className="p-8 bg-slate-50 rounded-3xl border border-dashed border-slate-200 text-center text-slate-400 text-xs font-bold">
-                    Không tìm thấy bài học tương tự
-                 </div>
-               )}
-            </div>
-
-            {/* CTA for guests */}
-            {!isLoggedIn && (
-               <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white space-y-6 relative overflow-hidden">
-                  <div className="relative z-10 space-y-4">
-                     <h4 className="text-2xl font-black leading-tight">Muốn lưu lại tiến độ học tập?</h4>
-                     <p className="text-slate-400 text-sm leading-relaxed">
-                        Đăng nhập ngay để theo dõi lịch sử làm bài và nhận chứng chỉ.
-                     </p>
-                     <Link 
-                        href="/student/login"
-                        className="block w-full py-4 bg-white text-slate-900 rounded-2xl text-center font-black tracking-widest hover:bg-primary hover:text-white transition-all group"
-                     >
-                        ĐĂNG NHẬP
-                        <ArrowRight className="inline-block ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                     </Link>
-                  </div>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16"></div>
-               </div>
+            {/* Questions Preview if any */}
+            {lesson.assignment?.questions && lesson.assignment.questions.length > 0 && (
+              <section className="bg-surface-container-low/30 p-8 md:p-12 rounded-xl border border-white/20 shadow-sm">
+                <h2 className="text-2xl font-headline font-black mb-8 text-on-background flex items-center gap-3 italic uppercase tracking-tighter">
+                   <span className="material-symbols-outlined text-primary text-3xl">quiz</span>
+                   NỘI DUNG THỰC HÀNH
+                </h2>
+                <div className="bg-white/80 backdrop-blur-sm rounded-[2rem] p-6 border border-white/40 shadow-sm">
+                   <PublicQuestionViewer 
+                     questions={lesson.assignment.questions} 
+                     assignmentId={lesson.assignment.id}
+                     isLoggedIn={isLoggedIn}
+                     showSubmitButton={false} 
+                   />
+                </div>
+              </section>
             )}
 
+            {/* Review & Discussion Section */}
+            <section className="bg-surface-container-high/10 p-8 md:p-12 rounded-[2.5rem] border border-white/20 shadow-inner">
+               <div className="flex justify-between items-center mb-10">
+                  <h2 className="text-3xl font-headline font-black text-on-background uppercase italic tracking-tighter">
+                     Thảo luận & Đánh giá
+                  </h2>
+               </div>
+               
+               <LessonReviewSection 
+                 reviews={lesson.reviews as any}
+                 lessonId={lesson.id}
+                 isLoggedIn={isLoggedIn}
+                 isPublic={isPublic}
+               />
+            </section>
+          </div>
+
+          {/* Right Column (Sidebar) */}
+          <div className="lg:col-span-4 flex flex-col gap-8">
+            
+            {/* Instructor Card */}
+            <aside className="bg-surface-container-highest p-10 rounded-[2.5rem] relative overflow-hidden shadow-2xl shadow-primary/5 border border-white/30 group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none group-hover:bg-primary/20 transition-colors"></div>
+              
+              <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-10 border-b border-primary/10 pb-4">Người Hướng Dẫn</h3>
+              
+              <div className="flex flex-col items-center text-center gap-6 mb-8">
+                <div className="w-24 h-24 rounded-2xl bg-white shadow-xl p-1.5 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                  <img 
+                    alt={lesson.teacher.name || ""} 
+                    className="w-full h-full object-cover rounded-xl" 
+                    src={lesson.teacher.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lesson.teacher.id}`} 
+                  />
+                </div>
+                <div>
+                  <h4 className="text-2xl font-headline font-black text-on-background uppercase tracking-tight italic">{lesson.teacher.name}</h4>
+                  <p className="text-primary font-black text-[10px] uppercase tracking-[0.2em] mt-2 px-4 py-1 bg-primary/5 rounded-full inline-block">
+                    {lesson.teacher.professionalTitle || "GIẢNG VIÊN CAO CẤP"}
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-on-surface-variant font-body text-sm mb-10 leading-relaxed italic text-center px-4">
+                "{lesson.teacher.bio || "Mang đến những kiến thức thực tiễn và tư duy linh hoạt giúp bạn làm chủ mọi kỹ năng mới."}"
+              </p>
+              
+              <Link 
+                href={`/profile/${lesson.teacher.id}`}
+                className="w-full py-5 bg-white text-primary font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm border border-white/40 block text-center"
+              >
+                XEM HỒ SƠ CHI TIẾT
+              </Link>
+            </aside>
+
+            {/* Next Lessons / Related */}
+            <aside className="bg-surface-container-low p-10 rounded-[2.5rem] border border-white/20 shadow-sm">
+              <h3 className="text-lg font-headline font-black text-on-background uppercase italic tracking-tighter mb-10 border-b border-on-surface/5 pb-4">Bài Học Tiếp Theo</h3>
+              <div className="space-y-8">
+                 {relatedLessons.length > 0 ? (
+                   relatedLessons.map((rel) => (
+                     <Link 
+                       key={rel.id} 
+                       href={`/public/lessons/${rel.id}`}
+                       className="group flex gap-4 items-start"
+                     >
+                       <div className="relative w-24 aspect-video rounded-xl overflow-hidden shrink-0 shadow-lg border border-white/20">
+                         <img 
+                           alt={rel.title} 
+                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                           src={rel.assignment?.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=200"} 
+                         />
+                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+                       </div>
+                       <div className="space-y-1 overflow-hidden">
+                         <h4 className="font-headline font-black text-on-surface group-hover:text-primary transition-colors line-clamp-2 leading-tight text-xs uppercase italic">
+                           {rel.title}
+                         </h4>
+                         <p className="text-[10px] text-on-surface-variant/50 font-black uppercase tracking-widest">{rel.teacher.name}</p>
+                       </div>
+                     </Link>
+                   ))
+                 ) : (
+                   <p className="text-on-surface-variant/40 font-black text-[10px] uppercase tracking-widest text-center py-10 border border-dashed border-primary/20 rounded-2xl bg-white/50">
+                      Đang cập nhật bài học mới...
+                   </p>
+                 )}
+              </div>
+            </aside>
+
+            {/* Pro Badge / CTA */}
+            <div className="bg-on-surface rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-on-surface/30 group">
+               <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-white/20 transition-all"></div>
+               <div className="relative z-10 space-y-6">
+                  <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                     <span className="material-symbols-outlined text-on-primary">rocket_launch</span>
+                  </div>
+                  <div className="space-y-2">
+                     <h3 className="text-2xl font-black font-headline uppercase italic tracking-tighter">Gia Nhập Cộng Đồng</h3>
+                     <p className="text-white/60 text-xs font-bold leading-relaxed">Mở khóa lộ trình học tập chuyên sâu và kết nối với mạng lưới chuyên gia toàn cầu.</p>
+                  </div>
+                  <Link href="/student/login" className="block w-full py-5 bg-white text-on-surface font-black text-[10px] uppercase tracking-[0.2em] rounded-xl hover:scale-105 transition-transform shadow-xl text-center">
+                     BẮT ĐẦU NGAY
+                  </Link>
+               </div>
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Mobile Nav - Premium Floating */}
+      <nav className="md:hidden fixed bottom-8 left-8 right-8 z-50 bg-white/40 backdrop-blur-3xl rounded-full shadow-2xl border border-white/40 flex justify-around items-center px-4 py-3">
+        <Link href="/" className="flex flex-col items-center justify-center text-primary p-3 bg-white/80 rounded-full shadow-sm">
+           <span className="material-symbols-outlined">home</span>
+        </Link>
+        <button className="flex flex-col items-center justify-center text-on-surface-variant p-3">
+           <span className="material-symbols-outlined">search</span>
+        </button>
+        <button className="flex flex-col items-center justify-center text-on-surface-variant p-3">
+           <span className="material-symbols-outlined">person</span>
+        </button>
+      </nav>
     </div>
   );
 }

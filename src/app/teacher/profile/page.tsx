@@ -6,7 +6,7 @@ import TeacherProfileEditor from "./editor"
 export default async function TeacherProfilePage() {
     const session = await auth();
     
-    if (!session?.user?.id || session.user.role !== "TEACHER") {
+    if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
         redirect("/login");
     }
 
