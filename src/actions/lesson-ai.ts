@@ -1,13 +1,11 @@
 "use server";
 
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import openai from "@/lib/openai";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import fs from 'fs';
 import path from 'path';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export interface AILessonResponse {
   title: string;
@@ -21,63 +19,13 @@ export interface AILessonResponse {
     examples: string[];
   }[];
   questions: {
-    type: "MULTIPLE_CHOICE" | "TRUE_FALSE";
+    type: "MULTIPLE_CHOICE" | "MULTIPLE_SELECT" | "TRUE_FALSE";
     questionText: string;
     options?: { text: string; isCorrect: boolean }[];
     isTrue?: boolean;
     explanation: string;
   }[];
 }
-const lessonSchema = {
-  type: SchemaType.OBJECT,
-  properties: {
-    title: { type: SchemaType.STRING },
-    shortDescription: { type: SchemaType.STRING },
-    passage: { type: SchemaType.STRING },
-    vocabulary: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          word: { type: SchemaType.STRING },
-          pronunciation: { type: SchemaType.STRING },
-          meaningVi: { type: SchemaType.STRING },
-          explanationEn: { type: SchemaType.STRING },
-          examples: {
-            type: SchemaType.ARRAY,
-            items: { type: SchemaType.STRING }
-          }
-        },
-        required: ["word", "pronunciation", "meaningVi", "explanationEn", "examples"]
-      }
-    },
-    questions: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          type: { type: SchemaType.STRING, description: "MULTIPLE_CHOICE or TRUE_FALSE" },
-          questionText: { type: SchemaType.STRING },
-          options: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.OBJECT,
-              properties: {
-                text: { type: SchemaType.STRING },
-                isCorrect: { type: SchemaType.BOOLEAN }
-              },
-              required: ["text", "isCorrect"]
-            }
-          },
-          isTrue: { type: SchemaType.BOOLEAN, description: "Only for TRUE_FALSE type" },
-          explanation: { type: SchemaType.STRING }
-        },
-        required: ["type", "questionText", "explanation"]
-      }
-    }
-  },
-  required: ["title", "shortDescription", "passage", "vocabulary", "questions"]
-};
 
 function logProgress(msg: string) {
   const logDir = path.join(process.cwd(), 'scratch');
@@ -93,7 +41,10 @@ export async function generateAILesson({
   difficulty,
   language = "English",
   questionCount = 5,
-  wordCount = 400
+  wordCount = 400,
+  providedPassage,
+  additionalInstructions,
+  generateVocab = false
 }: {
   topic: string;
   gradeLevel: string;
@@ -102,82 +53,114 @@ export async function generateAILesson({
   language?: string;
   questionCount?: number;
   wordCount?: number;
+  providedPassage?: string;
+  additionalInstructions?: string;
+  generateVocab?: boolean;
 }): Promise<AILessonResponse | { error: string }> {
-  logProgress(`Starting AI Generation for topic: ${topic}, Language: ${language}, WordCount: ${wordCount}`);
+  logProgress(`Starting OpenAI Generation (gpt-4o) for topic: ${topic}, Language: ${language}, ProvidedPassage: ${!!providedPassage}, ExtraInstructions: ${!!additionalInstructions}, GenerateVocab: ${generateVocab}`);
   
-  if (!process.env.GEMINI_API_KEY) {
-    logProgress(`ERROR: GEMINI_API_KEY is missing`);
-    return { error: "GEMINI_API_KEY is not configured." };
+  if (!process.env.OPENAI_API_KEY) {
+    logProgress(`ERROR: OPENAI_API_KEY is missing`);
+    return { error: "OPENAI_API_KEY is not configured." };
   }
 
   try {
     const isVietnamese = language === "Tiếng Việt";
 
-    const prompt = `Create a complete lesson for students in the ${language} language on the topic: "${topic}".
-    Subject: ${subject}
-    Difficulty level: ${difficulty}
-    Target Language for all content (Title, Passage, Questions): ${language}
+    let prompt = "";
     
-    The lesson MUST include:
-    1. An engaging Title written COMPLETELY in ${language}.
-    2. A Short Description (1-2 sentences) written COMPLETELY in ${language}.
-    3. A reading Passage (Body Text) written COMPLETELY in ${language} with approximately ${wordCount} words. 
-       IMPORTANT requirements for the passage:
-       - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
-       - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
-    4. A Vocabulary list of 5-8 key words from the passage with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}
-    5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE and TRUE_FALSE) written COMPLETELY in ${language}.
-    
-    CRITICAL: ALL text in title, passage, and questions MUST be in ${language}. DO NOT use English if the Target Language is Vietnamese.
-    Follow the JSON schema exactly.`;
-
-
-    const maxRetries = 2;
-    let retryCount = 0;
-    let result;
-
-    while (retryCount <= maxRetries) {
-      try {
-        logProgress(`Calling Gemini API (1.5 Flash) - Attempt ${retryCount + 1}...`);
-        const model = genAI.getGenerativeModel({
-          model: "gemini-1.5-flash",
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseSchema: lessonSchema as any,
-          }
-        });
-
-        result = await model.generateContent(prompt);
-        break; // Success
-      } catch (error: any) {
-        if (error.message?.includes("503") || error.message?.includes("high demand") || error.message?.includes("Service Unavailable")) {
-          retryCount++;
-          if (retryCount <= maxRetries) {
-            logProgress(`Gemini 503 detected, retrying in 2s...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-        }
-        throw error;
-      }
+    if (providedPassage) {
+      prompt = `You are an educational assistant. I will provide you with a lesson passage, and you will generate questions based on it.
+      
+      Lesson Topic: "${topic}"
+      Subject: ${subject}
+      Difficulty level: ${difficulty}
+      Target Language for Questions: ${language}
+      ${additionalInstructions ? `EXTRA INSTRUCTIONS FOR QUESTION GENERATION: "${additionalInstructions}"` : ""}
+      
+      PROVIDED PASSAGE:
+      """
+      ${providedPassage}
+      """
+      
+      YOUR TASKS:
+      ${generateVocab ? `1. Identify 5-8 key vocabulary words from the passage.
+      2. Return the EXACT SAME passage you were given, but you MUST wrap those identified key vocabulary words inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
+         Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
+      3. Create a Vocabulary list of those 5-8 key words with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}` : `1. Keep the provided passage exactly as is (No vocabulary markers).
+      2. Leave the "vocabulary" list empty [] in the JSON output.`}
+      4. Create a set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}. MULTIPLE_SELECT should have 2+ correct options.
+         ${additionalInstructions ? `IMPORTANT: Follow these extra instructions for the questions: ${additionalInstructions}` : ""}
+      5. Provide an engaging Title and a Short Description based on the passage.
+      
+      CRITICAL: ALL generated text (Title, Description, Questions${generateVocab ? ', Vocab definitions' : ''}) MUST be in ${language}.`;
+    } else {
+      prompt = `Create a complete lesson for students in the ${language} language on the topic: "${topic}".
+      Subject: ${subject}
+      Difficulty level: ${difficulty}
+      Target Language for all content (Title, Passage, Questions): ${language}
+      
+      The lesson MUST include:
+      1. An engaging Title written COMPLETELY in ${language}.
+      2. A Short Description (1-2 sentences) written COMPLETELY in ${language}.
+      3. A reading Passage (Body Text) written COMPLETELY in ${language} with approximately ${wordCount} words. 
+         IMPORTANT requirements for the passage:
+         - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
+         - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
+      4. A Vocabulary list of 5-8 key words from the passage with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}
+      5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}. MULTIPLE_SELECT should have 2+ correct options.
+      
+      CRITICAL: ALL text in title, passage, and questions MUST be in ${language}. DO NOT use English if the Target Language is Vietnamese.`;
     }
 
-    if (!result) throw new Error("Failed to get response from Gemini.");
-
-    const response = await result.response;
-    const text = response.text();
+    prompt += `
     
-    logProgress(`Gemini response received. Length: ${text.length}`);
+    Return the result in JSON format matching this structure:
+    {
+      "title": "string",
+      "shortDescription": "string",
+      "passage": "string",
+      "vocabulary": [
+        {
+          "word": "string",
+          "pronunciation": "string",
+          "meaningVi": "string",
+          "explanationEn": "string",
+          "examples": ["string"]
+        }
+      ],
+      "questions": [
+        {
+          "type": "MULTIPLE_CHOICE" | "MULTIPLE_SELECT" | "TRUE_FALSE",
+          "questionText": "string",
+          "options": [{"text": "string", "isCorrect": boolean}],
+          "isTrue": boolean,
+          "explanation": "string"
+        }
+      ]
+    }`;
+
+    logProgress(`Calling OpenAI API (gpt-4o)...`);
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: "You are a helpful educational content creator." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const text = completion.choices[0].message.content;
+    if (!text) {
+      throw new Error("Empty response from OpenAI");
+    }
+    
+    logProgress(`OpenAI response received. Length: ${text.length}`);
     return JSON.parse(text) as AILessonResponse;
 
   } catch (error: any) {
-    logProgress(`Gemini API Error: ${error.message}`);
+    logProgress(`OpenAI API Error: ${error.message}`);
     console.error("AI Lesson Gen Error:", error);
-    
-    if (error.message?.includes("503") || error.message?.includes("high demand") || error.message?.includes("Service Unavailable")) {
-      return { error: "Hệ thống AI của Google đang quá tải (503). Vui lòng thử lại sau vài giây." };
-    }
-    
     return { error: error.message || "Failed to generate lesson content." };
   }
 }
@@ -197,12 +180,17 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         vocabMap.set(v.word.toLowerCase(), v);
       });
 
-      let passageHtml = data.passage
-        .split('\n\n')
-        .map(p => p.trim())
-        .filter(p => p.length > 0)
-        .map(p => `<p>${p}</p>`)
-        .join('');
+      let passageHtml = data.passage;
+      
+      // If it doesn't look like HTML (no tags), wrap in paragraphs
+      if (!/<[a-z][\s\S]*>/i.test(passageHtml)) {
+        passageHtml = passageHtml
+          .split('\n\n')
+          .map(p => p.trim())
+          .filter(p => p.length > 0)
+          .map(p => `<p>${p}</p>`)
+          .join('');
+      }
 
       passageHtml = passageHtml.replace(
         /<span class="custom-vocab-marker" data-vocab-id="([^"]+)">([^<]+)<\/span>/g,
@@ -262,14 +250,16 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
       });
 
       const questionsData = data.questions.map((q, idx) => {
-        let questionContent;
-        if (q.type === "MULTIPLE_CHOICE") {
+        let questionContent: any;
+        if (q.type === "MULTIPLE_CHOICE" || q.type === "MULTIPLE_SELECT") {
           questionContent = {
+            type: q.type, // Preserve the specific type (choice vs select)
             questionText: q.questionText,
             options: q.options || []
           };
         } else {
           questionContent = {
+            type: q.type,
             statement: q.questionText,
             isTrue: q.isTrue ?? true
           };
@@ -277,7 +267,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
 
         return {
           assignmentId: assignment.id,
-          type: q.type as any,
+          type: (q.type === "MULTIPLE_SELECT" ? "MULTIPLE_CHOICE" : q.type) as any,
           orderIndex: idx,
           points: 1.0,
           explanation: q.explanation,
@@ -309,8 +299,10 @@ export async function customGenerateLesson(params: {
   gradeLevel: string;
   subject: string;
   difficulty: string;
-  questionCount: number;
   wordCount: number;
+  providedPassage?: string;
+  additionalInstructions?: string;
+  generateVocab?: boolean;
 }) {
   const session = await auth();
   if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
@@ -324,7 +316,10 @@ export async function customGenerateLesson(params: {
       subject: params.subject,
       difficulty: params.difficulty,
       questionCount: params.questionCount,
-      wordCount: params.wordCount
+      wordCount: params.wordCount,
+      providedPassage: params.providedPassage,
+      additionalInstructions: params.additionalInstructions,
+      generateVocab: params.generateVocab
     });
 
     if ("error" in aiResponse) {
