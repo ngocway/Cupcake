@@ -482,8 +482,8 @@ export async function updateMaterialStatus(id: string, newStatus: MaterialStatus
   // 1. Validation for transitioning OUT of DRAFT
   // Materials must meet quality standards before being Private or Public
   if (existing.status === 'DRAFT' && newStatus !== 'DRAFT') {
-    if (!existing.title || existing.title === 'Bài tập mới' || existing.title === 'Reading Exercise: Modern Ethics') {
-      throw new Error('Bài tập phải có Tiêu đề cụ thể trước khi đổi trạng thái.');
+    if (!existing.title || existing.title.trim() === '') {
+      throw new Error('Bài tập phải có Tiêu đề trước khi đổi trạng thái.');
     }
 
     // Check content sufficiency (Reading materials)

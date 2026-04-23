@@ -18,6 +18,7 @@ import {
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ReviewTrigger } from '@/components/reviews/ReviewTrigger';
+import { BookmarkButton } from '@/components/common/BookmarkButton';
 
 export default async function StudentLobbyPage({ 
   params,
@@ -38,6 +39,9 @@ export default async function StudentLobbyPage({
       teacher: true,
       _count: {
         select: { questions: true }
+      },
+      favoriteAssignments: {
+        where: { studentId: session.user.id }
       }
     }
   });
@@ -110,11 +114,21 @@ export default async function StudentLobbyPage({
      return false;
   }
 
+  const isBookmarked = assignment.favoriteAssignments.length > 0;
+
   return (
     <div className="min-h-screen bg-surface-container-low/30 pb-20">
       {/* Hero Section */}
       <div className="bg-white dark:bg-slate-950 border-b border-outline-variant/30">
-        <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center">
+        <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center relative">
+          <div className="absolute top-8 right-6">
+            <BookmarkButton 
+              type="assignment" 
+              id={id} 
+              initialIsBookmarked={isBookmarked} 
+              className="scale-125"
+            />
+          </div>
           <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-primary/5">
             <BookOpen className="w-10 h-10 text-primary" />
           </div>

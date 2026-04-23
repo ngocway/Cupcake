@@ -148,7 +148,10 @@ export async function toggleFavoriteAssignment(assignmentId: string) {
                     }
                 }
             });
-            revalidatePath("/");
+            revalidatePath("/student/assignments");
+            revalidatePath(`/student/assignments/${assignmentId}/run`);
+            revalidatePath(`/student/assignments/${assignmentId}/run/quiz`);
+            revalidatePath("/student/bookmarks");
             return { success: true, action: "unfavorited" };
         } else {
             await prisma.favoriteAssignment.create({
@@ -157,11 +160,61 @@ export async function toggleFavoriteAssignment(assignmentId: string) {
                     assignmentId: assignmentId
                 }
             });
-            revalidatePath("/");
+            revalidatePath("/student/assignments");
+            revalidatePath(`/student/assignments/${assignmentId}/run`);
+            revalidatePath(`/student/assignments/${assignmentId}/run/quiz`);
+            revalidatePath("/student/bookmarks");
             return { success: true, action: "favorited" };
         }
     } catch (error) {
-        console.error("Error toggling favorite:", error);
+        console.error("Error toggling favorite assignment:", error);
+        return { error: "Lỗi hệ thống" };
+    }
+}
+
+export async function toggleFavoriteLesson(lessonId: string) {
+    try {
+        const session = await auth();
+        if (!session?.user?.id) return { error: "Yêu cầu đăng nhập" };
+
+        const userId = session.user.id;
+
+        const existing = await prisma.favoriteLesson.findUnique({
+            where: {
+                studentId_lessonId: {
+                    studentId: userId,
+                    lessonId: lessonId
+                }
+            }
+        });
+
+        if (existing) {
+            await prisma.favoriteLesson.delete({
+                where: {
+                    studentId_lessonId: {
+                        studentId: userId,
+                        lessonId: lessonId
+                    }
+                }
+            });
+            revalidatePath("/student/lessons");
+            revalidatePath(`/student/lessons/${lessonId}`);
+            revalidatePath("/student/bookmarks");
+            return { success: true, action: "unfavorited" };
+        } else {
+            await prisma.favoriteLesson.create({
+                data: {
+                    studentId: userId,
+                    lessonId: lessonId
+                }
+            });
+            revalidatePath("/student/lessons");
+            revalidatePath(`/student/lessons/${lessonId}`);
+            revalidatePath("/student/bookmarks");
+            return { success: true, action: "favorited" };
+        }
+    } catch (error) {
+        console.error("Error toggling favorite lesson:", error);
         return { error: "Lỗi hệ thống" };
     }
 }

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const limit = 12
     const skip = (page - 1) * limit
 
-    const where: any = { status: 'PUBLIC', deletedAt: null }
+    const where: any = { status: 'PUBLIC', deletedAt: null, materialType: { in: ['EXERCISE', 'FLASHCARD'] } }
 
     if (search) {
       where.OR = [

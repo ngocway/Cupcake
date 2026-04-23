@@ -6,6 +6,11 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
   const likes = ((item.id?.charCodeAt(0) || 0) * 7) % 1000
   const rating = (4.5 + (item.id?.length % 5) * 0.1).toFixed(1)
 
+  // Skip the intermediate lobby by adding ?direct=true
+  const href = isLoggedIn 
+    ? `/student/assignments/${item.id}/run?direct=true` 
+    : `/public/assignments/${item.id}?direct=true`
+
   return (
     <div className="relative w-full group transition-all duration-300 hover:-translate-y-2">
       {/* Thumbnail Container */}
@@ -43,7 +48,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
         </div>
 
         {/* Title */}
-        <Link href={isLoggedIn ? `/student/assignments/${item.id}/run` : `/join/${item.id}`}>
+        <Link href={href}>
           <h3 className="text-on-surface text-sm font-extrabold leading-snug mb-4 tracking-tight line-clamp-2 min-h-[2.5rem] group-hover:text-primary transition-colors">
             {item.title}
           </h3>
@@ -76,14 +81,27 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
   )
 }
 
-export function LessonCard({ item }: { item: any }) {
-  const thumb = item.videoUrl
-    ? `https://img.youtube.com/vi/${item.videoUrl.split("v=")[1]?.split("&")[0]}/hqdefault.jpg`
-    : "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800"
+export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boolean }) {
+  const isReading = item.type === 'READING_LESSON' || item.materialType === 'READING'
+  
+  const thumb = isReading 
+    ? (item.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800")
+    : (item.videoUrl
+        ? `https://img.youtube.com/vi/${item.videoUrl.split("v=")[1]?.split("&")[0]}/hqdefault.jpg`
+        : "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800")
 
-  const views = item.viewCount || 0
+  const views = (item.viewCount !== undefined ? item.viewCount : item.viewsCount) || 0
   const rating = (4.5 + (item.id?.length % 5) * 0.1).toFixed(1)
   const reviewCount = item._count?.reviews || 0
+
+  // For lessons, we use the student route if logged in to maintain consistent state
+  const href = isReading
+    ? (isLoggedIn 
+        ? `/student/assignments/${item.id}/run?direct=true` 
+        : `/public/assignments/${item.id}?direct=true`)
+    : (isLoggedIn 
+        ? `/student/lessons/${item.id}` 
+        : `/public/lessons/${item.id}`)
 
   return (
     <div className="relative w-full group transition-all duration-300 hover:-translate-y-2">
@@ -96,9 +114,11 @@ export function LessonCard({ item }: { item: any }) {
         />
         {/* Badge: 'Bài học' */}
         <div className="absolute top-4 left-4 z-10">
-          <span className="bg-secondary text-on-secondary text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5">
-            <span className="material-symbols-outlined !text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
-            Bài học
+          <span className={`${isReading ? 'bg-amber-500' : 'bg-secondary'} text-white text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg flex items-center gap-1.5`}>
+            <span className="material-symbols-outlined !text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {isReading ? 'menu_book' : 'play_circle'}
+            </span>
+            {isReading ? 'Reading' : 'Bài học'}
           </span>
         </div>
         {/* Gradient Overlay */}
@@ -122,7 +142,7 @@ export function LessonCard({ item }: { item: any }) {
         </div>
 
         {/* Title */}
-        <Link href={`/public/lessons/${item.id}`}>
+        <Link href={href}>
           <h3 className="text-on-surface text-sm font-extrabold leading-snug mb-4 tracking-tight line-clamp-2 min-h-[2.5rem] group-hover:text-secondary transition-colors">
             {item.title}
           </h3>

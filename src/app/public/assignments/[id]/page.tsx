@@ -1,18 +1,38 @@
 
-import { auth } from "@/auth";
-import prisma from "@/lib/prisma";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { format } from "date-fns";
-import { vi } from "date-fns/locale";
-import PublicQuestionViewer from "@/components/lessons/PublicQuestionViewer";
-import AssignmentReviewSection from "@/components/public/assignments/AssignmentReviewSection";
+import React from 'react';
+import { auth } from '@/auth';
+import prisma from '@/lib/prisma';
+import { notFound, redirect } from 'next/navigation';
+import { StartButton } from '@/app/student/assignments/[id]/run/StartButton';
+import { 
+  Globe, 
+  Clock, 
+  Calendar, 
+  CheckCircle, 
+  AlertTriangle, 
+  Award, 
+  BarChart3, 
+  Info,
+  ChevronRight,
+  BookOpen,
+  ArrowRight,
+  Share2,
+  Bookmark
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import { ReviewTrigger } from '@/components/reviews/ReviewTrigger';
+import { BookmarkButton } from '@/components/common/BookmarkButton';
 import { PublicHeader } from "@/components/public/PublicHeader";
+import Link from "next/link";
+import QuizClientRunner from "@/app/student/assignments/[id]/run/quiz/QuizClientRunner";
 
 export default async function PublicAssignmentPage({ 
-  params 
+  params,
+  searchParams
 }: { 
-  params: Promise<{ id: string }> 
+  params: Promise<{ id: string }>,
+  searchParams: Promise<{ direct?: string }>
 }) {
   const sessionData = await auth();
   const session = sessionData?.user ? {
@@ -23,302 +43,298 @@ export default async function PublicAssignmentPage({
   } : null;
 
   const { id } = await params;
-
+  const { direct } = await searchParams;
+  
   const assignment = await prisma.assignment.findUnique({
     where: { id },
     include: {
       teacher: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          professionalTitle: true,
-          bio: true,
-          _count: { select: { assignments: true } }
+        include: {
+          _count: {
+            select: {
+               lessons: true,
+               assignments: true
+            }
+          }
         }
       },
-      questions: {
-        orderBy: { orderIndex: 'asc' }
-      },
-      reviews: {
-        include: {
-          student: {
-            select: { name: true, image: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      },
       _count: {
-        select: { submissions: true }
-      }
+        select: { questions: true }
+      },
+      ...(session ? {
+        favoriteAssignments: {
+          where: { studentId: session.id }
+        }
+      } : {})
     }
   });
 
   if (!assignment) notFound();
 
-  const isPublic = assignment.status === "PUBLIC";
-  const isLoggedIn = !!session;
+  const submissions = session ? await prisma.submission.findMany({
+    where: {
+      assignmentId: id,
+      studentId: session.id
+    },
+    orderBy: {
+      attemptNumber: 'desc'
+    }
+  }) : [];
 
-  if (!isPublic && !isLoggedIn) {
+  const activeSubmission = submissions.find(s => !s.submittedAt);
+  const completedSubmissions = submissions.filter(s => s.submittedAt);
+  
+  const hasAttemptsLeft = completedSubmissions.length < assignment.maxAttempts;
+  const nextAttemptNumber = completedSubmissions.length + 1;
+  const isDeadlinePassed = assignment.deadline ? new Date() > assignment.deadline : false;
+  
+  const totalQuestions = assignment._count.questions;
+  const maxScore = assignment.defaultPoints * totalQuestions;
+
+  // Direct jump logic for guests
+  if (!session && direct === 'true') {
+    // Fetch questions and related data for the runner
+    const questions = await prisma.question.findMany({
+      where: { assignmentId: id },
+      orderBy: { orderIndex: 'asc' }
+    });
+
+    const tags = assignment.tags?.split(',').map(t => t.trim()).filter(Boolean) || [];
+    const relatedAssignments = await prisma.assignment.findMany({
+      where: {
+        status: 'PUBLIC',
+        id: { not: id },
+        OR: [
+          { teacherId: assignment.teacherId },
+          {
+            OR: tags.map(tag => ({
+              tags: { contains: tag }
+            }))
+          }
+        ]
+      },
+      take: 5,
+      include: {
+        teacher: {
+          select: { name: true, image: true }
+        }
+      }
+    });
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface p-6 font-body">
-        <div className="max-w-md w-full bg-surface-container-lowest rounded-[20px] p-10 border border-outline-variant/30 text-center space-y-6 shadow-2xl">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-            <span className="material-symbols-outlined text-4xl text-primary">lock</span>
-          </div>
-          <h1 className="text-3xl font-black text-on-surface font-headline">Bài tập riêng tư</h1>
-          <p className="text-on-surface-variant leading-relaxed">
-            Bài tập này đã được đặt ở chế độ riêng tư bởi giáo viên. Vui lòng đăng nhập bằng tài khoản học sinh để tiếp tục.
-          </p>
-          <Link 
-            href="/student/login"
-            className="block w-full py-4 bg-primary text-on-primary rounded-lg font-black tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20 uppercase"
-          >
-            Đăng nhập ngay
-          </Link>
-          <Link href="/" className="block text-sm font-bold text-primary hover:underline transition-colors">
-            Quay lại trang chủ
-          </Link>
-        </div>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+         <QuizClientRunner 
+            assignment={assignment}
+            questions={questions}
+            initialAnswers={{}}
+            isBookmarked={false}
+            initialReview={null}
+            allReviews={assignment.reviews || []}
+            relatedAssignments={relatedAssignments}
+            isGuest={true}
+         />
       </div>
     );
   }
 
-  const currentTags = assignment.tags?.split(',').map(t => t.trim()).filter(Boolean) || [];
-  let relatedAssignments: any[] = [];
-  
-  if (currentTags.length > 0) {
-    relatedAssignments = await prisma.assignment.findMany({
-      where: {
-        id: { not: id },
-        status: isLoggedIn ? { in: ["PUBLIC", "PRIVATE"] as any } : "PUBLIC",
-        OR: currentTags.map(tag => ({
-           tags: { contains: tag }
-        }))
-      },
-      take: 5,
-      include: {
-        teacher: { select: { name: true, id: true, image: true } },
-      }
-    });
+  // Direct start logic for logged in users
+  if (session && direct === 'true') {
+    if (activeSubmission) {
+      redirect(`/student/assignments/${id}/run/quiz?submissionId=${activeSubmission.id}`);
+    } else if (hasAttemptsLeft && !isDeadlinePassed) {
+      const newSubmission = await prisma.submission.create({
+        data: {
+          assignmentId: id,
+          studentId: session.id,
+          attemptNumber: nextAttemptNumber
+        }
+      });
+      redirect(`/student/assignments/${id}/run/quiz?submissionId=${newSubmission.id}`);
+    }
   }
 
+  const canReview = (sub: any) => {
+    if (assignment.reviewMode === "AFTER_EACH_ATTEMPT") return true;
+    if (assignment.reviewMode === "AFTER_ALL_ATTEMPTS_EXHAUSTED" && !hasAttemptsLeft) return true;
+    if (assignment.reviewMode === "AFTER_DEADLINE" && isDeadlinePassed) return true;
+    return false;
+  }
+
+  const isBookmarked = session ? (assignment as any).favoriteAssignments?.length > 0 : false;
+
   return (
-    <div className="min-h-screen bg-surface font-body">
+    <div className="min-h-screen bg-surface-container-low/30 pb-20 font-body">
       <PublicHeader session={session} />
-
-      <main className="w-full pt-28 pb-12 px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Main Content (Left) */}
-          <div className="lg:col-span-8 space-y-8">
-            
-            {/* Hero Card */}
-            <div className="bg-surface-container-lowest rounded-[20px] overflow-hidden shadow-2xl border border-white/20 p-2 relative group">
-              <div className="aspect-[21/9] bg-slate-900 rounded-[16px] overflow-hidden relative">
-                <img 
-                  src={assignment.thumbnail || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=1200"} 
-                  alt="" 
-                  className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent"></div>
-                <div className="absolute bottom-8 left-8 right-8 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-primary text-on-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      {assignment.materialType === "READING" ? "Đọc hiểu" : assignment.materialType === "FLASHCARD" ? "Flashcard" : "Trắc nghiệm"}
-                    </span>
-                    <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
-                      {assignment.gradeLevel || "Tất cả"}
-                    </span>
-                  </div>
-                  <h1 className="text-3xl md:text-5xl font-black text-white leading-tight font-headline uppercase italic tracking-tighter">
-                    {assignment.title}
-                  </h1>
-                </div>
-              </div>
+      
+      {/* Hero Section */}
+      <div className="bg-white dark:bg-slate-950 border-b border-outline-variant/30 pt-20">
+        <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center relative">
+          {session && (
+            <div className="absolute top-8 right-6">
+              <BookmarkButton 
+                type="assignment" 
+                id={id} 
+                initialIsBookmarked={isBookmarked} 
+                className="scale-125"
+              />
             </div>
-
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Thời gian", value: assignment.timeLimit ? `${assignment.timeLimit} phút` : "Không giới hạn", icon: "timer" },
-                { label: "Điểm chuẩn", value: `${assignment.defaultPoints} điểm`, icon: "military_tech" },
-                { label: "Số câu hỏi", value: `${assignment.questions.length} câu`, icon: "quiz" },
-                { label: "Lượt làm bài", value: `${assignment.maxAttempts} lần`, icon: "history_edu" },
-              ].map((stat, idx) => (
-                <div key={idx} className="bg-surface-container-lowest rounded-[16px] p-6 border border-white/20 shadow-sm flex flex-col items-center text-center gap-2 group hover:bg-primary/5 transition-colors">
-                  <span className="material-symbols-outlined text-primary text-3xl group-hover:scale-110 transition-transform">{stat.icon}</span>
-                  <span className="text-[10px] font-black text-on-surface-variant/40 uppercase tracking-widest">{stat.label}</span>
-                  <span className="text-sm font-black text-on-surface uppercase">{stat.value}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Content Tabs / Sections */}
-            <div className="bg-surface-container-low/40 rounded-[20px] p-8 border border-white/20 space-y-8">
-              {/* Instructions */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-primary">
-                  <span className="material-symbols-outlined !text-[20px]">info</span>
-                  <h2 className="text-sm font-black uppercase tracking-widest">Hướng dẫn làm bài</h2>
-                </div>
-                <div className="text-on-surface-variant leading-relaxed font-medium text-lg prose prose-slate max-w-none">
-                  {assignment.instructions ? (
-                    <div dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
-                  ) : (
-                    <p className="italic opacity-60">Không có hướng dẫn cụ thể cho bài tập này.</p>
-                  )}
-                </div>
-              </section>
-
-              {/* Reading Passage if any */}
-              {assignment.materialType === "READING" && assignment.readingText && (
-                <section className="space-y-4 pt-8 border-t border-white/20">
-                  <div className="flex items-center gap-2 text-primary">
-                    <span className="material-symbols-outlined !text-[20px]">menu_book</span>
-                    <h2 className="text-sm font-black uppercase tracking-widest">Văn bản đọc hiểu</h2>
-                  </div>
-                  <div className="bg-white/50 backdrop-blur-sm rounded-[16px] p-8 border border-white/30 text-on-surface-variant leading-relaxed font-serif text-xl italic whitespace-pre-wrap">
-                    {assignment.readingText}
-                  </div>
-                </section>
-              )}
-
-              {/* Questions Preview */}
-              <section className="space-y-6 pt-8 border-t border-white/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-primary">
-                    <span className="material-symbols-outlined !text-[20px]">list_alt</span>
-                    <h2 className="text-sm font-black uppercase tracking-widest">Xem trước câu hỏi</h2>
-                  </div>
-                  <Link 
-                    href={isLoggedIn ? `/student/assignments/${assignment.id}/run` : `/join/${assignment.id}`}
-                    className="bg-primary text-on-primary px-6 py-2 rounded-full text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
-                  >
-                    Bắt đầu ngay
-                  </Link>
-                </div>
-                
-                <div className="bg-white/50 backdrop-blur-sm rounded-[16px] p-6 border border-white/30">
-                  <PublicQuestionViewer 
-                    questions={assignment.questions} 
-                    assignmentId={assignment.id}
-                    isLoggedIn={isLoggedIn}
-                    showSubmitButton={false} 
-                  />
-                </div>
-              </section>
-
-              {/* Reviews */}
-              <section className="pt-8 border-t border-white/20">
-                <AssignmentReviewSection 
-                  reviews={assignment.reviews}
-                  assignmentId={assignment.id}
-                  isLoggedIn={isLoggedIn}
-                  isPublic={isPublic}
-                />
-              </section>
-            </div>
+          )}
+          <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-primary/5">
+            <BookOpen className="w-10 h-10 text-primary" />
           </div>
-
-          {/* Sidebar (Right) */}
-          <div className="lg:col-span-4 space-y-8">
-            
-            {/* Instructor Card */}
-            <div className="bg-surface-container-low rounded-[20px] p-8 border border-white/20 shadow-xl shadow-on-surface/5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors"></div>
-              
-              <div className="relative z-10 space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg bg-white overflow-hidden shadow-lg p-1">
-                    <img 
-                      src={assignment.teacher.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${assignment.teacher.id}`} 
-                      alt="" 
-                      className="w-full h-full object-cover rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Giáo viên</span>
-                    <h3 className="text-xl font-black text-on-surface font-headline">{assignment.teacher.name}</h3>
-                  </div>
-                </div>
-
-                <p className="text-on-surface-variant/70 text-sm leading-relaxed font-medium line-clamp-3 italic">
-                  "{assignment.teacher.bio || "Chuyên gia đào tạo tại Scholar Script, mang đến những phương pháp học tập hiện đại và hiệu quả."}"
-                </p>
-
-                <Link 
-                  href={`/profile/${assignment.teacher.id}`}
-                  className="flex items-center justify-between w-full p-4 bg-white/50 hover:bg-white rounded-lg border border-white/40 transition-all group/btn"
-                >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-black text-on-surface">{assignment.teacher._count.assignments} Bài tập</span>
-                    <span className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest">Hồ sơ đầy đủ</span>
-                  </div>
-                  <span className="material-symbols-outlined text-primary group-hover/btn:translate-x-1 transition-transform">arrow_forward</span>
-                </Link>
-              </div>
+          <p className="text-primary font-bold text-xs uppercase tracking-[0.2em] mb-2">Thông tin bài tập</p>
+          <h1 className="text-3xl md:text-5xl font-black text-on-surface tracking-tight max-w-2xl leading-tight uppercase italic font-headline">
+            {assignment.title}
+          </h1>
+          <div className="flex items-center gap-2 mt-6 px-4 py-2 bg-surface-container rounded-full">
+            <div className="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] font-bold">
+               {assignment.teacher.name?.charAt(0) || "T"}
             </div>
-
-            {/* Related Assignments */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 text-primary px-2">
-                <span className="material-symbols-outlined !text-[20px]">auto_awesome</span>
-                <h2 className="text-sm font-black uppercase tracking-widest">Cùng chủ đề</h2>
-              </div>
-              
-              {relatedAssignments.length > 0 ? (
-                <div className="space-y-4">
-                  {relatedAssignments.map((rel) => (
-                    <Link 
-                      key={rel.id} 
-                      href={`/public/assignments/${rel.id}`}
-                      className="group flex gap-4 p-3 bg-surface-container-low/50 hover:bg-white rounded-xl border border-transparent hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5 transition-all"
-                    >
-                      <div className="w-20 h-20 bg-white rounded-lg overflow-hidden shrink-0 shadow-sm border border-on-surface/5">
-                        <img 
-                          src={rel.thumbnail || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=200"} 
-                          alt="" 
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                      </div>
-                      <div className="flex flex-col justify-center gap-1">
-                        <h4 className="text-sm font-black text-on-surface line-clamp-2 leading-snug group-hover:text-primary transition-colors">{rel.title}</h4>
-                        <span className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest">{rel.teacher.name}</span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 bg-surface-container-high/10 rounded-[16px] border border-dashed border-white/20 text-center text-on-surface-variant/40 text-[11px] font-bold">
-                  Không tìm thấy bài tập tương tự
-                </div>
-              )}
-            </div>
-
-            {/* CTA Box */}
-            <div className="bg-primary rounded-[20px] p-8 text-on-primary relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:bg-white/20 transition-all"></div>
-              <div className="relative z-10 space-y-6">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center">
-                  <span className="material-symbols-outlined">trending_up</span>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-black font-headline italic uppercase tracking-tighter">Nâng tầm kỹ năng</h3>
-                  <p className="text-on-primary/70 text-sm font-medium">Hoàn thành bài tập để tích lũy điểm thưởng và chứng nhận từ giáo viên.</p>
-                </div>
-                <Link 
-                  href={isLoggedIn ? `/student/assignments/${assignment.id}/run` : `/join/${assignment.id}`}
-                  className="block w-full py-4 bg-white text-primary rounded-lg text-center font-black text-sm tracking-widest hover:scale-105 transition-all shadow-lg"
-                >
-                  THỬ SỨC NGAY
-                </Link>
-              </div>
-            </div>
-
+            <span className="text-sm font-medium text-on-surface-variant">Giáo viên: {assignment.teacher.name || "Cố định"}</span>
           </div>
         </div>
-      </main>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 -mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Info Dashboard */}
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-magazine-shadow border border-outline-variant/20 grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Thời gian</p>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                <span className="font-black text-on-surface">{assignment.timeLimit ? `${assignment.timeLimit}'` : "Free"}</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Số câu</p>
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 text-secondary" />
+                <span className="font-black text-on-surface">{totalQuestions} Câu</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Hạn nộp</p>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-error" />
+                <span className="font-black text-on-surface">
+                  {assignment.deadline ? format(assignment.deadline, 'dd/MM') : "∞"}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Lượt làm</p>
+              <div className="flex items-center gap-2">
+                < Award className="w-4 h-4 text-tertiary" />
+                <span className="font-black text-on-surface">{completedSubmissions.length}/{assignment.maxAttempts}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Warnings & Focus Mode */}
+          {assignment.focusMode && (
+             <div className="bg-error-container/20 border border-error/20 p-6 rounded-3xl flex gap-4">
+                <AlertTriangle className="w-6 h-6 text-error shrink-0" />
+                <div className="space-y-1">
+                   <h4 className="font-bold text-error">Chế độ tập trung (Focus Mode)</h4>
+                   <p className="text-sm text-on-surface-variant leading-relaxed">
+                      Bài làm sẽ tự động nộp nếu bạn thoát màn hình hoặc chuyển tab quá 3 lần.
+                   </p>
+                </div>
+             </div>
+          )}
+
+          {/* History & Review */}
+          <div className="space-y-6">
+            <h3 className="text-xl font-black tracking-tight uppercase italic">Lịch sử làm bài</h3>
+            {session ? (
+               completedSubmissions.length > 0 ? (
+                  <div className="space-y-4">
+                     {completedSubmissions.map((sub) => {
+                       const isPassed = (sub.score || 0) >= (maxScore * 0.5);
+                       const showReview = canReview(sub);
+                       return (
+                         <div key={sub.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-outline-variant/10 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/30 transition-all">
+                            <div className="flex items-center gap-4">
+                               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${isPassed ? 'bg-secondary-container/20 text-secondary' : 'bg-error-container/20 text-error'}`}>
+                                  <BarChart3 className="w-7 h-7" />
+                               </div>
+                               <div>
+                                  <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Lần làm {sub.attemptNumber}</p>
+                                  <h5 className="font-black text-xl">
+                                     {sub.score || 0} <span className="text-sm font-medium text-on-surface-variant">/ {maxScore} điểm</span>
+                                  </h5>
+                                  <p className="text-xs text-on-surface-variant mt-1">
+                                     {sub.submittedAt ? format(sub.submittedAt, "HH:mm, dd/MM", { locale: vi }) : "N/A"}
+                                  </p>
+                               </div>
+                            </div>
+                            
+                            <a 
+                               href={`/student/assignments/${id}/review/${sub.id}?showAnswers=${showReview}`}
+                               className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${
+                                 showReview 
+                                 ? "bg-on-surface text-white hover:bg-primary" 
+                                 : "bg-surface-container text-on-surface-variant cursor-not-allowed pointer-events-none"
+                               }`}
+                            >
+                               {showReview ? "Xem lại đáp án" : "Review đã khóa"}
+                               <ChevronRight className="w-4 h-4" />
+                            </a>
+                         </div>
+                       )
+                     })}
+                  </div>
+               ) : (
+                  <p className="text-on-surface-variant italic">Bạn chưa thực hiện lần thử nào.</p>
+               )
+            ) : (
+               <div className="p-8 bg-surface-container rounded-[2rem] border border-dashed border-outline-variant/30 text-center">
+                  <p className="text-on-surface-variant font-medium">Vui lòng đăng nhập để xem lịch sử làm bài.</p>
+                  <Link href="/student/login" className="text-primary font-bold hover:underline mt-2 inline-block">Đăng nhập ngay</Link>
+               </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar CTA */}
+        <div className="space-y-8">
+           <div className="bg-primary text-white rounded-[2.5rem] p-8 shadow-2xl shadow-primary/20 space-y-8">
+              <div>
+                 <h3 className="text-2xl font-black mb-2 uppercase italic font-headline">
+                    {session ? (activeSubmission ? "Tiếp tục" : "Bắt đầu") : "Tham gia"}
+                 </h3>
+                 <p className="text-primary-fixed/80 text-sm font-medium">
+                    Hãy kiểm tra kỹ các thông tin trước khi nhấn nút.
+                 </p>
+              </div>
+
+              <div className="flex flex-col items-center">
+                 {session ? (
+                    activeSubmission ? (
+                       <StartButton assignmentId={id} label="TIẾP TỤC" />
+                    ) : (hasAttemptsLeft && !isDeadlinePassed) ? (
+                       <StartButton assignmentId={id} label={completedSubmissions.length > 0 ? "LÀM LẠI" : "BẮT ĐẦU"} />
+                    ) : (
+                       <div className="bg-white/10 px-8 py-4 rounded-3xl text-sm font-bold border border-white/20 text-center w-full">
+                          Đã khóa
+                       </div>
+                    )
+                 ) : (
+                    <Link 
+                      href={`/join/${id}`}
+                      className="w-full py-4 bg-white text-primary rounded-3xl text-center font-black text-sm tracking-widest hover:scale-105 active:scale-95 shadow-xl shadow-primary/20 transition-all uppercase"
+                    >
+                       BẮT ĐẦU NGAY
+                    </Link>
+                 )}
+              </div>
+           </div>
+        </div>
+      </div>
+      
+      {/* Voluntary Review Trigger (UC 11) */}
+      <ReviewTrigger type="assignment" id={id} isLoggedIn={!!session} />
     </div>
   );
 }

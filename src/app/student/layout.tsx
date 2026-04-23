@@ -2,7 +2,10 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { NotificationBell } from "@/components/common/NotificationBell"
+import { SideNavWrapper } from "@/app/student/_components/SideNavWrapper"
+import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper"
 import { SideNavItem } from "@/app/student/_components/SideNavItem"
+import { StudentUserNav } from "@/components/student/StudentUserNav"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -17,28 +20,35 @@ export default async function StudentLayout({ children }: { children: React.Reac
     redirect("/role-select")
   }
   
-  // Allow both STUDENT and ADMIN (for testing), redirect teachers away
-  if (session.user.role !== "STUDENT" && session.user.role !== "ADMIN") {
+  // Allow both STUDENT and ADMIN, and allow TEACHER for learning routes
+  const isTeacher = session.user.role === "TEACHER";
+  if (session.user.role !== "STUDENT" && session.user.role !== "ADMIN" && !isTeacher) {
     redirect("/teacher/dashboard")
   }
 
   return (
     <div className="min-h-screen bg-surface font-body text-on-surface">
-      {/* Admin Impersonation Banner */}
-      {session.user.role === 'ADMIN' && (
-        <div className="sticky top-0 z-[100] w-full bg-amber-500 text-amber-950 flex items-center justify-between px-6 py-2.5 shadow-lg">
+      {/* Admin/Teacher Impersonation Banner */}
+      {(session.user.role === 'ADMIN' || isTeacher) && (
+        <div className={`sticky top-0 z-[100] w-full ${isTeacher ? 'bg-primary text-white' : 'bg-amber-500 text-amber-950'} flex items-center justify-between px-6 py-2.5 shadow-lg`}>
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+            <span className="material-symbols-outlined text-[18px]">
+              {isTeacher ? 'visibility' : 'admin_panel_settings'}
+            </span>
             <span className="text-xs font-black uppercase tracking-widest">
-              Admin đang xem giao diện Học sinh
+              {isTeacher ? 'Bạn đang xem với tư cách Học sinh (Guest Mode)' : 'Admin đang xem giao diện Học sinh'}
             </span>
           </div>
           <a
-            href="/admin/staff"
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-950/10 hover:bg-amber-950/20 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all border border-amber-950/20"
+            href={isTeacher ? "/teacher/materials" : "/admin/staff"}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all border ${
+              isTeacher 
+                ? 'bg-white/10 hover:bg-white/20 border-white/20' 
+                : 'bg-amber-950/10 hover:bg-amber-950/20 border-amber-950/20'
+            }`}
           >
             <span className="material-symbols-outlined text-sm">arrow_back</span>
-            Thoát về Admin
+            {isTeacher ? 'Quay lại Library' : 'Thoát về Admin'}
           </a>
         </div>
       )}
@@ -58,18 +68,12 @@ export default async function StudentLayout({ children }: { children: React.Reac
           <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-full flex">
             <span className="material-symbols-outlined text-on-surface-variant">translate</span>
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed">
-            <img 
-              alt="Student Profile Avatar" 
-              className="w-full h-full object-cover" 
-              src={session.user.image || "https://lh3.googleusercontent.com/aida-public/AB6AXuDG4UeVjdE9vLCqkj7SyCEGler4aGvlCwdYpmqVp0cDgQN-B09pvN9OrtVWynZmUUxvTVP9mAsgSLWx-Ag5kxfQqqRcSdYN61zxDBeCHI71WSlnCIo6Kxz83OBuTEfG3qVktRHHG_LyuaozLOD4wQOQ54OCfGNgnP2_VH7ocpD6u0Ypc3y0Zu52SVqPW0sW4guBb4C06oiwglwM15Fhah6pGngIrtFVsU47mG1qGAnOMnQZFV6fGI_6uFlo89i4ULCFPitxZrmXH4QS"} 
-            />
-          </div>
+          <StudentUserNav user={session.user as any} />
         </div>
       </nav>
 
-      {/* SideNavBar */}
-      <aside className="h-screen w-64 fixed left-0 top-0 pt-20 bg-slate-50 dark:bg-slate-900 flex-col h-full border-r border-slate-200/50 dark:border-slate-800/50 z-40 hidden md:flex">
+      {/* SideNavBar - Controlled by Wrapper */}
+      <SideNavWrapper isTeacher={isTeacher}>
         <div className="px-6 py-4">
           <h3 className="font-headline font-bold text-slate-900 dark:text-white text-lg">Learning Path</h3>
           <p className="font-label text-xs text-slate-500 uppercase tracking-widest mt-1">Level B2 Upper-Intermediate</p>
@@ -79,6 +83,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
           <SideNavItem href="/student/dashboard" icon="dashboard" label="Dashboard" />
           <SideNavItem href="/student/lessons" icon="menu_book" label="Lessons" />
           <SideNavItem href="/student/assignments" icon="assignment" label="Assignments" />
+          <SideNavItem href="/student/bookmarks" icon="bookmark" label="Bookmarks" />
           <SideNavItem href="/student/classes" icon="group" label="Classes" />
           <SideNavItem href="/student/growth" icon="trending_up" label="Growth" />
         </nav>
@@ -88,23 +93,12 @@ export default async function StudentLayout({ children }: { children: React.Reac
             Join Live Class
           </button>
         </div>
-        
-        <div className="px-4 py-6 mt-auto border-t border-slate-200/50">
-          <Link className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" href="/student/settings">
-            <span className="material-symbols-outlined text-sm">settings</span>
-            <span className="font-label text-sm">Settings</span>
-          </Link>
-          <a className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" href="#">
-            <span className="material-symbols-outlined text-sm">help_outline</span>
-            <span className="font-label text-sm">Help</span>
-          </a>
-        </div>
-      </aside>
+      </SideNavWrapper>
 
-      {/* Main Content Canvas */}
-      <main className="md:ml-64 pt-24 px-6 pb-24 md:pb-12">
+      {/* Main Content Canvas - Controlled by Wrapper */}
+      <MainContentWrapper isTeacher={isTeacher}>
         {children}
-      </main>
+      </MainContentWrapper>
 
       {/* BottomNavBar (Mobile Only) */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center py-4 md:hidden z-50">
@@ -130,10 +124,6 @@ export default async function StudentLayout({ children }: { children: React.Reac
         </Link>
       </nav>
 
-      {/* Floating Action Button */}
-      <button className="fixed bottom-24 right-6 md:bottom-8 md:right-8 bg-on-surface text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-50 group">
-        <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">add</span>
-      </button>
     </div>
   )
 }

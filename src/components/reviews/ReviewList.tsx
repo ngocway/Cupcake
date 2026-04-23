@@ -1,4 +1,6 @@
 import { Star, MessageCircle, Clock } from "lucide-react"
+import { format } from "date-fns"
+import { vi } from "date-fns/locale"
 
 interface Review {
     id: string
@@ -75,7 +77,7 @@ export function ReviewList({ reviews }: ReviewListProps) {
                                 </div>
                             </div>
                             <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                <Clock className="w-3 h-3" /> {new Date(review.createdAt).toLocaleDateString()}
+                                <Clock className="w-3 h-3" /> {format(new Date(review.createdAt), "dd/MM/yyyy", { locale: vi })}
                             </div>
                         </div>
                         

@@ -401,6 +401,7 @@ model AssignmentReview {
   assignmentId String
   rating       Int
   comment      String?
+  isApproved   Boolean    @default(false)
   createdAt    DateTime   @default(now())
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)

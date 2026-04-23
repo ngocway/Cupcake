@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { getMyNotifications, getUnreadCount, markAsRead, markAllAsRead } from '@/actions/notification-actions';
+import { format } from "date-fns"
+import { vi } from "date-fns/locale"
 
 interface Notification {
   id: string;
@@ -137,7 +139,7 @@ export function NotificationBell() {
                         {n.message}
                       </p>
                       <span className="text-[10px] font-bold text-slate-400 mt-2 block uppercase tracking-wider">
-                        {new Date(n.createdAt).toLocaleDateString()}
+                        {format(new Date(n.createdAt), "dd/MM/yyyy", { locale: vi })}
                       </span>
                     </div>
                     {!n.isRead && (

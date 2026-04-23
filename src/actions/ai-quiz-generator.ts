@@ -53,7 +53,7 @@ export const generateQuizQuestions = async ({
     }
 
     const prompt = `Generate ${count} ${difficulty} difficulty quiz questions about "${topic}" in ${langStr}. 
-    The question type format must be strictly as follows:
+    The output must be in JSON format and the question type format must be strictly as follows:
     ${formatInstructions}
     
     Ensure output is educational and factually accurate.`;

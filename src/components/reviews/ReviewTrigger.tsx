@@ -21,12 +21,9 @@ export function ReviewTrigger({ type, id, isLoggedIn }: ReviewTriggerProps) {
         if (rating === 0) return;
         setLoading(true);
         try {
-            const action = type === 'assignment' ? submitAssignmentReview : submitLessonReview;
-            const res = await action({ 
-                [type === 'assignment' ? 'assignmentId' : 'lessonId']: id, 
-                rating, 
-                comment 
-            } as any);
+            const res = type === 'assignment' 
+                ? await submitAssignmentReview(id, rating, comment)
+                : await submitLessonReview(id, rating, comment);
 
             if (res.success) {
                 setSubmitted(true);

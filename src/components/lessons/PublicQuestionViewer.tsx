@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -36,6 +36,16 @@ export default function PublicQuestionViewer({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showExplanation, setShowExplanation] = useState<Record<string, boolean>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hoveredLine, setHoveredLine] = useState<{ x: number, y: number, content: string } | null>(null);
+  const [dragging, setDragging] = useState<{ 
+    fromId: string; 
+    fromSide: 'left' | 'right'; 
+    x1: number; 
+    y1: number; 
+    x2: number; 
+    y2: number;
+  } | null>(null);
 
   const currentQuestion = questions[currentIndex];
   
@@ -47,6 +57,26 @@ export default function PublicQuestionViewer({
       return null;
     }
   }, [currentQuestion]);
+
+  const shuffledRightItems = useMemo(() => {
+    if (!questionData || !questionData.pairs) return [];
+    return [...questionData.pairs].map(p => p.rightText).sort(() => Math.random() - 0.5);
+  }, [currentIndex, questionData]);
+
+  const matchingColors = [
+    "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"
+  ];
+
+  const getDotCoords = (id: string, side: 'left' | 'right') => {
+    const el = document.getElementById(`dot-${side}-${id}`);
+    if (!el || !containerRef.current) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    return {
+      x: rect.left - containerRect.left + rect.width / 2,
+      y: rect.top - containerRect.top + rect.height / 2
+    };
+  };
 
   const handleSelect = (questionId: string, value: any, isCorrect: boolean) => {
     if (answers[questionId] !== undefined) return; // Prevent multiple attempts if already answered in practice mode
@@ -176,8 +206,207 @@ export default function PublicQuestionViewer({
                  </div>
                )}
 
-               {/* OTHER TYPES (Matching, etc.) */}
-               {currentQuestion.type !== 'MULTIPLE_CHOICE' && currentQuestion.type !== 'TRUE_FALSE' && (
+                {/* MATCHING */}
+                {currentQuestion.type === 'MATCHING' && questionData.pairs && (
+                  <div className="space-y-6 select-none">
+                    <div 
+                      ref={containerRef}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-6 relative p-4"
+                      onMouseMove={(e) => {
+                        if (!dragging || !containerRef.current) return;
+                        const rect = containerRef.current.getBoundingClientRect();
+                        setDragging({
+                          ...dragging,
+                          x2: e.clientX - rect.left,
+                          y2: e.clientY - rect.top
+                        });
+                      }}
+                      onMouseUp={() => setDragging(null)}
+                      onMouseLeave={() => setDragging(null)}
+                    >
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ minHeight: '300px' }}>
+                        {Object.entries(answers[currentQuestion.id]?.value || {}).map(([leftId, rightText], idx) => {
+                          const pair = questionData.pairs.find((p: any) => p.id === leftId);
+                          if (!pair) return null;
+
+                          const isChecked = answers[currentQuestion.id]?.isCorrect !== undefined;
+                          const isCorrect = isChecked && pair.rightText === rightText;
+                          
+                          const coords1 = getDotCoords(leftId, 'left');
+                          const rightItemIdx = shuffledRightItems.indexOf(rightText as string);
+                          if (rightItemIdx === -1) return null;
+                          const coords2 = getDotCoords(rightItemIdx.toString(), 'right');
+                          
+                          let strokeColor = matchingColors[idx % matchingColors.length];
+                          if (isChecked) {
+                            strokeColor = isCorrect ? '#10B981' : '#EF4444';
+                          }
+                          
+                          return (
+                            <g 
+                              key={`student-${leftId}`}
+                              onMouseEnter={(e) => {
+                                if (isChecked) {
+                                  setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? 'Đúng' : 'Sai' });
+                                }
+                              }}
+                              onMouseMove={(e) => {
+                                if (hoveredLine) setHoveredLine({ ...hoveredLine, x: e.clientX, y: e.clientY });
+                              }}
+                              onMouseLeave={() => setHoveredLine(null)}
+                            >
+                              <line 
+                                x1={coords1.x} y1={coords1.y} 
+                                x2={coords2.x} y2={coords2.y} 
+                                stroke="transparent"
+                                strokeWidth="15"
+                                className="cursor-help pointer-events-auto"
+                              />
+                              <line 
+                                x1={coords1.x} y1={coords1.y} 
+                                x2={coords2.x} y2={coords2.y} 
+                                stroke={strokeColor}
+                                strokeWidth={isCorrect ? "4" : "2"}
+                                strokeDasharray={isChecked && !isCorrect ? "6,4" : "0"}
+                                className="pointer-events-none"
+                              />
+                              {isChecked && !isCorrect && (() => {
+                                const correctIdx = shuffledRightItems.indexOf(pair.rightText);
+                                if (correctIdx === -1) return null;
+                                const correctCoords = getDotCoords(correctIdx.toString(), 'right');
+                                return (
+                                  <line 
+                                    x1={coords1.x} y1={coords1.y} 
+                                    x2={correctCoords.x} y2={correctCoords.y} 
+                                    stroke="#CBD5E1"
+                                    strokeWidth="2"
+                                    strokeDasharray="2,4"
+                                    className="opacity-60 pointer-events-none"
+                                  />
+                                );
+                              })()}
+                            </g>
+                          );
+                        })}
+                        {dragging && (
+                          <line 
+                            x1={dragging.x1} y1={dragging.y1} 
+                            x2={dragging.x2} y2={dragging.y2} 
+                            stroke="#3B82F6" 
+                            strokeWidth="3" 
+                            strokeDasharray="6,4"
+                          />
+                        )}
+                      </svg>
+
+                      {/* Tooltip */}
+                      {hoveredLine && (
+                        <div 
+                          className="fixed z-[100] px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold pointer-events-none shadow-xl -translate-x-1/2 -translate-y-full mb-4"
+                          style={{ left: hoveredLine.x, top: hoveredLine.y }}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${hoveredLine.content === 'Đúng' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                            {hoveredLine.content}
+                          </div>
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                        </div>
+                      )}
+
+                      {/* Left Column */}
+                      <div className="space-y-4 z-20">
+                        {questionData.pairs.map((pair: any, idx: number) => {
+                          const pairedRightText = (answers[currentQuestion.id]?.value || {})[pair.id];
+                          return (
+                            <div key={pair.id} className={`relative p-4 rounded-xl border-2 flex items-center gap-3 ${pairedRightText ? 'border-primary/40 bg-primary/5' : 'border-slate-100 bg-white'}`}>
+                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black shrink-0">{String.fromCharCode(65 + idx)}</div>
+                              {pair.leftImageUrl || (pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/')) ? (
+                                <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-14 w-14 object-cover rounded-lg" />
+                              ) : (
+                                <span className="font-bold text-slate-700">{pair.leftText}</span>
+                              )}
+                              <div 
+                                id={`dot-left-${pair.id}`}
+                                onMouseDown={() => {
+                                  const coords = getDotCoords(pair.id, 'left');
+                                  setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                                }}
+                                onMouseUp={() => {
+                                  if (dragging && dragging.fromSide === 'right') {
+                                    const rightText = shuffledRightItems[parseInt(dragging.fromId)];
+                                    const currentVal = answers[currentQuestion.id]?.value || {};
+                                    const newVal = { ...currentVal };
+                                    Object.keys(newVal).forEach(k => { if (newVal[k] === rightText) delete newVal[k]; });
+                                    newVal[pair.id] = rightText;
+                                    setAnswers(prev => ({ ...prev, [currentQuestion.id]: { value: newVal, isCorrect: false } }));
+                                    setDragging(null);
+                                  }
+                                }}
+                                className={`w-4 h-4 rounded-full border-2 border-white shadow-sm absolute -right-2 top-1/2 -translate-y-1/2 z-30 cursor-crosshair ${pairedRightText ? 'bg-primary' : 'bg-slate-300'}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Right Column */}
+                      <div className="space-y-4 z-20">
+                        {shuffledRightItems.map((rightText: string, idx: number) => {
+                          const pairedLeftId = Object.keys(answers[currentQuestion.id]?.value || {}).find(k => (answers[currentQuestion.id]?.value || {})[k] === rightText);
+                          return (
+                            <div key={idx} className={`relative p-4 rounded-xl border-2 flex items-center gap-3 ${pairedLeftId ? 'border-primary/40 bg-primary/5' : 'border-slate-100 bg-white'}`}>
+                              <div 
+                                id={`dot-right-${idx}`}
+                                onMouseUp={() => {
+                                  if (dragging && dragging.fromSide === 'left') {
+                                    const currentVal = answers[currentQuestion.id]?.value || {};
+                                    const newVal = { ...currentVal };
+                                    // Overwrite: remove this rightText from other leftIds
+                                    Object.keys(newVal).forEach(k => { if (newVal[k] === rightText) delete newVal[k]; });
+                                    newVal[dragging.fromId] = rightText;
+                                    setAnswers(prev => ({ ...prev, [currentQuestion.id]: { value: newVal, isCorrect: false } }));
+                                    setDragging(null);
+                                  }
+                                }}
+                                onMouseDown={(e) => {
+                                  const rect = containerRef.current!.getBoundingClientRect();
+                                  if (pairedLeftId) {
+                                    // Re-drag logic
+                                    const coords = getDotCoords(pairedLeftId, 'left');
+                                    setDragging({
+                                      fromId: pairedLeftId,
+                                      fromSide: 'left',
+                                      x1: coords.x, y1: coords.y,
+                                      x2: e.clientX - rect.left, y2: e.clientY - rect.top
+                                    });
+                                  } else {
+                                    // New drag from right
+                                    const coords = getDotCoords(idx.toString(), 'right');
+                                    setDragging({
+                                      fromId: idx.toString(),
+                                      fromSide: 'right',
+                                      x1: coords.x, y1: coords.y,
+                                      x2: coords.x, y2: coords.y
+                                    });
+                                  }
+                                }}
+                                className={`w-4 h-4 rounded-full border-2 border-white shadow-sm absolute -left-2 top-1/2 -translate-y-1/2 z-30 cursor-crosshair ${pairedLeftId ? 'bg-primary' : 'bg-slate-300'}`}
+                              />
+                              {rightText.startsWith('http') || rightText.startsWith('/') ? (
+                                <img src={rightText} alt="" className="h-14 w-14 object-cover rounded-lg" />
+                              ) : (
+                                <span className="font-bold text-slate-700">{rightText}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* OTHER TYPES */}
+                {currentQuestion.type !== 'MULTIPLE_CHOICE' && currentQuestion.type !== 'TRUE_FALSE' && currentQuestion.type !== 'MATCHING' && (
                  <div className="p-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-center">
                     <p className="text-slate-400 font-bold italic">
                        Loại câu hỏi {currentQuestion.type} đang được cập nhật...

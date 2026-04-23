@@ -55,7 +55,15 @@ export default auth((req) => {
     // Role check for student
     const userRole = req.auth?.user?.role
     if (userRole !== 'STUDENT' && userRole !== 'ADMIN') {
-       return NextResponse.redirect(new URL('/', req.nextUrl))
+      // Allow teachers to access learning content
+      const isLearningRoute = path.match(/\/student\/lessons\/[a-zA-Z0-9_-]+/) || 
+                             path.match(/\/student\/assignments\/[a-zA-Z0-9_-]+\/run/);
+      
+      if (userRole === 'TEACHER') {
+        if (isLearningRoute) return NextResponse.next();
+        return NextResponse.redirect(new URL('/teacher/dashboard', req.nextUrl))
+      }
+      return NextResponse.redirect(new URL('/', req.nextUrl))
     }
   }
 

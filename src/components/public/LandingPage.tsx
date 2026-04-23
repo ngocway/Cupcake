@@ -225,7 +225,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
             {activeTab === "exercises" ? (
               exercises.map(item => <ExerciseCard key={item.id} item={item} isLoggedIn={!!session} />)
             ) : (
-              lessons.map(item => <LessonCard key={item.id} item={item} />)
+              lessons.map(item => <LessonCard key={item.id} item={item} isLoggedIn={!!session} />)
             )}
           </div>
 

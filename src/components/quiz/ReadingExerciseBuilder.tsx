@@ -6,6 +6,105 @@ import { autoSaveMaterial } from '@/actions/material-actions';
 import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { DUMMY_DICTIONARY } from '@/lib/dictionary-data';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+
+function SortableQuestionItem({ 
+  q, 
+  idx, 
+  onEdit, 
+  onDelete 
+}: { 
+  q: any, 
+  idx: number, 
+  onEdit: () => void, 
+  onDelete: () => void 
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: q.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`p-6 bg-white dark:bg-gray-800 rounded-3xl border transition-all group cursor-grab active:cursor-grabbing ${
+        isDragging ? 'border-primary shadow-xl ring-2 ring-primary/20' : 'border-slate-100 dark:border-gray-700 hover:border-primary/30 shadow-sm hover:shadow-md'
+      }`}
+    >
+      <div className="flex justify-between items-start gap-4">
+        <div className="flex gap-4">
+          <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black shrink-0">
+            {idx + 1}
+          </div>
+          <div className="space-y-2">
+            <p className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed">
+              {q.questionText}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded text-[10px] font-bold text-slate-500 uppercase">
+                {q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Trắc nghiệm'}
+              </span>
+              <span className="px-2 py-1 bg-primary/5 rounded text-[10px] font-bold text-primary uppercase">
+                {q.points} Điểm
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          <button 
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onEdit} 
+            className="size-10 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-700 flex items-center justify-center text-slate-400 hover:text-primary transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px]">edit</span>
+          </button>
+          <button 
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={onDelete} 
+            className="size-10 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center justify-center text-slate-400 hover:text-red-500 transition-all"
+          >
+            <span className="material-symbols-outlined text-[20px]">delete</span>
+          </button>
+          <div className="size-10 flex items-center justify-center text-slate-300">
+            <span className="material-symbols-outlined">drag_indicator</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function ReadingExerciseBuilder({ 
   assignmentId: initialId, 
@@ -99,6 +198,31 @@ export function ReadingExerciseBuilder({
     editingIndex?: number;
   }>({ isOpen: false, type: 'NONE', isMultiple: false });
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setQuestions((items) => {
+        const oldIndex = items.findIndex((q) => q.id === active.id);
+        const newIndex = items.findIndex((q) => q.id === over.id);
+        const newItems = arrayMove(items, oldIndex, newIndex);
+        return newItems;
+      });
+      // Trigger save after a small delay to ensure state update
+      setTimeout(() => handleSave(), 100);
+    }
+  };
+
   const [hoveredVocab, setHoveredVocab] = useState<{
     vocabId: string;
     word: string;
@@ -171,19 +295,31 @@ export function ReadingExerciseBuilder({
           setAudioUrl(data.assignment.audioUrl || '');
           if (data.assignment.questions) {
             const normalizedQuestions = data.assignment.questions.map((q: any) => {
-              const content = q.content || {};
-              const rawOptions = content.options || q.options || [];
-              const options = rawOptions.map((opt: any, oIdx: number) => ({
+              let content = q.content || {};
+              if (typeof content === 'string') {
+                try {
+                  content = JSON.parse(content);
+                } catch (e) {
+                  content = {};
+                }
+              }
+              
+              const rawOptions = q.options || content.options || content.data?.options || [];
+              const options = Array.isArray(rawOptions) ? rawOptions.map((opt: any, oIdx: number) => ({
                 id: opt.id || `opt-${oIdx}-${Math.random().toString(36).substr(2, 9)}`,
                 ...opt
-              }));
+              })) : [];
               
+              const qText = q.questionText || q.question || q.statement || 
+                            content.questionText || content.question || content.statement || 
+                            content.data?.questionText || content.data?.question || '';
+
               return {
                 ...q,
-                questionText: content.questionText || content.statement || q.questionText || '',
+                questionText: qText,
                 options: options,
                 correctAnswer: q.type === 'TRUE_FALSE' 
-                  ? (content.isTrue === false ? 'false' : 'true') 
+                  ? (content.isTrue === false ? 'false' : (q.correctAnswer || 'true')) 
                   : (q.correctAnswer || '')
               };
             });
@@ -256,7 +392,15 @@ export function ReadingExerciseBuilder({
         id: idToSave,
         title: customTitle || title,
         type: 'READING',
-        questions: questions, 
+        questions: questions.map(q => ({
+          ...q,
+          content: {
+            ...(typeof q.content === 'object' ? q.content : {}),
+            questionText: q.questionText,
+            options: q.options,
+            isTrue: q.type === 'TRUE_FALSE' ? q.correctAnswer === 'true' : undefined
+          }
+        })), 
         readingText: contentHtml,
         videoUrl: videoUrl,
         audioUrl: audioUrl,
@@ -272,46 +416,6 @@ export function ReadingExerciseBuilder({
       setTimeout(() => setSavingStatus('idle'), 2000);
     } catch (error) {
       console.error('Save failed:', error);
-      setSavingStatus('error');
-    }
-  };
-
-  const [showPublishMenu, setShowPublishMenu] = useState(false);
-  const publishMenuRef = useRef<HTMLDivElement>(null);
-
-  const handlePublish = async (newStatus: 'PRIVATE' | 'PUBLIC') => {
-    const editor = document.getElementById('rich-text-editor');
-    const plainText = editor?.textContent?.trim() || '';
-    
-    // Validation
-    const isDefaultTitle = !title || title.trim() === '' || title === 'Bài tập mới' || title === 'Reading Exercise: Modern Ethics';
-    const editorEl = document.getElementById('rich-text-editor');
-    const hasImage = editorEl?.querySelector('img') !== null;
-    const cleanContent = plainText.replace('Bôi đen từ mới để thiết lập vocabulary chi tiết.', '').trim();
-    const isDefaultContent = !cleanContent || (cleanContent.length < 50 && !hasImage);
-
-    if (isDefaultTitle || isDefaultContent) {
-      setValidationModal({
-        show: true,
-        missingTitle: isDefaultTitle,
-        missingContent: isDefaultContent
-      });
-      setShowPublishMenu(false);
-      return;
-    }
-
-    setSavingStatus('saving');
-    try {
-      const { updateMaterialStatus } = await import('@/actions/material-actions');
-      await updateMaterialStatus(assignmentId, newStatus);
-      setAssignmentStatus(newStatus);
-      setSavingStatus('saved');
-      setShowPublishMenu(false);
-      setTimeout(() => {
-        handleBack();
-      }, 800);
-    } catch (error: any) {
-      alert(error.message || 'Lỗi khi cập nhật trạng thái');
       setSavingStatus('error');
     }
   };
@@ -589,14 +693,16 @@ export function ReadingExerciseBuilder({
   };
 
   const handleSaveQuestion = (q: any) => {
+    const questionWithId = { ...q, id: q.id || uuidv4() };
     if (questionModal.editingIndex !== undefined) {
       const newQs = [...questions];
-      newQs[questionModal.editingIndex] = q;
+      newQs[questionModal.editingIndex] = questionWithId;
       setQuestions(newQs);
     } else {
-      setQuestions([...questions, q]);
+      setQuestions([...questions, questionWithId]);
     }
     setQuestionModal({ isOpen: false, type: 'NONE', isMultiple: false });
+    setTimeout(() => handleSave(), 100);
   };
 
   return (
@@ -774,44 +880,13 @@ export function ReadingExerciseBuilder({
                 <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span> Chèn Ảnh
               </span>
             </div>
-            <div className="relative" ref={publishMenuRef}>
-               <button 
-                 onClick={() => setShowPublishMenu(!showPublishMenu)} 
-                 disabled={savingStatus === 'saving'} 
-                 className={`px-8 py-2.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-lg font-label text-xs font-bold uppercase tracking-wider editorial-shadow transition-all ${savingStatus === 'saving' ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
-               >
-                {savingStatus === 'saving' ? 'Saving...' : (assignmentStatus === 'DRAFT' ? 'Publish' : 'Change Status')}
-              </button>
-              
-              {showPublishMenu && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-black/5 p-2 z-50 animate-in fade-in slide-in-from-top-2">
-                   <div className="px-4 py-2 border-b border-slate-100 dark:border-gray-700 mb-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Trạng thái bài học</span>
-                   </div>
-                   <button onClick={async () => {
-                     setSavingStatus('saving');
-                     await handleSave();
-                     setShowPublishMenu(false);
-                     setSavingStatus('saved');
-                     setTimeout(() => {
-                       handleBack();
-                     }, 800);
-                   }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-900/10 rounded-xl transition-colors text-primary border border-transparent hover:border-primary/20 mb-1 font-bold">
-                      <span className="material-symbols-outlined text-[20px]">save</span>
-                      <span className="text-sm font-bold">Lưu Bản nháp & Thoát</span>
-                   </button>
-                   <div className="h-px bg-slate-100 dark:bg-gray-700 my-1 mx-2" />
-                   <button onClick={() => handlePublish('PRIVATE')} className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-xl transition-colors ${assignmentStatus === 'PRIVATE' ? 'text-primary bg-primary/5' : 'text-slate-700 dark:text-slate-200'}`}>
-                      <span className="material-symbols-outlined text-[20px]">lock_open</span>
-                      <span className="text-sm font-bold">Chế độ Riêng tư</span>
-                   </button>
-                   <button onClick={() => handlePublish('PUBLIC')} className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-xl transition-colors ${assignmentStatus === 'PUBLIC' ? 'text-emerald-600 bg-emerald-50/50' : 'text-slate-700 dark:text-slate-200'}`}>
-                      <span className="material-symbols-outlined text-[20px]">public</span>
-                      <span className="text-sm font-bold">Chế độ Công khai</span>
-                   </button>
-                </div>
-              )}
-            </div>
+            <button 
+              onClick={() => handleSave()} 
+              disabled={savingStatus === 'saving'} 
+              className={`px-8 py-2.5 bg-primary text-white rounded-lg font-label text-xs font-bold uppercase tracking-wider editorial-shadow transition-all ${savingStatus === 'saving' ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+            >
+              {savingStatus === 'saving' ? 'Đang lưu...' : 'Lưu bài học'}
+            </button>
           </div>
         </header>
 
@@ -929,43 +1004,33 @@ export function ReadingExerciseBuilder({
                   <p className="text-slate-400 text-sm mt-1">Hãy bắt đầu tạo câu hỏi để kiểm tra kiến thức học sinh</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {questions.map((q, idx) => (
-                    <div key={idx} className="group bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl p-6 hover:shadow-md transition-all">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="px-2.5 py-1 bg-slate-100 dark:bg-gray-800 text-slate-500 text-[10px] font-black rounded-lg uppercase tracking-tight">Q{idx + 1}</span>
-                            <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg uppercase tracking-tight ${
-                              q.type === 'TRUE_FALSE' ? 'bg-emerald-50 text-emerald-600' : 
-                              q.isMultiple ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
-                            }`}>
-                              {q.type === 'TRUE_FALSE' ? 'Đúng / Sai' : q.isMultiple ? 'Nhiều đáp án' : '1 đáp án đúng'}
-                            </span>
-                          </div>
-                          <h4 className="text-base font-bold text-slate-900 dark:text-white line-clamp-2">{q.questionText}</h4>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => {
-                            setQuestionModal({
-                              isOpen: true,
-                              type: q.type,
-                              isMultiple: q.isMultiple,
-                              editingIndex: idx
-                            });
-                          }} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all">
-                            <span className="material-symbols-outlined text-[20px]">edit</span>
-                          </button>
-                          <button onClick={() => {
-                            const newQs = questions.filter((_, i) => i !== idx);
-                            setQuestions(newQs);
-                          }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-                            <span className="material-symbols-outlined text-[20px]">delete</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-4">
+                  <DndContext 
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext 
+                      items={questions.map(q => q.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {questions.map((q, idx) => (
+                        <SortableQuestionItem 
+                          key={q.id || `q-${idx}`}
+                          q={q}
+                          idx={idx}
+                          onEdit={() => setQuestionModal({ isOpen: true, type: q.type, isMultiple: q.isMultiple, editingIndex: idx })}
+                          onDelete={() => {
+                            if (confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) {
+                              const newQs = questions.filter((_, i) => i !== idx);
+                              setQuestions(newQs);
+                              setTimeout(handleSave, 100);
+                            }
+                          }}
+                        />
+                      ))}
+                    </SortableContext>
+                  </DndContext>
                 </div>
               )}
             </div>
@@ -1402,23 +1467,46 @@ export function ReadingExerciseBuilder({
 function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData }: any) {
   const [formData, setFormData] = useState<any>(() => {
     if (initialData) {
-      const content = initialData.content || {};
+      let content = initialData.content || {};
+      if (typeof content === 'string') {
+        try {
+          content = JSON.parse(content);
+        } catch (e) {
+          content = {};
+        }
+      }
+      
       const qType = initialData.type || type;
-      return {
-        ...initialData,
-        questionText: content.questionText || content.statement || initialData.questionText || '',
-        options: (content.options || initialData.options || (qType === 'TRUE_FALSE' ? [] : [
+      
+      // Aggressive property resolution with even more aliases
+      const qText = initialData.questionText || initialData.question || initialData.statement || 
+                    content.questionText || content.question || content.statement || 
+                    content.data?.questionText || content.data?.question || '';
+      
+      // Robust options loading
+      let rawOptions = initialData.options || content.options || content.data?.options;
+      
+      // Fallback for non-True/False questions
+      if ((!rawOptions || rawOptions.length === 0) && qType !== 'TRUE_FALSE') {
+        rawOptions = [
           { id: '1', text: '', isCorrect: false },
           { id: '2', text: '', isCorrect: false },
           { id: '3', text: '', isCorrect: false },
           { id: '4', text: '', isCorrect: false }
-        ])).map((o: any, i: number) => ({ ...o, id: o.id || `opt-${i}` })),
+        ];
+      } else if (!rawOptions) {
+        rawOptions = [];
+      }
 
+      return {
+        ...initialData,
+        questionText: qText,
+        options: rawOptions.map((o: any, i: number) => ({ ...o, id: o.id || `opt-${i}` })),
         correctAnswer: qType === 'TRUE_FALSE' 
-          ? (content.isTrue === false ? 'false' : 'true') 
+          ? (content.isTrue === false ? 'false' : (initialData.correctAnswer || 'true')) 
           : (initialData.correctAnswer || ''),
         points: initialData.points || 1,
-        explanation: initialData.explanation || ''
+        explanation: initialData.explanation || content.explanation || ''
       };
     }
     return {
@@ -1452,7 +1540,7 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
               {initialData ? 'Sửa câu hỏi' : 'Tạo câu hỏi mới'}
             </h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-              {type === 'TRUE_FALSE' ? 'Đúng / Sai' : type === 'SINGLE_CHOICE' ? 'Trắc nghiệm 1 đáp án' : 'Trắc nghiệm nhiều đáp án'}
+              {type === 'TRUE_FALSE' ? 'Đúng / Sai' : !isMultiple ? 'Trắc nghiệm 1 đáp án' : 'Trắc nghiệm nhiều đáp án'}
             </p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">

@@ -12,6 +12,23 @@ import { ReorderBuilder } from './ReorderBuilder';
 import { QuestionBankModal } from './QuestionBankModal';
 import { AIGeneratorModal } from './AIGeneratorModal';
 import { InstructionsModal } from './InstructionsModal';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 // Use native crypto.randomUUID instead of external uuid library for stability
 const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
 
@@ -25,6 +42,67 @@ const QUESTION_TYPES: { value: QuestionType; label: string; icon: string }[] = [
   { value: 'MATCHING', label: 'Nối cặp', icon: '🔗' },
   { value: 'REORDER', label: 'Sắp xếp lại', icon: '🔃' },
 ];
+
+function SortableQuestionItem({ 
+  q, 
+  idx, 
+  activeId, 
+  setActiveId, 
+  getQuestionPreviewText 
+}: { 
+  q: BaseQuestionProps, 
+  idx: number, 
+  activeId: string, 
+  setActiveId: (id: string) => void,
+  getQuestionPreviewText: (q: BaseQuestionProps, idx: number) => string
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: q.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => setActiveId(q.id)}
+      className={`flex items-start gap-3 p-3 rounded-xl border transition-all group cursor-grab active:cursor-grabbing ${
+        activeId === q.id 
+          ? 'bg-primary/5 border-2 border-primary shadow-md' 
+          : 'bg-white border-slate-200 shadow-sm hover:border-primary/30'
+      } text-left relative overflow-hidden`}
+    >
+      <div className="flex-1 flex gap-3 min-w-0">
+        <span className={`flex-shrink-0 size-6 rounded-md flex items-center justify-center text-xs font-bold ${
+          activeId === q.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
+        }`}>
+          {idx + 1}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm ${activeId === q.id ? 'font-bold text-primary' : 'font-medium'} line-clamp-2`}>
+            {getQuestionPreviewText(q, idx)}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 opacity-40 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
+           <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function QuizEditor() {
   const router = useRouter();
@@ -63,6 +141,28 @@ export function QuizEditor() {
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [loading, setLoading] = useState(id !== 'new');
   const [fetchError, setFetchError] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setQuestions((items) => {
+        const oldIndex = items.findIndex((q) => q.id === active.id);
+        const newIndex = items.findIndex((q) => q.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   // Initial fetch
   useEffect(() => {
@@ -630,48 +730,27 @@ export function QuizEditor() {
             <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-600">Tổng: {questions.length}</span>
           </div>
           <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar pr-2">
-            {questions.map((q, idx) => (
-              <div 
-                key={q.id}
-                onClick={() => setActiveId(q.id)}
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-all group cursor-pointer ${
-                  activeId === q.id 
-                    ? 'bg-primary/5 border-2 border-primary' 
-                    : 'bg-white border-slate-200 shadow-sm hover:border-primary/30'
-                } text-left`}
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext 
+                items={questions.map(q => q.id)}
+                strategy={verticalListSortingStrategy}
               >
-                <div className="flex-1 flex gap-3 min-w-0">
-                  <span className={`flex-shrink-0 size-6 rounded-md flex items-center justify-center text-xs font-bold ${
-                    activeId === q.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${activeId === q.id ? 'font-bold text-primary' : 'font-medium'} line-clamp-2`}>
-                      {getQuestionPreviewText(q, idx)}
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleMoveQuestion(q.id, 'UP'); }}
-                      disabled={idx === 0}
-                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20 transition-colors"
-                      title="Di chuyển lên"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">expand_less</span>
-                    </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleMoveQuestion(q.id, 'DOWN'); }}
-                      disabled={idx === questions.length - 1}
-                      className="p-0.5 hover:bg-slate-200 rounded disabled:opacity-20 transition-colors"
-                      title="Di chuyển xuống"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                {questions.map((q, idx) => (
+                  <SortableQuestionItem 
+                    key={q.id}
+                    q={q}
+                    idx={idx}
+                    activeId={activeId}
+                    setActiveId={setActiveId}
+                    getQuestionPreviewText={getQuestionPreviewText}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
             <button 
               disabled={!isValid}
               onClick={handleAddQuestion}

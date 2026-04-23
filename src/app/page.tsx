@@ -8,10 +8,11 @@ async function getInitialData() {
   const session = await auth()
   const userId = session?.user?.id
 
-  const exWhere = { status: "PUBLIC" as const, deletedAt: null }
+  const exWhere = { status: "PUBLIC" as const, deletedAt: null, materialType: { in: ["EXERCISE", "FLASHCARD"] } }
   const leWhere = { deletedAt: null, isPremium: false, assignment: { status: "PUBLIC" as const } }
+  const reWhere = { status: "PUBLIC" as const, deletedAt: null, materialType: "READING" }
 
-  const [exercises, exercisesTotal, lessons, lessonsTotal, rawTags] = await Promise.all([
+  const [exercises, exercisesTotal, lessons, lessonsTotal, readingLessons, rawTags] = await Promise.all([
     prisma.assignment.findMany({
       where: exWhere,
       include: {
@@ -34,10 +35,32 @@ async function getInitialData() {
     }),
     prisma.lesson.count({ where: leWhere }),
     prisma.assignment.findMany({
+      where: reWhere,
+      include: {
+        teacher: { select: { id: true, name: true, image: true } },
+        _count: { select: { reviews: true } },
+        ...(userId ? { favoriteAssignments: { where: { studentId: userId } } } : {})
+      },
+      orderBy: { createdAt: "desc" },
+      take: LIMIT
+    }),
+    prisma.assignment.findMany({
       where: { status: "PUBLIC", deletedAt: null, tags: { not: null } },
       select: { tags: true }
     })
   ])
+
+  const allLessons = [
+    ...lessons.map(l => ({ ...l, type: 'VIDEO_LESSON' })),
+    ...readingLessons.map(a => ({ 
+      ...a, 
+      type: 'READING_LESSON',
+      description: a.shortDescription,
+      viewsCount: a.viewCount,
+      _count: { reviews: a._count.reviews }
+    }))
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
 
   const allTags = [...new Set(
     rawTags.flatMap(a => (a.tags || "").split(",").map((t: string) => t.trim()).filter(Boolean))
@@ -59,8 +82,8 @@ async function getInitialData() {
     } : null,
     initialExercises: processedExercises,
     hasMoreExercises: exercisesTotal > LIMIT,
-    initialLessons: lessons,
-    hasMoreLessons: lessonsTotal > LIMIT,
+    initialLessons: allLessons,
+    hasMoreLessons: (lessonsTotal + readingLessons.length) > LIMIT,
     allTags
   }
 }

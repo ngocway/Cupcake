@@ -105,9 +105,17 @@ export async function POST(
 
             case "MATCHING": {
               stringifiedAns = JSON.stringify(studentAns)
-              // Basic placeholder logic for matching if needed.
-              // Assuming studentAns is object like { [leftId]: rightId/rightText }
-              isCorrect = false // specific matching logic requires Exact structure comparison.
+              if (content.pairs && typeof studentAns === 'object' && studentAns !== null) {
+                let correctCount = 0
+                content.pairs.forEach((pair: any) => {
+                  // studentAns is { [pairId]: rightText }
+                  if (studentAns[pair.id] === pair.rightText) {
+                    correctCount++
+                  }
+                })
+                // ALL OR NOTHING for now, can be partial in the future
+                isCorrect = correctCount === content.pairs.length && content.pairs.length > 0
+              }
               break;
             }
 

@@ -103,7 +103,7 @@ export default async function TeacherLessonsPage({
                lessons.map((lesson) => (
                  <Link 
                    key={lesson.id}
-                   href={`/public/lessons/${lesson.id}`}
+                   href={isLoggedIn ? `/student/lessons/${lesson.id}` : `/public/lessons/${lesson.id}`}
                    className="group bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all flex flex-col"
                  >
                     <div className="aspect-video relative overflow-hidden bg-slate-100">

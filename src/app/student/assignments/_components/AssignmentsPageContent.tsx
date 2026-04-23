@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { format } from "date-fns"
+import { vi } from "date-fns/locale"
 import { 
    LayoutGrid, 
    GraduationCap, 
@@ -157,7 +159,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
           {filteredAssignments.map((a) => (
             <Link
               key={a.id}
-              href={`/student/assignments/${a.id}/run`}
+              href={`/student/assignments/${a.id}/run?direct=true`}
               className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col"
             >
               {/* Thumbnail Wrap */}
@@ -188,7 +190,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
                         : "bg-surface-container-lowest/90 text-on-surface-variant"
                       }`}>
                          <Clock className="w-3 h-3" />
-                         {(new Date(a.dueDate).getTime() - new Date().getTime()) < 86400000 ? "Gấp: Cần nộp ngay" : `Hạn: ${new Date(a.dueDate).toLocaleDateString("vi-VN")}`}
+                         {(new Date(a.dueDate).getTime() - new Date().getTime()) < 86400000 ? "Gấp: Cần nộp ngay" : `Hạn: ${format(new Date(a.dueDate), "dd/MM/yyyy", { locale: vi })}`}
                       </div>
                    </div>
                 )}
@@ -209,7 +211,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
                      <span className="text-outline-variant text-[10px]">|</span>
                      <div className="flex items-center gap-1.5 text-xs font-medium">
                         <Calendar className="w-3.5 h-3.5 text-outline" />
-                        <span>{new Date(a.assignedAt).toLocaleDateString("vi-VN")}</span>
+                        <span>{format(new Date(a.assignedAt), "dd/MM/yyyy", { locale: vi })}</span>
                      </div>
                   </div>
                 </div>

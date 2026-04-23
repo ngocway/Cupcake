@@ -44,12 +44,12 @@ export async function submitLessonReview(lessonId: string, rating: number, comme
         lessonId,
         studentId,
         rating,
-        comment,
-        isApproved: false
+        comment
       }
     });
 
     revalidatePath(`/public/lessons/${lessonId}`);
+    revalidatePath(`/student/lessons/${lessonId}`);
     return { 
       success: true, 
       message: "Đánh giá của bạn đã được gửi và đang chờ quản trị viên phê duyệt." 
@@ -94,20 +94,20 @@ export async function submitAssignmentReview(assignmentId: string, rating: numbe
       return { success: false, message: "Bạn đã đánh giá bài tập này rồi." };
     }
 
-    // 3. Create review (AssignmentReview doesn't have isApproved in schema)
+    // 3. Create review (with moderation)
     await prisma.assignmentReview.create({
       data: {
         assignmentId,
         studentId,
         rating,
-        comment: comment || null,
+        comment: comment || null
       }
     });
 
-    revalidatePath(`/public/assignments/${assignmentId}`);
+    revalidatePath(`/student/assignments/${assignmentId}/run`);
     return { 
       success: true, 
-      message: "Cảm ơn bạn đã gửi đánh giá!" 
+      message: "Đánh giá của bạn đã được gửi và đang chờ quản trị viên phê duyệt." 
     };
 
   } catch (error) {

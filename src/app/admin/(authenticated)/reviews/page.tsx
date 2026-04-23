@@ -23,7 +23,7 @@ export default async function AdminReviewsPage() {
     redirect("/student/login");
   }
 
-  const reviews = await prisma.lessonReview.findMany({
+  const lessonReviews = await prisma.lessonReview.findMany({
     include: {
       student: { select: { name: true, image: true, email: true } },
       lesson: { select: { title: true, id: true } }
@@ -31,7 +31,21 @@ export default async function AdminReviewsPage() {
     orderBy: { createdAt: "desc" }
   });
 
-  const pendingCount = reviews.filter(r => !r.isApproved).length;
+  const assignmentReviews = await prisma.assignmentReview.findMany({
+    include: {
+      student: { select: { name: true, image: true, email: true } },
+      assignment: { select: { title: true, id: true } }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  // Combine and add type discriminator
+  const allReviews = [
+    ...lessonReviews.map(r => ({ ...r, type: 'lesson' as const, targetTitle: r.lesson.title })),
+    ...assignmentReviews.map(r => ({ ...r, type: 'assignment' as const, targetTitle: r.assignment.title }))
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const pendingCount = allReviews.filter(r => !r.isApproved).length;
 
   return (
     <div className="p-8 space-y-10">
@@ -42,9 +56,9 @@ export default async function AdminReviewsPage() {
              <ShieldCheck className="w-4 h-4" />
              Quản trị hệ thống
           </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Duyệt đánh giá bài học</h1>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Duyệt đánh giá & Bình luận</h1>
           <p className="text-slate-500 font-medium">
-             Quản lý và kiểm duyệt các phản hồi từ học sinh để đảm bảo chất lượng nội dung.
+             Quản lý và kiểm duyệt các phản hồi từ học sinh (Lessons & Assignments).
           </p>
         </div>
         
@@ -67,14 +81,14 @@ export default async function AdminReviewsPage() {
             <div className="p-4 bg-primary/10 rounded-2xl text-primary"><MessageSquare className="w-6 h-6" /></div>
             <div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tổng đánh giá</p>
-               <p className="text-2xl font-black text-slate-900">{reviews.length}</p>
+               <p className="text-2xl font-black text-slate-900">{allReviews.length}</p>
             </div>
          </div>
          <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
             <div className="p-4 bg-green-100 rounded-2xl text-green-600"><CheckCircle className="w-6 h-6" /></div>
             <div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đã phê duyệt</p>
-               <p className="text-2xl font-black text-slate-900">{reviews.filter(r => r.isApproved).length}</p>
+               <p className="text-2xl font-black text-slate-900">{allReviews.filter(r => r.isApproved).length}</p>
             </div>
          </div>
          <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
@@ -82,7 +96,7 @@ export default async function AdminReviewsPage() {
             <div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Điểm trung bình</p>
                <p className="text-2xl font-black text-slate-900">
-                  {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : "0.0"}
+                  {allReviews.length > 0 ? (allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length).toFixed(1) : "0.0"}
                </p>
             </div>
          </div>
@@ -98,7 +112,7 @@ export default async function AdminReviewsPage() {
             <table className="w-full text-left">
                <thead>
                   <tr className="border-b border-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                     <th className="px-8 py-6">Học viên / Bài học</th>
+                     <th className="px-8 py-6">Học viên / Nội dung</th>
                      <th className="px-8 py-6">Đánh giá</th>
                      <th className="px-8 py-6">Nội dung</th>
                      <th className="px-8 py-6">Ngày gửi</th>
@@ -107,8 +121,8 @@ export default async function AdminReviewsPage() {
                   </tr>
                </thead>
                <tbody className="divide-y divide-slate-50">
-                  {reviews.length > 0 ? (
-                    <ReviewManagementClient reviews={reviews} />
+                  {allReviews.length > 0 ? (
+                    <ReviewManagementClient reviews={allReviews as any} />
                   ) : (
                     <tr>
                       <td colSpan={6} className="px-8 py-20 text-center">

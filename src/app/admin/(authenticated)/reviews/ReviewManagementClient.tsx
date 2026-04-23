@@ -14,14 +14,12 @@ interface Review {
   comment: string | null;
   isApproved: boolean;
   createdAt: Date;
+  type: 'lesson' | 'assignment';
+  targetTitle: string;
   student: {
     name: string | null;
     image: string | null;
     email: string | null;
-  };
-  lesson: {
-    title: string;
-    id: string;
   };
 }
 
@@ -33,10 +31,10 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
   const [reviews, setReviews] = useState(initialReviews);
   const [loading, setLoading] = useState<string | null>(null);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, type: 'lesson' | 'assignment') => {
     setLoading(id);
     try {
-      const result = await approveReview(id);
+      const result = await approveReview(id, type);
       if (result.success) {
         toast.success(result.message);
         setReviews(prev => prev.map(r => r.id === id ? { ...r, isApproved: true } : r));
@@ -50,12 +48,12 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, type: 'lesson' | 'assignment') => {
     if (!confirm("Bạn có chắc chắn muốn xóa đánh giá này? Hành động này không thể hoàn tác.")) return;
     
     setLoading(id);
     try {
-      const result = await deleteReview(id);
+      const result = await deleteReview(id, type);
       if (result.success) {
         toast.success(result.message);
         setReviews(prev => prev.filter(r => r.id !== id));
@@ -87,8 +85,8 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
                 <div className="min-w-0">
                    <p className="font-black text-slate-900 truncate max-w-[200px]">{review.student.name || "N/A"}</p>
                    <div className="flex items-center gap-1.5 text-slate-400">
-                      <BookOpen className="w-3 h-3 text-primary" />
-                      <p className="text-[10px] font-bold truncate max-w-[150px] uppercase tracking-wider">{review.lesson.title}</p>
+                      <div className={`w-1.5 h-1.5 rounded-full ${review.type === 'lesson' ? 'bg-blue-400' : 'bg-purple-400'}`} />
+                      <p className="text-[10px] font-bold truncate max-w-[150px] uppercase tracking-wider">{review.targetTitle}</p>
                    </div>
                 </div>
              </div>
@@ -131,7 +129,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 {!review.isApproved && (
                   <button
-                    onClick={() => handleApprove(review.id)}
+                    onClick={() => handleApprove(review.id, review.type)}
                     disabled={loading === review.id}
                     className="p-2.5 bg-green-500 text-white rounded-xl hover:scale-110 active:scale-90 transition-all shadow-lg shadow-green-500/20 disabled:opacity-50"
                     title="Duyệt đánh giá"
@@ -144,7 +142,7 @@ export default function ReviewManagementClient({ reviews: initialReviews }: Prop
                   </button>
                 )}
                 <button
-                  onClick={() => handleDelete(review.id)}
+                  onClick={() => handleDelete(review.id, review.type)}
                   disabled={loading === review.id}
                   className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white hover:scale-110 active:scale-90 transition-all shadow-lg shadow-red-500/5 disabled:opacity-50"
                   title="Xóa đánh giá"

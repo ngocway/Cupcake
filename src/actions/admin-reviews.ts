@@ -12,14 +12,21 @@ async function checkAdmin() {
   }
 }
 
-export async function approveReview(reviewId: string) {
+export async function approveReview(reviewId: string, type: 'lesson' | 'assignment') {
   try {
     await checkAdmin();
 
-    await prisma.lessonReview.update({
-      where: { id: reviewId },
-      data: { isApproved: true }
-    });
+    if (type === 'lesson') {
+      await prisma.lessonReview.update({
+        where: { id: reviewId },
+        data: { isApproved: true }
+      });
+    } else {
+      await prisma.assignmentReview.update({
+        where: { id: reviewId },
+        data: { isApproved: true }
+      });
+    }
 
     revalidatePath("/admin/reviews");
     return { success: true, message: "Đã duyệt đánh giá thành công." };
@@ -28,13 +35,19 @@ export async function approveReview(reviewId: string) {
   }
 }
 
-export async function deleteReview(reviewId: string) {
+export async function deleteReview(reviewId: string, type: 'lesson' | 'assignment') {
   try {
     await checkAdmin();
 
-    await prisma.lessonReview.delete({
-      where: { id: reviewId }
-    });
+    if (type === 'lesson') {
+      await prisma.lessonReview.delete({
+        where: { id: reviewId }
+      });
+    } else {
+      await prisma.assignmentReview.delete({
+        where: { id: reviewId }
+      });
+    }
 
     revalidatePath("/admin/reviews");
     return { success: true, message: "Đã xóa đánh giá thành công." };

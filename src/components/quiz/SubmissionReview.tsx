@@ -38,18 +38,65 @@ export function SubmissionReview({
       </div>
       
       <div className={`p-4 rounded-xl mb-4 border ${isCorrect ? 'bg-emerald-50/50 border-emerald-100' : 'bg-red-50/50 border-red-100'}`}>
-        <p className="text-sm text-slate-600 mb-1">Đáp án của học sinh:</p>
-        <div className="flex items-center space-x-2">
-          {isCorrect ? (
-            <span className="text-emerald-700 font-semibold">{studentAnswer}</span>
+        <p className="text-sm text-slate-600 mb-2">Đáp án của học sinh:</p>
+        <div className="space-y-2">
+          {question.type === 'MATCHING' ? (
+            (() => {
+              let userPairs: Record<string, string> = {};
+              try {
+                userPairs = typeof studentAnswer === 'string' ? JSON.parse(studentAnswer) : studentAnswer;
+              } catch (e) {
+                userPairs = {};
+              }
+              
+              const questionContent = question.content;
+              const pairs = questionContent?.pairs || [];
+
+              return (
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(userPairs).map(([leftId, rightText], idx) => {
+                    const leftItem = pairs.find((p: any) => p.id === leftId);
+                    const isPairCorrect = leftItem?.rightText === rightText;
+                    
+                    return (
+                      <div key={idx} className={`flex items-center gap-3 p-2 rounded-lg border ${isPairCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-center gap-2 flex-1">
+                          {leftItem?.leftImageUrl ? (
+                            <img src={leftItem.leftImageUrl} className="w-8 h-8 object-cover rounded" alt="" />
+                          ) : (
+                            <span className="text-xs font-bold text-slate-700">{leftItem?.leftText || leftId}</span>
+                          )}
+                          <span className="text-slate-400">→</span>
+                          {rightText.startsWith('http') ? (
+                            <img src={rightText} className="w-8 h-8 object-cover rounded" alt="" />
+                          ) : (
+                            <span className="text-xs font-bold text-slate-700">{rightText}</span>
+                          )}
+                        </div>
+                        <span className="material-symbols-outlined text-sm">
+                          {isPairCorrect ? 'check_circle' : 'cancel'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {Object.keys(userPairs).length === 0 && <span className="text-xs italic text-slate-400">Không có cặp nào được nối</span>}
+                </div>
+              );
+            })()
           ) : (
-            <div className="flex flex-col space-y-2 w-full">
-              <span className="text-red-600 font-semibold line-through decoration-red-400 decoration-2">{studentAnswer}</span>
-              <div className="h-px bg-red-100 w-full" />
-              <div>
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2">Đáp án đúng:</span>
-                <span className="text-emerald-600 font-bold">{correctAnswerText}</span>
-              </div>
+            <div className="flex items-center space-x-2">
+              {isCorrect ? (
+                <span className="text-emerald-700 font-semibold">{studentAnswer}</span>
+              ) : (
+                <div className="flex flex-col space-y-2 w-full">
+                  <span className="text-red-600 font-semibold line-through decoration-red-400 decoration-2">{studentAnswer}</span>
+                  <div className="h-px bg-red-100 w-full" />
+                  <div>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest mr-2">Đáp án đúng:</span>
+                    <span className="text-emerald-600 font-bold">{correctAnswerText}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
