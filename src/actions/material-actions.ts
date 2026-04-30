@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
-import { MaterialStatus } from '@prisma/client';
+import { MaterialStatus } from '@/generated/client';
 
 export async function generateMaterialThumbnail(assignment: { title: string; subject: string | null }, questions: any[]) {
   // Analyze content to create a stable seed
@@ -61,6 +61,31 @@ export async function createDraftMaterial(type: 'EXERCISE' | 'READING' | 'FLASHC
   return newAss.id;
 }
 
+export async function createDraftLesson() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  // Create Assignment first because Lesson depends on it
+  const newAssignment = await prisma.assignment.create({
+    data: {
+      title: 'Bài học mới',
+      materialType: 'READING', // Default for lessons
+      status: 'DRAFT',
+      teacherId: session.user.id,
+    }
+  });
+
+  await prisma.lesson.create({
+    data: {
+      title: 'Bài học mới',
+      teacherId: session.user.id,
+      assignmentId: newAssignment.id
+    }
+  });
+
+  return newAssignment.id; // Return assignment ID for the editor
+}
+
 export async function autoSaveMaterial(payload: { 
   id: string; 
   title: string; 
@@ -74,6 +99,7 @@ export async function autoSaveMaterial(payload: {
   shortDescription?: string;
   tags?: string;
   instructions?: string;
+  categoryIds?: string[];
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -120,6 +146,9 @@ export async function autoSaveMaterial(payload: {
         tags: payload.tags || "",
         instructions: payload.instructions || null,
         updatedAt: new Date(),
+        categories: {
+          set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
+        }
       },
       create: {
         id: payload.id,
@@ -136,6 +165,9 @@ export async function autoSaveMaterial(payload: {
         teacherId: session.user.id,
         materialType: (payload.type as any) || 'READING',
         status: 'DRAFT',
+        categories: {
+          connect: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
+        }
       }
     });
 
@@ -325,22 +357,55 @@ export async function deleteMaterial(id: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
-  const existing = await prisma.assignment.findUnique({ 
+  // Try finding as assignment
+  const assignment = await prisma.assignment.findUnique({ 
     where: { id },
-    include: { _count: { select: { targetClasses: true } } }
+    include: { lesson: true, _count: { select: { targetClasses: true } } }
   });
 
-  if (!existing || existing.teacherId !== session.user.id) {
-    throw new Error('Forbidden: You do not have permission to delete this material.');
+  if (assignment) {
+    if (assignment.teacherId !== session.user.id) throw new Error('Forbidden');
+    
+    await prisma.$transaction([
+      prisma.assignment.update({
+        where: { id },
+        data: { deletedAt: new Date() }
+      }),
+      ...(assignment.lesson ? [
+        prisma.lesson.update({
+          where: { id: assignment.lesson.id },
+          data: { deletedAt: new Date() }
+        })
+      ] : [])
+    ]);
+  } else {
+    // Try finding as lesson
+    const lesson = await prisma.lesson.findUnique({
+      where: { id },
+      include: { assignment: true }
+    });
+
+    if (!lesson || lesson.teacherId !== session.user.id) {
+      throw new Error('Forbidden: You do not have permission to delete this material.');
+    }
+
+    await prisma.$transaction([
+      prisma.lesson.update({
+        where: { id },
+        data: { deletedAt: new Date() }
+      }),
+      ...(lesson.assignment ? [
+        prisma.assignment.update({
+          where: { id: lesson.assignment.id },
+          data: { deletedAt: new Date() }
+        })
+      ] : [])
+    ]);
   }
-
-  await prisma.assignment.update({
-    where: { id },
-    data: { deletedAt: new Date() }
-  });
 
   revalidatePath('/teacher/materials');
   revalidatePath('/teacher/materials/trash');
+  revalidatePath('/teacher/lessons');
   revalidatePath('/teacher/dashboard');
   return { success: true };
 }
@@ -420,18 +485,32 @@ export async function restoreMaterial(id: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
-  const existing = await prisma.assignment.findUnique({ where: { id }});
-  if (!existing || existing.teacherId !== session.user.id) {
-    throw new Error('Forbidden');
-  }
-
-  await prisma.assignment.update({
+  const assignment = await prisma.assignment.findUnique({ 
     where: { id },
-    data: { deletedAt: null }
+    include: { lesson: true }
   });
+
+  if (assignment) {
+    if (assignment.teacherId !== session.user.id) throw new Error('Forbidden');
+    await prisma.$transaction([
+      prisma.assignment.update({ where: { id }, data: { deletedAt: null } }),
+      ...(assignment.lesson ? [prisma.lesson.update({ where: { id: assignment.lesson.id }, data: { deletedAt: null } })] : [])
+    ]);
+  } else {
+    const lesson = await prisma.lesson.findUnique({ 
+      where: { id },
+      include: { assignment: true }
+    });
+    if (!lesson || lesson.teacherId !== session.user.id) throw new Error('Forbidden');
+    await prisma.$transaction([
+      prisma.lesson.update({ where: { id }, data: { deletedAt: null } }),
+      ...(lesson.assignment ? [prisma.assignment.update({ where: { id: lesson.assignment.id }, data: { deletedAt: null } })] : [])
+    ]);
+  }
 
   revalidatePath('/teacher/materials/trash');
   revalidatePath('/teacher/materials');
+  revalidatePath('/teacher/lessons');
   return { success: true };
 }
 
@@ -439,25 +518,63 @@ export async function permanentlyDeleteMaterial(id: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
-  const existing = await prisma.assignment.findUnique({ 
+  const assignment = await prisma.assignment.findUnique({ 
     where: { id },
-    include: { _count: { select: { targetClasses: true } } }
+    include: { lesson: true, _count: { select: { targetClasses: true } } }
   });
 
-  if (!existing || existing.teacherId !== session.user.id) {
-    throw new Error('Forbidden');
-  }
+  if (assignment) {
+    if (assignment.teacherId !== session.user.id) throw new Error('Forbidden');
+    if (assignment._count.targetClasses > 0) {
+      throw new Error('Không thể xóa vĩnh viễn bài tập đã được giao.');
+    }
+    
+    await prisma.$transaction([
+      ...(assignment.lesson ? [prisma.lesson.delete({ where: { id: assignment.lesson.id } })] : []),
+      prisma.assignment.delete({ where: { id } })
+    ]);
+  } else {
+    const lesson = await prisma.lesson.findUnique({ 
+      where: { id },
+      include: { assignment: true }
+    });
+    if (!lesson || lesson.teacherId !== session.user.id) throw new Error('Forbidden');
+    
+    // If lesson has assignment, check if that assignment is assigned
+    if (lesson.assignment) {
+      const assCount = await prisma.assignmentClass.count({ where: { assignmentId: lesson.assignment.id } });
+      if (assCount > 0) throw new Error('Không thể xóa vĩnh viễn bài học có bài tập đã được giao.');
+    }
 
-  // Still check if it was assigned (sanity check)
-  if (existing._count.targetClasses > 0) {
-    throw new Error('Không thể xóa vĩnh viễn bài tập đã được giao.');
+    await prisma.$transaction([
+      ...(lesson.assignment ? [prisma.assignment.delete({ where: { id: lesson.assignment.id } })] : []),
+      prisma.lesson.delete({ where: { id } })
+    ]);
   }
-
-  await prisma.assignment.delete({
-    where: { id }
-  });
 
   revalidatePath('/teacher/materials/trash');
+  revalidatePath('/teacher/lessons');
+  return { success: true };
+}
+
+export async function bulkDeleteMaterials(ids: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  await Promise.all(ids.map(id => deleteMaterial(id)));
+  return { success: true };
+}
+
+export async function bulkRestoreMaterials(ids: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  await Promise.all(ids.map(id => restoreMaterial(id)));
+  return { success: true };
+}
+
+export async function bulkPermanentlyDeleteMaterials(ids: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  await Promise.all(ids.map(id => permanentlyDeleteMaterial(id)));
   return { success: true };
 }
 

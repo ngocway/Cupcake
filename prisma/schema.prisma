@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -173,6 +174,7 @@ model Assignment {
   lesson                Lesson?
   questions             Question[]
   submissions           Submission[]
+  categories            Category[]
 }
 
 model FlashcardDeck {
@@ -297,6 +299,7 @@ model Lesson {
   teacher        User             @relation(fields: [teacherId], references: [id])
   reviews        LessonReview[]
   purchases      Purchase[]
+  categories     Category[]
 }
 
 model FavoriteLesson {
@@ -468,4 +471,24 @@ enum QuestionType {
   MATCHING
   TRUE_FALSE
   REORDER
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  icon        String?
+  color       String?
+  description String?
+  parentId    String?
+  orderIndex  Int        @default(0)
+  isHidden    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryHierarchy")
+
+  assignments Assignment[]
+  lessons     Lesson[]
 }

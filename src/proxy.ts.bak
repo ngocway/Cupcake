@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server'
 import { auth } from './auth'
 
 export default auth((req) => {
-  const isLoggedIn = !!req.auth
   const path = req.nextUrl.pathname
+  console.log("Proxy checking path:", path)
+  const isLoggedIn = !!req.auth
 
   // Do not redirect if we are already on a login page
   if (path === '/teacher/login' || path === '/student/login') {

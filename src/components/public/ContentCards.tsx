@@ -27,6 +27,19 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
             Mới nhất
           </span>
         </div>
+        {/* Media Icons */}
+        <div className="absolute top-4 right-4 z-10 flex gap-1.5">
+          {item.videoUrl && (
+            <div title="Có video" className="bg-black/60 backdrop-blur-md text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg border border-white/20">
+              <span className="material-symbols-outlined !text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>videocam</span>
+            </div>
+          )}
+          {item.audioUrl && (
+            <div title="Có audio" className="bg-black/60 backdrop-blur-md text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg border border-white/20">
+              <span className="material-symbols-outlined !text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
+            </div>
+          )}
+        </div>
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
       </div>
@@ -120,6 +133,19 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
             </span>
             {isReading ? 'Reading' : 'Bài học'}
           </span>
+        </div>
+        {/* Media Icons */}
+        <div className="absolute top-4 right-4 z-10 flex gap-1.5">
+          {item.videoUrl && (
+            <div title="Có video" className="bg-black/60 backdrop-blur-md text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg border border-white/20">
+              <span className="material-symbols-outlined !text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>videocam</span>
+            </div>
+          )}
+          {item.audioUrl && (
+            <div title="Có audio" className="bg-black/60 backdrop-blur-md text-white w-7 h-7 rounded-full flex items-center justify-center shadow-lg border border-white/20">
+              <span className="material-symbols-outlined !text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
+            </div>
+          )}
         </div>
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>

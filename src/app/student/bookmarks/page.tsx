@@ -5,14 +5,14 @@ import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  Bookmark, 
-  BookOpen, 
-  Assignment as AssignmentIcon,
+  Bookmark,
+  BookOpen,
+  FileText as AssignmentIcon,
   ChevronRight,
   Clock,
   User,
   Search
-} from '@mui/icons-material';
+} from 'lucide-react';
 
 export default async function BookmarksPage() {
   const session = await auth();
@@ -63,7 +63,7 @@ export default async function BookmarksPage() {
         
         <div className="relative group">
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline group-focus-within:text-primary transition-colors">
-            <Search sx={{ fontSize: 20 }} />
+            <Search className="w-5 h-5" />
           </div>
           <input 
             type="text" 
@@ -76,7 +76,7 @@ export default async function BookmarksPage() {
       {!hasBookmarks ? (
         <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-20 text-center border border-dashed border-outline-variant/50">
           <div className="w-20 h-20 bg-surface-container rounded-3xl flex items-center justify-center mx-auto mb-6 text-outline">
-            <Bookmark sx={{ fontSize: 40 }} />
+            <Bookmark className="w-10 h-10" />
           </div>
           <h3 className="text-xl font-bold text-on-surface">Bạn chưa lưu mục nào</h3>
           <p className="text-on-surface-variant max-w-sm mx-auto mt-2">
@@ -98,7 +98,7 @@ export default async function BookmarksPage() {
             <section className="space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                  <BookOpen sx={{ fontSize: 22 }} />
+                  <BookOpen className="w-[22px] h-[22px]" />
                 </div>
                 <h2 className="text-xl font-black tracking-tight">Bài học đã lưu ({bookmarkedLessons.length})</h2>
               </div>
@@ -113,7 +113,7 @@ export default async function BookmarksPage() {
                     <div className="aspect-video bg-surface-container relative">
                        {/* Placeholder for lesson thumbnail */}
                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                         <BookOpen sx={{ fontSize: 60 }} />
+                         <BookOpen className="w-[60px] h-[60px]" />
                        </div>
                        <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-black uppercase tracking-widest text-primary shadow-sm">
                           Lesson
@@ -149,7 +149,7 @@ export default async function BookmarksPage() {
             <section className="space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
-                  <AssignmentIcon sx={{ fontSize: 22 }} />
+                  <AssignmentIcon className="w-[22px] h-[22px]" />
                 </div>
                 <h2 className="text-xl font-black tracking-tight">Bài tập đã lưu ({bookmarkedAssignments.length})</h2>
               </div>
@@ -164,7 +164,7 @@ export default async function BookmarksPage() {
                     <div className="aspect-video bg-surface-container relative">
                        {/* Placeholder for assignment thumbnail */}
                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                         <AssignmentIcon sx={{ fontSize: 60 }} />
+                         <AssignmentIcon className="w-[60px] h-[60px]" />
                        </div>
                        <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-black uppercase tracking-widest text-secondary shadow-sm">
                           Exercise
@@ -176,11 +176,11 @@ export default async function BookmarksPage() {
                       </h4>
                       <div className="flex items-center gap-4 pt-2 border-t border-outline-variant/10">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant uppercase">
-                          <Clock sx={{ fontSize: 14 }} />
+                          <Clock className="w-[14px] h-[14px]" />
                           {item.assignment.timeLimit ? `${item.assignment.timeLimit} Phút` : 'Không giới hạn'}
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant uppercase">
-                          <User sx={{ fontSize: 14 }} />
+                          <User className="w-[14px] h-[14px]" />
                           {item.assignment.teacher.name}
                         </div>
                       </div>

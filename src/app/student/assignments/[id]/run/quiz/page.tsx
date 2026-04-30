@@ -72,19 +72,23 @@ export default async function StudentQuizPage({
 
   // Fetch related assignments by tags
   const tags = submission.assignment.tags?.split(',').map(t => t.trim()).filter(Boolean) || [];
+  
+  const relatedWhere: any = {
+    status: 'PUBLIC',
+    id: { not: submission.assignment.id },
+  };
+
+  if (tags.length > 0) {
+    relatedWhere.OR = [
+      { teacherId: submission.assignment.teacherId },
+      { OR: tags.map(tag => ({ tags: { contains: tag } })) }
+    ];
+  } else {
+    relatedWhere.teacherId = submission.assignment.teacherId;
+  }
+
   const relatedAssignments = await prisma.assignment.findMany({
-    where: {
-      status: 'PUBLIC',
-      id: { not: submission.assignment.id },
-      OR: [
-        { teacherId: submission.assignment.teacherId },
-        {
-          OR: tags.map(tag => ({
-            tags: { contains: tag }
-          }))
-        }
-      ]
-    },
+    where: relatedWhere,
     take: 5,
     include: {
       teacher: {

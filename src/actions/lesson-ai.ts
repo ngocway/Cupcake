@@ -249,6 +249,16 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         }
       });
 
+      // Create a Lesson record linked to this assignment
+      await tx.lesson.create({
+        data: {
+          title: assignment.title,
+          description: assignment.shortDescription,
+          teacherId: session.user.id,
+          assignmentId: assignment.id,
+        }
+      });
+
       const questionsData = data.questions.map((q, idx) => {
         let questionContent: any;
         if (q.type === "MULTIPLE_CHOICE" || q.type === "MULTIPLE_SELECT") {
@@ -358,8 +368,8 @@ export async function quickGenerateLesson() {
 
     const aiResponse = await generateAILesson({
       topic: randomTopic,
-      gradeLevel: "10",
-      subject: "Tiếng Anh",
+      gradeLevel: "Khác",
+      subject: "Khác",
       difficulty: "MEDIUM",
       questionCount: 5,
       wordCount: 400
@@ -369,8 +379,8 @@ export async function quickGenerateLesson() {
 
     const saveResponse = await saveAILesson({
       ...aiResponse,
-      gradeLevel: "10",
-      subject: "Tiếng Anh"
+      gradeLevel: "Khác",
+      subject: "Khác"
     });
 
     return saveResponse;

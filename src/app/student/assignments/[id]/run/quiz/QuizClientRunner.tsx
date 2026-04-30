@@ -51,6 +51,13 @@ export default function QuizClientRunner({
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
+
+  const hasInstructions = useMemo(() => {
+    if (!assignment?.instructions) return false;
+    const cleanText = String(assignment.instructions).replace(/<[^>]*>/g, "").trim();
+    if (cleanText.length > 0) return true;
+    return /<(img|video|audio|iframe|embed)\b/i.test(String(assignment.instructions));
+  }, [assignment?.instructions]);
   
   // Review State
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -295,69 +302,8 @@ export default function QuizClientRunner({
           isGuest={isGuest}
         />
 
-        {/* Middle Column: Material / Reading Content & Reviews */}
-        <div className="flex-1 border-r border-outline-variant/30 flex flex-col bg-white dark:bg-slate-900">
-           <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20">
-              <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
-                 <BookOpen className="w-4 h-4" />
-                 Nội dung bài học
-              </div>
-              <div className="flex items-center gap-4">
-                 {!isGuest && (
-                   <>
-                     <BookmarkButton 
-                       id={assignment.id} 
-                       type="ASSIGNMENT" 
-                       initialIsBookmarked={assignment.favoriteAssignments?.length > 0} 
-                     />
-                     <button 
-                       onClick={() => setIsReviewModalOpen(true)}
-                       className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-outline-variant/20 hover:scale-105 active:scale-95 transition-all"
-                     >
-                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Đánh giá</span>
-                     </button>
-                   </>
-                 )}
-              </div>
-           </div>
-           <div className="flex-1 overflow-y-auto p-10 custom-scrollbar pb-20">
-              {assignment.readingText ? (
-                <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg mb-20">
-                   <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
-                </div>
-              ) : (
-                <div className="py-20 text-center space-y-4">
-                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                      <BookOpen className="w-8 h-8 text-slate-300" />
-                   </div>
-                   <p className="text-slate-400 font-medium italic">Bài tập này không kèm theo tài liệu đọc.</p>
-                </div>
-              )}
-
-              {/* Reviews Section below reading text */}
-              <div className="border-t border-outline-variant/20 pt-16 space-y-12">
-                 <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                       <h3 className="text-2xl font-black tracking-tight italic uppercase">Phản hồi từ học viên</h3>
-                       <p className="text-sm text-slate-500 font-medium">Những chia sẻ từ các bạn đã hoàn thành bài tập này.</p>
-                    </div>
-                    {allReviews.length > 0 && (
-                       <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-100">
-                          <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                          <span className="font-black text-amber-700">
-                             {(allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length).toFixed(1)}
-                          </span>
-                       </div>
-                    )}
-                 </div>
-                 <ReviewList reviews={allReviews} />
-              </div>
-           </div>
-        </div>
-
-        {/* Right Column: Questions */}
-        <div className="w-full max-w-2xl flex flex-col bg-slate-50/30 dark:bg-slate-950/30">
+        {/* Middle Column: Questions */}
+        <div className="flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30">
            {/* Question Header */}
            <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
               <div className="flex items-center gap-2 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
@@ -381,7 +327,7 @@ export default function QuizClientRunner({
 
               const qType = questionData.type || currentQuestion.type;
               const isMultiSelect = qType === "MULTIPLE_SELECT";
-              const questionText = questionData.instruction || questionData.questionText || questionData.statement || currentQuestion.content;
+              const questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? currentQuestion.content;
               const userAnswer = answers[currentQuestion.id];
 
               return (
@@ -847,6 +793,93 @@ export default function QuizClientRunner({
                </button>
              )}
           </div>
+        </div>
+
+        {/* Right Column: Material / Reading Content & Reviews */}
+        <div className="w-full max-w-2xl flex flex-col bg-white dark:bg-slate-900 border-l border-outline-variant/30">
+           <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
+              <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
+                 <BookOpen className="w-4 h-4" />
+                 Hướng dẫn & Tài liệu
+              </div>
+              <div className="flex items-center gap-4">
+                 {!isGuest && (
+                   <>
+                     <BookmarkButton 
+                       id={assignment.id} 
+                       type="ASSIGNMENT" 
+                       initialIsBookmarked={assignment.favoriteAssignments?.length > 0} 
+                     />
+                     <button 
+                       onClick={() => setIsReviewModalOpen(true)}
+                       className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-outline-variant/20 hover:scale-105 active:scale-95 transition-all"
+                     >
+                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Đánh giá</span>
+                     </button>
+                   </>
+                 )}
+              </div>
+           </div>
+           <div className="flex-1 overflow-y-auto p-10 custom-scrollbar pb-20 space-y-12">
+              {/* Instructions Section */}
+              {hasInstructions && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
+                    <span className="material-symbols-outlined text-sm">info</span>
+                    Hướng dẫn làm bài
+                  </div>
+                  <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
+                    <div dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Tags Section */}
+              {assignment.tags && (
+                <div className="flex flex-wrap gap-2">
+                  {assignment.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
+                    <span key={i} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-200/50 dark:border-slate-700/50">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Material Section */}
+              {assignment.readingText && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
+                    <span className="material-symbols-outlined text-sm">menu_book</span>
+                    Tài liệu học tập
+                  </div>
+                  <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
+                    <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Reviews Section below material */}
+              {allReviews.some(r => r.isApproved) && (
+                <div className="border-t border-outline-variant/20 pt-16 space-y-12">
+                   <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                         <h3 className="text-2xl font-black tracking-tight italic uppercase">Phản hồi từ học viên</h3>
+                         <p className="text-sm text-slate-500 font-medium">Những chia sẻ từ các bạn đã hoàn thành bài tập này.</p>
+                      </div>
+                      {allReviews.length > 0 && (
+                         <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-100">
+                            <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+                            <span className="font-black text-amber-700">
+                               {(allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length).toFixed(1)}
+                            </span>
+                         </div>
+                      )}
+                   </div>
+                   <ReviewList reviews={allReviews} />
+                </div>
+              )}
+           </div>
         </div>
       </div>
 

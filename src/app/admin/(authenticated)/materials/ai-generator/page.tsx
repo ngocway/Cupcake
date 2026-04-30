@@ -27,8 +27,8 @@ export default function AILessonGeneratorPage() {
   // Form states
   const [config, setConfig] = useState({
     topic: "",
-    gradeLevel: "10",
-    subject: "English",
+    gradeLevel: "Khác",
+    subject: "Khác",
     difficulty: "MEDIUM" as "EASY" | "MEDIUM" | "HARD",
     questionCount: 5,
   });
@@ -128,34 +128,9 @@ export default function AILessonGeneratorPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Khối lớp</Label>
-                <Select value={config.gradeLevel} onValueChange={(val) => setConfig({...config, gradeLevel: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn lớp" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[6, 7, 8, 9, 10, 11, 12].map(g => (
-                      <SelectItem key={g} value={g.toString()}>Lớp {g}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Môn học</Label>
-                <Select value={config.subject} onValueChange={(val) => setConfig({...config, subject: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Môn học" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="English">Tiếng Anh</SelectItem>
-                    <SelectItem value="Science">Khoa học</SelectItem>
-                    <SelectItem value="History">Lịch sử</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {/* Grade and Subject are now internal defaults to simplify UI */}
+            <input type="hidden" value={config.gradeLevel} />
+            <input type="hidden" value={config.subject} />
 
             <div className="space-y-3">
               <Label>Độ khó</Label>

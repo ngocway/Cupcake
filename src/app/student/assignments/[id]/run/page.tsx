@@ -121,13 +121,14 @@ export default async function StudentLobbyPage({
       {/* Hero Section */}
       <div className="bg-white dark:bg-slate-950 border-b border-outline-variant/30">
         <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center relative">
-          <div className="absolute top-8 right-6">
+          <div className="absolute top-8 right-6 flex items-center gap-2">
             <BookmarkButton 
               type="assignment" 
               id={id} 
               initialIsBookmarked={isBookmarked} 
               className="scale-125"
             />
+            <ReviewTrigger type="assignment" id={id} isLoggedIn={!!session} inline />
           </div>
           <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 shadow-xl shadow-primary/5">
             <BookOpen className="w-10 h-10 text-primary" />

@@ -6,6 +6,7 @@ import { autoSaveMaterial } from '@/actions/material-actions';
 import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { DUMMY_DICTIONARY } from '@/lib/dictionary-data';
+import CategorySelect from '@/components/shared/CategorySelect';
 import {
   DndContext,
   closestCenter,
@@ -140,7 +141,8 @@ export function ReadingExerciseBuilder({
         gradeLevel,
         shortDescription,
         instructions,
-        tags: tags.join(',')
+        tags: tags.join(','),
+        categoryIds
       });
       setSavingStatus('saved');
       
@@ -153,22 +155,25 @@ export function ReadingExerciseBuilder({
       }
     }
   };
-  const [title, setTitle] = useState('Reading Exercise: Modern Ethics');
+  const [title, setTitle] = useState('Đang tải...');
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [assignmentStatus, setAssignmentStatus] = useState<'DRAFT' | 'PRIVATE' | 'PUBLIC'>('DRAFT');
   const [validationModal, setValidationModal] = useState<{show: boolean, missingTitle: boolean, missingContent: boolean}>({show: false, missingTitle: false, missingContent: false});
   const [videoUrl, setVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
+  const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
   const [instructions, setInstructions] = useState('');
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
   // Metadata States
-  const [subject, setSubject] = useState('Toán học');
-  const [gradeLevel, setGradeLevel] = useState('Lớp 10');
+  const [subject, setSubject] = useState('Khác');
+  const [gradeLevel, setGradeLevel] = useState('Khác');
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
   const [imageControlPos, setImageControlPos] = useState({ top: 0, left: 0 });
@@ -335,6 +340,10 @@ export function ReadingExerciseBuilder({
               const hasMarkers = editor.querySelectorAll('.custom-vocab-marker').length > 0;
               if (hasMarkers) setVocabEnabled(true);
             }
+          } else {
+            // Ensure editor is empty for new materials
+            const editor = document.getElementById('rich-text-editor');
+            if (editor) editor.innerHTML = '';
           }
           if (data.assignment.subject) setSubject(data.assignment.subject);
           if (data.assignment.gradeLevel) setGradeLevel(data.assignment.gradeLevel);
@@ -343,11 +352,14 @@ export function ReadingExerciseBuilder({
           if (data.assignment.tags) {
              setTags(data.assignment.tags.split(',').filter(Boolean));
           }
-          
-          setIsInitialLoadDone(true);
+          if (data.assignment.categories) {
+            setCategoryIds(data.assignment.categories.map((c: any) => c.id));
+          }
         }
       } catch (err) {
         console.error('Initial fetch failed:', err);
+      } finally {
+        setIsInitialLoadDone(true);
       }
     }
     init();
@@ -357,10 +369,18 @@ export function ReadingExerciseBuilder({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 100 * 1024 * 1024) return alert('Video dung lượng quá lớn (tối đa 100MB)');
+      setVideoUploadProgress(0);
       const reader = new FileReader();
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setVideoUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
       reader.onload = (event) => {
-        setVideoUrl(event.target?.result as string);
-        setTimeout(handleSave, 100);
+        const result = event.target?.result as string;
+        setVideoUrl(result);
+        setVideoUploadProgress(null);
+        handleSave(undefined, result, undefined);
       };
       reader.readAsDataURL(file);
     }
@@ -370,16 +390,24 @@ export function ReadingExerciseBuilder({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 20 * 1024 * 1024) return alert('Audio dung lượng quá lớn (tối đa 20MB)');
+      setAudioUploadProgress(0);
       const reader = new FileReader();
+      reader.onprogress = (event) => {
+        if (event.lengthComputable) {
+          setAudioUploadProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
       reader.onload = (event) => {
-        setAudioUrl(event.target?.result as string);
-        setTimeout(handleSave, 100);
+        const result = event.target?.result as string;
+        setAudioUrl(result);
+        setAudioUploadProgress(null);
+        handleSave(undefined, undefined, result);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSave = async (customTitle?: string) => {
+  const handleSave = async (customTitle?: string, customVideoUrl?: string, customAudioUrl?: string) => {
     const idToSave = assignmentId || initialId || 'clp_reading_001';
     if (!idToSave) return;
     
@@ -402,13 +430,14 @@ export function ReadingExerciseBuilder({
           }
         })), 
         readingText: contentHtml,
-        videoUrl: videoUrl,
-        audioUrl: audioUrl,
+        videoUrl: customVideoUrl !== undefined ? customVideoUrl : videoUrl,
+        audioUrl: customAudioUrl !== undefined ? customAudioUrl : audioUrl,
         subject,
         gradeLevel,
         shortDescription,
         instructions,
-        tags: tags.join(',')
+        tags: tags.join(','),
+        categoryIds
       });
       
       setSavingStatus('saved');
@@ -424,7 +453,7 @@ export function ReadingExerciseBuilder({
     if (!isInitialLoadDone) return;
     const timer = setTimeout(() => handleSave(), 3000);
     return () => clearTimeout(timer);
-  }, [title, questions, subject, gradeLevel, shortDescription, tags, instructions, isInitialLoadDone]);
+  }, [title, questions, subject, gradeLevel, shortDescription, tags, instructions, videoUrl, audioUrl, isInitialLoadDone, categoryIds]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -789,16 +818,22 @@ export function ReadingExerciseBuilder({
           <div className="px-4 mt-8 space-y-6">
             <div className="flex flex-col gap-3">
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Multimedia Attachments</h3>
-               
                {/* Video Upload */}
                <div className="px-4">
                   <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer overflow-hidden min-h-[100px]">
-                     {videoUrl ? (
+                     {videoUploadProgress !== null ? (
+                       <div className="w-full flex flex-col items-center px-2">
+                           <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
+                               <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${videoUploadProgress}%` }}></div>
+                           </div>
+                           <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {videoUploadProgress}%</span>
+                       </div>
+                     ) : videoUrl ? (
                        <div className="w-full flex flex-col items-center">
-                          <div className="size-10 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg flex items-center justify-center mb-2">
-                             <span className="material-symbols-outlined text-[24px]">movie</span>
+                          <div className="size-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-lg flex items-center justify-center mb-2 ring-1 ring-emerald-500/20 shadow-sm">
+                             <span className="material-symbols-outlined text-[24px]">check_circle</span>
                           </div>
-                          <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 truncate w-full text-center">Video đã tải lên</span>
+                          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate w-full text-center tracking-wide">Video đã tải lên</span>
                           <button onClick={() => { setVideoUrl(''); setTimeout(handleSave, 100); }} className="absolute top-2 right-2 size-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-all opacity-0 group-hover:opacity-100 shadow-sm">
                              <span className="material-symbols-outlined text-[14px]">close</span>
                           </button>
@@ -816,12 +851,19 @@ export function ReadingExerciseBuilder({
                {/* Audio Upload */}
                <div className="px-4">
                   <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer overflow-hidden min-h-[100px]">
-                     {audioUrl ? (
+                     {audioUploadProgress !== null ? (
+                       <div className="w-full flex flex-col items-center px-2">
+                           <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
+                               <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${audioUploadProgress}%` }}></div>
+                           </div>
+                           <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {audioUploadProgress}%</span>
+                       </div>
+                     ) : audioUrl ? (
                        <div className="w-full flex flex-col items-center">
-                          <div className="size-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-lg flex items-center justify-center mb-2">
-                             <span className="material-symbols-outlined text-[24px]">audiotrack</span>
+                          <div className="size-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-lg flex items-center justify-center mb-2 ring-1 ring-emerald-500/20 shadow-sm">
+                             <span className="material-symbols-outlined text-[24px]">check_circle</span>
                           </div>
-                          <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 truncate w-full text-center">Audio đã tải lên</span>
+                          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate w-full text-center tracking-wide">Audio đã tải lên</span>
                           <button onClick={() => { setAudioUrl(''); setTimeout(handleSave, 100); }} className="absolute top-2 right-2 size-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-all opacity-0 group-hover:opacity-100 shadow-sm">
                              <span className="material-symbols-outlined text-[14px]">close</span>
                           </button>
@@ -895,6 +937,13 @@ export function ReadingExerciseBuilder({
           <div className={activeTab !== 'passage' ? 'hidden' : 'block'}>
             <div className="w-full max-w-4xl mx-auto flex flex-col gap-8 pb-12 px-6 lg:px-0 mt-8">
               <div id="editor-wrapper" className="bg-surface-container-lowest dark:bg-gray-900 rounded-2xl p-8 lg:p-14 min-h-[800px] editorial-shadow relative border border-gray-200/50 dark:border-gray-800">
+                {!isInitialLoadDone && (
+                  <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-50 flex flex-col items-center justify-center rounded-2xl backdrop-blur-[2px]">
+                     <span className="material-symbols-outlined text-[48px] text-primary/30 animate-spin mb-4">progress_activity</span>
+                     <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Đang tải bài học...</div>
+                  </div>
+                )}
+                
                 <div
                   className={`absolute top-6 right-8 flex items-center gap-3 px-4 py-2 rounded-full border cursor-pointer transition-all select-none ${
                     vocabEnabled
@@ -958,8 +1007,6 @@ export function ReadingExerciseBuilder({
                 )}
 
                 <article id="rich-text-editor" onClick={handleEditorClick} onMouseMove={handleEditorMouseMove} onInput={() => handleSave()} onBlur={() => handleSave()} className="prose prose-slate dark:prose-invert max-w-none outline-none focus:outline-none min-h-[500px]" contentEditable suppressContentEditableWarning>
-                  <h3 className="font-headline font-bold text-3xl mb-8 leading-tight text-slate-900 dark:text-white">Navigating the Grey: Ethics in the Digital Age</h3>
-                  <div className="text-lg leading-relaxed text-slate-700 dark:text-slate-300 font-body mb-6"> Bôi đen từ mới để thiết lập vocabulary chi tiết. </div>
                 </article>
               </div>
             </div>
@@ -1347,31 +1394,12 @@ export function ReadingExerciseBuilder({
 
                {/* Modal Content */}
                <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
-                  <div className="grid grid-cols-2 gap-6">
-                     <div className="space-y-2">
-                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Môn học</label>
-                        <select 
-                          value={subject}
-                          onChange={(e) => setSubject(e.target.value)}
-                          className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm"
-                        >
-                           {['Toán học', 'Tiếng Anh', 'Ngữ Văn', 'Vật Lý', 'Hóa Học', 'Sinh Học', 'Lịch Sử', 'Địa Lý', 'GDCD', 'Tin Học'].map(s => (
-                             <option key={s} value={s}>{s}</option>
-                           ))}
-                        </select>
-                     </div>
-                     <div className="space-y-2">
-                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Khối lớp</label>
-                        <select 
-                          value={gradeLevel}
-                          onChange={(e) => setGradeLevel(e.target.value)}
-                          className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm"
-                        >
-                           {['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi Đại học'].map(g => (
-                             <option key={g} value={g}>{g}</option>
-                           ))}
-                        </select>
-                     </div>
+                  {/* Basic Metadata - Hidden as per user request to simplify UI */}
+                  {/* Fields are kept in state with default 'Khác' to maintain data integrity */}
+
+                  <div className="space-y-2">
+                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
+                     <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
                   </div>
 
                   <div className="space-y-2">

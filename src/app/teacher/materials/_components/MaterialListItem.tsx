@@ -29,6 +29,7 @@ type Assignment = {
     dueDate?: string | null;
   }[];
   createdAt: string;
+  lessonId?: string;
 };
 
 const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: string; className: string }> = {
@@ -50,13 +51,17 @@ export function MaterialListItem({
   onDelete, 
   onEdit,
   onRefresh,
-  isTrash
+  isTrash,
+  selected,
+  onSelect
 }: { 
   assignment: Assignment, 
   onDelete: () => void,
   onEdit?: (id: string) => void,
   onRefresh?: () => void,
-  isTrash?: boolean
+  isTrash?: boolean;
+  selected?: boolean;
+  onSelect?: (id: string) => void;
 }) {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -234,7 +239,28 @@ export function MaterialListItem({
     <>
       <div 
         onClick={() => handleEdit()}
-        className={`bg-white dark:bg-gray-800 p-0 rounded-2xl border border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg transition-all group flex flex-col ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+        className={`bg-white dark:bg-gray-800 p-0 rounded-2xl border transition-all group flex flex-col relative ${
+          selected 
+            ? 'border-primary ring-2 ring-primary/10 shadow-lg' 
+            : 'border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg'
+        } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+        
+        {/* Selection Checkbox */}
+        <div className={`absolute top-4 left-4 z-20 transition-all duration-200 ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect?.(assignment.id);
+            }}
+            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+              selected 
+                ? 'bg-primary border-primary text-white' 
+                : 'bg-white/90 border-slate-300 text-transparent'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px] font-bold">check</span>
+          </button>
+        </div>
         
         <div className="flex gap-4 p-5">
           <div 
@@ -265,16 +291,7 @@ export function MaterialListItem({
               </span>
             </div>
             <div className="flex items-center flex-wrap gap-2">
-              {assignment.subject && (
-                <span className={`px-2 py-0.5 ${SUBJECT_CONFIG[assignment.subject] || 'bg-gray-100 text-gray-600'} text-[11px] font-semibold rounded-full`}>
-                  {assignment.subject}
-                </span>
-              )}
-              {assignment.gradeLevel && (
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 text-[11px] font-semibold rounded-full">
-                  {assignment.gradeLevel}
-                </span>
-              )}
+              {/* Subject and Grade Level hidden to simplify UI */}
               {Array.isArray(assignment.tags) && assignment.tags.slice(0, 3).map(tag => (
                 <span key={tag} className="px-2 py-0.5 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 text-[10px] font-bold rounded-md border border-yellow-100 dark:border-yellow-800/30">
                    #{tag}
@@ -332,7 +349,7 @@ export function MaterialListItem({
                   <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Thao tác</span>
                 </div>
                 <Link 
-                  href={`/student/assignments/${assignment.id}/run`}
+                  href={assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run`}
                   target="_blank"
                   onClick={(e) => e.stopPropagation()}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
@@ -346,7 +363,11 @@ export function MaterialListItem({
                   <span className="material-symbols-outlined text-[18px]">content_copy</span> Nhân bản
                 </button>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); router.push(`/student/assignments/${assignment.id}/run?direct=true`); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    const url = assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run?direct=true`;
+                    router.push(url); 
+                  }}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2 text-indigo-600 font-semibold"
                 >
                   <span className="material-symbols-outlined text-[18px]">school</span> Học ngay
@@ -533,7 +554,11 @@ export function MaterialListItem({
             ) : (
               <>
                 <button 
-                  onClick={(e) => { e.stopPropagation(); router.push(`/student/assignments/${assignment.id}/run?direct=true`); }}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    const url = assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run?direct=true`;
+                    router.push(url);
+                  }}
                   className="bg-indigo-50 text-indigo-600 border border-indigo-100 h-9 px-4 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[18px]">school</span>

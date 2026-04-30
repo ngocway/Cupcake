@@ -8,17 +8,7 @@ import { LanguageToggle } from "@/components/LanguageToggle"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { PublicHeader } from "@/components/public/PublicHeader"
 
-const SUBJECTS = [
-  { label: "Tiếng Anh", icon: "category" },
-  { label: "Toán học", icon: "functions" },
-  { label: "Khoa học", icon: "science" },
-]
-
-const GRADES = [
-  { label: "Mầm non", icon: "child_care" },
-  { label: "Tiểu học", icon: "escalator_warning" },
-  { label: "Trung học", icon: "history_edu" },
-]
+// Filters for Subject and Grade are removed as per user request to simplify hierarchy
 
 interface Props {
   session: { id: string; name: string | null; image: string | null; role: string | null } | null
@@ -27,14 +17,16 @@ interface Props {
   initialLessons: any[]
   hasMoreLessons: boolean
   allTags: string[]
+  categoryTree: any[]
 }
 
-export function LandingPage({ session, initialExercises, hasMoreExercises, initialLessons, hasMoreLessons, allTags }: Props) {
+export function LandingPage({ session, initialExercises, hasMoreExercises, initialLessons, hasMoreLessons, allTags, categoryTree }: Props) {
   const [activeTab, setActiveTab] = useState<"exercises" | "lessons">("exercises")
   const [search, setSearch] = useState("")
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedGrade, setSelectedGrade] = useState("")
+  const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const [sort, setSort] = useState<"newest" | "popular" | "trending">("newest")
 
   const [exercises, setExercises] = useState(initialExercises)
@@ -65,15 +57,17 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
     if (search) p.set("search", search)
     if (selectedSubject) p.set("subject", selectedSubject)
     if (selectedGrade) p.set("gradeLevel", selectedGrade)
+    if (selectedCategoryId) p.set("categoryId", selectedCategoryId)
     if (selectedTags.length) p.set("tags", selectedTags.join(","))
     return `/api/public/assignments?${p}`
-  }, [search, selectedSubject, selectedGrade, selectedTags, sort])
+  }, [search, selectedSubject, selectedGrade, selectedTags, selectedCategoryId, sort])
 
   const buildLeUrl = useCallback((page: number) => {
     const p = new URLSearchParams({ page: String(page), sort })
     if (search) p.set("search", search)
+    if (selectedCategoryId) p.set("categoryId", selectedCategoryId)
     return `/api/public/lessons?${p}`
-  }, [search, sort])
+  }, [search, selectedCategoryId, sort])
 
   useEffect(() => {
     if (initialRender.current) { initialRender.current = false; return }
@@ -84,7 +78,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
       setLessons([]); setLePage(1); setHasMoreLe(true)
       fetch(buildLeUrl(1)).then(r => r.json()).then(d => { setLessons(d.items); setHasMoreLe(d.hasMore); setLePage(2) })
     }
-  }, [activeTab, search, selectedTags, selectedSubject, selectedGrade, sort])
+  }, [activeTab, search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, sort])
 
   useEffect(() => {
     if (!exBottomInView || !hasMoreEx || loadingEx || activeTab !== "exercises") return
@@ -105,7 +99,46 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   }, [leBottomInView])
 
   const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSearch("") }
+  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch("") }
+
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
+  const toggleCategoryExpand = (id: string) => setExpandedCategories(p => ({ ...p, [id]: !p[id] }))
+
+  const renderCategory = (node: any, level = 0) => {
+    const hasChildren = node.children && node.children.length > 0
+    const isExpanded = expandedCategories[node.id]
+    const isSelected = selectedCategoryId === node.id
+
+    return (
+      <div key={node.id} className="space-y-1">
+        <div 
+          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all group cursor-pointer ${
+            isSelected 
+              ? "bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]" 
+              : "text-on-surface-variant/70 hover:bg-surface-container-high"
+          }`}
+          style={{ marginLeft: `${level * 12}px` }}
+          onClick={() => setSelectedCategoryId(isSelected ? "" : node.id)}
+        >
+          {hasChildren && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); toggleCategoryExpand(node.id) }}
+              className={`material-symbols-outlined text-[18px] transition-transform ${isExpanded ? "rotate-90" : ""}`}
+            >
+              chevron_right
+            </button>
+          )}
+          {!hasChildren && <span className="material-symbols-outlined text-[18px] opacity-40">subdirectory_arrow_right</span>}
+          <span className="font-bold flex-1 truncate">{node.name}</span>
+        </div>
+        {isExpanded && hasChildren && (
+          <div className="border-l-2 border-slate-100 ml-6 pl-2 space-y-1">
+            {node.children.map((child: any) => renderCategory(child, level + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="bg-background text-on-surface min-h-screen font-body">
@@ -124,31 +157,19 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
                 <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest">Explore Topics</p>
               </div>
             </div>
-            <div className="space-y-1">
-              <p className="px-4 py-2 text-xs font-bold text-on-surface-variant/40 uppercase tracking-widest">Môn Học</p>
-              {SUBJECTS.map(({ label, icon }) => (
-                <button 
-                  key={label}
-                  onClick={() => setSelectedSubject(selectedSubject === label ? "" : label)}
-                  className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 font-bold transition-all ${selectedSubject === label ? "bg-surface-container text-primary scale-98 shadow-sm" : "text-on-surface-variant/70 hover:bg-surface-container-high"}`}
-                >
-                  <span className="material-symbols-outlined">{icon}</span>
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="space-y-1 mt-6">
-              <p className="px-4 py-2 text-xs font-bold text-on-surface-variant/40 uppercase tracking-widest">Khối Lớp</p>
-              {GRADES.map(({ label, icon }) => (
-                <button 
-                  key={label}
-                  onClick={() => setSelectedGrade(selectedGrade === label ? "" : label)}
-                  className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 font-bold transition-all ${selectedGrade === label ? "bg-surface-container text-primary scale-98 shadow-sm" : "text-on-surface-variant/70 hover:bg-surface-container-high"}`}
-                >
-                  <span className="material-symbols-outlined">{icon}</span>
-                  {label}
-                </button>
-              ))}
+            
+            <div className="space-y-2">
+              <button 
+                onClick={() => setSelectedCategoryId("")}
+                className={`w-full flex items-center gap-3 rounded-lg px-4 py-3 font-bold transition-all ${!selectedCategoryId ? "bg-surface-container text-primary shadow-sm" : "text-on-surface-variant/70 hover:bg-surface-container-high"}`}
+              >
+                <span className="material-symbols-outlined">grid_view</span>
+                Tất cả chủ đề
+              </button>
+              
+              <div className="space-y-1 mt-4">
+                {categoryTree.map(node => renderCategory(node))}
+              </div>
             </div>
           </div>
           <div className="mt-auto space-y-4">
@@ -171,35 +192,32 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
 
         {/* Main Content Area */}
         <main className="flex-1 space-y-4">
-          {/* CTA Cards */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div 
-              onClick={() => setActiveTab("exercises")}
-              className={`relative overflow-hidden group p-4 rounded-xl flex items-center justify-between transition-all cursor-pointer border-2 ${activeTab === "exercises" ? "border-primary bg-primary-container scale-[1.02] shadow-xl shadow-primary/10" : "border-transparent bg-surface-container-high hover:scale-[1.01]"}`}
-            >
-              <div className="z-10">
-                <h2 className="text-2xl font-black text-on-primary-container mb-1">Bài tập</h2>
-                <p className="text-on-primary-container/70 text-sm font-medium">Rèn luyện kỹ năng mỗi ngày</p>
-              </div>
-              <div className="bg-white/30 backdrop-blur-md p-4 rounded-lg z-10 shadow-inner">
-                <span className="material-symbols-outlined text-4xl text-on-primary-container" style={{ fontVariationSettings: "'FILL' 1" }}>edit_note</span>
-              </div>
-              <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
+          {/* New Pill Style Tabs - Moved to Left */}
+          <div className="flex flex-col items-start pt-2 pb-6">
+            
+            <div className="inline-flex p-1.5 bg-[#1a1c1e] rounded-[24px] items-center shadow-inner border border-white/5">
+              <button 
+                onClick={() => setActiveTab("lessons")}
+                className={`px-8 py-3 rounded-[20px] text-sm font-bold transition-all duration-300 ${
+                  activeTab === "lessons" 
+                    ? "bg-[#1a73e8] text-white shadow-xl shadow-blue-500/20" 
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Tất cả bài học
+              </button>
+              <button 
+                onClick={() => setActiveTab("exercises")}
+                className={`px-8 py-3 rounded-[20px] text-sm font-bold transition-all duration-300 ${
+                  activeTab === "exercises" 
+                    ? "bg-[#1a73e8] text-white shadow-xl shadow-blue-500/20" 
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Bài tập / Đề thi
+              </button>
             </div>
-            <div 
-              onClick={() => setActiveTab("lessons")}
-              className={`relative overflow-hidden group p-4 rounded-xl flex items-center justify-between transition-all cursor-pointer border-2 ${activeTab === "lessons" ? "border-secondary bg-secondary-container scale-[1.02] shadow-xl shadow-secondary/10" : "border-transparent bg-surface-container-high hover:scale-[1.01]"}`}
-            >
-              <div className="z-10">
-                <h2 className="text-2xl font-black text-on-secondary-container mb-1">Bài học</h2>
-                <p className="text-on-secondary-container/70 text-sm font-medium">Khám phá kiến thức mới</p>
-              </div>
-              <div className="bg-white/30 backdrop-blur-md p-4 rounded-lg z-10 shadow-inner">
-                <span className="material-symbols-outlined text-4xl text-on-secondary-container" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
-              </div>
-              <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-secondary/10 rounded-full blur-3xl group-hover:scale-150 transition-transform"></div>
-            </div>
-          </section>
+          </div>
 
           {/* Filter Chips */}
           <section className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

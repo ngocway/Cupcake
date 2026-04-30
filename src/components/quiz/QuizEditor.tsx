@@ -12,6 +12,7 @@ import { ReorderBuilder } from './ReorderBuilder';
 import { QuestionBankModal } from './QuestionBankModal';
 import { AIGeneratorModal } from './AIGeneratorModal';
 import { InstructionsModal } from './InstructionsModal';
+import CategorySelect from '@/components/shared/CategorySelect';
 import {
   DndContext,
   closestCenter,
@@ -128,10 +129,11 @@ export function QuizEditor() {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const [title, setTitle] = useState('Toán lớp 5 - Tuần 12');
-  const [subject, setSubject] = useState('Toán học');
-  const [gradeLevel, setGradeLevel] = useState('Lớp 5');
+  const [subject, setSubject] = useState('Khác');
+  const [gradeLevel, setGradeLevel] = useState('Khác');
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
@@ -179,6 +181,7 @@ export function QuizEditor() {
           setShortDescription(data.assignment.shortDescription || '');
           setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
+          setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
           
           if (data.assignment.questions?.length > 0) {
             setQuestions(data.assignment.questions);
@@ -213,7 +216,8 @@ export function QuizEditor() {
           gradeLevel,
           shortDescription,
           instructions,
-          tags: tags.join(',')
+          tags: tags.join(','),
+          categoryIds
         });
         setSaveStatus('SAVED');
       } catch (err) {
@@ -223,7 +227,7 @@ export function QuizEditor() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags, instructions]);
+  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags, instructions, categoryIds]);
 
   const handleFinish = async () => {
     const validQuestions = questions.filter(q => isQuestionValid(q));
@@ -1184,32 +1188,13 @@ export function QuizEditor() {
             </div>
 
             <div className="space-y-8">
-              {/* Basic Metadata */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Môn học</label>
-                    <select 
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      className="w-full p-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold text-slate-900 focus:ring-primary focus:border-primary outline-none appearance-none"
-                    >
-                       {['Tiếng Anh', 'Toán học', 'Ngữ Văn', 'Khoa học', 'Lịch sử', 'Công nghệ', 'Khác'].map(s => (
-                         <option key={s} value={s}>{s}</option>
-                       ))}
-                    </select>
-                 </div>
-                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Khối lớp</label>
-                    <select 
-                      value={gradeLevel}
-                      onChange={(e) => setGradeLevel(e.target.value)}
-                      className="w-full p-4 rounded-2xl border border-slate-200 bg-slate-50 font-bold text-slate-900 focus:ring-primary focus:border-primary outline-none appearance-none"
-                    >
-                       {['Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Khác'].map(g => (
-                         <option key={g} value={g}>{g}</option>
-                       ))}
-                    </select>
-                 </div>
+              {/* Basic Metadata - Hidden as per user request to simplify UI */}
+              {/* Fields are kept in state with default 'Khác' to maintain data integrity */}
+
+              {/* Categories */}
+              <div className="space-y-2">
+                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
+                 <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
               </div>
 
               {/* Short Description */}

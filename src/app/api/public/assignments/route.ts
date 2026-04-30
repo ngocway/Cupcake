@@ -10,12 +10,13 @@ export async function GET(request: NextRequest) {
     const tags = tagsParam ? tagsParam.split(',').filter(Boolean) : []
     const subject = searchParams.get('subject') || ''
     const gradeLevel = searchParams.get('gradeLevel') || ''
+    const categoryId = searchParams.get('categoryId') || ''
     const sort = searchParams.get('sort') || 'newest'
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
     const limit = 12
     const skip = (page - 1) * limit
 
-    const where: any = { status: 'PUBLIC', deletedAt: null, materialType: { in: ['EXERCISE', 'FLASHCARD'] } }
+    const where: any = { status: 'PUBLIC', deletedAt: null, lesson: null }
 
     if (search) {
       where.OR = [
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest) {
     }
     if (subject) where.subject = subject
     if (gradeLevel) where.gradeLevel = gradeLevel
+    if (categoryId) {
+      where.categories = { some: { id: categoryId } }
+    }
     if (tags.length > 0) {
       where.AND = tags.map((tag: string) => ({
         tags: { contains: tag, mode: 'insensitive' }

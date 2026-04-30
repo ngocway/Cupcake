@@ -15,6 +15,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         id: id,
         teacherId: session.user.id,
         deletedAt: null
+      },
+      include: {
+        categories: { select: { id: true } }
       }
     });
 
@@ -40,6 +43,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         gradeLevel: baseAssignment.gradeLevel || null,
         shortDescription: baseAssignment.shortDescription || null,
         tags: baseAssignment.tags || "",
+        instructions: baseAssignment.instructions || null,
+        categories: baseAssignment.categories,
         questions: questions.map(q => {
           // Parse the stringified JSON from the database with safety
           let parsed = {};

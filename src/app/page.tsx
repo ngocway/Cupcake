@@ -8,16 +8,15 @@ async function getInitialData() {
   const session = await auth()
   const userId = session?.user?.id
 
-  const exWhere = { status: "PUBLIC" as const, deletedAt: null, materialType: { in: ["EXERCISE", "FLASHCARD"] } }
+  const exWhere = { status: "PUBLIC" as const, deletedAt: null, lesson: null }
   const leWhere = { deletedAt: null, isPremium: false, assignment: { status: "PUBLIC" as const } }
-  const reWhere = { status: "PUBLIC" as const, deletedAt: null, materialType: "READING" }
 
-  const [exercises, exercisesTotal, lessons, lessonsTotal, readingLessons, rawTags] = await Promise.all([
+  const [assignments, assignmentsTotal, lessons, lessonsTotal, rawTags, categoryTree] = await Promise.all([
     prisma.assignment.findMany({
       where: exWhere,
       include: {
         teacher: { select: { id: true, name: true, image: true } },
-        _count: { select: { questions: true } },
+        _count: { select: { questions: true, reviews: true } },
         ...(userId ? { favoriteAssignments: { where: { studentId: userId } } } : {})
       },
       orderBy: { createdAt: "desc" },
@@ -28,45 +27,47 @@ async function getInitialData() {
       where: leWhere,
       include: {
         teacher: { select: { id: true, name: true, image: true } },
-        _count: { select: { reviews: true } }
+        _count: { select: { reviews: true } },
+        assignment: { select: { videoUrl: true, audioUrl: true, thumbnail: true } }
       },
       orderBy: { createdAt: "desc" },
       take: LIMIT
     }),
     prisma.lesson.count({ where: leWhere }),
     prisma.assignment.findMany({
-      where: reWhere,
-      include: {
-        teacher: { select: { id: true, name: true, image: true } },
-        _count: { select: { reviews: true } },
-        ...(userId ? { favoriteAssignments: { where: { studentId: userId } } } : {})
-      },
-      orderBy: { createdAt: "desc" },
-      take: LIMIT
-    }),
-    prisma.assignment.findMany({
       where: { status: "PUBLIC", deletedAt: null, tags: { not: null } },
       select: { tags: true }
+    }),
+    prisma.category.findMany({
+      where: { parentId: null },
+      include: {
+        children: {
+          include: {
+            children: {
+              include: {
+                children: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { orderIndex: 'asc' }
     })
   ])
 
-  const allLessons = [
-    ...lessons.map(l => ({ ...l, type: 'VIDEO_LESSON' })),
-    ...readingLessons.map(a => ({ 
-      ...a, 
-      type: 'READING_LESSON',
-      description: a.shortDescription,
-      viewsCount: a.viewCount,
-      _count: { reviews: a._count.reviews }
-    }))
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-
+  const allLessons = lessons.map(l => ({ 
+    ...l, 
+    type: 'VIDEO_LESSON',
+    videoUrl: l.assignment?.videoUrl || l.videoUrl,
+    audioUrl: l.assignment?.audioUrl,
+    thumbnail: l.assignment?.thumbnail || null
+  }))
 
   const allTags = [...new Set(
     rawTags.flatMap(a => (a.tags || "").split(",").map((t: string) => t.trim()).filter(Boolean))
   )].sort()
 
-  const processedExercises = exercises.map((a: any) => ({
+  const processedAssignments = assignments.map((a: any) => ({
     ...a,
     tags: a.tags ? a.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [],
     isBookmarked: userId ? (a.favoriteAssignments?.length > 0) : false,
@@ -80,11 +81,12 @@ async function getInitialData() {
       image: session.user.image ?? null,
       role: (session.user as any).role ?? null
     } : null,
-    initialExercises: processedExercises,
-    hasMoreExercises: exercisesTotal > LIMIT,
+    initialExercises: processedAssignments,
+    hasMoreExercises: assignmentsTotal > LIMIT,
     initialLessons: allLessons,
-    hasMoreLessons: (lessonsTotal + readingLessons.length) > LIMIT,
-    allTags
+    hasMoreLessons: lessonsTotal > LIMIT,
+    allTags,
+    categoryTree
   }
 }
 
