@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import { 
   createCategory, 
   updateCategory, 
@@ -16,7 +16,8 @@ import {
   ChevronDown, 
   Save, 
   X,
-  GripVertical
+  GripVertical,
+  Image as ImageIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,6 +55,8 @@ function SortableCategoryNode({
   setFormName, 
   formSlug, 
   setFormSlug,
+  formShowBg,
+  setFormShowBg,
   handleUpdate,
   handleDelete,
   handleCreate,
@@ -123,6 +126,15 @@ function SortableCategoryNode({
               className="px-2 py-1 border rounded text-sm w-32"
               placeholder="slug"
             />
+            <label className="flex items-center gap-1 cursor-pointer hover:bg-slate-100 p-1 rounded">
+              <input 
+                type="checkbox" 
+                checked={formShowBg} 
+                onChange={e => setFormShowBg(e.target.checked)}
+                className="w-4 h-4 rounded text-primary"
+              />
+              <span className="text-[10px] font-bold text-slate-500">Hiện BG</span>
+            </label>
             <button onClick={() => handleUpdate(node.id)} className="p-1 text-emerald-600"><Save className="w-4 h-4" /></button>
             <button onClick={() => setEditingId(null)} className="p-1 text-slate-400"><X className="w-4 h-4" /></button>
           </div>
@@ -131,6 +143,12 @@ function SortableCategoryNode({
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm text-on-surface">{node.name}</span>
               <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{node.slug}</span>
+              {node.showClearBackground && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-bold border border-emerald-100 animate-pulse">
+                  <ImageIcon className="w-2.5 h-2.5" />
+                  BG HIỆN RÕ
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               {deletingId === node.id ? (
@@ -170,6 +188,7 @@ function SortableCategoryNode({
                       setEditingId(node.id);
                       setFormName(node.name);
                       setFormSlug(node.slug);
+                      setFormShowBg(!!node.showClearBackground);
                     }}
                     className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-100 rounded-md transition-colors"
                   >
@@ -210,6 +229,15 @@ function SortableCategoryNode({
             className="px-2 py-1.5 border border-outline-variant/50 rounded-md text-sm w-32 focus:border-primary outline-none"
             placeholder="slug..."
           />
+          <label className="flex items-center gap-2 cursor-pointer bg-slate-50 px-2 py-1 rounded border border-outline-variant/30">
+            <input 
+              type="checkbox" 
+              checked={formShowBg} 
+              onChange={e => setFormShowBg(e.target.checked)}
+              className="w-4 h-4 text-primary"
+            />
+            <span className="text-xs font-medium text-slate-600">Hiện BG rõ</span>
+          </label>
           <button onClick={() => handleCreate(node.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"><Save className="w-4 h-4" /></button>
           <button onClick={() => setAddingTo(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded"><X className="w-4 h-4" /></button>
         </div>
@@ -237,6 +265,8 @@ function SortableCategoryNode({
             setFormName={setFormName}
             formSlug={formSlug}
             setFormSlug={setFormSlug}
+            formShowBg={formShowBg}
+            setFormShowBg={setFormShowBg}
             handleUpdate={handleUpdate}
             handleDelete={handleDelete}
             handleCreate={handleCreate}
@@ -251,6 +281,9 @@ function SortableCategoryNode({
 // --- Level Wrapper with Sortable Context ---
 
 function SortableLevel({ nodes, level, onReorder, ...props }: any) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -268,6 +301,22 @@ function SortableLevel({ nodes, level, onReorder, ...props }: any) {
       const newNodes = arrayMove(nodes, oldIndex, newIndex);
       onReorder(newNodes, nodes[0]?.parentId || null);
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="space-y-0.5">
+        {nodes.map((node: any) => (
+          <SortableCategoryNode 
+            key={node.id} 
+            node={node} 
+            level={level} 
+            onReorder={onReorder}
+            {...props} 
+          />
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -309,6 +358,7 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
   
   const [formName, setFormName] = useState("");
   const [formSlug, setFormSlug] = useState("");
+  const [formShowBg, setFormShowBg] = useState(false);
 
   const toggleExpand = (id: string) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -319,11 +369,12 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
     
     startTransition(async () => {
       try {
-        await createCategory({ name: formName, slug: formSlug, parentId });
+        await createCategory({ name: formName, slug: formSlug, parentId, showClearBackground: formShowBg });
         toast.success("Thêm danh mục thành công.");
         setAddingTo(null);
         setFormName("");
         setFormSlug("");
+        setFormShowBg(false);
         window.location.reload();
       } catch (e: any) {
         toast.error(e.message || "Lỗi tạo danh mục");
@@ -336,11 +387,12 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
     
     startTransition(async () => {
       try {
-        await updateCategory(id, { name: formName, slug: formSlug });
+        await updateCategory(id, { name: formName, slug: formSlug, showClearBackground: formShowBg });
         toast.success("Cập nhật thành công.");
         setEditingId(null);
         setFormName("");
         setFormSlug("");
+        setFormShowBg(false);
         window.location.reload();
       } catch (e: any) {
         toast.error(e.message || "Lỗi cập nhật danh mục");
@@ -437,6 +489,15 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
             className="px-3 py-1.5 border border-outline-variant/50 rounded-md text-sm w-32 focus:border-primary outline-none bg-white"
             placeholder="root-slug..."
           />
+          <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-md border border-outline-variant/50">
+            <input 
+              type="checkbox" 
+              checked={formShowBg} 
+              onChange={e => setFormShowBg(e.target.checked)}
+              className="w-4 h-4 text-primary"
+            />
+            <span className="text-sm font-medium text-slate-600">Hiện BG rõ</span>
+          </label>
           <button onClick={() => handleCreate(null)} disabled={isPending} className="px-3 py-1.5 bg-primary text-white rounded-md text-sm font-bold ml-2">Lưu</button>
           <button onClick={() => setAddingTo(null)} className="px-3 py-1.5 text-slate-500 hover:bg-slate-200 rounded-md text-sm font-bold">Hủy</button>
         </div>
@@ -465,6 +526,8 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
           setFormName={setFormName}
           formSlug={formSlug}
           setFormSlug={setFormSlug}
+          formShowBg={formShowBg}
+          setFormShowBg={setFormShowBg}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
           handleCreate={handleCreate}

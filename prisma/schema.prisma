@@ -482,9 +482,10 @@ model Category {
   description String?
   parentId    String?
   orderIndex  Int        @default(0)
-  isHidden    Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isHidden            Boolean    @default(false)
+  showClearBackground Boolean    @default(false)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children    Category[] @relation("CategoryHierarchy")

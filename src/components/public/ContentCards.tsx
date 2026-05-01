@@ -45,7 +45,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
       </div>
 
       {/* Overlapping Content Box */}
-      <div className="relative -mt-12 mx-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[8px] p-5 shadow-2xl z-20 border border-white/20 dark:border-white/10 transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-primary/20">
+      <div className="relative -mt-12 mx-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[8px] p-5 shadow-2xl z-20 border border-white/20 dark:border-white/10 transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-primary/20">
         {/* Teacher Info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-7 h-7 rounded-lg overflow-hidden border-2 border-primary/20">
@@ -151,7 +151,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
       </div>
 
       {/* Overlapping Content Box */}
-      <div className="relative -mt-12 mx-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[8px] p-5 shadow-2xl z-20 border border-white/20 dark:border-white/10 transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-secondary/20">
+      <div className="relative -mt-12 mx-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[8px] p-5 shadow-2xl z-20 border border-white/20 dark:border-white/10 transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-secondary/20">
         {/* Teacher Info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-7 h-7 rounded-lg overflow-hidden border-2 border-secondary/20">

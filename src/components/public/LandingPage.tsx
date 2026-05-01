@@ -27,6 +27,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedGrade, setSelectedGrade] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
+  const [isKidCategory, setIsKidCategory] = useState(false)
   const [sort, setSort] = useState<"newest" | "popular" | "trending">("newest")
 
   const [exercises, setExercises] = useState(initialExercises)
@@ -99,7 +100,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   }, [leBottomInView])
 
   const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch("") }
+  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch(""); setIsKidCategory(false) }
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   const toggleCategoryExpand = (id: string) => setExpandedCategories(p => ({ ...p, [id]: !p[id] }))
@@ -118,7 +119,13 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
               : "text-slate-600 hover:bg-slate-50 dark:hover:bg-gray-800"
           }`}
           style={{ marginLeft: `${level * 16}px` }}
-          onClick={() => setSelectedCategoryId(isSelected ? "" : node.id)}
+          onClick={() => {
+            const isNowSelected = selectedCategoryId === node.id ? "" : node.id
+            setSelectedCategoryId(isNowSelected)
+            
+            // Use the new field configured in Admin Category Management
+            setIsKidCategory(!!isNowSelected && !!node.showClearBackground)
+          }}
         >
           {hasChildren ? (
             <button 
@@ -143,11 +150,18 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   }
 
   return (
-    <div className="bg-background text-foreground min-h-screen font-sans selection:bg-primary/20">
-      {/* Mesh Gradient Background Decor */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+    <div className="text-foreground min-h-screen font-sans selection:bg-primary/20 relative">
+      {/* Full Screen Blurred Kid-Friendly Background */}
+      <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f0f9ff]">
+        <img 
+          src="/bg-kid.png" 
+          alt="" 
+          className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${
+            isKidCategory 
+              ? "blur-none opacity-100 scale-100" 
+              : "blur-xl opacity-80 scale-105"
+          }`}
+        />
       </div>
 
       <PublicHeader session={session} search={search} setSearch={setSearch} />
@@ -159,7 +173,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
             
             <div className="space-y-2">
               <button 
-                onClick={() => setSelectedCategoryId("")}
+                onClick={() => { setSelectedCategoryId(""); setIsKidCategory(false) }}
                 className={`w-full flex items-center gap-3 rounded-2xl px-5 py-4 font-bold transition-all duration-300 ${!selectedCategoryId ? "bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]" : "text-on-surface-variant hover:bg-primary/5 hover:text-primary"}`}
               >
                 <span className="material-symbols-outlined text-[24px]">grid_view</span>

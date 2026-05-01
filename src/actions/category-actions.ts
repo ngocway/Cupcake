@@ -4,7 +4,15 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 
-export async function createCategory(data: { name: string, slug: string, parentId?: string, icon?: string, color?: string, description?: string }) {
+export async function createCategory(data: { 
+  name: string, 
+  slug: string, 
+  parentId?: string, 
+  icon?: string, 
+  color?: string, 
+  description?: string,
+  showClearBackground?: boolean
+}) {
   const session = await auth();
   if (session?.user?.role !== "ADMIN") throw new Error("Unauthorized");
 
@@ -16,6 +24,7 @@ export async function createCategory(data: { name: string, slug: string, parentI
       icon: data.icon,
       color: data.color,
       description: data.description,
+      showClearBackground: data.showClearBackground || false,
       orderIndex: await getNextOrderIndex(data.parentId),
     }
   });
