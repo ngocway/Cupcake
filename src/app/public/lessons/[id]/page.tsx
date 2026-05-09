@@ -16,7 +16,8 @@ import {
   MessageSquare,
   BookOpenCheck as AssignmentIcon,
   CheckCircle,
-  Star
+  Star,
+  ThumbsUp
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -115,23 +116,16 @@ export default async function PublicLessonPage({
   const videoId = getYoutubeId(lesson.videoUrl);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col h-screen overflow-hidden font-body">
+    <div className="min-h-screen bg-transparent flex flex-col h-screen overflow-hidden font-body">
       <PublicHeader session={session} />
       
-      {/* 3-Column Learning Layout */}
-      <div className="flex flex-1 overflow-hidden pt-16">
-         {/* Left Column: Teacher & Related */}
-         <LearningSidebar 
-           teacher={lesson.teacher as any} 
-           relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: null }))} 
-           isGuest={!session}
-         />
-
-         {/* Middle Column: Video & Content & Reviews */}
-         <div className="flex-1 border-r border-outline-variant/30 flex flex-col bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar">
-            <div className="p-8 lg:p-12 space-y-12 max-w-5xl mx-auto w-full">
+      {/* 2-Column Learning Layout */}
+      <div className="flex flex-1 overflow-hidden">
+         {/* Main Column: Video & Content & Reviews */}
+         <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto custom-scrollbar">
+            <div className="px-8 lg:px-12 pt-7 pb-12 space-y-12 max-w-5xl mx-auto w-full">
                {/* Video Player */}
-               <div className="aspect-video bg-black rounded-[3rem] overflow-hidden shadow-2xl group relative ring-1 ring-white/10 shrink-0">
+               <div className="aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl group relative ring-1 ring-white/10 shrink-0">
                   {videoId ? (
                     <iframe
                       className="w-full h-full"
@@ -148,85 +142,91 @@ export default async function PublicLessonPage({
                   )}
                </div>
 
-               {/* Lesson Details */}
-               <div className="space-y-12">
+               {/* Lesson Details Card */}
+               <div className="glass rounded-3xl p-10 lg:p-12 space-y-12 shadow-xl border border-white/40 mb-12">
                   <div className="space-y-6">
-                     <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                           <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                              Lesson Detail
-                           </span>
-                           <div className="flex items-center gap-2 text-on-surface-variant text-xs font-bold">
-                              <Calendar className="w-3.5 h-3.5" />
-                              {format(lesson.createdAt, "dd/MM/yyyy", { locale: vi })}
-                           </div>
-                        </div>
+                     <div className="flex items-center justify-end">
                         
                         <div className="flex items-center gap-3">
                            {session && (
-                             <>
-                               <BookmarkButton 
-                                  id={lesson.id}
-                                  type="LESSON"
-                                  initialIsBookmarked={isBookmarked}
-                               />
-                             </>
+                             <BookmarkButton 
+                                id={lesson.id}
+                                type="LESSON"
+                                initialIsBookmarked={isBookmarked}
+                             />
                            )}
                            <ReviewTrigger 
                               type="lesson"
                               id={lesson.id}
-                              isLoggedIn={!!session}
+                              isLoggedIn={!!session} inline
                            />
                         </div>
                      </div>
-                     <h2 className="text-4xl md:text-5xl font-black text-on-surface tracking-tight leading-tight uppercase italic font-headline">
+                     <h2 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
                         {lesson.title}
                      </h2>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-6 py-8 border-y border-outline-variant/10">
-                     <div className="flex flex-col gap-1 text-center">
-                        <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Lượt xem</p>
-                        <div className="flex items-center justify-center gap-2 font-black text-on-surface">
-                           <Eye className="w-4 h-4 text-primary" />
-                           {lesson.viewsCount}
-                        </div>
-                     </div>
-                     <div className="flex flex-col gap-1 text-center">
-                        <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Loại bài</p>
-                        <div className="flex items-center justify-center gap-2 font-black text-on-surface uppercase text-xs">
-                           <BookOpen className="w-4 h-4 text-secondary" />
-                           {lesson.isPremium ? "Premium" : "Miễn phí"}
-                        </div>
-                     </div>
-                     <div className="flex flex-col gap-1 text-center">
-                        <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Trạng thái</p>
-                        <div className="flex items-center justify-center gap-2 font-black text-on-surface uppercase text-xs text-tertiary">
-                           <Play className="w-4 h-4" />
-                           Có sẵn
-                        </div>
-                     </div>
-                  </div>
 
-                  <div className="space-y-6">
-                     <h4 className="text-xl font-black tracking-tight underline decoration-primary/30 decoration-4 underline-offset-8 italic uppercase">Mô tả nội dung</h4>
+                  <div className="space-y-10">
                      <div className="text-on-surface-variant leading-loose text-lg font-medium prose prose-slate max-w-none">
                         {lesson.description || "Bài giảng chưa có mô tả chi tiết từ giáo viên."}
                      </div>
+
+                     {lesson.assignment && (
+                        <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-3xl shadow-2xl relative overflow-hidden group">
+                           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                              <div className="space-y-4">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                                       <AssignmentIcon className="w-5 h-5 text-white" />
+                                    </div>
+                                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">Nhiệm vụ đi kèm</p>
+                                 </div>
+                                 <h3 className="text-2xl font-black tracking-tight uppercase italic">{lesson.assignment.title}</h3>
+                                 <div className="flex items-center gap-6">
+                                    <span className="flex items-center gap-2 text-xs font-bold">
+                                       <CheckCircle className="w-4 h-4 text-white/40" />
+                                       {lesson.assignment._count.questions} câu hỏi
+                                    </span>
+                                    <span className="flex items-center gap-2 text-xs font-bold">
+                                       <CheckCircle className="w-4 h-4 text-white/40" />
+                                       Chấm điểm tự động
+                                    </span>
+                                 </div>
+                              </div>
+                              <Link 
+                                 href={session ? `/student/assignments/${lesson.assignment.id}/run?direct=true` : `/public/assignments/${lesson.assignment.id}?direct=true`}
+                                 className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
+                              >
+                                 BẮT ĐẦU LÀM BÀI
+                                 <ArrowRight className="w-5 h-5" />
+                              </Link>
+                           </div>
+                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+                        </div>
+                     )}
                   </div>
 
                   {/* Reviews & Comments Section */}
-                  <div className="pt-16 border-t border-outline-variant/10 space-y-12 pb-20">
-                     <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-black tracking-tight italic uppercase">Đánh giá & Bình luận</h3>
-                        <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-100">
-                           <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                           <span className="font-black text-amber-700">
+                  <div className="bg-[#eef8fa] dark:bg-slate-900/50 rounded-3xl p-10 space-y-12 mb-20">
+                     <div className="space-y-4">
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Đánh giá từ học viên</h3>
+                        <div className="flex items-end gap-6">
+                           <div className="text-6xl font-black text-slate-900 dark:text-white leading-none">
                               {lesson.reviews.length > 0 
                                  ? (lesson.reviews.reduce((acc, r) => acc + r.rating, 0) / lesson.reviews.length).toFixed(1)
-                                 : "N/A"
-                              }
-                           </span>
+                                 : "0"
+                              }/5
+                           </div>
+                           <div className="space-y-1 pb-1">
+                              <div className="flex gap-0.5">
+                                 {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                 ))}
+                              </div>
+                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{lesson.reviews.length} đánh giá</p>
+                           </div>
                         </div>
                      </div>
 
@@ -234,40 +234,44 @@ export default async function PublicLessonPage({
                         <div className="space-y-10">
                            {lesson.reviews.map((review) => (
                               <div key={review.id} className="space-y-4 animate-in fade-in duration-500">
-                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                       <div className="w-12 h-12 rounded-2xl bg-surface-container overflow-hidden p-0.5 border border-outline-variant/20">
-                                          {review.student.image ? (
-                                            <img src={review.student.image} alt="" className="w-full h-full object-cover rounded-1.5xl" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold">
-                                               {review.student.name?.charAt(0)}
-                                            </div>
-                                          )}
-                                       </div>
-                                       <div>
-                                          <p className="text-sm font-black">{review.student.name}</p>
-                                          <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
-                                             {format(review.createdAt, "dd/MM/yyyy", { locale: vi })}
-                                          </p>
-                                       </div>
+                                 <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                                       {review.student.image ? (
+                                         <img src={review.student.image} alt="" className="w-full h-full object-cover" />
+                                       ) : (
+                                         <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold">
+                                            {review.student.name?.charAt(0)}
+                                         </div>
+                                       )}
                                     </div>
-                                    <div className="flex gap-0.5">
-                                       {[1, 2, 3, 4, 5].map((s) => (
-                                          <Star key={s} className={`w-3.5 h-3.5 ${review.rating >= s ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
-                                       ))}
+                                    <div className="flex-1 space-y-2">
+                                       <div className="flex items-center gap-3">
+                                          <p className="text-sm font-black text-slate-800 dark:text-white">{review.student.name}</p>
+                                          <div className="flex gap-0.5">
+                                             {[1, 2, 3, 4, 5].map((s) => (
+                                                <Star key={s} className={`w-3 h-3 ${review.rating >= s ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                                             ))}
+                                          </div>
+                                       </div>
+                                       <p className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
+                                          {review.comment}
+                                       </p>
+                                       <div className="flex items-center gap-6 pt-1">
+                                          <button className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-primary transition-colors">
+                                             <ThumbsUp className="w-3.5 h-3.5" />
+                                             <span>12</span>
+                                          </button>
+                                          <button className="text-xs font-bold text-slate-400 hover:text-primary transition-colors">Phản hồi</button>
+                                       </div>
                                     </div>
                                  </div>
-                                 <p className="text-on-surface-variant text-base leading-relaxed font-medium pl-15">
-                                    {review.comment}
-                                 </p>
                               </div>
                            ))}
                         </div>
                      ) : (
-                        <div className="py-16 text-center space-y-4 bg-slate-50/50 dark:bg-slate-800/50 rounded-[3rem] border-2 border-dashed border-outline-variant/20">
-                           <MessageSquare className="w-12 h-12 text-slate-300 mx-auto" />
-                           <p className="text-slate-400 italic font-medium">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
+                        <div className="py-16 text-center space-y-4 bg-white/50 dark:bg-slate-800/50 rounded-[2rem] border-2 border-dashed border-slate-200">
+                           <MessageSquare className="w-10 h-10 text-slate-300 mx-auto" />
+                           <p className="text-slate-400 italic font-medium text-sm">Chưa có bình luận nào từ học viên.</p>
                         </div>
                      )}
                   </div>
@@ -275,69 +279,15 @@ export default async function PublicLessonPage({
             </div>
          </div>
 
-         {/* Right Column: Related Assignment */}
-         <div className="w-full max-w-md flex flex-col bg-slate-50/30 dark:bg-slate-950/30 overflow-y-auto custom-scrollbar">
-            <div className="p-8 space-y-10">
-               {lesson.assignment ? (
-                  <div className="bg-slate-900 dark:bg-primary text-white rounded-[3rem] p-10 shadow-2xl space-y-10 relative overflow-hidden group">
-                     <div className="relative z-10 space-y-6">
-                        <div className="w-16 h-16 bg-white/10 backdrop-blur-xl rounded-[1.5rem] flex items-center justify-center border border-white/20">
-                           <AssignmentIcon className="w-8 h-8 text-white" />
-                        </div>
-                        <div className="space-y-2">
-                           <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.3em]">Nhiệm vụ đi kèm</p>
-                           <h3 className="text-3xl font-black leading-tight tracking-tight italic uppercase font-headline">{lesson.assignment.title}</h3>
-                        </div>
-                        <ul className="space-y-4">
-                           <li className="flex items-center gap-3 text-sm font-bold">
-                              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                 <CheckCircle className="w-4 h-4" />
-                              </div>
-                              {lesson.assignment._count.questions} câu hỏi luyện tập
-                           </li>
-                           <li className="flex items-center gap-3 text-sm font-bold">
-                              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                 <CheckCircle className="w-4 h-4" />
-                              </div>
-                              Chấm điểm & Phản hồi ngay
-                           </li>
-                        </ul>
-                        
-                        <Link 
-                           href={session ? `/student/assignments/${lesson.assignment.id}/run?direct=true` : `/public/assignments/${lesson.assignment.id}?direct=true`}
-                           className="flex items-center justify-center gap-3 w-full py-5 bg-white text-slate-900 rounded-[2rem] font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all group-hover:scale-105 active:scale-95"
-                        >
-                           BẮT ĐẦU LÀM BÀI
-                           <ArrowRight className="w-5 h-5" />
-                        </Link>
-                     </div>
-
-                     {/* Background Decoration */}
-                     <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24 blur-3xl" />
-                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16 blur-2xl" />
-                  </div>
-               ) : (
-                  <div className="p-10 text-center space-y-4 bg-white dark:bg-slate-900 rounded-[3rem] border border-outline-variant/20 shadow-sm">
-                     <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                        <AssignmentIcon className="w-8 h-8 text-slate-200" />
-                     </div>
-                     <p className="text-slate-400 font-bold text-sm italic uppercase tracking-widest leading-loose">Bài học này chưa có bài tập rèn luyện.</p>
-                  </div>
-               )}
-
-               {/* Additional Section: Learning Tips */}
-               <div className="bg-amber-50 dark:bg-amber-950/20 rounded-[2.5rem] p-8 border border-amber-100 dark:border-amber-900/30 space-y-4">
-                  <h5 className="font-black text-sm uppercase tracking-widest text-amber-900 dark:text-amber-400 flex items-center gap-2">
-                     <Star className="w-4 h-4 fill-current" />
-                     Lời khuyên học tập
-                  </h5>
-                  <p className="text-xs font-medium text-amber-800 dark:text-amber-300/80 leading-loose">
-                     Hãy xem hết video bài giảng và ghi chép lại các cấu trúc quan trọng trước khi bắt đầu làm bài tập để đạt kết quả tốt nhất nhé!
-                  </p>
-               </div>
-            </div>
+         {/* Right Column: Teacher & Related */}
+         <div className="w-[30%]">
+            <LearningSidebar 
+              teacher={lesson.teacher as any} 
+              relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: null }))} 
+              isGuest={!session}
+            />
          </div>
       </div>
-    </div>
+   </div>
   );
 }

@@ -53,24 +53,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
         </div>
       )}
       {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl flex justify-between items-center px-6 py-3">
-        <div className="flex items-center gap-8">
-          <Link href="/student/dashboard" className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50 font-headline">
-            Scholar Script
-          </Link>
-          <div className="hidden md:flex items-center gap-4 bg-surface-container px-4 py-2 rounded-full">
-            <span className="material-symbols-outlined text-outline text-sm">search</span>
-            <input className="bg-transparent border-none focus:ring-0 text-sm font-label w-48 outline-none" placeholder="Search lessons..." type="text" />
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <NotificationBell />
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors rounded-full flex">
-            <span className="material-symbols-outlined text-on-surface-variant">translate</span>
-          </button>
-          <StudentUserNav user={session.user as any} />
-        </div>
-      </nav>
+      {/* TopNavBar removed as per user request to hide header on non-homepage routes */}
 
       {/* SideNavBar - Controlled by Wrapper */}
       <SideNavWrapper isTeacher={isTeacher}>

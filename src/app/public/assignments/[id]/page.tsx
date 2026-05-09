@@ -163,11 +163,11 @@ export default async function PublicAssignmentPage({
   const isBookmarked = session ? (assignment as any).favoriteAssignments?.length > 0 : false;
 
   return (
-    <div className="min-h-screen bg-surface-container-low/30 pb-20 font-body">
+    <div className="min-h-screen bg-transparent pb-20 font-body">
       <PublicHeader session={session} />
       
       {/* Hero Section */}
-      <div className="bg-white dark:bg-slate-950 border-b border-outline-variant/30 pt-20">
+      <div className="bg-white/40 dark:bg-slate-950/40 backdrop-blur-md border-b border-outline-variant/30">
         <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col items-center text-center relative">
           {session && (
             <div className="absolute top-8 right-6">
@@ -198,7 +198,7 @@ export default async function PublicAssignmentPage({
       <div className="max-w-5xl mx-auto px-6 -mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Info Dashboard */}
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 shadow-magazine-shadow border border-outline-variant/20 grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 shadow-magazine-shadow border border-outline-variant/20 grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="space-y-1">
               <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Thời gian</p>
               <div className="flex items-center gap-2">
@@ -254,7 +254,7 @@ export default async function PublicAssignmentPage({
                        const isPassed = (sub.score || 0) >= (maxScore * 0.5);
                        const showReview = canReview(sub);
                        return (
-                         <div key={sub.id} className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-outline-variant/10 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/30 transition-all">
+                         <div key={sub.id} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-outline-variant/10 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/30 transition-all">
                             <div className="flex items-center gap-4">
                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${isPassed ? 'bg-secondary-container/20 text-secondary' : 'bg-error-container/20 text-error'}`}>
                                   <BarChart3 className="w-7 h-7" />
@@ -289,7 +289,7 @@ export default async function PublicAssignmentPage({
                   <p className="text-on-surface-variant italic">Bạn chưa thực hiện lần thử nào.</p>
                )
             ) : (
-               <div className="p-8 bg-surface-container rounded-[2rem] border border-dashed border-outline-variant/30 text-center">
+               <div className="p-8 bg-surface-container rounded-3xl border border-dashed border-outline-variant/30 text-center">
                   <p className="text-on-surface-variant font-medium">Vui lòng đăng nhập để xem lịch sử làm bài.</p>
                   <Link href="/student/login" className="text-primary font-bold hover:underline mt-2 inline-block">Đăng nhập ngay</Link>
                </div>
@@ -299,7 +299,7 @@ export default async function PublicAssignmentPage({
 
         {/* Sidebar CTA */}
         <div className="space-y-8">
-           <div className="bg-primary text-white rounded-[2.5rem] p-8 shadow-2xl shadow-primary/20 space-y-8">
+           <div className="bg-primary text-white rounded-3xl p-8 shadow-2xl shadow-primary/20 space-y-8">
               <div>
                  <h3 className="text-2xl font-black mb-2 uppercase italic font-headline">
                     {session ? (activeSubmission ? "Tiếp tục" : "Bắt đầu") : "Tham gia"}

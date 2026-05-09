@@ -1,29 +1,26 @@
-'use client'
+"use client";
 
-import { User, Star, BookOpen, BookOpenCheck as AssignmentIcon, Palette, ChevronRight } from "lucide-react"
-import Link from "next/link"
+import React from "react";
+import { User, ChevronRight, Play } from "lucide-react";
+import Link from "next/link";
 
 interface TeacherInfo {
-  id: string
-  name: string | null
-  image: string | null
-  professionalTitle: string | null
-  bio: string | null
-  isPortfolioPublished: boolean
+  id: string;
+  name: string | null;
+  image: string | null;
+  professionalTitle: string | null;
+  bio: string | null;
+  isPortfolioPublished: boolean;
   _count: {
-    lessons: number
-    assignments: number
-  }
+    lessons: number;
+    assignments: number;
+  };
 }
 
 interface RelatedItem {
-  id: string
-  title: string
-  thumbnail: string | null
-  teacher: {
-    name: string | null
-  }
-  type?: "LESSON" | "ASSIGNMENT"
+  id: string;
+  title: string;
+  thumbnail: string | null;
 }
 
 export function LearningSidebar({ 
@@ -36,104 +33,72 @@ export function LearningSidebar({
   isGuest?: boolean
 }) {
   return (
-    <aside className="w-80 border-r border-outline-variant/30 flex flex-col bg-slate-50/50 dark:bg-slate-900/50 shrink-0 overflow-y-auto custom-scrollbar">
-       <div className="p-8 space-y-10">
-          {/* Teacher Profile */}
-          <div className="space-y-6">
-             <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-24 h-24 rounded-[2rem] bg-white dark:bg-slate-800 p-1 shadow-magazine-shadow border border-outline-variant/20 overflow-hidden">
-                   {teacher.image ? (
-                     <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover rounded-[1.8rem]" />
-                   ) : (
-                     <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                        <User className="w-10 h-10" />
-                     </div>
-                   )}
-                </div>
-                <div>
-                   <h3 className="font-black text-xl tracking-tight text-slate-900 dark:text-white">{teacher.name}</h3>
-                   <p className="text-xs font-bold text-primary uppercase tracking-[0.2em] mt-1">{teacher.professionalTitle || "Giáo viên"}</p>
-                </div>
+    <aside className="w-full h-full flex flex-col bg-transparent overflow-y-auto no-scrollbar p-10 pt-7 space-y-10">
+       {/* Teacher Profile Card */}
+       <div className="glass rounded-3xl p-8 space-y-8 flex flex-col items-center text-center shadow-xl">
+          <div className="space-y-4 flex flex-col items-center w-full">
+             <div className="w-28 h-28 rounded-full border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden bg-white">
+                {teacher.image ? (
+                  <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                     <User className="w-12 h-12" />
+                  </div>
+                )}
              </div>
-
-             <div className="space-y-4">
-                <p className="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed italic text-center px-4">
-                   "{teacher.bio || "Giáo viên tâm huyết với nghề."}"
-                </p>
-                
-                <div className="flex flex-col gap-3">
-                   {teacher.isPortfolioPublished && (
-                      <Link 
-                        href={`/profile/${teacher.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between px-5 py-3 bg-slate-900 dark:bg-primary text-white rounded-2xl font-black text-[10px] tracking-widest uppercase hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
-                      >
-                         <span className="flex items-center gap-2">
-                            <Palette className="w-4 h-4" />
-                            Xem Portfolio
-                         </span>
-                         <ChevronRight className="w-4 h-4" />
-                      </Link>
-                   )}
-                   <div className="grid grid-cols-2 gap-3">
-                      <Link 
-                        href={isGuest ? `/public/teachers/${teacher.id}/lessons` : `/student/lessons?teacherId=${teacher.id}`}
-                        className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-outline-variant/20 text-center hover:border-primary/50 transition-colors group"
-                      >
-                         <p className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors">{teacher._count?.lessons || 0}</p>
-                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bài học</p>
-                      </Link>
-                      <Link 
-                        href={isGuest ? `/public/teachers/${teacher.id}/assignments` : `/student/assignments?teacherId=${teacher.id}`}
-                        className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-outline-variant/20 text-center hover:border-primary/50 transition-colors group"
-                      >
-                         <p className="text-2xl font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors">{teacher._count?.assignments || 0}</p>
-                         <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Bài tập</p>
-                      </Link>
-                   </div>
-                </div>
+             
+             <div className="space-y-1">
+                <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{teacher.name}</h3>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{teacher.professionalTitle || "Giảng viên tại Học viện"}</p>
              </div>
           </div>
 
-          {/* Related Content */}
-          <div className="space-y-6">
-             <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
-                <h4 className="font-black text-sm uppercase tracking-[0.2em] text-slate-900 dark:text-white">Gợi ý cho bạn</h4>
-             </div>
-             
-             <div className="space-y-4">
-                {relatedItems.map((item) => {
-                   const isLesson = item.type === "LESSON" || !item.type && !item.id.startsWith("assignment");
-                   const href = isLesson 
-                    ? (isGuest ? `/public/lessons/${item.id}` : `/student/lessons/${item.id}`)
-                    : (isGuest ? `/public/assignments/${item.id}?direct=true` : `/student/assignments/${item.id}/run?direct=true`);
-                   
-                   return (
-                    <Link 
-                      key={item.id} 
-                      href={href}
-                      className="flex gap-4 group hover:bg-white dark:hover:bg-slate-800 p-3 rounded-2xl transition-all border border-transparent hover:border-outline-variant/20"
-                    >
-                       <div className="w-16 h-16 rounded-xl bg-slate-200 shrink-0 overflow-hidden">
-                          {item.thumbnail ? (
-                             <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                          ) : (
-                             <div className="w-full h-full flex items-center justify-center text-slate-400">
-                                {isLesson ? <BookOpen className="w-6 h-6" /> : <AssignmentIcon className="w-6 h-6" />}
-                             </div>
-                          )}
-                       </div>
-                       <div className="flex flex-col justify-center gap-1 overflow-hidden">
-                          <h5 className="font-bold text-xs text-slate-900 dark:text-white truncate">{item.title}</h5>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{item.teacher.name}</p>
-                       </div>
-                    </Link>
-                   );
-                })}
-             </div>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed max-w-[280px]">
+             {teacher.bio || "Giảng viên tâm huyết với nhiều năm kinh nghiệm trong lĩnh vực giáo dục và đào tạo."}
+          </p>
+
+          <Link 
+             href={`/public/teachers/${teacher.id}`}
+             className="w-full py-4 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-full font-black text-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center"
+          >
+             Xem Hồ Sơ
+          </Link>
+       </div>
+
+       {/* Related Lessons Card */}
+       <div className="glass rounded-3xl p-8 space-y-6 shadow-xl">
+          <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Bài học liên quan</h4>
+          
+          <div className="space-y-4">
+             {relatedItems.map((item) => (
+                <Link 
+                  key={item.id}
+                  href={`/public/lessons/${item.id}`}
+                  className="flex items-center gap-4 group"
+                >
+                   <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
+                      {item.thumbnail ? (
+                        <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                           <Play className="w-5 h-5 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                   </div>
+                   <div className="flex-1 overflow-hidden">
+                      <h5 className="text-xs font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                        {item.title}
+                      </h5>
+                   </div>
+                </Link>
+             ))}
+
+             {relatedItems.length === 0 && (
+                <p className="text-xs italic text-slate-400 text-center py-4">Chưa có bài học liên quan nào.</p>
+             )}
           </div>
        </div>
     </aside>
-  )
+  );
 }

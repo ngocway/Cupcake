@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Star, MessageSquare, Send, X, CheckCircle2, Loader2 } from "lucide-react"
 import { submitAssignmentReview, submitLessonReview } from "@/actions/reviews"
 
@@ -17,6 +18,11 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
     const [comment, setComment] = useState("");
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleSubmit = async () => {
         if (rating === 0) return;
@@ -52,9 +58,9 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                     <Star className={`w-5 h-5 ${rating > 0 ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                 </button>
 
-                {isOpen && (
-                    <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-300">
-                        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-2xl border border-slate-100 dark:border-slate-800 w-[380px] animate-in zoom-in-95 duration-300 relative">
+                {isOpen && mounted && createPortal(
+                    <div className="fixed top-0 left-0 w-screen h-[100dvh] bg-slate-950/40 backdrop-blur-sm z-[9999] flex items-center justify-center animate-in fade-in duration-300">
+                        <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-2xl border border-slate-100 dark:border-slate-800 w-[90%] max-w-[380px] animate-in zoom-in-95 duration-300 relative">
                             <button onClick={() => setIsOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
@@ -108,7 +114,8 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </>
         )
@@ -129,9 +136,9 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                 </div>
             )}
 
-            {isOpen && (
-                <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[100] flex items-center justify-center animate-in fade-in duration-300">
-                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-2xl border border-slate-100 dark:border-slate-800 w-[380px] animate-in zoom-in-95 duration-300 relative">
+            {isOpen && mounted && createPortal(
+                <div className="fixed top-0 left-0 w-screen h-[100dvh] bg-slate-950/40 backdrop-blur-sm z-[9999] flex items-center justify-center animate-in fade-in duration-300">
+                    <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-2xl border border-slate-100 dark:border-slate-800 w-[90%] max-w-[380px] animate-in zoom-in-95 duration-300 relative">
                         <button onClick={() => setIsOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-colors">
                             <X className="w-5 h-5" />
                         </button>
@@ -185,7 +192,8 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );

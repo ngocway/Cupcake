@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "sonner";
+import { SharedBackground } from "@/components/public/SharedBackground";
+import { Providers } from "@/components/Providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,8 +39,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Lexend:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" precedence="default" />
       </head>
             <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <Toaster position="top-center" richColors />
-        {children}
+        <Providers>
+          <SharedBackground />
+          {children}
+        </Providers>
       </body>
     </html>
   );

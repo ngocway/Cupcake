@@ -7,6 +7,7 @@ import { LoginButton } from "@/components/LoginButton"
 import { LanguageToggle } from "@/components/LanguageToggle"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { PublicHeader } from "@/components/public/PublicHeader"
+import { useThemeStore } from "@/store/useThemeStore"
 
 // Filters for Subject and Grade are removed as per user request to simplify hierarchy
 
@@ -27,7 +28,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedGrade, setSelectedGrade] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
-  const [isKidCategory, setIsKidCategory] = useState(false)
+  const { isClearBackground, setClearBackground } = useThemeStore()
   const [sort, setSort] = useState<"newest" | "popular" | "trending">("newest")
 
   const [exercises, setExercises] = useState(initialExercises)
@@ -73,11 +74,19 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   useEffect(() => {
     if (initialRender.current) { initialRender.current = false; return }
     if (activeTab === "exercises") {
+      setLoadingEx(true)
       setExercises([]); setExPage(1); setHasMoreEx(true)
-      fetch(buildExUrl(1)).then(r => r.json()).then(d => { setExercises(d.items); setHasMoreEx(d.hasMore); setExPage(2) })
+      fetch(buildExUrl(1)).then(r => r.json()).then(d => { 
+        setExercises(d.items); setHasMoreEx(d.hasMore); setExPage(2)
+        setLoadingEx(false)
+      }).catch(() => setLoadingEx(false))
     } else {
+      setLoadingLe(true)
       setLessons([]); setLePage(1); setHasMoreLe(true)
-      fetch(buildLeUrl(1)).then(r => r.json()).then(d => { setLessons(d.items); setHasMoreLe(d.hasMore); setLePage(2) })
+      fetch(buildLeUrl(1)).then(r => r.json()).then(d => { 
+        setLessons(d.items); setHasMoreLe(d.hasMore); setLePage(2)
+        setLoadingLe(false)
+      }).catch(() => setLoadingLe(false))
     }
   }, [activeTab, search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, sort])
 
@@ -100,7 +109,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   }, [leBottomInView])
 
   const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch(""); setIsKidCategory(false) }
+  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch(""); setClearBackground(false) }
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   const toggleCategoryExpand = (id: string) => setExpandedCategories(p => ({ ...p, [id]: !p[id] }))
@@ -124,7 +133,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
             setSelectedCategoryId(isNowSelected)
             
             // Use the new field configured in Admin Category Management
-            setIsKidCategory(!!isNowSelected && !!node.showClearBackground)
+            setClearBackground(!!isNowSelected && !!node.showClearBackground)
           }}
         >
           {hasChildren ? (
@@ -151,19 +160,6 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
 
   return (
     <div className="text-foreground min-h-screen font-sans selection:bg-primary/20 relative">
-      {/* Full Screen Blurred Kid-Friendly Background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden bg-[#f0f9ff]">
-        <img 
-          src="/bg-kid.png" 
-          alt="" 
-          className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${
-            isKidCategory 
-              ? "blur-none opacity-100 scale-100" 
-              : "blur-xl opacity-80 scale-105"
-          }`}
-        />
-      </div>
-
       <PublicHeader session={session} search={search} setSearch={setSearch} />
 
       <div className="w-full pt-32 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
@@ -173,7 +169,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
             
             <div className="space-y-2">
               <button 
-                onClick={() => { setSelectedCategoryId(""); setIsKidCategory(false) }}
+                onClick={() => { setSelectedCategoryId(""); setClearBackground(false) }}
                 className={`w-full flex items-center gap-3 rounded-2xl px-5 py-4 font-bold transition-all duration-300 ${!selectedCategoryId ? "bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]" : "text-on-surface-variant hover:bg-primary/5 hover:text-primary"}`}
               >
                 <span className="material-symbols-outlined text-[24px]">grid_view</span>
@@ -253,8 +249,24 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
             )}
           </div>
 
+          {/* Loading State for initial fetch */}
+          {(activeTab === "exercises" ? loadingEx && exercises.length === 0 : loadingLe && lessons.length === 0) && (
+            <div className="flex flex-col items-center justify-center py-24 text-center space-y-6 animate-fade-in">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-primary animate-pulse">downloading</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-on-surface font-bold">Đang tải dữ liệu...</h3>
+                <p className="text-body text-on-surface-variant">Vui lòng đợi trong giây lát</p>
+              </div>
+            </div>
+          )}
+
           {/* Empty State */}
-          {(activeTab === "exercises" ? exercises.length === 0 : lessons.length === 0) && (
+          {!(activeTab === "exercises" ? loadingEx : loadingLe) && (activeTab === "exercises" ? exercises.length === 0 : lessons.length === 0) && (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
               <div className="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center animate-float">
                 <span className="material-symbols-outlined text-[48px] text-on-surface-variant">search_off</span>

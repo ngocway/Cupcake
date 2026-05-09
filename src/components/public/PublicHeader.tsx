@@ -5,6 +5,8 @@ import { LoginButton } from "@/components/LoginButton"
 import { LanguageToggle } from "@/components/LanguageToggle"
 import { signOut } from "next-auth/react"
 
+import { usePathname } from "next/navigation"
+
 interface PublicHeaderProps {
   session: { id: string; name: string | null; image: string | null; role: string | null } | null
   search?: string
@@ -12,6 +14,10 @@ interface PublicHeaderProps {
 }
 
 export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) {
+  const pathname = usePathname()
+  
+  if (pathname !== "/") return null;
+
   const [isAtTop, setIsAtTop] = useState(true)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)

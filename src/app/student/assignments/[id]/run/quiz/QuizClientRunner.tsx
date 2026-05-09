@@ -21,7 +21,8 @@ import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
-import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
+import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
+import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 
 interface Props {
   assignment: any;
@@ -231,79 +232,16 @@ export default function QuizClientRunner({
   };
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden">
-      {/* Header */}
-      <header className="h-16 border-b border-outline-variant/30 bg-white dark:bg-slate-900 flex items-center justify-between px-6 shrink-0 z-20">
-         <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.back()}
-              className="p-2 hover:bg-surface-container rounded-full"
-            >
-               <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="hidden md:block">
-               <div className="flex items-center gap-3">
-                  <h1 className="font-black text-on-surface truncate max-w-xs">{assignment.title}</h1>
-                  {!isGuest && (
-                    <div className="flex items-center gap-1">
-                      <BookmarkButton 
-                        type="assignment" 
-                        id={assignment.id} 
-                        initialIsBookmarked={isBookmarked} 
-                        className="scale-90"
-                      />
-                      <button 
-                        onClick={() => setIsReviewModalOpen(true)}
-                        className={`p-2 rounded-full transition-all active:scale-90 ${
-                          userReview ? 'bg-amber-100 text-amber-600' : 'bg-surface-container text-on-surface-variant hover:bg-amber-50 hover:text-amber-600'
-                        }`}
-                        title="Đánh giá bài tập"
-                      >
-                         <Star className={`w-5 h-5 ${userReview ? 'fill-current' : ''}`} />
-                      </button>
-                    </div>
-                  )}
-               </div>
-               <div className="flex items-center gap-2 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                  <Clock className="w-3.5 h-3.5 text-primary" />
-                  <span>45:00 Còn lại</span>
-               </div>
-            </div>
-         </div>
-
-         <div className="flex items-center gap-6">
-            <div className="hidden md:flex flex-col items-end gap-1">
-               <span className="text-[10px] font-bold text-outline uppercase tracking-widest">Tiến độ</span>
-               <div className="w-32 h-1.5 bg-surface-container rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-500 ease-out" 
-                    style={{ width: `${progress}%` }}
-                  />
-               </div>
-            </div>
-            
-            <button 
-              onClick={handleSubmit}
-              disabled={isPending}
-              className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-full font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
-            >
-               {isPending ? "ĐANG NỘP..." : "NỘP BÀI"}
-               <Send className="w-4 h-4" />
-            </button>
-         </div>
-      </header>
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative">
+      {/* Floating Teacher Info */}
+      <FloatingTeacherInfo teacher={assignment.teacher} />
+      
+      {/* Header removed as per user request */}
 
       {/* Integrated Workspace */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Column: Teacher & Related */}
-        <LearningSidebar 
-          teacher={assignment.teacher} 
-          relatedItems={relatedAssignments.map(a => ({ ...a, type: "ASSIGNMENT" as const }))} 
-          isGuest={isGuest}
-        />
-
-        {/* Middle Column: Questions */}
-        <div className="flex-1 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30">
+        {/* Middle Column: Questions (70%) */}
+        <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30">
            {/* Question Header */}
            <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
               <div className="flex items-center gap-2 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
@@ -315,7 +253,7 @@ export default function QuizClientRunner({
               </div>
            </div>
 
-          <div className="flex-1 overflow-y-auto p-8 lg:p-12 space-y-10">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-8 lg:p-12 pl-32 lg:pl-40 space-y-10">
             {/* Question Display */}
             {currentQuestion && (() => {
               let questionData: any;
@@ -753,15 +691,16 @@ export default function QuizClientRunner({
           </div>
 
           {/* Navigation Controls */}
-          <div className="h-20 border-t border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center justify-between px-6 shrink-0">
-             <button 
-                onClick={handlePrev}
-                disabled={currentQuestionIndex === 0}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-on-surface-variant hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none transition-all"
-             >
-                <ChevronLeft className="w-5 h-5" />
-                Quay lại
-             </button>
+          <div className="h-20 border-t border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center justify-center gap-12 lg:gap-24 px-6 shrink-0">
+             <div className="flex items-center gap-4">
+                <button 
+                    onClick={handlePrev}
+                    disabled={currentQuestionIndex === 0}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-on-surface-variant hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none transition-all"
+                >
+                    Quay lại
+                </button>
+             </div>
 
              <div className="flex items-center gap-1">
                 {questions.map((_, i) => (
@@ -774,29 +713,41 @@ export default function QuizClientRunner({
                 ))}
              </div>
 
-             {isChecked ? (
-               <button 
-                  onClick={handleNext}
-                  disabled={currentQuestionIndex === questions.length - 1}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-on-surface text-white rounded-xl font-bold text-sm hover:bg-primary transition-all disabled:opacity-30 disabled:pointer-events-none animate-in zoom-in-95 duration-200"
-               >
-                  Câu sau
-                  <ChevronRight className="w-5 h-5" />
-               </button>
-             ) : (
-               <button 
-                  onClick={handleCheck}
-                  className="flex items-center gap-2 px-8 py-2.5 bg-primary text-white rounded-xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
-               >
-                  KIỂM TRA
-                  <span className="material-symbols-outlined text-lg">verified</span>
-               </button>
-             )}
+             <div className="flex items-center gap-4">
+                {isChecked ? (
+                  currentQuestionIndex === questions.length - 1 ? (
+                    <button 
+                        onClick={handleSubmit}
+                        disabled={isPending}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 uppercase italic"
+                    >
+                        {isPending ? "ĐANG NỘP..." : "NỘP BÀI"}
+                        <Send className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button 
+                        onClick={handleNext}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-on-surface text-white rounded-xl font-bold text-sm hover:bg-primary transition-all shadow-lg"
+                    >
+                        Câu sau
+                        <ChevronRight className="w-5 h-5" />
+                    </button>
+                  )
+                ) : (
+                <button 
+                    onClick={handleCheck}
+                    className="flex items-center gap-2 px-8 py-2.5 bg-secondary text-white rounded-xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-secondary/20 uppercase italic"
+                >
+                    KIỂM TRA
+                    <span className="material-symbols-outlined text-lg">verified</span>
+                </button>
+                )}
+             </div>
           </div>
         </div>
 
-        {/* Right Column: Material / Reading Content & Reviews */}
-        <div className="w-full max-w-2xl flex flex-col bg-white dark:bg-slate-900 border-l border-outline-variant/30">
+        {/* Right Column: Material / Reading Content & Reviews (30%) */}
+        <div className="w-[30%] shrink-0 flex flex-col bg-white dark:bg-slate-900 border-l border-outline-variant/30">
            <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
               <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
                  <BookOpen className="w-4 h-4" />
@@ -821,16 +772,16 @@ export default function QuizClientRunner({
                  )}
               </div>
            </div>
-           <div className="flex-1 overflow-y-auto p-10 custom-scrollbar pb-20 space-y-12">
+           <div className="flex-1 overflow-y-auto no-scrollbar p-10 custom-scrollbar pb-20 space-y-12">
               {/* Instructions Section */}
               {hasInstructions && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
-                    <span className="material-symbols-outlined text-sm">info</span>
-                    Hướng dẫn làm bài
+                  <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
+                    <span className="material-symbols-outlined text-sm">menu_book</span>
+                    Tài liệu học tập
                   </div>
-                  <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
-                    <div dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
+                  <div className="flex-1 overflow-y-auto no-scrollbar prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
+                    <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
                   </div>
                 </div>
               )}
@@ -849,12 +800,12 @@ export default function QuizClientRunner({
               {/* Material Section */}
               {assignment.readingText && (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
-                    <span className="material-symbols-outlined text-sm">menu_book</span>
-                    Tài liệu học tập
+                  <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
+                    <span className="material-symbols-outlined text-sm">info</span>
+                    Hướng dẫn làm bài
                   </div>
-                  <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
-                    <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
+                  <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
+                    <div dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
                   </div>
                 </div>
               )}
@@ -876,9 +827,14 @@ export default function QuizClientRunner({
                          </div>
                       )}
                    </div>
-                   <ReviewList reviews={allReviews} />
+                    <ReviewList reviews={allReviews} />
                 </div>
               )}
+
+              {/* Related Assignments Section at the bottom of right column */}
+              <RelatedAssignmentsSection 
+                items={relatedAssignments.map(a => ({ ...a, type: "ASSIGNMENT" as const }))} 
+              />
            </div>
         </div>
       </div>

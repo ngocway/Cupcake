@@ -100,46 +100,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-slate-50 font-body">
-      {/* Header */}
-      <header className="h-20 border-b border-slate-100 bg-white/80 backdrop-blur-xl flex items-center justify-between px-8 shrink-0 z-20">
-         <div className="flex items-center gap-6">
-            <button 
-              onClick={() => router.back()}
-              className="p-3 hover:bg-slate-50 rounded-2xl transition-colors"
-            >
-               <ChevronLeft className="w-6 h-6 text-slate-400" />
-            </button>
-            <div>
-               <h1 className="text-xl font-black text-slate-900 tracking-tight">{assignment.title}</h1>
-               <div className="flex items-center gap-2 text-[10px] font-bold text-primary uppercase tracking-[0.2em]">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                  Đang làm bài (Công khai)
-               </div>
-            </div>
-         </div>
-
-         <div className="flex items-center gap-8">
-            <div className="hidden md:flex flex-col items-end gap-1.5">
-               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tiến độ bài làm</span>
-               <div className="w-48 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                  <div 
-                    className="h-full bg-primary transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1)" 
-                    style={{ width: `${progress}%` }}
-                  />
-               </div>
-            </div>
-
-            {!finished && (
-               <button 
-                onClick={handleNext}
-                className="flex items-center gap-3 px-8 py-3 bg-slate-950 text-white rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/20"
-              >
-                 {currentIndex === questions.length - 1 ? "HOÀN THÀNH" : "CÂU TIẾP THEO"}
-                 <ChevronRight className="w-4 h-4 ml-1" />
-              </button>
-            )}
-         </div>
-      </header>
+      {/* Header removed as per user request */}
 
       {/* Runner Workspace */}
       <div className="flex flex-1 overflow-hidden">
@@ -150,7 +111,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
                    <BookOpen className="w-4 h-4" /> Nội dung bài học
                 </div>
              </div>
-             <div className="flex-1 overflow-y-auto p-12 lg:p-16 prose prose-slate max-w-none prose-p:text-lg prose-p:leading-loose prose-p:text-slate-600 prose-headings:font-black">
+             <div className="flex-1 overflow-y-auto no-scrollbar p-12 lg:p-16 prose prose-slate max-w-none prose-p:text-lg prose-p:leading-loose prose-p:text-slate-600 prose-headings:font-black">
                 <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
              </div>
           </div>
@@ -166,7 +127,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
              </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-12 lg:p-20 space-y-12">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-12 lg:p-20 space-y-12">
             {currentQuestion && (
               <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="space-y-4">
