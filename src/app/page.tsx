@@ -9,7 +9,7 @@ async function getInitialData() {
   const userId = session?.user?.id
 
   const exWhere = { status: "PUBLIC" as const, deletedAt: null, lesson: null }
-  const leWhere = { deletedAt: null, isPremium: false, assignment: { status: "PUBLIC" as const } }
+  const leWhere = { deletedAt: null, isPremium: false }
 
   const [assignments, assignmentsTotal, lessons, lessonsTotal, rawTags, categoryTree] = await Promise.all([
     prisma.assignment.findMany({
@@ -28,7 +28,7 @@ async function getInitialData() {
       include: {
         teacher: { select: { id: true, name: true, image: true } },
         _count: { select: { reviews: true } },
-        assignment: { select: { videoUrl: true, audioUrl: true, thumbnail: true } }
+        assignment: { select: { id: true, videoUrl: true, audioUrl: true, thumbnail: true, materialType: true } }
       },
       orderBy: { createdAt: "desc" },
       take: LIMIT
@@ -58,6 +58,7 @@ async function getInitialData() {
   const allLessons = lessons.map(l => ({ 
     ...l, 
     type: 'VIDEO_LESSON',
+    materialType: l.assignment?.materialType,
     videoUrl: l.assignment?.videoUrl || l.videoUrl,
     audioUrl: l.assignment?.audioUrl,
     thumbnail: l.assignment?.thumbnail || null

@@ -106,14 +106,11 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
   const rating = (4.5 + (item.id?.length % 5) * 0.1).toFixed(1)
   const reviewCount = item._count?.reviews || 0
 
+  const targetAssignmentId = item.assignmentId || item.id
   // For lessons, we use the student route if logged in to maintain consistent state
-  const href = isReading
-    ? (isLoggedIn 
-        ? `/student/assignments/${item.id}/run?direct=true` 
-        : `/public/assignments/${item.id}?direct=true`)
-    : (isLoggedIn 
-        ? `/student/lessons/${item.id}` 
-        : `/public/lessons/${item.id}`)
+  const href = isLoggedIn 
+    ? `/student/lessons/${item.id}` 
+    : `/public/lessons/${item.id}`
 
   return (
     <div className="relative w-full group">

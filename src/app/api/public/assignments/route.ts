@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       page
     })
   } catch (e) {
-    console.error(e)
+    console.error('API Assignments Error:', e)
     return NextResponse.json({ items: [], total: 0, hasMore: false, page: 1 })
   }
 }

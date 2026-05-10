@@ -11,13 +11,13 @@ export async function GET(request: NextRequest) {
     const limit = 12
     const skip = (page - 1) * limit
 
-    const leWhere: any = { deletedAt: null, isPremium: false, assignment: { status: 'PUBLIC' } }
+    const leWhere: any = { 
+      deletedAt: null, 
+      isPremium: false
+    }
 
     if (categoryId) {
-      leWhere.assignment = {
-        status: 'PUBLIC',
-        categories: { some: { id: categoryId } }
-      }
+      leWhere.categories = { some: { id: categoryId } }
     }
 
     if (search) {
@@ -30,10 +30,16 @@ export async function GET(request: NextRequest) {
     const [lessons, lessonsTotal] = await Promise.all([
       prisma.lesson.findMany({
         where: leWhere,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          videoUrl: true,
+          viewsCount: true,
+          createdAt: true,
           teacher: { select: { id: true, name: true, image: true } },
           _count: { select: { reviews: true } },
-          assignment: { select: { videoUrl: true, audioUrl: true, thumbnail: true } }
+          assignmentId: true,
+          assignment: { select: { id: true, videoUrl: true, audioUrl: true, thumbnail: true, materialType: true } }
         },
         orderBy: sort === 'popular' ? { viewsCount: 'desc' } : { createdAt: 'desc' },
         take: limit,
@@ -45,6 +51,7 @@ export async function GET(request: NextRequest) {
     const allItems = lessons.map(l => ({ 
       ...l, 
       type: 'VIDEO_LESSON',
+      materialType: l.assignment?.materialType,
       videoUrl: l.assignment?.videoUrl || l.videoUrl,
       audioUrl: l.assignment?.audioUrl,
       thumbnail: l.assignment?.thumbnail || null
@@ -52,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: allItems, total: lessonsTotal, hasMore: lessonsTotal > skip + limit, page })
   } catch (e) {
-    console.error(e)
+    console.error('API Lessons Error:', e)
     return NextResponse.json({ items: [], total: 0, hasMore: false, page: 1 })
   }
 }

@@ -8,6 +8,7 @@ import { LanguageToggle } from "@/components/LanguageToggle"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { PublicHeader } from "@/components/public/PublicHeader"
 import { useThemeStore } from "@/store/useThemeStore"
+import { useContentStore } from "@/store/useContentStore"
 
 // Filters for Subject and Grade are removed as per user request to simplify hierarchy
 
@@ -30,17 +31,35 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   const [selectedCategoryId, setSelectedCategoryId] = useState("")
   const { isClearBackground, setClearBackground } = useThemeStore()
   const [sort, setSort] = useState<"newest" | "popular" | "trending">("newest")
-
-  const [exercises, setExercises] = useState(initialExercises)
-  const [exPage, setExPage] = useState(2)
-  const [hasMoreEx, setHasMoreEx] = useState(hasMoreExercises)
-  const [loadingEx, setLoadingEx] = useState(false)
-
-  const [lessons, setLessons] = useState(initialLessons)
-  const [lePage, setLePage] = useState(2)
-  const [hasMoreLe, setHasMoreLe] = useState(hasMoreLessons)
-  const [loadingLe, setLoadingLe] = useState(false)
   const [isAtTop, setIsAtTop] = useState(true)
+
+  const { 
+    exercises: storeExercises, setExercises, addExercises, 
+    lessons: storeLessons, setLessons, addLessons,
+    hasMoreEx, setHasMoreEx, 
+    hasMoreLe, setHasMoreLe, 
+    exPage, setExPage, 
+    lePage, setLePage 
+  } = useContentStore()
+
+  const [loadingEx, setLoadingEx] = useState(false)
+  const [loadingLe, setLoadingLe] = useState(false)
+
+  const initialRender = useRef(true)
+
+  // Use props as fallback for the very first render before store is populated
+  const exercises = storeExercises.length > 0 || !initialRender.current ? storeExercises : initialExercises
+  const lessons = storeLessons.length > 0 || !initialRender.current ? storeLessons : initialLessons
+
+  // Initialize store with server-side data if empty
+  useEffect(() => {
+    if (storeExercises.length === 0 && initialExercises.length > 0) {
+      setExercises(initialExercises); setHasMoreEx(hasMoreExercises); setExPage(2)
+    }
+    if (storeLessons.length === 0 && initialLessons.length > 0) {
+      setLessons(initialLessons); setHasMoreLe(hasMoreLessons); setLePage(2)
+    }
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -50,7 +69,6 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  const initialRender = useRef(true)
   const { ref: exBottomRef, inView: exBottomInView } = useInView({ threshold: 0 })
   const { ref: leBottomRef, inView: leBottomInView } = useInView({ threshold: 0 })
 
@@ -71,22 +89,62 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
     return `/api/public/lessons?${p}`
   }, [search, selectedCategoryId, sort])
 
+  const prevFilters = useRef("")
+  
   useEffect(() => {
     if (initialRender.current) { initialRender.current = false; return }
-    if (activeTab === "exercises") {
-      setLoadingEx(true)
-      setExercises([]); setExPage(1); setHasMoreEx(true)
-      fetch(buildExUrl(1)).then(r => r.json()).then(d => { 
-        setExercises(d.items); setHasMoreEx(d.hasMore); setExPage(2)
-        setLoadingEx(false)
-      }).catch(() => setLoadingEx(false))
-    } else {
-      setLoadingLe(true)
-      setLessons([]); setLePage(1); setHasMoreLe(true)
-      fetch(buildLeUrl(1)).then(r => r.json()).then(d => { 
-        setLessons(d.items); setHasMoreLe(d.hasMore); setLePage(2)
-        setLoadingLe(false)
-      }).catch(() => setLoadingLe(false))
+    
+    const filters = JSON.stringify({ search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, sort })
+    const filtersChanged = prevFilters.current !== filters
+    prevFilters.current = filters
+
+    const isEx = activeTab === "exercises"
+    const currentData = isEx ? storeExercises : storeLessons
+    const setData = isEx ? setExercises : setLessons
+    const setLoading = isEx ? setLoadingEx : setLoadingLe
+    const setPage = isEx ? setExPage : setLePage
+    const setHasMore = isEx ? setHasMoreEx : setHasMoreLe
+    const buildUrl = isEx ? buildExUrl : buildLeUrl
+
+    // If filters changed, reset EVERYTHING
+    if (filtersChanged) {
+      setExercises([])
+      setLessons([])
+      setExPage(1)
+      setLePage(1)
+      setHasMoreEx(true)
+      setHasMoreLe(true)
+      prevFilters.current = filters
+    } else if (currentData.length > 0) {
+      // Instant switch: data exists and filters haven't changed
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    fetch(buildUrl(1))
+      .then(r => r.json())
+      .then(d => { 
+        setData(d.items)
+        setHasMore(d.hasMore)
+        setPage(2)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+
+    // Prefetch other tab if empty
+    const otherBuildUrl = isEx ? buildLeUrl : buildExUrl
+    const otherData = isEx ? storeLessons : storeExercises
+    const setOtherData = isEx ? setLessons : setExercises
+    const setOtherHasMore = isEx ? setHasMoreLe : setHasMoreEx
+    const setOtherPage = isEx ? setLePage : setExPage
+    
+    if (otherData.length === 0) {
+      fetch(otherBuildUrl(1)).then(r => r.json()).then(d => {
+        setOtherData(d.items)
+        setOtherHasMore(d.hasMore)
+        setOtherPage(2)
+      })
     }
   }, [activeTab, search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, sort])
 
@@ -94,19 +152,19 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
     if (!exBottomInView || !hasMoreEx || loadingEx || activeTab !== "exercises") return
     setLoadingEx(true)
     fetch(buildExUrl(exPage)).then(r => r.json()).then(d => {
-      setExercises(prev => { const ids = new Set(prev.map((i: any) => i.id)); return [...prev, ...d.items.filter((i: any) => !ids.has(i.id))] })
-      setHasMoreEx(d.hasMore); setExPage(p => p + 1); setLoadingEx(false)
+      addExercises(d.items)
+      setHasMoreEx(d.hasMore); setExPage(exPage + 1); setLoadingEx(false)
     })
-  }, [exBottomInView])
+  }, [exBottomInView, exPage, hasMoreEx, loadingEx, activeTab])
 
   useEffect(() => {
     if (!leBottomInView || !hasMoreLe || loadingLe || activeTab !== "lessons") return
     setLoadingLe(true)
     fetch(buildLeUrl(lePage)).then(r => r.json()).then(d => {
-      setLessons(prev => { const ids = new Set(prev.map((i: any) => i.id)); return [...prev, ...d.items.filter((i: any) => !ids.has(i.id))] })
-      setHasMoreLe(d.hasMore); setLePage(p => p + 1); setLoadingLe(false)
+      addLessons(d.items)
+      setHasMoreLe(d.hasMore); setLePage(lePage + 1); setLoadingLe(false)
     })
-  }, [leBottomInView])
+  }, [leBottomInView, lePage, hasMoreLe, loadingLe, activeTab])
 
   const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch(""); setClearBackground(false) }
@@ -266,7 +324,9 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
           )}
 
           {/* Empty State */}
-          {!(activeTab === "exercises" ? loadingEx : loadingLe) && (activeTab === "exercises" ? exercises.length === 0 : lessons.length === 0) && (
+          {!(activeTab === "exercises" ? loadingEx : loadingLe) && 
+           (activeTab === "exercises" ? exercises.length === 0 : lessons.length === 0) && 
+           !initialRender.current && (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
               <div className="w-24 h-24 bg-surface-container rounded-full flex items-center justify-center animate-float">
                 <span className="material-symbols-outlined text-[48px] text-on-surface-variant">search_off</span>
