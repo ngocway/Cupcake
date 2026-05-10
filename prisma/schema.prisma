@@ -134,6 +134,7 @@ model ClassEnrollment {
 
 model Assignment {
   id                    String               @id @default(cuid())
+  slug                  String?              @unique
   title                 String
   status                MaterialStatus       @default(DRAFT)
   materialType          MaterialType         @default(EXERCISE)
@@ -280,6 +281,7 @@ model SubmissionAnswer {
 
 model Lesson {
   id             String           @id @default(cuid())
+  slug           String?          @unique
   title          String
   description    String?
   videoUrl       String?

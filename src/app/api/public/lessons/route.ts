@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         where: leWhere,
         select: {
           id: true,
+          slug: true,
           title: true,
           videoUrl: true,
           viewsCount: true,

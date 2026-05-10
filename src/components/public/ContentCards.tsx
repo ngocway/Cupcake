@@ -7,9 +7,10 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
   const rating = (4.5 + (item.id?.length % 5) * 0.1).toFixed(1)
 
   // Skip the intermediate lobby by adding ?direct=true
+  const identifier = item.slug || item.id
   const href = isLoggedIn 
-    ? `/student/assignments/${item.id}/run?direct=true` 
-    : `/public/assignments/${item.id}?direct=true`
+    ? `/student/assignments/${identifier}/run?direct=true` 
+    : `/public/assignments/${identifier}?direct=true`
 
   return (
     <div className="relative w-full group">
@@ -108,9 +109,10 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
 
   const targetAssignmentId = item.assignmentId || item.id
   // For lessons, we use the student route if logged in to maintain consistent state
+  const identifier = item.slug || item.id
   const href = isLoggedIn 
-    ? `/student/lessons/${item.id}` 
-    : `/public/lessons/${item.id}`
+    ? `/student/lessons/${identifier}` 
+    : `/public/lessons/${identifier}`
 
   return (
     <div className="relative w-full group">

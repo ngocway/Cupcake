@@ -6,6 +6,7 @@ import Link from "next/link";
 
 interface RelatedItem {
   id: string;
+  slug?: string | null;
   title: string;
   thumbnail: string | null;
 }
@@ -22,7 +23,7 @@ export function RelatedAssignmentsSection({ items }: { items: RelatedItem[] }) {
         {items.map((item) => (
           <Link 
             key={item.id}
-            href={`/student/assignments/${item.id}/run?direct=true`}
+            href={`/student/assignments/${item.slug || item.id}/run?direct=true`}
             className="flex items-center gap-4 group p-4 bg-slate-50 dark:bg-slate-800/50 rounded-[4px] border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all"
           >
             <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative">

@@ -19,6 +19,7 @@ interface TeacherInfo {
 
 interface RelatedItem {
   id: string;
+  slug?: string | null;
   title: string;
   thumbnail: string | null;
 }
@@ -73,7 +74,7 @@ export function LearningSidebar({
              {relatedItems.map((item) => (
                 <Link 
                   key={item.id}
-                  href={`/public/lessons/${item.id}`}
+                  href={`/public/lessons/${item.slug || item.id}`}
                   className="flex items-center gap-4 group"
                 >
                    <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">

@@ -51,8 +51,13 @@ export default async function StudentAssignmentLobbyPage({
   const { id } = await params;
   const { direct } = await searchParams;
   
-  const assignment = await prisma.assignment.findUnique({
-    where: { id },
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      OR: [
+        { id },
+        { slug: id }
+      ]
+    },
     include: {
       teacher: {
         include: {
@@ -83,7 +88,7 @@ export default async function StudentAssignmentLobbyPage({
 
   const submissions = await prisma.submission.findMany({
     where: {
-      assignmentId: id,
+      assignmentId: assignment.id,
       studentId: session.id
     },
     orderBy: {
@@ -104,16 +109,16 @@ export default async function StudentAssignmentLobbyPage({
   // Direct start logic for logged in users
   if (direct === 'true') {
     if (activeSubmission) {
-      redirect(`/student/assignments/${id}/run/quiz?submissionId=${activeSubmission.id}`);
+      redirect(`/student/assignments/${assignment.id}/run/quiz?submissionId=${activeSubmission.id}`);
     } else if (hasAttemptsLeft && !isDeadlinePassed) {
       const newSubmission = await prisma.submission.create({
         data: {
-          assignmentId: id,
+          assignmentId: assignment.id,
           studentId: session.id,
           attemptNumber: nextAttemptNumber
         }
       });
-      redirect(`/student/assignments/${id}/run/quiz?submissionId=${newSubmission.id}`);
+      redirect(`/student/assignments/${assignment.id}/run/quiz?submissionId=${newSubmission.id}`);
     }
   }
 
@@ -237,7 +242,7 @@ export default async function StudentAssignmentLobbyPage({
                           </div>
                           
                           <a 
-                            href={`/student/assignments/${id}/review/${sub.id}?showAnswers=${showReview}`}
+                            href={`/student/assignments/${assignment.id}/review/${sub.id}?showAnswers=${showReview}`}
                             className={`px-6 h-12 rounded-xl text-sm font-black uppercase tracking-widest flex items-center gap-2 transition-all ${
                               showReview 
                               ? "bg-slate-900 dark:bg-primary text-white hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/10" 
@@ -275,9 +280,9 @@ export default async function StudentAssignmentLobbyPage({
 
              <div className="flex flex-col items-center">
                 {activeSubmission ? (
-                  <StartButton assignmentId={id} label="TIẾP TỤC" />
+                  <StartButton assignmentId={assignment.id} label="TIẾP TỤC" />
                 ) : (hasAttemptsLeft && !isDeadlinePassed) ? (
-                  <StartButton assignmentId={id} label={completedSubmissions.length > 0 ? "LÀM LẠI" : "BẮT ĐẦU"} />
+                  <StartButton assignmentId={assignment.id} label={completedSubmissions.length > 0 ? "LÀM LẠI" : "BẮT ĐẦU"} />
                 ) : (
                   <div className="px-10 py-3 bg-surface-container text-on-surface-variant rounded-xl font-black text-sm tracking-widest uppercase italic border border-outline-variant/20 opacity-50">
                       Đã khóa
@@ -297,7 +302,7 @@ export default async function StudentAssignmentLobbyPage({
             <div className="flex items-center gap-3">
                <BookmarkButton 
                   type="assignment" 
-                  id={id} 
+                  id={assignment.id} 
                   initialIsBookmarked={isBookmarked} 
                   className="scale-90"
                />
@@ -353,7 +358,7 @@ export default async function StudentAssignmentLobbyPage({
 
             {/* Voluntary Review Trigger */}
             <div className="pt-6">
-               <ReviewTrigger type="assignment" id={id} isLoggedIn={true} />
+               <ReviewTrigger type="assignment" id={assignment.id} isLoggedIn={true} />
             </div>
           </div>
         </div>

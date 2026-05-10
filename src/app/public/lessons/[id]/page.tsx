@@ -41,8 +41,13 @@ export default async function PublicLessonPage({
   
   const { id } = await params;
 
-  const lesson = await prisma.lesson.findUnique({
-    where: { id },
+  const lesson = await prisma.lesson.findFirst({
+    where: {
+      OR: [
+        { id },
+        { slug: id }
+      ]
+    },
     include: {
       teacher: {
         select: {
@@ -97,6 +102,7 @@ export default async function PublicLessonPage({
     take: 5,
     select: {
       id: true,
+      slug: true,
       title: true,
       teacher: {
         select: { name: true }

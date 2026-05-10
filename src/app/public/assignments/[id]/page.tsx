@@ -45,8 +45,13 @@ export default async function PublicAssignmentPage({
   const { id } = await params;
   const { direct } = await searchParams;
   
-  const assignment = await prisma.assignment.findUnique({
-    where: { id },
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      OR: [
+        { id },
+        { slug: id }
+      ]
+    },
     include: {
       teacher: {
         include: {
@@ -73,7 +78,7 @@ export default async function PublicAssignmentPage({
 
   const submissions = session ? await prisma.submission.findMany({
     where: {
-      assignmentId: id,
+      assignmentId: assignment.id,
       studentId: session.id
     },
     orderBy: {
@@ -95,7 +100,7 @@ export default async function PublicAssignmentPage({
   if (!session && direct === 'true') {
     // Fetch questions and related data for the runner
     const questions = await prisma.question.findMany({
-      where: { assignmentId: id },
+      where: { assignmentId: assignment.id },
       orderBy: { orderIndex: 'asc' }
     });
 
@@ -103,7 +108,7 @@ export default async function PublicAssignmentPage({
     const relatedAssignments = await prisma.assignment.findMany({
       where: {
         status: 'PUBLIC',
-        id: { not: id },
+        id: { not: assignment.id },
         OR: [
           { teacherId: assignment.teacherId },
           {
@@ -140,16 +145,16 @@ export default async function PublicAssignmentPage({
   // Direct start logic for logged in users
   if (session && direct === 'true') {
     if (activeSubmission) {
-      redirect(`/student/assignments/${id}/run/quiz?submissionId=${activeSubmission.id}`);
+      redirect(`/student/assignments/${assignment.id}/run/quiz?submissionId=${activeSubmission.id}`);
     } else if (hasAttemptsLeft && !isDeadlinePassed) {
       const newSubmission = await prisma.submission.create({
         data: {
-          assignmentId: id,
+          assignmentId: assignment.id,
           studentId: session.id,
           attemptNumber: nextAttemptNumber
         }
       });
-      redirect(`/student/assignments/${id}/run/quiz?submissionId=${newSubmission.id}`);
+      redirect(`/student/assignments/${assignment.id}/run/quiz?submissionId=${newSubmission.id}`);
     }
   }
 
@@ -173,7 +178,7 @@ export default async function PublicAssignmentPage({
             <div className="absolute top-8 right-6">
               <BookmarkButton 
                 type="assignment" 
-                id={id} 
+                id={assignment.id} 
                 initialIsBookmarked={isBookmarked} 
                 className="scale-125"
               />
@@ -271,7 +276,7 @@ export default async function PublicAssignmentPage({
                             </div>
                             
                             <a 
-                               href={`/student/assignments/${id}/review/${sub.id}?showAnswers=${showReview}`}
+                               href={`/student/assignments/${assignment.id}/review/${sub.id}?showAnswers=${showReview}`}
                                className={`px-6 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${
                                  showReview 
                                  ? "bg-on-surface text-white hover:bg-primary" 
@@ -312,9 +317,9 @@ export default async function PublicAssignmentPage({
               <div className="flex flex-col items-center">
                  {session ? (
                     activeSubmission ? (
-                       <StartButton assignmentId={id} label="TIẾP TỤC" />
+                       <StartButton assignmentId={assignment.id} label="TIẾP TỤC" />
                     ) : (hasAttemptsLeft && !isDeadlinePassed) ? (
-                       <StartButton assignmentId={id} label={completedSubmissions.length > 0 ? "LÀM LẠI" : "BẮT ĐẦU"} />
+                       <StartButton assignmentId={assignment.id} label={completedSubmissions.length > 0 ? "LÀM LẠI" : "BẮT ĐẦU"} />
                     ) : (
                        <div className="bg-white/10 px-8 py-4 rounded-3xl text-sm font-bold border border-white/20 text-center w-full">
                           Đã khóa
@@ -322,7 +327,7 @@ export default async function PublicAssignmentPage({
                     )
                  ) : (
                     <Link 
-                      href={`/join/${id}`}
+                      href={`/join/${assignment.id}`}
                       className="w-full py-4 bg-white text-primary rounded-3xl text-center font-black text-sm tracking-widest hover:scale-105 active:scale-95 shadow-xl shadow-primary/20 transition-all uppercase"
                     >
                        BẮT ĐẦU NGAY
@@ -334,7 +339,7 @@ export default async function PublicAssignmentPage({
       </div>
       
       {/* Voluntary Review Trigger (UC 11) */}
-      <ReviewTrigger type="assignment" id={id} isLoggedIn={!!session} />
+      <ReviewTrigger type="assignment" id={assignment.id} isLoggedIn={!!session} />
     </div>
   );
 }
