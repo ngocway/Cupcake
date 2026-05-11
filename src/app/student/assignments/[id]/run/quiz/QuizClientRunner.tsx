@@ -288,6 +288,15 @@ export default function QuizClientRunner({
     return () => observer.disconnect();
   }, [questions]);
 
+  const allCompleted = useMemo(() => {
+    return questions.every(q => {
+      const ans = answers[q.id];
+      return ans !== undefined && ans !== null && (
+        (typeof ans === 'object' ? Object.keys(ans).length > 0 : true)
+      );
+    });
+  }, [questions, answers]);
+
   const scrollToQuestion = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -826,7 +835,7 @@ export default function QuizClientRunner({
                 Xác nhận chuyển bài tập
               </h4>
               <p className="text-slate-500 dark:text-slate-400 font-medium text-sm leading-relaxed">
-                Bạn chưa hoàn tất bài tập hiện tại, bạn có muốn chuyển sang bài <span className="font-bold text-slate-900 dark:text-white">{navGuard.targetTitle}</span> không?
+                {!allCompleted && "Bạn chưa hoàn tất bài tập hiện tại, "}bạn có muốn chuyển sang bài <span className="font-bold text-slate-900 dark:text-white">{navGuard.targetTitle}</span> không?
               </p>
             </div>
 
