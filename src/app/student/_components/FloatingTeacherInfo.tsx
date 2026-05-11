@@ -17,7 +17,13 @@ interface TeacherInfo {
   };
 }
 
-export function FloatingTeacherInfo({ teacher }: { teacher: TeacherInfo }) {
+export function FloatingTeacherInfo({ 
+  teacher,
+  onNavigate
+}: { 
+  teacher: TeacherInfo,
+  onNavigate?: (href: string) => void
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -80,7 +86,13 @@ export function FloatingTeacherInfo({ teacher }: { teacher: TeacherInfo }) {
 
           <Link 
             href={`/public/teachers/${teacher.id}`}
-            onClick={() => setIsOpen(false)}
+            onClick={(e) => {
+              setIsOpen(false);
+              if (onNavigate) {
+                e.preventDefault();
+                onNavigate(`/public/teachers/${teacher.id}`);
+              }
+            }}
             className="w-full py-3 bg-slate-900 dark:bg-primary text-white rounded-full font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest italic"
           >
             Xem Hồ Sơ

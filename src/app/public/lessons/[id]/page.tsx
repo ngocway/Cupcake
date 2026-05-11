@@ -131,22 +131,17 @@ export default async function PublicLessonPage({
          <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto custom-scrollbar">
             <div className="px-8 lg:px-12 pt-7 pb-12 space-y-12 max-w-5xl mx-auto w-full">
                {/* Video Player */}
-               <div className="aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl group relative ring-1 ring-white/10 shrink-0">
-                  {videoId ? (
-                    <iframe
-                      className="w-full h-full"
-                      src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
-                      title={lesson.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center space-y-4 text-white/50">
-                       <Play className="w-16 h-16" />
-                       <p className="font-bold tracking-tight">Không có video bài giảng</p>
-                    </div>
-                  )}
-               </div>
+               {videoId && (
+                  <div className="aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl group relative ring-1 ring-white/10 shrink-0">
+                     <iframe
+                       className="w-full h-full"
+                       src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
+                       title={lesson.title}
+                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                       allowFullScreen
+                     />
+                  </div>
+               )}
 
                {/* Lesson Details Card */}
                <div className="glass rounded-3xl p-10 lg:p-12 space-y-12 shadow-xl border border-white/40 mb-12">

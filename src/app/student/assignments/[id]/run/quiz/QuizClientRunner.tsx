@@ -103,7 +103,37 @@ export default function QuizClientRunner({
     originalLeftId?: string;
   } | null>(null);
   const [hoveredLine, setHoveredLine] = useState<{ x: number, y: number, content: string } | null>(null);
+  const [navGuard, setNavGuard] = useState<{ isOpen: boolean; targetUrl: string; targetTitle: string }>({
+    isOpen: false,
+    targetUrl: "",
+    targetTitle: "",
+  });
   const router = useRouter();
+
+  const isDirty = Object.keys(answers).length > 0;
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  const handleSafeNavigate = (href: string, title?: string) => {
+    if (isDirty) {
+      setNavGuard({
+        isOpen: true,
+        targetUrl: href,
+        targetTitle: title || "trang khác",
+      });
+    } else {
+      router.push(href);
+    }
+  };
 
   const currentQuestion = questions[currentQuestionIndex];
   
@@ -226,6 +256,8 @@ export default function QuizClientRunner({
     }
     if (!confirm("Bạn có chắc chắn muốn nộp bài không?")) return;
     
+    // Clear dirty state
+    setAnswers({});
     startTransition(async () => {
       router.push(`/student/assignments/${assignment.id}/run`);
     });
@@ -234,7 +266,10 @@ export default function QuizClientRunner({
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden relative">
       {/* Floating Teacher Info */}
-      <FloatingTeacherInfo teacher={assignment.teacher} />
+      <FloatingTeacherInfo 
+        teacher={assignment.teacher} 
+        onNavigate={handleSafeNavigate}
+      />
       
       {/* Header removed as per user request */}
 
@@ -694,6 +729,13 @@ export default function QuizClientRunner({
           <div className="h-20 border-t border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center justify-center gap-12 lg:gap-24 px-6 shrink-0">
              <div className="flex items-center gap-4">
                 <button 
+                    onClick={() => handleSafeNavigate("/student/library")}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-200 transition-all uppercase tracking-widest"
+                >
+                    Thoát
+                </button>
+                <div className="w-px h-6 bg-slate-200" />
+                <button 
                     onClick={handlePrev}
                     disabled={currentQuestionIndex === 0}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-on-surface-variant hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none transition-all"
@@ -834,6 +876,8 @@ export default function QuizClientRunner({
               {/* Related Assignments Section at the bottom of right column */}
               <RelatedAssignmentsSection 
                 items={relatedAssignments.map(a => ({ ...a, type: "ASSIGNMENT" as const }))} 
+                isGuest={isGuest}
+                onNavigate={handleSafeNavigate}
               />
            </div>
         </div>
@@ -924,6 +968,54 @@ export default function QuizClientRunner({
            </div>
         </div>
       )}
-    </div>
-  );
+
+
+    {/* Navigation Guard Modal */}
+    {navGuard.isOpen && (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 backdrop-blur-sm bg-slate-900/60 animate-in fade-in duration-200">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-md p-8 relative animate-in zoom-in-95 duration-300">
+          <button 
+            onClick={() => setNavGuard({ ...navGuard, isOpen: false })}
+            className="absolute top-6 left-6 p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="mt-8 space-y-6 text-center">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mx-auto">
+               <HelpCircle className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            
+            <div className="space-y-3">
+              <h4 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
+                Xác nhận chuyển bài tập
+              </h4>
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-sm leading-relaxed">
+                Bạn chưa hoàn tất bài tập hiện tại, bạn có muốn chuyển sang bài <span className="font-bold text-slate-900 dark:text-white">{navGuard.targetTitle}</span> không?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setNavGuard({ ...navGuard, isOpen: false });
+                  router.push(navGuard.targetUrl);
+                }}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm tracking-widest hover:bg-primary/90 transition-all shadow-xl shadow-primary/20 uppercase italic"
+              >
+                Đồng ý
+              </button>
+              <button
+                onClick={() => setNavGuard({ ...navGuard, isOpen: false })}
+                className="w-full py-3 text-slate-500 dark:text-slate-400 font-bold text-xs hover:text-slate-800 dark:hover:text-white transition-colors uppercase tracking-widest"
+              >
+                Tiếp tục làm bài
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+    );
 }

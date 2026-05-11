@@ -11,11 +11,19 @@ interface RelatedItem {
   thumbnail: string | null;
 }
 
-export function RelatedAssignmentsSection({ items }: { items: RelatedItem[] }) {
+export function RelatedAssignmentsSection({ 
+  items,
+  isGuest = false,
+  onNavigate
+}: { 
+  items: RelatedItem[],
+  isGuest?: boolean,
+  onNavigate?: (href: string) => void
+}) {
   return (
     <div className="border-t border-outline-variant/20 pt-16 space-y-8">
       <div className="space-y-1">
-        <h3 className="text-2xl font-black tracking-tight italic uppercase">Bài học liên quan</h3>
+        <h3 className="text-2xl font-black tracking-tight italic uppercase">Nội dung liên quan</h3>
         <p className="text-sm text-slate-500 font-medium">Có thể bạn sẽ quan tâm đến các nội dung này.</p>
       </div>
       
@@ -23,7 +31,20 @@ export function RelatedAssignmentsSection({ items }: { items: RelatedItem[] }) {
         {items.map((item) => (
           <Link 
             key={item.id}
-            href={`/student/assignments/${item.slug || item.id}/run?direct=true`}
+            href={isGuest 
+              ? `/public/assignments/${item.slug || item.id}?direct=true`
+              : `/student/assignments/${item.slug || item.id}/run?direct=true`
+            }
+            onClick={(e) => {
+              if (onNavigate) {
+                e.preventDefault();
+                onNavigate(isGuest 
+                  ? `/public/assignments/${item.slug || item.id}?direct=true`
+                  : `/student/assignments/${item.slug || item.id}/run?direct=true`,
+                  item.title
+                );
+              }
+            }}
             className="flex items-center gap-4 group p-4 bg-slate-50 dark:bg-slate-800/50 rounded-[4px] border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all"
           >
             <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative">
