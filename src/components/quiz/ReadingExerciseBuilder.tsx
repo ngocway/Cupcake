@@ -109,10 +109,12 @@ function SortableQuestionItem({
 
 export function ReadingExerciseBuilder({ 
   assignmentId: initialId, 
-  onBack 
+  onBack,
+  initialType
 }: { 
   assignmentId?: string, 
-  onBack?: () => void 
+  onBack?: () => void,
+  initialType?: 'READING' | 'EXERCISE' | 'FLASHCARD'
 }) {
   const router = useRouter();
   const [assignmentId, setAssignmentId] = useState<string>(initialId || 'clp_reading_001');
@@ -142,7 +144,8 @@ export function ReadingExerciseBuilder({
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds
+        categoryIds,
+        type: materialType
       });
       setSavingStatus('saved');
       
@@ -174,6 +177,7 @@ export function ReadingExerciseBuilder({
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [materialType, setMaterialType] = useState<string>(initialType || 'READING');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
   const [imageControlPos, setImageControlPos] = useState({ top: 0, left: 0 });
@@ -191,7 +195,9 @@ export function ReadingExerciseBuilder({
   } | null>(null);
 
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'passage' | 'questions' | 'vocabulary'>('passage');
+  const [activeTab, setActiveTab] = useState<'passage' | 'questions' | 'vocabulary'>(
+    initialType === 'EXERCISE' ? 'questions' : (initialType === 'FLASHCARD' ? 'vocabulary' : 'passage')
+  );
   const [vocabEnabled, setVocabEnabled] = useState(false);
   const [showVocabDisableWarning, setShowVocabDisableWarning] = useState(false);
   const [vocabList, setVocabList] = useState<any[]>([]);
@@ -355,6 +361,17 @@ export function ReadingExerciseBuilder({
           if (data.assignment.categories) {
             setCategoryIds(data.assignment.categories.map((c: any) => c.id));
           }
+          if (data.assignment.materialType) {
+            setMaterialType(data.assignment.materialType);
+            // Update active tab if it's the first load and not already set by initialType
+            if (!initialType) {
+              if (data.assignment.materialType === 'EXERCISE') setActiveTab('questions');
+              if (data.assignment.materialType === 'FLASHCARD') {
+                setActiveTab('vocabulary');
+                setVocabEnabled(true);
+              }
+            }
+          }
         }
       } catch (err) {
         console.error('Initial fetch failed:', err);
@@ -437,7 +454,8 @@ export function ReadingExerciseBuilder({
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds
+        categoryIds,
+        type: materialType
       });
       
       setSavingStatus('saved');
@@ -453,7 +471,7 @@ export function ReadingExerciseBuilder({
     if (!isInitialLoadDone) return;
     const timer = setTimeout(() => handleSave(), 3000);
     return () => clearTimeout(timer);
-  }, [title, questions, subject, gradeLevel, shortDescription, tags, instructions, videoUrl, audioUrl, isInitialLoadDone, categoryIds]);
+  }, [title, questions, subject, gradeLevel, shortDescription, tags, instructions, videoUrl, audioUrl, isInitialLoadDone, categoryIds, materialType]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -757,8 +775,14 @@ export function ReadingExerciseBuilder({
                <span className="material-symbols-outlined text-[18px]">arrow_back</span> Quay lại danh sách
              </button>
            )}
-           <h1 className="text-lg font-black text-blue-700 font-headline mb-1 leading-tight">Reading Exercise Builder</h1>
-           <p className="text-[10px] font-semibold font-label text-slate-500 uppercase tracking-widest mt-2">Teacher Dashboard</p>
+           <h1 className="text-lg font-black text-blue-700 font-headline mb-1 leading-tight">
+              {materialType === 'FLASHCARD' ? 'Flashcard Builder' : 
+               materialType === 'EXERCISE' ? 'Exercise Builder' : 'Reading Builder'}
+            </h1>
+            <p className="text-[10px] font-semibold font-label text-slate-500 uppercase tracking-widest mt-2">
+               {materialType === 'FLASHCARD' ? 'Thiết lập bộ thẻ ghi nhớ' : 
+                materialType === 'EXERCISE' ? 'Thiết lập bài tập & câu hỏi' : 'Thiết lập bài đọc & từ vựng'}
+            </p>
         </div>
         <div className="px-4 mb-8">
           <div className="bg-surface-container-low rounded-xl p-4 flex flex-col gap-1 border border-black/5 dark:border-white/5">
@@ -767,18 +791,21 @@ export function ReadingExerciseBuilder({
           </div>
         </div>
         <nav className="flex-1 px-4 space-y-2">
-          <button 
-            onClick={() => setActiveTab('passage')}
-            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
-              activeTab === 'passage' 
-                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
-                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">edit_note</span> Passage Editor
-          </button>
+          {(materialType !== 'FLASHCARD' || activeTab === 'passage') && (
+            <button 
+              onClick={() => setActiveTab('passage')}
+              className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
+                activeTab === 'passage' 
+                  ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
+                  : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">edit_note</span> 
+              {materialType === 'EXERCISE' ? 'Context / Instruction' : 'Passage Editor'}
+            </button>
+          )}
 
-          {vocabEnabled && (
+          {(vocabEnabled || materialType === 'FLASHCARD') && (
             <button 
               onClick={() => {
                 if (activeTab === 'passage') refreshVocabList();
@@ -790,19 +817,24 @@ export function ReadingExerciseBuilder({
                   : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">translate</span> Vocabulary Bank
+              <span className="material-symbols-outlined text-[18px]">{materialType === 'FLASHCARD' ? 'style' : 'translate'}</span> 
+              {materialType === 'FLASHCARD' ? 'Flashcard Bank' : 'Vocabulary Bank'}
             </button>
           )}
-          <button 
-            onClick={() => setActiveTab('questions')}
-            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
-              activeTab === 'questions' 
-                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
-                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">quiz</span> Question Bank
-          </button>
+          
+          {(materialType !== 'FLASHCARD' || activeTab === 'questions') && (
+            <button 
+              onClick={() => setActiveTab('questions')}
+              className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
+                activeTab === 'questions' 
+                  ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
+                  : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">quiz</span> 
+              {materialType === 'EXERCISE' ? 'Questions / Quiz' : 'Question Bank'}
+            </button>
+          )}
           
           <button 
             onClick={() => setShowInstructionsModal(true)}
@@ -890,7 +922,7 @@ export function ReadingExerciseBuilder({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="font-headline font-extrabold text-xl text-slate-900 dark:text-white tracking-tight bg-transparent border-none outline-none focus:ring-0 p-0 m-0 w-full"
-              placeholder="Nhập tiêu đề bài tập..."
+              placeholder={materialType === 'FLASHCARD' ? 'Nhập tiêu đề bộ thẻ...' : 'Nhập tiêu đề bài tập...'}
             />
             <div className="flex items-center gap-2 mt-1">
               <span className={`w-2 h-2 rounded-full ${savingStatus === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-secondary'}`}></span>
@@ -940,7 +972,7 @@ export function ReadingExerciseBuilder({
                 {!isInitialLoadDone && (
                   <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-50 flex flex-col items-center justify-center rounded-2xl backdrop-blur-[2px]">
                      <span className="material-symbols-outlined text-[48px] text-primary/30 animate-spin mb-4">progress_activity</span>
-                     <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Đang tải bài học...</div>
+                     <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Đang tải dữ liệu...</div>
                   </div>
                 )}
                 
@@ -1394,6 +1426,7 @@ export function ReadingExerciseBuilder({
 
                {/* Modal Content */}
                <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+
                   {/* Basic Metadata - Hidden as per user request to simplify UI */}
                   {/* Fields are kept in state with default 'Khác' to maintain data integrity */}
 

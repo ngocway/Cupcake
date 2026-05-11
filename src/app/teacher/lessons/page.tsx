@@ -12,6 +12,9 @@ export default function LessonsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
+  const [showTypeSelectionModal, setShowTypeSelectionModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'MANUAL' | 'AI' | null>(null);
+  const [selectedType, setSelectedType] = useState<'READING' | 'EXERCISE' | 'FLASHCARD'>('READING');
   const [showTrash, setShowTrash] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
@@ -63,16 +66,18 @@ export default function LessonsPage() {
     fetchLessons();
   }, [showTrash]);
 
-  const handleCreate = async () => {
+  const handleCreate = async (type: 'READING' | 'EXERCISE' | 'FLASHCARD') => {
     setIsCreating(true);
+    setShowTypeSelectionModal(false);
     try {
-      const id = await createDraftLesson();
+      const id = await createDraftLesson(type);
       setEditingId(id);
     } catch (err) {
       console.error('Failed to create lesson:', err);
       alert('Không thể tạo bài học mới.');
     } finally {
       setIsCreating(false);
+      setPendingAction(null);
     }
   };
 
@@ -115,9 +120,13 @@ export default function LessonsPage() {
   };
 
   if (editingId) {
+    const currentEditingLesson = lessons.find(l => l.id === editingId);
+    const materialType = currentEditingLesson?.materialType || selectedType || 'READING';
+
     return (
       <ReadingExerciseBuilder 
         assignmentId={editingId} 
+        initialType={materialType}
         onBack={() => {
           setEditingId(null);
           fetchLessons();
@@ -147,12 +156,21 @@ export default function LessonsPage() {
             <span className="material-symbols-outlined">{showTrash ? 'arrow_back' : 'delete'}</span>
             {showTrash ? 'Quay lại' : 'Thùng rác'}
           </button>
-          <button onClick={() => setShowAiModal(true)} className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-blue-400 border border-neutral-700 rounded-xl font-bold text-sm hover:bg-neutral-700 transition-all shadow-sm">
+          <button 
+            onClick={() => {
+              setPendingAction('AI');
+              setShowTypeSelectionModal(true);
+            }} 
+            className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-blue-400 border border-neutral-700 rounded-xl font-bold text-sm hover:bg-neutral-700 transition-all shadow-sm"
+          >
             <span className="material-symbols-outlined text-xl">auto_awesome</span> AI Assistant
           </button>
           {!showTrash && (
             <button 
-              onClick={handleCreate}
+              onClick={() => {
+                setPendingAction('MANUAL');
+                setShowTypeSelectionModal(true);
+              }}
               disabled={isCreating}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all disabled:opacity-50"
             >
@@ -274,7 +292,66 @@ export default function LessonsPage() {
       )}
 
       {showAiModal && (
-        <AiGeneratorModal onClose={() => setShowAiModal(false)} onSuccess={fetchLessons} />
+        <AiGeneratorModal 
+          onClose={() => {
+            setShowAiModal(false);
+            setPendingAction(null);
+          }} 
+          onSuccess={fetchLessons} 
+          materialType={selectedType}
+        />
+      )}
+
+      {/* Type Selection Modal */}
+      {showTypeSelectionModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-gray-900 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-white/10 flex flex-col">
+            <div className="p-8 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="size-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+                  <span className="material-symbols-outlined">category</span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white">Chọn loại học liệu</h2>
+                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Lưu ý: Không thể thay đổi sau khi tạo</p>
+                </div>
+              </div>
+              <button onClick={() => { setShowTypeSelectionModal(false); setPendingAction(null); }} className="size-10 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 flex items-center justify-center text-slate-400">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-8 grid grid-cols-3 gap-4">
+              {[
+                { value: 'READING', label: 'Bài đọc / Video', icon: 'menu_book', desc: 'Soạn thảo văn bản, chèn video hoặc podcast' },
+                { value: 'EXERCISE', label: 'Bài tập / Đề thi', icon: 'assignment', desc: 'Câu hỏi trắc nghiệm, điền từ, nối câu...' },
+                { value: 'FLASHCARD', label: 'Thẻ từ vựng', icon: 'style', desc: 'Bộ thẻ ghi nhớ thông minh với hình ảnh' }
+              ].map(type => (
+                <button 
+                  key={type.value}
+                  onClick={() => {
+                    setSelectedType(type.value as any);
+                    if (pendingAction === 'MANUAL') {
+                      handleCreate(type.value as any);
+                    } else {
+                      setShowTypeSelectionModal(false);
+                      setShowAiModal(true);
+                    }
+                  }}
+                  className="flex flex-col items-center text-center gap-4 p-6 rounded-[24px] border-2 border-slate-100 bg-slate-50/50 hover:border-primary hover:bg-primary/5 transition-all group"
+                >
+                  <div className="size-16 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-slate-100 dark:border-gray-700 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-all">
+                    <span className="material-symbols-outlined text-[32px]">{type.icon}</span>
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-tight mb-1 text-slate-900 dark:text-white">{type.label}</h3>
+                    <p className="text-[10px] text-slate-500 font-medium leading-tight">{type.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -21,11 +21,21 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
           alt={item.title} 
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1" 
         />
-        {/* Badge: 'Mới nhất' */}
+        {/* Badge: Type */}
         <div className="absolute top-4 left-4 z-10">
-          <span className="bg-primary text-on-primary text-tiny font-black px-4 py-2 rounded-xl uppercase tracking-widest shadow-2xl flex items-center gap-2 backdrop-blur-md bg-primary/90">
-            <span className="material-symbols-outlined !text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-            Mới nhất
+          <span className={`${
+            item.materialType === 'READING' ? 'bg-amber-500' : 
+            item.materialType === 'FLASHCARD' ? 'bg-rose-500' : 
+            'bg-primary'
+          } text-white text-tiny font-black px-4 py-2 rounded-xl uppercase tracking-widest shadow-2xl flex items-center gap-2 backdrop-blur-md bg-opacity-90`}>
+            <span className="material-symbols-outlined !text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {item.materialType === 'READING' ? 'menu_book' : 
+               item.materialType === 'FLASHCARD' ? 'style' : 
+               'assignment'}
+            </span>
+            {item.materialType === 'READING' ? 'Reading' : 
+             item.materialType === 'FLASHCARD' ? 'Flashcard' : 
+             'Bài tập'}
           </span>
         </div>
         {/* Media Icons */}
@@ -123,13 +133,21 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
           alt={item.title} 
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:-rotate-1" 
         />
-        {/* Badge: 'Bài học' */}
+        {/* Badge: Type */}
         <div className="absolute top-4 left-4 z-10">
-          <span className={`${isReading ? 'bg-amber-500' : 'bg-secondary'} text-white text-tiny font-black px-4 py-2 rounded-xl uppercase tracking-widest shadow-2xl flex items-center gap-2 backdrop-blur-md bg-opacity-90`}>
+          <span className={`${
+            item.materialType === 'READING' ? 'bg-amber-500' : 
+            item.materialType === 'FLASHCARD' ? 'bg-rose-500' : 
+            'bg-secondary'
+          } text-white text-tiny font-black px-4 py-2 rounded-xl uppercase tracking-widest shadow-2xl flex items-center gap-2 backdrop-blur-md bg-opacity-90`}>
             <span className="material-symbols-outlined !text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              {isReading ? 'menu_book' : 'play_circle'}
+              {item.materialType === 'READING' ? 'menu_book' : 
+               item.materialType === 'FLASHCARD' ? 'style' : 
+               'play_circle'}
             </span>
-            {isReading ? 'Reading' : 'Bài học'}
+            {item.materialType === 'READING' ? 'Reading' : 
+             item.materialType === 'FLASHCARD' ? 'Flashcard' : 
+             'Bài học'}
           </span>
         </div>
         {/* Media Icons */}

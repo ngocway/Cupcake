@@ -11,9 +11,10 @@ const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 interface AiGeneratorModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  materialType?: 'READING' | 'EXERCISE' | 'FLASHCARD';
 }
 
-export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ onClose, onSuccess }) => {
+export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ onClose, onSuccess, materialType = 'READING' }) => {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     topic: '',
@@ -36,7 +37,8 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ onClose, onS
       const res = await customGenerateLesson({
         ...formData,
         gradeLevel: "10", // Default or get from somewhere
-        wordCount: 0 // Not used when passage provided
+        wordCount: 0, // Not used when passage provided
+        materialType
       } as any);
       
       if (res && res.success) {
@@ -93,14 +95,14 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ onClose, onS
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Nội dung bài đọc (Rich Text)</label>
+            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">Hướng dẫn soạn thảo nội dung (AI sẽ sinh bài dựa trên đây)</label>
             <div className="quill-container rounded-2xl overflow-hidden border-2 border-slate-50 dark:border-gray-800 focus-within:border-blue-500 transition-all bg-slate-50 dark:bg-gray-800">
               <ReactQuill 
                 theme="snow"
                 value={formData.providedPassage}
                 onChange={(content) => setFormData({...formData, providedPassage: content})}
                 modules={quillModules}
-                placeholder="Dán hoặc nhập nội dung bài học vào đây..."
+                placeholder="Ví dụ: Tạo bài học 500 chữ về chủ đề Bảo vệ môi trường, tập trung vào học các từ mới, dành cho học sinh tiểu học..."
                 className="bg-white dark:bg-gray-900 min-h-[200px]"
               />
             </div>

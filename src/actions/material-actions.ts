@@ -61,15 +61,15 @@ export async function createDraftMaterial(type: 'EXERCISE' | 'READING' | 'FLASHC
   return newAss.id;
 }
 
-export async function createDraftLesson() {
+export async function createDraftLesson(type: 'READING' | 'EXERCISE' | 'FLASHCARD' = 'READING') {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   // Create Assignment first because Lesson depends on it
   const newAssignment = await prisma.assignment.create({
     data: {
-      title: 'Bài học mới',
-      materialType: 'READING', // Default for lessons
+      title: type === 'READING' ? 'Bài học mới' : (type === 'EXERCISE' ? 'Bài tập mới' : 'Bộ thẻ mới'),
+      materialType: type,
       status: 'DRAFT',
       teacherId: session.user.id,
     }
@@ -77,7 +77,7 @@ export async function createDraftLesson() {
 
   await prisma.lesson.create({
     data: {
-      title: 'Bài học mới',
+      title: type === 'READING' ? 'Bài học mới' : (type === 'EXERCISE' ? 'Bài tập mới' : 'Bộ thẻ mới'),
       teacherId: session.user.id,
       assignmentId: newAssignment.id
     }
@@ -89,7 +89,7 @@ export async function createDraftLesson() {
 export async function autoSaveMaterial(payload: { 
   id: string; 
   title: string; 
-  type: string; 
+  // removed type (materialType) to make it immutable after creation
   questions: any[]; 
   readingText?: string;
   videoUrl?: string;
@@ -132,7 +132,7 @@ export async function autoSaveMaterial(payload: {
     console.log(`[AutoSave] Starting update for assignment: ${payload.id}`);
 
     // Update main info (using upsert)
-    await tx.assignment.upsert({
+    const updatedAssignment = await tx.assignment.upsert({
       where: { id: payload.id },
       update: { 
         title: payload.title,
@@ -163,13 +163,33 @@ export async function autoSaveMaterial(payload: {
         tags: payload.tags || "",
         instructions: payload.instructions || null,
         teacherId: session.user.id,
-        materialType: (payload.type as any) || 'READING',
+        // materialType will default to READING if created via this fallback, 
+        // but normally it's created via createDraftLesson/createDraftMaterial
+        materialType: 'READING', 
         status: 'DRAFT',
         categories: {
           connect: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
         }
+      },
+      include: {
+        lesson: true
       }
     });
+
+    // Sync to Lesson if exists
+    if (updatedAssignment.lesson) {
+      await tx.lesson.update({
+        where: { id: updatedAssignment.lesson.id },
+        data: {
+          title: payload.title,
+          description: payload.shortDescription || null,
+          categories: {
+            set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
+          }
+        }
+      });
+      console.log(`[AutoSave] Synced metadata to linked lesson: ${updatedAssignment.lesson.id}`);
+    }
 
     // Wipe old questions
     const deleteResult = await tx.question.deleteMany({

@@ -134,6 +134,7 @@ export function QuizEditor() {
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [materialType, setMaterialType] = useState<string>('EXERCISE');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
@@ -182,6 +183,7 @@ export function QuizEditor() {
           setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
+          setMaterialType(data.assignment.materialType || 'EXERCISE');
           
           if (data.assignment.questions?.length > 0) {
             setQuestions(data.assignment.questions);
@@ -210,7 +212,7 @@ export function QuizEditor() {
         await autoSaveMaterial({
           id,
           title,
-          type: 'EXERCISE',
+          type: materialType,
           questions,
           subject,
           gradeLevel,
@@ -227,7 +229,7 @@ export function QuizEditor() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags, instructions, categoryIds]);
+  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags, instructions, categoryIds, materialType]);
 
   const handleFinish = async () => {
     const validQuestions = questions.filter(q => isQuestionValid(q));
@@ -258,13 +260,14 @@ export function QuizEditor() {
         await autoSaveMaterial({ 
           id, 
           title, 
-          type: 'EXERCISE', 
+          type: materialType, 
           questions: validQuestions,
           subject,
           gradeLevel,
           shortDescription,
           instructions,
-          tags: tags.join(',')
+          tags: tags.join(','),
+          categoryIds
         });
         
         // If we came from a class assignment flow, assign it now
@@ -308,13 +311,14 @@ export function QuizEditor() {
       await autoSaveMaterial({
         id,
         title,
-        type: 'EXERCISE',
+        type: materialType,
         questions,
         subject,
         gradeLevel,
         shortDescription,
         instructions,
-        tags: tags.join(',')
+        tags: tags.join(','),
+        categoryIds
       });
       setSaveStatus('SAVED');
       
@@ -1190,6 +1194,7 @@ export function QuizEditor() {
             <div className="space-y-8">
               {/* Basic Metadata - Hidden as per user request to simplify UI */}
               {/* Fields are kept in state with default 'Khác' to maintain data integrity */}
+
 
               {/* Categories */}
               <div className="space-y-2">

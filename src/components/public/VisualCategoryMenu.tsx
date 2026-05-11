@@ -34,7 +34,7 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
   return (
     <div className="w-full space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
       {/* Level 1: Main Category Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 px-4">
         {categoryTree.map((cat, idx) => {
           const isActive = selectedCategoryId === cat.id;
           const gradient = level1Gradients[idx % level1Gradients.length];
@@ -79,30 +79,41 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
         })}
       </div>
 
-      {/* Level 2: Sub-category Pills */}
-      {activeCategory && activeCategory.children && activeCategory.children.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-3 py-4 animate-in fade-in zoom-in-95 duration-500">
-          {activeCategory.children.map((sub) => {
-            const isSubActive = selectedSubCategoryId === sub.id;
-            
-            return (
-              <button
-                key={sub.id}
-                onClick={() => {
-                  setSelectedSubCategoryId(isSubActive ? "" : sub.id);
-                }}
-                className={`px-6 py-3 rounded-2xl text-sm font-black transition-all duration-300 border-2 uppercase tracking-wider ${
-                  isSubActive
-                    ? "bg-sky-100 border-sky-300 text-sky-900 shadow-lg shadow-sky-100"
-                    : "bg-sky-50/50 border-sky-100 text-sky-700 hover:bg-sky-100 hover:border-sky-200"
-                }`}
-              >
-                {sub.name}
-              </button>
-            );
-          })}
+      {/* Level 2: Sub-category Pills with Smooth Slide Down Effect */}
+      <div 
+        className={`grid transition-all duration-700 ease-in-out ${
+          activeCategory && activeCategory.children && activeCategory.children.length > 0 
+            ? "grid-rows-[1fr] opacity-100 translate-y-0" 
+            : "grid-rows-[0fr] opacity-0 -translate-y-4 pointer-events-none"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div 
+            key={activeCategory?.id}
+            className="flex flex-wrap items-center justify-start gap-4 py-8 px-6 animate-in fade-in slide-in-from-top-8 duration-1000"
+          >
+            {activeCategory?.children?.map((sub) => {
+              const isSubActive = selectedSubCategoryId === sub.id;
+              
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => {
+                    setSelectedSubCategoryId(isSubActive ? "" : sub.id);
+                  }}
+                  className={`px-8 py-3.5 rounded-[2rem] text-sm font-black transition-all duration-500 border-2 uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 ${
+                    isSubActive
+                      ? "bg-sky-500 border-sky-400 text-white shadow-lg shadow-sky-200 scale-105"
+                      : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-sky-300 hover:text-sky-600"
+                  }`}
+                >
+                  {sub.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

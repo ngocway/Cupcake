@@ -66,34 +66,33 @@ export async function generateAILesson({
 
   try {
     const isVietnamese = language === "Tiếng Việt";
-
     let prompt = "";
     
     if (providedPassage) {
-      prompt = `You are an educational assistant. I will provide you with a lesson passage, and you will generate questions based on it.
+      // New logic: treat providedPassage as specific content generation instructions
+      prompt = `Create a complete educational lesson for students in the ${language} language on the topic: "${topic}".
       
-      Lesson Topic: "${topic}"
-      Subject: ${subject}
-      Difficulty level: ${difficulty}
-      Target Language for Questions: ${language}
-      ${additionalInstructions ? `EXTRA INSTRUCTIONS FOR QUESTION GENERATION: "${additionalInstructions}"` : ""}
-      
-      PROVIDED PASSAGE:
+      CONTENT GENERATION INSTRUCTIONS:
       """
       ${providedPassage}
       """
       
-      YOUR TASKS:
-      ${generateVocab ? `1. Identify 5-8 key vocabulary words from the passage.
-      2. Return the EXACT SAME passage you were given, but you MUST wrap those identified key vocabulary words inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
-         Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
-      3. Create a Vocabulary list of those 5-8 key words with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}` : `1. Keep the provided passage exactly as is (No vocabulary markers).
-      2. Leave the "vocabulary" list empty [] in the JSON output.`}
-      4. Create a set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}. MULTIPLE_SELECT should have 2+ correct options.
-         ${additionalInstructions ? `IMPORTANT: Follow these extra instructions for the questions: ${additionalInstructions}` : ""}
-      5. Provide an engaging Title and a Short Description based on the passage.
+      Subject: ${subject}
+      Difficulty level: ${difficulty}
+      Target Language for all content (Title, Passage, Questions): ${language}
       
-      CRITICAL: ALL generated text (Title, Description, Questions${generateVocab ? ', Vocab definitions' : ''}) MUST be in ${language}.`;
+      YOUR TASKS:
+      1. Write a complete reading passage (Body Text) in ${language} following the CONTENT GENERATION INSTRUCTIONS provided above.
+         IMPORTANT requirements for the passage:
+         - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
+         - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
+      2. Identify 5-8 key vocabulary words from the passage you just wrote.
+      3. Create a Vocabulary list of those key words with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}
+      4. Create a set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
+         ${additionalInstructions ? `IMPORTANT: Follow these extra instructions for the questions: ${additionalInstructions}` : ""}
+      5. Provide an engaging Title and a Short Description based on the passage you wrote.
+      
+      CRITICAL: ALL generated text MUST be in ${language}.`;
     } else {
       prompt = `Create a complete lesson for students in the ${language} language on the topic: "${topic}".
       Subject: ${subject}
@@ -108,7 +107,7 @@ export async function generateAILesson({
          - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
          - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
       4. A Vocabulary list of 5-8 key words from the passage with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}
-      5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}. MULTIPLE_SELECT should have 2+ correct options.
+      5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
       
       CRITICAL: ALL text in title, passage, and questions MUST be in ${language}. DO NOT use English if the Target Language is Vietnamese.`;
     }
@@ -165,7 +164,7 @@ export async function generateAILesson({
   }
 }
 
-export async function saveAILesson(data: AILessonResponse & { gradeLevel: string; subject: string }) {
+export async function saveAILesson(data: AILessonResponse & { gradeLevel: string; subject: string; materialType?: string }) {
   logProgress(`Saving AI Lesson: ${data.title}`);
   const session = await auth();
   if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
@@ -204,7 +203,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
               data-meaning-vi="${v.meaningVi}" 
               data-explanation-en="${v.explanationEn.replace(/"/g, '&quot;')}" 
               data-examples="${v.examples.join('; ').replace(/"/g, '&quot;')}"
-              style="background-color: #fef08a; border-bottom: 2px solid #facc15; cursor: help;"
+              style="border-bottom: 2px dashed #facc15; cursor: help; color: #854d0e; font-weight: 700;"
             >${wordText}</span>`;
           }
           return match;
@@ -241,7 +240,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
           readingText: passageHtml,
           gradeLevel: data.gradeLevel,
           subject: data.subject,
-          materialType: "READING",
+          materialType: (data.materialType as any) || "READING",
           status: "DRAFT",
           teacherId: session.user.id,
           isAiGenerated: true,
@@ -313,6 +312,7 @@ export async function customGenerateLesson(params: {
   providedPassage?: string;
   additionalInstructions?: string;
   generateVocab?: boolean;
+  materialType?: string;
 }) {
   const session = await auth();
   if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
@@ -339,7 +339,8 @@ export async function customGenerateLesson(params: {
     const saveResponse = await saveAILesson({
       ...aiResponse,
       gradeLevel: params.gradeLevel,
-      subject: params.subject
+      subject: params.subject,
+      materialType: params.materialType
     });
 
     if ("error" in saveResponse) {

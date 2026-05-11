@@ -5,6 +5,8 @@ export type QuestionType =
   | "TRUE_FALSE"
   | "REORDER";
 
+export type MaterialType = "EXERCISE" | "READING" | "FLASHCARD";
+
 export type QuestionContent = 
   | MultipleChoiceContent 
   | ClozeTestContent 

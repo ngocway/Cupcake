@@ -25,6 +25,7 @@ import { ReviewTrigger } from "@/components/reviews/ReviewTrigger";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
+import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
 
 export default async function StudentLessonDetailPage({ 
   params 
@@ -170,8 +171,30 @@ export default async function StudentLessonDetailPage({
                         {lesson.description || "Bài giảng chưa có mô tả chi tiết từ giáo viên."}
                      </div>
 
+                     {lesson.assignment?.readingText && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                           <div className="flex items-center gap-4">
+                              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                              <div className="px-6 py-2 rounded-full border border-slate-200 bg-white/50 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+                                 Nội dung bài học
+                              </div>
+                              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+                           </div>
+                           
+                           <div className="prose prose-slate prose-lg max-w-none dark:prose-invert 
+                                 prose-headings:font-headline prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight
+                                 prose-p:text-on-surface-variant prose-p:leading-loose prose-p:text-lg prose-p:font-normal
+                                 prose-img:rounded-3xl prose-img:border-0 prose-img:ring-0
+                                 prose-strong:text-primary prose-strong:font-bold
+                                 selection:bg-primary/10"
+                              >
+                                 <InteractiveReadingContent html={lesson.assignment.readingText} />
+                              </div>
+                        </div>
+                     )}
+
                      {lesson.assignment && (
-                        <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-3xl shadow-2xl relative overflow-hidden group">
+                        <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10">
                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                               <div className="space-y-4">
                                  <div className="flex items-center gap-3">

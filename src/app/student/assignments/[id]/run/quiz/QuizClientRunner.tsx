@@ -15,7 +15,8 @@ import {
   Star,
   MessageCircle,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Check
 } from "lucide-react";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
@@ -23,6 +24,51 @@ import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
+
+// Helper to determine question correctness
+const getQuestionStatus = (q: any, answer: any) => {
+  if (answer === undefined || answer === null) return 'pending';
+  
+  let questionData: any;
+  try {
+    questionData = typeof q.content === 'string' ? JSON.parse(q.content) : q.content;
+  } catch (e) {
+    questionData = {};
+  }
+  
+  const qType = questionData.type || q.type;
+
+  if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
+    const options = questionData.options || [];
+    if (qType === "MULTIPLE_SELECT") {
+      const answersArray = Array.isArray(answer) ? answer : [];
+      const correctIndices = options
+        .map((opt: any, i: number) => opt.isCorrect ? i : -1)
+        .filter((i: number) => i !== -1);
+      
+      if (answersArray.length === 0) return 'pending';
+      if (answersArray.length !== correctIndices.length) return 'incorrect';
+      return answersArray.every(v => correctIndices.includes(v)) ? 'correct' : 'incorrect';
+    } else {
+      const correctIndex = options.findIndex((opt: any) => opt.isCorrect);
+      return answer === correctIndex ? 'correct' : 'incorrect';
+    }
+  }
+
+  if (qType === "TRUE_FALSE") {
+    return answer === questionData.isTrue ? 'correct' : 'incorrect';
+  }
+
+  if (qType === "MATCHING") {
+    const pairs = questionData.pairs || [];
+    const userAnswer = answer || {};
+    if (Object.keys(userAnswer).length === 0) return 'pending';
+    const isAllCorrect = pairs.every((p: any) => userAnswer[p.id] === p.rightText);
+    return isAllCorrect ? 'correct' : 'incorrect';
+  }
+
+  return 'pending';
+};
 
 function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange, matchingColors }: any) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -356,7 +402,7 @@ export default function QuizClientRunner({
     });
   };
 
-  const handleCheckAll = () => {
+  const handleCheckAll = async () => {
     const unansweredIndices: number[] = [];
     questions.forEach((q, idx) => {
       const currentAnswer = answers[q.id];
@@ -368,13 +414,18 @@ export default function QuizClientRunner({
 
     if (unansweredIndices.length > 0) {
       toast.error(`Bạn chưa hoàn thành các câu: ${unansweredIndices.join(", ")}`);
-      // Optional: scroll to the first unanswered
       scrollToQuestion(questions[unansweredIndices[0] - 1].id);
       return;
     }
     
-    // If all done, we can mark all as checked or just submit
-    questions.forEach(q => setCheckedQuestions(prev => ({ ...prev, [q.id]: true })));
+    // Start sequential reveal
+    setCheckedQuestions({}); // Reset first
+    
+    for (const q of questions) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Delay between reveals
+      setCheckedQuestions(prev => ({ ...prev, [q.id]: true }));
+    }
+    
     toast.success("Tất cả câu hỏi đã được kiểm tra!");
   };
 
@@ -419,23 +470,39 @@ export default function QuizClientRunner({
                     const isActive = activeQuestionId === q.id;
 
                     return (
-                       <button
-                         key={q.id}
-                         onClick={() => scrollToQuestion(q.id)}
-                         className={`relative flex items-center justify-center w-10 h-10 rounded-full text-xs font-black transition-all duration-300 border-2 ${
-                           isActive 
-                            ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
-                            : isCompleted
-                              ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
-                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
-                         }`}
-                       >
-                          {i + 1}
-                          {/* Connection line between circles */}
-                          {i < questions.length - 1 && (
-                            <div className={`absolute left-full w-3 h-0.5 -z-10 ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
-                          )}
-                       </button>
+                        <button
+                          key={q.id}
+                          onClick={() => scrollToQuestion(q.id)}
+                          className={`relative flex items-center justify-center w-10 h-10 rounded-full text-xs font-black transition-all duration-300 border-2 ${
+                            isActive 
+                             ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
+                             : isCompleted
+                               ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
+                               : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
+                          }`}
+                        >
+                           {i + 1}
+                           
+                           {/* Feedback indicator above circle */}
+                           {checkedQuestions[q.id] && (
+                             <div className="absolute -top-5 left-1/2 -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 duration-500 z-20">
+                               {getQuestionStatus(q, answers[q.id]) === 'correct' ? (
+                                 <div className="bg-emerald-500 text-white rounded-full p-1 shadow-lg shadow-emerald-500/40 border-2 border-white dark:border-slate-900">
+                                   <Check className="w-2.5 h-2.5 stroke-[4px]" />
+                                 </div>
+                               ) : (
+                                 <div className="bg-rose-500 text-white rounded-full p-1 shadow-lg shadow-rose-500/40 border-2 border-white dark:border-slate-900">
+                                   <X className="w-2.5 h-2.5 stroke-[4px]" />
+                                 </div>
+                               )}
+                             </div>
+                           )}
+
+                           {/* Connection line between circles */}
+                           {i < questions.length - 1 && (
+                             <div className={`absolute left-full w-3 h-0.5 -z-10 ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
+                           )}
+                        </button>
                     )
                  })}
               </div>
@@ -492,10 +559,10 @@ export default function QuizClientRunner({
                            let iconClass = 'bg-surface-container text-on-surface-variant';
 
                            if (isSelected) {
-                             borderClass = 'border-primary';
-                             bgClass = 'bg-primary/5';
-                             textClass = 'text-primary';
-                             iconClass = 'bg-primary text-white';
+                             borderClass = 'border-amber-500';
+                             bgClass = 'bg-amber-50 dark:bg-amber-900/20';
+                             textClass = 'text-amber-700 dark:text-amber-400';
+                             iconClass = 'bg-amber-500 text-white';
                            }
 
                            if (isChecked) {
@@ -555,8 +622,9 @@ export default function QuizClientRunner({
                             let textClass = 'text-on-surface-variant';
 
                             if (isSelected) {
-                              borderClass = 'border-primary bg-primary/5';
-                              textClass = 'text-primary';
+                              borderClass = 'border-amber-500';
+                              bgClass = 'bg-amber-50 dark:bg-amber-900/20';
+                              textClass = 'text-amber-700 dark:text-amber-400';
                             }
 
                             if (isChecked) {
@@ -574,7 +642,7 @@ export default function QuizClientRunner({
                                 key={opt.label}
                                 disabled={isChecked}
                                 onClick={() => handleAnswerChange(q, opt.value)}
-                                className={`p-6 rounded-2xl border-2 flex items-center justify-center gap-3 font-black transition-all ${borderClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50'}`}
+                                className={`p-6 rounded-2xl border-2 flex items-center justify-center gap-3 font-black transition-all ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50'}`}
                               >
                                 <span className="material-symbols-outlined">
                                   {isChecked && isCorrect ? 'check_circle' : (isChecked && isSelected && !isCorrect ? 'cancel' : (opt.value ? 'check_circle' : 'cancel'))}
