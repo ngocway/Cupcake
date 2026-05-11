@@ -24,6 +24,146 @@ import { ReviewList } from "@/components/reviews/ReviewList";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 
+function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange, matchingColors }: any) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<any>(null);
+  const [hoveredLine, setHoveredLine] = useState<any>(null);
+
+  const shuffledRightItems = useMemo(() => {
+    if (!questionData.pairs) return [];
+    const seed = q.id;
+    return [...questionData.pairs]
+      .map(p => p.rightText)
+      .sort(() => (seed.length % 2 === 0 ? 1 : -1) * 0.5 - Math.random());
+  }, [q.id, questionData.pairs]);
+
+  const getDotCoords = (id: string, side: 'left' | 'right') => {
+    const el = document.getElementById(`dot-${side}-${q.id}-${id}`);
+    if (!el || !containerRef.current) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    return {
+      x: rect.left - containerRect.left + rect.width / 2,
+      y: rect.top - containerRect.top + rect.height / 2
+    };
+  };
+
+  return (
+    <div className="space-y-6 select-none">
+      <div 
+        ref={containerRef}
+        className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-6 relative p-4"
+        onMouseMove={(e) => {
+          if (!dragging || !containerRef.current) return;
+          const rect = containerRef.current.getBoundingClientRect();
+          setDragging({
+            ...dragging,
+            x2: e.clientX - rect.left,
+            y2: e.clientY - rect.top
+          });
+        }}
+        onMouseUp={() => setDragging(null)}
+        onMouseLeave={() => setDragging(null)}
+      >
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ minHeight: '300px' }}>
+          {Object.entries(userAnswer || {}).map(([leftId, rightText], idx) => {
+            const pair = questionData.pairs.find((p: any) => p.id === leftId);
+            if (!pair) return null;
+            const isCorrect = isChecked && pair.rightText === rightText;
+            const coords1 = getDotCoords(leftId, 'left');
+            const rightItemIdx = shuffledRightItems.indexOf(rightText as string);
+            if (rightItemIdx === -1) return null;
+            const coords2 = getDotCoords(rightItemIdx.toString(), 'right');
+            let strokeColor = matchingColors[idx % matchingColors.length];
+            if (isChecked) strokeColor = isCorrect ? '#10B981' : '#EF4444';
+
+            return (
+              <g key={`student-${leftId}`} onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? 'Đúng' : 'Sai' })} onMouseLeave={() => setHoveredLine(null)}>
+                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="15" className="cursor-help pointer-events-auto" />
+                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isCorrect ? "4" : "2"} strokeDasharray={isChecked && !isCorrect ? "6,4" : "0"} className="transition-all duration-500 pointer-events-none" />
+                {isChecked && !isCorrect && (() => {
+                  const correctIdx = shuffledRightItems.indexOf(pair.rightText);
+                  if (correctIdx === -1) return null;
+                  const correctCoords = getDotCoords(correctIdx.toString(), 'right');
+                  return <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="#CBD5E1" strokeWidth="2" strokeDasharray="2,4" className="opacity-60 pointer-events-none" />;
+                })()}
+              </g>
+            );
+          })}
+          {dragging && <line x1={dragging.x1} y1={dragging.y1} x2={dragging.x2} y2={dragging.y2} stroke="#3B82F6" strokeWidth="3" strokeDasharray="6,4" />}
+        </svg>
+        {hoveredLine && (
+          <div className="fixed z-[100] px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold pointer-events-none shadow-xl -translate-x-1/2 -translate-y-full mb-4" style={{ left: hoveredLine.x, top: hoveredLine.y }}>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${hoveredLine.content === 'Đúng' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+              {hoveredLine.content}
+            </div>
+          </div>
+        )}
+        <div className="space-y-4 z-20">
+          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">Cột vế hỏi</span>
+          {(questionData.pairs || []).map((pair: any, idx: number) => {
+            const pairedRightText = userAnswer?.[pair.id];
+            return (
+              <div key={pair.id} className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
+                <div className="flex items-center gap-4">
+                   <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-xs font-black shrink-0">{String.fromCharCode(65 + idx)}</div>
+                   {pair.leftImageUrl || (pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/')) ? <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{pair.leftText}</span>}
+                </div>
+                <div id={`dot-left-${q.id}-${pair.id}`} onMouseDown={(e) => {
+                  if (isChecked) return;
+                  const coords = getDotCoords(pair.id, 'left');
+                  setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                }} onMouseUp={() => {
+                  if (dragging && dragging.fromSide === 'right') {
+                    handleAnswerChange(q, { leftId: pair.id, rightText: shuffledRightItems[parseInt(dragging.fromId)] });
+                    setDragging(null);
+                  }
+                }} className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+              </div>
+            );
+          })}
+        </div>
+        <div className="space-y-4 z-20">
+          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">Cột trả lời</span>
+          {shuffledRightItems.map((rightText: string, idx: number) => {
+            const pairedLeftId = Object.keys(userAnswer || {}).find(k => userAnswer[k] === rightText);
+            const isPairCorrect = isChecked && pairedLeftId && (questionData.pairs.find((p:any) => p.id === pairedLeftId)?.rightText === rightText);
+            return (
+              <div key={idx} className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center gap-4 ${pairedLeftId ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
+                <div id={`dot-right-${q.id}-${idx}`} onMouseUp={() => {
+                  if (dragging && dragging.fromSide === 'left') {
+                    handleAnswerChange(q, { leftId: dragging.fromId, rightText });
+                    setDragging(null);
+                  }
+                }} onMouseDown={(e) => {
+                  if (isChecked) return;
+                  const rect = containerRef.current!.getBoundingClientRect();
+                  if (pairedLeftId) {
+                    const coords = getDotCoords(pairedLeftId, 'left');
+                    setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                  } else {
+                    const coords = getDotCoords(idx.toString(), 'right');
+                    setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                  }
+                }} className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                {rightText.startsWith('http') || rightText.startsWith('/') ? <img src={rightText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{rightText}</span>}
+                {isChecked && pairedLeftId && <span className={`material-symbols-outlined ml-auto ${isPairCorrect ? 'text-emerald-500' : 'text-rose-500'}`}>{isPairCorrect ? 'check_circle' : 'cancel'}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {!isChecked && (
+        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+           <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary"><span className="material-symbols-outlined text-sm">gesture</span></div>
+           <p className="text-xs text-slate-500 font-medium">Mẹo: Nhấn vào nốt tròn và kéo để nối. Bạn có thể kéo lại các đầu dây đã nối để thay đổi đáp án!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   assignment: any;
   submissionId?: string;
@@ -47,7 +187,7 @@ export default function QuizClientRunner({
   relatedAssignments = [],
   isGuest = false
 }: Props) {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState(initialAnswers);
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -91,24 +231,16 @@ export default function QuizClientRunner({
     }
   };
 
-  const [selectedLeftId, setSelectedLeftId] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState<{ 
-    fromId: string; 
-    fromSide: 'left' | 'right'; 
-    x1: number; 
-    y1: number; 
-    x2: number; 
-    y2: number;
-    originalLeftId?: string;
-  } | null>(null);
-  const [hoveredLine, setHoveredLine] = useState<{ x: number, y: number, content: string } | null>(null);
   const [navGuard, setNavGuard] = useState<{ isOpen: boolean; targetUrl: string; targetTitle: string }>({
     isOpen: false,
     targetUrl: "",
     targetTitle: "",
   });
   const router = useRouter();
+
+  const matchingColors = [
+    "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"
+  ];
 
   const isDirty = Object.keys(answers).length > 0;
 
@@ -135,68 +267,62 @@ export default function QuizClientRunner({
     }
   };
 
-  const currentQuestion = questions[currentQuestionIndex];
-  
-  const shuffledRightItems = useMemo(() => {
-    if (!currentQuestion) return [];
-    try {
-      const questionData = JSON.parse(currentQuestion.content);
-      const qType = questionData.type || currentQuestion.type;
-      if (qType === "MATCHING" && questionData.pairs) {
-        // Deterministic shuffle based on question ID to keep it consistent during session
-        const seed = currentQuestion.id;
-        return [...questionData.pairs]
-          .map(p => p.rightText)
-          .sort(() => (seed.length % 2 === 0 ? 1 : -1) * 0.5 - Math.random());
-      }
-    } catch (e) {}
-    return [];
-  }, [currentQuestionIndex, currentQuestion]);
+  const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    setSelectedLeftId(null);
-    setDragging(null);
-  }, [currentQuestionIndex]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveQuestionId(entry.target.id);
+          }
+        });
+      },
+      { threshold: 0.3, rootMargin: "-20% 0px -40% 0px" }
+    );
 
-  const matchingColors = [
-    "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"
-  ];
+    Object.values(questionRefs.current).forEach((ref) => {
+      if (ref) observer.observe(ref);
+    });
 
-  const getDotCoords = (id: string, side: 'left' | 'right') => {
-    const el = document.getElementById(`dot-${side}-${id}`);
-    if (!el || !containerRef.current) return { x: 0, y: 0 };
-    const rect = el.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
-    return {
-      x: rect.left - containerRect.left + rect.width / 2,
-      y: rect.top - containerRect.top + rect.height / 2
-    };
+    return () => observer.disconnect();
+  }, [questions]);
+
+  const scrollToQuestion = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   };
+  
+  // Shuffling for matching is now handled per-question to avoid ReferenceErrors and support multiple matching questions.
 
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-  const isChecked = checkedQuestions[currentQuestion?.id] || false;
+  // Matching state reset is now handled per-question if needed, 
+  // but since we render all, we don't need a central reset on index change.
 
-  const handleAnswerChange = (questionId: string, value: any) => {
-    if (isChecked) return; // Don't allow changes after checking
+  // Progress is now implied by the sticky circles bar.
+  // const isChecked = checkedQuestions[currentQuestion?.id] || false; // Removed stale reference
+
+  const handleAnswerChange = (q: any, value: any) => {
+    if (checkedQuestions[q.id]) return;
     
-    // Determine the type correctly from JSON or DB field
     let questionData: any;
     try {
-      questionData = JSON.parse(currentQuestion.content);
+      questionData = JSON.parse(q.content);
     } catch (e) {
       questionData = {};
     }
-    const qType = questionData.type || currentQuestion.type;
+    const qType = questionData.type || q.type;
 
     setAnswers((prev: any) => {
-      const currentAnswer = prev[questionId];
+      const currentAnswer = prev[q.id];
       
       if (qType === "MULTIPLE_SELECT") {
         const answersArray = Array.isArray(currentAnswer) ? currentAnswer : [];
         if (answersArray.includes(value)) {
-          return { ...prev, [questionId]: answersArray.filter(v => v !== value) };
+          return { ...prev, [q.id]: answersArray.filter(v => v !== value) };
         } else {
-          return { ...prev, [questionId]: [...answersArray, value] };
+          return { ...prev, [q.id]: [...answersArray, value] };
         }
       }
 
@@ -206,45 +332,41 @@ export default function QuizClientRunner({
         if (value.rightText === null) {
           delete newMatching[value.leftId];
         } else {
-          // Remove this rightText from any other leftId (one-to-one)
           Object.keys(newMatching).forEach(key => {
             if (newMatching[key] === value.rightText) delete newMatching[key];
           });
           newMatching[value.leftId] = value.rightText;
         }
-        return { ...prev, [questionId]: newMatching };
+        return { ...prev, [q.id]: newMatching };
       }
 
       return {
         ...prev,
-        [questionId]: value
+        [q.id]: value
       };
     });
   };
 
-  const handleCheck = () => {
-    const currentAnswer = answers[currentQuestion.id];
-    const isEmpty = currentAnswer === undefined || 
-                    (Array.isArray(currentAnswer) && currentAnswer.length === 0) ||
-                    (typeof currentAnswer === 'object' && currentAnswer !== null && Object.keys(currentAnswer).length === 0);
+  const handleCheckAll = () => {
+    const unansweredIndices: number[] = [];
+    questions.forEach((q, idx) => {
+      const currentAnswer = answers[q.id];
+      const isEmpty = currentAnswer === undefined || 
+                      (Array.isArray(currentAnswer) && currentAnswer.length === 0) ||
+                      (typeof currentAnswer === 'object' && currentAnswer !== null && Object.keys(currentAnswer).length === 0);
+      if (isEmpty) unansweredIndices.push(idx + 1);
+    });
 
-    if (isEmpty) {
-      alert("Vui lòng hoàn thành câu hỏi trước khi kiểm tra!");
+    if (unansweredIndices.length > 0) {
+      toast.error(`Bạn chưa hoàn thành các câu: ${unansweredIndices.join(", ")}`);
+      // Optional: scroll to the first unanswered
+      scrollToQuestion(questions[unansweredIndices[0] - 1].id);
       return;
     }
-    setCheckedQuestions(prev => ({ ...prev, [currentQuestion.id]: true }));
-  };
-
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
+    
+    // If all done, we can mark all as checked or just submit
+    questions.forEach(q => setCheckedQuestions(prev => ({ ...prev, [q.id]: true })));
+    toast.success("Tất cả câu hỏi đã được kiểm tra!");
   };
 
   const handleSubmit = () => {
@@ -276,38 +398,66 @@ export default function QuizClientRunner({
       {/* Integrated Workspace */}
       <div className="flex flex-1 overflow-hidden">
         {/* Middle Column: Questions (70%) */}
-        <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30">
-           {/* Question Header */}
-           <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
-              <div className="flex items-center gap-2 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
-                 <HelpCircle className="w-4 h-4" />
-                 Câu hỏi rèn luyện
-              </div>
-              <div className="text-[10px] font-black text-outline uppercase tracking-widest">
-                 Câu {currentQuestionIndex + 1} / {questions.length}
+        <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30 relative">
+           {/* Progress Navigation Header (Sticky) */}
+           <div className="sticky top-0 z-50 h-20 border-b border-outline-variant/20 flex items-center justify-center px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shrink-0">
+              <div className="flex items-center gap-3">
+                 {questions.map((q, i) => {
+                    const ans = answers[q.id];
+                    const isCompleted = ans !== undefined && ans !== null && (
+                      (typeof ans === 'object' ? Object.keys(ans).length > 0 : true)
+                    );
+                    const isActive = activeQuestionId === q.id;
+
+                    return (
+                       <button
+                         key={q.id}
+                         onClick={() => scrollToQuestion(q.id)}
+                         className={`relative flex items-center justify-center w-10 h-10 rounded-full text-xs font-black transition-all duration-300 border-2 ${
+                           isActive 
+                            ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
+                            : isCompleted
+                              ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
+                              : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
+                         }`}
+                       >
+                          {i + 1}
+                          {/* Connection line between circles */}
+                          {i < questions.length - 1 && (
+                            <div className={`absolute left-full w-3 h-0.5 -z-10 ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
+                          )}
+                       </button>
+                    )
+                 })}
               </div>
            </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar p-8 lg:p-12 pl-32 lg:pl-40 space-y-10">
-            {/* Question Display */}
-            {currentQuestion && (() => {
+          <div className="flex-1 overflow-y-auto no-scrollbar p-8 lg:p-12 pl-12 lg:pl-20 space-y-24 scroll-smooth">
+            {/* All Questions Rendered */}
+            {questions.map((q, idx) => {
               let questionData: any;
               try {
-                questionData = JSON.parse(currentQuestion.content);
+                questionData = JSON.parse(q.content);
               } catch (e) {
-                questionData = { questionText: currentQuestion.content };
+                questionData = { questionText: q.content };
               }
 
-              const qType = questionData.type || currentQuestion.type;
+              const qType = questionData.type || q.type;
               const isMultiSelect = qType === "MULTIPLE_SELECT";
-              const questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? currentQuestion.content;
-              const userAnswer = answers[currentQuestion.id];
+              const questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? q.content;
+              const userAnswer = answers[q.id];
+              const isChecked = checkedQuestions[q.id] || false;
 
               return (
-                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-500">
+                <div 
+                  key={q.id}
+                  id={q.id}
+                  ref={el => { questionRefs.current[q.id] = el }}
+                  className="space-y-8 pb-12 border-b border-outline-variant/10 last:border-0"
+                >
                   <div className="space-y-4">
                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-lg text-secondary text-[10px] font-black uppercase tracking-widest">
-                        Câu hỏi {currentQuestionIndex + 1} • {
+                        Câu hỏi {idx + 1} • {
                           qType === "MULTIPLE_SELECT" ? 'Chọn nhiều đáp án' : 
                           qType === "MATCHING" ? 'Nối cặp đáp án' : 
                           'Chọn một đáp án'
@@ -319,7 +469,6 @@ export default function QuizClientRunner({
                   </div>
 
                   <div className="space-y-4">
-                     
                      {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
                        <div className="grid grid-cols-1 gap-3">
                          {(questionData.options || []).map((option: any, i: number) => {
@@ -329,7 +478,7 @@ export default function QuizClientRunner({
                            const isCorrect = option.isCorrect;
                            
                            let borderClass = 'border-outline-variant/30';
-                           let bgClass = 'bg-white';
+                           let bgClass = 'bg-white dark:bg-slate-900';
                            let textClass = 'text-on-surface-variant';
                            let iconClass = 'bg-surface-container text-on-surface-variant';
 
@@ -354,11 +503,11 @@ export default function QuizClientRunner({
                              }
                            }
 
-                           return (
+                            return (
                              <button 
                                key={i}
                                disabled={isChecked}
-                               onClick={() => handleAnswerChange(currentQuestion.id, i)}
+                               onClick={() => handleAnswerChange(q, i)}
                                className={`p-5 rounded-2xl border-2 text-left font-bold transition-all relative ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50'}`}
                              >
                                <div className="flex items-center gap-4">
@@ -371,10 +520,10 @@ export default function QuizClientRunner({
                                  </div>
                                  <span className="flex-1">{option.text}</span>
                                  {isChecked && isCorrect && (
-                                   <span className="material-symbols-outlined text-emerald-600">check_circle</span>
+                                   <span className="material-symbols-outlined text-emerald-600 ml-auto">check_circle</span>
                                  )}
                                  {isChecked && isSelected && !isCorrect && (
-                                   <span className="material-symbols-outlined text-rose-600">cancel</span>
+                                   <span className="material-symbols-outlined text-rose-600 ml-auto">cancel</span>
                                  )}
                                </div>
                              </button>
@@ -393,7 +542,7 @@ export default function QuizClientRunner({
                             const isCorrect = questionData.isTrue === opt.value;
                             
                             let borderClass = 'border-outline-variant/30';
-                            let bgClass = 'bg-white';
+                            let bgClass = 'bg-white dark:bg-slate-900';
                             let textClass = 'text-on-surface-variant';
 
                             if (isSelected) {
@@ -415,7 +564,7 @@ export default function QuizClientRunner({
                               <button 
                                 key={opt.label}
                                 disabled={isChecked}
-                                onClick={() => handleAnswerChange(currentQuestion.id, opt.value)}
+                                onClick={() => handleAnswerChange(q, opt.value)}
                                 className={`p-6 rounded-2xl border-2 flex items-center justify-center gap-3 font-black transition-all ${borderClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50'}`}
                               >
                                 <span className="material-symbols-outlined">
@@ -429,363 +578,49 @@ export default function QuizClientRunner({
                       )}
 
                       {qType === "MATCHING" && (
-                        <div className="space-y-6 select-none">
-                          <div 
-                            ref={containerRef}
-                            className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-6 relative p-4"
-                            onMouseMove={(e) => {
-                              if (!dragging || !containerRef.current) return;
-                              const rect = containerRef.current.getBoundingClientRect();
-                              setDragging({
-                                ...dragging,
-                                x2: e.clientX - rect.left,
-                                y2: e.clientY - rect.top
-                              });
-                            }}
-                            onMouseUp={() => setDragging(null)}
-                            onMouseLeave={() => setDragging(null)}
-                          >
-                            {/* SVG Layer for Connections */}
-                            <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ minHeight: '300px' }}>
-                              <defs>
-                                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                                  <feGaussianBlur stdDeviation="2" result="blur" />
-                                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                </filter>
-                              </defs>
-                              
-                              {/* 1. Draw Correct Connections & Student's Wrong Connections */}
-                              {Object.entries(answers[currentQuestion.id] || {}).map(([leftId, rightText], idx) => {
-                                const pair = questionData.pairs.find((p: any) => p.id === leftId);
-                                if (!pair) return null;
-                                
-                                const isCorrect = isChecked && pair.rightText === rightText;
-                                const coords1 = getDotCoords(leftId, 'left');
-                                const rightItemIdx = shuffledRightItems.indexOf(rightText as string);
-                                if (rightItemIdx === -1) return null;
-                                const coords2 = getDotCoords(rightItemIdx.toString(), 'right');
-                                
-                                let strokeColor = matchingColors[idx % matchingColors.length];
-                                if (isChecked) {
-                                  strokeColor = isCorrect ? '#10B981' : '#EF4444'; // Emerald-500 or Rose-500
-                                }
-
-                                 return (
-                                  <g 
-                                    key={`student-${leftId}`}
-                                    onMouseEnter={(e) => {
-                                      if (!isChecked) return;
-                                      setHoveredLine({
-                                        x: e.clientX,
-                                        y: e.clientY,
-                                        content: isCorrect ? 'Đúng' : 'Sai'
-                                      });
-                                    }}
-                                    onMouseMove={(e) => {
-                                      if (hoveredLine) {
-                                        setHoveredLine({ ...hoveredLine, x: e.clientX, y: e.clientY });
-                                      }
-                                    }}
-                                    onMouseLeave={() => setHoveredLine(null)}
-                                  >
-                                    {/* Invisible wider line for easier hover */}
-                                    <line 
-                                      x1={coords1.x} y1={coords1.y} 
-                                      x2={coords2.x} y2={coords2.y} 
-                                      stroke="transparent"
-                                      strokeWidth="15"
-                                      className="cursor-help pointer-events-auto"
-                                    />
-                                    <line 
-                                      x1={coords1.x} y1={coords1.y} 
-                                      x2={coords2.x} y2={coords2.y} 
-                                      stroke={strokeColor}
-                                      strokeWidth={isCorrect ? "4" : "2"}
-                                      strokeDasharray={isChecked && !isCorrect ? "6,4" : "0"}
-                                      className="transition-all duration-500 pointer-events-none"
-                                    />
-                                    {/* If Wrong, draw the Ghost Line to the CORRECT answer */}
-                                    {isChecked && !isCorrect && (() => {
-                                      const correctIdx = shuffledRightItems.indexOf(pair.rightText);
-                                      if (correctIdx === -1) return null;
-                                      const correctCoords = getDotCoords(correctIdx.toString(), 'right');
-                                      return (
-                                        <line 
-                                          x1={coords1.x} y1={coords1.y} 
-                                          x2={correctCoords.x} y2={correctCoords.y} 
-                                          stroke="#CBD5E1" // Slate-300 for ghost line
-                                          strokeWidth="2"
-                                          strokeDasharray="2,4"
-                                          className="opacity-60 pointer-events-none"
-                                        />
-                                      );
-                                    })()}
-                                  </g>
-                                );
-                              })}
-
-                              {/* 2. Handle items NOT connected but have a correct answer (Ghost lines for skipped items) */}
-                              {isChecked && questionData.pairs.map((pair: any) => {
-                                const studentConnected = (answers[currentQuestion.id] || {})[pair.id];
-                                if (studentConnected) return null; // Already handled above
-
-                                const coords1 = getDotCoords(pair.id, 'left');
-                                const correctIdx = shuffledRightItems.indexOf(pair.rightText);
-                                if (correctIdx === -1) return null;
-                                const correctCoords = getDotCoords(correctIdx.toString(), 'right');
-
-                                return (
-                                  <line 
-                                    key={`ghost-missing-${pair.id}`}
-                                    x1={coords1.x} y1={coords1.y} 
-                                    x2={correctCoords.x} y2={correctCoords.y} 
-                                    stroke="#CBD5E1"
-                                    strokeWidth="2"
-                                    strokeDasharray="2,4"
-                                    className="opacity-40"
-                                  />
-                                );
-                              })}
-
-                              {/* 3. Dragging Line */}
-                              {dragging && (
-                                <line 
-                                  x1={dragging.x1} y1={dragging.y1} 
-                                  x2={dragging.x2} y2={dragging.y2} 
-                                  stroke="#3B82F6" 
-                                  strokeWidth="3" 
-                                  strokeDasharray="6,4"
-                                />
-                              )}
-                            </svg>
-{hoveredLine && (
-  <div 
-    className="fixed z-[100] px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold pointer-events-none shadow-xl -translate-x-1/2 -translate-y-full mb-4"
-    style={{ left: hoveredLine.x, top: hoveredLine.y }}
-  >
-    <div className="flex items-center gap-1.5">
-      <span className={`w-2 h-2 rounded-full ${hoveredLine.content === 'Đúng' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-      {hoveredLine.content}
-    </div>
-    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
-  </div>
-)}
-
-                            {/* Left Column */}
-                            <div className="space-y-4 z-20">
-                              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">Cột vế hỏi</span>
-                              {(questionData.pairs || []).map((pair: any, idx: number) => {
-                                const pairedRightText = userAnswer?.[pair.id];
-                                const isBeingDragged = dragging?.fromId === pair.id && dragging?.fromSide === 'left';
-                                
-                                return (
-                                  <div 
-                                    key={pair.id}
-                                    className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${
-                                      pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-4">
-                                       <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-xs font-black shrink-0">
-                                         {String.fromCharCode(65 + idx)}
-                                       </div>
-                                       {pair.leftImageUrl || (pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/')) ? (
-                                         <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" />
-                                       ) : (
-                                         <span className="font-bold text-on-surface">{pair.leftText}</span>
-                                       )}
-                                    </div>
-                                    
-                                    {/* Dot Anchor */}
-                                    <div 
-                                      id={`dot-left-${pair.id}`}
-                                      onMouseDown={(e) => {
-                                        if (isChecked) return;
-                                        const coords = getDotCoords(pair.id, 'left');
-                                        setDragging({
-                                          fromId: pair.id,
-                                          fromSide: 'left',
-                                          x1: coords.x,
-                                          y1: coords.y,
-                                          x2: coords.x,
-                                          y2: coords.y
-                                        });
-                                      }}
-                                      onMouseUp={() => {
-                                        if (dragging && dragging.fromSide === 'right') {
-                                          // Find the rightText from the dragging.fromId (which is index)
-                                          const rightText = shuffledRightItems[parseInt(dragging.fromId)];
-                                          handleAnswerChange(currentQuestion.id, { leftId: pair.id, rightText });
-                                          setDragging(null);
-                                        }
-                                      }}
-                                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${
-                                        pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'
-                                      }`}
-                                    />
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* Right Column */}
-                            <div className="space-y-4 z-20">
-                              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">Cột trả lời</span>
-                              {shuffledRightItems.map((rightText: string, idx: number) => {
-                                const pairedLeftId = Object.keys(userAnswer || {}).find(k => userAnswer[k] === rightText);
-                                const isCorrect = isChecked && pairedLeftId && (questionData.pairs.find((p:any) => p.id === pairedLeftId)?.rightText === rightText);
-
-                                return (
-                                  <div 
-                                    key={idx}
-                                    className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center gap-4 ${
-                                      pairedLeftId ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'
-                                    }`}
-                                  >
-                                    {/* Dot Anchor */}
-                                    <div 
-                                      id={`dot-right-${idx}`}
-                                      onMouseUp={() => {
-                                        if (dragging && dragging.fromSide === 'left') {
-                                          handleAnswerChange(currentQuestion.id, { leftId: dragging.fromId, rightText });
-                                          setDragging(null);
-                                        }
-                                      }}
-                                      onMouseDown={(e) => {
-                                        if (isChecked) return;
-                                        const rect = containerRef.current!.getBoundingClientRect();
-                                        
-                                        if (pairedLeftId) {
-                                          // Re-drag logic: start from the left partner
-                                          const coords = getDotCoords(pairedLeftId, 'left');
-                                          setDragging({
-                                            fromId: pairedLeftId,
-                                            fromSide: 'left',
-                                            x1: coords.x, y1: coords.y,
-                                            x2: e.clientX - rect.left, y2: e.clientY - rect.top
-                                          });
-                                        } else {
-                                          // New drag from right side
-                                          const coords = getDotCoords(idx.toString(), 'right');
-                                          setDragging({
-                                            fromId: idx.toString(),
-                                            fromSide: 'right',
-                                            x1: coords.x, y1: coords.y,
-                                            x2: coords.x, y2: coords.y
-                                          });
-                                        }
-                                      }}
-                                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${
-                                        pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'
-                                      }`}
-                                    />
-                                    {rightText.startsWith('http') || rightText.startsWith('/') ? (
-                                      <img src={rightText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" />
-                                    ) : (
-                                      <span className="font-bold text-on-surface">{rightText}</span>
-                                    )}
-                                    {isChecked && pairedLeftId && (
-                                      <span className={`material-symbols-outlined ml-auto ${isCorrect ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        {isCorrect ? 'check_circle' : 'cancel'}
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          
-                          {!isChecked && (
-                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                               <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary">
-                                  <span className="material-symbols-outlined text-sm">gesture</span>
-                               </div>
-                               <p className="text-xs text-slate-500 font-medium">
-                                  Mẹo: Nhấn vào nốt tròn và kéo để nối. Bạn có thể kéo lại các đầu dây đã nối để thay đổi đáp án!
-                                </p>
-                            </div>
-                          )}
-                        </div>
+                        <MatchingQuestionBlock 
+                          q={q}
+                          questionData={questionData}
+                          userAnswer={userAnswer}
+                          isChecked={isChecked}
+                          handleAnswerChange={handleAnswerChange}
+                          matchingColors={matchingColors}
+                        />
                       )}
-
-                     {isChecked && currentQuestion.explanation && (
-                       <div className="mt-6 p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-l-4 border-primary animate-in fade-in slide-in-from-left-2 duration-300">
-                         <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest mb-2">
-                           <span className="material-symbols-outlined text-sm">info</span>
-                           Giải thích của AI
-                         </div>
-                         <p className="text-on-surface leading-relaxed text-sm italic">
-                           {currentQuestion.explanation}
-                         </p>
-                       </div>
-                     )}
                   </div>
                 </div>
-              );
-            })()}
+              )
+            })}
+
+            {/* Bottom Actions */}
+            <div className="pt-20 pb-40 flex flex-col items-center gap-8">
+                <div className="text-center space-y-2">
+                   <h4 className="text-2xl font-black text-on-surface">Hoàn thành bài tập?</h4>
+                   <p className="text-on-surface-variant">Kiểm tra lại các đáp án trước khi nộp bài nhé!</p>
+                </div>
+                
+                <div className="flex items-center gap-6">
+                  <button 
+                      onClick={handleCheckAll}
+                      className="flex items-center gap-3 px-10 py-4 bg-secondary text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-secondary/20 uppercase italic"
+                  >
+                      KIỂM TRA TẤT CẢ
+                      <span className="material-symbols-outlined text-xl">verified</span>
+                  </button>
+                  
+                  <button 
+                      onClick={handleSubmit}
+                      disabled={isPending}
+                      className="flex items-center gap-3 px-10 py-4 bg-primary text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase italic"
+                  >
+                      {isPending ? "ĐANG NỘP..." : "NỘP BÀI"}
+                      <Send className="w-5 h-5" />
+                  </button>
+                </div>
+            </div>
           </div>
 
-          {/* Navigation Controls */}
-          <div className="h-20 border-t border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center justify-center gap-12 lg:gap-24 px-6 shrink-0">
-             <div className="flex items-center gap-4">
-                <button 
-                    onClick={() => handleSafeNavigate("/student/library")}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold text-xs hover:bg-slate-200 transition-all uppercase tracking-widest"
-                >
-                    Thoát
-                </button>
-                <div className="w-px h-6 bg-slate-200" />
-                <button 
-                    onClick={handlePrev}
-                    disabled={currentQuestionIndex === 0}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-on-surface-variant hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none transition-all"
-                >
-                    Quay lại
-                </button>
-             </div>
-
-             <div className="flex items-center gap-1">
-                {questions.map((_, i) => (
-                   <div 
-                     key={i}
-                     className={`w-1.5 h-1.5 rounded-full transition-all ${
-                       i === currentQuestionIndex ? 'w-6 bg-primary' : 'bg-outline-variant/50'
-                     }`}
-                   />
-                ))}
-             </div>
-
-             <div className="flex items-center gap-4">
-                {isChecked ? (
-                  currentQuestionIndex === questions.length - 1 ? (
-                    <button 
-                        onClick={handleSubmit}
-                        disabled={isPending}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 uppercase italic"
-                    >
-                        {isPending ? "ĐANG NỘP..." : "NỘP BÀI"}
-                        <Send className="w-4 h-4" />
-                    </button>
-                  ) : (
-                    <button 
-                        onClick={handleNext}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-on-surface text-white rounded-xl font-bold text-sm hover:bg-primary transition-all shadow-lg"
-                    >
-                        Câu sau
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
-                  )
-                ) : (
-                <button 
-                    onClick={handleCheck}
-                    className="flex items-center gap-2 px-8 py-2.5 bg-secondary text-white rounded-xl font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-secondary/20 uppercase italic"
-                >
-                    KIỂM TRA
-                    <span className="material-symbols-outlined text-lg">verified</span>
-                </button>
-                )}
-             </div>
-          </div>
+          {/* Footer removed/collapsed into main scroll area or bottom bar */}
         </div>
 
         {/* Right Column: Material / Reading Content & Reviews (30%) */}
