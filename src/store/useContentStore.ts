@@ -8,6 +8,9 @@ interface ContentState {
   exPage: number
   lePage: number
   
+  selectedCategoryId: string
+  selectedSubCategoryId: string
+  
   setExercises: (items: any[]) => void
   setLessons: (items: any[]) => void
   addExercises: (items: any[]) => void
@@ -17,6 +20,9 @@ interface ContentState {
   setHasMoreLe: (val: boolean) => void
   setExPage: (val: number) => void
   setLePage: (val: number) => void
+  
+  setSelectedCategoryId: (val: string) => void
+  setSelectedSubCategoryId: (val: string) => void
   
   clearContent: () => void
 }
@@ -28,6 +34,8 @@ export const useContentStore = create<ContentState>((set) => ({
   hasMoreLe: true,
   exPage: 1,
   lePage: 1,
+  selectedCategoryId: "",
+  selectedSubCategoryId: "",
 
   setExercises: (items) => set({ exercises: items }),
   setLessons: (items) => set({ lessons: items }),
@@ -49,12 +57,17 @@ export const useContentStore = create<ContentState>((set) => ({
   setExPage: (val) => set({ exPage: val }),
   setLePage: (val) => set({ lePage: val }),
 
+  setSelectedCategoryId: (val) => set({ selectedCategoryId: val }),
+  setSelectedSubCategoryId: (val) => set({ selectedSubCategoryId: val }),
+
   clearContent: () => set({ 
     exercises: [], 
     lessons: [], 
     hasMoreEx: true, 
     hasMoreLe: true, 
     exPage: 1, 
-    lePage: 1 
+    lePage: 1,
+    selectedCategoryId: "",
+    selectedSubCategoryId: ""
   })
 }))

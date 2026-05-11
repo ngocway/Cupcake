@@ -9,6 +9,7 @@ import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { PublicHeader } from "@/components/public/PublicHeader"
 import { useThemeStore } from "@/store/useThemeStore"
 import { useContentStore } from "@/store/useContentStore"
+import { VisualCategoryMenu } from "@/components/public/VisualCategoryMenu"
 
 // Filters for Subject and Grade are removed as per user request to simplify hierarchy
 
@@ -28,19 +29,19 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [selectedSubject, setSelectedSubject] = useState("")
   const [selectedGrade, setSelectedGrade] = useState("")
-  const [selectedCategoryId, setSelectedCategoryId] = useState("")
-  const { isClearBackground, setClearBackground } = useThemeStore()
-  const [sort, setSort] = useState<"newest" | "popular" | "trending">("newest")
-  const [isAtTop, setIsAtTop] = useState(true)
-
   const { 
     exercises: storeExercises, setExercises, addExercises, 
     lessons: storeLessons, setLessons, addLessons,
     hasMoreEx, setHasMoreEx, 
     hasMoreLe, setHasMoreLe, 
     exPage, setExPage, 
-    lePage, setLePage 
+    lePage, setLePage,
+    selectedCategoryId, setSelectedCategoryId,
+    selectedSubCategoryId, setSelectedSubCategoryId
   } = useContentStore()
+  const { isClearBackground, setClearBackground } = useThemeStore()
+  const [sort, setSort] = useState<"newest" | "popular" | "trending">("newest")
+  const [isAtTop, setIsAtTop] = useState(true)
 
   const [loadingEx, setLoadingEx] = useState(false)
   const [loadingLe, setLoadingLe] = useState(false)
@@ -77,24 +78,26 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
     if (search) p.set("search", search)
     if (selectedSubject) p.set("subject", selectedSubject)
     if (selectedGrade) p.set("gradeLevel", selectedGrade)
-    if (selectedCategoryId) p.set("categoryId", selectedCategoryId)
+    const finalCatId = selectedSubCategoryId || selectedCategoryId;
+    if (finalCatId) p.set("categoryId", finalCatId)
     if (selectedTags.length) p.set("tags", selectedTags.join(","))
     return `/api/public/assignments?${p}`
-  }, [search, selectedSubject, selectedGrade, selectedTags, selectedCategoryId, sort])
+  }, [search, selectedSubject, selectedGrade, selectedTags, selectedCategoryId, selectedSubCategoryId, sort])
 
   const buildLeUrl = useCallback((page: number) => {
     const p = new URLSearchParams({ page: String(page), sort })
+    const finalCatId = selectedSubCategoryId || selectedCategoryId;
     if (search) p.set("search", search)
-    if (selectedCategoryId) p.set("categoryId", selectedCategoryId)
+    if (finalCatId) p.set("categoryId", finalCatId)
     return `/api/public/lessons?${p}`
-  }, [search, selectedCategoryId, sort])
+  }, [search, selectedCategoryId, selectedSubCategoryId, sort])
 
   const prevFilters = useRef("")
   
   useEffect(() => {
     if (initialRender.current) { initialRender.current = false; return }
     
-    const filters = JSON.stringify({ search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, sort })
+    const filters = JSON.stringify({ search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, selectedSubCategoryId, sort })
     const filtersChanged = prevFilters.current !== filters
     prevFilters.current = filters
 
@@ -146,7 +149,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
         setOtherPage(2)
       })
     }
-  }, [activeTab, search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, sort])
+  }, [activeTab, search, selectedTags, selectedSubject, selectedGrade, selectedCategoryId, selectedSubCategoryId, sort])
 
   useEffect(() => {
     if (!exBottomInView || !hasMoreEx || loadingEx || activeTab !== "exercises") return
@@ -167,15 +170,22 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
   }, [leBottomInView, lePage, hasMoreLe, loadingLe, activeTab])
 
   const toggleTag = (tag: string) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSearch(""); setClearBackground(false) }
+  const clearFilters = () => { setSelectedTags([]); setSelectedSubject(""); setSelectedGrade(""); setSelectedCategoryId(""); setSelectedSubCategoryId(""); setSearch(""); setClearBackground(false) }
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({})
   const toggleCategoryExpand = (id: string) => setExpandedCategories(p => ({ ...p, [id]: !p[id] }))
 
+  // Auto-expand sidebar parent when selectedCategoryId changes
+  useEffect(() => {
+    if (selectedCategoryId) {
+      setExpandedCategories(prev => ({ ...prev, [selectedCategoryId]: true }))
+    }
+  }, [selectedCategoryId])
+
   const renderCategory = (node: any, level = 0) => {
     const hasChildren = node.children && node.children.length > 0
     const isExpanded = expandedCategories[node.id]
-    const isSelected = selectedCategoryId === node.id
+    const isSelected = selectedCategoryId === node.id || selectedSubCategoryId === node.id
 
     return (
       <div key={node.id} className="space-y-0.5">
@@ -187,11 +197,17 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
           }`}
           style={{ marginLeft: `${level * 16}px` }}
           onClick={() => {
-            const isNowSelected = selectedCategoryId === node.id ? "" : node.id
-            setSelectedCategoryId(isNowSelected)
-            
-            // Use the new field configured in Admin Category Management
-            setClearBackground(!!isNowSelected && !!node.showClearBackground)
+            if (level === 0) {
+              // Level 1: Toggle parent
+              const isNowSelected = selectedCategoryId === node.id ? "" : node.id
+              setSelectedCategoryId(isNowSelected)
+              setSelectedSubCategoryId("") // Reset sub when parent changes
+              setClearBackground(!!isNowSelected && !!node.showClearBackground)
+            } else {
+              // Level 2+: Set as sub-category
+              const isNowSelected = selectedSubCategoryId === node.id ? "" : node.id
+              setSelectedSubCategoryId(isNowSelected)
+            }
           }}
         >
           {hasChildren ? (
@@ -227,7 +243,7 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
             
             <div className="space-y-2">
               <button 
-                onClick={() => { setSelectedCategoryId(""); setClearBackground(false) }}
+                onClick={() => { setSelectedCategoryId(""); setSelectedSubCategoryId(""); setClearBackground(false) }}
                 className={`w-full flex items-center gap-3 rounded-2xl px-5 py-4 font-bold transition-all duration-300 ${!selectedCategoryId ? "bg-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.02]" : "text-on-surface-variant hover:bg-primary/5 hover:text-primary"}`}
               >
                 <span className="material-symbols-outlined text-[24px]">grid_view</span>
@@ -262,7 +278,10 @@ export function LandingPage({ session, initialExercises, hasMoreExercises, initi
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 space-y-10 animate-fade-in-up">
+        <main className="flex-1 space-y-12 animate-fade-in-up">
+          {/* Visual Category Menu */}
+          <VisualCategoryMenu categoryTree={categoryTree} />
+
           {/* Header Section */}
 
             {/* Pill Style Tabs */}
