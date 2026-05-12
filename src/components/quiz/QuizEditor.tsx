@@ -12,6 +12,8 @@ import { ReorderBuilder } from './ReorderBuilder';
 import { QuestionBankModal } from './QuestionBankModal';
 import { AIGeneratorModal } from './AIGeneratorModal';
 import { InstructionsModal } from './InstructionsModal';
+import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
+
 import CategorySelect from '@/components/shared/CategorySelect';
 import {
   DndContext,
@@ -202,34 +204,30 @@ export function QuizEditor() {
     fetchAssignment();
   }, [id]);
 
-  // Auto-save logic
-  useEffect(() => {
+
+  // Manual save function
+  const handleSave = async () => {
     if (!id || id === 'new' || loading || fetchError) return;
-
-    const timer = setTimeout(async () => {
-      setSaveStatus('SAVING');
-      try {
-        await autoSaveMaterial({
-          id,
-          title,
-          type: materialType,
-          questions,
-          subject,
-          gradeLevel,
-          shortDescription,
-          instructions,
-          tags: tags.join(','),
-          categoryIds
-        });
-        setSaveStatus('SAVED');
-      } catch (err) {
-        console.error('Auto-save failed:', err);
-        setSaveStatus('ERROR');
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [questions, title, id, loading, subject, gradeLevel, shortDescription, tags, instructions, categoryIds, materialType]);
+    setSaveStatus('SAVING');
+    try {
+      await autoSaveMaterial({
+        id,
+        title,
+        type: materialType,
+        questions,
+        subject,
+        gradeLevel,
+        shortDescription,
+        instructions,
+        tags: tags.join(','),
+        categoryIds
+      });
+      setSaveStatus('SAVED');
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSaveStatus('ERROR');
+    }
+  };
 
   const handleFinish = async () => {
     const validQuestions = questions.filter(q => isQuestionValid(q));
@@ -674,19 +672,23 @@ export function QuizEditor() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              saveStatus === 'SAVING' ? 'bg-blue-50 text-blue-600' : 
-              saveStatus === 'ERROR' ? 'bg-red-50 text-red-600' :
-              'bg-slate-100 dark:bg-gray-800 text-slate-600'
-            }`}>
+            <button
+              onClick={handleSave}
+              disabled={saveStatus === 'SAVING'}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                saveStatus === 'SAVING' ? 'bg-blue-50 text-blue-500 cursor-not-allowed' :
+                saveStatus === 'ERROR' ? 'bg-red-50 text-red-600 border border-red-200' :
+                'bg-slate-100 dark:bg-gray-800 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
               <span className={`material-symbols-outlined text-[18px] ${saveStatus === 'SAVING' ? 'animate-spin' : ''}`}>
-                {saveStatus === 'SAVING' ? 'sync' : saveStatus === 'ERROR' ? 'error' : 'cloud_done'}
+                {saveStatus === 'SAVING' ? 'sync' : saveStatus === 'ERROR' ? 'error' : 'save'}
               </span>
               <span>
-                {saveStatus === 'SAVING' ? 'Đang lưu...' : 
-                 saveStatus === 'ERROR' ? 'Lỗi khi lưu' : 'Đã lưu tự động'}
+                {saveStatus === 'SAVING' ? 'Đang lưu...' :
+                 saveStatus === 'ERROR' ? 'Lỗi khi lưu' : 'Lưu'}
               </span>
-            </div>
+            </button>
             <button 
               onClick={() => setShowSettingsModal(true)}
               className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all flex items-center gap-2"
@@ -964,14 +966,11 @@ export function QuizEditor() {
                           </button>
                         </div>
                         <div className="flex flex-col items-center gap-3 p-3 bg-slate-50/50 dark:bg-gray-900/50 rounded-xl border border-dashed border-slate-100 dark:border-gray-700">
-                          <div className="size-8 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[20px]">volume_up</span>
-                          </div>
-                          <audio 
-                            key={activeQuestion.audioUrl || activeQuestion.mediaUrl}
-                            controls 
-                            src={activeQuestion.audioUrl || (activeQuestion.mediaType === 'AUDIO' ? activeQuestion.mediaUrl : undefined)} 
-                            className="w-full h-8 scale-90 outline-none"
+                          <CustomAudioPlayer 
+                            src={activeQuestion.audioUrl || (activeQuestion.mediaType === 'AUDIO' ? activeQuestion.mediaUrl : '')} 
+                            title="Âm thanh"
+                            subtitle=""
+                            className="!bg-transparent !p-0 !border-none !shadow-none !w-full"
                           />
                         </div>
                       </div>

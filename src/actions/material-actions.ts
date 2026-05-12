@@ -45,14 +45,14 @@ export async function generateMaterialThumbnail(assignment: { title: string; sub
   return `https://api.dicebear.com/7.x/identicon/svg?seed=${hash}&backgroundColor=f0f2f4&rowColor=${rowColor}`;
 }
 
-export async function createDraftMaterial(type: 'EXERCISE' | 'READING' | 'FLASHCARD') {
+export async function createDraftMaterial() {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   const newAss = await prisma.assignment.create({
     data: {
-      title: 'Bài tập mới',
-      materialType: type,
+      title: 'Bài học mới',
+      materialType: 'READING',
       teacherId: session.user.id,
       status: 'DRAFT'
     }
@@ -61,15 +61,15 @@ export async function createDraftMaterial(type: 'EXERCISE' | 'READING' | 'FLASHC
   return newAss.id;
 }
 
-export async function createDraftLesson(type: 'READING' | 'EXERCISE' | 'FLASHCARD' = 'READING') {
+export async function createDraftLesson() {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   // Create Assignment first because Lesson depends on it
   const newAssignment = await prisma.assignment.create({
     data: {
-      title: type === 'READING' ? 'Bài học mới' : (type === 'EXERCISE' ? 'Bài tập mới' : 'Bộ thẻ mới'),
-      materialType: type,
+      title: 'Bài học mới',
+      materialType: 'READING',
       status: 'DRAFT',
       teacherId: session.user.id,
     }
@@ -77,7 +77,7 @@ export async function createDraftLesson(type: 'READING' | 'EXERCISE' | 'FLASHCAR
 
   await prisma.lesson.create({
     data: {
-      title: type === 'READING' ? 'Bài học mới' : (type === 'EXERCISE' ? 'Bài tập mới' : 'Bộ thẻ mới'),
+      title: 'Bài học mới',
       teacherId: session.user.id,
       assignmentId: newAssignment.id
     }
@@ -178,16 +178,25 @@ export async function autoSaveMaterial(payload: {
 
     // Sync to Lesson if exists
     if (updatedAssignment.lesson) {
+      // Update standard fields and categories first
       await tx.lesson.update({
         where: { id: updatedAssignment.lesson.id },
         data: {
           title: payload.title,
           description: payload.shortDescription || null,
+          videoUrl: payload.videoUrl || null,
           categories: {
             set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
           }
         }
       });
+
+      // Update audioUrl via raw SQL to bypass client validation until next restart/generate
+      await tx.$executeRawUnsafe(
+        `UPDATE "Lesson" SET "audioUrl" = $1 WHERE "id" = $2`,
+        payload.audioUrl || null,
+        updatedAssignment.lesson.id
+      );
       console.log(`[AutoSave] Synced metadata to linked lesson: ${updatedAssignment.lesson.id}`);
     }
 

@@ -9,12 +9,13 @@ import 'react-quill-new/dist/quill.snow.css';
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
 interface AiGeneratorModalProps {
+  isOpen?: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  materialType?: 'READING' | 'EXERCISE' | 'FLASHCARD';
 }
 
-export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ onClose, onSuccess, materialType = 'READING' }) => {
+export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  if (isOpen === false) return null;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     topic: '',
@@ -38,7 +39,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ onClose, onS
         ...formData,
         gradeLevel: "10", // Default or get from somewhere
         wordCount: 0, // Not used when passage provided
-        materialType
+        materialType: 'READING'
       } as any);
       
       if (res && res.success) {

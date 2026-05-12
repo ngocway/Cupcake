@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 
 export async function createCategory(data: { 
   name: string, 
@@ -97,32 +97,36 @@ async function getNextOrderIndex(parentId?: string | null) {
   return last ? last.orderIndex + 1 : 0;
 }
 
-export async function getCategoryTree() {
-  const categories = await prisma.category.findMany({
-    orderBy: { orderIndex: 'asc' }
-  });
-  
-  // Transform to tree structure
-  const map = new Map();
-  const roots: any[] = [];
-  
-  categories.forEach(c => map.set(c.id, { ...c, children: [], materialCount: 0 })); // Note: count would be separate
-  
-  categories.forEach(c => {
-    if (c.parentId) {
-      const parent = map.get(c.parentId);
-      if (parent) {
-        parent.children.push(map.get(c.id));
+export const getCategoryTree = unstable_cache(
+  async () => {
+    const categories = await prisma.category.findMany({
+      orderBy: { orderIndex: 'asc' }
+    });
+    
+    // Transform to tree structure
+    const map = new Map();
+    const roots: any[] = [];
+    
+    categories.forEach(c => map.set(c.id, { ...c, children: [], materialCount: 0 })); 
+    
+    categories.forEach(c => {
+      if (c.parentId) {
+        const parent = map.get(c.parentId);
+        if (parent) {
+          parent.children.push(map.get(c.id));
+        } else {
+          roots.push(map.get(c.id)); 
+        }
       } else {
-        roots.push(map.get(c.id)); // Orphan protection
+        roots.push(map.get(c.id));
       }
-    } else {
-      roots.push(map.get(c.id));
-    }
-  });
+    });
 
-  return roots;
-}
+    return roots;
+  },
+  ['category-tree'],
+  { revalidate: 3600, tags: ['categories'] }
+);
 
 export async function getFlatCategories() {
   return await prisma.category.findMany({

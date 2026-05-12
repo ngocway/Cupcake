@@ -109,12 +109,10 @@ function SortableQuestionItem({
 
 export function ReadingExerciseBuilder({ 
   assignmentId: initialId, 
-  onBack,
-  initialType
+  onBack 
 }: { 
   assignmentId?: string, 
-  onBack?: () => void,
-  initialType?: 'READING' | 'EXERCISE' | 'FLASHCARD'
+  onBack?: () => void 
 }) {
   const router = useRouter();
   const [assignmentId, setAssignmentId] = useState<string>(initialId || 'clp_reading_001');
@@ -163,6 +161,9 @@ export function ReadingExerciseBuilder({
   const [assignmentStatus, setAssignmentStatus] = useState<'DRAFT' | 'PRIVATE' | 'PUBLIC'>('DRAFT');
   const [validationModal, setValidationModal] = useState<{show: boolean, missingTitle: boolean, missingContent: boolean}>({show: false, missingTitle: false, missingContent: false});
   const [videoUrl, setVideoUrl] = useState('');
+  const [videoThumbnail, setVideoThumbnail] = useState('');
+  const [videoTab, setVideoTab] = useState<'upload' | 'youtube'>('upload');
+  const [youtubeLinkInput, setYoutubeLinkInput] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
   const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
@@ -177,7 +178,7 @@ export function ReadingExerciseBuilder({
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [materialType, setMaterialType] = useState<string>(initialType || 'READING');
+  const [materialType, setMaterialType] = useState<string>('READING');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
   const [imageControlPos, setImageControlPos] = useState({ top: 0, left: 0 });
@@ -195,9 +196,7 @@ export function ReadingExerciseBuilder({
   } | null>(null);
 
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'passage' | 'questions' | 'vocabulary'>(
-    initialType === 'EXERCISE' ? 'questions' : (initialType === 'FLASHCARD' ? 'vocabulary' : 'passage')
-  );
+  const [activeTab, setActiveTab] = useState<'passage' | 'questions' | 'vocabulary'>('passage');
   const [vocabEnabled, setVocabEnabled] = useState(false);
   const [showVocabDisableWarning, setShowVocabDisableWarning] = useState(false);
   const [vocabList, setVocabList] = useState<any[]>([]);
@@ -229,8 +228,6 @@ export function ReadingExerciseBuilder({
         const newItems = arrayMove(items, oldIndex, newIndex);
         return newItems;
       });
-      // Trigger save after a small delay to ensure state update
-      setTimeout(() => handleSave(), 100);
     }
   };
 
@@ -253,7 +250,6 @@ export function ReadingExerciseBuilder({
       const text = innerSpan?.textContent || marker.textContent || '';
       marker.replaceWith(document.createTextNode(text));
       setHoveredVocab(null);
-      setTimeout(handleSave, 100);
     }
   };
 
@@ -284,6 +280,12 @@ export function ReadingExerciseBuilder({
   const isFetched = useRef(false);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // --- Video helpers (must be before the init useEffect) ---
+  const extractYouTubeId = (url: string): string | null => {
+    const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/);
+    return m ? m[1] : null;
+  };
+
   useEffect(() => {
     if (activeTab === 'vocabulary') refreshVocabList();
   }, [activeTab]);
@@ -303,6 +305,15 @@ export function ReadingExerciseBuilder({
           setTitle(data.assignment.title);
           setAssignmentStatus(data.assignment.status);
           setVideoUrl(data.assignment.videoUrl || '');
+          // Restore thumbnail for YouTube videos that were previously saved
+          if (data.assignment.videoUrl) {
+            const ytId = extractYouTubeId(data.assignment.videoUrl);
+            if (ytId) {
+              setVideoThumbnail(`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`);
+              setVideoTab('youtube');
+              setYoutubeLinkInput(data.assignment.videoUrl || '');
+            }
+          }
           setAudioUrl(data.assignment.audioUrl || '');
           if (data.assignment.questions) {
             const normalizedQuestions = data.assignment.questions.map((q: any) => {
@@ -363,14 +374,6 @@ export function ReadingExerciseBuilder({
           }
           if (data.assignment.materialType) {
             setMaterialType(data.assignment.materialType);
-            // Update active tab if it's the first load and not already set by initialType
-            if (!initialType) {
-              if (data.assignment.materialType === 'EXERCISE') setActiveTab('questions');
-              if (data.assignment.materialType === 'FLASHCARD') {
-                setActiveTab('vocabulary');
-                setVocabEnabled(true);
-              }
-            }
           }
         }
       } catch (err) {
@@ -382,11 +385,54 @@ export function ReadingExerciseBuilder({
     init();
   }, [initialId]);
 
+
+  const generateVideoThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      video.addEventListener('loadeddata', () => {
+        video.currentTime = Math.min(1, video.duration * 0.1);
+      });
+      video.addEventListener('seeked', () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 360;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { URL.revokeObjectURL(url); reject('no ctx'); return; }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const thumb = canvas.toDataURL('image/jpeg', 0.85);
+        URL.revokeObjectURL(url);
+        resolve(thumb);
+      });
+      video.addEventListener('error', () => { URL.revokeObjectURL(url); reject('video error'); });
+    });
+  };
+
+  const handleYouTubeLink = (url: string) => {
+    setYoutubeLinkInput(url);
+    const id = extractYouTubeId(url);
+    if (id) {
+      setVideoUrl(url);
+      setVideoThumbnail(`https://img.youtube.com/vi/${id}/hqdefault.jpg`);
+    } else {
+      setVideoThumbnail('');
+      if (!url) setVideoUrl('');
+    }
+  };
+
   const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 100 * 1024 * 1024) return alert('Video dung lượng quá lớn (tối đa 100MB)');
       setVideoUploadProgress(0);
+      // Generate thumbnail from first frame via canvas
+      generateVideoThumbnail(file)
+        .then(thumb => setVideoThumbnail(thumb))
+        .catch(() => setVideoThumbnail(''));
       const reader = new FileReader();
       reader.onprogress = (event) => {
         if (event.lengthComputable) {
@@ -397,7 +443,6 @@ export function ReadingExerciseBuilder({
         const result = event.target?.result as string;
         setVideoUrl(result);
         setVideoUploadProgress(null);
-        handleSave(undefined, result, undefined);
       };
       reader.readAsDataURL(file);
     }
@@ -418,7 +463,6 @@ export function ReadingExerciseBuilder({
         const result = event.target?.result as string;
         setAudioUrl(result);
         setAudioUploadProgress(null);
-        handleSave(undefined, undefined, result);
       };
       reader.readAsDataURL(file);
     }
@@ -467,11 +511,7 @@ export function ReadingExerciseBuilder({
     }
   };
 
-  useEffect(() => {
-    if (!isInitialLoadDone) return;
-    const timer = setTimeout(() => handleSave(), 3000);
-    return () => clearTimeout(timer);
-  }, [title, questions, subject, gradeLevel, shortDescription, tags, instructions, videoUrl, audioUrl, isInitialLoadDone, categoryIds, materialType]);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -574,7 +614,6 @@ export function ReadingExerciseBuilder({
       document.execCommand('insertHTML', false, html);
     }
     setVocabForm(null);
-    setTimeout(handleSave, 100);
   };
 
   const handleAiFill = async () => {
@@ -668,7 +707,6 @@ export function ReadingExerciseBuilder({
     action();
     requestAnimationFrame(() => {
       updateImageToolbarPosition(selectedImage);
-      handleSave();
     });
   };
 
@@ -749,7 +787,6 @@ export function ReadingExerciseBuilder({
       setQuestions([...questions, questionWithId]);
     }
     setQuestionModal({ isOpen: false, type: 'NONE', isMultiple: false });
-    setTimeout(() => handleSave(), 100);
   };
 
   return (
@@ -775,14 +812,8 @@ export function ReadingExerciseBuilder({
                <span className="material-symbols-outlined text-[18px]">arrow_back</span> Quay lại danh sách
              </button>
            )}
-           <h1 className="text-lg font-black text-blue-700 font-headline mb-1 leading-tight">
-              {materialType === 'FLASHCARD' ? 'Flashcard Builder' : 
-               materialType === 'EXERCISE' ? 'Exercise Builder' : 'Reading Builder'}
-            </h1>
-            <p className="text-[10px] font-semibold font-label text-slate-500 uppercase tracking-widest mt-2">
-               {materialType === 'FLASHCARD' ? 'Thiết lập bộ thẻ ghi nhớ' : 
-                materialType === 'EXERCISE' ? 'Thiết lập bài tập & câu hỏi' : 'Thiết lập bài đọc & từ vựng'}
-            </p>
+           <h1 className="text-lg font-black text-blue-700 font-headline mb-1 leading-tight">Reading Exercise Builder</h1>
+           <p className="text-[10px] font-semibold font-label text-slate-500 uppercase tracking-widest mt-2">Teacher Dashboard</p>
         </div>
         <div className="px-4 mb-8">
           <div className="bg-surface-container-low rounded-xl p-4 flex flex-col gap-1 border border-black/5 dark:border-white/5">
@@ -791,21 +822,18 @@ export function ReadingExerciseBuilder({
           </div>
         </div>
         <nav className="flex-1 px-4 space-y-2">
-          {(materialType !== 'FLASHCARD' || activeTab === 'passage') && (
-            <button 
-              onClick={() => setActiveTab('passage')}
-              className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
-                activeTab === 'passage' 
-                  ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
-                  : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">edit_note</span> 
-              {materialType === 'EXERCISE' ? 'Context / Instruction' : 'Passage Editor'}
-            </button>
-          )}
+          <button 
+            onClick={() => setActiveTab('passage')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
+              activeTab === 'passage' 
+                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
+                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">edit_note</span> Passage Editor
+          </button>
 
-          {(vocabEnabled || materialType === 'FLASHCARD') && (
+          {vocabEnabled && (
             <button 
               onClick={() => {
                 if (activeTab === 'passage') refreshVocabList();
@@ -817,24 +845,19 @@ export function ReadingExerciseBuilder({
                   : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">{materialType === 'FLASHCARD' ? 'style' : 'translate'}</span> 
-              {materialType === 'FLASHCARD' ? 'Flashcard Bank' : 'Vocabulary Bank'}
+              <span className="material-symbols-outlined text-[18px]">translate</span> Vocabulary Bank
             </button>
           )}
-          
-          {(materialType !== 'FLASHCARD' || activeTab === 'questions') && (
-            <button 
-              onClick={() => setActiveTab('questions')}
-              className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
-                activeTab === 'questions' 
-                  ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
-                  : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px]">quiz</span> 
-              {materialType === 'EXERCISE' ? 'Questions / Quiz' : 'Question Bank'}
-            </button>
-          )}
+          <button 
+            onClick={() => setActiveTab('questions')}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
+              activeTab === 'questions' 
+                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
+                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">quiz</span> Question Bank
+          </button>
           
           <button 
             onClick={() => setShowInstructionsModal(true)}
@@ -852,31 +875,84 @@ export function ReadingExerciseBuilder({
                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Multimedia Attachments</h3>
                {/* Video Upload */}
                <div className="px-4">
-                  <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer overflow-hidden min-h-[100px]">
-                     {videoUploadProgress !== null ? (
-                       <div className="w-full flex flex-col items-center px-2">
-                           <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
-                               <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${videoUploadProgress}%` }}></div>
-                           </div>
-                           <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {videoUploadProgress}%</span>
-                       </div>
-                     ) : videoUrl ? (
-                       <div className="w-full flex flex-col items-center">
-                          <div className="size-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-lg flex items-center justify-center mb-2 ring-1 ring-emerald-500/20 shadow-sm">
-                             <span className="material-symbols-outlined text-[24px]">check_circle</span>
+                  <div className="flex flex-col gap-2">
+                    {/* Tab switcher */}
+                    <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-gray-700 text-[10px] font-black uppercase tracking-widest">
+                      <button
+                        onClick={() => setVideoTab('upload')}
+                        className={`flex-1 py-1.5 transition-colors ${
+                          videoTab === 'upload' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-slate-400 hover:text-primary'
+                        }`}
+                      >
+                        📂 Từ máy tính
+                      </button>
+                      <button
+                        onClick={() => setVideoTab('youtube')}
+                        className={`flex-1 py-1.5 transition-colors ${
+                          videoTab === 'youtube' ? 'bg-primary text-white' : 'bg-white dark:bg-gray-800 text-slate-400 hover:text-primary'
+                        }`}
+                      >
+                        🎥 YouTube
+                      </button>
+                    </div>
+
+                    {/* Thumbnail preview */}
+                    {videoThumbnail && (
+                      <div className="relative rounded-xl overflow-hidden aspect-video bg-black">
+                        <img src={videoThumbnail} alt="Video thumbnail" className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => { setVideoUrl(''); setVideoThumbnail(''); setYoutubeLinkInput(''); }}
+                          className="absolute top-1.5 right-1.5 size-6 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Tab content - always in DOM, hidden via CSS to avoid controlled/uncontrolled warning */}
+                    <div className={videoTab !== 'upload' ? 'hidden' : ''}>
+                      <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 transition-all cursor-pointer overflow-hidden min-h-[80px]">
+                        {videoUploadProgress !== null ? (
+                          <div className="w-full flex flex-col items-center px-2">
+                            <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
+                              <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${videoUploadProgress}%` }} />
+                            </div>
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {videoUploadProgress}%</span>
                           </div>
-                          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate w-full text-center tracking-wide">Video đã tải lên</span>
-                          <button onClick={() => { setVideoUrl(''); setTimeout(handleSave, 100); }} className="absolute top-2 right-2 size-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-all opacity-0 group-hover:opacity-100 shadow-sm">
-                             <span className="material-symbols-outlined text-[14px]">close</span>
-                          </button>
-                       </div>
-                     ) : (
-                       <>
-                          <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleVideoUpload} />
-                          <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">video_call</span>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 group-hover:text-primary transition-colors">Tải lên Video</span>
-                       </>
-                     )}
+                        ) : videoUrl && !extractYouTubeId(videoUrl) ? (
+                          <>
+                            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate w-full text-center tracking-wide">Video đã tải lên ✓</span>
+                            <label className="mt-2 text-[9px] text-slate-400 cursor-pointer hover:text-primary underline">
+                              Thay thế video khác
+                              <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                            </label>
+                          </>
+                        ) : (
+                          <>
+                            <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleVideoUpload} />
+                            <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">video_call</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 group-hover:text-primary transition-colors">Tải lên Video</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={videoTab !== 'youtube' ? 'hidden' : 'flex flex-col gap-2'}>
+                      <input
+                        type="url"
+                        value={youtubeLinkInput ?? ''}
+                        onChange={(e) => handleYouTubeLink(e.target.value)}
+                        placeholder="Dán link YouTube..."
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-slate-300"
+                      />
+                      {youtubeLinkInput && !extractYouTubeId(youtubeLinkInput) && (
+                        <p className="text-[10px] text-red-400 font-bold px-1">⚠️ Link không hợp lệ</p>
+                      )}
+                      {youtubeLinkInput && extractYouTubeId(youtubeLinkInput) && (
+                        <p className="text-[10px] text-emerald-500 font-bold px-1">✔️ Đã xác nhận video YouTube</p>
+                      )}
+                    </div>
+
                   </div>
                </div>
 
@@ -896,7 +972,7 @@ export function ReadingExerciseBuilder({
                              <span className="material-symbols-outlined text-[24px]">check_circle</span>
                           </div>
                           <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate w-full text-center tracking-wide">Audio đã tải lên</span>
-                          <button onClick={() => { setAudioUrl(''); setTimeout(handleSave, 100); }} className="absolute top-2 right-2 size-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-all opacity-0 group-hover:opacity-100 shadow-sm">
+                          <button onClick={() => { setAudioUrl(''); }} className="absolute top-2 right-2 size-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-all opacity-0 group-hover:opacity-100 shadow-sm">
                              <span className="material-symbols-outlined text-[14px]">close</span>
                           </button>
                        </div>
@@ -922,14 +998,10 @@ export function ReadingExerciseBuilder({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="font-headline font-extrabold text-xl text-slate-900 dark:text-white tracking-tight bg-transparent border-none outline-none focus:ring-0 p-0 m-0 w-full"
-              placeholder={materialType === 'FLASHCARD' ? 'Nhập tiêu đề bộ thẻ...' : 'Nhập tiêu đề bài tập...'}
+              placeholder="Nhập tiêu đề bài tập..."
             />
             <div className="flex items-center gap-2 mt-1">
-              <span className={`w-2 h-2 rounded-full ${savingStatus === 'saving' ? 'bg-amber-400 animate-pulse' : 'bg-secondary'}`}></span>
-              <span className="text-[10px] font-label font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                {savingStatus === 'saving' ? 'Đang lưu...' : lastSaved ? `Đã lưu lúc ${lastSaved.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : 'Tự động lưu...'}
-              </span>
-              <div className={`ml-3 px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase border ${
+              <div className={`ml-0 px-2 py-0.5 rounded text-[10px] font-black tracking-widest uppercase border ${
                 assignmentStatus === 'DRAFT' ? 'bg-slate-100 text-slate-500 border-slate-200' :
                 assignmentStatus === 'PRIVATE' ? 'bg-indigo-50 text-indigo-600 border-indigo-200' :
                 'bg-emerald-50 text-emerald-600 border-emerald-200'
@@ -972,7 +1044,7 @@ export function ReadingExerciseBuilder({
                 {!isInitialLoadDone && (
                   <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 z-50 flex flex-col items-center justify-center rounded-2xl backdrop-blur-[2px]">
                      <span className="material-symbols-outlined text-[48px] text-primary/30 animate-spin mb-4">progress_activity</span>
-                     <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Đang tải dữ liệu...</div>
+                     <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Đang tải bài học...</div>
                   </div>
                 )}
                 
@@ -1034,11 +1106,11 @@ export function ReadingExerciseBuilder({
                       <button onMouseDown={(e) => { e.preventDefault(); handleImageModify(() => { selectedImage.style.width = '75%'; }); }} className="px-2 py-1 text-[10px] font-black bg-slate-100 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-primary hover:text-white transition-all">L</button>
                       <button onMouseDown={(e) => { e.preventDefault(); handleImageModify(() => { selectedImage.style.width = '100%'; }); }} className="px-2 py-1 text-[10px] font-black bg-slate-100 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-primary hover:text-white transition-all">MAX</button>
                     </div>
-                    <span onMouseDown={(e) => { e.preventDefault(); selectedImage.remove(); setSelectedImage(null); handleSave(); }} className="material-symbols-outlined text-[18px] text-red-500 cursor-pointer hover:text-red-700 transition-colors" title="Xóa ảnh">delete</span>
+                    <span onMouseDown={(e) => { e.preventDefault(); selectedImage.remove(); setSelectedImage(null); }} className="material-symbols-outlined text-[18px] text-red-500 cursor-pointer hover:text-red-700 transition-colors" title="Xóa ảnh">delete</span>
                   </div>
                 )}
 
-                <article id="rich-text-editor" onClick={handleEditorClick} onMouseMove={handleEditorMouseMove} onInput={() => handleSave()} onBlur={() => handleSave()} className="prose prose-slate dark:prose-invert max-w-none outline-none focus:outline-none min-h-[500px]" contentEditable suppressContentEditableWarning>
+                <article id="rich-text-editor" onClick={handleEditorClick} onMouseMove={handleEditorMouseMove} className="prose prose-slate dark:prose-invert max-w-none outline-none focus:outline-none min-h-[500px]" contentEditable suppressContentEditableWarning>
                 </article>
               </div>
             </div>
@@ -1103,7 +1175,6 @@ export function ReadingExerciseBuilder({
                             if (confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) {
                               const newQs = questions.filter((_, i) => i !== idx);
                               setQuestions(newQs);
-                              setTimeout(handleSave, 100);
                             }
                           }}
                         />
@@ -1419,7 +1490,7 @@ export function ReadingExerciseBuilder({
                         <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Cấu hình thông tin hiển thị công khai</p>
                      </div>
                   </div>
-                  <button onClick={() => { setIsSettingsOpen(false); handleSave(); }} className="size-10 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 flex items-center justify-center transition-all group">
+                  <button onClick={() => { setIsSettingsOpen(false); }} className="size-10 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 flex items-center justify-center transition-all group">
                      <span className="material-symbols-outlined text-slate-400 group-hover:rotate-90 transition-transform">close</span>
                   </button>
                </div>
@@ -1504,7 +1575,7 @@ export function ReadingExerciseBuilder({
                {/* Modal Footer */}
                <div className="p-8 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-800 shrink-0">
                   <button 
-                    onClick={() => { setIsSettingsOpen(false); handleSave(); }}
+                    onClick={() => { setIsSettingsOpen(false); }}
                     className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-900/20"
                   >
                      Xác nhận & Lưu thiết lập

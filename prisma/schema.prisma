@@ -285,6 +285,7 @@ model Lesson {
   title          String
   description    String?
   videoUrl       String?
+  audioUrl       String?
   isPremium      Boolean          @default(false)
   price          Float            @default(0)
   viewsCount     Int              @default(0)

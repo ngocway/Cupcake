@@ -164,7 +164,7 @@ export async function generateAILesson({
   }
 }
 
-export async function saveAILesson(data: AILessonResponse & { gradeLevel: string; subject: string; materialType?: string }) {
+export async function saveAILesson(data: AILessonResponse & { gradeLevel: string; subject: string }) {
   logProgress(`Saving AI Lesson: ${data.title}`);
   const session = await auth();
   if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
@@ -240,7 +240,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
           readingText: passageHtml,
           gradeLevel: data.gradeLevel,
           subject: data.subject,
-          materialType: (data.materialType as any) || "READING",
+          materialType: "READING",
           status: "DRAFT",
           teacherId: session.user.id,
           isAiGenerated: true,
@@ -312,7 +312,6 @@ export async function customGenerateLesson(params: {
   providedPassage?: string;
   additionalInstructions?: string;
   generateVocab?: boolean;
-  materialType?: string;
 }) {
   const session = await auth();
   if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
@@ -340,7 +339,6 @@ export async function customGenerateLesson(params: {
       ...aiResponse,
       gradeLevel: params.gradeLevel,
       subject: params.subject,
-      materialType: params.materialType
     });
 
     if ("error" in saveResponse) {

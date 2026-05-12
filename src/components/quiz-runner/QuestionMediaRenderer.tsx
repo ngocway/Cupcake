@@ -1,4 +1,6 @@
 import React from 'react';
+import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
+
 
 export function QuestionMediaRenderer({ question }: { question: any }) {
   if (!question) return null;
@@ -33,17 +35,12 @@ export function QuestionMediaRenderer({ question }: { question: any }) {
       )}
       
       {audioSrc && (
-        <div className="w-full max-w-xl mx-auto p-4 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">
-             <span className="material-symbols-outlined text-[18px]">volume_up</span>
-             Âm thanh đính kèm
-          </div>
-          <audio 
-            controls 
-            src={audioSrc} 
-            className="w-full h-10 outline-none"
-          />
-        </div>
+        <CustomAudioPlayer 
+          src={audioSrc} 
+          title="Âm thanh đính kèm"
+          subtitle=""
+          className="max-w-xl mx-auto !bg-slate-50 border-slate-100 shadow-sm"
+        />
       )}
     </div>
   );

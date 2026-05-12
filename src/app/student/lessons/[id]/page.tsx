@@ -26,6 +26,8 @@ import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
+import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
+
 
 export default async function StudentLessonDetailPage({ 
   params 
@@ -91,6 +93,15 @@ export default async function StudentLessonDetailPage({
   });
 
   if (!lesson) notFound();
+  
+  // Patch audioUrl since prisma client might not know about it yet
+  const audioPatch: any = await prisma.$queryRawUnsafe(
+    `SELECT "audioUrl" FROM "Lesson" WHERE "id" = $1`,
+    lesson.id
+  );
+  if (audioPatch?.[0]?.audioUrl) {
+    (lesson as any).audioUrl = audioPatch[0].audioUrl;
+  }
 
   // Fetch related lessons
   const relatedLessons = await prisma.lesson.findMany({
@@ -132,16 +143,34 @@ export default async function StudentLessonDetailPage({
          <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto custom-scrollbar">
             <div className="px-8 lg:px-12 pt-7 pb-12 space-y-12 max-w-5xl mx-auto w-full">
                {/* Video Player */}
-               {videoId && (
+               {(videoId || lesson.videoUrl) && (
                   <div className="aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl group relative ring-1 ring-white/10 shrink-0">
-                     <iframe
-                       className="w-full h-full"
-                       src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
-                       title={lesson.title}
-                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                       allowFullScreen
-                     />
+                     {videoId ? (
+                        <iframe
+                          className="w-full h-full"
+                          src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
+                          title={lesson.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                     ) : (
+                        <video 
+                          src={lesson.videoUrl!} 
+                          className="w-full h-full" 
+                          controls 
+                          poster={lesson.assignment?.thumbnail || undefined}
+                        />
+                     )}
                   </div>
+               )}
+
+               {/* Audio Player */}
+               {(lesson as any).audioUrl && (
+                  <CustomAudioPlayer 
+                    src={(lesson as any).audioUrl} 
+                    title="Nghe bài giảng"
+                    subtitle="Audio Lesson"
+                  />
                )}
 
                {/* Lesson Details Card */}
@@ -194,7 +223,7 @@ export default async function StudentLessonDetailPage({
                      )}
 
                      {lesson.assignment && (
-                        <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10">
+                        <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10 clear-both mt-32">
                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
                               <div className="space-y-4">
                                  <div className="flex items-center gap-3">
