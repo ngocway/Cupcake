@@ -31,92 +31,77 @@ export const getCachedTags = unstable_cache(
       select: { tags: true },
       take: 200
     });
-    
+
     const allTags = [...new Set(
       rawTags.flatMap(a => (a.tags || "").split(",").map((t: string) => t.trim()).filter(Boolean))
     )].sort();
-    
+
     return allTags;
   },
   ["public-tags"],
   { revalidate: 1800, tags: ["assignments", "tags"] }
 );
 
+// ─── Shared mapper ────────────────────────────────────────────────────────────
+
+function mapFeedItem(item: any) {
+  return {
+    ...item,
+    id: item.sourceId,
+    teacher: {
+      id: item.teacherId,
+      name: item.teacherName,
+      image: item.teacherImage
+    },
+    _count: { reviews: item.reviewCount }
+  };
+}
+
+// ─── EXERCISES (newest) ───────────────────────────────────────────────────────
+
+/** Server-side: newest exercises only — fast first load. Popular is fetched client-side. */
 export const getCachedAssignments = unstable_cache(
   async (params: any) => {
-    const { categoryId, search, sort = "newest" } = params;
-    
-    // ULTRA-FAST QUERY: Read only from HomepageFeed
-    // Zero Joins, Zero Counts.
-    const where: any = { 
-      status: "PUBLIC", 
-      contentType: "EXERCISE" 
-    };
-    
+    const { categoryId, search } = params;
+
+    const where: any = { status: "PUBLIC", contentType: "EXERCISE" };
     if (categoryId) where.categoryId = categoryId;
     if (search) where.title = { contains: search, mode: 'insensitive' };
-    
-    const orderBy: any = sort === "popular" ? { viewCount: "desc" } : { createdAt: "desc" };
 
     const items = await prisma.homepageFeed.findMany({
       where,
-      orderBy,
+      orderBy: { createdAt: "desc" },
       take: 12
     });
 
-    return {
-      items: items.map(item => ({
-        ...item,
-        id: item.sourceId, // Keep source ID for frontend compatibility
-        teacher: {
-          id: item.teacherId,
-          name: item.teacherName,
-          image: item.teacherImage
-        },
-        _count: { reviews: item.reviewCount }
-      })),
-      total: items.length
-    };
+    return { items: items.map(mapFeedItem), total: items.length };
   },
-  ["home-assignments-v3"],
+  ["home-assignments-newest-v4"],
   { revalidate: 300, tags: ["assignments", "home-feed"] }
 );
 
+// ─── LESSONS (newest) ─────────────────────────────────────────────────────────
+
+/** Server-side: newest lessons only — fast first load. Popular is fetched client-side. */
 export const getCachedLessons = unstable_cache(
   async (params: any) => {
-    const { categoryId, search, sort = "newest" } = params;
-    
-    const where: any = { 
-      status: "PUBLIC", 
-      contentType: "LESSON" 
-    };
-    
+    const { categoryId, search } = params;
+
+    const where: any = { status: "PUBLIC", contentType: "LESSON" };
     if (categoryId) where.categoryId = categoryId;
     if (search) where.title = { contains: search, mode: 'insensitive' };
-    
-    const orderBy: any = sort === "popular" ? { viewCount: "desc" } : { createdAt: "desc" };
 
     const items = await prisma.homepageFeed.findMany({
       where,
-      orderBy,
+      orderBy: { createdAt: "desc" },
       take: 12
     });
 
     return {
-      items: items.map(item => ({
-        ...item,
-        id: item.sourceId,
-        teacher: {
-          id: item.teacherId,
-          name: item.teacherName,
-          image: item.teacherImage
-        },
-        _count: { reviews: item.reviewCount },
-        type: 'VIDEO_LESSON'
-      })),
+      items: items.map(item => ({ ...mapFeedItem(item), type: 'VIDEO_LESSON' })),
       total: items.length
     };
   },
-  ["home-lessons-v3"],
+  ["home-lessons-newest-v4"],
   { revalidate: 300, tags: ["assignments", "lessons", "home-feed"] }
 );

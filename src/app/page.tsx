@@ -1,7 +1,7 @@
 
 import { Suspense } from "react"
 import { LandingPage } from "@/components/public/LandingPage"
-import { HomeLoadingSkeleton, HomeShell } from "./_components/HomeShell"
+import { HomeShell } from "./_components/HomeShell"
 import { HomeSidebar } from "./_components/HomeSidebar"
 import { getCachedCategoryTree, getCachedAssignments, getCachedLessons } from "@/lib/cached-queries"
 
@@ -9,21 +9,20 @@ export const revalidate = 10; // ISR: Revalidate every 10 seconds
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
-  
-  // PRE-FETCHING STRATEGY: 
-  // We initiate BOTH promises in parallel regardless of the active tab.
-  // This "pre-heats" the server cache and ensures that when the user 
-  // switches tabs, the data is already resolved or in-flight.
-  // This creates an "Instant" feel for tab switching at the cost of one extra query.
-  const assignmentsPromise = getCachedAssignments(params);
-  const lessonsPromise = getCachedLessons(params);
+
+  // FAST FIRST LOAD: Only fetch newest variants on the server.
+  // Popular data is pre-fetched client-side in the background (via /api/feed)
+  // after the page has already rendered — so sort switching feels instant
+  // without slowing down the initial page load.
+  const assignmentsPromise  = getCachedAssignments(params);
+  const lessonsPromise      = getCachedLessons(params);
   const categoryTreePromise = getCachedCategoryTree();
 
   return (
     <HomeShell>
       <div className="w-full pt-32 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
         <HomeSidebar searchParams={params} />
-        
+
         <main className="flex-1 space-y-12">
           <Suspense fallback={
             <div className="space-y-12 animate-pulse">
@@ -36,11 +35,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               </div>
             </div>
           }>
-            <LandingPage 
+            <LandingPage
               promises={{
                 assignments: assignmentsPromise,
                 lessons: lessonsPromise,
-                categoryTree: categoryTreePromise
+                categoryTree: categoryTreePromise,
               }}
               searchParams={params}
             />
