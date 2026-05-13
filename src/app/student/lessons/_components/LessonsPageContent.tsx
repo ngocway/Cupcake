@@ -20,6 +20,7 @@ import { toggleLessonBookmark, incrementLessonViews } from "../actions";
 
 interface Lesson {
   id: string;
+  slug: string | null;
   title: string;
   description: string | null;
   videoUrl: string | null;
@@ -195,7 +196,8 @@ function LessonCard({
     // Increment views via action
     startTransition(async () => {
        await incrementLessonViews(lesson.id);
-       router.push(`/student/lessons/${lesson.id}`);
+       const identifier = lesson.slug || lesson.id;
+       router.push(`/student/lessons/${identifier}`);
     });
   };
 

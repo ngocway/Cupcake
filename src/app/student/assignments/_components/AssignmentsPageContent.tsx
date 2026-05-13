@@ -19,6 +19,7 @@ import {
 
 interface Assignment {
   id: string;
+  slug: string | null;
   title: string;
   thumbnail: string | null;
   className: string;
@@ -159,7 +160,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
           {filteredAssignments.map((a) => (
             <Link
               key={a.id}
-              href={`/student/assignments/${a.id}/run?direct=true`}
+              href={`/student/assignments/${a.slug || a.id}/run?direct=true`}
               className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col"
             >
               {/* Thumbnail Wrap */}

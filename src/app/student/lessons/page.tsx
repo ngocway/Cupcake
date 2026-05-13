@@ -55,6 +55,7 @@ export default async function StudentLessonsPage() {
     const enrollment = enrollments.find(e => e.class.teacherId === l.teacherId);
     return {
       id: l.id,
+      slug: l.slug,
       title: l.title,
       description: l.description,
       videoUrl: l.videoUrl,
@@ -89,6 +90,7 @@ export default async function StudentLessonsPage() {
 
   const publicLessons = publicLessonsRaw.map(l => ({
     id: l.id,
+    slug: l.slug,
     title: l.title,
     description: l.description,
     videoUrl: l.videoUrl,

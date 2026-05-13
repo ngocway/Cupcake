@@ -47,10 +47,31 @@ export async function GET(request: NextRequest) {
     const [items, total] = await Promise.all([
       prisma.assignment.findMany({
         where,
-        include: {
-          teacher: { select: { id: true, name: true, image: true } },
-          _count: { select: { questions: true } },
-          ...(userId ? { favoriteAssignments: { where: { studentId: userId } } } : {})
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          thumbnail: true,
+          materialType: true,
+          viewCount: true,
+          videoUrl: true,
+          audioUrl: true,
+          createdAt: true,
+          tags: true,
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              image: true
+            }
+          },
+          _count: {
+            select: {
+              questions: true,
+              reviews: true
+            }
+          },
+          ...(userId ? { favoriteAssignments: { where: { studentId: userId }, select: { studentId: true } } } : {})
         },
         orderBy,
         take: limit,

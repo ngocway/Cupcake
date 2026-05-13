@@ -17,7 +17,8 @@ export default async function StudentQuizPage({
   const { id } = await params;
 
   if (!submissionId) {
-    redirect(`/student/assignments/${id}/run`);
+    const { id: paramsId } = await params;
+    redirect(`/student/assignments/${paramsId}/run`);
   }
 
   const submission = await prisma.submission.findUnique({
@@ -97,8 +98,15 @@ export default async function StudentQuizPage({
     }
   });
 
+  // Canonical redirect
+  const identifier = submission.assignment.slug || submission.assignment.id;
+  const { id: paramsId } = await params;
+  if (paramsId === submission.assignment.id && submission.assignment.slug && paramsId !== submission.assignment.slug) {
+    redirect(`/student/assignments/${submission.assignment.slug}/run/quiz?submissionId=${submissionId}`);
+  }
+
   if (submission.submittedAt) {
-    redirect(`/student/assignments/${id}/run`);
+    redirect(`/student/assignments/${identifier}/run`);
   }
 
   const isBookmarked = submission.assignment.favoriteAssignments.length > 0;

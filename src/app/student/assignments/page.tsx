@@ -59,6 +59,7 @@ export default async function StudentAssignmentsPage() {
       const submission = submissionMap.get(ca.assignmentId);
       return {
         id: ca.assignmentId,
+        slug: ca.assignment.slug,
         title: ca.assignment.title,
         thumbnail: ca.assignment.thumbnail,
         className: e.class.name,
@@ -95,6 +96,7 @@ export default async function StudentAssignmentsPage() {
     const submission = submissionMap.get(a.id);
     return {
       id: a.id,
+      slug: a.slug,
       title: a.title,
       thumbnail: a.thumbnail,
       className: "Kho tự học",

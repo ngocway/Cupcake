@@ -19,8 +19,19 @@ export async function startOrResumeAttempt(assignmentId: string) {
     }
   });
 
+  const assignment = await prisma.assignment.findFirst({
+    where: {
+      OR: [{ id: assignmentId }, { slug: assignmentId }]
+    },
+    select: { id: true, slug: true, maxAttempts: true }
+  });
+
+  if (!assignment) throw new Error("Assignment not found.");
+
+  const identifier = assignment.slug || assignment.id;
+
   if (activeSubmission) {
-    redirect(`/student/assignments/${assignmentId}/run/quiz?submissionId=${activeSubmission.id}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
   }
 
   // Create new submission
@@ -32,12 +43,8 @@ export async function startOrResumeAttempt(assignmentId: string) {
     }
   });
 
-  const assignment = await prisma.assignment.findUnique({
-    where: { id: assignmentId }
-  });
-
-  if (!assignment || completedCount >= assignment.maxAttempts) {
-    throw new Error("Maximum attempts reached or assignment not found.");
+  if (completedCount >= assignment.maxAttempts) {
+    throw new Error("Maximum attempts reached.");
   }
 
   const newSubmission = await prisma.submission.create({
@@ -48,5 +55,5 @@ export async function startOrResumeAttempt(assignmentId: string) {
     }
   });
 
-  redirect(`/student/assignments/${assignmentId}/run/quiz?submissionId=${newSubmission.id}`);
+  redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}`);
 }

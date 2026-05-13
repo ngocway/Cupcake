@@ -4,6 +4,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { syncToHomepageFeed } from "@/lib/feed-sync";
 
 export async function submitLessonReview(lessonId: string, rating: number, comment: string) {
   try {
@@ -47,6 +48,9 @@ export async function submitLessonReview(lessonId: string, rating: number, comme
         comment
       }
     });
+
+    // Background sync to feed
+    syncToHomepageFeed(lessonId, "LESSON");
 
     revalidatePath(`/public/lessons/${lessonId}`);
     revalidatePath(`/student/lessons/${lessonId}`);
@@ -103,6 +107,9 @@ export async function submitAssignmentReview(assignmentId: string, rating: numbe
         comment: comment || null
       }
     });
+
+    // Background sync to feed
+    syncToHomepageFeed(assignmentId, "EXERCISE");
 
     revalidatePath(`/student/assignments/${assignmentId}/run`);
     return { 

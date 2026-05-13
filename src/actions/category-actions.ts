@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 
 export async function createCategory(data: { 
   name: string, 
@@ -30,6 +30,7 @@ export async function createCategory(data: {
   });
 
   revalidatePath("/admin/categories");
+  revalidateTag("categories");
   return { success: true, category };
 }
 
@@ -43,6 +44,7 @@ export async function updateCategory(id: string, data: any) {
   });
 
   revalidatePath("/admin/categories");
+  revalidateTag("categories");
   return { success: true, category };
 }
 
@@ -69,6 +71,7 @@ export async function deleteCategory(id: string, strategy: 'DELETE_CHILDREN' | '
   await prisma.category.delete({ where: { id } });
 
   revalidatePath("/admin/categories");
+  revalidateTag("categories");
   return { success: true };
 }
 
@@ -86,6 +89,7 @@ export async function reorderCategories(items: { id: string, parentId: string | 
   );
 
   revalidatePath("/admin/categories");
+  revalidateTag("categories");
   return { success: true };
 }
 

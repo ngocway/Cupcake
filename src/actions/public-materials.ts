@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
 import { revalidatePath } from "next/cache"
+import { syncToHomepageFeed } from "@/lib/feed-sync"
 
 export async function getPublicMaterials(params?: { 
     search?: string, 
@@ -103,6 +104,10 @@ export async function incrementPublicView(id: string) {
             where: { id, status: 'PUBLIC' },
             data: { viewCount: { increment: 1 } }
         });
+        
+        // Background sync to feed
+        syncToHomepageFeed(id, "EXERCISE");
+        
         return { success: true };
     } catch (error) {
         console.error("Error incrementing view count:", error);

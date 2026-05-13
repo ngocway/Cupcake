@@ -176,6 +176,11 @@ model Assignment {
   questions             Question[]
   submissions           Submission[]
   categories            Category[]
+
+  @@index([status])
+  @@index([materialType])
+  @@index([deletedAt])
+  @@index([createdAt])
 }
 
 model FlashcardDeck {
@@ -293,6 +298,8 @@ model Lesson {
   isEditorChoice Boolean          @default(false)
   teacherId      String
   assignmentId   String?          @unique
+  thumbnail      String?
+  materialType   String?          @default("READING")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   deletedAt      DateTime?
@@ -303,6 +310,10 @@ model Lesson {
   reviews        LessonReview[]
   purchases      Purchase[]
   categories     Category[]
+
+  @@index([deletedAt, isPremium, createdAt])
+  @@index([viewsCount])
+  @@index([assignmentId])
 }
 
 model FavoriteLesson {
@@ -378,6 +389,8 @@ model Notification {
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
 }
 
 model Announcement {
@@ -495,4 +508,34 @@ model Category {
 
   assignments Assignment[]
   lessons     Lesson[]
+
+  @@index([parentId])
+  @@index([orderIndex])
+}
+
+model HomepageFeed {
+  id            String   @id @default(cuid())
+  sourceId      String   @unique
+  contentType   String   // "EXERCISE" or "LESSON"
+  title         String
+  slug          String
+  thumbnail     String?
+  videoUrl      String?
+  audioUrl      String?
+  materialType  String?  @default("READING")
+  teacherId     String
+  teacherName   String
+  teacherImage  String?
+  viewCount     Int      @default(0)
+  reviewCount   Int      @default(0)
+  categoryId    String?
+  status        String   @default("PUBLIC")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([contentType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([viewCount])
+  @@index([categoryId])
 }

@@ -2,7 +2,8 @@
 
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from "next/cache";
+import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
 import crypto from 'crypto';
 import { MaterialStatus } from '@/generated/client';
 
@@ -79,7 +80,11 @@ export async function createDraftLesson() {
     data: {
       title: 'Bài học mới',
       teacherId: session.user.id,
-      assignmentId: newAssignment.id
+      assignmentId: newAssignment.id,
+      thumbnail: newAssignment.thumbnail,
+      materialType: newAssignment.materialType,
+      videoUrl: newAssignment.videoUrl,
+      audioUrl: newAssignment.audioUrl
     }
   });
 
@@ -178,25 +183,20 @@ export async function autoSaveMaterial(payload: {
 
     // Sync to Lesson if exists
     if (updatedAssignment.lesson) {
-      // Update standard fields and categories first
       await tx.lesson.update({
         where: { id: updatedAssignment.lesson.id },
         data: {
           title: payload.title,
           description: payload.shortDescription || null,
           videoUrl: payload.videoUrl || null,
+          audioUrl: payload.audioUrl || null,
+          thumbnail: thumbnail || null,
+          materialType: updatedAssignment.materialType,
           categories: {
             set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
           }
         }
       });
-
-      // Update audioUrl via raw SQL to bypass client validation until next restart/generate
-      await tx.$executeRawUnsafe(
-        `UPDATE "Lesson" SET "audioUrl" = $1 WHERE "id" = $2`,
-        payload.audioUrl || null,
-        updatedAssignment.lesson.id
-      );
       console.log(`[AutoSave] Synced metadata to linked lesson: ${updatedAssignment.lesson.id}`);
     }
 
@@ -234,6 +234,15 @@ export async function autoSaveMaterial(payload: {
   }, {
     timeout: 30000 // Increase timeout to 30 seconds for stability
   });
+
+  revalidateTag("assignments");
+  revalidateTag("tags");
+  
+  // Sync to Homepage Feed
+  await syncToHomepageFeed(payload.id, "EXERCISE");
+  if (updatedAssignment.lesson) {
+    await syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON");
+  }
 
   return { success: true, savedAt: new Date() };
 }
@@ -436,6 +445,11 @@ export async function deleteMaterial(id: string) {
   revalidatePath('/teacher/materials/trash');
   revalidatePath('/teacher/lessons');
   revalidatePath('/teacher/dashboard');
+
+  // Sync removal from feed
+  await removeFromHomepageFeed(id);
+  if (assignment?.lesson) await removeFromHomepageFeed(assignment.lesson.id);
+
   return { success: true };
 }
 
@@ -690,6 +704,8 @@ export async function updateMaterialStatus(id: string, newStatus: MaterialStatus
   revalidatePath('/teacher/materials');
   revalidatePath('/teacher/dashboard');
   revalidatePath(`/teacher/materials/${id}`);
+  revalidateTag("assignments");
+  revalidateTag("tags");
   
   return { success: true };
 }
