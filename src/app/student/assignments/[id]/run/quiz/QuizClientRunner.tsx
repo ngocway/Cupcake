@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
+import { completeSubmission } from "@/actions/submission-actions";
 
 // Helper to determine question correctness
 const getQuestionStatus = (q: any, answer: any) => {
@@ -222,6 +223,13 @@ interface Props {
   isGuest?: boolean;
 }
 
+const getYoutubeVideoId = (url: string | null) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
 export default function QuizClientRunner({ 
   assignment, 
   submissionId, 
@@ -239,13 +247,27 @@ export default function QuizClientRunner({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
 
-  const hasInstructions = useMemo(() => {
+  const videoUrl = assignment.videoUrl || assignment.lesson?.videoUrl;
+  const audioUrl = assignment.audioUrl || assignment.lesson?.audioUrl;
+  const youtubeId = getYoutubeVideoId(videoUrl);
+
+  const hasMaterialSection = useMemo(() => {
+    if (videoUrl || audioUrl) return true;
+    if (assignment?.readingText) {
+      const cleanText = String(assignment.readingText).replace(/<[^>]*>/g, "").trim();
+      if (cleanText.length > 0) return true;
+      if (/<(img|video|audio|iframe|embed)\b/i.test(String(assignment.readingText))) return true;
+    }
+    return false;
+  }, [assignment?.readingText, videoUrl, audioUrl]);
+
+  const hasInstructionText = useMemo(() => {
     if (!assignment?.instructions) return false;
     const cleanText = String(assignment.instructions).replace(/<[^>]*>/g, "").trim();
     if (cleanText.length > 0) return true;
     return /<(img|video|audio|iframe|embed)\b/i.test(String(assignment.instructions));
   }, [assignment?.instructions]);
-  
+
   // Review State
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [userReview, setUserReview] = useState<any>(initialReview);
@@ -427,6 +449,16 @@ export default function QuizClientRunner({
     }
     
     toast.success("Tất cả câu hỏi đã được kiểm tra!");
+
+    // Mark as completed in background
+    if (submissionId) {
+      startTransition(async () => {
+        const res = await completeSubmission(submissionId, answers);
+        if (res.success) {
+          console.log("Submission marked as completed");
+        }
+      });
+    }
   };
 
   const handleSubmit = () => {
@@ -460,7 +492,10 @@ export default function QuizClientRunner({
         {/* Middle Column: Questions (70%) */}
         <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30 relative">
            {/* Progress Navigation Header (Sticky) */}
-           <div className="sticky top-0 z-50 h-20 border-b border-outline-variant/20 flex items-center justify-center px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shrink-0">
+           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/20 flex flex-col items-center justify-center px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shrink-0 gap-2">
+              <h2 className="text-[11px] font-black text-on-surface/80 uppercase tracking-[0.2em] line-clamp-1 max-w-[80%] text-center">
+                {assignment.title}
+              </h2>
               <div className="flex items-center gap-3">
                  {questions.map((q, i) => {
                     const ans = answers[q.id];
@@ -668,14 +703,8 @@ export default function QuizClientRunner({
                 </div>
               )
             })}
-
             {/* Bottom Actions */}
             <div className="pt-20 pb-40 flex flex-col items-center gap-8">
-                <div className="text-center space-y-2">
-                   <h4 className="text-2xl font-black text-on-surface">Hoàn thành bài tập?</h4>
-                   <p className="text-on-surface-variant">Kiểm tra lại các đáp án trước khi nộp bài nhé!</p>
-                </div>
-                
                 <div className="flex items-center gap-6">
                   <button 
                       onClick={handleCheckAll}
@@ -685,14 +714,18 @@ export default function QuizClientRunner({
                       <span className="material-symbols-outlined text-xl">verified</span>
                   </button>
                   
-                  <button 
-                      onClick={handleSubmit}
-                      disabled={isPending}
-                      className="flex items-center gap-3 px-10 py-4 bg-primary text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 uppercase italic"
-                  >
-                      {isPending ? "ĐANG NỘP..." : "NỘP BÀI"}
-                      <Send className="w-5 h-5" />
-                  </button>
+                  <div className="relative">
+                    <button 
+                        disabled
+                        className="flex items-center gap-3 px-10 py-4 bg-primary/20 text-primary/40 cursor-not-allowed rounded-[2rem] font-black text-lg tracking-widest transition-all uppercase italic border-2 border-primary/10"
+                    >
+                        NỘP BÀI
+                        <Send className="w-5 h-5" />
+                    </button>
+                    <div className="absolute -top-3 -right-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full shadow-lg border-2 border-white transform rotate-12">
+                      Coming Soon
+                    </div>
+                  </div>
                 </div>
             </div>
           </div>
@@ -728,14 +761,43 @@ export default function QuizClientRunner({
            </div>
            <div className="flex-1 overflow-y-auto no-scrollbar p-10 custom-scrollbar pb-20 space-y-12">
               {/* Instructions Section */}
-              {hasInstructions && (
+              {hasMaterialSection && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
                     <span className="material-symbols-outlined text-sm">menu_book</span>
                     Tài liệu học tập
                   </div>
-                  <div className="flex-1 overflow-y-auto no-scrollbar prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
-                    <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
+                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+                    {/* Video Player */}
+                    {videoUrl && (
+                      <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10 shrink-0 mb-6">
+                        {youtubeId ? (
+                          <iframe
+                            className="w-full h-full"
+                            src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+                            title={assignment.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video src={videoUrl} className="w-full h-full" controls />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Audio Player */}
+                    {audioUrl && (
+                      <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl flex items-center gap-4 mb-6 ring-1 ring-slate-200 dark:ring-slate-700">
+                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                          <span className="material-symbols-outlined">audiotrack</span>
+                        </div>
+                        <audio src={audioUrl} className="flex-1 h-8" controls />
+                      </div>
+                    )}
+
+                    <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
+                      <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
+                    </div>
                   </div>
                 </div>
               )}
@@ -752,7 +814,7 @@ export default function QuizClientRunner({
               )}
 
               {/* Material Section */}
-              {assignment.readingText && (
+              {hasInstructionText && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
                     <span className="material-symbols-outlined text-sm">info</span>

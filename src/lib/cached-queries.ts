@@ -60,8 +60,8 @@ function mapFeedItem(item: any) {
 // ─── EXERCISES (newest) ───────────────────────────────────────────────────────
 
 /** Server-side: newest exercises only — fast first load. Popular is fetched client-side. */
-export const getCachedAssignments = unstable_cache(
-  async (params: any) => {
+export const getCachedAssignments = (params: any) => unstable_cache(
+  async () => {
     const { categoryId, search } = params;
 
     const where: any = { status: "PUBLIC", contentType: "EXERCISE" };
@@ -76,15 +76,15 @@ export const getCachedAssignments = unstable_cache(
 
     return { items: items.map(mapFeedItem), total: items.length };
   },
-  ["home-assignments-newest-v4"],
+  ["home-assignments-newest-v4", JSON.stringify(params)],
   { revalidate: 300, tags: ["assignments", "home-feed"] }
-);
+)();
 
 // ─── LESSONS (newest) ─────────────────────────────────────────────────────────
 
 /** Server-side: newest lessons only — fast first load. Popular is fetched client-side. */
-export const getCachedLessons = unstable_cache(
-  async (params: any) => {
+export const getCachedLessons = (params: any) => unstable_cache(
+  async () => {
     const { categoryId, search } = params;
 
     const where: any = { status: "PUBLIC", contentType: "LESSON" };
@@ -102,6 +102,6 @@ export const getCachedLessons = unstable_cache(
       total: items.length
     };
   },
-  ["home-lessons-newest-v4"],
+  ["home-lessons-newest-v4", JSON.stringify(params)],
   { revalidate: 300, tags: ["assignments", "lessons", "home-feed"] }
-);
+)();

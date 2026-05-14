@@ -10,15 +10,6 @@ export async function startOrResumeAttempt(assignmentId: string) {
 
   const userId = session.user.id;
 
-  // Find active submission
-  const activeSubmission = await prisma.submission.findFirst({
-    where: {
-      assignmentId,
-      studentId: userId,
-      submittedAt: null
-    }
-  });
-
   const assignment = await prisma.assignment.findFirst({
     where: {
       OR: [{ id: assignmentId }, { slug: assignmentId }]
@@ -30,6 +21,15 @@ export async function startOrResumeAttempt(assignmentId: string) {
 
   const identifier = assignment.slug || assignment.id;
 
+  // Find active submission - use assignment.id instead of assignmentId (which could be a slug)
+  const activeSubmission = await prisma.submission.findFirst({
+    where: {
+      assignmentId: assignment.id,
+      studentId: userId,
+      submittedAt: null
+    }
+  });
+
   if (activeSubmission) {
     redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
   }
@@ -37,7 +37,7 @@ export async function startOrResumeAttempt(assignmentId: string) {
   // Create new submission
   const completedCount = await prisma.submission.count({
     where: {
-      assignmentId,
+      assignmentId: assignment.id,
       studentId: userId,
       submittedAt: { not: null }
     }
@@ -49,11 +49,16 @@ export async function startOrResumeAttempt(assignmentId: string) {
 
   const newSubmission = await prisma.submission.create({
     data: {
-      assignmentId,
+      assignmentId: assignment.id,
       studentId: userId,
       attemptNumber: completedCount + 1
     }
   });
 
   redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}`);
+}
+
+export async function prewarmQuestionsAction(assignmentId: string) {
+  const { prewarmAssignmentQuestions } = await import("./data");
+  return prewarmAssignmentQuestions(assignmentId);
 }

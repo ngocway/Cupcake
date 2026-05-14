@@ -74,7 +74,13 @@ export default async function PublicAssignmentPage({
     }
   });
 
-  if (!assignment) notFound();
+  console.log('[PublicAssignmentPage] id from params:', id);
+  console.log('[PublicAssignmentPage] assignment found:', !!assignment);
+
+  if (!assignment) {
+    console.log('[PublicAssignmentPage] Triggering notFound');
+    notFound();
+  }
 
   const submissions = session ? await prisma.submission.findMany({
     where: {

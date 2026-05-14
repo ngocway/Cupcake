@@ -454,11 +454,11 @@ export default function PublicQuestionViewer({
 
          {currentIndex === questions.length - 1 ? (
             showSubmitButton && (
-              <button
-                 onClick={() => alert('Chức năng nộp bài đang được hoàn thiện!')}
-                 className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white rounded-lg font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/10"
+               <button
+                 onClick={() => alert('Chức năng nộp bài đang được nâng cấp, vui lòng quay lại sau!')}
+                 className="flex items-center gap-2 px-8 py-3 bg-slate-400 text-white cursor-not-allowed rounded-lg font-black text-sm tracking-widest transition-all"
               >
-                 HOÀN THÀNH
+                 COMING SOON
               </button>
             )
          ) : (

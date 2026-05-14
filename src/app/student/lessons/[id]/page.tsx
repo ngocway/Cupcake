@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Play, 
   ChevronLeft, 
@@ -29,15 +30,16 @@ import { InteractiveReadingContent } from "@/components/common/InteractiveReadin
 import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
 import { Suspense } from "react";
 import { LessonVideoPlayer } from "./_components/LessonVideoPlayer";
+import { getLessonDetail, getLessonReviews, getRelatedLessons } from "./data";
 
 // --- Sub-components for Streaming ---
 
 async function AudioPlayerWrapper({ lessonId }: { lessonId: string }) {
-  const audioPatchResult: any = await prisma.$queryRawUnsafe(
-    `SELECT "audioUrl" FROM "Lesson" WHERE "id" = $1`,
-    lessonId
-  );
-  const audioUrl = audioPatchResult?.[0]?.audioUrl;
+  const lesson = await prisma.lesson.findUnique({
+    where: { id: lessonId },
+    select: { audioUrl: true }
+  });
+  const audioUrl = lesson?.audioUrl;
   
   if (!audioUrl) return null;
   
@@ -53,17 +55,7 @@ async function AudioPlayerWrapper({ lessonId }: { lessonId: string }) {
 }
 
 async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
-  // Limit to 5 reviews initially for speed
-  const reviews = await prisma.lessonReview.findMany({
-    where: { lessonId, isApproved: true },
-    include: {
-      student: {
-        select: { name: true, image: true }
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 5
-  });
+  const reviews = await getLessonReviews(lessonId);
 
   const averageRating = reviews.length > 0 
     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
@@ -93,9 +85,14 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
           {reviews.map((review) => (
             <div key={review.id} className="space-y-4 animate-in fade-in duration-500">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm relative">
                   {review.student.image ? (
-                    <img src={review.student.image} alt="" className="w-full h-full object-cover" />
+                    <Image 
+                      src={review.student.image} 
+                      alt="" 
+                      fill
+                      className="object-cover" 
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold">
                       {review.student.name?.charAt(0)}
@@ -135,20 +132,7 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
 }
 
 async function SidebarWrapper({ teacher, lessonId }: { teacher: any, lessonId: string }) {
-  const relatedLessons = await prisma.lesson.findMany({
-    where: {
-      id: { not: lessonId },
-      teacherId: teacher.id,
-      deletedAt: null,
-      isBlocked: false
-    },
-    take: 5,
-    select: {
-      id: true,
-      slug: true,
-      title: true
-    }
-  });
+  const relatedLessons = await getRelatedLessons(teacher.id, lessonId);
 
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-700">
@@ -157,6 +141,24 @@ async function SidebarWrapper({ teacher, lessonId }: { teacher: any, lessonId: s
         relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: null }))} 
         isGuest={false}
       />
+    </div>
+  );
+}
+
+async function ReadingContentWrapper({ readingText }: { readingText: string }) {
+  return (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center gap-4">
+        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+        <div className="px-6 py-2 rounded-full border border-slate-200 bg-white/50 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
+            Nội dung bài học
+        </div>
+        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+      </div>
+      
+      <div className="prose prose-slate prose-lg max-w-none dark:prose-invert">
+        <InteractiveReadingContent html={readingText} />
+      </div>
     </div>
   );
 }
@@ -170,59 +172,16 @@ export default async function StudentLessonDetailPage({
 }) {
   const { id } = await params;
 
-  // 1. Fetch only critical data for initial render
+  // Parallel fetch auth and cached lesson detail
   const [sessionData, lesson] = await Promise.all([
     auth(),
-    prisma.lesson.findFirst({
-      where: {
-        OR: [{ id }, { slug: id }]
-      },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        description: true,
-        videoUrl: true,
-        teacherId: true,
-        teacher: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            professionalTitle: true,
-            bio: true,
-            isPortfolioPublished: true,
-            _count: {
-              select: { lessons: true, assignments: true }
-            }
-          }
-        },
-        assignment: {
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            thumbnail: true,
-            readingText: true,
-            _count: { select: { questions: true } }
-          }
-        },
-        favorites: {
-          select: { studentId: true }
-        }
-      }
-    })
+    getLessonDetail(id)
   ]);
 
   if (!lesson) notFound();
 
-  const session = sessionData?.user ? {
-    id: sessionData.user.id!,
-    name: sessionData.user.name ?? null,
-    image: sessionData.user.image ?? null,
-    role: sessionData.user.role ?? null,
-  } : null;
-
+  // Session is guaranteed by StudentLayout, but we need the ID
+  const session = sessionData?.user;
   if (!session) redirect("/login");
   
   if (id === lesson.id && lesson.slug && id !== lesson.slug) {
@@ -249,6 +208,8 @@ export default async function StudentLessonDetailPage({
                {/* Video Player (Facade Optimization) */}
                {(videoId || lesson.videoUrl) && (
                   <LessonVideoPlayer 
+                    lessonId={lesson.id}
+                    studentId={session.id}
                     videoId={videoId}
                     videoUrl={lesson.videoUrl}
                     title={lesson.title}
@@ -266,14 +227,14 @@ export default async function StudentLessonDetailPage({
                      <div className="flex items-center justify-end">
                         <div className="flex items-center gap-3">
                            <BookmarkButton 
-                              id={lesson.id}
-                              type="LESSON"
-                              initialIsBookmarked={isBookmarked}
+                               id={lesson.id}
+                               type="LESSON"
+                               initialIsBookmarked={isBookmarked}
                            />
                            <ReviewTrigger 
-                              type="lesson"
-                              id={lesson.id}
-                              isLoggedIn={true} inline
+                               type="lesson"
+                               id={lesson.id}
+                               isLoggedIn={true} inline
                            />
                         </div>
                      </div>
@@ -288,19 +249,9 @@ export default async function StudentLessonDetailPage({
                      </div>
 
                      {lesson.assignment?.readingText && (
-                        <div className="space-y-8">
-                           <div className="flex items-center gap-4">
-                              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                              <div className="px-6 py-2 rounded-full border border-slate-200 bg-white/50 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                                 Nội dung bài học
-                              </div>
-                              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                           </div>
-                           
-                           <div className="prose prose-slate prose-lg max-w-none dark:prose-invert">
-                              <InteractiveReadingContent html={lesson.assignment.readingText} />
-                           </div>
-                        </div>
+                        <Suspense fallback={<div className="h-96 bg-slate-50 dark:bg-slate-900 animate-pulse rounded-2xl" />}>
+                           <ReadingContentWrapper readingText={lesson.assignment.readingText} />
+                        </Suspense>
                      )}
 
                      {lesson.assignment && (

@@ -9,9 +9,13 @@ interface LessonVideoPlayerProps {
   videoUrl: string | null;
   title: string;
   thumbnail?: string | null;
+  lessonId?: string;
+  studentId?: string;
 }
 
-export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail }: LessonVideoPlayerProps) {
+import { startLessonProgress, completeLessonProgress } from "@/actions/lesson-progress-actions";
+
+export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail, lessonId, studentId }: LessonVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [imgSrc, setImgSrc] = useState<string | null>(null);
 
@@ -24,8 +28,20 @@ export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail }: Lesso
     }
   }, [videoId, thumbnail]);
 
+  const handlePlay = () => {
+    setIsPlaying(true);
+    if (lessonId && studentId) {
+      startLessonProgress(lessonId, studentId);
+    }
+  };
+
+  const handleEnded = () => {
+    if (lessonId && studentId) {
+      completeLessonProgress(lessonId, studentId);
+    }
+  };
+
   const handleImgError = () => {
-    // Fallback to High Quality if Max Res is unavailable
     if (videoId && imgSrc?.includes('maxresdefault')) {
       setImgSrc(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`);
     }
@@ -48,6 +64,7 @@ export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail }: Lesso
             className="w-full h-full" 
             controls 
             autoPlay
+            onEnded={handleEnded}
           />
         )}
       </div>
@@ -57,7 +74,7 @@ export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail }: Lesso
   return (
     <div 
       className="aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl group relative ring-1 ring-white/10 shrink-0 cursor-pointer overflow-hidden"
-      onClick={() => setIsPlaying(true)}
+      onClick={handlePlay}
     >
       {/* Background Image / Mesh Gradient */}
       {imgSrc ? (

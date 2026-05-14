@@ -3,6 +3,38 @@ import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import QuizClientRunner from "./QuizClientRunner";
 
+async function getQuizData(assignmentId: string, studentId: string) {
+  return prisma.assignment.findFirst({
+    where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+    include: {
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          professionalTitle: true,
+          bio: true,
+          isPortfolioPublished: true,
+          _count: { select: { lessons: true, assignments: true } }
+        }
+      },
+      questions: { orderBy: { orderIndex: 'asc' } },
+      favoriteAssignments: { where: { studentId }, select: { studentId: true } },
+      lesson: {
+        select: {
+          videoUrl: true,
+          audioUrl: true
+        }
+      },
+      reviews: {
+        where: { isApproved: true },
+        include: { student: { select: { name: true, image: true } } },
+        orderBy: { createdAt: 'desc' }
+      }
+    }
+  });
+}
+
 export default async function StudentQuizPage({
   searchParams,
   params
@@ -10,120 +42,79 @@ export default async function StudentQuizPage({
   searchParams: Promise<{ submissionId: string }>;
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  const [session, { submissionId }, { id: paramsId }] = await Promise.all([
+    auth(),
+    searchParams,
+    params
+  ]);
 
-  const { submissionId } = await searchParams;
-  const { id } = await params;
+  if (!session?.user?.id) redirect("/login");
+  const userId = session.user.id;
 
   if (!submissionId) {
-    const { id: paramsId } = await params;
     redirect(`/student/assignments/${paramsId}/run`);
   }
 
+  // Fetch submission first to get the real assignmentId (CUID)
   const submission = await prisma.submission.findUnique({
     where: { id: submissionId },
-    include: {
-      assignment: {
-        include: {
-          teacher: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              professionalTitle: true,
-              bio: true,
-              isPortfolioPublished: true,
-              _count: {
-                select: {
-                  lessons: true,
-                  assignments: true
-                }
-              }
-            }
-          },
-          questions: {
-            orderBy: { orderIndex: 'asc' }
-          },
-          favoriteAssignments: {
-            where: { studentId: session.user.id }
-          },
-          reviews: {
-            where: {
-              OR: [
-                { isApproved: true },
-                { studentId: session.user.id }
-              ]
-            },
-            include: {
-              student: {
-                select: { name: true, image: true }
-              }
-            },
-            orderBy: { createdAt: 'desc' }
-          }
-        }
-      }
+    select: { 
+      id: true, 
+      studentId: true, 
+      assignmentId: true, 
+      submittedAt: true, 
+      answersDraft: true 
     }
   });
 
-  if (!submission || submission.studentId !== session.user.id) {
+  // Verify submission belongs to user
+  if (!submission || submission.studentId !== userId) {
     notFound();
   }
 
-  // Fetch related assignments by tags
-  const tags = submission.assignment.tags?.split(',').map(t => t.trim()).filter(Boolean) || [];
-  
-  const relatedWhere: any = {
-    status: 'PUBLIC',
-    id: { not: submission.assignment.id },
-  };
+  // Fetch assignment using CUID
+  const assignment = await getQuizData(submission.assignmentId, userId);
 
-  if (tags.length > 0) {
-    relatedWhere.OR = [
-      { teacherId: submission.assignment.teacherId },
-      { OR: tags.map(tag => ({ tags: { contains: tag } })) }
-    ];
-  } else {
-    relatedWhere.teacherId = submission.assignment.teacherId;
-  }
-
-  const relatedAssignments = await prisma.assignment.findMany({
-    where: relatedWhere,
-    take: 5,
-    include: {
-      teacher: {
-        select: { name: true, image: true }
-      }
-    }
-  });
-
-  // Canonical redirect
-  const identifier = submission.assignment.slug || submission.assignment.id;
-  const { id: paramsId } = await params;
-  if (paramsId === submission.assignment.id && submission.assignment.slug && paramsId !== submission.assignment.slug) {
-    redirect(`/student/assignments/${submission.assignment.slug}/run/quiz?submissionId=${submissionId}`);
+  if (!assignment) {
+    notFound();
   }
 
   if (submission.submittedAt) {
+    const identifier = assignment.slug || assignment.id;
     redirect(`/student/assignments/${identifier}/run`);
   }
 
-  const isBookmarked = submission.assignment.favoriteAssignments.length > 0;
-  const myReview = submission.assignment.reviews.find(r => r.studentId === session.user.id);
-  const approvedReviews = submission.assignment.reviews.filter(r => r.isApproved);
+  // Tối ưu hóa: Lấy nội dung liên quan
+  const tags = assignment.tags?.split(',').map(t => t.trim()).filter(Boolean) || [];
+  const relatedAssignments = await prisma.assignment.findMany({
+    where: {
+      status: 'PUBLIC',
+      id: { not: assignment.id },
+      OR: tags.length > 0 ? [
+        { teacherId: assignment.teacherId },
+        ...tags.map(tag => ({ tags: { contains: tag } }))
+      ] : [{ teacherId: assignment.teacherId }]
+    },
+    take: 5,
+    include: {
+      teacher: { select: { name: true, image: true } }
+    }
+  });
+
+  const isBookmarked = assignment.favoriteAssignments.length > 0;
+  const myReview = assignment.reviews.find(r => r.studentId === userId);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
        <QuizClientRunner 
-          assignment={submission.assignment}
+          assignment={assignment as any}
           submissionId={submissionId}
-          questions={submission.assignment.questions}
+          questions={assignment.questions}
           initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft) : {}}
           isBookmarked={isBookmarked}
-          initialReview={myReview}
-          allReviews={approvedReviews}
-          relatedAssignments={relatedAssignments}
+          initialReview={myReview as any}
+          allReviews={assignment.reviews as any}
+          relatedAssignments={relatedAssignments as any}
        />
     </div>
   );

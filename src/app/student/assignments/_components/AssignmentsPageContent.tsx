@@ -16,6 +16,7 @@ import {
    User,
    ArrowRight
 } from "lucide-react";
+import { DirectStartLink } from "../../_components/DirectStartLink";
 
 interface Assignment {
   id: string;
@@ -26,62 +27,40 @@ interface Assignment {
   classId: string;
   assignedAt: Date;
   dueDate: Date | null;
-  status: "PENDING" | "COMPLETED";
+  status: "PENDING" | "COMPLETED" | "IN_PROGRESS";
   score?: number | null;
+  correctAnswers?: number | null;
+  totalQuestions?: number | null;
   teacherName?: string | null;
   type: "ASSIGNED" | "FREE";
 }
 
 interface Props {
-  assignedAssignments: Assignment[];
-  freeLearningAssignments: Assignment[];
+  assignments: Assignment[];
+  source: "class" | "public";
   classes: { id: string; name: string }[];
+  initialTab?: "pending" | "completed" | "in-progress";
 }
 
-export default function AssignmentsPageContent({ assignedAssignments, freeLearningAssignments, classes }: Props) {
-  const [activeCategory, setActiveCategory] = useState<"assigned" | "free">("assigned");
-  const [activeTab, setActiveTab] = useState<"pending" | "completed">("pending");
+export default function AssignmentsPageContent({ assignments, source, classes, initialTab }: Props) {
+  const [activeTab, setActiveTab] = useState<"in-progress" | "completed">(initialTab === "completed" ? "completed" : "in-progress");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
 
-  const currentList = activeCategory === "assigned" ? assignedAssignments : freeLearningAssignments;
-
   const filteredAssignments = useMemo(() => {
-    return currentList.filter((a) => {
-      const matchTab = activeTab === "pending" ? a.status === "PENDING" : a.status === "COMPLETED";
+    return assignments.filter((a) => {
+      const matchTab = activeTab === "in-progress" 
+        ? (a.status === "PENDING" || a.status === "IN_PROGRESS")
+        : (a.status === "COMPLETED");
+      
       const matchSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchClass = activeCategory === "free" || selectedClassId === "all" || a.classId === selectedClassId;
+      const matchClass = source === "public" || selectedClassId === "all" || a.classId === selectedClassId;
       return matchTab && matchSearch && matchClass;
     });
-  }, [currentList, activeTab, searchQuery, selectedClassId, activeCategory]);
+  }, [assignments, activeTab, searchQuery, selectedClassId, source]);
 
   return (
     <div className="space-y-10">
-      {/* 1. Category Switcher (Assigned vs Free) */}
-      <div className="flex p-1.5 bg-surface-container-low rounded-3xl w-fit border border-outline-variant/10 shadow-inner">
-         <button 
-            onClick={() => { setActiveCategory("assigned"); setSelectedClassId("all"); }}
-            className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all ${
-               activeCategory === "assigned" 
-               ? "bg-white dark:bg-slate-900 shadow-lg shadow-black/5 text-primary" 
-               : "text-on-surface-variant hover:text-on-surface"
-            }`}
-         >
-            <GraduationCap className="w-4 h-4" />
-            Nhiệm vụ từ Giáo viên
-         </button>
-         <button 
-            onClick={() => { setActiveCategory("free"); setSelectedClassId("all"); }}
-            className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all ${
-               activeCategory === "free" 
-               ? "bg-white dark:bg-slate-900 shadow-lg shadow-black/5 text-primary" 
-               : "text-on-surface-variant hover:text-on-surface"
-            }`}
-         >
-            <LayoutGrid className="w-4 h-4" />
-            Kho tài liệu tự học
-         </button>
-      </div>
 
       {/* 2. Toolbar: Search, Filters & Tabs */}
       <div className="space-y-6">
@@ -89,24 +68,24 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
             {/* Tabs (Pending vs Completed) */}
             <div className="flex gap-8 border-b border-outline-variant/30 px-2 overflow-x-auto w-full lg:w-auto">
                <button
-                  onClick={() => setActiveTab("pending")}
+                  onClick={() => setActiveTab("in-progress")}
                   className={`pb-4 text-sm font-label font-bold transition-all relative whitespace-nowrap ${
-                     activeTab === "pending"
-                     ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                     activeTab === "in-progress"
+                     ? "text-amber-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500"
                      : "text-outline hover:text-on-surface"
                   }`}
                >
-                  Đang diễn ra ({currentList.filter(a => a.status === "PENDING").length})
+                  Đang làm ({assignments.filter(a => a.status === "PENDING" || a.status === "IN_PROGRESS").length})
                </button>
                <button
                   onClick={() => setActiveTab("completed")}
                   className={`pb-4 text-sm font-label font-bold transition-all relative whitespace-nowrap ${
                      activeTab === "completed"
-                     ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                     ? "text-green-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-green-500"
                      : "text-outline hover:text-on-surface"
                   }`}
                >
-                  Đã hoàn thành ({currentList.filter(a => a.status === "COMPLETED").length})
+                  Đã hoàn thành ({assignments.filter(a => a.status === "COMPLETED").length})
                </button>
             </div>
 
@@ -123,7 +102,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
                   />
                </div>
 
-               {activeCategory === "assigned" && (
+               {source === "class" && (
                   <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full sm:max-w-xs pb-1 sm:pb-0">
                      <button
                         onClick={() => setSelectedClassId("all")}
@@ -158,10 +137,10 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
       {filteredAssignments.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredAssignments.map((a) => (
-            <Link
+            <DirectStartLink
               key={a.id}
-              href={`/student/assignments/${a.slug || a.id}/run?direct=true`}
-              className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col"
+              id={a.slug || a.id}
+              className="group bg-white dark:bg-slate-900 rounded-[2.5rem] border border-outline-variant/10 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col relative"
             >
               {/* Thumbnail Wrap */}
               <div className="aspect-[4/3] w-full bg-surface-container relative overflow-hidden">
@@ -183,7 +162,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
                    )}
                 </div>
 
-                {activeCategory === "assigned" && a.dueDate && a.status === "PENDING" && (
+                {source === "class" && a.dueDate && a.status === "PENDING" && (
                    <div className="absolute bottom-5 left-5">
                       <div className={`px-4 py-1.5 rounded-full text-[10px] font-bold shadow-sm backdrop-blur-md flex items-center gap-2 ${
                         (new Date(a.dueDate).getTime() - new Date().getTime()) < 86400000 
@@ -217,28 +196,33 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-outline-variant/10 pt-6">
-                   {a.status === "COMPLETED" ? (
-                      <div className="flex items-center gap-3">
-                         <div className="flex flex-col">
-                            <p className="text-[10px] text-outline font-bold uppercase tracking-widest">Điểm số</p>
-                            <span className="font-black text-2xl text-secondary">{a.score !== null ? `${Math.round(a.score * 10) / 10}` : "--"}</span>
-                         </div>
-                      </div>
-                   ) : (
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-2xl bg-primary-fixed/30 flex items-center justify-center text-primary">
-                            <PlayCircle className="w-6 h-6" />
-                         </div>
-                         <p className="text-sm font-black text-primary uppercase tracking-tighter">{activeCategory === "assigned" ? "Làm nhiệm vụ" : "Học ngay"}</p>
-                      </div>
-                   )}
+                 <div className="flex items-center justify-between border-t border-outline-variant/10 pt-6">
+                    {a.status === "COMPLETED" ? (
+                       <div className="flex items-center gap-3">
+                          <div className="flex flex-col">
+                             <p className="text-[10px] text-outline font-bold uppercase tracking-widest">Kết quả</p>
+                             <div className="flex items-baseline gap-1">
+                                <span className="font-black text-2xl text-green-500">{a.correctAnswers ?? 0}</span>
+                                <span className="text-sm text-outline font-bold">/{a.totalQuestions ?? 0} câu</span>
+                             </div>
+                          </div>
+                       </div>
+                    ) : (
+                       <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${a.status === "IN_PROGRESS" ? "bg-amber-500/20 text-amber-500" : "bg-primary-fixed/30 text-primary"}`}>
+                             {a.status === "IN_PROGRESS" ? <Clock className="w-6 h-6" /> : <PlayCircle className="w-6 h-6" />}
+                          </div>
+                          <p className={`text-sm font-black uppercase tracking-tighter ${a.status === "IN_PROGRESS" ? "text-amber-500" : "text-primary"}`}>
+                             {a.status === "IN_PROGRESS" ? "Đang làm dở" : source === "class" ? "Làm nhiệm vụ" : "Học ngay"}
+                          </p>
+                       </div>
+                    )}
                    <div className="w-10 h-10 rounded-full border border-outline-variant/30 flex items-center justify-center group-hover:bg-on-surface group-hover:border-on-surface group-hover:text-white transition-all">
                      <ArrowRight className="w-5 h-5" />
                    </div>
                 </div>
               </div>
-            </Link>
+            </DirectStartLink>
           ))}
         </div>
       ) : (
@@ -249,7 +233,7 @@ export default function AssignmentsPageContent({ assignedAssignments, freeLearni
            <div className="max-w-sm mx-auto">
               <h3 className="text-2xl font-black">Chưa có nội dung ở đây</h3>
               <p className="text-on-surface-variant mt-3 leading-relaxed">
-                {searchQuery ? "Chúng mình không tìm thấy bài nào khớp với từ khóa bạn nhập. Thử lại nhé!" : activeCategory === "assigned" ? "Bạn đã hoàn thành tất cả bài tập từ giáo viên rồi đấy. Thật tuyệt vời!" : "Kho học liệu đang được cập nhật thêm. Hãy quay lại sau nhé!"}
+                {searchQuery ? "Chúng mình không tìm thấy bài nào khớp với từ khóa bạn nhập. Thử lại nhé!" : source === "class" ? "Bạn đã hoàn thành tất cả bài tập từ giáo viên rồi đấy. Thật tuyệt vời!" : "Kho học liệu đang được cập nhật thêm. Hãy quay lại sau nhé!"}
               </p>
            </div>
            {searchQuery && (

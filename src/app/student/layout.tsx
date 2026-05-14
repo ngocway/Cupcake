@@ -5,14 +5,12 @@ import { NotificationBell } from "@/components/common/NotificationBell"
 import { SideNavWrapper } from "@/app/student/_components/SideNavWrapper"
 import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper"
 import { SideNavItem } from "@/app/student/_components/SideNavItem"
-import { StudentUserNav } from "@/components/student/StudentUserNav"
+import { PublicHeader } from "@/components/public/PublicHeader"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   
   if (!session) {
-    // proxy.ts already redirects non-login pages to /student/login
-    // So if we reach here without a session, we must be on /student/login
     return <>{children}</>
   }
   
@@ -20,17 +18,25 @@ export default async function StudentLayout({ children }: { children: React.Reac
     redirect("/role-select")
   }
   
-  // Allow both STUDENT and ADMIN, and allow TEACHER for learning routes
   const isTeacher = session.user.role === "TEACHER";
   if (session.user.role !== "STUDENT" && session.user.role !== "ADMIN" && !isTeacher) {
     redirect("/teacher/dashboard")
   }
 
+  const publicSession = {
+    id: session.user.id!,
+    name: session.user.name ?? null,
+    image: session.user.image ?? null,
+    role: (session.user as any).role ?? null
+  };
+
   return (
     <div className="min-h-screen bg-surface font-body text-on-surface">
+      <PublicHeader session={publicSession} />
+      
       {/* Admin/Teacher Impersonation Banner */}
       {(session.user.role === 'ADMIN' || isTeacher) && (
-        <div className={`sticky top-0 z-[100] w-full ${isTeacher ? 'bg-primary text-white' : 'bg-amber-500 text-amber-950'} flex items-center justify-between px-6 py-2.5 shadow-lg`}>
+        <div className={`sticky top-0 z-[100] w-full ${isTeacher ? 'bg-primary text-white' : 'bg-amber-500 text-amber-950'} flex items-center justify-between px-6 py-2.5 shadow-lg pt-32`}>
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[18px]">
               {isTeacher ? 'visibility' : 'admin_panel_settings'}
@@ -57,18 +63,32 @@ export default async function StudentLayout({ children }: { children: React.Reac
 
       {/* SideNavBar - Controlled by Wrapper */}
       <SideNavWrapper isTeacher={isTeacher}>
-        <div className="px-6 py-4">
-          <h3 className="font-headline font-bold text-slate-900 dark:text-white text-lg">Learning Path</h3>
-          <p className="font-label text-xs text-slate-500 uppercase tracking-widest mt-1">Level B2 Upper-Intermediate</p>
-        </div>
-        
-        <nav className="flex-1 px-4 py-4 space-y-2">
-          <SideNavItem href="/student/dashboard" icon="dashboard" label="Dashboard" />
-          <SideNavItem href="/student/lessons" icon="menu_book" label="Lessons" />
-          <SideNavItem href="/student/assignments" icon="assignment" label="Assignments" />
-          <SideNavItem href="/student/bookmarks" icon="bookmark" label="Bookmarks" />
-          <SideNavItem href="/student/classes" icon="group" label="Classes" />
-          <SideNavItem href="/student/growth" icon="trending_up" label="Growth" />
+        <nav className="flex-1 px-4 pb-6 pt-0 space-y-8">
+          <div>
+            <div className="space-y-1 mb-6">
+              <SideNavItem href="/student/dashboard" icon="dashboard" label="Dashboard" />
+            </div>
+            
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Khám phá kiến thức</p>
+            <div className="space-y-1">
+              <SideNavItem href="/student/lessons?source=public" icon="explore" label="Bài học" />
+              <SideNavItem href="/student/assignments?source=public" icon="language" label="Bài tập" />
+            </div>
+          </div>
+
+          <div>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Nội dung từ Lớp học</p>
+            <div className="space-y-1">
+              <SideNavItem href="/student/lessons?source=class" icon="menu_book" label="Bài học" comingSoon />
+              <SideNavItem href="/student/assignments?source=class" icon="assignment" label="Bài tập" comingSoon />
+            </div>
+          </div>
+          
+          <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-1">
+            <SideNavItem href="/student/bookmarks" icon="bookmark" label="Bookmarks" />
+            <SideNavItem href="/student/classes" icon="group" label="Classes" />
+            <SideNavItem href="/student/growth" icon="trending_up" label="Growth" />
+          </div>
         </nav>
         
         <div className="p-4">

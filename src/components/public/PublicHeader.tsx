@@ -16,7 +16,10 @@ interface PublicHeaderProps {
 export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) {
   const pathname = usePathname()
   
-  if (pathname !== "/") return null;
+  const isLearningRoute = pathname?.includes('/lessons/') || 
+                         (pathname?.includes('/assignments/') && pathname?.includes('/run'))
+  
+  if (isLearningRoute) return null;
 
   const [isAtTop, setIsAtTop] = useState(true)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -42,6 +45,8 @@ export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) 
 
   const dashboardHref = session?.role === "TEACHER" ? "/teacher/dashboard" : "/student/dashboard"
 
+  const isActive = (path: string) => pathname === path
+
   return (
     <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-6 md:px-10 py-4 w-[95%] max-w-[1440px] glass rounded-[32px] shadow-2xl transition-all duration-700 ease-in-out ${isAtTop ? "translate-y-0 opacity-100" : "-translate-y-40 opacity-0 pointer-events-none"}`}>
       <div className="flex items-center gap-10">
@@ -55,7 +60,12 @@ export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) 
           </div>
         </Link>
         <div className="hidden lg:flex gap-8 items-center">
-          <Link className="text-small font-black uppercase tracking-widest text-primary border-b-2 border-primary pb-1" href="/">Trang chủ</Link>
+          <Link 
+            className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
+            href="/"
+          >
+            Trang chủ
+          </Link>
           <Link className="text-small font-black uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all duration-300" href="#">Thư viện</Link>
           <Link className="text-small font-black uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all duration-300" href="#">Cộng đồng</Link>
         </div>
@@ -105,18 +115,55 @@ export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) 
                     <Link 
                       href={dashboardHref}
                       onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group"
+                      className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive(dashboardHref) ? 'bg-white/10 text-primary' : 'text-white/70'}`}
                     >
                       <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">dashboard</span>
-                      Bảng điều khiển
+                      <div className="flex items-center justify-between flex-1">
+                        <span>Bảng điều khiển</span>
+                      </div>
                     </Link>
                     <Link 
                       href={`/profile/${session.id}`}
                       onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group"
+                      className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive(`/profile/${session.id}`) ? 'bg-white/10 text-primary' : 'text-white/70'}`}
                     >
                       <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">person</span>
                       Hồ sơ cá nhân
+                    </Link>
+                    
+                    <div className="h-px bg-white/5 my-1 mx-2" />
+                    
+                    <Link 
+                      href="/student/my-learning/assignments"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive('/student/my-learning/assignments') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                    >
+                      <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">assignment</span>
+                      Bài tập của tôi
+                    </Link>
+                    <Link 
+                      href="/student/lessons?filter=completed"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${pathname.includes('/student/lessons') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                    >
+                      <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">history_edu</span>
+                      Bài học đã học
+                    </Link>
+                    <Link 
+                      href="/student/bookmarks"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive('/student/bookmarks') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                    >
+                      <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">bookmark</span>
+                      Bookmark của tôi
+                    </Link>
+                    <Link 
+                      href="/student/reviews"
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive('/student/reviews') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                    >
+                      <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">star</span>
+                      Đánh giá của tôi
                     </Link>
                   </div>
                   <div className="p-3 border-t border-white/10">

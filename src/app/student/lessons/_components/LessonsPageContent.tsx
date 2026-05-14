@@ -32,17 +32,20 @@ interface Lesson {
   createdAt: Date;
   className?: string;
   isFavorite: boolean;
+  status: "PENDING" | "COMPLETED" | "IN_PROGRESS";
   type: "ASSIGNED" | "FREE";
 }
 
 interface Props {
-  assignedLessons: Lesson[];
-  publicLessons: Lesson[];
+  lessons: Lesson[];
+  source: "class" | "public";
+  classes: { id: string; name: string }[];
 }
 
-export default function LessonsPageContent({ assignedLessons, publicLessons }: Props) {
-  const [activeCategory, setActiveCategory] = useState<"assigned" | "free">("assigned");
+export default function LessonsPageContent({ lessons, source, classes }: Props) {
+  const [activeTab, setActiveTab] = useState<"in-progress" | "completed">("in-progress");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState<string>("all");
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
 
@@ -51,15 +54,21 @@ export default function LessonsPageContent({ assignedLessons, publicLessons }: P
     setTimeout(() => setToast(null), 3000);
   };
 
-  const currentList = activeCategory === "assigned" ? assignedLessons : publicLessons;
-
   const filteredLessons = useMemo(() => {
-    return currentList.filter((l) => {
-      return l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    return lessons.filter((l) => {
+      const matchTab = activeTab === "in-progress" 
+        ? (l.status === "PENDING" || l.status === "IN_PROGRESS")
+        : (l.status === "COMPLETED");
+        
+      const matchSearch = l.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
              (l.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
              (l.className?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+             
+      const matchClass = source === "public" || selectedClassId === "all" || l.className === selectedClassId;
+             
+      return matchTab && matchSearch && matchClass;
     });
-  }, [currentList, searchQuery]);
+  }, [lessons, activeTab, searchQuery, selectedClassId, source]);
 
   return (
     <div className="space-y-10 relative">
@@ -77,55 +86,75 @@ export default function LessonsPageContent({ assignedLessons, publicLessons }: P
         </div>
       )}
 
-      {/* 1. Category Switcher */}
-      <div className="flex p-1.5 bg-surface-container-low rounded-3xl w-fit border border-outline-variant/10 shadow-inner">
-         <button 
-            onClick={() => { setActiveCategory("assigned"); setSearchQuery(""); }}
-            className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all ${
-               activeCategory === "assigned" 
-               ? "bg-white dark:bg-slate-900 shadow-lg shadow-black/5 text-primary" 
-               : "text-on-surface-variant hover:text-on-surface"
-            }`}
-         >
-            <GraduationCap className="w-4 h-4" />
-            Nội dung từ Lớp học
-         </button>
-         <button 
-            onClick={() => { setActiveCategory("free"); setSearchQuery(""); }}
-            className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all ${
-               activeCategory === "free" 
-               ? "bg-white dark:bg-slate-900 shadow-lg shadow-black/5 text-primary" 
-               : "text-on-surface-variant hover:text-on-surface"
-            }`}
-         >
-            <LayoutGrid className="w-4 h-4" />
-            Khám phá kiến thức
-         </button>
-      </div>
-
-      {/* 2. Search & Toolbar */}
-      <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
-         <div className="relative w-full md:w-96 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
-            <input
-               type="text"
-               placeholder="Tìm bài giảng, nội dung học..."
-               className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-outline-variant/30 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium"
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-            />
-         </div>
-
-         {activeCategory === "free" && (
-            <div className="flex items-center gap-3">
-               <span className="text-xs font-bold text-outline-variant uppercase tracking-widest hidden sm:block">Sắp xếp:</span>
-               <select className="bg-white dark:bg-slate-900 border border-outline-variant/30 rounded-xl px-4 py-2 text-xs font-bold outline-none focus:border-primary">
-                  <option>Mới nhất</option>
-                  <option>Nổi bật</option>
-                  <option>Xem nhiều nhất</option>
-               </select>
+      {/* 2. Toolbar: Search, Filters & Tabs */}
+      <div className="space-y-6">
+         <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
+            {/* Tabs (In-progress vs Completed) */}
+            <div className="flex gap-8 border-b border-outline-variant/30 px-2 overflow-x-auto w-full lg:w-auto">
+               <button
+                  onClick={() => setActiveTab("in-progress")}
+                  className={`pb-4 text-sm font-label font-bold transition-all relative whitespace-nowrap ${
+                     activeTab === "in-progress"
+                     ? "text-amber-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-amber-500"
+                     : "text-outline hover:text-on-surface"
+                  }`}
+               >
+                  Đang học ({lessons.filter(l => l.status === "PENDING" || l.status === "IN_PROGRESS").length})
+               </button>
+               <button
+                  onClick={() => setActiveTab("completed")}
+                  className={`pb-4 text-sm font-label font-bold transition-all relative whitespace-nowrap ${
+                     activeTab === "completed"
+                     ? "text-green-500 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-green-500"
+                     : "text-outline hover:text-on-surface"
+                  }`}
+               >
+                  Đã hoàn thành ({lessons.filter(l => l.status === "COMPLETED").length})
+               </button>
             </div>
-         )}
+
+            {/* Search and Class Filter */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+               <div className="relative w-full sm:w-80 group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
+                  <input
+                     type="text"
+                     placeholder="Tìm kiếm bài học..."
+                     className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-outline-variant/50 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium"
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+               </div>
+
+               {source === "class" && (
+                  <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full sm:max-w-xs pb-1 sm:pb-0">
+                     <button
+                        onClick={() => setSelectedClassId("all")}
+                        className={`px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
+                           selectedClassId === "all"
+                           ? "bg-on-surface text-white border-on-surface"
+                           : "bg-white dark:bg-slate-900 text-on-surface-variant border-outline-variant hover:border-primary"
+                        }`}
+                     >
+                        Tất cả lớp
+                     </button>
+                     {classes.map((c) => (
+                        <button
+                           key={c.id}
+                           onClick={() => setSelectedClassId(c.id)}
+                           className={`px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
+                              selectedClassId === c.id
+                              ? "bg-on-surface text-white border-on-surface"
+                              : "bg-white dark:bg-slate-900 text-on-surface-variant border-outline-variant hover:border-primary"
+                           }`}
+                        >
+                           {c.name}
+                        </button>
+                     ))}
+                  </div>
+               )}
+            </div>
+         </div>
       </div>
 
       {/* 3. Results Grid */}
@@ -146,8 +175,8 @@ export default function LessonsPageContent({ assignedLessons, publicLessons }: P
               <Video className="w-8 h-8 text-outline-variant" />
            </div>
            <div>
-              <h3 className="text-xl font-extrabold">Không tìm thấy bài học</h3>
-              <p className="text-on-surface-variant mt-2">Chúng mình đang cập nhật nội dung cho phần này, hãy quay lại sau nhé!</p>
+              <h3 className="text-xl font-extrabold">Chưa có nội dung ở đây</h3>
+              <p className="text-on-surface-variant mt-2">{searchQuery ? "Chúng mình không tìm thấy bài nào khớp với từ khóa bạn nhập. Thử lại nhé!" : source === "class" ? "Tất cả bài giảng từ giáo viên đã được cập nhật tại đây. Hãy bắt đầu học nhé!" : "Kho học liệu đang được cập nhật thêm. Hãy quay lại sau nhé!"}</p>
            </div>
         </div>
       )}
@@ -239,6 +268,27 @@ function LessonCard({
                  <Lock className="w-4 h-4" />
               </div>
            </div>
+        )}
+
+        {/* Status Badge */}
+        {lesson.status !== "PENDING" && (
+          <div className="absolute bottom-4 right-4">
+            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg backdrop-blur-md ${
+              lesson.status === "COMPLETED" ? "bg-green-500 text-white" : "bg-amber-500 text-white"
+            }`}>
+              {lesson.status === "COMPLETED" ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3" />
+                  Đã hoàn thành
+                </>
+              ) : (
+                <>
+                  <Clock className="w-3 h-3" />
+                  Đang làm
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
       

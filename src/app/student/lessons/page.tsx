@@ -4,7 +4,12 @@ import prisma from "@/lib/prisma";
 import LessonsPageContent from "./_components/LessonsPageContent";
 import { Play, Video } from "lucide-react";
 
-export default async function StudentLessonsPage() {
+export default async function StudentLessonsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ source?: string }>
+}) {
+  const { source = "public" } = await searchParams;
   const session = await auth();
   
   if (!session || session.user?.role !== "STUDENT") {
@@ -13,46 +18,74 @@ export default async function StudentLessonsPage() {
 
   const userId = session.user.id;
 
-  // 1. Fetch Enrolled Classes & Teachers
-  const enrollments = await prisma.classEnrollment.findMany({
-    where: { studentId: userId },
-    include: {
-      class: {
-        include: {
-          teacher: true
-        }
-      }
+  // 1-3. Parallel Fetching to avoid waterfalls
+  const [enrollments, progressRaw, userFavorites] = await Promise.all([
+    prisma.classEnrollment.findMany({
+      where: { studentId: userId },
+      include: { class: { include: { teacher: true } } }
+    }),
+    prisma.lessonProgress.findMany({
+      where: { studentId: userId }
+    }),
+    (prisma as any).favoriteLesson.findMany({
+      where: { studentId: userId },
+      select: { lessonId: true }
+    }).catch(() => [])
+  ]);
+
+  const classIds = enrollments.map(e => e.classId);
+  const favoriteIds = new Set(userFavorites.map((f: any) => f.lessonId));
+
+  const progressMap = new Map();
+  progressRaw.forEach(p => {
+    // Keep the one with completedAt if multiple exist
+    const existing = progressMap.get(p.lessonId);
+    if (!existing || (!existing.completedAt && p.completedAt)) {
+      progressMap.set(p.lessonId, p);
     }
   });
 
-  const teacherIds = Array.from(new Set(enrollments.map(e => e.class.teacherId)));
-
-  // 2. Fetch User Favorites (with safety check)
-  let favoriteIds = new Set<string>();
-  try {
-    const userFavorites = await (prisma as any).favoriteLesson.findMany({
-      where: { studentId: userId },
-      select: { lessonId: true }
+  // 4. Fetch Lessons based on source
+  let lessonsRaw;
+  if (source === "class") {
+    lessonsRaw = await prisma.lesson.findMany({
+      where: {
+        targetClasses: { some: { classId: { in: classIds } } },
+        deletedAt: null
+      },
+      include: {
+        teacher: { select: { name: true } },
+        targetClasses: {
+          where: { classId: { in: classIds } },
+          include: { class: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
     });
-    favoriteIds = new Set(userFavorites.map((f: any) => f.lessonId));
-  } catch (error) {
-    console.error("Prisma client may need update:", error);
+  } else {
+    lessonsRaw = await prisma.lesson.findMany({
+      where: {
+        OR: [
+          { isPremium: false },
+          { isEditorChoice: true }
+        ],
+        deletedAt: null
+      },
+      include: {
+        teacher: { select: { name: true } }
+      },
+      take: 40,
+      orderBy: { viewsCount: 'desc' }
+    });
   }
 
-  // 3. Fetch Assigned Lessons
-  const assignedLessonsRaw = await prisma.lesson.findMany({
-    where: {
-      teacherId: { in: teacherIds },
-      deletedAt: null
-    },
-    include: {
-      teacher: { select: { name: true } }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
+  const lessons = lessonsRaw.map(l => {
+    const progress = progressMap.get(l.id);
+    let status: "PENDING" | "COMPLETED" | "IN_PROGRESS" = "PENDING";
+    if (progress) {
+      status = progress.completedAt ? "COMPLETED" : "IN_PROGRESS";
+    }
 
-  const assignedLessons = assignedLessonsRaw.map(l => {
-    const enrollment = enrollments.find(e => e.class.teacherId === l.teacherId);
     return {
       id: l.id,
       slug: l.slug,
@@ -65,82 +98,26 @@ export default async function StudentLessonsPage() {
       isPremium: l.isPremium,
       price: l.price,
       createdAt: l.createdAt,
-      className: enrollment?.class.name,
+      className: (l as any).targetClasses?.[0]?.class.name,
       isFavorite: favoriteIds.has(l.id),
-      type: "ASSIGNED" as const
+      status,
+      type: source === "class" ? ("ASSIGNED" as const) : ("FREE" as const)
     };
   });
 
-  // 4. Fetch Public Lessons
-  const publicLessonsRaw = await prisma.lesson.findMany({
-    where: {
-      OR: [
-        { isPremium: false },
-        { isEditorChoice: true }
-      ],
-      deletedAt: null,
-      NOT: { id: { in: assignedLessons.map(l => l.id) } }
-    },
-    include: {
-      teacher: { select: { name: true } }
-    },
-    take: 12,
-    orderBy: { viewsCount: 'desc' }
-  });
-
-  const publicLessons = publicLessonsRaw.map(l => ({
-    id: l.id,
-    slug: l.slug,
-    title: l.title,
-    description: l.description,
-    videoUrl: l.videoUrl,
-    teacherName: l.teacher.name,
-    teacherId: l.teacherId,
-    viewsCount: l.viewsCount,
-    isPremium: l.isPremium,
-    price: l.price,
-    createdAt: l.createdAt,
-    isFavorite: favoriteIds.has(l.id),
-    type: "FREE" as const
-  }));
+  const classes = source === "class" 
+    ? Array.from(new Set(lessons.filter(l => l.className).map(l => JSON.stringify({ id: l.className, name: l.className }))))
+        .map(s => JSON.parse(s))
+    : [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-      {/* Page Header */}
-      <div className="space-y-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest ring-1 ring-primary/20">
-           <Play className="w-3 h-3 fill-current" />
-           Thư viện bài giảng
-        </div>
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="max-w-2xl">
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-                 Khám phá <span className="text-primary italic">Tri thức</span>
-              </h1>
-              <p className="text-on-surface-variant text-lg mt-4 max-w-xl">
-                 Từ những bài học trọng tâm trên lớp đến các chuyên đề mở rộng từ cộng đồng giáo viên giỏi.
-              </p>
-            </div>
-            
-            <div className="hidden lg:block bg-surface-container-low p-5 rounded-[2rem] border border-outline-variant/10 shadow-sm relative overflow-hidden group">
-              <div className="relative z-10 flex items-center gap-4">
-                 <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg text-primary">
-                    <Video className="w-6 h-6" />
-                 </div>
-                 <div>
-                    <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Tổng bài học</p>
-                    <p className="text-xl font-black">{assignedLessons.length + publicLessons.length}</p>
-                 </div>
-              </div>
-              <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full -mr-10 -mt-10 group-hover:scale-120 transition-transform"></div>
-            </div>
-        </div>
-      </div>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
 
       {/* Main Content Component */}
       <LessonsPageContent 
-        assignedLessons={assignedLessons} 
-        publicLessons={publicLessons}
+        lessons={lessons} 
+        source={source as "class" | "public"}
+        classes={classes}
       />
     </div>
   );
