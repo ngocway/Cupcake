@@ -1,12 +1,11 @@
-import createMiddleware from "next-intl/middleware";
-import { locales, defaultLocale } from "./i18n";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export default createMiddleware({
-  locales,
-  defaultLocale,
-  localePrefix: "never",
-  localeDetection: true,
-});
+// TEMPORARY: Disabled next-intl middleware to fix root 404
+// TODO: Re-enable with proper [locale] folder structure
+export function middleware(request: NextRequest) {
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
