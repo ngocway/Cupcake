@@ -104,7 +104,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
     };
 
     // Tag management logic
-    const currentTags = formData.expertiseTags ? formData.expertiseTags.split(',').filter(Boolean) : [];
+    const currentTags: string[] = formData.expertiseTags ? formData.expertiseTags.split(',').filter(Boolean) : [];
     
     const addTag = (tag: string) => {
         const normalizedTag = tag.trim();
@@ -116,7 +116,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
     };
 
     const removeTag = (tagToRemove: string) => {
-        const newTags = currentTags.filter(t => t !== tagToRemove).join(',');
+        const newTags = currentTags.filter((t: string) => t !== tagToRemove).join(',');
         setFormData({...formData, expertiseTags: newTags});
     };
 

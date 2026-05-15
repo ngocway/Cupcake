@@ -30,7 +30,8 @@ export async function changeStudentPassword(oldPassword: string, newPassword: st
 
     try {
         const user = await prisma.user.findUnique({
-            where: { id: session.user.id }
+            where: { id: session.user.id },
+            include: { accounts: true }
         })
 
         if (!user || (!user.password && user.accounts.length > 0)) {

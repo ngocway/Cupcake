@@ -44,20 +44,14 @@ export async function completeSubmission(submissionId: string, answers: any) {
           const content = JSON.parse(question.content)
           
           switch (question.type) {
-            case "MULTIPLE_CHOICE":
-            case "MULTIPLE_SELECT": {
+            case "MULTIPLE_CHOICE": {
               stringifiedAns = JSON.stringify(studentAns)
               const options = content.options || []
               const correctIndices = options
                 .map((opt: any, i: number) => opt.isCorrect ? i : -1)
                 .filter((i: number) => i !== -1);
               
-              if (question.type === "MULTIPLE_SELECT") {
-                const answersArray = Array.isArray(studentAns) ? studentAns : [];
-                isCorrect = answersArray.length === correctIndices.length && answersArray.every(v => correctIndices.includes(v));
-              } else {
-                isCorrect = correctIndices.includes(studentAns);
-              }
+              isCorrect = correctIndices.includes(studentAns);
               break;
             }
 

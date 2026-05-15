@@ -43,10 +43,10 @@ export default function AILessonGeneratorPage() {
     setLessonData(null);
     try {
       const response = await generateAILesson(config);
-      if ("error" in response) {
+      if ("error" in response && response.error) {
         showToast(response.error, "error");
       } else {
-        setLessonData(response);
+        setLessonData(response as any);
         showToast("Đã tạo nội dung bài học bằng AI!");
       }
     } catch (error) {
@@ -67,7 +67,7 @@ export default function AILessonGeneratorPage() {
         subject: config.subject,
       });
 
-      if ("error" in response) {
+      if ("error" in response && response.error) {
         showToast(response.error, "error");
       } else {
         showToast("Đã lưu bài học thành công!");

@@ -36,7 +36,7 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                 setSubmitted(true);
                 setTimeout(() => setIsOpen(false), 2000);
             } else {
-                alert(res.error);
+                alert(res.message);
             }
         } catch (error) {
             console.error(error);

@@ -369,7 +369,7 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
     
     startTransition(async () => {
       try {
-        await createCategory({ name: formName, slug: formSlug, parentId, showClearBackground: formShowBg });
+        await createCategory({ name: formName, slug: formSlug, parentId: parentId || undefined, showClearBackground: formShowBg });
         toast.success("Thêm danh mục thành công.");
         setAddingTo(null);
         setFormName("");

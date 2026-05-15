@@ -8,7 +8,6 @@ export async function HomeSidebar({ searchParams }: { searchParams: any }) {
   return (
     <StickySidebarWrapper>
       <Suspense fallback={<SidebarSkeleton />}>
-        {/* @ts-expect-error Server Component */}
         <SidebarContent searchParams={searchParams} />
       </Suspense>
     </StickySidebarWrapper>

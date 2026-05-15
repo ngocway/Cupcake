@@ -14,7 +14,7 @@ export default function Loading() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="space-y-4">
-            <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+            <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-[8px] shadow-xl animate-pulse" />
             <div className="space-y-2">
               <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded-lg w-full" />
               <div className="h-5 bg-slate-200 dark:bg-slate-800 rounded-lg w-2/3" />

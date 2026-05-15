@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
+import type { MaterialType } from './types';
 import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank } from '@/actions/material-actions';
 import { MultipleChoiceBuilder } from './MultipleChoiceBuilder';
 import { ClozeTestBuilder } from './ClozeTestBuilder';
@@ -13,8 +14,9 @@ import { QuestionBankModal } from './QuestionBankModal';
 import { AIGeneratorModal } from './AIGeneratorModal';
 import { InstructionsModal } from './InstructionsModal';
 import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
-
 import CategorySelect from '@/components/shared/CategorySelect';
+import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
+
 import {
   DndContext,
   closestCenter,
@@ -136,7 +138,8 @@ export function QuizEditor() {
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
-  const [materialType, setMaterialType] = useState<string>('EXERCISE');
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [materialType, setMaterialType] = useState<MaterialType>('EXERCISE');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
@@ -185,6 +188,7 @@ export function QuizEditor() {
           setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
+          setThumbnail(data.assignment.thumbnail || null);
           setMaterialType(data.assignment.materialType || 'EXERCISE');
           
           if (data.assignment.questions?.length > 0) {
@@ -213,14 +217,14 @@ export function QuizEditor() {
       await autoSaveMaterial({
         id,
         title,
-        type: materialType,
         questions,
         subject,
         gradeLevel,
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds
+        categoryIds,
+        thumbnail
       });
       setSaveStatus('SAVED');
     } catch (err) {
@@ -258,14 +262,14 @@ export function QuizEditor() {
         await autoSaveMaterial({ 
           id, 
           title, 
-          type: materialType, 
           questions: validQuestions,
           subject,
           gradeLevel,
           shortDescription,
           instructions,
           tags: tags.join(','),
-          categoryIds
+          categoryIds,
+          thumbnail
         });
         
         // If we came from a class assignment flow, assign it now
@@ -309,14 +313,14 @@ export function QuizEditor() {
       await autoSaveMaterial({
         id,
         title,
-        type: materialType,
         questions,
         subject,
         gradeLevel,
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds
+        categoryIds,
+        thumbnail
       });
       setSaveStatus('SAVED');
       
@@ -338,7 +342,7 @@ export function QuizEditor() {
     }
   };
 
-  const activeQuestion = questions.find(q => q.id === activeId);
+  const activeQuestion = questions.find(q => q.id === activeId) as (typeof questions)[number] | undefined;
   const activeIdx = questions.findIndex(q => q.id === activeId);
 
   const handleAddQuestion = () => {
@@ -398,7 +402,8 @@ export function QuizEditor() {
 
     setQuestions((prev) => {
       // If there's only 1 question and it's a completely blank template
-      const isDefaultBlank = prev.length === 1 && (!prev[0].content || !prev[0].content.questionText || prev[0].content.questionText.trim() === '');
+      const content = prev[0]?.content as any;
+      const isDefaultBlank = prev.length === 1 && (!content || !content.questionText || content.questionText.trim() === '');
       if (isDefaultBlank) {
         return aiQuestions;
       }
@@ -897,23 +902,23 @@ export function QuizEditor() {
                   onChange={(e) => updateActiveQuestion({ points: parseFloat(e.target.value) || 0 })}
                 />
                 {/* Banking Toggle - Hide if already from bank */}
-                {!activeQuestion.originalId && (
+                {!activeQuestion?.originalId && (
                   <button 
-                    onClick={() => updateActiveQuestion({ isBanked: !activeQuestion.isBanked })}
+                    onClick={() => updateActiveQuestion({ isBanked: !activeQuestion?.isBanked })}
                     disabled={!isValid}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
-                      activeQuestion.isBanked !== false 
+                      activeQuestion?.isBanked !== false 
                         ? 'bg-amber-100 text-amber-700 border border-amber-200' 
                         : 'bg-slate-100 text-slate-400 border border-slate-200'
                     }`}
-                    title={activeQuestion.isBanked !== false ? "Câu hỏi này sẽ được tự động lưu vào ngân hàng" : "Câu hỏi này sẽ KHÔNG được lưu vào ngân hàng"}
+                    title={activeQuestion?.isBanked !== false ? "Câu hỏi này sẽ được tự động lưu vào ngân hàng" : "Câu hỏi này sẽ KHÔNG được lưu vào ngân hàng"}
                   >
-                    <span className={`material-symbols-outlined text-[18px] transition-transform ${activeQuestion.isBanked !== false ? 'scale-110' : 'scale-90'}`}>
-                      {activeQuestion.isBanked !== false ? 'bookmark_added' : 'bookmark_add'}
+                    <span className={`material-symbols-outlined text-[18px] transition-transform ${activeQuestion?.isBanked !== false ? 'scale-110' : 'scale-90'}`}>
+                      {activeQuestion?.isBanked !== false ? 'bookmark_added' : 'bookmark_add'}
                     </span>
                     <span>Lưu vào Ngân hàng</span>
-                    <div className={`w-8 h-4 rounded-full relative transition-colors ${activeQuestion.isBanked !== false ? 'bg-amber-500' : 'bg-slate-300'}`}>
-                      <div className={`absolute top-0.5 size-3 bg-white rounded-full transition-all ${activeQuestion.isBanked !== false ? 'left-[18px]' : 'left-0.5'}`}></div>
+                    <div className={`w-8 h-4 rounded-full relative transition-colors ${activeQuestion?.isBanked !== false ? 'bg-amber-500' : 'bg-slate-300'}`}>
+                      <div className={`absolute top-0.5 size-3 bg-white rounded-full transition-all ${activeQuestion?.isBanked !== false ? 'left-[18px]' : 'left-0.5'}`}></div>
                     </div>
                   </button>
                 )}
@@ -942,7 +947,7 @@ export function QuizEditor() {
                         </div>
                         <div className="flex justify-center p-3 bg-slate-50/50 dark:bg-gray-900/50 rounded-xl border border-dashed border-slate-100 dark:border-gray-700">
                           <img 
-                            src={activeQuestion.imageUrl || (activeQuestion.mediaType === 'IMAGE' ? activeQuestion.mediaUrl : undefined)} 
+                            src={activeQuestion?.imageUrl || (activeQuestion?.mediaType === 'IMAGE' ? activeQuestion?.mediaUrl || undefined : undefined)} 
                             alt="Preview" 
                             className="max-h-[120px] rounded-lg object-contain shadow-sm"
                           />
@@ -967,7 +972,7 @@ export function QuizEditor() {
                         </div>
                         <div className="flex flex-col items-center gap-3 p-3 bg-slate-50/50 dark:bg-gray-900/50 rounded-xl border border-dashed border-slate-100 dark:border-gray-700">
                           <CustomAudioPlayer 
-                            src={activeQuestion.audioUrl || (activeQuestion.mediaType === 'AUDIO' ? activeQuestion.mediaUrl : '')} 
+                            src={(activeQuestion?.audioUrl || (activeQuestion?.mediaType === 'AUDIO' ? activeQuestion?.mediaUrl : '')) || ''} 
                             title="Âm thanh"
                             subtitle=""
                             className="!bg-transparent !p-0 !border-none !shadow-none !w-full"
@@ -1191,8 +1196,11 @@ export function QuizEditor() {
             </div>
 
             <div className="space-y-8">
-              {/* Basic Metadata - Hidden as per user request to simplify UI */}
-              {/* Fields are kept in state with default 'Khác' to maintain data integrity */}
+              <ThumbnailUploader 
+                value={thumbnail}
+                onChange={setThumbnail}
+                label="Ảnh đại diện (16:9)"
+              />
 
 
               {/* Categories */}

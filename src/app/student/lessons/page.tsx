@@ -115,8 +115,8 @@ export default async function StudentLessonsPage({
 
       {/* Main Content Component */}
       <LessonsPageContent 
-        lessons={lessons} 
-        source={source as "class" | "public"}
+        initialLessons={lessons} 
+        initialSource={source as "class" | "public"}
         classes={classes}
       />
     </div>

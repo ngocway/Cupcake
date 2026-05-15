@@ -55,7 +55,7 @@ export default async function TeacherDashboard() {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
-            <h1 className="text-4xl font-black text-slate-900 italic tracking-tight">Chào buổi sáng, {teacher.name.split(' ')[0]}!</h1>
+            <h1 className="text-4xl font-black text-slate-900 italic tracking-tight">Chào buổi sáng, {teacher.name?.split(' ')[0] || 'bạn'}!</h1>
             <p className="text-slate-500 font-medium mt-2">Dưới đây là những việc cần bạn xử lý trong hôm nay.</p>
           </div>
           <div className="flex gap-3">

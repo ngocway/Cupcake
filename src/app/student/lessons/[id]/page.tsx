@@ -181,8 +181,13 @@ export default async function StudentLessonDetailPage({
   if (!lesson) notFound();
 
   // Session is guaranteed by StudentLayout, but we need the ID
-  const session = sessionData?.user;
-  if (!session) redirect("/login");
+  const session = {
+    id: sessionData?.user?.id || "",
+    name: sessionData?.user?.name ?? null,
+    image: sessionData?.user?.image ?? null,
+    role: (sessionData?.user as any)?.role ?? null
+  };
+  if (!session.id) redirect("/login");
   
   if (id === lesson.id && lesson.slug && id !== lesson.slug) {
     redirect(`/student/lessons/${lesson.slug}`);

@@ -99,7 +99,7 @@ export function AssignContentModal({ classId, onClose, onAssigned }: AssignConte
   const handleCreateAndAssign = async () => {
     setCreating(true);
     try {
-      const newId = await createDraftMaterial('EXERCISE');
+      const newId = await createDraftMaterial();
       onClose();
       router.push(`/teacher/materials/${newId}/edit?assignToClass=${classId}`);
     } catch (err) {

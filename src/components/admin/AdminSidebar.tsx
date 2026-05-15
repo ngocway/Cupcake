@@ -1,7 +1,6 @@
 "use client"
 
-import Link from "use-client"
-import LinkNext from "next/link"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 
@@ -50,12 +49,12 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
   return (
     <aside className="w-72 bg-neutral-950 border-r border-neutral-800 flex flex-col sticky top-0 h-screen">
       <div className="p-8 border-b border-neutral-800">
-        <LinkNext href="/admin/dashboard" className="flex items-center gap-3 group">
+        <Link href="/admin/dashboard" className="flex items-center gap-3 group">
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-[0_0_20px_rgba(37,99,235,0.4)]">
             <span className="material-symbols-outlined text-white">castle</span>
           </div>
           <span className="font-display font-black text-xl tracking-tighter text-white">CUPCAKES</span>
-        </LinkNext>
+        </Link>
       </div>
 
       <nav className="flex-grow p-6 space-y-8 overflow-y-auto custom-scrollbar">
@@ -68,7 +67,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
               {group.items.map((item) => {
                 const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && pathname?.startsWith(item.href))
                 return (
-                  <LinkNext 
+                  <Link 
                     key={item.href}
                     href={item.href} 
                     className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-200 group ${
@@ -81,7 +80,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
                       {item.icon}
                     </span>
                     <span className="text-sm font-bold">{item.label}</span>
-                  </LinkNext>
+                  </Link>
                 )
               })}
             </div>

@@ -169,7 +169,7 @@ export default function MaterialLibraryPage() {
             onClick={async () => {
               setIsCreating(true);
               try {
-                const id = await createDraftMaterial('EXERCISE');
+                const id = await createDraftMaterial();
                 router.push(`/teacher/materials/${id}/edit`);
               } finally { setIsCreating(false); }
             }}
@@ -184,7 +184,7 @@ export default function MaterialLibraryPage() {
               if (session?.user?.role !== 'ADMIN') { alert('Chức năng Tạo bằng AI hiện tại chỉ dành cho Super Admin.'); return; }
               setIsCreating(true);
               try {
-                const id = await createDraftMaterial('EXERCISE');
+                const id = await createDraftMaterial();
                 router.push(`/teacher/materials/${id}/edit?ai=true`);
               } finally { setIsCreating(false); }
             }}

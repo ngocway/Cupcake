@@ -146,8 +146,8 @@ export default async function StudentAssignmentsPage({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
 
       <AssignmentsPageContent 
-        assignments={filteredAssignments} 
-        source={source as "class" | "public"}
+        initialAssignments={filteredAssignments} 
+        initialSource={source as "class" | "public"}
         classes={classes}
         initialTab={filter === "completed" ? "completed" : filter === "in-progress" ? "in-progress" : "pending"}
       />

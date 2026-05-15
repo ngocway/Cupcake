@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { autoSaveMaterial } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses } from '@/actions/material-actions';
 import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { DUMMY_DICTIONARY } from '@/lib/dictionary-data';
 import CategorySelect from '@/components/shared/CategorySelect';
+import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
 import {
   DndContext,
   closestCenter,
@@ -132,7 +133,6 @@ export function ReadingExerciseBuilder({
       await autoSaveMaterial({
         id: assignmentId || initialId || 'clp_reading_001',
         title,
-        type: 'READING',
         questions: questions, 
         readingText: contentHtml,
         videoUrl: videoUrl,
@@ -143,7 +143,7 @@ export function ReadingExerciseBuilder({
         instructions,
         tags: tags.join(','),
         categoryIds,
-        type: materialType
+        thumbnail
       });
       setSavingStatus('saved');
       
@@ -159,6 +159,7 @@ export function ReadingExerciseBuilder({
   const [title, setTitle] = useState('Đang tải...');
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [assignmentStatus, setAssignmentStatus] = useState<'DRAFT' | 'PRIVATE' | 'PUBLIC'>('DRAFT');
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [validationModal, setValidationModal] = useState<{show: boolean, missingTitle: boolean, missingContent: boolean}>({show: false, missingTitle: false, missingContent: false});
   const [videoUrl, setVideoUrl] = useState('');
   const [videoThumbnail, setVideoThumbnail] = useState('');
@@ -370,11 +371,10 @@ export function ReadingExerciseBuilder({
              setTags(data.assignment.tags.split(',').filter(Boolean));
           }
           if (data.assignment.categories) {
-            setCategoryIds(data.assignment.categories.map((c: any) => c.id));
+            setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
           }
-          if (data.assignment.materialType) {
-            setMaterialType(data.assignment.materialType);
-          }
+          setThumbnail(data.assignment.thumbnail || null);
+          setMaterialType(data.assignment.materialType || 'READING');
         }
       } catch (err) {
         console.error('Initial fetch failed:', err);
@@ -480,7 +480,6 @@ export function ReadingExerciseBuilder({
       await autoSaveMaterial({
         id: idToSave,
         title: customTitle || title,
-        type: 'READING',
         questions: questions.map(q => ({
           ...q,
           content: {
@@ -498,8 +497,7 @@ export function ReadingExerciseBuilder({
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds,
-        type: materialType
+        categoryIds
       });
       
       setSavingStatus('saved');
@@ -1497,11 +1495,13 @@ export function ReadingExerciseBuilder({
 
                {/* Modal Content */}
                <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+                    <ThumbnailUploader 
+                      value={thumbnail}
+                      onChange={setThumbnail}
+                      label="Ảnh đại diện (16:9)"
+                    />
 
-                  {/* Basic Metadata - Hidden as per user request to simplify UI */}
-                  {/* Fields are kept in state with default 'Khác' to maintain data integrity */}
-
-                  <div className="space-y-2">
+                    <div className="space-y-2">
                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
                      <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
                   </div>

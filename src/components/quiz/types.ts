@@ -29,6 +29,7 @@ export type BaseQuestionProps = {
   videoUrl?: string;
   isBanked?: boolean;
   originalId?: string;
+  saveToBank?: boolean;
 };
 
 export type MultipleChoiceContent = {

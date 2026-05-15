@@ -324,7 +324,6 @@ export async function customGenerateLesson(params: {
       gradeLevel: params.gradeLevel,
       subject: params.subject,
       difficulty: params.difficulty,
-      questionCount: params.questionCount,
       wordCount: params.wordCount,
       providedPassage: params.providedPassage,
       additionalInstructions: params.additionalInstructions,

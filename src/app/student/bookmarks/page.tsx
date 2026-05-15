@@ -108,9 +108,9 @@ export default async function BookmarksPage() {
                   <Link 
                     key={item.lessonId}
                     href={`/student/lessons/${item.lessonId}`}
-                    className="group bg-white dark:bg-slate-900 rounded-3xl border border-outline-variant/10 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
+                    className="group bg-white dark:bg-slate-900 rounded-[8px] border border-outline-variant/10 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
                   >
-                    <div className="aspect-video bg-surface-container relative">
+                    <div className="aspect-video bg-surface-container relative overflow-hidden rounded-[8px]">
                        {/* Placeholder for lesson thumbnail */}
                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
                          <BookOpen className="w-[60px] h-[60px]" />
@@ -159,9 +159,9 @@ export default async function BookmarksPage() {
                   <Link 
                     key={item.assignmentId}
                     href={`/student/assignments/${item.assignmentId}/run`}
-                    className="group bg-white dark:bg-slate-900 rounded-3xl border border-outline-variant/10 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
+                    className="group bg-white dark:bg-slate-900 rounded-[8px] border border-outline-variant/10 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
                   >
-                    <div className="aspect-video bg-surface-container relative">
+                    <div className="aspect-video bg-surface-container relative overflow-hidden rounded-[8px]">
                        {/* Placeholder for assignment thumbnail */}
                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
                          <AssignmentIcon className="w-[60px] h-[60px]" />

@@ -94,7 +94,9 @@ export async function GET(
       const submissionMap: Record<string, any> = {};
       studentSubmissions.forEach(s => {
         // Latest attempt
-        if (!submissionMap[s.assignmentId] || new Date(s.submittedAt) > new Date(submissionMap[s.assignmentId].submittedAt)) {
+        const currentSubmittedAt = s.submittedAt ? new Date(s.submittedAt) : new Date(0);
+        const existingSubmittedAt = submissionMap[s.assignmentId]?.submittedAt ? new Date(submissionMap[s.assignmentId].submittedAt) : new Date(0);
+        if (!submissionMap[s.assignmentId] || currentSubmittedAt > existingSubmittedAt) {
           submissionMap[s.assignmentId] = {
             id: s.id,
             score: s.score,

@@ -86,8 +86,9 @@ export default async function StudentLayout({ children }: { children: React.Reac
           
           <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-1">
             <SideNavItem href="/student/bookmarks" icon="bookmark" label="Bookmarks" />
-            <SideNavItem href="/student/classes" icon="group" label="Classes" />
-            <SideNavItem href="/student/growth" icon="trending_up" label="Growth" />
+            <SideNavItem href="/student/classes" icon="group" label="Classes" comingSoon />
+            <SideNavItem href="/student/my-reviews" icon="star" label="Đánh giá của tôi" />
+            <SideNavItem href="/student/growth" icon="trending_up" label="Growth" comingSoon />
           </div>
         </nav>
         

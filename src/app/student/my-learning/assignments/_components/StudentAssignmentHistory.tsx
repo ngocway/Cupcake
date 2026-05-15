@@ -92,10 +92,10 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
           {filtered.map((s) => (
             <div 
               key={s.id}
-              className="group bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col"
+              className="group bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col"
             >
               {/* Thumbnail */}
-              <div className="aspect-[16/10] relative overflow-hidden bg-slate-100">
+              <div className="aspect-video relative overflow-hidden bg-slate-100 rounded-[8px] shadow-xl">
                 <img 
                   src={s.thumbnail || "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?q=80&w=800&auto=format&fit=crop"} 
                   alt={s.title}

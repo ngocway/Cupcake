@@ -7,9 +7,10 @@ interface Props {
   id: string;
   className?: string;
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
-export function DirectStartLink({ id, className, children }: Props) {
+export function DirectStartLink({ id, className, children, style }: Props) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -42,6 +43,7 @@ export function DirectStartLink({ id, className, children }: Props) {
     <a 
       href={`/student/assignments/${id}/run?direct=true`} 
       onClick={handleClick} 
+      style={style}
       className={`${className} ${isPending ? "opacity-70 pointer-events-none" : ""}`}
     >
       {children}

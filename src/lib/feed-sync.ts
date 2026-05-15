@@ -15,7 +15,6 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
       });
 
       if (!ass || ass.deletedAt || ass.status !== "PUBLIC" || ass.lesson) {
-        // If not public, deleted, or part of a lesson, remove from feed
         await prisma.homepageFeed.deleteMany({ where: { sourceId } });
         return;
       }
@@ -24,16 +23,16 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         where: { sourceId },
         update: {
           title: ass.title,
-          slug: ass.slug,
-          thumbnail: ass.thumbnail,
-          videoUrl: ass.videoUrl,
-          audioUrl: ass.audioUrl,
+          slug: ass.slug || '',
+          thumbnail: ass.thumbnail ?? undefined,
+          videoUrl: ass.videoUrl ?? undefined,
+          audioUrl: ass.audioUrl ?? undefined,
           materialType: ass.materialType,
           teacherName: ass.teacher.name || "Teacher",
-          teacherImage: ass.teacher.image,
+          teacherImage: ass.teacher.image ?? undefined,
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
-          categoryId: ass.categories[0]?.id || null,
+          categoryId: ass.categories[0]?.id ?? undefined,
           status: ass.status,
           updatedAt: new Date()
         },
@@ -41,17 +40,17 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           sourceId,
           contentType: "EXERCISE",
           title: ass.title,
-          slug: ass.slug,
-          thumbnail: ass.thumbnail,
-          videoUrl: ass.videoUrl,
-          audioUrl: ass.audioUrl,
+          slug: ass.slug || '',
+          thumbnail: ass.thumbnail ?? undefined,
+          videoUrl: ass.videoUrl ?? undefined,
+          audioUrl: ass.audioUrl ?? undefined,
           materialType: ass.materialType,
           teacherId: ass.teacherId,
           teacherName: ass.teacher.name || "Teacher",
-          teacherImage: ass.teacher.image,
+          teacherImage: ass.teacher.image ?? undefined,
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
-          categoryId: ass.categories[0]?.id || null,
+          categoryId: ass.categories[0]?.id ?? undefined,
           status: ass.status,
           createdAt: ass.createdAt
         }
@@ -75,33 +74,33 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         where: { sourceId },
         update: {
           title: lesson.title,
-          slug: lesson.slug,
-          thumbnail: lesson.thumbnail,
-          videoUrl: lesson.videoUrl,
-          audioUrl: lesson.audioUrl,
+          slug: lesson.slug || '',
+          thumbnail: lesson.thumbnail ?? undefined,
+          videoUrl: lesson.videoUrl ?? undefined,
+          audioUrl: lesson.audioUrl ?? undefined,
           materialType: lesson.materialType,
           teacherName: lesson.teacher.name || "Teacher",
-          teacherImage: lesson.teacher.image,
+          teacherImage: lesson.teacher.image ?? undefined,
           viewCount: lesson.viewsCount,
           reviewCount: lesson._count.reviews,
-          categoryId: lesson.categories[0]?.id || null,
+          categoryId: lesson.categories[0]?.id ?? undefined,
           updatedAt: new Date()
         },
         create: {
           sourceId,
           contentType: "LESSON",
           title: lesson.title,
-          slug: lesson.slug,
-          thumbnail: lesson.thumbnail,
-          videoUrl: lesson.videoUrl,
-          audioUrl: lesson.audioUrl,
+          slug: lesson.slug || '',
+          thumbnail: lesson.thumbnail ?? undefined,
+          videoUrl: lesson.videoUrl ?? undefined,
+          audioUrl: lesson.audioUrl ?? undefined,
           materialType: lesson.materialType,
           teacherId: lesson.teacherId,
           teacherName: lesson.teacher.name || "Teacher",
-          teacherImage: lesson.teacher.image,
+          teacherImage: lesson.teacher.image ?? undefined,
           viewCount: lesson.viewsCount,
           reviewCount: lesson._count.reviews,
-          categoryId: lesson.categories[0]?.id || null,
+          categoryId: lesson.categories[0]?.id ?? undefined,
           createdAt: lesson.createdAt
         }
       });

@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "explore": "Explore",
+    "lessons": "Lessons",
+    "assignments": "Assignments",
+    "myLearning": "My Learning",
+    "myReviews": "My Reviews",
+    "login": "Sign In",
+    "register": "Register",
+    "logout": "Sign Out",
+    "profile": "Profile",
+    "joinClass": "Join Class"
+  },
+  "common": {
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "viewAll": "View All",
+    "seeMore": "See More",
+    "noResults": "No results found",
+    "error": "An error occurred",
+    "success": "Success",
+    "pending": "Pending",
+    "completed": "Completed",
+    "inProgress": "In Progress"
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "pendingTasks": "Pending Tasks",
+    "highScores": "High Scores",
+    "learningStreak": "Learning Streak",
+    "dayStreak": "Day Streak",
+    "dailyMission": "Daily Mission",
+    "assignments": "Assignments",
+    "myClasses": "My Classes",
+    "recentActivity": "Recent Activity"
+  },
+  "lesson": {
+    "title": "Lessons",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "public": "Public",
+    "assigned": "Assigned",
+    "premium": "Premium",
+    "views": "views",
+    "bookmark": "Bookmark",
+    "removeBookmark": "Remove Bookmark",
+    "lessonBookmarked": "Lesson bookmarked",
+    "bookmarkRemoved": "Bookmark removed",
+    "startLesson": "Start Lesson",
+    "continueLesson": "Continue",
+    "lessonDetails": "Lesson Details",
+    "noContent": "No content available",
+    "upgradeRequired": "Please upgrade your account to access this lesson"
+  },
+  "assignment": {
+    "title": "Assignments",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "start": "Start",
+    "resume": "Resume",
+    "dueDate": "Due Date",
+    "score": "Score",
+    "correctAnswers": "correct answers",
+    "submitAssignment": "Submit Assignment",
+    "noAssignment": "No assignments available"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "orContinueWith": "Or continue with"
+  },
+  "class": {
+    "join": "Join Class",
+    "enterCode": "Enter class code",
+    "joinSuccess": "Successfully joined class",
+    "invalidCode": "Invalid class code"
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "unauthorized": "Unauthorized",
+    "serverError": "Server error",
+    "networkError": "Network error"
+  }
+}

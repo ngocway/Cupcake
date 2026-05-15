@@ -70,7 +70,12 @@ export default async function PublicAssignmentPage({
         favoriteAssignments: {
           where: { studentId: session.id }
         }
-      } : {})
+      } : {}),
+      reviews: {
+        where: { isApproved: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      }
     }
   });
 
