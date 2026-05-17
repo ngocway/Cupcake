@@ -1,6 +1,7 @@
 "use server"
 
 import { cookies } from "next/headers"
+import { revalidatePath } from "next/cache"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 
@@ -27,5 +28,6 @@ export async function setUserTypePreference(userType: string) {
     }
   }
 
+  revalidatePath("/")
   return { success: true }
 }

@@ -91,88 +91,111 @@ export function SmartHeader({ session }: SmartHeaderProps) {
                 <div className="relative" ref={menuRef}>
                   <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="flex items-center gap-3 pl-2 pr-5 py-2 rounded-2xl text-small font-black transition-all hover:bg-primary/5 active:scale-95 border border-border group"
+                    className="flex items-center gap-3 pl-1.5 pr-4 py-1.5 bg-surface-container-low border border-primary/10 rounded-full text-on-surface-variant/80 hover:text-primary transition-all active:scale-95 group"
                   >
-                    <div className="w-9 h-9 rounded-xl overflow-hidden border-2 border-primary/20 shrink-0 group-hover:border-primary transition-colors">
+                    <div className="w-9 h-9 rounded-full overflow-hidden border border-primary/20 shrink-0 group-hover:border-primary transition-colors">
                       <img 
                         src={session.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.id}`} 
                         alt="User avatar" 
                         className="w-full h-full object-cover" 
                       />
                     </div>
-                    <span className="hidden sm:inline-block max-w-[120px] truncate">{session.name || t("profile")}</span>
-                    <span className={`material-symbols-outlined text-[18px] transition-transform duration-500 ${isMenuOpen ? "rotate-180" : ""}`}>expand_more</span>
+                    <span className="hidden sm:inline-block max-w-[120px] truncate text-xs font-bold">{session.name || t("profile")}</span>
+                    <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${isMenuOpen ? "rotate-180" : ""}`}>expand_more</span>
                   </button>
 
                   {/* Dropdown Menu */}
                   {isMenuOpen && (
-                    <div className="absolute right-0 mt-4 w-64 glass-dark text-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in slide-in-from-top-4 duration-300 origin-top-right z-[60]">
-                      <div className="p-6 border-b border-white/10">
-                        <p className="text-tiny font-black text-primary uppercase tracking-widest mb-2">{session.role || "MEMBER"}</p>
-                        <p className="font-bold text-base truncate">{session.name}</p>
+                    <div className="absolute top-full right-0 mt-3 w-56 bg-white border border-primary/10 rounded-[24px] shadow-2xl py-2 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="px-5 py-4 border-b border-primary/10 mb-2">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{session.role || "MEMBER"}</p>
+                        <p className="font-bold text-sm text-on-surface truncate">{session.name}</p>
                       </div>
-                      <div className="p-3">
+                      <div className="flex flex-col">
                         <Link 
                           href={dashboardHref}
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive(dashboardHref) ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive(dashboardHref) 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">dashboard</span>
-                          <div className="flex items-center justify-between flex-1">
-                            <span>{t("dashboard")}</span>
-                          </div>
+                          <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                          <span>{t("dashboard")}</span>
                         </Link>
                         <Link 
                           href={`/profile/${session.id}`}
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive(`/profile/${session.id}`) ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive(`/profile/${session.id}`) 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">person</span>
-                          {t("profile")}
+                          <span className="material-symbols-outlined text-[18px]">person</span>
+                          <span>{t("profile")}</span>
                         </Link>
                         
-                        <div className="h-px bg-white/5 my-1 mx-2" />
+                        <div className="h-px bg-primary/5 my-2 mx-4" />
                         
                         <Link 
                           href="/student/my-learning/assignments"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive('/student/my-learning/assignments') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive('/student/my-learning/assignments') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">assignment</span>
-                          {t("myAssignments")}
+                          <span className="material-symbols-outlined text-[18px]">assignment</span>
+                          <span>{t("myAssignments")}</span>
                         </Link>
                         <Link 
                           href="/student/lessons?filter=completed"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${pathname.includes('/student/lessons') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            pathname.includes('/student/lessons') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">history_edu</span>
-                          {t("learnedLessons")}
+                          <span className="material-symbols-outlined text-[18px]">history_edu</span>
+                          <span>{t("learnedLessons")}</span>
                         </Link>
                         <Link 
                           href="/student/bookmarks"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive('/student/bookmarks') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive('/student/bookmarks') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">bookmark</span>
-                          {t("myBookmarks")}
+                          <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                          <span>{t("myBookmarks")}</span>
                         </Link>
                         <Link 
                           href="/student/my-reviews"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold hover:bg-white/10 transition-all group ${isActive('/student/my-reviews') ? 'bg-white/10 text-primary' : 'text-white/70'}`}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive('/student/my-reviews') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">star</span>
-                          {t("myReviews")}
+                          <span className="material-symbols-outlined text-[18px]">star</span>
+                          <span>{t("myReviews")}</span>
                         </Link>
-                      </div>
-                      <div className="p-3 border-t border-white/10">
+                        
+                        <div className="h-px bg-primary/5 mt-2 mb-1" />
+                        
                         <button 
                           onClick={() => signOut({ callbackUrl: "/" })}
-                          className="w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl text-small font-bold text-tertiary hover:bg-tertiary/10 transition-all group"
+                          className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
                         >
-                          <span className="material-symbols-outlined text-[20px] group-hover:rotate-12 transition-transform">logout</span>
-                          {t("logout")}
+                          <span className="material-symbols-outlined text-[18px]">logout</span>
+                          <span>{t("logout")}</span>
                         </button>
                       </div>
                     </div>

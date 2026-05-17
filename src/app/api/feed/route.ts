@@ -13,12 +13,19 @@ export async function GET(req: NextRequest) {
   const type       = searchParams.get('type')        // 'exercises' | 'lessons'
   const categoryId = searchParams.get('categoryId')
   const search     = searchParams.get('search')
+  const userType   = searchParams.get('userType')
 
   const contentType = type === 'lessons' ? 'LESSON' : 'EXERCISE'
 
   const where: any = { status: 'PUBLIC', contentType }
   if (categoryId) where.categoryId = categoryId
   if (search)     where.title = { contains: search, mode: 'insensitive' }
+  if (userType) {
+    where.OR = [
+      { targetAudiences: { has: userType } },
+      { targetAudiences: { equals: [] } }
+    ]
+  }
 
   const items = await prisma.homepageFeed.findMany({
     where,

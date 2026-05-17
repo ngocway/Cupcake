@@ -62,11 +62,17 @@ function mapFeedItem(item: any) {
 /** Server-side: newest exercises only — fast first load. Popular is fetched client-side. */
 export const getCachedAssignments = (params: any) => unstable_cache(
   async () => {
-    const { categoryId, search } = params;
+    const { categoryId, search, userType } = params;
 
     const where: any = { status: "PUBLIC", contentType: "EXERCISE" };
     if (categoryId) where.categoryId = categoryId;
     if (search) where.title = { contains: search, mode: 'insensitive' };
+    if (userType) {
+      where.OR = [
+        { targetAudiences: { has: userType } },
+        { targetAudiences: { equals: [] } }
+      ];
+    }
 
     const items = await prisma.homepageFeed.findMany({
       where,
@@ -85,11 +91,17 @@ export const getCachedAssignments = (params: any) => unstable_cache(
 /** Server-side: newest lessons only — fast first load. Popular is fetched client-side. */
 export const getCachedLessons = (params: any) => unstable_cache(
   async () => {
-    const { categoryId, search } = params;
+    const { categoryId, search, userType } = params;
 
     const where: any = { status: "PUBLIC", contentType: "LESSON" };
     if (categoryId) where.categoryId = categoryId;
     if (search) where.title = { contains: search, mode: 'insensitive' };
+    if (userType) {
+      where.OR = [
+        { targetAudiences: { has: userType } },
+        { targetAudiences: { equals: [] } }
+      ];
+    }
 
     const items = await prisma.homepageFeed.findMany({
       where,

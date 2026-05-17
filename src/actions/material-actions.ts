@@ -105,6 +105,7 @@ export async function autoSaveMaterial(payload: {
   tags?: string;
   instructions?: string;
   categoryIds?: string[];
+  targetAudiences?: string[];
   thumbnail?: string | null;
 }) {
   const session = await auth();
@@ -154,6 +155,7 @@ export async function autoSaveMaterial(payload: {
         tags: payload.tags || "",
         instructions: payload.instructions || null,
         updatedAt: new Date(),
+        targetAudiences: payload.targetAudiences !== undefined ? { set: payload.targetAudiences } : undefined,
         categories: {
           set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
         }
@@ -175,6 +177,7 @@ export async function autoSaveMaterial(payload: {
         // but normally it's created via createDraftLesson/createDraftMaterial
         materialType: 'READING', 
         status: 'DRAFT',
+        targetAudiences: payload.targetAudiences !== undefined ? payload.targetAudiences : [],
         categories: {
           connect: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
         }
@@ -195,6 +198,7 @@ export async function autoSaveMaterial(payload: {
           audioUrl: payload.audioUrl || null,
           thumbnail: thumbnail || null,
           materialType: updatedAssignment.materialType,
+          targetAudiences: payload.targetAudiences !== undefined ? { set: payload.targetAudiences } : undefined,
           categories: {
             set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
           }

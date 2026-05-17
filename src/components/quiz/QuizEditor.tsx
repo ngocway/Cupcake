@@ -138,6 +138,8 @@ export function QuizEditor() {
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
+  const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [materialType, setMaterialType] = useState<MaterialType>('EXERCISE');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -188,6 +190,12 @@ export function QuizEditor() {
           setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
+          if (data.assignment.targetAudiences) {
+            setTargetAudiences(data.assignment.targetAudiences || []);
+          }
+          if (data.assignment.lesson || data.assignment.lessonId) {
+            setBelongsToLesson(true);
+          }
           setThumbnail(data.assignment.thumbnail || null);
           setMaterialType(data.assignment.materialType || 'EXERCISE');
           
@@ -224,6 +232,7 @@ export function QuizEditor() {
         instructions,
         tags: tags.join(','),
         categoryIds,
+        targetAudiences: targetAudiences,
         thumbnail
       });
       setSaveStatus('SAVED');
@@ -269,6 +278,7 @@ export function QuizEditor() {
           instructions,
           tags: tags.join(','),
           categoryIds,
+          targetAudiences: targetAudiences,
           thumbnail
         });
         
@@ -320,6 +330,7 @@ export function QuizEditor() {
         instructions,
         tags: tags.join(','),
         categoryIds,
+        targetAudiences: targetAudiences,
         thumbnail
       });
       setSaveStatus('SAVED');
@@ -1207,6 +1218,39 @@ export function QuizEditor() {
               <div className="space-y-2">
                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
                  <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Đối tượng (Target Audiences)</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'kids', label: '🧸 Trẻ em (Kids)' },
+                    { id: 'teens', label: '🎒 Thiếu niên (Teens)' },
+                    { id: 'adults', label: '🎓 Người lớn (Adults)' },
+                    { id: 'business', label: '💼 Doanh nhân (Business)' }
+                  ].map(type => (
+                    <button
+                      key={type.id}
+                      onClick={() => {
+                        if (targetAudiences.includes(type.id)) {
+                          setTargetAudiences(targetAudiences.filter(t => t !== type.id));
+                        } else {
+                          setTargetAudiences([...targetAudiences, type.id]);
+                        }
+                      }}
+                      className={`px-5 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                        targetAudiences.includes(type.id) 
+                        ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' 
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      {type.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 px-1 italic">
+                  * Bỏ trống (không chọn) đồng nghĩa với việc hiển thị cho tất cả mọi người.
+                </p>
               </div>
 
               {/* Short Description */}

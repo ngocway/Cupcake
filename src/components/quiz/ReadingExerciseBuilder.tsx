@@ -143,6 +143,7 @@ export function ReadingExerciseBuilder({
         instructions,
         tags: tags.join(','),
         categoryIds,
+        targetAudiences: targetAudiences,
         thumbnail
       });
       setSavingStatus('saved');
@@ -179,6 +180,8 @@ export function ReadingExerciseBuilder({
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
+  const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [materialType, setMaterialType] = useState<string>('READING');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
@@ -373,6 +376,12 @@ export function ReadingExerciseBuilder({
           if (data.assignment.categories) {
             setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
           }
+          if (data.assignment.targetAudiences) {
+            setTargetAudiences(data.assignment.targetAudiences || []);
+          }
+          if (data.assignment.lesson || data.assignment.lessonId) {
+            setBelongsToLesson(true);
+          }
           setThumbnail(data.assignment.thumbnail || null);
           setMaterialType(data.assignment.materialType || 'READING');
         }
@@ -497,7 +506,8 @@ export function ReadingExerciseBuilder({
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds
+        categoryIds,
+        targetAudiences: targetAudiences
       });
       
       setSavingStatus('saved');
@@ -1504,6 +1514,39 @@ export function ReadingExerciseBuilder({
                     <div className="space-y-2">
                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
                      <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Đối tượng (Target Audiences)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'kids', label: '🧸 Trẻ em (Kids)' },
+                        { id: 'teens', label: '🎒 Thiếu niên (Teens)' },
+                        { id: 'adults', label: '🎓 Người lớn (Adults)' },
+                        { id: 'business', label: '💼 Doanh nhân (Business)' }
+                      ].map(type => (
+                        <button
+                          key={type.id}
+                          onClick={() => {
+                            if (targetAudiences.includes(type.id)) {
+                              setTargetAudiences(targetAudiences.filter(t => t !== type.id));
+                            } else {
+                              setTargetAudiences([...targetAudiences, type.id]);
+                            }
+                          }}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+                            targetAudiences.includes(type.id) 
+                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105' 
+                            : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
+                          }`}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-400 px-1 italic">
+                      * Bỏ trống (không chọn) đồng nghĩa với việc hiển thị cho tất cả mọi người.
+                    </p>
                   </div>
 
                   <div className="space-y-2">

@@ -165,6 +165,7 @@ model Assignment {
   instructions          String?
   shortDescription      String?
   tags                  String?              @default("")
+  targetAudiences       String[]             @default([])
   thumbnail             String?
   videoUrl              String?
   audioUrl              String?
@@ -306,6 +307,7 @@ model Lesson {
   teacherId      String
   assignmentId   String?          @unique
   thumbnail      String?
+  targetAudiences String[]        @default([])
   materialType   String?          @default("READING")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -540,6 +542,7 @@ model HomepageFeed {
   viewCount     Int      @default(0)
   reviewCount   Int      @default(0)
   categoryId    String?
+  targetAudiences String[]   @default([])
   status        String   @default("PUBLIC")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

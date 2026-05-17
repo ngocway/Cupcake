@@ -31,12 +31,12 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
   }, [categoryTree, selectedCategoryId]);
 
   const solarpunkStyles = [
-    { icon: BookOpen, color: "text-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", iconBg: "bg-emerald-100", shadow: "shadow-emerald-900/10" },
-    { icon: Calculator, color: "text-orange-800", bg: "bg-orange-50", border: "border-orange-200", iconBg: "bg-orange-100", shadow: "shadow-orange-900/10" },
-    { icon: Globe, color: "text-sky-800", bg: "bg-sky-50", border: "border-sky-200", iconBg: "bg-sky-100", shadow: "shadow-sky-900/10" },
-    { icon: Atom, color: "text-purple-800", bg: "bg-purple-50", border: "border-purple-200", iconBg: "bg-purple-100", shadow: "shadow-purple-900/10" },
-    { icon: Palette, color: "text-rose-800", bg: "bg-rose-50", border: "border-rose-200", iconBg: "bg-rose-100", shadow: "shadow-rose-900/10" },
-    { icon: Sparkles, color: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200", iconBg: "bg-amber-100", shadow: "shadow-amber-900/10" },
+    { icon: "/images/english.png", color: "text-emerald-900", bg: "bg-emerald-100", border: "border-emerald-300", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10" },
+    { icon: "/images/math.png", color: "text-orange-900", bg: "bg-orange-100", border: "border-orange-300", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10" },
+    { icon: "/images/global.png", color: "text-sky-900", bg: "bg-sky-100", border: "border-sky-300", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10" },
+    { icon: Atom, color: "text-purple-900", bg: "bg-purple-100", border: "border-purple-300", iconBg: "bg-purple-200", shadow: "shadow-purple-900/10" },
+    { icon: Palette, color: "text-rose-900", bg: "bg-rose-100", border: "border-rose-300", iconBg: "bg-rose-200", shadow: "shadow-rose-900/10" },
+    { icon: Sparkles, color: "text-amber-900", bg: "bg-amber-100", border: "border-amber-300", iconBg: "bg-amber-200", shadow: "shadow-amber-900/10" },
   ];
 
   const getStyleByName = (name: string, index: number) => {
@@ -90,12 +90,16 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
               className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl ${
                 isActive 
                   ? `${style.bg} ${style.border} scale-[1.08] shadow-2xl z-20 animate-solar-pulse` 
-                  : `${style.bg} ${style.border} opacity-80 hover:opacity-100 hover:scale-[1.05] ${style.shadow}`
+                  : `${style.bg} ${style.border} hover:scale-[1.05] ${style.shadow}`
               }`}
             >
               {/* Category Icon 'Nổi' on the edge */}
-              <div className={`absolute -top-4 -left-3 p-3 rounded-2xl shadow-lg transition-all duration-700 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
-                <Icon size={24} strokeWidth={3} />
+              <div className={`absolute -top-5 -left-4 rounded-2xl shadow-lg transition-all duration-700 flex items-center justify-center w-14 h-14 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
+                {typeof Icon === "string" ? (
+                  <img src={Icon} alt={cat.name} className="w-10 h-10 object-contain drop-shadow-sm" />
+                ) : (
+                  <Icon size={36} strokeWidth={2.5} />
+                )}
               </div>
 
               <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 ${isActive ? style.color + " scale-105" : "text-foreground/80"}`}>

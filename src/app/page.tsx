@@ -31,8 +31,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // Popular data is pre-fetched client-side in the background (via /api/feed)
   // after the page has already rendered — so sort switching feels instant
   // without slowing down the initial page load.
-  const assignmentsPromise  = getCachedAssignments(params);
-  const lessonsPromise      = getCachedLessons(params);
+  const queryParams = { ...params, userType: initialUserType };
+  const assignmentsPromise  = getCachedAssignments(queryParams);
+  const lessonsPromise      = getCachedLessons(queryParams);
   const categoryTreePromise = getCachedCategoryTree();
 
   return (

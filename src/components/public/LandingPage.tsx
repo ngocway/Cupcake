@@ -177,6 +177,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     const qs = new URLSearchParams()
     if (searchParams.categoryId) qs.set('categoryId', searchParams.categoryId)
     if (searchParams.search)     qs.set('search',     searchParams.search)
+    if (userType)                qs.set('userType',   userType)
     const base = qs.toString() ? `&${qs}` : ''
 
     fetch(`/api/feed?type=exercises${base}`)
@@ -188,7 +189,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       .then(r => r.json())
       .then(data => setPopularLessons(data.items))
       .catch(() => {})
-  }, [searchParams.categoryId, searchParams.search]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchParams.categoryId, searchParams.search, userType]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync URL → state (e.g. browser Back button) ───────────────────────────
   useEffect(() => {
