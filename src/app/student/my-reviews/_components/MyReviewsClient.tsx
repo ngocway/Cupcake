@@ -36,11 +36,12 @@ interface AssignmentReview {
 interface Props {
   initialLessonReviews: LessonReview[];
   initialAssignmentReviews: AssignmentReview[];
+  translations: any; // Using any for simplicity as it's passed down
 }
 
 type TabType = "all" | "lesson" | "assignment";
 
-export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews }: Props) {
+export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews, translations }: Props) {
   const [lessonReviews, setLessonReviews] = useState(initialLessonReviews);
   const [assignmentReviews, setAssignmentReviews] = useState(initialAssignmentReviews);
   const [activeTab, setActiveTab] = useState<TabType>("all");
@@ -100,6 +101,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
         totalReviews={totalReviews}
         approvedReviews={approvedReviews}
         averageRating={averageRating}
+        translations={translations}
       />
 
       <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
@@ -109,11 +111,11 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               onClick={() => setActiveTab("all")}
               className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
                 activeTab === "all"
-                  ? "bg-white shadow-sm text-slate-900"
-                  : "text-slate-500 hover:text-slate-700"
+                   ? "bg-white shadow-sm text-slate-900"
+                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              Tất cả ({combinedReviews.length})
+              {translations.all} ({combinedReviews.length})
             </button>
             <button
               onClick={() => setActiveTab("lesson")}
@@ -124,7 +126,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               }`}
             >
               <BookOpen className="w-4 h-4" />
-              Bài học ({lessonReviews.length})
+              {translations.lessons} ({lessonReviews.length})
             </button>
             <button
               onClick={() => setActiveTab("assignment")}
@@ -135,7 +137,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               }`}
             >
               <FileQuestion className="w-4 h-4" />
-              Bài tập ({assignmentReviews.length})
+              {translations.assignments} ({assignmentReviews.length})
             </button>
           </div>
 
@@ -143,7 +145,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Tìm kiếm đánh giá..."
+              placeholder={translations.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-11 pr-4 py-3 bg-slate-50 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all w-full md:w-64"
@@ -159,6 +161,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
                 review={review}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
+                translations={translations}
               />
             ))}
           </div>
@@ -168,13 +171,13 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               <MessageSquare className="w-10 h-10 text-slate-200" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-900">Chưa có đánh giá nào</h3>
+              <h3 className="text-xl font-black text-slate-900">{translations.noReviews}</h3>
               <p className="text-slate-500 font-medium max-w-sm mx-auto">
                 {searchQuery
-                  ? "Không tìm thấy đánh giá phù hợp với từ khóa."
+                  ? translations.noResults
                   : activeTab === "all"
-                  ? "Bạn chưa đánh giá bài học hay bài tập nào. Hãy bắt đầu đánh giá để giúp cộng đồng học tập tốt hơn!"
-                  : `Bạn chưa đánh giá ${activeTab === "lesson" ? "bài học" : "bài tập"} nào.`}
+                  ? translations.emptyMessage
+                  : translations.emptyTypeMessage.replace("{type}", activeTab === "lesson" ? translations.lesson.toLowerCase() : translations.assignment.toLowerCase())}
               </p>
             </div>
             {!searchQuery && (
@@ -183,7 +186,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
                 className="inline-flex items-center gap-2 px-6 py-3 bg-slate-950 text-white rounded-2xl font-bold text-sm hover:bg-primary transition-colors"
               >
                 <Star className="w-4 h-4" />
-                Khám phá {activeTab === "lesson" ? "bài học" : "bài tập"}
+                {translations.explore} {activeTab === "lesson" ? translations.lessons.toLowerCase() : translations.assignments.toLowerCase()}
               </a>
             )}
           </div>

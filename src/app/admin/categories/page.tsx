@@ -9,7 +9,7 @@ export const metadata = {
 
 export default async function AdminCategoriesPage() {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/login");
+  if (session?.user?.role !== "ADMIN") redirect("/admin/login");
 
   const categoryTree = await getCategoryTree();
 

@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Check
 } from "lucide-react";
+import BackButton from "@/components/ui/BackButton";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { toast } from "sonner";
@@ -25,6 +26,7 @@ import { ReviewList } from "@/components/reviews/ReviewList";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 import { completeSubmission } from "@/actions/submission-actions";
+import { useTranslations } from "next-intl";
 
 // Helper to determine question correctness
 const getQuestionStatus = (q: any, answer: any) => {
@@ -72,6 +74,7 @@ const getQuestionStatus = (q: any, answer: any) => {
 };
 
 function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange, matchingColors }: any) {
+  const t = useTranslations("student.quiz");
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<any>(null);
   const [hoveredLine, setHoveredLine] = useState<any>(null);
@@ -125,7 +128,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
             if (isChecked) strokeColor = isCorrect ? '#10B981' : '#EF4444';
 
             return (
-              <g key={`student-${leftId}`} onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? 'Đúng' : 'Sai' })} onMouseLeave={() => setHoveredLine(null)}>
+              <g key={`student-${leftId}`} onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? t('correct') : t('incorrect') })} onMouseLeave={() => setHoveredLine(null)}>
                 <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="15" className="cursor-help pointer-events-auto" />
                 <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isCorrect ? "4" : "2"} strokeDasharray={isChecked && !isCorrect ? "6,4" : "0"} className="transition-all duration-500 pointer-events-none" />
                 {isChecked && !isCorrect && (() => {
@@ -148,11 +151,11 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
           </div>
         )}
         <div className="space-y-4 z-20">
-          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">Cột vế hỏi</span>
+          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">{t("matchingLeftColumn")}</span>
           {(questionData.pairs || []).map((pair: any, idx: number) => {
             const pairedRightText = userAnswer?.[pair.id];
             return (
-              <div key={pair.id} className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
+              <div key={pair.id || idx} className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
                 <div className="flex items-center gap-4">
                    <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-xs font-black shrink-0">{String.fromCharCode(65 + idx)}</div>
                    {pair.leftImageUrl || (pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/')) ? <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{pair.leftText}</span>}
@@ -172,7 +175,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
           })}
         </div>
         <div className="space-y-4 z-20">
-          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">Cột trả lời</span>
+          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">{t("matchingRightColumn")}</span>
           {shuffledRightItems.map((rightText: string, idx: number) => {
             const pairedLeftId = Object.keys(userAnswer || {}).find(k => userAnswer[k] === rightText);
             const isPairCorrect = isChecked && pairedLeftId && (questionData.pairs.find((p:any) => p.id === pairedLeftId)?.rightText === rightText);
@@ -194,7 +197,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
                     setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
                   }
                 }} className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
-                {rightText.startsWith('http') || rightText.startsWith('/') ? <img src={rightText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{rightText}</span>}
+                {rightText?.startsWith('http') || rightText?.startsWith('/') ? <img src={rightText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{rightText}</span>}
                 {isChecked && pairedLeftId && <span className={`material-symbols-outlined ml-auto ${isPairCorrect ? 'text-emerald-500' : 'text-rose-500'}`}>{isPairCorrect ? 'check_circle' : 'cancel'}</span>}
               </div>
             );
@@ -204,7 +207,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
       {!isChecked && (
         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
            <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary"><span className="material-symbols-outlined text-sm">gesture</span></div>
-           <p className="text-xs text-slate-500 font-medium">Mẹo: Nhấn vào nốt tròn và kéo để nối. Bạn có thể kéo lại các đầu dây đã nối để thay đổi đáp án!</p>
+           <p className="text-xs text-slate-500 font-medium">{t("matchingTip")}</p>
         </div>
       )}
     </div>
@@ -241,6 +244,7 @@ export default function QuizClientRunner({
   relatedAssignments = [],
   isGuest = false
 }: Props) {
+  const t = useTranslations("student.quiz");
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState(initialAnswers);
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
@@ -278,7 +282,7 @@ export default function QuizClientRunner({
 
   const handleReviewSubmit = async () => {
     if (reviewRating === 0) {
-      toast.error("Vui lòng chọn số sao đánh giá.");
+      toast.error(t("starRatingError"));
       return;
     }
     
@@ -293,7 +297,7 @@ export default function QuizClientRunner({
         toast.error(result.message);
       }
     } catch (err) {
-      toast.error("Lỗi khi gửi đánh giá.");
+      toast.error(t("reviewSubmitError"));
     } finally {
       setIsSubmittingReview(false);
     }
@@ -328,7 +332,7 @@ export default function QuizClientRunner({
       setNavGuard({
         isOpen: true,
         targetUrl: href,
-        targetTitle: title || "trang khác",
+        targetTitle: title || "...",
       });
     } else {
       router.push(href);
@@ -364,6 +368,10 @@ export default function QuizClientRunner({
       );
     });
   }, [questions, answers]);
+
+  const isAllChecked = useMemo(() => {
+    return questions.length > 0 && questions.every(q => checkedQuestions[q.id]);
+  }, [questions, checkedQuestions]);
 
   const scrollToQuestion = (id: string) => {
     const element = document.getElementById(id);
@@ -435,7 +443,7 @@ export default function QuizClientRunner({
     });
 
     if (unansweredIndices.length > 0) {
-      toast.error(`Bạn chưa hoàn thành các câu: ${unansweredIndices.join(", ")}`);
+      toast.error(t("unansweredError", { numbers: unansweredIndices.join(", ") }));
       scrollToQuestion(questions[unansweredIndices[0] - 1].id);
       return;
     }
@@ -448,27 +456,25 @@ export default function QuizClientRunner({
       setCheckedQuestions(prev => ({ ...prev, [q.id]: true }));
     }
     
-    toast.success("Tất cả câu hỏi đã được kiểm tra!");
+    toast.success(t("checkAllSuccess"));
+  };
 
-    // Mark as completed in background
-    if (submissionId) {
-      startTransition(async () => {
-        const res = await completeSubmission(submissionId, answers);
-        if (res.success) {
-          console.log("Submission marked as completed");
-        }
-      });
-    }
+  const handleReset = () => {
+    // Reset all answers to initial empty state
+    const emptyAnswers: Record<string, any> = {};
+    setAnswers(emptyAnswers);
+    // Reset checked questions to hide answer reveals
+    setCheckedQuestions({});
   };
 
   const handleSubmit = () => {
     if (isGuest) {
-      if (confirm("Vui lòng đăng nhập để nộp bài và lưu kết quả. Chuyển đến trang đăng nhập?")) {
+      if (confirm(t("guestSubmitConfirm"))) {
         router.push(`/student/login?callbackUrl=/student/assignments/${assignment.id}/run?direct=true`);
       }
       return;
     }
-    if (!confirm("Bạn có chắc chắn muốn nộp bài không?")) return;
+    if (!confirm(t("submitConfirm"))) return;
     
     // Clear dirty state
     setAnswers({});
@@ -492,54 +498,63 @@ export default function QuizClientRunner({
         {/* Middle Column: Questions (70%) */}
         <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30 relative">
            {/* Progress Navigation Header (Sticky) */}
-           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/20 flex flex-col items-center justify-center px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shrink-0 gap-2">
-              <h2 className="text-[11px] font-black text-on-surface/80 uppercase tracking-[0.2em] line-clamp-1 max-w-[80%] text-center">
-                {assignment.title}
-              </h2>
-              <div className="flex items-center gap-3">
-                 {questions.map((q, i) => {
-                    const ans = answers[q.id];
-                    const isCompleted = ans !== undefined && ans !== null && (
-                      (typeof ans === 'object' ? Object.keys(ans).length > 0 : true)
-                    );
-                    const isActive = activeQuestionId === q.id;
+           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/20 flex items-center px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shrink-0 gap-6">
+              <div className="shrink-0">
+                <BackButton className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
+                  <ChevronLeft className="w-4 h-4" />
+                  Quay lại
+                </BackButton>
+              </div>
+              
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 pr-20"> {/* pr-20 to balance the back button */}
+                <h2 className="text-[11px] font-black text-on-surface/80 uppercase tracking-[0.2em] line-clamp-1 max-w-[80%] text-center">
+                  {assignment.title}
+                </h2>
+                <div className="flex items-center gap-3">
+                   {questions.map((q, i) => {
+                      const ans = answers[q.id];
+                      const isCompleted = ans !== undefined && ans !== null && (
+                        (typeof ans === 'object' ? Object.keys(ans).length > 0 : true)
+                      );
+                      const isActive = activeQuestionId === q.id;
 
-                    return (
-                        <button
-                          key={q.id}
-                          onClick={() => scrollToQuestion(q.id)}
-                          className={`relative flex items-center justify-center w-10 h-10 rounded-full text-xs font-black transition-all duration-300 border-2 ${
-                            isActive 
-                             ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
-                             : isCompleted
-                               ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
-                               : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
-                          }`}
-                        >
-                           {i + 1}
-                           
-                           {/* Feedback indicator above circle */}
-                           {checkedQuestions[q.id] && (
-                             <div className="absolute -top-5 left-1/2 -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 duration-500 z-20">
-                               {getQuestionStatus(q, answers[q.id]) === 'correct' ? (
-                                 <div className="bg-emerald-500 text-white rounded-full p-1 shadow-lg shadow-emerald-500/40 border-2 border-white dark:border-slate-900">
-                                   <Check className="w-2.5 h-2.5 stroke-[4px]" />
-                                 </div>
-                               ) : (
-                                 <div className="bg-rose-500 text-white rounded-full p-1 shadow-lg shadow-rose-500/40 border-2 border-white dark:border-slate-900">
-                                   <X className="w-2.5 h-2.5 stroke-[4px]" />
-                                 </div>
-                               )}
-                             </div>
-                           )}
+                      return (
+                          <button
+                            key={q.id}
+                            onClick={() => scrollToQuestion(q.id)}
+                            className={`relative flex items-center justify-center w-10 h-10 rounded-full text-xs font-black transition-all duration-300 border-2 ${
+                              isActive 
+                               ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
+                               : isCompleted
+                                 ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
+                                 : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
+                            }`}
+                          >
+                             {i + 1}
+                             
+                             {/* Feedback indicator above circle */}
+                             {checkedQuestions[q.id] && (
+                               <div className="absolute -top-5 left-1/2 -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 duration-500 z-20">
+                                 {getQuestionStatus(q, answers[q.id]) === 'correct' ? (
+                                   <div className="bg-emerald-500 text-white rounded-full p-1 shadow-lg shadow-emerald-500/40 border-2 border-white dark:border-slate-900">
+                                     <Check className="w-2.5 h-2.5 stroke-[4px]" />
+                                   </div>
+                                 ) : (
+                                   <div className="bg-rose-500 text-white rounded-full p-1 shadow-lg shadow-rose-500/40 border-2 border-white dark:border-slate-900">
+                                     <X className="w-2.5 h-2.5 stroke-[4px]" />
+                                   </div>
+                                 )}
+                               </div>
+                             )}
 
-                           {/* Connection line between circles */}
-                           {i < questions.length - 1 && (
-                             <div className={`absolute left-full w-3 h-0.5 -z-10 ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
-                           )}
-                        </button>
-                    )
-                 })}
+                             {/* Connection line between circles */}
+                             {i < questions.length - 1 && (
+                               <div className={`absolute left-full w-3 h-0.5 -z-10 ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
+                             )}
+                          </button>
+                      )
+                   })}
+                </div>
               </div>
            </div>
 
@@ -555,7 +570,13 @@ export default function QuizClientRunner({
 
               const qType = questionData.type || q.type;
               const isMultiSelect = qType === "MULTIPLE_SELECT";
-              const questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? q.content;
+              let questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? q.content;
+              
+              // Prevent showing raw JSON if questionText is just the stringified content
+              if (questionText && questionText.startsWith('{') && questionText.endsWith('}')) {
+                questionText = "";
+              }
+              
               const userAnswer = answers[q.id];
               const isChecked = checkedQuestions[q.id] || false;
 
@@ -568,15 +589,17 @@ export default function QuizClientRunner({
                 >
                   <div className="space-y-4">
                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-lg text-secondary text-[10px] font-black uppercase tracking-widest">
-                        Câu hỏi {idx + 1} • {
-                          qType === "MULTIPLE_SELECT" ? 'Chọn nhiều đáp án' : 
-                          qType === "MATCHING" ? 'Nối cặp đáp án' : 
-                          'Chọn một đáp án'
+                        {t("questionPrefix")} {idx + 1} • {
+                          qType === "MULTIPLE_SELECT" ? t('multipleSelect') : 
+                          qType === "MATCHING" ? t('matching') : 
+                          t('multipleChoice')
                         }
                      </div>
-                      <h3 className="text-xl font-black text-on-surface leading-snug">
-                        {questionText === "{}" ? "" : questionText}
-                      </h3>
+                      {questionText && questionText !== "{}" && (
+                        <h3 className="text-xl font-black text-on-surface leading-snug">
+                          {questionText}
+                        </h3>
+                      )}
                   </div>
 
                   <div className="space-y-4">
@@ -646,8 +669,8 @@ export default function QuizClientRunner({
                      {qType === "TRUE_FALSE" && (
                         <div className="grid grid-cols-2 gap-4">
                           {[
-                            { label: "Đúng", value: true },
-                            { label: "Sai", value: false }
+                             { label: t("correct"), value: true },
+                             { label: t("incorrect"), value: false }
                           ].map((opt) => {
                             const isSelected = userAnswer === opt.value;
                             const isCorrect = questionData.isTrue === opt.value;
@@ -706,24 +729,34 @@ export default function QuizClientRunner({
             {/* Bottom Actions */}
             <div className="pt-20 pb-40 flex flex-col items-center gap-8">
                 <div className="flex items-center gap-6">
-                  <button 
+                  {isAllChecked ? (
+                    <button
+                      onClick={handleReset}
+                      className="flex items-center gap-3 px-10 py-4 bg-orange-500 text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-500/20 uppercase italic"
+                    >
+                      {t("resetAll")}
+                      <span className="material-symbols-outlined text-xl">restart_alt</span>
+                    </button>
+                  ) : (
+                    <button
                       onClick={handleCheckAll}
                       className="flex items-center gap-3 px-10 py-4 bg-secondary text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-secondary/20 uppercase italic"
-                  >
-                      KIỂM TRA TẤT CẢ
+                    >
+                      {t("checkAll")}
                       <span className="material-symbols-outlined text-xl">verified</span>
-                  </button>
+                    </button>
+                  )}
                   
                   <div className="relative">
                     <button 
                         disabled
                         className="flex items-center gap-3 px-10 py-4 bg-primary/20 text-primary/40 cursor-not-allowed rounded-[2rem] font-black text-lg tracking-widest transition-all uppercase italic border-2 border-primary/10"
                     >
-                        NỘP BÀI
+                        {t("submit")}
                         <Send className="w-5 h-5" />
                     </button>
                     <div className="absolute -top-3 -right-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full shadow-lg border-2 border-white transform rotate-12">
-                      Coming Soon
+                      {t("comingSoon")}
                     </div>
                   </div>
                 </div>
@@ -738,7 +771,7 @@ export default function QuizClientRunner({
            <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
               <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
                  <BookOpen className="w-4 h-4" />
-                 Hướng dẫn & Tài liệu
+                 {t("resources")}
               </div>
               <div className="flex items-center gap-4">
                  {!isGuest && (
@@ -753,7 +786,7 @@ export default function QuizClientRunner({
                        className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-outline-variant/20 hover:scale-105 active:scale-95 transition-all"
                      >
                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Đánh giá</span>
+                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">{t("sendReview")}</span>
                      </button>
                    </>
                  )}
@@ -765,7 +798,7 @@ export default function QuizClientRunner({
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
                     <span className="material-symbols-outlined text-sm">menu_book</span>
-                    Tài liệu học tập
+                    {t("studyMaterial")}
                   </div>
                   <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
                     {/* Video Player */}
@@ -818,7 +851,7 @@ export default function QuizClientRunner({
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
                     <span className="material-symbols-outlined text-sm">info</span>
-                    Hướng dẫn làm bài
+                    {t("instructions")}
                   </div>
                   <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
                     <div dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
@@ -831,8 +864,8 @@ export default function QuizClientRunner({
                 <div className="border-t border-outline-variant/20 pt-16 space-y-12">
                    <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                         <h3 className="text-2xl font-black tracking-tight italic uppercase">Phản hồi từ học viên</h3>
-                         <p className="text-sm text-slate-500 font-medium">Những chia sẻ từ các bạn đã hoàn thành bài tập này.</p>
+                         <h3 className="text-2xl font-black tracking-tight italic uppercase">{t("studentFeedback")}</h3>
+                         <p className="text-sm text-slate-500 font-medium">{t("feedbackSubtitle")}</p>
                       </div>
                       {allReviews.length > 0 && (
                          <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-100">
@@ -876,8 +909,8 @@ export default function QuizClientRunner({
 
               <div className="space-y-8">
                  <div className="space-y-2">
-                    <h4 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase">Đánh giá của bạn</h4>
-                    <p className="text-slate-500 font-medium text-sm">Cảm nhận của bạn về nội dung và độ khó của các câu hỏi?</p>
+                    <h4 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight italic uppercase">{t("yourReview")}</h4>
+                    <p className="text-slate-500 font-medium text-sm">{t("reviewSubtitle")}</p>
                  </div>
 
                  <div className="overflow-y-auto pr-2 space-y-8">
@@ -887,9 +920,9 @@ export default function QuizClientRunner({
                            <CheckCircle2 className="w-10 h-10" />
                         </div>
                         <div className="space-y-2 px-6">
-                           <h5 className="text-xl font-black text-slate-900 dark:text-white">Cảm ơn bạn!</h5>
+                           <h5 className="text-xl font-black text-slate-900 dark:text-white">{t("thankYou")}</h5>
                            <p className="text-sm text-slate-500 font-medium italic">
-                              {userReview.isApproved ? "Đánh giá của bạn đã được duyệt" : "Đánh giá của bạn đã được ghi nhận và đang chờ phê duyệt."}
+                              {userReview.isApproved ? t("reviewApproved") : t("reviewPending")}
                            </p>
                         </div>
                      </div>
@@ -921,7 +954,7 @@ export default function QuizClientRunner({
                            <div className="relative">
                               <MessageCircle className="absolute top-5 left-5 w-5 h-5 text-slate-300" />
                               <textarea 
-                                placeholder="Viết nhận xét của bạn tại đây..."
+                                placeholder={t("commentPlaceholder")}
                                 value={reviewComment}
                                 onChange={(e) => setReviewComment(e.target.value)}
                                 className="w-full bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 rounded-[2rem] p-5 pl-14 min-h-[150px] text-base font-medium focus:border-primary focus:ring-0 transition-all outline-none"
@@ -932,7 +965,7 @@ export default function QuizClientRunner({
                              disabled={isSubmittingReview || reviewRating === 0}
                              className="w-full h-14 bg-slate-950 dark:bg-primary text-white rounded-full font-black tracking-[0.2em] hover:bg-primary transition-all disabled:opacity-50 shadow-xl"
                            >
-                              {isSubmittingReview ? "ĐANG GỬI..." : "GỬI ĐÁNH GIÁ"}
+                              {isSubmittingReview ? t("sending") : t("sendReview")}
                            </button>
                         </div>
                      </div>
@@ -962,10 +995,13 @@ export default function QuizClientRunner({
             
             <div className="space-y-3">
               <h4 className="text-xl font-black text-slate-900 dark:text-white leading-tight">
-                Xác nhận chuyển bài tập
+                {t("navGuardTitle")}
               </h4>
               <p className="text-slate-500 dark:text-slate-400 font-medium text-sm leading-relaxed">
-                {!allCompleted && "Bạn chưa hoàn tất bài tập hiện tại, "}bạn có muốn chuyển sang bài <span className="font-bold text-slate-900 dark:text-white">{navGuard.targetTitle}</span> không?
+                {t("navGuardMessage", { 
+                    unfinished: allCompleted ? "" : t("unfinished"),
+                    title: navGuard.targetTitle 
+                  })}
               </p>
             </div>
 
@@ -977,13 +1013,13 @@ export default function QuizClientRunner({
                 }}
                 className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm tracking-widest hover:bg-primary/90 transition-all shadow-xl shadow-primary/20 uppercase italic"
               >
-                Đồng ý
+                {t("confirm")}
               </button>
               <button
                 onClick={() => setNavGuard({ ...navGuard, isOpen: false })}
                 className="w-full py-3 text-slate-500 dark:text-slate-400 font-bold text-xs hover:text-slate-800 dark:hover:text-white transition-colors uppercase tracking-widest"
               >
-                Tiếp tục làm bài
+                {t("continue")}
               </button>
             </div>
           </div>

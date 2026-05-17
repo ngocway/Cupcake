@@ -4,6 +4,7 @@ import React from "react";
 import { Play } from "lucide-react";
 import Link from "next/link";
 import { DirectStartLink } from "./DirectStartLink";
+import { useTranslations } from "next-intl";
 
 interface RelatedItem {
   id: string;
@@ -43,11 +44,13 @@ export function RelatedAssignmentsSection({
   isGuest?: boolean,
   onNavigate?: (href: string) => void
 }) {
+  const t = useTranslations("header");
+
   return (
     <div className="border-t border-outline-variant/20 pt-16 space-y-8">
       <div className="space-y-1">
-        <h3 className="text-2xl font-black tracking-tight italic uppercase">Nội dung liên quan</h3>
-        <p className="text-sm text-slate-500 font-medium">Có thể bạn sẽ quan tâm đến các nội dung này.</p>
+        <h3 className="text-2xl font-black tracking-tight italic uppercase">{t("relatedContent")}</h3>
+        <p className="text-sm text-slate-500 font-medium">{t("relatedContentDescription")}</p>
       </div>
       
       <div className="grid grid-cols-1 gap-4">
@@ -80,7 +83,7 @@ export function RelatedAssignmentsSection({
         })}
 
         {items.length === 0 && (
-          <p className="text-sm italic text-slate-400 col-span-2 py-4">Chưa có bài học liên quan nào.</p>
+          <p className="text-sm italic text-slate-400 col-span-2 py-4">{t("noRelatedLessons")}</p>
         )}
       </div>
     </div>

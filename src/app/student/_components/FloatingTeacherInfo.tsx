@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { User, X, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface TeacherInfo {
   id: string;
@@ -24,6 +25,7 @@ export function FloatingTeacherInfo({
   teacher: TeacherInfo,
   onNavigate?: (href: string) => void
 }) {
+  const t = useTranslations("header");
   const [isOpen, setIsOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
@@ -76,12 +78,12 @@ export function FloatingTeacherInfo({
             
             <div className="space-y-1">
               <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">{teacher.name}</h3>
-              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{teacher.professionalTitle || "Giảng viên tại Học viện"}</p>
+              <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{teacher.professionalTitle || t("teacherTitle")}</p>
             </div>
           </div>
 
           <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed text-center">
-            {teacher.bio || "Giảng viên tâm huyết với nhiều năm kinh nghiệm trong lĩnh vực giáo dục và đào tạo."}
+            {teacher.bio || t("defaultBio")}
           </p>
 
           <Link 
@@ -95,7 +97,7 @@ export function FloatingTeacherInfo({
             }}
             className="w-full py-3 bg-slate-900 dark:bg-primary text-white rounded-full font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-widest italic"
           >
-            Xem Hồ Sơ
+            {t("viewProfile")}
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>

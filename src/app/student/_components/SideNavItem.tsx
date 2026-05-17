@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,6 +13,7 @@ interface SideNavItemProps {
 }
 
 export function SideNavItem({ href, icon, label, comingSoon }: SideNavItemProps) {
+  const t = useTranslations("common");
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isActive, setIsActive] = useState(false);
@@ -61,7 +63,7 @@ export function SideNavItem({ href, icon, label, comingSoon }: SideNavItemProps)
       <div className="flex-1 flex items-center justify-between gap-2">
         <span className="font-label text-sm">{label}</span>
         {comingSoon && (
-          <span className="text-[7px] font-black uppercase tracking-[0.2em] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500">Soon</span>
+          <span className="text-[7px] font-black uppercase tracking-[0.2em] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-500">{t("comingSoon")}</span>
         )}
       </div>
     </Link>

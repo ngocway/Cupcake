@@ -1,4 +1,5 @@
 import { getRequestConfig } from "next-intl/server";
+import { cookies } from "next/headers";
 import en from "./messages/en.json";
 import vi from "./messages/vi.json";
 
@@ -12,10 +13,19 @@ const messages = {
 };
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  const locale = await requestLocale;
+  let locale = await requestLocale;
+  
+  // If not in URL, try to get from cookie
+  if (!locale) {
+    const cookieStore = await cookies();
+    locale = cookieStore.get("NEXT_LOCALE")?.value;
+  }
+
+  // Fallback to default
+  const finalLocale = (locale && locales.includes(locale as any)) ? locale : defaultLocale;
   
   return {
-    locale: locale || defaultLocale,
-    messages: messages[(locale || defaultLocale) as Locale] || messages[defaultLocale],
+    locale: finalLocale,
+    messages: messages[finalLocale as Locale] || messages[defaultLocale],
   };
 });

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { Star, MessageSquare, Send, X, CheckCircle2, Loader2 } from "lucide-react"
 import { submitAssignmentReview, submitLessonReview } from "@/actions/reviews"
+import { Star, X, CheckCircle2, MessageSquare, Loader2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 interface ReviewTriggerProps {
     type: 'assignment' | 'lesson'
@@ -13,6 +14,7 @@ interface ReviewTriggerProps {
 }
 
 export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerProps) {
+    const t = useTranslations("student.review");
     const [isOpen, setIsOpen] = useState(false);
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
@@ -53,7 +55,7 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                 <button 
                     onClick={() => setIsOpen(true)}
                     className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-yellow-500 transition-all active:scale-95"
-                    title="Đánh giá"
+                    title={t("sendReview")}
                 >
                     <Star className={`w-5 h-5 ${rating > 0 ? 'fill-yellow-400 text-yellow-400' : ''}`} />
                 </button>
@@ -70,14 +72,16 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                                     <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto">
                                         <CheckCircle2 className="w-10 h-10" />
                                     </div>
-                                    <h4 className="text-xl font-black italic">Cảm ơn bạn!</h4>
-                                    <p className="text-sm text-slate-500 font-medium">Đánh giá của bạn đã giúp cộng đồng học tập tốt hơn.</p>
+                                    <h4 className="text-xl font-black italic">{t("thankYou")}</h4>
+                                    <p className="text-sm text-slate-500 font-medium">{t("reviewHelper")}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-8">
                                     <div>
-                                        <h4 className="text-2xl font-black font-headline italic">Đánh giá {type === 'assignment' ? 'bài tập' : 'bài học'}?</h4>
-                                        <p className="text-sm text-slate-500 font-medium mt-1">Phản hồi của bạn thực sự quý giá với giáo viên.</p>
+                                        <h4 className="text-2xl font-black font-headline italic">
+                                            {t("rateTitle", { type: t(type) })}
+                                        </h4>
+                                        <p className="text-sm text-slate-500 font-medium mt-1">{t("reviewSubtitle")}</p>
                                     </div>
 
                                     <div className="flex justify-center gap-3">
@@ -94,13 +98,13 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
 
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                            <MessageSquare className="w-3 h-3" /> Bình luận (Tùy chọn)
+                                            <MessageSquare className="w-3 h-3" /> {t("comment")}
                                         </div>
                                         <textarea 
                                             className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
                                             value={comment}
                                             onChange={e => setComment(e.target.value)}
-                                            placeholder="Viết cảm nhận của bạn..."
+                                            placeholder={t("commentPlaceholder")}
                                         />
                                     </div>
 
@@ -109,7 +113,7 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                                         disabled={rating === 0 || loading}
                                         className="w-full h-14 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-primary transition-all disabled:opacity-30 disabled:hover:bg-slate-950"
                                     >
-                                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Gửi đánh giá"}
+                                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("sendReview")}
                                     </button>
                                 </div>
                             )}
@@ -148,14 +152,16 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                                 <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto">
                                     <CheckCircle2 className="w-10 h-10" />
                                 </div>
-                                <h4 className="text-xl font-black italic">Cảm ơn bạn!</h4>
-                                <p className="text-sm text-slate-500 font-medium">Đánh giá của bạn đã giúp cộng đồng học tập tốt hơn.</p>
+                                <h4 className="text-xl font-black italic">{t("thankYou")}</h4>
+                                <p className="text-sm text-slate-500 font-medium">{t("reviewHelper")}</p>
                             </div>
                         ) : (
                             <div className="space-y-8">
                                 <div>
-                                    <h4 className="text-2xl font-black font-headline italic">Đánh giá {type === 'assignment' ? 'bài tập' : 'bài học'}?</h4>
-                                    <p className="text-sm text-slate-500 font-medium mt-1">Phản hồi của bạn thực sự quý giá với giáo viên.</p>
+                                    <h4 className="text-2xl font-black font-headline italic">
+                                        {t("rateTitle", { type: t(type) })}
+                                    </h4>
+                                    <p className="text-sm text-slate-500 font-medium mt-1">{t("reviewSubtitle")}</p>
                                 </div>
 
                                 <div className="flex justify-center gap-3">
@@ -172,13 +178,13 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
 
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                        <MessageSquare className="w-3 h-3" /> Bình luận (Tùy chọn)
+                                        <MessageSquare className="w-3 h-3" /> {t("comment")}
                                     </div>
                                     <textarea 
                                         className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
                                         value={comment}
                                         onChange={e => setComment(e.target.value)}
-                                        placeholder="Viết cảm nhận của bạn..."
+                                        placeholder={t("commentPlaceholder")}
                                     />
                                 </div>
 
@@ -187,7 +193,7 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                                     disabled={rating === 0 || loading}
                                     className="w-full h-14 bg-slate-950 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-primary transition-all disabled:opacity-30 disabled:hover:bg-slate-950"
                                 >
-                                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Gửi đánh giá"}
+                                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t("sendReview")}
                                 </button>
                             </div>
                         )}

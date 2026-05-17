@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
 import Link from "next/link";
 import { 
   CheckCircle2, 
@@ -33,9 +32,10 @@ interface Submission {
 
 interface Props {
   initialSubmissions: Submission[];
+  translations: any;
 }
 
-export function StudentAssignmentHistory({ initialSubmissions }: Props) {
+export function StudentAssignmentHistory({ initialSubmissions, translations }: Props) {
   const [activeTab, setActiveTab] = useState<"completed" | "in-progress">("completed");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -59,7 +59,7 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
             }`}
           >
             <CheckCircle2 className="w-4 h-4" />
-            Đã hoàn thành
+            {translations.completed}
           </button>
           <button 
             onClick={() => setActiveTab("in-progress")}
@@ -70,7 +70,7 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
             }`}
           >
             <Clock className="w-4 h-4" />
-            Đang làm
+            {translations.inProgress}
           </button>
         </div>
 
@@ -78,7 +78,7 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
           <input 
             type="text"
-            placeholder="Tìm kiếm bài tập đã thực hiện..."
+            placeholder={translations.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-[2rem] py-4 pl-14 pr-6 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
@@ -107,7 +107,7 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
                     className="w-full py-3 bg-white text-primary rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-all shadow-xl"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    Làm lại bài tập
+                    {translations.retake}
                   </Link>
                 </div>
                 
@@ -117,8 +117,8 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
                      s.status === "COMPLETED" 
                      ? "bg-green-500/90 text-white border-white/20" 
                      : "bg-amber-500/90 text-white border-white/20"
-                   }`}>
-                     {s.status === "COMPLETED" ? "Đã hoàn thành" : "Đang làm"}
+                    }`}>
+                     {s.status === "COMPLETED" ? translations.completed : translations.inProgress}
                    </div>
                 </div>
               </div>
@@ -138,8 +138,8 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
                     <Calendar className="w-4 h-4" />
                     <span className="text-xs font-medium">
                       {s.status === "COMPLETED" 
-                        ? `Ngày làm bài: ${format(new Date(s.submittedAt!), "dd/MM/yyyy HH:mm", { locale: vi })}`
-                        : `Ngày làm bài: ${format(new Date(s.startedAt), "dd/MM/yyyy HH:mm", { locale: vi })}`
+                        ? translations.date.replace("{date}", format(new Date(s.submittedAt!), "dd/MM/yyyy HH:mm"))
+                        : translations.date.replace("{date}", format(new Date(s.startedAt), "dd/MM/yyyy HH:mm"))
                       }
                     </span>
                   </div>
@@ -148,10 +148,10 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
                 <div className="mt-auto pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   {s.status === "COMPLETED" ? (
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">Kết quả bài làm</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1">{translations.result}</span>
                       <div className="flex items-baseline gap-1">
                         <span className="text-3xl font-black text-green-500">{s.correctAnswers}</span>
-                        <span className="text-sm font-bold text-slate-400">/{s.totalQuestions} câu</span>
+                        <span className="text-sm font-bold text-slate-400">/{s.totalQuestions} {translations.questions}</span>
                       </div>
                     </div>
                   ) : (
@@ -160,8 +160,8 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
                         <PlayCircle className="w-7 h-7" />
                       </div>
                       <div className="flex flex-col">
-                         <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Đang dở dang</span>
-                         <Link href={`/student/assignments/${s.slug || s.assignmentId}/run`} className="text-sm font-black text-slate-900 dark:text-white hover:text-primary transition-colors">Tiếp tục ngay</Link>
+                         <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{translations.unfinished}</span>
+                         <Link href={`/student/assignments/${s.slug || s.assignmentId}/run`} className="text-sm font-black text-slate-900 dark:text-white hover:text-primary transition-colors">{translations.continue}</Link>
                       </div>
                     </div>
                   )}
@@ -179,16 +179,18 @@ export function StudentAssignmentHistory({ initialSubmissions }: Props) {
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-[3rem] py-24 text-center border border-dashed border-slate-200 dark:border-slate-800">
-           <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-             <Filter className="w-10 h-10 text-slate-300" />
-           </div>
-           <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Không tìm thấy bài tập nào</h3>
-           <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-             {searchQuery ? "Chúng mình không tìm thấy kết quả phù hợp với từ khóa này." : `Bạn chưa có bài tập nào trong mục ${activeTab === "completed" ? "Đã hoàn thành" : "Đang làm"}.`}
-           </p>
-           {searchQuery && (
-             <button onClick={() => setSearchQuery("")} className="mt-6 text-primary font-bold hover:underline">Xóa tìm kiếm</button>
-           )}
+            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Filter className="w-10 h-10 text-slate-300" />
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{translations.noAssignments}</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              {searchQuery 
+                ? translations.noResults 
+                : translations.emptyMessage.replace("{tab}", activeTab === "completed" ? translations.completed : translations.inProgress)}
+            </p>
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="mt-6 text-primary font-bold hover:underline">{translations.clearSearch}</button>
+            )}
         </div>
       )}
     </div>

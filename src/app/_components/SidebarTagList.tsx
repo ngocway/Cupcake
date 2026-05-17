@@ -25,10 +25,10 @@ export function SidebarTagList({ tags, searchParams }: Props) {
           <FilterLink
             key={tag}
             href={`/?${params.toString()}`}
-            className={`px-4 py-2 rounded-xl text-tiny font-bold transition-all duration-300 ${
+            className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500 ${
               isSelected
-                ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105"
-                : "bg-slate-50 dark:bg-slate-800 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700"
+                ? "bg-secondary text-on-secondary shadow-lg shadow-secondary/20 scale-110"
+                : "bg-white border border-primary/10 text-primary/60 hover:border-primary/40 hover:text-primary hover:bg-primary/5"
             }`}
           >
             {tag}

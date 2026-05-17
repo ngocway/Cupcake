@@ -33,7 +33,6 @@ export const getLessonDetail = (id: string) => unstable_cache(
             slug: true,
             title: true,
             thumbnail: true,
-            readingText: true,
             _count: { select: { questions: true } }
           }
         },
@@ -46,6 +45,14 @@ export const getLessonDetail = (id: string) => unstable_cache(
   ["lesson-detail", id],
   { revalidate: 300, tags: ["lessons", "assignment"] }
 )();
+
+export const getLessonReadingText = async (lessonId: string) => {
+  const assignment = await prisma.assignment.findFirst({
+    where: { lesson: { id: lessonId } },
+    select: { readingText: true }
+  });
+  return assignment?.readingText ?? null;
+};
 
 export const getLessonReviews = (lessonId: string) => unstable_cache(
   async () => {

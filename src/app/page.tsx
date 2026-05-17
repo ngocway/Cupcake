@@ -20,7 +20,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <HomeShell>
-      <div className="w-full pt-32 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
+      <div className="w-full pt-24 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
         <HomeSidebar searchParams={params} />
 
         <main className="flex-1 space-y-12">

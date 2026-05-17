@@ -5,48 +5,48 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: #edf8ff;
-  --color-foreground: #003344;
-  --font-headline: "Plus Jakarta Sans", sans-serif;
-  --font-body: "Lexend", sans-serif;
-  --font-label: "Lexend", sans-serif;
+  --color-background: #FFF8E7;
+  --color-foreground: #2D6A4F;
+  --font-headline: var(--font-nunito);
+  --font-body: var(--font-nunito);
+  --font-label: var(--font-nunito);
   
-  --color-primary: #006477;
-  --color-primary-dim: #005868;
-  --color-on-primary: #dff7ff;
-  --color-primary-container: #50dcff;
-  --color-on-primary-container: #004b59;
+  --color-primary: #2D6A4F;
+  --color-primary-dim: #1B4332;
+  --color-on-primary: #FFF8E7;
+  --color-primary-container: #52B788;
+  --color-on-primary-container: #081C15;
   
-  --color-secondary: #652fe7;
-  --color-secondary-dim: #5819db;
-  --color-on-secondary: #f7f0ff;
-  --color-secondary-container: #d8caff;
-  --color-on-secondary-container: #5000d2;
+  --color-secondary: #FFB703;
+  --color-secondary-dim: #FB8500;
+  --color-on-secondary: #081C15;
+  --color-secondary-container: #FFB703;
+  --color-on-secondary-container: #081C15;
   
-  --color-tertiary: #2157b6;
-  --color-tertiary-container: #8eafff;
-  --color-on-tertiary-container: #002d6f;
+  --color-tertiary: #219EBC;
+  --color-tertiary-container: #8ECAE6;
+  --color-on-tertiary-container: #023047;
   
-  --color-surface: #edf8ff;
-  --color-surface-dim: #97deff;
-  --color-surface-bright: #edf8ff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #e0f4ff;
-  --color-surface-container: #ccedff;
-  --color-surface-container-high: #bde9ff;
-  --color-surface-container-highest: #afe5ff;
+  --color-surface: #FFF8E7;
+  --color-surface-dim: #E9EDC9;
+  --color-surface-bright: #FFF8E7;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #FDFBF7;
+  --color-surface-container: #F8F4E3;
+  --color-surface-container-high: #F2E9D0;
+  --color-surface-container-highest: #ECE1C0;
   
-  --color-on-surface: #003344;
-  --color-on-surface-variant: #316176;
-  --color-outline: #4e7d92;
-  --color-outline-variant: #85b4ca;
+  --color-on-surface: #2D6A4F;
+  --color-on-surface-variant: #40916C;
+  --color-outline: #52B788;
+  --color-outline-variant: #74C69D;
   
-  --color-border: #85b4ca;
-  --color-ring: #006477;
+  --color-border: #52B788;
+  --color-ring: #FFB703;
   
-  --radius-lg: 1rem;
-  --radius-xl: 2rem;
-  --radius-2xl: 3rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
   --radius-full: 9999px;
 }
 
@@ -121,22 +121,41 @@
 
 /* Animations */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes float {
   0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-8px); }
   100% { transform: translateY(0px); }
 }
 
+@keyframes solar-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 183, 3, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(255, 183, 3, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 183, 3, 0); }
+}
+
+@keyframes leaf-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s ease-out forwards;
+  animation: fadeInUp 0.54s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-solar-pulse {
+  animation: solar-pulse 4s ease-in-out infinite;
+}
+
+.animate-leaf-sway {
+  animation: leaf-sway 3s ease-in-out infinite;
 }
 
 /* Utilities */

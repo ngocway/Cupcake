@@ -48,7 +48,7 @@ export default async function StudentQuizPage({
     params
   ]);
 
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/student/login");
   const userId = session.user.id;
 
   if (!submissionId) {

@@ -20,9 +20,23 @@ type FormattedClassInfo = {
 interface ClassesClientProps {
   activeClasses: FormattedClassInfo[];
   pendingRequests: FormattedClassInfo[];
+  translations: {
+    searchPlaceholder: string;
+    pendingApproval: string;
+    waitingTeacher: string;
+    cancelRequest: string;
+    canceling: string;
+    activeClasses: string;
+    noClasses: string;
+    noClassesMessage: string;
+    teacher: string;
+    newAssignments: string;
+    totalAssignments: string;
+    cancelError: string;
+  };
 }
 
-export default function ClassesClient({ activeClasses, pendingRequests }: ClassesClientProps) {
+export default function ClassesClient({ activeClasses, pendingRequests, translations }: ClassesClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [cancelingId, setCancelingId] = useState<string | null>(null);
 
@@ -41,7 +55,7 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
     try {
       await cancelJoinRequest(classId);
     } catch (err) {
-      alert("Lỗi khi hủy yêu cầu");
+      alert(translations.cancelError);
     } finally {
       setCancelingId(null);
     }
@@ -56,7 +70,7 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
         </span>
         <input 
           type="text" 
-          placeholder="Tìm kiếm theo tên lớp hoặc giáo viên..." 
+          placeholder={translations.searchPlaceholder} 
           className="w-full pl-12 pr-4 py-3 rounded-2xl bg-surface-container-low border border-outline-variant/30 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-medium"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -67,7 +81,7 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
       {matchedPending.length > 0 && (
         <section className="space-y-6">
            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            Đang chờ duyệt
+            {translations.pendingApproval}
             <span className="h-6 px-2 bg-amber-100 text-amber-700 text-xs rounded-full flex items-center justify-center font-bold">
               {matchedPending.length}
             </span>
@@ -80,12 +94,12 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
                     <span className="material-symbols-outlined text-[24px]">hourglass_empty</span>
                   </div>
                   <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Chờ giáo viên
+                    {translations.waitingTeacher}
                   </span>
                 </div>
                 <div className="mt-5 space-y-1">
                   <h3 className="text-xl font-bold line-clamp-1">{item.class.name}</h3>
-                  <p className="text-on-surface-variant text-sm font-medium">GV: {item.class.teacherName}</p>
+                  <p className="text-on-surface-variant text-sm font-medium">{translations.teacher}: {item.class.teacherName}</p>
                 </div>
                 <div className="mt-6 pt-5 border-t border-outline-variant/20 flex gap-3">
                    <button 
@@ -93,7 +107,7 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
                       disabled={cancelingId === item.id}
                       className="flex-1 py-2 text-sm font-bold text-red-600 hover:bg-red-50 bg-transparent rounded-xl transition-colors disabled:opacity-50"
                    >
-                     {cancelingId === item.id ? 'Đang hủy...' : 'Hủy yêu cầu'}
+                     {cancelingId === item.id ? translations.canceling : translations.cancelRequest}
                    </button>
                 </div>
               </div>
@@ -105,15 +119,15 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
       {/* Active Classes Section */}
       <section className="space-y-6">
         <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          Lớp đang học
+          {translations.activeClasses}
           <span className="w-2 h-2 bg-primary rounded-full"></span>
         </h2>
         
         {matchedActive.length === 0 ? (
           <div className="bg-surface-container-low p-12 rounded-3xl text-center border-2 border-dashed border-outline-variant/30">
             <span className="material-symbols-outlined text-5xl text-outline-variant/50 mb-4 block">class</span>
-            <h3 className="text-xl font-bold mb-2">Chưa có lớp học nào</h3>
-            <p className="text-on-surface-variant mb-6">Bạn chưa tham gia lớp học nào, hoặc không tìm thấy lớp phù hợp.</p>
+            <h3 className="text-xl font-bold mb-2">{translations.noClasses}</h3>
+            <p className="text-on-surface-variant mb-6">{translations.noClassesMessage}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -146,13 +160,13 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
                     </div>
                     <div className="space-y-1 mb-6">
                       <h3 className="text-xl font-bold text-slate-900 group-hover:text-primary transition-colors line-clamp-1">{item.class.name}</h3>
-                      <p className="text-sm font-medium text-slate-500">Giáo viên: {item.class.teacherName}</p>
+                      <p className="text-sm font-medium text-slate-500">{translations.teacher}: {item.class.teacherName}</p>
                     </div>
                     
                     {/* Metrics */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-slate-50 p-3 rounded-xl">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Nhiệm vụ mới</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{translations.newAssignments}</p>
                         <p className="font-bold text-slate-800 text-lg flex items-center gap-1.5">
                           {item.pendingCount > 0 ? (
                             <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
@@ -163,7 +177,7 @@ export default function ClassesClient({ activeClasses, pendingRequests }: Classe
                         </p>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-xl">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tổng bài tập</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{translations.totalAssignments}</p>
                         <p className="font-bold text-slate-800 text-lg">
                           {item.class.totalAssignments}
                         </p>

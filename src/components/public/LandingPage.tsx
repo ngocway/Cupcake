@@ -1,12 +1,14 @@
 
 "use client"
-import { use, useState, Suspense, useEffect, useTransition } from "react"
+import { use, useState, Suspense, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams } from "next/navigation"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { VisualCategoryMenu } from "@/components/public/VisualCategoryMenu"
 import { LoadingBar } from "@/components/public/TopProgressBar"
 import { useContentStore } from "@/store/useContentStore"
+import { useTranslations } from "next-intl"
+import { TypingText } from "@/components/public/TypingText"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -112,12 +114,17 @@ export function LandingPage({ promises, searchParams }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const isLoggedIn = !!session
+  const t = useTranslations("home")
+  const nt = useTranslations("nav")
 
   // Local states — switching never triggers server roundtrip
   const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "exercises")
   const [activeSort, setActiveSort] = useState<'newest' | 'popular'>(
     searchParams.sort === 'popular' ? 'popular' : 'newest'
   )
+
+  // User type selection (Kids, Teens, Adults, Business)
+  const [userType, setUserType] = useState<string>("adults")
 
   const setPopularExercises = useContentStore(s => s.setPopularExercises)
   const setPopularLessons   = useContentStore(s => s.setPopularLessons)
@@ -167,75 +174,158 @@ export function LandingPage({ promises, searchParams }: Props) {
   }
 
   return (
-    <div className="space-y-12 relative">
+    <div className="space-y-6 relative">
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
 
-      {/* Category menu */}
-      <Suspense fallback={
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-2xl" />
-          ))}
+      {/* Solarpunk Hero Section */}
+      <section className="relative pt-8 pb-2 md:pt-12 md:pb-4 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center overflow-hidden transition-all duration-1000 ease-in-out">
+        <div className="lg:col-span-3 space-y-12 animate-fade-in-up h-full flex flex-col justify-center min-h-[480px] transition-all duration-1000 ease-in-out">
+          <div className="flex flex-col gap-12">
+            <div className="flex flex-col gap-8">
+              <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
+                Tôi là
+              </h2>
+              <div className="flex flex-wrap gap-8 items-center pl-12 md:pl-20 py-4">
+                {[
+                  { id: 'kids', label: 'Kid', src: '/images/avatars/kid.png' },
+                  { id: 'teens', label: 'Teen', src: '/images/avatars/teen.png' },
+                  { id: 'adults', label: 'Adult', src: '/images/avatars/adult.png' },
+                  { id: 'business', label: 'Business', src: '/images/avatars/Business man.png' },
+                ].map((type) => {
+                  const isActive = userType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      onClick={() => setUserType(type.id)}
+                      className={`group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none`}
+                    >
+                      <div className={`relative w-[100px] h-[100px] rounded-full overflow-hidden transition-all duration-500 border-[6px] ${
+                        isActive 
+                          ? "border-primary shadow-2xl shadow-primary/40 scale-110 rotate-3" 
+                          : "border-transparent shadow-md opacity-60 group-hover:opacity-100 group-hover:border-primary/30 group-hover:scale-105 group-hover:-translate-y-2 group-hover:rotate-[-3deg]"
+                      }`}>
+                        <img 
+                          src={type.src} 
+                          alt={type.label} 
+                          className="w-full h-full object-cover" 
+                        />
+                      </div>
+                      <span className={`text-sm font-black uppercase tracking-[0.1em] transition-all duration-300 ${
+                        isActive ? "text-primary scale-110" : "text-primary/50 group-hover:text-primary"
+                      }`}>
+                        {type.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="text-lg md:text-xl text-primary/80 max-w-xl leading-relaxed font-black h-12 flex items-center">
+              <TypingText text={t("whatToLearn")} speed={150} />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Suspense fallback={
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-pulse">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-24 bg-slate-100 rounded-2xl" />
+                ))}
+              </div>
+            }>
+              <CategoryMenuSection promise={promises.categoryTree} />
+            </Suspense>
+          </div>
         </div>
-      }>
-        <CategoryMenuSection promise={promises.categoryTree} />
-      </Suspense>
+
+        <div className="lg:col-span-2 relative animate-in zoom-in fade-in duration-1000 delay-300 transition-all duration-700 ease-in-out">
+          {/* H1 moved here to the right column */}
+          <h1 className="text-2xl md:text-4xl font-headline font-black text-primary leading-[1.1] tracking-tight mb-6">
+            The Future of <br />
+            <span className="relative inline-block px-3 py-1 mr-2">
+              <span className="relative z-10 text-secondary-dim">Learning</span>
+              <div className="absolute inset-0 bg-white shadow-xl shadow-primary/5 rounded-2xl -rotate-1 -z-0 border border-primary/5" />
+            </span>
+            is Bright.
+          </h1>
+
+          {/* Main Hero Image in Solarpunk Frame */}
+          <div className="relative z-10 aspect-[4/3] rounded-[2.5rem] overflow-hidden border-[12px] border-white shadow-2xl rotate-2 hover:rotate-0 transition-all duration-700">
+            <img 
+              src="https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&q=80&w=1200" 
+              alt="Solar Learning" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Floating Eco Elements */}
+          <div className="absolute -bottom-8 -right-8 z-20 w-32 h-32 text-primary/40 animate-leaf-sway">
+            <span className="material-symbols-outlined !text-[120px]" style={{ fontVariationSettings: "'FILL' 1" }}>eco</span>
+          </div>
+          <div className="absolute -top-12 -left-8 z-0 w-24 h-24 bg-secondary/20 blur-3xl rounded-full" />
+          
+          {/* Small Bird Mascot Placeholder */}
+          <div className="absolute -top-10 right-10 z-20 animate-float">
+            <div className="w-16 h-16 bg-sky-400 rounded-full flex items-center justify-center shadow-lg">
+              <span className="material-symbols-outlined text-white">flutter_dash</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Tab + Sort controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="inline-flex p-1.5 glass rounded-[28px] items-center shadow-lg bg-white/50 dark:bg-slate-900/50">
+      <div id="content-tabs" className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-10">
+        <div className="inline-flex items-center gap-4">
           <button
             onClick={() => handleTabChange("exercises")}
-            className={`px-8 py-3.5 rounded-[24px] text-small font-black transition-all duration-300 ${
+            className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
               activeTab === "exercises"
-                ? "bg-primary text-on-primary shadow-xl shadow-primary/30 scale-[1.05]"
-                : "text-on-surface-variant hover:text-primary"
+                ? "bg-secondary border-secondary text-on-secondary shadow-lg shadow-secondary/20 scale-[1.03] translate-y-[-2px]"
+                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
             }`}
           >
-            BÀI TẬP
+            {nt("assignments").toUpperCase()}
           </button>
           <button
             onClick={() => handleTabChange("lessons")}
-            className={`px-8 py-3.5 rounded-[24px] text-small font-black transition-all duration-300 ${
+            className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
               activeTab === "lessons"
-                ? "bg-secondary text-on-secondary shadow-xl shadow-secondary/30 scale-[1.05]"
-                : "text-on-surface-variant hover:text-secondary"
+                ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
+                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
             }`}
           >
-            BÀI HỌC
+            {nt("lessons").toUpperCase()}
           </button>
         </div>
 
-        <div className="flex items-center gap-3 glass p-1.5 rounded-2xl bg-white/50 dark:bg-slate-900/50">
+        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/50 border border-outline/10 backdrop-blur-sm">
           {(["newest", "popular"] as const).map(s => (
             <button
               key={s}
               onClick={() => handleSortChange(s)}
-              className={`px-5 py-2.5 rounded-xl text-tiny font-black transition-all uppercase tracking-widest ${
+              className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] ${
                 activeSort === s
-                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                  : "text-slate-400 hover:text-slate-600"
+                  ? "bg-primary text-on-primary shadow-md"
+                  : "text-slate-400 hover:text-primary hover:bg-primary/5"
               }`}
             >
-              {s === "newest" ? "Mới nhất" : "Phổ biến"}
+              {s === "newest" ? t("newest") : t("popular")}
             </button>
           ))}
         </div>
       </div>
 
       {/* ── Content grids ───────────────────────────────────────────────────── */}
-      {/* Hướng 4: Overlay mờ khi đang filter (Optimistic UI) */}
       <div className={`min-h-[600px] relative transition-opacity duration-300 ${isFiltering ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
-        {/* Spinner góc trên phải grid khi loading */}
         {isFiltering && (
           <div className="absolute top-0 right-0 z-10 flex items-center gap-2 px-4 py-2 glass rounded-2xl shadow-lg animate-in fade-in duration-200">
             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-tiny font-bold text-on-surface-variant">Đang lọc...</span>
+            <span className="text-tiny font-bold text-on-surface-variant">{t("filtering")}</span>
           </div>
         )}
 
-        {/* EXERCISES TAB */}
         <div className={activeTab === "exercises" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
           {activeSort === "newest" ? (
             <Suspense fallback={<SectionSkeleton />}>
@@ -246,7 +336,6 @@ export function LandingPage({ promises, searchParams }: Props) {
           )}
         </div>
 
-        {/* LESSONS TAB */}
         <div className={activeTab === "lessons" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
           {activeSort === "newest" ? (
             <Suspense fallback={<SectionSkeleton />}>

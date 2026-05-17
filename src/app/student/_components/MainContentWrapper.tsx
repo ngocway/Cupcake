@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
+import { useScrollDirection } from "@/hooks/useScrollDirection"
 
 export function MainContentWrapper({ 
   children,
@@ -11,14 +12,11 @@ export function MainContentWrapper({
   isTeacher: boolean
 }) {
   const pathname = usePathname()
-  const [isAtTop, setIsAtTop] = useState(true)
+  const { isHidden, isAtTop } = useScrollDirection()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsAtTop(window.scrollY < 20)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+    setMounted(true)
   }, [])
   
   const isLearningRoute = pathname?.includes('/lessons/') || 
@@ -26,8 +24,11 @@ export function MainContentWrapper({
 
   const noSidebar = isLearningRoute || isTeacher
 
+  // Calculate top padding based on header visibility
+  const topPadding = mounted ? (isHidden ? 'pt-0' : 'pt-8') : 'pt-8'
+
   return (
-    <main className={`${!noSidebar ? (isAtTop ? 'md:ml-64 pt-32 px-6' : 'md:ml-64 pt-0 px-6') : 'max-w-full mx-auto pt-0 px-0'} pb-24 md:pb-0 transition-all duration-500 min-h-screen`}>
+    <main className={`${!noSidebar ? (isAtTop ? `md:ml-64 ${topPadding} px-6` : `md:ml-64 pt-0 px-6`) : 'max-w-full mx-auto pt-0 px-0'} pb-24 md:pb-0 transition-all duration-500 min-h-screen`}>
       {children}
     </main>
   )

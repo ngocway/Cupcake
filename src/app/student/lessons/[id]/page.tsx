@@ -21,7 +21,7 @@ import {
   ThumbsUp
 } from "lucide-react";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { vi, enUS } from "date-fns/locale";
 import { ReviewTrigger } from "@/components/reviews/ReviewTrigger";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
@@ -30,11 +30,15 @@ import { InteractiveReadingContent } from "@/components/common/InteractiveReadin
 import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
 import { Suspense } from "react";
 import { LessonVideoPlayer } from "./_components/LessonVideoPlayer";
-import { getLessonDetail, getLessonReviews, getRelatedLessons } from "./data";
+import { getLessonDetail, getLessonReviews, getRelatedLessons, getLessonReadingText } from "./data";
+import { getTranslations, getLocale } from "next-intl/server";
+
+import BackButton from "@/components/ui/BackButton";
 
 // --- Sub-components for Streaming ---
 
 async function AudioPlayerWrapper({ lessonId }: { lessonId: string }) {
+  const t = await getTranslations("student.lessonDetail");
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     select: { audioUrl: true }
@@ -47,14 +51,15 @@ async function AudioPlayerWrapper({ lessonId }: { lessonId: string }) {
     <div className="animate-in fade-in slide-in-from-top-4 duration-500">
       <CustomAudioPlayer 
         src={audioUrl} 
-        title="Nghe bài giảng"
-        subtitle="Audio Lesson"
+        title={t("listenAudio")}
+        subtitle={t("audioLesson")}
       />
     </div>
   );
 }
 
 async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
+  const t = await getTranslations("student.lessonDetail");
   const reviews = await getLessonReviews(lessonId);
 
   const averageRating = reviews.length > 0 
@@ -64,7 +69,7 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
   return (
     <div className="bg-[#eef8fa] dark:bg-slate-900/50 rounded-3xl p-10 space-y-12 mb-20 animate-in fade-in duration-700">
       <div className="space-y-4">
-        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Đánh giá từ học viên</h3>
+        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t("studentReviews")}</h3>
         <div className="flex items-end gap-6">
           <div className="text-6xl font-black text-slate-900 dark:text-white leading-none">
             {averageRating}/5
@@ -75,7 +80,7 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
                 <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />
               ))}
             </div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{reviews.length}+ đánh giá</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t("reviewsCount", { count: reviews.length })}</p>
           </div>
         </div>
       </div>
@@ -117,14 +122,14 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
           ))}
           {reviews.length === 5 && (
             <button className="w-full py-4 text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-primary transition-colors border-t border-slate-200/50 mt-4">
-              Xem tất cả đánh giá
+              {t("viewAllReviews")}
             </button>
           )}
         </div>
       ) : (
         <div className="py-16 text-center space-y-4 bg-white/50 dark:bg-slate-800/50 rounded-[2rem] border-2 border-dashed border-slate-200">
           <MessageSquare className="w-10 h-10 text-slate-300 mx-auto" />
-          <p className="text-slate-400 italic font-medium text-sm">Chưa có bình luận nào từ học viên.</p>
+          <p className="text-slate-400 italic font-medium text-sm">{t("noReviews")}</p>
         </div>
       )}
     </div>
@@ -145,13 +150,16 @@ async function SidebarWrapper({ teacher, lessonId }: { teacher: any, lessonId: s
   );
 }
 
-async function ReadingContentWrapper({ readingText }: { readingText: string }) {
+async function ReadingContentWrapper({ lessonId }: { lessonId: string }) {
+  const t = await getTranslations("student.lessonDetail");
+  const readingText = await getLessonReadingText(lessonId);
+  if (!readingText) return null;
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex items-center gap-4">
         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
         <div className="px-6 py-2 rounded-full border border-slate-200 bg-white/50 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-            Nội dung bài học
+            {t("lessonContent")}
         </div>
         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
       </div>
@@ -173,9 +181,10 @@ export default async function StudentLessonDetailPage({
   const { id } = await params;
 
   // Parallel fetch auth and cached lesson detail
-  const [sessionData, lesson] = await Promise.all([
+  const [sessionData, lesson, t] = await Promise.all([
     auth(),
-    getLessonDetail(id)
+    getLessonDetail(id),
+    getTranslations("student.lessonDetail")
   ]);
 
   if (!lesson) notFound();
@@ -187,7 +196,7 @@ export default async function StudentLessonDetailPage({
     image: sessionData?.user?.image ?? null,
     role: (sessionData?.user as any)?.role ?? null
   };
-  if (!session.id) redirect("/login");
+  if (!session.id) redirect("/student/login");
   
   if (id === lesson.id && lesson.slug && id !== lesson.slug) {
     redirect(`/student/lessons/${lesson.slug}`);
@@ -205,11 +214,15 @@ export default async function StudentLessonDetailPage({
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col h-screen overflow-hidden font-body">
-      <PublicHeader session={session} />
       
       <div className="flex flex-1 overflow-hidden">
-         <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto custom-scrollbar">
-            <div className="px-8 lg:px-12 pt-7 pb-12 space-y-12 max-w-5xl mx-auto w-full">
+         <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto no-scrollbar">
+            <div className="px-8 lg:px-12 pt-4 pb-8 space-y-6 max-w-5xl mx-auto w-full">
+               {/* Back Button */}
+               <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/50 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
+                  <ChevronLeft className="w-4 h-4" />
+                  Quay lại
+               </BackButton>
                {/* Video Player (Facade Optimization) */}
                {(videoId || lesson.videoUrl) && (
                   <LessonVideoPlayer 
@@ -250,12 +263,12 @@ export default async function StudentLessonDetailPage({
 
                   <div className="space-y-10">
                      <div className="text-on-surface-variant leading-loose text-lg font-medium prose prose-slate max-w-none">
-                        {lesson.description || "Bài giảng chưa có mô tả chi tiết từ giáo viên."}
+                        {lesson.description || t("noDescription")}
                      </div>
 
-                     {lesson.assignment?.readingText && (
+                     {lesson.assignment && (
                         <Suspense fallback={<div className="h-96 bg-slate-50 dark:bg-slate-900 animate-pulse rounded-2xl" />}>
-                           <ReadingContentWrapper readingText={lesson.assignment.readingText} />
+                           <ReadingContentWrapper lessonId={lesson.id} />
                         </Suspense>
                      )}
 
@@ -267,19 +280,19 @@ export default async function StudentLessonDetailPage({
                                     <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
                                        <AssignmentIcon className="w-5 h-5 text-white" />
                                     </div>
-                                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">Nhiệm vụ đi kèm</p>
+                                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">{t("relatedAssignment")}</p>
                                  </div>
                                  <h3 className="text-2xl font-black tracking-tight uppercase italic">{lesson.assignment.title}</h3>
                                  <div className="flex items-center gap-6 text-xs font-bold">
-                                    <span>{lesson.assignment._count.questions} câu hỏi</span>
-                                    <span>Chấm điểm tự động</span>
+                                    <span>{t("questionsCount", { count: lesson.assignment._count.questions })}</span>
+                                    <span>{t("autoGrading")}</span>
                                  </div>
                               </div>
                               <Link 
                                  href={`/student/assignments/${lesson.assignment.slug || lesson.assignment.id}/run?direct=true`}
                                  className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
                               >
-                                 BẮT ĐẦU LÀM BÀI
+                                 {t("startAssignment")}
                                  <ArrowRight className="w-5 h-5" />
                               </Link>
                            </div>

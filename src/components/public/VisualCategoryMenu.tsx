@@ -1,7 +1,14 @@
 "use client"
 import React, { useMemo } from "react";
 import { useContentStore } from "@/store/useContentStore";
-import { ChevronRight, Sparkles } from "lucide-react";
+import { 
+  BookOpen, 
+  Calculator, 
+  Globe, 
+  Atom, 
+  Palette, 
+  Sparkles 
+} from "lucide-react";
 
 interface Category {
   id: string;
@@ -23,88 +30,119 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
     return categoryTree.find(cat => cat.id === selectedCategoryId);
   }, [categoryTree, selectedCategoryId]);
 
-  const level1Gradients = [
-    "from-pink-100 to-rose-200 text-rose-950 shadow-rose-100/50",
-    "from-orange-100 to-amber-200 text-amber-950 shadow-amber-100/50",
-    "from-purple-100 to-indigo-200 text-indigo-950 shadow-indigo-100/50",
-    "from-emerald-100 to-teal-200 text-teal-950 shadow-teal-100/50",
-    "from-blue-100 to-sky-200 text-sky-950 shadow-sky-100/50",
+  const solarpunkStyles = [
+    { icon: BookOpen, color: "text-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", iconBg: "bg-emerald-100", shadow: "shadow-emerald-900/10" },
+    { icon: Calculator, color: "text-orange-800", bg: "bg-orange-50", border: "border-orange-200", iconBg: "bg-orange-100", shadow: "shadow-orange-900/10" },
+    { icon: Globe, color: "text-sky-800", bg: "bg-sky-50", border: "border-sky-200", iconBg: "bg-sky-100", shadow: "shadow-sky-900/10" },
+    { icon: Atom, color: "text-purple-800", bg: "bg-purple-50", border: "border-purple-200", iconBg: "bg-purple-100", shadow: "shadow-purple-900/10" },
+    { icon: Palette, color: "text-rose-800", bg: "bg-rose-50", border: "border-rose-200", iconBg: "bg-rose-100", shadow: "shadow-rose-900/10" },
+    { icon: Sparkles, color: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200", iconBg: "bg-amber-100", shadow: "shadow-amber-900/10" },
+  ];
+
+  const getStyleByName = (name: string, index: number) => {
+    const n = name.toLowerCase();
+    if (n.includes("anh") || n.includes("english")) return solarpunkStyles[0];
+    if (n.includes("toán") || n.includes("math")) return solarpunkStyles[1];
+    if (n.includes("global") || n.includes("xã hội")) return solarpunkStyles[2];
+    if (n.includes("khoa học") || n.includes("science")) return solarpunkStyles[3];
+    if (n.includes("nghệ thuật") || n.includes("art")) return solarpunkStyles[4];
+    return solarpunkStyles[index % solarpunkStyles.length];
+  };
+
+  const blobShapes = [
+    "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
+    "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
+    "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
+    "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
+    "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
   ];
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in slide-in-from-top-4 duration-700">
+    <div className="w-full animate-in fade-in slide-in-from-top-4 duration-1000 ease-out">
       {/* Level 1: Main Category Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 px-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-6">
         {categoryTree.map((cat, idx) => {
           const isActive = selectedCategoryId === cat.id;
-          const gradient = level1Gradients[idx % level1Gradients.length];
+          const style = getStyleByName(cat.name, idx);
+          const blobShape = blobShapes[idx % blobShapes.length];
+          const Icon = style.icon;
           
           return (
             <button
               key={cat.id}
               onClick={() => {
-                if (isActive) {
-                  setSelectedCategoryId("");
-                  setSelectedSubCategoryId("");
+                const updateState = () => {
+                  if (isActive) {
+                    setSelectedCategoryId("");
+                    setSelectedSubCategoryId("");
+                  } else {
+                    setSelectedCategoryId(cat.id);
+                    setSelectedSubCategoryId(""); 
+                  }
+                };
+
+                if (typeof document !== "undefined" && (document as any).startViewTransition) {
+                  (document as any).startViewTransition(updateState);
                 } else {
-                  setSelectedCategoryId(cat.id);
-                  setSelectedSubCategoryId(""); // Reset sub when changing main
+                  updateState();
                 }
               }}
-              className={`group relative h-28 md:h-32 rounded-3xl p-6 transition-all duration-500 overflow-hidden flex flex-col items-center justify-center gap-3 border-2 ${
+              className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl ${
                 isActive 
-                  ? `bg-gradient-to-br ${gradient} border-white scale-105 shadow-2xl z-10` 
-                  : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-primary/20 hover:scale-[1.02] shadow-magazine-shadow"
+                  ? `${style.bg} ${style.border} scale-[1.08] shadow-2xl z-20 animate-solar-pulse` 
+                  : `${style.bg} ${style.border} opacity-80 hover:opacity-100 hover:scale-[1.05] ${style.shadow}`
               }`}
             >
-              {/* Background Glow for active state */}
-              {isActive && (
-                <div className="absolute inset-0 bg-white/20 blur-xl scale-150 animate-pulse" />
-              )}
-              
-              <div className={`relative z-10 font-headline font-black text-xl md:text-2xl tracking-tight transition-colors ${isActive ? "text-inherit" : "text-slate-800 dark:text-slate-100"}`}>
+              {/* Category Icon 'Nổi' on the edge */}
+              <div className={`absolute -top-4 -left-3 p-3 rounded-2xl shadow-lg transition-all duration-700 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
+                <Icon size={24} strokeWidth={3} />
+              </div>
+
+              <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 ${isActive ? style.color + " scale-105" : "text-foreground/80"}`}>
                 {cat.name}
               </div>
               
               {isActive && (
-                <div className="relative z-10 w-6 h-1 bg-current rounded-full opacity-50" />
+                <div className={`relative z-10 w-8 h-1.5 bg-current opacity-20 rounded-full blur-[1px] ${style.color}`} />
               )}
-
-              {/* Decorative Icon */}
-              <div className={`absolute -right-2 -bottom-2 opacity-10 transition-transform duration-700 group-hover:scale-125 group-hover:-rotate-12 ${isActive ? "scale-110" : ""}`}>
-                 <Sparkles className="w-16 h-16" />
-              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Level 2: Sub-category Pills with Smooth Slide Down Effect */}
+      {/* Level 2: Sub-category Pills */}
       <div 
-        className={`grid transition-all duration-700 ease-in-out ${
+        className={`grid transition-all duration-1000 ease-in-out ${
           activeCategory && activeCategory.children && activeCategory.children.length > 0 
             ? "grid-rows-[1fr] opacity-100 translate-y-0" 
-            : "grid-rows-[0fr] opacity-0 -translate-y-4 pointer-events-none"
+            : "grid-rows-[0fr] opacity-0 -translate-y-6 pointer-events-none"
         }`}
       >
         <div className="overflow-hidden">
           <div 
-            key={activeCategory?.id}
-            className="flex flex-wrap items-center justify-start gap-4 py-8 px-6 animate-in fade-in slide-in-from-top-8 duration-1000"
+            className="flex flex-wrap items-center justify-start gap-4 py-4 px-4 transition-all duration-1000"
           >
-            {activeCategory?.children?.map((sub) => {
+            {activeCategory?.children?.map((sub, idx) => {
               const isSubActive = selectedSubCategoryId === sub.id;
+              const blobShape = blobShapes[(idx + 2) % blobShapes.length]; // Offset to vary shapes
               
               return (
                 <button
                   key={sub.id}
                   onClick={() => {
                     setSelectedSubCategoryId(isSubActive ? "" : sub.id);
+                    // Scroll to content tabs
+                    setTimeout(() => {
+                      document.getElementById("content-tabs")?.scrollIntoView({ 
+                        behavior: "smooth", 
+                        block: "start" 
+                      });
+                    }, 100);
                   }}
-                  className={`px-8 py-3.5 rounded-[2rem] text-sm font-black transition-all duration-500 border-2 uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 ${
+                  className={`px-8 py-3 ${blobShape} text-xs font-black transition-all duration-500 border-2 uppercase tracking-[0.1em] shadow-sm hover:scale-110 active:scale-95 ${
                     isSubActive
-                      ? "bg-sky-500 border-sky-400 text-white shadow-lg shadow-sky-200 scale-105"
-                      : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-sky-300 hover:text-sky-600"
+                      ? "bg-primary border-primary text-on-primary shadow-xl shadow-primary/30 scale-105"
+                      : "bg-white border-primary/10 text-primary/60 hover:border-primary/40 hover:text-primary"
                   }`}
                 >
                   {sub.name}

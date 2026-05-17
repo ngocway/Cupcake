@@ -1,33 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useRouter, usePathname } from "next/navigation";
+import { useLocale } from "next-intl";
 
 export function LanguageToggle() {
   const [isOpen, setIsOpen] = useState(false);
   const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
 
   const handleSelect = (newLocale: string) => {
+    if (newLocale === locale) {
+      setIsOpen(false);
+      return;
+    }
+
     setIsOpen(false);
     
     // Save to localStorage for guest users
     localStorage.setItem("preferred-locale", newLocale);
     
-    // Update cookie for middleware detection
+    // Update cookie for next-intl detection
     document.cookie = `NEXT_LOCALE=${newLocale};path=/;max-age=31536000`;
     
-    // Save to DB if user is logged in (fire and forget)
+    // Save to DB if user is logged in
     fetch("/api/locale", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locale: newLocale }),
-    }).catch(() => {});
-    
-    // Refresh to apply new locale
-    router.refresh();
+    }).finally(() => {
+      // Full reload to ensure server-side and client-side are in sync
+      window.location.reload();
+    });
   };
 
   // Close on outside click

@@ -2,8 +2,11 @@ import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import ClassesClient from './ClassesClient';
+import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function StudentClassesPage() {
+  const t = await getTranslations("student.classes");
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) {
     redirect('/login');
@@ -63,15 +66,29 @@ export default async function StudentClassesPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-10">
       <div className="flex flex-col gap-2">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">Lớp học của tôi</h1>
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">{t("title")}</h1>
         <p className="text-on-surface-variant text-lg">
-          Quản lý các lớp học bạn đang tham gia và theo dõi tiến độ.
+          {t("subtitle")}
         </p>
       </div>
 
       <ClassesClient 
         activeClasses={activeClasses} 
         pendingRequests={pendingRequests} 
+        translations={{
+          searchPlaceholder: t("searchPlaceholder"),
+          pendingApproval: t("pendingApproval"),
+          waitingTeacher: t("waitingTeacher"),
+          cancelRequest: t("cancelRequest"),
+          canceling: t("canceling"),
+          activeClasses: t("activeClasses"),
+          noClasses: t("noClasses"),
+          noClassesMessage: t("noClassesMessage"),
+          teacher: t("teacher"),
+          newAssignments: t("newAssignments"),
+          totalAssignments: t("totalAssignments"),
+          cancelError: t("cancelError")
+        }}
       />
     </div>
   );

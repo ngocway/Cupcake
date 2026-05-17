@@ -16,10 +16,11 @@ import {
   Star,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { vi, enUS } from 'date-fns/locale';
 import { ReviewTrigger } from '@/components/reviews/ReviewTrigger';
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import Link from "next/link";
+import BackButton from "@/components/ui/BackButton";
 import { getAssignmentMeta } from './data';
 import { 
   SidebarReviewsWrapper, 
@@ -28,6 +29,7 @@ import {
   TeacherInfoWrapper 
 } from './StreamingComponents';
 import { QuizPrefetcher } from './QuizPrefetcher';
+import { getTranslations, getLocale } from 'next-intl/server';
 
 // --- Sub-components for Streaming ---
 
@@ -50,6 +52,10 @@ async function SubmissionHistoryWrapper({
   isDeadlinePassed: boolean;
   totalQuestions: number;
 }) {
+  const t = await getTranslations("student.assignmentRun");
+  const locale = await getLocale();
+  const dateLocale = locale === "vi" ? vi : enUS;
+
   const completedSubmissions = await prisma.submission.findMany({
     where: {
       assignmentId,
@@ -65,9 +71,6 @@ async function SubmissionHistoryWrapper({
   });
 
   const canReview = (sub: any) => {
-    // Note: reviewMode is not in assignmentMeta anymore, we might need a small fix here 
-    // or just pass it down if it was in Meta. Let's assume it's in Meta for simplicity 
-    // or fetch it here.
     if (reviewMode === "AFTER_EACH_ATTEMPT") return true;
     if (reviewMode === "AFTER_ALL_ATTEMPTS_EXHAUSTED" && !hasAttemptsLeft) return true;
     if (reviewMode === "AFTER_DEADLINE" && isDeadlinePassed) return true;
@@ -79,7 +82,7 @@ async function SubmissionHistoryWrapper({
       <div className="flex items-center justify-between">
          <h3 className="text-xl font-black tracking-tight uppercase italic flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">history</span>
-            Lịch sử làm bài
+            {t("submissionHistory")}
          </h3>
       </div>
       
@@ -95,12 +98,12 @@ async function SubmissionHistoryWrapper({
                     <BarChart3 className="w-7 h-7" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-outline uppercase tracking-widest">Lần làm {sub.attemptNumber}</p>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-widest">{t("attempt", { number: sub.attemptNumber })}</p>
                     <h5 className="font-black text-2xl text-on-surface">
-                      {correctCount} <span className="text-sm font-medium text-on-surface-variant">/ {totalQuestions} câu đúng</span>
+                      {t("correctAnswers", { count: correctCount, total: totalQuestions })}
                     </h5>
                     <p className="text-xs text-on-surface-variant mt-1 font-medium">
-                      {sub.submittedAt ? format(sub.submittedAt, "HH:mm, dd/MM", { locale: vi }) : "N/A"}
+                      {sub.submittedAt ? format(sub.submittedAt, "HH:mm, dd/MM", { locale: dateLocale }) : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -113,7 +116,7 @@ async function SubmissionHistoryWrapper({
            <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center text-outline">
               <BarChart3 className="w-8 h-8" />
            </div>
-           <p className="text-on-surface-variant font-medium italic">Bạn chưa thực hiện lần thử nào cho bài tập này.</p>
+           <p className="text-on-surface-variant font-medium italic">{t("noAttempts")}</p>
         </div>
       )}
     </div>
@@ -129,23 +132,26 @@ export default async function StudentAssignmentLobbyPage({
   params: Promise<{ id: string }>,
   searchParams: Promise<{ direct?: string }>
 }) {
-  const [sessionData, { id }, { direct }] = await Promise.all([
+  const [sessionData, { id: paramsId }, { direct }] = await Promise.all([
     auth(),
     params,
     searchParams
   ]);
+  const id = paramsId;
 
-  if (!sessionData?.user?.id) redirect("/login");
+  if (!sessionData?.user?.id) redirect("/student/login");
   const userId = sessionData.user.id;
 
   // Hướng 1 & 4: Parallel queries + Meta-only fetch (Cực nhanh)
-  const [assignment, submissionStatus] = await Promise.all([
+  const [assignment, submissionStatus, t, locale] = await Promise.all([
     getAssignmentMeta(id),
     prisma.submission.findMany({
       where: { assignmentId: id, studentId: userId },
       select: { id: true, submittedAt: true, attemptNumber: true },
       orderBy: { attemptNumber: 'desc' }
-    })
+    }),
+    getTranslations("student.assignmentRun"),
+    getLocale()
   ]);
 
   if (!assignment) notFound();
@@ -180,6 +186,7 @@ export default async function StudentAssignmentLobbyPage({
       redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}`);
     }
   }
+  const dateLocale = locale === "vi" ? vi : enUS;
 
   return (
     <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-slate-50 dark:bg-slate-950 font-body">
@@ -187,13 +194,20 @@ export default async function StudentAssignmentLobbyPage({
       <QuizPrefetcher assignmentId={assignment.id} />
 
       <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-white dark:bg-slate-900 shrink-0 z-50 shadow-sm">
-        <div className="flex items-center gap-2 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
-          <BookOpen className="w-4 h-4 text-primary" />
-          Chi tiết bài tập
+        <div className="flex items-center gap-4">
+          <BackButton className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
+            <ChevronLeft className="w-4 h-4" />
+            {t("back")}
+          </BackButton>
+          <div className="h-4 w-px bg-outline-variant/20" />
+          <div className="flex items-center gap-2 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
+            <BookOpen className="w-4 h-4 text-primary" />
+            {t("assignmentDetail")}
+          </div>
         </div>
         <div className="flex items-center gap-4">
            <div className="text-[10px] font-black text-outline uppercase tracking-widest px-3 py-1 bg-surface-container rounded-full border border-outline-variant/10">
-              {completedCount} / {assignment.maxAttempts} Lượt đã thực hiện
+              {t("attemptsCount", { count: completedCount, total: assignment.maxAttempts })}
            </div>
         </div>
       </div>
@@ -206,7 +220,7 @@ export default async function StudentAssignmentLobbyPage({
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
                   <Star className="w-3 h-3 fill-primary" />
-                  Thông tin bài học
+                  {t("lessonInfo")}
                 </div>
                 <h1 className="text-4xl md:text-5xl font-black text-on-surface tracking-tight leading-[1.1] uppercase italic font-headline max-w-3xl">
                   {assignment.title}
@@ -220,10 +234,10 @@ export default async function StudentAssignmentLobbyPage({
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "Thời gian", value: assignment.timeLimit ? `${assignment.timeLimit}'` : "Free", icon: Clock, color: "text-primary", bg: "bg-primary/5" },
-                  { label: "Số câu", value: `${totalQuestions} Câu`, icon: Info, color: "text-secondary", bg: "bg-secondary/5" },
-                  { label: "Hạn nộp", value: assignment.deadline ? format(assignment.deadline, 'dd/MM') : "∞", icon: Calendar, color: "text-error", bg: "bg-error/5" },
-                  { label: "Lượt làm", value: `${completedCount}/${assignment.maxAttempts}`, icon: Award, color: "text-amber-500", bg: "bg-amber-50" }
+                  { label: t("time"), value: assignment.timeLimit ? `${assignment.timeLimit}'` : t("free"), icon: Clock, color: "text-primary", bg: "bg-primary/5" },
+                  { label: t("questions"), value: t("questionsCount", { count: totalQuestions }), icon: Info, color: "text-secondary", bg: "bg-secondary/5" },
+                  { label: t("deadline"), value: assignment.deadline ? format(assignment.deadline, 'dd/MM', { locale: dateLocale }) : "∞", icon: Calendar, color: "text-error", bg: "bg-error/5" },
+                  { label: t("attempts"), value: `${completedCount}/${assignment.maxAttempts}`, icon: Award, color: "text-amber-500", bg: "bg-amber-50" }
                 ].map((stat, i) => (
                   <div key={i} className={`p-5 rounded-2xl border border-outline-variant/10 ${stat.bg} space-y-3`}>
                     <p className="text-[10px] font-bold text-outline uppercase tracking-wider">{stat.label}</p>
@@ -241,9 +255,9 @@ export default async function StudentAssignmentLobbyPage({
                      <AlertTriangle className="w-6 h-6 text-rose-600" />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="font-black text-rose-700 dark:text-rose-400 text-sm uppercase tracking-wide">Chế độ tập trung (Focus Mode)</h4>
+                    <h4 className="font-black text-rose-700 dark:text-rose-400 text-sm uppercase tracking-wide">{t("focusMode")}</h4>
                     <p className="text-sm text-rose-600/80 dark:text-rose-400/60 leading-relaxed font-medium">
-                      Bài làm sẽ tự động nộp nếu bạn thoát màn hình hoặc chuyển tab quá 3 lần.
+                      {t("focusModeWarning")}
                     </p>
                   </div>
                 </div>
@@ -269,12 +283,12 @@ export default async function StudentAssignmentLobbyPage({
 
              <div className="flex flex-col items-center">
                 {activeSubmission ? (
-                  <StartButton assignmentId={assignment.id} label="TIẾP TỤC" />
+                  <StartButton assignmentId={assignment.id} label={t("continue")} />
                 ) : (hasAttemptsLeft && !isDeadlinePassed) ? (
-                  <StartButton assignmentId={assignment.id} label={completedCount > 0 ? "LÀM LẠI" : "BẮT ĐẦU"} />
+                  <StartButton assignmentId={assignment.id} label={completedCount > 0 ? t("retry") : t("start")} />
                 ) : (
                   <div className="px-10 py-3 bg-surface-container text-on-surface-variant rounded-xl font-black text-sm tracking-widest uppercase italic border border-outline-variant/20 opacity-50">
-                      Đã khóa
+                      {t("locked")}
                   </div>
                 )}
              </div>
@@ -285,7 +299,7 @@ export default async function StudentAssignmentLobbyPage({
           <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
             <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
               <BookOpen className="w-4 h-4" />
-              Tài liệu & Đánh giá
+              {t("resourcesAndReviews")}
             </div>
             <div className="flex items-center gap-3">
                <Suspense fallback={<div className="w-10 h-10 bg-slate-100 rounded-full animate-pulse" />}>

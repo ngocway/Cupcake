@@ -19,22 +19,22 @@ export function SidebarCategoryList({ categories, activeId }: { categories: any[
     return (
       <div key={node.id} className="space-y-1">
         <div
-          className={`flex items-center gap-3 rounded-xl px-4 py-2.5 transition-all duration-300 group cursor-pointer ${
+          className={`flex items-center gap-3 rounded-full px-5 py-3 transition-all duration-500 group cursor-pointer ${
             isSelected
-              ? "bg-primary text-white shadow-lg shadow-primary/20"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+              ? "bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]"
+              : "text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary"
           }`}
           style={{ marginLeft: `${level * 16}px` }}
         >
           {hasChildren ? (
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleExpand(node.id); }}
-              className={`transition-transform duration-300 ${isExpanded ? "rotate-90" : ""} ${isSelected ? "text-white" : "text-slate-400"}`}
+              className={`transition-transform duration-500 ${isExpanded ? "rotate-90" : ""} ${isSelected ? "text-white" : "text-primary/40"}`}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           ) : (
-            <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white" : "bg-slate-300"}`} />
+            <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isSelected ? "bg-white scale-125" : "bg-primary/20 group-hover:bg-primary/40"}`} />
           )}
 
           <FilterLink

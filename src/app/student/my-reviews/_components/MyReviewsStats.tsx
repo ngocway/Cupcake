@@ -4,9 +4,10 @@ interface StatsProps {
   totalReviews: number;
   approvedReviews: number;
   averageRating: number;
+  translations: any;
 }
 
-export function MyReviewsStats({ totalReviews, approvedReviews, averageRating }: StatsProps) {
+export function MyReviewsStats({ totalReviews, approvedReviews, averageRating, translations }: StatsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex items-center gap-4">
@@ -14,7 +15,7 @@ export function MyReviewsStats({ totalReviews, approvedReviews, averageRating }:
           <MessageSquare className="w-6 h-6" />
         </div>
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tổng đánh giá</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{translations.totalReviews}</p>
           <p className="text-2xl font-black text-slate-900">{totalReviews}</p>
         </div>
       </div>
@@ -24,7 +25,7 @@ export function MyReviewsStats({ totalReviews, approvedReviews, averageRating }:
           <CheckCircle className="w-6 h-6" />
         </div>
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Đã phê duyệt</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{translations.approved}</p>
           <p className="text-2xl font-black text-slate-900">{approvedReviews}</p>
         </div>
       </div>
@@ -34,7 +35,7 @@ export function MyReviewsStats({ totalReviews, approvedReviews, averageRating }:
           <Star className="w-6 h-6" />
         </div>
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Điểm trung bình</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{translations.averageRating}</p>
           <p className="text-2xl font-black text-slate-900">
             {totalReviews > 0 ? averageRating.toFixed(1) : "0.0"}
           </p>

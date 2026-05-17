@@ -20,9 +20,10 @@ interface MyReviewCardProps {
   review: ReviewItem;
   onUpdate: () => void;
   onDelete: (id: string) => void;
+  translations: any;
 }
 
-export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) {
+export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyReviewCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editRating, setEditRating] = useState(review.rating);
   const [editComment, setEditComment] = useState(review.comment || "");
@@ -39,14 +40,14 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
         alert(result.message);
       }
     } catch (error) {
-      alert("Lỗi khi cập nhật đánh giá");
+      alert(translations.updateError);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("Bạn có chắc muốn xóa đánh giá này?")) return;
+    if (!confirm(translations.deleteConfirm)) return;
     setLoading(true);
     try {
       const result = await deleteMyReview(review.id, review.type);
@@ -56,7 +57,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
         alert(result.message);
       }
     } catch (error) {
-      alert("Lỗi khi xóa đánh giá");
+      alert(translations.deleteError);
     } finally {
       setLoading(false);
     }
@@ -67,7 +68,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
     : `/student/assignments/${review.targetId}/run`;
 
   const TypeIcon = review.type === "lesson" ? BookOpen : FileQuestion;
-  const typeLabel = review.type === "lesson" ? "Bài học" : "Bài tập";
+  const typeLabel = review.type === "lesson" ? translations.lesson : translations.assignment;
 
   return (
     <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
@@ -81,7 +82,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{typeLabel}</span>
             </div>
             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">
-              {format(new Date(review.createdAt), "dd/MM/yyyy", { locale: vi })}
+              {format(new Date(review.createdAt), "dd/MM/yyyy")}
             </span>
           </div>
 
@@ -102,7 +103,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
             className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
             value={editComment}
             onChange={(e) => setEditComment(e.target.value)}
-            placeholder="Viết cảm nhận của bạn..."
+            placeholder={translations.placeholder}
           />
 
           <div className="flex gap-3">
@@ -110,14 +111,14 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
               onClick={() => setIsEditing(false)}
               className="flex-1 h-12 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
             >
-              Hủy
+              {translations.cancel}
             </button>
             <button
               onClick={handleSave}
               disabled={loading}
               className="flex-1 h-12 bg-slate-950 text-white rounded-xl font-bold text-sm hover:bg-primary transition-colors disabled:opacity-50"
             >
-              {loading ? "Đang lưu..." : "Lưu thay đổi"}
+              {loading ? translations.saving : translations.saveChanges}
             </button>
           </div>
         </div>
@@ -135,12 +136,12 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
               {review.isApproved ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-100 text-[10px] font-black uppercase tracking-widest">
                   <CheckCircle className="w-3 h-3" />
-                  Đã duyệt
+                  {translations.approvedStatus}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100 text-[10px] font-black uppercase tracking-widest">
                   <Clock className="w-3 h-3" />
-                  Chờ duyệt
+                  {translations.pendingStatus}
                 </span>
               )}
             </div>
@@ -156,7 +157,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
             </h3>
             {review.teacher && (
               <p className="text-sm text-slate-500 font-medium mt-1">
-                Giáo viên: {review.teacher.name || "N/A"}
+                {translations.teacher}: {review.teacher.name || "N/A"}
               </p>
             )}
           </a>
@@ -180,7 +181,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
           <div className="flex items-center justify-between pt-4 border-t border-slate-100">
             <div className="flex items-center gap-2 text-slate-400 text-xs">
               <Clock className="w-3 h-3" />
-              {format(new Date(review.createdAt), "dd/MM/yyyy HH:mm", { locale: vi })}
+              {format(new Date(review.createdAt), "dd/MM/yyyy HH:mm")}
             </div>
 
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -188,7 +189,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
                 onClick={() => setIsEditing(true)}
                 disabled={review.isApproved}
                 className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-primary hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title={review.isApproved ? "Không thể sửa đã được duyệt" : "Sửa đánh giá"}
+                title={review.isApproved ? translations.cannotEditApproved : translations.editReview}
               >
                 <Edit2 className="w-4 h-4" />
               </button>
@@ -196,7 +197,7 @@ export function MyReviewCard({ review, onUpdate, onDelete }: MyReviewCardProps) 
                 onClick={handleDelete}
                 disabled={loading}
                 className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
-                title="Xóa đánh giá"
+                title={translations.deleteReview}
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />

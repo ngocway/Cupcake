@@ -40,17 +40,16 @@ export function SharedBackground() {
   const isHomepage = pathname === "/"
 
   return (
-    <div className={`fixed inset-0 -z-50 overflow-hidden transition-colors duration-1000 ${isHomepage ? "bg-[#f0f9ff]" : "bg-primary/10"}`}>
+    <div className={`fixed inset-0 -z-50 overflow-hidden transition-all duration-1000 ${isHomepage ? "bg-gradient-to-b from-[#87CEEB] to-[#FFF8E7]" : "bg-primary/10"}`}>
       {isHomepage && (
-        <img 
-          src="/bg-kid.png" 
-          alt="" 
-          className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${
-            isClearBackground 
-              ? "blur-none opacity-100 scale-100" 
-              : "blur-xl opacity-80 scale-105"
-          }`}
-        />
+        <>
+          {/* Solar Flare / Ambient Glow */}
+          <div className="absolute top-[-10%] right-[-10%] w-[50%] aspect-square bg-secondary/20 blur-[120px] rounded-full animate-float" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[40%] aspect-square bg-primary/10 blur-[100px] rounded-full" />
+          
+          {/* Organic botanical texture overlay (SVG or subtle image) */}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/leaf.png')]" />
+        </>
       )}
     </div>
   )

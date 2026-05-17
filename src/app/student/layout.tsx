@@ -5,10 +5,12 @@ import { NotificationBell } from "@/components/common/NotificationBell"
 import { SideNavWrapper } from "@/app/student/_components/SideNavWrapper"
 import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper"
 import { SideNavItem } from "@/app/student/_components/SideNavItem"
-import { PublicHeader } from "@/components/public/PublicHeader"
+import { SmartHeader } from "@/components/student/SmartHeader"
+import { getTranslations } from "next-intl/server"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
+  const t = await getTranslations("sidebar")
   
   if (!session) {
     return <>{children}</>
@@ -32,7 +34,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-surface font-body text-on-surface">
-      <PublicHeader session={publicSession} />
+      <SmartHeader session={publicSession} />
       
       {/* Admin/Teacher Impersonation Banner */}
       {(session.user.role === 'ADMIN' || isTeacher) && (
@@ -42,7 +44,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
               {isTeacher ? 'visibility' : 'admin_panel_settings'}
             </span>
             <span className="text-xs font-black uppercase tracking-widest">
-              {isTeacher ? 'Bạn đang xem với tư cách Học sinh (Guest Mode)' : 'Admin đang xem giao diện Học sinh'}
+              {isTeacher ? t("studentViewMode") : t("adminViewMode")}
             </span>
           </div>
           <a
@@ -54,80 +56,80 @@ export default async function StudentLayout({ children }: { children: React.Reac
             }`}
           >
             <span className="material-symbols-outlined text-sm">arrow_back</span>
-            {isTeacher ? 'Quay lại Library' : 'Thoát về Admin'}
+            {isTeacher ? t("backToLibrary") : t("exitToAdmin")}
           </a>
         </div>
       )}
       {/* TopNavBar */}
       {/* TopNavBar removed as per user request to hide header on non-homepage routes */}
-
+ 
       {/* SideNavBar - Controlled by Wrapper */}
       <SideNavWrapper isTeacher={isTeacher}>
         <nav className="flex-1 px-4 pb-6 pt-0 space-y-8">
           <div>
             <div className="space-y-1 mb-6">
-              <SideNavItem href="/student/dashboard" icon="dashboard" label="Dashboard" />
+              <SideNavItem href="/student/dashboard" icon="dashboard" label={t("dashboard")} />
             </div>
             
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Khám phá kiến thức</p>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t("exploreKnowledge")}</p>
             <div className="space-y-1">
-              <SideNavItem href="/student/lessons?source=public" icon="explore" label="Bài học" />
-              <SideNavItem href="/student/assignments?source=public" icon="language" label="Bài tập" />
+              <SideNavItem href="/student/lessons?source=public" icon="explore" label={t("lessons")} />
+              <SideNavItem href="/student/assignments?source=public" icon="language" label={t("assignments")} />
             </div>
           </div>
-
+ 
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Nội dung từ Lớp học</p>
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t("classContent")}</p>
             <div className="space-y-1">
-              <SideNavItem href="/student/lessons?source=class" icon="menu_book" label="Bài học" comingSoon />
-              <SideNavItem href="/student/assignments?source=class" icon="assignment" label="Bài tập" comingSoon />
+              <SideNavItem href="/student/lessons?source=class" icon="menu_book" label={t("lessons")} comingSoon />
+              <SideNavItem href="/student/assignments?source=class" icon="assignment" label={t("assignments")} comingSoon />
             </div>
           </div>
           
           <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-1">
-            <SideNavItem href="/student/bookmarks" icon="bookmark" label="Bookmarks" />
-            <SideNavItem href="/student/classes" icon="group" label="Classes" comingSoon />
-            <SideNavItem href="/student/my-reviews" icon="star" label="Đánh giá của tôi" />
-            <SideNavItem href="/student/growth" icon="trending_up" label="Growth" comingSoon />
+            <SideNavItem href="/student/bookmarks" icon="bookmark" label={t("bookmarks")} />
+            <SideNavItem href="/student/classes" icon="group" label={t("classes")} comingSoon />
+            <SideNavItem href="/student/my-reviews" icon="star" label={t("myReviews")} />
+            <SideNavItem href="/student/growth" icon="trending_up" label={t("growth")} comingSoon />
           </div>
         </nav>
         
         <div className="p-4">
           <button className="w-full bg-gradient-to-br from-primary to-primary-container text-white py-3 rounded-full font-label text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
-            Join Live Class
+            {t("joinLiveClass")}
           </button>
         </div>
       </SideNavWrapper>
-
+ 
       {/* Main Content Canvas - Controlled by Wrapper */}
       <MainContentWrapper isTeacher={isTeacher}>
         {children}
       </MainContentWrapper>
-
+ 
       {/* BottomNavBar (Mobile Only) */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center py-4 md:hidden z-50">
         <Link className="flex flex-col items-center gap-1 text-primary" href="/student/dashboard">
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
-          <span className="text-[10px] font-label font-bold">Dash</span>
+          <span className="text-[10px] font-label font-bold">{t("dash")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/lessons">
           <span className="material-symbols-outlined">menu_book</span>
-          <span className="text-[10px] font-label font-bold">Lessons</span>
+          <span className="text-[10px] font-label font-bold">{t("lessons")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/assignments">
           <span className="material-symbols-outlined">assignment</span>
-          <span className="text-[10px] font-label font-bold">Work</span>
+          <span className="text-[10px] font-label font-bold">{t("work")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/classes">
           <span className="material-symbols-outlined">group</span>
-          <span className="text-[10px] font-label font-bold">Class</span>
+          <span className="text-[10px] font-label font-bold">{t("class")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/growth">
           <span className="material-symbols-outlined">trending_up</span>
-          <span className="text-[10px] font-label font-bold">Growth</span>
+          <span className="text-[10px] font-label font-bold">{t("growth")}</span>
         </Link>
       </nav>
-
+ 
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { startOrResumeAttempt } from "./actions";
+import { useTranslations } from "next-intl";
 
 interface Props {
   assignmentId: string;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function StartButton({ assignmentId, label }: Props) {
+  const t = useTranslations("student.assignmentRun");
   const [isPending, startTransition] = useTransition();
 
   const handleStart = () => {
@@ -27,7 +29,7 @@ export function StartButton({ assignmentId, label }: Props) {
         : "bg-white text-primary hover:bg-primary-container hover:scale-105 active:scale-95 shadow-xl shadow-primary/20"
       }`}
     >
-      {isPending ? "ĐANG XỬ LÝ..." : label}
+      {isPending ? t("processing") : label}
     </button>
   );
 }

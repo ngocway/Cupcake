@@ -57,14 +57,18 @@ export const getAssignmentTeacher = (id: string) => unstable_cache(
   { revalidate: 600, tags: ["assignment", "assignments"] }
 )();
 
-export const getAssignmentReviews = async (assignmentId: string) => {
-  return prisma.assignmentReview.findMany({
-    where: { assignmentId, isApproved: true },
-    take: 3,
-    include: { student: { select: { name: true, image: true } } },
-    orderBy: { createdAt: "desc" }
-  });
-};
+export const getAssignmentReviews = (assignmentId: string) => unstable_cache(
+  async () => {
+    return prisma.assignmentReview.findMany({
+      where: { assignmentId, isApproved: true },
+      take: 3,
+      include: { student: { select: { name: true, image: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+  },
+  ["assignment-reviews", assignmentId],
+  { revalidate: 600, tags: ["assignment", "reviews"] }
+)();
 
 export const prewarmAssignmentQuestions = async (assignmentId: string) => {
   // Hàm này chỉ gọi để Prisma cache lại query câu hỏi

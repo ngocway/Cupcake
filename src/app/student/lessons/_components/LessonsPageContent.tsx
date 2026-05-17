@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { toggleLessonBookmark, incrementLessonViews } from "../actions";
 import { useLessons, LessonItem } from "@/hooks/useStudentContent";
+import { useTranslations, useLocale } from "next-intl";
+import { vi, enUS } from "date-fns/locale";
 
 interface Props {
   initialLessons?: LessonItem[];
@@ -40,6 +42,9 @@ const LessonCard = memo(function LessonCard({
   onBadgeClick: (val: string) => void;
   style?: React.CSSProperties;
 }) {
+  const t = useTranslations("lessonsPage");
+  const locale = useLocale();
+  const dateLocale = locale === "vi" ? vi : enUS;
   const [isPending, startTransition] = useTransition();
   const [isFavorite, setIsFavorite] = useState(lesson.isFavorite);
   const router = useRouter();
@@ -52,10 +57,10 @@ const LessonCard = memo(function LessonCard({
     startTransition(async () => {
        try {
           const result = await toggleLessonBookmark(lesson.id);
-          onToast(result.bookmarked ? "Đã lưu bài học" : "Đã xóa khỏi danh sách lưu");
+          onToast(result.bookmarked ? t("bookmarkSuccess") : t("bookmarkRemoved"));
        } catch (error) {
           setIsFavorite(isFavorite);
-          onToast("Có lỗi xảy ra khi lưu bài học", "error");
+          onToast(t("bookmarkError"), "error");
        }
     });
   };
@@ -63,7 +68,7 @@ const LessonCard = memo(function LessonCard({
   const handleLessonAccess = async (e: React.MouseEvent) => {
     if (lesson.isPremium) {
        e.preventDefault();
-       onToast("Vui lòng mua hoặc nâng cấp tài khoản để xem bài học này", "error");
+       onToast(t("premiumError"), "error");
        return;
     }
 
@@ -98,7 +103,7 @@ const LessonCard = memo(function LessonCard({
               }}
               className="bg-primary/90 backdrop-blur-sm px-3 py-1 rounded-lg text-[10px] font-extrabold text-white shadow-sm uppercase tracking-wider hover:scale-110 transition-transform"
            >
-             {lesson.className || "Public"}
+             {lesson.className || t("public")}
            </button>
         </div>
         
@@ -120,12 +125,12 @@ const LessonCard = memo(function LessonCard({
               {lesson.status === "COMPLETED" ? (
                 <>
                   <CheckCircle2 className="w-3 h-3" />
-                  Đã hoàn thành
+                  {t("completed")}
                 </>
               ) : (
                 <>
                   <Clock className="w-3 h-3" />
-                  Đang làm
+                  {t("inProgress")}
                 </>
               )}
             </div>
@@ -147,7 +152,7 @@ const LessonCard = memo(function LessonCard({
              </button>
           </div>
           <p className="text-sm text-on-surface-variant line-clamp-2 leading-relaxed">
-            {lesson.description || "Tìm hiểu thêm về chủ đề này cùng đội ngũ giáo viên giàu kinh nghiệm."}
+            {lesson.description || t("defaultDescription")}
           </p>
         </div>
 
@@ -157,16 +162,16 @@ const LessonCard = memo(function LessonCard({
                  <User className="w-4 h-4 text-outline" />
               </div>
               <div className="text-xs font-bold">
-                 <p className="text-on-surface truncate max-w-[100px]">{lesson.teacherName || "Instructor"}</p>
+                 <p className="text-on-surface truncate max-w-[100px]">{lesson.teacherName || t("instructor")}</p>
                  <div className="flex items-center gap-1.5 text-on-surface-variant font-medium">
                     <Eye className="w-3 h-3" />
-                    <span>{lesson.viewsCount} lượt xem</span>
+                    <span>{lesson.viewsCount} {t("views")}</span>
                  </div>
               </div>
            </div>
            
            <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-tighter">
-              Chi tiết
+              {t("details")}
               <ArrowRight className="w-4 h-4" />
            </div>
         </div>
@@ -176,6 +181,7 @@ const LessonCard = memo(function LessonCard({
 });
 
 export default function LessonsPageContent(props: Props) {
+  const t = useTranslations("lessonsPage");
   const { initialLessons = [], initialSource = "public", classes: initialClasses = [] } = props;
   const [activeTab, setActiveTab] = useState<"in-progress" | "completed">("in-progress");
   const [searchQuery, setSearchQuery] = useState("");
@@ -266,7 +272,7 @@ export default function LessonsPageContent(props: Props) {
                      : "text-outline hover:text-on-surface"
                   }`}
                >
-                  Đang học ({lessons.filter(l => l.status === "PENDING" || l.status === "IN_PROGRESS").length})
+                  {t("inProgress")} ({lessons.filter(l => l.status === "PENDING" || l.status === "IN_PROGRESS").length})
                </button>
                <button
                   onClick={() => setActiveTab("completed")}
@@ -276,7 +282,7 @@ export default function LessonsPageContent(props: Props) {
                      : "text-outline hover:text-on-surface"
                   }`}
                >
-                  Đã hoàn thành ({lessons.filter(l => l.status === "COMPLETED").length})
+                  {t("completed")} ({lessons.filter(l => l.status === "COMPLETED").length})
                </button>
             </div>
 
@@ -286,7 +292,7 @@ export default function LessonsPageContent(props: Props) {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
                   <input
                      type="text"
-                     placeholder="Tìm kiếm bài học..."
+                     placeholder={t("searchPlaceholder")}
                      className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-outline-variant/50 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,7 +309,7 @@ export default function LessonsPageContent(props: Props) {
                            : "bg-white dark:bg-slate-900 text-on-surface-variant border-outline-variant hover:border-primary"
                         }`}
                      >
-                        Tất cả lớp
+                        {t("allClasses")}
                      </button>
                      {classes.map((c) => (
                         <button
@@ -391,7 +397,7 @@ export default function LessonsPageContent(props: Props) {
               <button
                 className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                "Tải thêm bài học"
+                {t("loadMore")}
               </button>
             </div>
           )}
@@ -402,8 +408,15 @@ export default function LessonsPageContent(props: Props) {
               <Video className="w-8 h-8 text-outline-variant" />
            </div>
            <div>
-              <h3 className="text-xl font-extrabold">Chưa có nội dung ở đây</h3>
-              <p className="text-on-surface-variant mt-2">{searchQuery ? "Chúng mình không tìm thấy bài nào khớp với từ khóa bạn nhập. Thử lại nhé!" : initialSource === "class" ? "Tất cả bài giảng từ giáo viên đã được cập nhật tại đây. Hãy bắt đầu học nhé!" : "Kho học liệu đang được cập nhật thêm. Hãy quay lại sau nhé!"}</p>
+              <h3 className="text-xl font-extrabold">{t("noContent")}</h3>
+              <p className="text-on-surface-variant mt-2">
+                {searchQuery 
+                  ? t("noResultsFound") 
+                  : initialSource === "class" 
+                    ? t("classLessonsWelcome") 
+                    : t("publicLessonsWelcome")
+                }
+              </p>
            </div>
         </div>
       )}

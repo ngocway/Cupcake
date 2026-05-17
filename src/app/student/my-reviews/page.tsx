@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { MyReviewsClient } from "./_components/MyReviewsClient";
 import { Star } from "lucide-react";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function MyReviewsPage() {
+  const t = await getTranslations("student.reviews");
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/student/login");
@@ -50,14 +53,43 @@ export default async function MyReviewsPage() {
           <Star className="w-8 h-8 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Đánh giá của tôi</h1>
-          <p className="text-slate-500 font-medium">Quản lý các đánh giá bạn đã gửi</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">{t("title")}</h1>
+          <p className="text-slate-500 font-medium">{t("subtitle")}</p>
         </div>
       </div>
 
       <MyReviewsClient
         initialLessonReviews={lessonReviews}
         initialAssignmentReviews={assignmentReviews}
+        translations={{
+          totalReviews: t("totalReviews"),
+          approved: t("approved"),
+          averageRating: t("averageRating"),
+          all: t("all"),
+          lessons: t("lessons"),
+          assignments: t("assignments"),
+          searchPlaceholder: t("searchPlaceholder"),
+          noReviews: t("noReviews"),
+          noResults: t("noResults"),
+          emptyMessage: t("emptyMessage"),
+          emptyTypeMessage: t("emptyTypeMessage"),
+          explore: t("explore"),
+          lesson: t("lesson"),
+          assignment: t("assignment"),
+          teacher: t("teacher"),
+          editReview: t("editReview"),
+          deleteReview: t("deleteReview"),
+          deleteConfirm: t("deleteConfirm"),
+          updateError: t("updateError"),
+          deleteError: t("deleteError"),
+          placeholder: t("placeholder"),
+          saveChanges: t("saveChanges"),
+          saving: t("saving"),
+          cancel: t("cancel"),
+          approvedStatus: t("approvedStatus"),
+          pendingStatus: t("pendingStatus"),
+          cannotEditApproved: t("cannotEditApproved")
+        }}
       />
     </div>
   );

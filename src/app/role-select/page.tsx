@@ -6,7 +6,7 @@ export default async function RoleSelectPage() {
   const session = await auth()
 
   if (!session) {
-    redirect("/login")
+    redirect("/student/login")
   }
 
   // Nếu người dùng đã có role, không cho phép đổi nữa (trừ admin)

@@ -8,7 +8,7 @@ export async function submitRoleSelection(formData: FormData) {
   const session = await auth()
   
   if (!session?.user?.id) {
-    redirect("/login")
+    redirect("/student/login")
   }
 
   const role = formData.get("role") as string

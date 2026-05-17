@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { DirectStartLink } from "../../_components/DirectStartLink";
 import { useAssignments, AssignmentItem } from "@/hooks/useStudentContent";
+import { useTranslations, useLocale } from "next-intl";
+import { enUS } from "date-fns/locale";
 
 interface Props {
   initialAssignments?: AssignmentItem[];
@@ -38,6 +40,10 @@ const AssignmentCard = memo(function AssignmentCard({
   source: "class" | "public";
   style?: React.CSSProperties;
 }) {
+  const t = useTranslations("student.assignments");
+  const locale = useLocale();
+  const dateLocale = locale === "vi" ? vi : enUS;
+
   return (
     <DirectStartLink
       id={assignment.slug || assignment.id}
@@ -76,7 +82,7 @@ const AssignmentCard = memo(function AssignmentCard({
                 : "bg-surface-container-lowest/90 text-on-surface-variant"
               }`}>
                  <Clock className="w-3 h-3" />
-                 {(new Date(assignment.dueDate).getTime() - new Date().getTime()) < 86400000 ? "Gấp: Cần nộp ngay" : `Hạn: ${format(new Date(assignment.dueDate), "dd/MM/yyyy", { locale: vi })}`}
+                 {(new Date(assignment.dueDate).getTime() - new Date().getTime()) < 86400000 ? t("urgent") : t("due", { date: format(new Date(assignment.dueDate), "dd/MM/yyyy", { locale: dateLocale }) })}
               </div>
            </div>
         )}
@@ -92,12 +98,12 @@ const AssignmentCard = memo(function AssignmentCard({
              {/* Teacher Info */}
              <div className="flex items-center gap-1.5 text-xs font-semibold">
                 <User className="w-3.5 h-3.5 text-outline" />
-                <span>{assignment.teacherName || "Hệ thống"}</span>
+                <span>{assignment.teacherName || t("system")}</span>
              </div>
              <span className="text-outline-variant text-[10px]">|</span>
              <div className="flex items-center gap-1.5 text-xs font-medium">
                 <Calendar className="w-3.5 h-3.5 text-outline" />
-                <span>{format(new Date(assignment.assignedAt), "dd/MM/yyyy", { locale: vi })}</span>
+                <span>{format(new Date(assignment.assignedAt), "dd/MM/yyyy", { locale: dateLocale })}</span>
              </div>
           </div>
         </div>
@@ -106,10 +112,10 @@ const AssignmentCard = memo(function AssignmentCard({
             {assignment.status === "COMPLETED" ? (
                <div className="flex items-center gap-3">
                   <div className="flex flex-col">
-                     <p className="text-[10px] text-outline font-bold uppercase tracking-widest">Kết quả</p>
+                     <p className="text-[10px] text-outline font-bold uppercase tracking-widest">{t("result")}</p>
                      <div className="flex items-baseline gap-1">
                         <span className="font-black text-2xl text-green-500">{assignment.correctAnswers ?? 0}</span>
-                        <span className="text-sm text-outline font-bold">/{assignment.totalQuestions ?? 0} câu</span>
+                        <span className="text-sm text-outline font-bold">/{assignment.totalQuestions ?? 0} {t("questions")}</span>
                      </div>
                   </div>
                </div>
@@ -119,7 +125,7 @@ const AssignmentCard = memo(function AssignmentCard({
                      {assignment.status === "IN_PROGRESS" ? <Clock className="w-6 h-6" /> : <PlayCircle className="w-6 h-6" />}
                   </div>
                   <p className={`text-sm font-black uppercase tracking-tighter ${assignment.status === "IN_PROGRESS" ? "text-amber-500" : "text-primary"}`}>
-                     {assignment.status === "IN_PROGRESS" ? "Đang làm dở" : source === "class" ? "Làm nhiệm vụ" : "Học ngay"}
+                     {assignment.status === "IN_PROGRESS" ? t("inProgress") : source === "class" ? t("doTask") : t("learnNow")}
                   </p>
                </div>
             )}
@@ -139,6 +145,7 @@ export default function AssignmentsPageContent(props: Props) {
     classes: initialClasses = [], 
     initialTab = "pending"
   } = props;
+  const t = useTranslations("student.assignments");
   const [activeTab, setActiveTab] = useState<"in-progress" | "completed">(initialTab === "completed" ? "completed" : "in-progress");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClassId, setSelectedClassId] = useState<string>("all");
@@ -197,7 +204,7 @@ export default function AssignmentsPageContent(props: Props) {
                      : "text-outline hover:text-on-surface"
                   }`}
                >
-                  Đang làm ({assignments.filter(a => a.status === "PENDING" || a.status === "IN_PROGRESS").length})
+                  {t("inProgress")} ({assignments.filter(a => a.status === "PENDING" || a.status === "IN_PROGRESS").length})
                </button>
                <button
                   onClick={() => setActiveTab("completed")}
@@ -207,7 +214,7 @@ export default function AssignmentsPageContent(props: Props) {
                      : "text-outline hover:text-on-surface"
                   }`}
                >
-                  Đã hoàn thành ({assignments.filter(a => a.status === "COMPLETED").length})
+                  {t("completed")} ({assignments.filter(a => a.status === "COMPLETED").length})
                </button>
             </div>
 
@@ -217,7 +224,7 @@ export default function AssignmentsPageContent(props: Props) {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
                   <input
                      type="text"
-                     placeholder="Tìm kiếm bài học..."
+                     placeholder={t("searchPlaceholder")}
                      className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-outline-variant/50 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
@@ -234,7 +241,7 @@ export default function AssignmentsPageContent(props: Props) {
                            : "bg-white dark:bg-slate-900 text-on-surface-variant border-outline-variant hover:border-primary"
                         }`}
                      >
-                        Tất cả lớp
+                        {t("allClasses")}
                      </button>
                      {classes.map((c) => (
                         <button
@@ -323,7 +330,7 @@ export default function AssignmentsPageContent(props: Props) {
               <button
                 className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-full font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                "Tải thêm bài tập"
+                {t("loadMore")}
               </button>
             </div>
           )}
@@ -334,13 +341,13 @@ export default function AssignmentsPageContent(props: Props) {
               <GraduationCap className="w-10 h-10 text-outline" />
            </div>
            <div className="max-w-sm mx-auto">
-              <h3 className="text-2xl font-black">Chưa có nội dung ở đây</h3>
+              <h3 className="text-2xl font-black">{t("noContent")}</h3>
               <p className="text-on-surface-variant mt-3 leading-relaxed">
-                {searchQuery ? "Chúng mình không tìm thấy bài nào khớp với từ khóa bạn nhập. Thử lại nhé!" : initialSource === "class" ? "Bạn đã hoàn thành tất cả bài tập từ giáo viên rồi đấy. Thật tuyệt vời!" : "Kho học liệu đang được cập nhật thêm. Hãy quay lại sau nhé!"}
+                {searchQuery ? t("noResultsFound") : initialSource === "class" ? t("classAssignmentsWelcome") : t("publicAssignmentsWelcome")}
               </p>
            </div>
            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="text-primary font-bold text-sm underline underline-offset-4">Xóa tìm kiếm</button>
+              <button onClick={() => setSearchQuery("")} className="text-primary font-bold text-sm underline underline-offset-4">{t("clearSearch")}</button>
            )}
         </div>
       )}

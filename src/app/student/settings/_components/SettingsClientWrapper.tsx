@@ -7,14 +7,14 @@ import { SecuritySettings } from "./SecuritySettings"
 import { NotificationSettings } from "./NotificationSettings"
 import { AppearanceSettings } from "./AppearanceSettings"
 
-export function SettingsClientWrapper({ user }: { user: any }) {
+export function SettingsClientWrapper({ user, translations }: { user: any, translations: any }) {
     const [activeTab, setActiveTab] = useState("profile")
 
     const tabs = [
-        { id: "profile", label: "Hồ sơ", icon: User, color: "text-blue-500" },
-        { id: "notifications", label: "Thông báo", icon: Bell, color: "text-orange-500" },
-        { id: "security", label: "Bảo mật", icon: Shield, color: "text-red-500" },
-        { id: "appearance", label: "Giao diện", icon: Palette, color: "text-purple-500" },
+        { id: "profile", label: translations.profile, icon: User, color: "text-blue-500" },
+        { id: "notifications", label: translations.notifications, icon: Bell, color: "text-orange-500" },
+        { id: "security", label: translations.security, icon: Shield, color: "text-red-500" },
+        { id: "appearance", label: translations.appearance, icon: Palette, color: "text-purple-500" },
     ]
 
     return (

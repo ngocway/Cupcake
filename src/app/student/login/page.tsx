@@ -4,6 +4,7 @@ import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { registerStudent, resetPassword } from "@/actions/auth-actions"
+import { useTranslations } from "next-intl"
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const t = useTranslations("student.auth");
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ export default function LoginPage() {
       });
 
       if (res?.error) {
-        setErrorMessage("Tài khoản hoặc mật khẩu không chính xác.");
+        setErrorMessage(t("invalidCredentials"));
         setIsPending(false);
       } else if (res?.ok) {
         const searchParams = new URLSearchParams(window.location.search);
@@ -40,7 +42,7 @@ export default function LoginPage() {
         router.refresh();
       }
     } catch (err) {
-      setErrorMessage("Đã xảy ra sự cố hệ thống.");
+      setErrorMessage(t("systemError"));
       setIsPending(false);
     }
   }
@@ -56,7 +58,7 @@ export default function LoginPage() {
     const confirmPassword = formData.get("confirmPassword") as string;
 
     if (password !== confirmPassword) {
-      setErrorMessage("Mật khẩu xác nhận không khớp.");
+      setErrorMessage(t("passwordMismatch"));
       setIsPending(false);
       return;
     }
@@ -171,13 +173,13 @@ export default function LoginPage() {
                 onClick={() => { setMode("login"); setErrorMessage(""); setSuccessMessage(""); }}
                 className={`pb-4 border-b-2 font-headline font-bold text-lg transition-colors ${mode === "login" ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"}`}
               >
-                Log In
+                {t("login")}
               </button>
               <button 
                 onClick={() => { setMode("register"); setErrorMessage(""); setSuccessMessage(""); }}
                 className={`pb-4 border-b-2 font-headline font-bold text-lg transition-colors ${mode === "register" ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"}`}
               >
-                Sign Up
+                {t("signup")}
               </button>
             </div>
           )}
@@ -189,18 +191,18 @@ export default function LoginPage() {
                 className="flex items-center text-primary font-label font-bold text-sm hover:underline mb-4 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm mr-1">arrow_back</span>
-                Back to Login
+                {t("backToLogin")}
               </button>
-              <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Reset Password</h2>
-              <p className="text-on-surface-variant font-body">Enter your email and we'll send you instructions to reset your password.</p>
+              <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">{t("resetPassword")}</h2>
+              <p className="text-on-surface-variant font-body">{t("forgotSubtitle")}</p>
             </div>
           )}
 
           {mode === "login" && (
             <>
               <div className="mb-8">
-                <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Welcome Back</h2>
-                <p className="text-on-surface-variant font-body">Please enter your credentials to continue your journey.</p>
+                <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">{t("welcomeBack")}</h2>
+                <p className="text-on-surface-variant font-body">{t("loginSubtitle")}</p>
               </div>
 
               <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-label font-bold text-on-surface hover:bg-surface-container-low transition-all duration-200">
@@ -210,18 +212,18 @@ export default function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
                 </svg>
-                Continue with Google
+                {t("continueGoogle")}
               </button>
 
               <div className="relative mb-8 flex items-center">
                 <div className="flex-grow border-t border-outline-variant/15"></div>
-                <span className="px-4 text-xs font-label uppercase tracking-widest text-outline">Or with Email</span>
+                <span className="px-4 text-xs font-label uppercase tracking-widest text-outline">{t("orWithEmail")}</span>
                 <div className="flex-grow border-t border-outline-variant/15"></div>
               </div>
 
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email">Email Address</label>
+                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email">{t("emailLabel")}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
                     <input 
@@ -237,8 +239,8 @@ export default function LoginPage() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="password">Password</label>
-                    <button type="button" onClick={() => { setMode("forgot"); setErrorMessage(""); setSuccessMessage(""); }} className="text-xs font-label text-primary font-bold hover:underline cursor-pointer">Forgot Password?</button>
+                    <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="password">{t("passwordLabel")}</label>
+                    <button type="button" onClick={() => { setMode("forgot"); setErrorMessage(""); setSuccessMessage(""); }} className="text-xs font-label text-primary font-bold hover:underline cursor-pointer">{t("forgotPassword")}</button>
                   </div>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
@@ -262,7 +264,7 @@ export default function LoginPage() {
 
                 <div className="flex items-center gap-3 py-2">
                   <input className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" id="remember" type="checkbox"/>
-                  <label className="font-body text-sm text-on-surface-variant" htmlFor="remember">Keep me logged in</label>
+                  <label className="font-body text-sm text-on-surface-variant" htmlFor="remember">{t("keepLoggedIn")}</label>
                 </div>
 
                 {errorMessage && (
@@ -276,7 +278,7 @@ export default function LoginPage() {
                   disabled={isPending}
                   className="w-full py-4 bg-gradient-to-br from-[#004ac6] to-[#2563eb] hover:from-[#003ea8] hover:to-[#1d4ed8] text-white font-label font-bold uppercase tracking-wider rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] transform transition-transform duration-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isPending ? "Authenticating..." : "Enter Workspace"}
+                  {isPending ? t("authenticating") : t("enterWorkspace")}
                   {!isPending && <span className="material-symbols-outlined text-xl">arrow_forward</span>}
                 </button>
               </form>
@@ -286,8 +288,8 @@ export default function LoginPage() {
           {mode === "register" && (
             <>
               <div className="mb-8">
-                <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">Create an Account</h2>
-                <p className="text-on-surface-variant font-body">Join EngMaster to access personalized learning materials.</p>
+                <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">{t("createAccount")}</h2>
+                <p className="text-on-surface-variant font-body">{t("signupSubtitle")}</p>
               </div>
 
               <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-label font-bold text-on-surface hover:bg-surface-container-low transition-all duration-200">
@@ -297,18 +299,18 @@ export default function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"></path>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
                 </svg>
-                Sign up with Google
+                {t("signupGoogle")}
               </button>
 
               <div className="relative mb-8 flex items-center">
                 <div className="flex-grow border-t border-outline-variant/15"></div>
-                <span className="px-4 text-xs font-label uppercase tracking-widest text-outline">Or with Email</span>
+                <span className="px-4 text-xs font-label uppercase tracking-widest text-outline">{t("orWithEmail")}</span>
                 <div className="flex-grow border-t border-outline-variant/15"></div>
               </div>
 
               <form onSubmit={handleRegister} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="name">Full Name</label>
+                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="name">{t("fullName")}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">person</span>
                     <input 
@@ -323,7 +325,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email-reg">Email Address</label>
+                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email-reg">{t("emailLabel")}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
                     <input 
@@ -338,7 +340,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="password-reg">Password</label>
+                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="password-reg">{t("passwordLabel")}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
                     <input 
@@ -360,7 +362,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="confirmPassword">Confirm Password</label>
+                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="confirmPassword">{t("confirmPassword")}</label>
                   <div className="relative">
                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
                     <input 
@@ -390,7 +392,7 @@ export default function LoginPage() {
                   disabled={isPending}
                   className="w-full py-4 bg-gradient-to-br from-[#004ac6] to-[#2563eb] hover:from-[#003ea8] hover:to-[#1d4ed8] text-white font-label font-bold uppercase tracking-wider rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] transform transition-transform duration-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isPending ? "Setting up..." : "Create Account"}
+                  {isPending ? t("settingUp") : t("signup")}
                   {!isPending && <span className="material-symbols-outlined text-xl">arrow_forward</span>}
                 </button>
               </form>
@@ -400,7 +402,7 @@ export default function LoginPage() {
           {mode === "forgot" && (
             <form onSubmit={handleForgot} className="space-y-6">
               <div className="space-y-2">
-                <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email-forgot">Email Address</label>
+                <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email-forgot">{t("emailLabel")}</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
                   <input 
@@ -430,16 +432,16 @@ export default function LoginPage() {
                 disabled={isPending}
                 className="w-full py-4 bg-gradient-to-br from-[#004ac6] to-[#2563eb] hover:from-[#003ea8] hover:to-[#1d4ed8] text-white font-label font-bold uppercase tracking-wider rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] transform transition-transform duration-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isPending ? "Sending..." : "Send Reset Link"}
+                {isPending ? t("sending") : t("sendReset")}
               </button>
             </form>
           )}
 
           <footer className="mt-12 pt-8 border-t border-outline-variant/15 text-center">
             <p className="text-xs text-on-surface-variant font-label leading-relaxed">
-              By entering, you agree to our 
-              <a className="text-primary font-bold hover:underline ml-1" href="#">Terms of Service</a> and 
-              <a className="text-primary font-bold hover:underline ml-1" href="#">Privacy Policy</a>.
+              {t("termsPrefix")} 
+              <a className="text-primary font-bold hover:underline ml-1" href="#">{t("terms")}</a> {t("and")} 
+              <a className="text-primary font-bold hover:underline ml-1" href="#">{t("privacy")}</a>.
             </p>
           </footer>
         </div>

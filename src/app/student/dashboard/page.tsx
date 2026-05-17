@@ -2,12 +2,18 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import Image from "next/image"
 import Link from "next/link"
+import { getTranslations, getLocale } from "next-intl/server"
 
 export default async function StudentDashboardPage() {
   const session = await auth()
-  
-  // Only students or teachers acting as students (for testing) should reach here normally
   const userId = session?.user?.id
+  if (!userId) redirect("/student/login")
+
+  const t = await getTranslations("student.dashboard")
+  const locale = await getLocale()
+  const { format } = await import("date-fns")
+  const { vi, enUS } = await import("date-fns/locale")
+  const dateLocale = locale === "vi" ? vi : enUS
 
   // 1. Fetch Overview Data
   // Let's count pending tasks
@@ -50,8 +56,12 @@ export default async function StudentDashboardPage() {
       await createNotification(
         userId!,
         'DUE_REMINDER',
-        'Sắp hết hạn nộp bài',
-        `Bài tập "${assi.title}" trong lớp ${assi.className} sẽ kết thúc vào ${assi.dueDate?.toLocaleString('vi-VN')}.`,
+        t('dueReminder'),
+        t('dueReminderMessage', { 
+          title: assi.title, 
+          className: assi.className, 
+          date: assi.dueDate ? format(assi.dueDate, "HH:mm, dd/MM", { locale: dateLocale }) : "" 
+        }),
         `/student/assignments/${assi.id}/run`
       );
     }
@@ -87,10 +97,13 @@ export default async function StudentDashboardPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
-              Welcome back, {session?.user?.name?.split(' ')[0] || "Student"}!
+              {t("welcome", { name: session?.user?.name?.split(' ')[0] || "Student" })}
             </h1>
             <p className="text-on-surface-variant text-lg">
-              You've crushed <span className="text-primary font-bold">80%</span> of your goals this week! Keep the momentum going.
+              {t.rich("goalsMessage", { 
+                percent: 80,
+                strong: (chunks) => <span className="text-primary font-bold">{chunks}</span>
+              })}
             </p>
           </div>
           <div className="flex items-center gap-3 bg-surface-container-low p-2 rounded-2xl">
@@ -109,7 +122,7 @@ export default async function StudentDashboardPage() {
                 +5
               </div>
             </div>
-            <span className="text-xs font-label font-semibold text-on-surface-variant px-2">Learning Friends Online</span>
+            <span className="text-xs font-label font-semibold text-on-surface-variant px-2">{t("friendsOnline")}</span>
           </div>
         </div>
 
@@ -118,31 +131,31 @@ export default async function StudentDashboardPage() {
           <div className="bg-surface-container-low p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
             <div className="flex justify-between items-start">
               <span className="material-symbols-outlined text-primary-container text-4xl">pending_actions</span>
-              <span className="text-primary font-bold text-xs bg-primary-fixed px-3 py-1 rounded-full uppercase tracking-tighter">Due soon</span>
+              <span className="text-primary font-bold text-xs bg-primary-fixed px-3 py-1 rounded-full uppercase tracking-tighter">{t("dueSoon")}</span>
             </div>
             <div>
               <h4 className="text-5xl font-black mt-4">{pendingTasks.length}</h4>
-              <p className="font-label text-on-surface-variant font-medium">Pending Tasks</p>
+              <p className="font-label text-on-surface-variant font-medium">{t("pendingTasks")}</p>
             </div>
           </div>
           <div className="bg-secondary-container/20 p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300 border border-secondary-container/30">
             <div className="flex justify-between items-start">
               <span className="material-symbols-outlined text-secondary text-4xl">workspace_premium</span>
-              <span className="text-secondary font-bold text-xs bg-secondary-container px-3 py-1 rounded-full uppercase tracking-tighter">Academic</span>
+              <span className="text-secondary font-bold text-xs bg-secondary-container px-3 py-1 rounded-full uppercase tracking-tighter">{t("academic")}</span>
             </div>
             <div>
               <h4 className="text-5xl font-black mt-4">{highScores}</h4>
-              <p className="font-label text-on-surface-variant font-medium">High Scores</p>
+              <p className="font-label text-on-surface-variant font-medium">{t("highScores")}</p>
             </div>
           </div>
           <div className="bg-tertiary-fixed/30 p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300 border border-tertiary-fixed/30">
             <div className="flex justify-between items-start">
               <span className="material-symbols-outlined text-tertiary text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
-              <span className="text-tertiary font-bold text-xs bg-tertiary-fixed px-3 py-1 rounded-full uppercase tracking-tighter">Streak</span>
+              <span className="text-tertiary font-bold text-xs bg-tertiary-fixed px-3 py-1 rounded-full uppercase tracking-tighter">{t("streak")}</span>
             </div>
             <div>
               <h4 className="text-5xl font-black mt-4">{streak}</h4>
-              <p className="font-label text-on-surface-variant font-medium">Day Learning Streak</p>
+              <p className="font-label text-on-surface-variant font-medium">{t("dayStreak")}</p>
             </div>
           </div>
         </div>
@@ -153,7 +166,7 @@ export default async function StudentDashboardPage() {
         <div className="lg:col-span-2 space-y-8">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              Assignments
+              {t("assignments")}
               <span className="w-2 h-2 bg-primary rounded-full"></span>
             </h2>
           </div>
@@ -162,7 +175,7 @@ export default async function StudentDashboardPage() {
           {dailyMission ? (
             <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant/20 p-8 rounded-[2rem] shadow-sm">
               <div className="absolute top-0 right-0 p-8">
-                <span className="bg-error text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">Priority 1</span>
+                <span className="bg-error text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">{t("priority")} 1</span>
               </div>
               <div className="flex flex-col md:flex-row gap-8 items-center">
                 <div className="w-full md:w-48 h-48 rounded-2xl bg-surface-container overflow-hidden shrink-0">
@@ -173,12 +186,12 @@ export default async function StudentDashboardPage() {
                   />
                 </div>
                 <div className="flex-1 space-y-4">
-                  <span className="font-label text-xs font-bold text-primary uppercase tracking-widest">Daily Mission</span>
+                  <span className="font-label text-xs font-bold text-primary uppercase tracking-widest">{t("dailyMission")}</span>
                   <h3 className="text-2xl font-bold">{dailyMission.title}</h3>
                   <div className="flex flex-wrap gap-4 items-center text-on-surface-variant text-sm font-medium">
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-lg">calendar_today</span>
-                      {dailyMission.dueDate ? `Deadline: ${dailyMission.dueDate.toLocaleDateString()}` : "No deadline"}
+                      {dailyMission.dueDate ? t("due", { date: dailyMission.dueDate.toLocaleDateString(locale) }) : t("noDeadline")}
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-lg">class</span>
@@ -187,7 +200,7 @@ export default async function StudentDashboardPage() {
                   </div>
                   <Link href={`/student/assignments/${dailyMission.id}/run`}>
                     <button className="bg-on-surface text-white px-8 py-3 rounded-full font-label text-sm font-bold hover:bg-primary transition-colors mt-2">
-                      Resume Mission
+                      {t("resumeMission")}
                     </button>
                   </Link>
                 </div>
@@ -195,15 +208,15 @@ export default async function StudentDashboardPage() {
             </div>
           ) : (
              <div className="p-8 text-center bg-surface-container-low rounded-3xl">
-               <p className="text-on-surface-variant">No pending assignments at the moment. Great job!</p>
+               <p className="text-on-surface-variant">{t("noPending")}</p>
              </div>
           )}
 
           {/* Categorized Tabs */}
           <div className="space-y-6">
             <div className="flex gap-8 border-b border-outline-variant/30 px-2 overflow-x-auto">
-              <button className="pb-4 text-primary font-bold border-b-2 border-primary text-sm font-label whitespace-nowrap">In Progress ({pendingTasks.length})</button>
-              <button className="pb-4 text-outline font-medium hover:text-on-surface transition-colors text-sm font-label whitespace-nowrap">Completed ({submissions.length})</button>
+              <button className="pb-4 text-primary font-bold border-b-2 border-primary text-sm font-label whitespace-nowrap">{t("inProgress")} ({pendingTasks.length})</button>
+              <button className="pb-4 text-outline font-medium hover:text-on-surface transition-colors text-sm font-label whitespace-nowrap">{t("completed")} ({submissions.length})</button>
             </div>
             
             <div className="space-y-4">
@@ -215,7 +228,7 @@ export default async function StudentDashboardPage() {
                     </div>
                     <div>
                       <h4 className="font-bold group-hover:text-primary transition-colors">{task.title}</h4>
-                      <p className="text-xs text-on-surface-variant font-label mt-0.5">{task.className} • {task.dueDate ? `Due ${task.dueDate.toLocaleDateString()}` : 'No due date'}</p>
+                      <p className="text-xs text-on-surface-variant font-label mt-0.5">{task.className} • {task.dueDate ? t("due", { date: task.dueDate.toLocaleDateString(locale) }) : t("noDeadline")}</p>
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
@@ -223,7 +236,7 @@ export default async function StudentDashboardPage() {
               ))}
               
               {pendingTasks.length <= 1 && (
-                <p className="text-sm text-on-surface-variant px-4">You have caught up with all tasks!</p>
+                <p className="text-sm text-on-surface-variant px-4">{t("allTasksCaughtUp")}</p>
               )}
             </div>
           </div>
@@ -234,9 +247,9 @@ export default async function StudentDashboardPage() {
           {/* Classes & Feed */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold tracking-tight">My Classes</h3>
+              <h3 className="text-xl font-bold tracking-tight">{t("myClasses")}</h3>
               <button className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-1 hover:underline">
-                <span className="material-symbols-outlined text-sm">add</span> Join
+                <span className="material-symbols-outlined text-sm">add</span> {t("join")}
               </button>
             </div>
             <div className="space-y-4">
@@ -247,12 +260,12 @@ export default async function StudentDashboardPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-bold text-sm">{e.class.name}</p>
-                    <p className="text-xs text-on-surface-variant">{e.class.description || 'Active Class'}</p>
+                    <p className="text-xs text-on-surface-variant">{e.class.description || t("activeClass")}</p>
                   </div>
                   <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(0,110,47,0.4)]"></span>
                 </div>
               )) : (
-                <p className="text-sm text-on-surface-variant">You haven't joined any classes yet.</p>
+                <p className="text-sm text-on-surface-variant">{t("noClasses")}</p>
               )}
             </div>
           </div>
@@ -262,15 +275,15 @@ export default async function StudentDashboardPage() {
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>book</span>
-                Vocabulary Vault
+                {t("vocabularyVault")}
               </h3>
-              <span className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-md font-bold uppercase">New</span>
+              <span className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-md font-bold uppercase">{t("new")}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {["Dilemma", "Incorporate", "Resilient", "Eloquent"].map((word, i) => (
                 <div key={i} className="px-4 py-2 bg-white border border-outline-variant/30 rounded-xl hover:bg-primary-fixed transition-colors cursor-pointer group">
                   <p className="text-sm font-bold group-hover:text-primary">{word}</p>
-                  <p className="text-[10px] text-on-surface-variant">Word</p>
+                  <p className="text-[10px] text-on-surface-variant">{t("word")}</p>
                 </div>
               ))}
             </div>
@@ -279,8 +292,8 @@ export default async function StudentDashboardPage() {
           {/* Growth Widgets: Progress Pulse */}
           <div className="bg-inverse-surface text-white rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
             <div className="relative z-10">
-              <h3 className="font-bold text-lg">Progress Pulse</h3>
-              <p className="text-slate-400 text-xs mt-1">Average Score Last 6 Months</p>
+              <h3 className="font-bold text-lg">{t("progressPulse")}</h3>
+              <p className="text-slate-400 text-xs mt-1">{t("averageScore")}</p>
               <div className="mt-8 flex items-end gap-2 h-24">
                 {/* Minimal Sparkline (Mocked blocks) */}
                 {[12, 16, 20, 24, 20, 22].map((h, i) => (
@@ -302,7 +315,7 @@ export default async function StudentDashboardPage() {
 
           {/* Recent Notifications Feed */}
           <div className="space-y-4">
-            <h3 className="text-sm font-label font-bold uppercase tracking-widest text-on-surface-variant">Recent Activity</h3>
+            <h3 className="text-sm font-label font-bold uppercase tracking-widest text-on-surface-variant">{t("recentActivity")}</h3>
             <div className="space-y-4">
               {recentActivity.length > 0 ? recentActivity.map((sub: any) => (
                 <div key={sub.id} className="flex gap-4 p-4 hover:bg-surface-container-low rounded-2xl transition-colors">
@@ -310,15 +323,15 @@ export default async function StudentDashboardPage() {
                     <span className="material-symbols-outlined text-secondary text-xl">grade</span>
                   </div>
                   <div>
-                    <p className="text-sm font-bold">Assignment Submitted</p>
+                    <p className="text-sm font-bold">{t("assignmentSubmitted")}</p>
                     <p className="text-xs text-on-surface-variant mt-1">{sub.assignment.title}: <span className="font-bold text-secondary">{sub.score}%</span></p>
                     <p className="text-[10px] text-outline mt-1 uppercase">
-                      {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString() : 'Recently'}
+                      {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString(locale) : t("recently")}
                     </p>
                   </div>
                 </div>
               )) : (
-                <p className="text-sm text-on-surface-variant">No recent activity.</p>
+                <p className="text-sm text-on-surface-variant">{t("noRecentActivity")}</p>
               )}
             </div>
           </div>

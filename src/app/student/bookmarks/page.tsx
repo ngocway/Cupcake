@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
@@ -11,10 +10,16 @@ import {
   ChevronRight,
   Clock,
   User,
-  Search
+  Search,
+  Plus,
+  ArrowRight
 } from 'lucide-react';
+import { getTranslations, getLocale } from "next-intl/server";
+import BookmarksClient from "./BookmarksClient";
 
 export default async function BookmarksPage() {
+  const t = await getTranslations("student.bookmarks");
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user?.id) redirect('/student/login');
 
@@ -53,144 +58,62 @@ export default async function BookmarksPage() {
   const hasBookmarks = bookmarkedLessons.length > 0 || bookmarkedAssignments.length > 0;
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-on-surface">Của tôi & Yêu thích</h1>
-          <p className="text-on-surface-variant mt-1">Quản lý các bài học và bài tập bạn đã lưu lại.</p>
-        </div>
-        
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-outline group-focus-within:text-primary transition-colors">
-            <Search className="w-5 h-5" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div className="flex items-center gap-5 group">
+          <div className="p-5 bg-primary/10 rounded-[2rem] group-hover:scale-110 transition-transform duration-500">
+            <Bookmark className="w-10 h-10 text-primary fill-primary/20" />
           </div>
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">{t("title")}</h1>
+            <p className="text-slate-500 font-medium text-lg">{t("subtitle")}</p>
+          </div>
+        </div>
+        <div className="relative w-full md:w-96 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
           <input 
             type="text" 
-            placeholder="Tìm trong mục yêu thích..."
-            className="pl-12 pr-6 py-3 bg-surface-container-high rounded-2xl border-none focus:ring-2 focus:ring-primary w-full md:w-80 transition-all font-medium text-sm"
+            placeholder={t("searchPlaceholder")}
+            className="w-full pl-12 pr-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
           />
         </div>
       </div>
 
       {!hasBookmarks ? (
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-20 text-center border border-dashed border-outline-variant/50">
-          <div className="w-20 h-20 bg-surface-container rounded-3xl flex items-center justify-center mx-auto mb-6 text-outline">
-            <Bookmark className="w-10 h-10" />
+        <div className="bg-white/50 border-2 border-dashed border-slate-200 rounded-[3rem] p-20 text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
+          <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Plus className="w-12 h-12 text-slate-300" />
           </div>
-          <h3 className="text-xl font-bold text-on-surface">Bạn chưa lưu mục nào</h3>
-          <p className="text-on-surface-variant max-w-sm mx-auto mt-2">
-            Hãy khám phá các bài học và bài tập thú vị rồi nhấn icon bookmark để lưu lại xem sau nhé!
-          </p>
-          <div className="mt-8 flex justify-center gap-4">
-            <Link href="/student/lessons" className="px-6 py-3 bg-primary text-white rounded-2xl font-bold text-sm hover:scale-105 transition-transform">
-              Khám phá Lessons
+          <div className="max-w-md mx-auto space-y-4">
+            <h2 className="text-3xl font-black text-slate-800">{t("noBookmarks")}</h2>
+            <p className="text-slate-500 font-medium leading-relaxed italic">
+              {t("emptyStateMessage")}
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 pt-4">
+            <Link href="/library?type=LESSON" className="px-8 py-4 bg-primary text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 flex items-center gap-3">
+              {t("exploreLessons")}
+              <ArrowRight className="w-5 h-5" />
             </Link>
-            <Link href="/student/assignments" className="px-6 py-3 bg-surface-container text-on-surface rounded-2xl font-bold text-sm hover:bg-surface-container-high transition-colors">
-              Xem Assignments
+            <Link href="/library?type=ASSIGNMENT" className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-slate-900/20 flex items-center gap-3">
+              {t("viewAssignments")}
+              <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-12">
-          {/* Lessons Section */}
-          {bookmarkedLessons.length > 0 && (
-            <section className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                  <BookOpen className="w-[22px] h-[22px]" />
-                </div>
-                <h2 className="text-xl font-black tracking-tight">Bài học đã lưu ({bookmarkedLessons.length})</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {bookmarkedLessons.map((item) => (
-                  <Link 
-                    key={item.lessonId}
-                    href={`/student/lessons/${item.lessonId}`}
-                    className="group bg-white dark:bg-slate-900 rounded-[8px] border border-outline-variant/10 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
-                  >
-                    <div className="aspect-video bg-surface-container relative overflow-hidden rounded-[8px]">
-                       {/* Placeholder for lesson thumbnail */}
-                       <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                         <BookOpen className="w-[60px] h-[60px]" />
-                       </div>
-                       <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-black uppercase tracking-widest text-primary shadow-sm">
-                          Lesson
-                       </div>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <h4 className="font-bold text-lg line-clamp-2 leading-tight group-hover:text-primary transition-colors">
-                        {item.lesson.title}
-                      </h4>
-                      <div className="flex items-center gap-3 pt-2 border-t border-outline-variant/10">
-                        <div className="w-8 h-8 rounded-full bg-surface-container overflow-hidden">
-                          {item.lesson.teacher.image ? (
-                            <img src={item.lesson.teacher.image} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary text-xs font-bold">
-                              {item.lesson.teacher.name?.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-xs font-bold text-on-surface-variant">
-                          {item.lesson.teacher.name}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Assignments Section */}
-          {bookmarkedAssignments.length > 0 && (
-            <section className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
-                  <AssignmentIcon className="w-[22px] h-[22px]" />
-                </div>
-                <h2 className="text-xl font-black tracking-tight">Bài tập đã lưu ({bookmarkedAssignments.length})</h2>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {bookmarkedAssignments.map((item) => (
-                  <Link 
-                    key={item.assignmentId}
-                    href={`/student/assignments/${item.assignmentId}/run`}
-                    className="group bg-white dark:bg-slate-900 rounded-[8px] border border-outline-variant/10 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
-                  >
-                    <div className="aspect-video bg-surface-container relative overflow-hidden rounded-[8px]">
-                       {/* Placeholder for assignment thumbnail */}
-                       <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                         <AssignmentIcon className="w-[60px] h-[60px]" />
-                       </div>
-                       <div className="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[10px] font-black uppercase tracking-widest text-secondary shadow-sm">
-                          Exercise
-                       </div>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <h4 className="font-bold text-lg line-clamp-2 leading-tight group-hover:text-secondary transition-colors">
-                        {item.assignment.title}
-                      </h4>
-                      <div className="flex items-center gap-4 pt-2 border-t border-outline-variant/10">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant uppercase">
-                          <Clock className="w-[14px] h-[14px]" />
-                          {item.assignment.timeLimit ? `${item.assignment.timeLimit} Phút` : 'Không giới hạn'}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-on-surface-variant uppercase">
-                          <User className="w-[14px] h-[14px]" />
-                          {item.assignment.teacher.name}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+        <BookmarksClient
+          initialLessons={bookmarkedLessons.map(b => b.lesson)}
+          initialAssignments={bookmarkedAssignments.map(b => b.assignment)}
+          translations={{
+            savedLessons: t("savedLessons", { count: bookmarkedLessons.length }),
+            savedAssignments: t("savedAssignments", { count: bookmarkedAssignments.length }),
+            minutes: t("minutes"),
+            unlimited: t("unlimited"),
+            assignmentLabel: t("assignmentLabel")
+          }}
+        />
       )}
     </div>
   );
