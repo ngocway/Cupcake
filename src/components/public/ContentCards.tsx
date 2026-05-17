@@ -20,7 +20,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-[1.5rem] bg-surface-container shadow-xl border-2 border-primary/5">
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-primary/5">
         <Image 
           src={thumbnailSrc} 
           alt={item.title} 
@@ -47,7 +47,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
       </div>
 
       {/* Overlapping Content Box */}
-      <div className="relative -mt-10 mx-3 bg-white dark:bg-slate-900 rounded-[1.5rem] p-6 shadow-2xl z-20 border border-primary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-primary/10">
+      <div className="relative -mt-10 mx-3 bg-white dark:bg-slate-900 rounded-lg p-6 shadow-2xl z-20 border border-primary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-primary/10">
         {/* Teacher Info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 relative">
@@ -111,7 +111,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-[1.5rem] bg-surface-container shadow-xl border-2 border-secondary/5">
+      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5">
         <Image 
           src={thumb} 
           alt={item.title} 
@@ -138,7 +138,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
       </div>
 
       {/* Overlapping Content Box */}
-      <div className="relative -mt-10 mx-3 bg-white dark:bg-slate-900 rounded-[1.5rem] p-6 shadow-2xl z-20 border border-secondary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-secondary/10">
+      <div className="relative -mt-10 mx-3 bg-white dark:bg-slate-900 rounded-lg p-6 shadow-2xl z-20 border border-secondary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-secondary/10">
         {/* Teacher Info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-secondary/20 relative">

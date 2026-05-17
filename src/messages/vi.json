@@ -438,7 +438,8 @@
     "instructor": "Giảng viên",
     "hasVideo": "Có video",
     "hasAudio": "Có audio",
-    "whatToLearn": "Bạn muốn học gì?"
+    "whatToLearn": "Bạn muốn học gì?",
+    "whoAreYou": "Xin chào, bạn là...."
   },
   "errors": {
     "notFound": "Không tìm thấy trang",

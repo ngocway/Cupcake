@@ -4,11 +4,28 @@ import { LandingPage } from "@/components/public/LandingPage"
 import { HomeShell } from "./_components/HomeShell"
 import { HomeSidebar } from "./_components/HomeSidebar"
 import { getCachedCategoryTree, getCachedAssignments, getCachedLessons } from "@/lib/cached-queries"
+import { cookies } from "next/headers"
+import { auth } from "@/auth"
+import prisma from "@/lib/prisma"
 
 export const revalidate = 10; // ISR: Revalidate every 10 seconds
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
+
+  const cookieStore = await cookies()
+  let initialUserType = cookieStore.get("user_type")?.value || "adults"
+
+  const session = await auth()
+  if (session?.user?.id) {
+    const user = await prisma.user.findUnique({ 
+      where: { id: session.user.id },
+      select: { userType: true }
+    })
+    if (user?.userType) {
+      initialUserType = user.userType
+    }
+  }
 
   // FAST FIRST LOAD: Only fetch newest variants on the server.
   // Popular data is pre-fetched client-side in the background (via /api/feed)
@@ -42,6 +59,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 categoryTree: categoryTreePromise,
               }}
               searchParams={params}
+              initialUserType={initialUserType}
             />
           </Suspense>
         </main>

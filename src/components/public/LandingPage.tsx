@@ -1,14 +1,15 @@
 
 "use client"
-import { use, useState, Suspense, useEffect } from "react"
+import { use, useState, Suspense, useEffect, useTransition } from "react"
 import { useSession } from "next-auth/react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { VisualCategoryMenu } from "@/components/public/VisualCategoryMenu"
 import { LoadingBar } from "@/components/public/TopProgressBar"
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations } from "next-intl"
 import { TypingText } from "@/components/public/TypingText"
+import { setUserTypePreference } from "@/actions/user-preferences-actions"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface Props {
     categoryTree: Promise<any[]>
   }
   searchParams: any
+  initialUserType?: string
 }
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -110,9 +112,11 @@ function LessonPopularList({ isLoggedIn }: { isLoggedIn: boolean }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function LandingPage({ promises, searchParams }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "adults" }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const isLoggedIn = !!session
   const t = useTranslations("home")
   const nt = useTranslations("nav")
@@ -124,7 +128,45 @@ export function LandingPage({ promises, searchParams }: Props) {
   )
 
   // User type selection (Kids, Teens, Adults, Business)
-  const [userType, setUserType] = useState<string>("adults")
+  const [userType, setUserType] = useState<string>(initialUserType)
+
+  const handleUserTypeChange = (typeId: string) => {
+    if (userType === typeId) return; // Không làm gì nếu click lại cái đang chọn
+    
+    setUserType(typeId)
+    // Save preference to Cookie and Database in the background
+    startTransition(() => {
+      setUserTypePreference(typeId)
+    })
+    
+    // Tăng delay lên 300ms để đợi hiệu ứng phóng to Avatar (500ms) diễn ra được một nửa,
+    // tránh việc mắt người dùng phải theo dõi 2 chuyển động cùng lúc gây cảm giác giật.
+    setTimeout(() => {
+      const target = document.getElementById('learn-section');
+      if (!target) return;
+      
+      const targetPosition = target.getBoundingClientRect().top - 80; // Trừ hao header
+      const startPosition = window.scrollY;
+      const duration = 700; // Cuộn siêu mượt trong 0.7s
+      let startTime: number | null = null;
+
+      const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const animation = (currentTime: number) => {
+        if (startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const progress = Math.min(timeElapsed / duration, 1);
+        
+        window.scrollTo(0, startPosition + targetPosition * easeInOutCubic(progress));
+
+        if (timeElapsed < duration) {
+          requestAnimationFrame(animation);
+        }
+      };
+
+      requestAnimationFrame(animation);
+    }, 300);
+  }
 
   const setPopularExercises = useContentStore(s => s.setPopularExercises)
   const setPopularLessons   = useContentStore(s => s.setPopularLessons)
@@ -184,7 +226,7 @@ export function LandingPage({ promises, searchParams }: Props) {
           <div className="flex flex-col gap-12">
             <div className="flex flex-col gap-8">
               <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
-                Tôi là
+                {t("whoAreYou")}
               </h2>
               <div className="flex flex-wrap gap-8 items-center pl-12 md:pl-20 py-4">
                 {[
@@ -197,7 +239,7 @@ export function LandingPage({ promises, searchParams }: Props) {
                   return (
                     <button
                       key={type.id}
-                      onClick={() => setUserType(type.id)}
+                      onClick={() => handleUserTypeChange(type.id)}
                       className={`group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none`}
                     >
                       <div className={`relative w-[100px] h-[100px] rounded-full overflow-hidden transition-all duration-500 border-[6px] ${
@@ -222,7 +264,7 @@ export function LandingPage({ promises, searchParams }: Props) {
               </div>
             </div>
 
-            <div className="text-lg md:text-xl text-primary/80 max-w-xl leading-relaxed font-black h-12 flex items-center">
+            <div id="learn-section" className="text-lg md:text-xl text-primary/80 max-w-xl leading-relaxed font-black h-12 flex items-center scroll-mt-32">
               <TypingText text={t("whatToLearn")} speed={150} />
             </div>
           </div>
@@ -261,16 +303,16 @@ export function LandingPage({ promises, searchParams }: Props) {
           </div>
 
           {/* Floating Eco Elements */}
-          <div className="absolute -bottom-8 -right-8 z-20 w-32 h-32 text-primary/40 animate-leaf-sway">
-            <span className="material-symbols-outlined !text-[120px]" style={{ fontVariationSettings: "'FILL' 1" }}>eco</span>
-          </div>
+
           <div className="absolute -top-12 -left-8 z-0 w-24 h-24 bg-secondary/20 blur-3xl rounded-full" />
           
-          {/* Small Bird Mascot Placeholder */}
-          <div className="absolute -top-10 right-10 z-20 animate-float">
-            <div className="w-16 h-16 bg-sky-400 rounded-full flex items-center justify-center shadow-lg">
-              <span className="material-symbols-outlined text-white">flutter_dash</span>
-            </div>
+          {/* Small Bird Mascot */}
+          <div className="absolute -top-12 right-6 z-20 animate-float">
+            <img 
+              src="/images/bird.png" 
+              alt="Mascot" 
+              className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-xl hover:scale-110 transition-transform duration-300 cursor-pointer"
+            />
           </div>
         </div>
       </section>

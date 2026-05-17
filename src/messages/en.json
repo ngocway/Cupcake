@@ -438,7 +438,8 @@
     "instructor": "Instructor",
     "hasVideo": "Has video",
     "hasAudio": "Has audio",
-    "whatToLearn": "What do you want to learn?"
+    "whatToLearn": "What do you want to learn?",
+    "whoAreYou": "Tell us who you are"
   },
   "errors": {
     "notFound": "Page not found",
