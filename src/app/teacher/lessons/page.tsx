@@ -285,7 +285,12 @@ export default function LessonsPage() {
             setShowAiModal(false);
             setPendingAction(null);
           }} 
-          onSuccess={fetchLessons} 
+          onSuccess={(newId) => {
+            fetchLessons();
+            if (newId) {
+              setEditingId(newId);
+            }
+          }} 
         />
       )}
     </div>

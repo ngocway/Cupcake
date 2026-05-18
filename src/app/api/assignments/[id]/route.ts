@@ -45,6 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         tags: baseAssignment.tags || "",
         instructions: baseAssignment.instructions || null,
         categories: baseAssignment.categories,
+        targetAudiences: baseAssignment.targetAudiences || [],
         questions: questions.map(q => {
           // Parse the stringified JSON from the database with safety
           let parsed = {};

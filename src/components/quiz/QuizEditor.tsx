@@ -379,37 +379,44 @@ export function QuizEditor() {
     if (activeId === id) setActiveId(newQ[0].id);
   };
 
-  const handleAIGeneratedQuestions = (generatedData: any[], type: QuestionType) => {
-    const aiQuestions = generatedData.map((gq, i) => {
-      const id = uuidv4();
-      let content: any = { ...gq };
-      
-      // If MULTIPLE_CHOICE, Gemini returns options directly, but each option might need a generated string ID
-      if (type === 'MULTIPLE_CHOICE' && content.options) {
-        content.options = content.options.map((opt: any) => ({
-          ...opt,
-          id: uuidv4()
-        }));
-        content.allowMultipleAnswers = content.options.filter((o:any)=>o.isCorrect).length > 1;
-      }
-      
-      if (type === 'TRUE_FALSE') {
-          content.displayStyle = 'TRUE_FALSE';
-      }
+  const handleAIGeneratedQuestions = (generatedData: { type: QuestionType, questions: any[] }[]) => {
+    const aiQuestions = generatedData.flatMap(({ type, questions }) => {
+      return questions.map((gq: any) => {
+        const id = uuidv4();
+        let content: any = { ...gq };
+        
+        // If MULTIPLE_CHOICE, Gemini returns options directly, but each option might need a generated string ID
+        if (type === 'MULTIPLE_CHOICE' && content.options) {
+          content.options = content.options.map((opt: any) => ({
+            ...opt,
+            id: uuidv4()
+          }));
+          content.allowMultipleAnswers = content.options.filter((o:any)=>o.isCorrect).length > 1;
+        }
+        
+        if (type === 'TRUE_FALSE') {
+            content.displayStyle = 'TRUE_FALSE';
+        }
 
-      const explanation = content.explanation;
-      delete content.explanation;
+        const explanation = content.explanation;
+        delete content.explanation;
 
-      return {
-        id,
-        type,
-        points: 1.0,
-        isBanked: true,
-        isAiGenerated: true,
-        explanation: explanation || '',
-        content
-      };
+        return {
+          id,
+          type,
+          points: 1.0,
+          isBanked: true,
+          isAiGenerated: true,
+          explanation: explanation || '',
+          content
+        };
+      });
     });
+
+    if (aiQuestions.length === 0) {
+      setShowAIModal(false);
+      return;
+    }
 
     setQuestions((prev) => {
       // If there's only 1 question and it's a completely blank template
@@ -726,7 +733,7 @@ export function QuizEditor() {
 
       <div className="flex flex-1 w-full px-6 py-8 gap-8">
         {/* Sidebar */}
-        <aside className="w-1/5 shrink-0 flex flex-col gap-4">
+        <aside className="w-1/5 shrink-0 flex flex-col gap-4 sticky top-[80px] h-[calc(100vh-120px)]">
           <div className="flex flex-col gap-2 mb-2">
             <button 
               onClick={() => setShowAIModal(true)}
@@ -755,7 +762,7 @@ export function QuizEditor() {
             <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Danh sách câu hỏi</h3>
             <span className="text-[10px] font-bold bg-slate-200 px-2 py-0.5 rounded text-slate-600">Tổng: {questions.length}</span>
           </div>
-          <div className="flex flex-col gap-2 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar pr-2">
+          <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
             <DndContext 
               sensors={sensors}
               collisionDetection={closestCenter}

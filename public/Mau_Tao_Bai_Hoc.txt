@@ -1,0 +1,33 @@
+[THONG TIN]
+Tieu de: Bài học Tiếng Anh số 1
+Mon hoc: Tiếng Anh
+Cap do: Lớp 10
+Doi tuong: Teens
+Mo ta: Bài học mẫu tạo từ file TXT.
+
+[BAI DOC]
+Welcome to the English class. Today we will learn about present continuous tense.
+She is going to school.
+
+[CAU HOI 1]
+Loai: TRAC NGHIEM
+Noi dung: She ___ to school every day.
+Diem: 1
+Dap an dung: goes
+Dap an sai: go
+Dap an sai: is going
+Dap an sai: gone
+Giai thich: Chủ ngữ "She" là ngôi thứ 3 số ít.
+
+[CAU HOI 2]
+Loai: DUNG SAI
+Noi dung: Mặt trời mọc ở hướng Tây.
+Diem: 1
+Dap an dung: Sai
+Giai thich: Mặt trời luôn mọc ở hướng Đông.
+
+[CAU HOI 3]
+Loai: DIEN TU
+Noi dung: I enjoy {{playing}} soccer in the morning.
+Diem: 1
+Giai thich: Sau enjoy dùng V-ing.

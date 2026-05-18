@@ -130,11 +130,11 @@ export function ReadingExerciseBuilder({
       const editor = document.getElementById('rich-text-editor');
       const contentHtml = editor?.innerHTML || '';
       
-      await autoSaveMaterial({
+      const currentQuestionsHash = JSON.stringify(questions);
+      
+      const payload: any = {
         id: assignmentId || initialId || 'clp_reading_001',
         title,
-        questions: questions, 
-        readingText: contentHtml,
         videoUrl: videoUrl,
         audioUrl: audioUrl,
         subject,
@@ -145,7 +145,25 @@ export function ReadingExerciseBuilder({
         categoryIds,
         targetAudiences: targetAudiences,
         thumbnail
-      });
+      };
+
+      if (contentHtml !== lastSavedContentHtml) {
+        payload.readingText = contentHtml;
+      }
+      
+      if (currentQuestionsHash !== lastSavedQuestionsHash) {
+        payload.questions = questions.map(q => ({
+          ...q,
+          content: {
+            ...(typeof q.content === 'object' ? q.content : {}),
+            questionText: q.questionText,
+            options: q.options,
+            isTrue: q.type === 'TRUE_FALSE' ? q.correctAnswer === 'true' : undefined
+          }
+        }));
+      }
+
+      await autoSaveMaterial(payload);
       setSavingStatus('saved');
       
       // Smart redirect
@@ -173,6 +191,8 @@ export function ReadingExerciseBuilder({
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [lastSavedContentHtml, setLastSavedContentHtml] = useState<string | null>(null);
+  const [lastSavedQuestionsHash, setLastSavedQuestionsHash] = useState<string | null>(null);
   
   // Metadata States
   const [subject, setSubject] = useState('Khác');
@@ -357,6 +377,7 @@ export function ReadingExerciseBuilder({
             const editor = document.getElementById('rich-text-editor');
             if (editor) {
               editor.innerHTML = data.assignment.readingText;
+              setLastSavedContentHtml(data.assignment.readingText);
               // Auto-enable vocab if markers exist
               const hasMarkers = editor.querySelectorAll('.custom-vocab-marker').length > 0;
               if (hasMarkers) setVocabEnabled(true);
@@ -365,6 +386,7 @@ export function ReadingExerciseBuilder({
             // Ensure editor is empty for new materials
             const editor = document.getElementById('rich-text-editor');
             if (editor) editor.innerHTML = '';
+            setLastSavedContentHtml('');
           }
           if (data.assignment.subject) setSubject(data.assignment.subject);
           if (data.assignment.gradeLevel) setGradeLevel(data.assignment.gradeLevel);
@@ -384,6 +406,12 @@ export function ReadingExerciseBuilder({
           }
           setThumbnail(data.assignment.thumbnail || null);
           setMaterialType(data.assignment.materialType || 'READING');
+          
+          if (data.assignment.questions) {
+            setLastSavedQuestionsHash(JSON.stringify(data.assignment.questions));
+          } else {
+            setLastSavedQuestionsHash(JSON.stringify([]));
+          }
         }
       } catch (err) {
         console.error('Initial fetch failed:', err);
@@ -486,19 +514,11 @@ export function ReadingExerciseBuilder({
       const editor = document.getElementById('rich-text-editor');
       const contentHtml = editor?.innerHTML || '';
       
-      await autoSaveMaterial({
+      const currentQuestionsHash = JSON.stringify(questions);
+      
+      const payload: any = {
         id: idToSave,
         title: customTitle || title,
-        questions: questions.map(q => ({
-          ...q,
-          content: {
-            ...(typeof q.content === 'object' ? q.content : {}),
-            questionText: q.questionText,
-            options: q.options,
-            isTrue: q.type === 'TRUE_FALSE' ? q.correctAnswer === 'true' : undefined
-          }
-        })), 
-        readingText: contentHtml,
         videoUrl: customVideoUrl !== undefined ? customVideoUrl : videoUrl,
         audioUrl: customAudioUrl !== undefined ? customAudioUrl : audioUrl,
         subject,
@@ -508,10 +528,30 @@ export function ReadingExerciseBuilder({
         tags: tags.join(','),
         categoryIds,
         targetAudiences: targetAudiences
-      });
+      };
+
+      if (contentHtml !== lastSavedContentHtml) {
+        payload.readingText = contentHtml;
+      }
+
+      if (currentQuestionsHash !== lastSavedQuestionsHash) {
+        payload.questions = questions.map(q => ({
+          ...q,
+          content: {
+            ...(typeof q.content === 'object' ? q.content : {}),
+            questionText: q.questionText,
+            options: q.options,
+            isTrue: q.type === 'TRUE_FALSE' ? q.correctAnswer === 'true' : undefined
+          }
+        }));
+      }
+
+      await autoSaveMaterial(payload);
       
       setSavingStatus('saved');
       setLastSaved(new Date());
+      setLastSavedContentHtml(contentHtml);
+      setLastSavedQuestionsHash(currentQuestionsHash);
       setTimeout(() => setSavingStatus('idle'), 2000);
     } catch (error) {
       console.error('Save failed:', error);
@@ -829,7 +869,7 @@ export function ReadingExerciseBuilder({
             <span className="text-slate-500 font-label text-xs">Unit 4: Modern Ethics</span>
           </div>
         </div>
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-6">
           <button 
             onClick={() => setActiveTab('passage')}
             className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${

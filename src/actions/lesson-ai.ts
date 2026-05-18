@@ -386,3 +386,94 @@ export async function quickGenerateLesson() {
     return { error: "Failed." };
   }
 }
+
+export interface ParsedLessonData {
+  title: string;
+  subject: string;
+  gradeLevel: string;
+  targetAudience: string;
+  shortDescription: string;
+  tags?: string;
+  passage: string;
+  questions: {
+    type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CLOZE_TEST";
+    content: any;
+    explanation: string;
+    points: number;
+  }[];
+}
+
+export async function saveParsedLesson(data: ParsedLessonData) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Unauthorized" };
+
+  try {
+    const resultId = await prisma.$transaction(async (tx) => {
+      let passageHtml = data.passage || "";
+      if (passageHtml && !/<[a-z][\s\S]*>/i.test(passageHtml)) {
+        passageHtml = passageHtml.split('\n\n').map(p => `<p>${p}</p>`).join('');
+      }
+
+      let matchedCategory = null;
+      if (data.subject) {
+        matchedCategory = await tx.category.findFirst({
+          where: { name: { equals: data.subject, mode: 'insensitive' } },
+          select: { id: true }
+        });
+      }
+
+      const assignment = await tx.assignment.create({
+        data: {
+          title: data.title || "Untitled Lesson",
+          shortDescription: data.shortDescription,
+          readingText: passageHtml,
+          gradeLevel: data.gradeLevel || "Khác",
+          subject: data.subject || "Khác",
+          materialType: "READING",
+          status: "DRAFT",
+          teacherId: session.user.id,
+          targetAudiences: data.targetAudience ? [data.targetAudience] : [],
+          tags: data.tags || "",
+          categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+        }
+      });
+
+      await tx.lesson.create({
+        data: {
+          title: assignment.title,
+          description: assignment.shortDescription,
+          teacherId: session.user.id,
+          assignmentId: assignment.id,
+          targetAudiences: data.targetAudience ? [data.targetAudience] : [],
+          categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+        }
+      });
+
+      if (data.questions && data.questions.length > 0) {
+        const questionsData = data.questions.map((q, idx) => ({
+          assignmentId: assignment.id,
+          type: q.type as any,
+          orderIndex: idx,
+          points: q.points || 1.0,
+          explanation: q.explanation || "",
+          content: JSON.stringify(q.content),
+          isAiGenerated: false
+        }));
+
+        await tx.question.createMany({
+          data: questionsData
+        });
+      }
+
+      return assignment.id;
+    });
+
+    revalidatePath("/teacher/lessons");
+    revalidatePath("/teacher/materials");
+    return { success: true, id: resultId };
+  } catch (err: any) {
+    console.error("Save Parsed Lesson Error:", err);
+    return { error: err.message };
+  }
+}
+

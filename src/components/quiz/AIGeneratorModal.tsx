@@ -6,22 +6,41 @@ import { generateQuizQuestions } from '@/actions/ai-quiz-generator';
 
 interface AIGeneratorModalProps {
   onClose: () => void;
-  onQuestionsGenerated: (questions: any[], type: QuestionType) => void;
+  onQuestionsGenerated: (generatedData: { type: QuestionType, questions: any[] }[]) => void;
 }
 
 export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorModalProps) {
   const [topic, setTopic] = useState('');
-  const [count, setCount] = useState<number>(5);
-  const [type, setType] = useState<QuestionType>('MULTIPLE_CHOICE');
+  const [distribution, setDistribution] = useState<Record<QuestionType, number>>({
+    MULTIPLE_CHOICE: 5,
+    TRUE_FALSE: 0,
+    CLOZE_TEST: 0,
+    MATCHING: 0,
+    REORDER: 0
+  });
   const [difficulty, setDifficulty] = useState('Dễ (Cơ bản)');
   const [language, setLanguage] = useState('VI');
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
 
+  const totalCount = Object.values(distribution).reduce((acc, val) => acc + (val || 0), 0);
+
+  const handleDistributionChange = (type: QuestionType, delta: number) => {
+    setDistribution(prev => {
+      const newVal = (prev[type] || 0) + delta;
+      if (newVal < 0) return prev;
+      return { ...prev, [type]: newVal };
+    });
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       setError('Vui lòng nhập chủ đề hoặc từ khóa.');
+      return;
+    }
+    if (totalCount === 0) {
+      setError('Vui lòng chọn số lượng câu hỏi ít nhất là 1.');
       return;
     }
     
@@ -29,19 +48,31 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
     setError('');
     
     try {
-      const data = await generateQuizQuestions({
-        topic,
-        count,
-        type,
-        difficulty,
-        language
-      });
+      const promises = [];
+      const types = Object.keys(distribution) as QuestionType[];
       
-      if (data && data.questions) {
-        onQuestionsGenerated(data.questions, type);
-      } else {
-        throw new Error('Dữ liệu trả về bị lỗi. Vui lòng thử lại.');
+      for (const type of types) {
+        if (distribution[type] > 0) {
+          promises.push(
+            generateQuizQuestions({
+              topic,
+              count: distribution[type],
+              type,
+              difficulty,
+              language
+            }).then(data => ({ type, data }))
+          );
+        }
       }
+      
+      const results = await Promise.all(promises);
+      
+      const validResults = results.map(r => ({
+        type: r.type,
+        questions: r.data.questions || []
+      }));
+      
+      onQuestionsGenerated(validResults);
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra khi tạo câu hỏi.');
     } finally {
@@ -91,34 +122,54 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Count */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Số lượng câu hỏi</label>
-              <select 
-                value={count}
-                onChange={(e) => setCount(parseInt(e.target.value))}
-                className="w-full p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 outline-none text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none"
-              >
-                <option value={3}>3 câu</option>
-                <option value={5}>5 câu</option>
-                <option value={10}>10 câu</option>
-                <option value={15}>15 câu</option>
-              </select>
-            </div>
+            {/* Distribution */}
+            <div className="flex flex-col gap-4 sm:col-span-2 mb-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Phân bổ câu hỏi (Tổng: {totalCount} câu)</label>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Trắc nghiệm */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[20px]">🔘</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Trắc nghiệm</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => handleDistributionChange('MULTIPLE_CHOICE', -1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">-</button>
+                    <span className="text-sm font-bold w-4 text-center text-slate-700 dark:text-slate-300">{distribution.MULTIPLE_CHOICE}</span>
+                    <button type="button" onClick={() => handleDistributionChange('MULTIPLE_CHOICE', 1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">+</button>
+                  </div>
+                </div>
 
-            {/* Type */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Loại bài tập</label>
-              <select 
-                value={type}
-                onChange={(e) => setType(e.target.value as QuestionType)}
-                className="w-full p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 outline-none text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none"
-              >
-                <option value="MULTIPLE_CHOICE">Trắc nghiệm</option>
-                <option value="TRUE_FALSE">Đúng / Sai</option>
-                <option value="CLOZE_TEST" disabled>Điền từ (Đang cập nhật)</option>
-                <option value="MATCHING" disabled>Nối cặp (Đang cập nhật)</option>
-              </select>
+                {/* Đúng/Sai */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[20px]">✅</span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Đúng / Sai</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => handleDistributionChange('TRUE_FALSE', -1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">-</button>
+                    <span className="text-sm font-bold w-4 text-center text-slate-700 dark:text-slate-300">{distribution.TRUE_FALSE}</span>
+                    <button type="button" onClick={() => handleDistributionChange('TRUE_FALSE', 1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">+</button>
+                  </div>
+                </div>
+
+                {/* Các loại khác - Disabled */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-800/20 opacity-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[20px]">📝</span>
+                    <span className="text-sm font-medium text-slate-500">Điền từ <span className="text-[10px] ml-1 bg-slate-200 dark:bg-gray-700 px-1 py-0.5 rounded">Sắp có</span></span>
+                  </div>
+                  <div className="text-sm font-bold w-4 text-center text-slate-500">0</div>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-800/20 opacity-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[20px]">🔗</span>
+                    <span className="text-sm font-medium text-slate-500">Nối cặp <span className="text-[10px] ml-1 bg-slate-200 dark:bg-gray-700 px-1 py-0.5 rounded">Sắp có</span></span>
+                  </div>
+                  <div className="text-sm font-bold w-4 text-center text-slate-500">0</div>
+                </div>
+              </div>
             </div>
 
             {/* Difficulty */}
