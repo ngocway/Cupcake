@@ -16,6 +16,9 @@ export default function LessonsPage() {
   const [showTrash, setShowTrash] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Custom Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -30,10 +33,12 @@ export default function LessonsPage() {
     message: ''
   });
 
-  const fetchLessons = async () => {
-    setLoading(true);
+  const fetchLessons = async (pageNum: number = 1, append: boolean = false) => {
+    if (pageNum === 1) setLoading(true);
+    else setIsLoadingMore(true);
+
     try {
-      const res = await fetch(`/api/lessons?trash=${showTrash}&t=${Date.now()}`);
+      const res = await fetch(`/api/lessons?trash=${showTrash}&page=${pageNum}&limit=12&t=${Date.now()}`);
       const data = await res.json();
       
       const normalizedLessons = (data.lessons || []).map((l: any) => ({
@@ -51,18 +56,31 @@ export default function LessonsPage() {
         publicSubmissionCount: l.publicSubmissionCount ?? l.assignment?.publicSubmissionCount ?? 0,
         createdAt: l.createdAt
       }));
+      if (append) {
+        setLessons(prev => [...prev, ...normalizedLessons]);
+      } else {
+        setLessons(normalizedLessons);
+      }
       
-      setLessons(normalizedLessons);
+      setHasMore(data.lessons.length === 12);
+      setPage(pageNum);
     } catch (err) {
       console.error('Failed to fetch lessons:', err);
     } finally {
       setLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchLessons();
+    fetchLessons(1, false);
   }, [showTrash]);
+
+  const loadMore = () => {
+    if (!loading && !isLoadingMore && hasMore) {
+      fetchLessons(page + 1, true);
+    }
+  };
 
   const handleCreate = async () => {
     setIsCreating(true);
@@ -196,6 +214,18 @@ export default function LessonsPage() {
           </>
         )}
       </div>
+
+      {hasMore && !loading && (
+        <div className="flex justify-center mt-6">
+          <button 
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl font-bold transition-all"
+          >
+            {isLoadingMore ? 'Đang tải...' : 'Tải thêm'}
+          </button>
+        </div>
+      )}
 
       {selectedIds.length > 0 && (
         <div 

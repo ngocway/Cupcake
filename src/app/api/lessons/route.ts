@@ -11,44 +11,62 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const isTrash = searchParams.get('trash') === 'true';
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '12', 10);
+    const skip = (page - 1) * limit;
 
-    const lessons = await prisma.lesson.findMany({
-      where: {
-        teacherId: session.user.id,
-        deletedAt: isTrash ? { not: null } : null,
-      },
-      include: {
-        teacher: {
-          select: {
-            name: true
+    const whereClause = {
+      teacherId: session.user.id,
+      deletedAt: isTrash ? { not: null } : null,
+    };
+
+    const [lessons, total] = await Promise.all([
+      prisma.lesson.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          videoUrl: true,
+          viewsCount: true,
+          createdAt: true,
+          isPremium: true,
+          price: true,
+          teacher: {
+            select: {
+              name: true
+            }
+          },
+          assignment: {
+            select: {
+              id: true,
+              materialType: true,
+              status: true,
+              subject: true,
+              gradeLevel: true,
+              thumbnail: true,
+              tags: true,
+              publicSubmissionCount: true,
+              _count: {
+                select: {
+                  questions: true,
+                  targetClasses: true
+                }
+              }
+            }
+          },
+          _count: {
+            select: { 
+              reviews: true
+            },
           }
         },
-        assignment: {
-            select: {
-                id: true,
-                materialType: true,
-                status: true,
-                subject: true,
-                gradeLevel: true,
-                thumbnail: true,
-                tags: true,
-                publicSubmissionCount: true,
-                _count: {
-                  select: {
-                    questions: true,
-                    targetClasses: true
-                  }
-                }
-            }
-        },
-        _count: {
-          select: { 
-            reviews: true
-          },
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.lesson.count({ where: whereClause })
+    ]);
 
     return NextResponse.json({
       lessons: lessons.map(l => ({
@@ -72,7 +90,9 @@ export async function GET(req: NextRequest) {
         isPremium: l.isPremium,
         price: l.price
       })),
-      total: lessons.length,
+      total,
+      page,
+      limit,
     });
   } catch (err) {
     console.error('[GET /api/lessons]', err);
