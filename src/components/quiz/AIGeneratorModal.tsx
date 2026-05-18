@@ -6,7 +6,7 @@ import { generateQuizQuestions } from '@/actions/ai-quiz-generator';
 
 interface AIGeneratorModalProps {
   onClose: () => void;
-  onQuestionsGenerated: (generatedData: { type: QuestionType, questions: any[] }[]) => void;
+  onQuestionsGenerated: (generatedData: { type: QuestionType, questions: any[] }[], metadata?: any) => void;
 }
 
 export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorModalProps) {
@@ -51,6 +51,7 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
       const promises = [];
       const types = Object.keys(distribution) as QuestionType[];
       
+      let isFirstType = true;
       for (const type of types) {
         if (distribution[type] > 0) {
           promises.push(
@@ -59,9 +60,11 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
               count: distribution[type],
               type,
               difficulty,
-              language
+              language,
+              includeMetadata: isFirstType
             }).then(data => ({ type, data }))
           );
+          isFirstType = false;
         }
       }
       
@@ -72,7 +75,15 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
         questions: r.data.questions || []
       }));
       
-      onQuestionsGenerated(validResults);
+      const firstData = results[0]?.data || {};
+      const metadata = {
+        title: firstData.title,
+        instructions: firstData.instructions,
+        shortDescription: firstData.shortDescription,
+        targetAudiences: firstData.targetAudiences
+      };
+      
+      onQuestionsGenerated(validResults, metadata);
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra khi tạo câu hỏi.');
     } finally {
@@ -153,21 +164,30 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
                   </div>
                 </div>
 
-                {/* Các loại khác - Disabled */}
-                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-800/20 opacity-50">
+                {/* Điền từ */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50">
                   <div className="flex items-center gap-3">
                     <span className="text-[20px]">📝</span>
-                    <span className="text-sm font-medium text-slate-500">Điền từ <span className="text-[10px] ml-1 bg-slate-200 dark:bg-gray-700 px-1 py-0.5 rounded">Sắp có</span></span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Điền từ</span>
                   </div>
-                  <div className="text-sm font-bold w-4 text-center text-slate-500">0</div>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => handleDistributionChange('CLOZE_TEST', -1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">-</button>
+                    <span className="text-sm font-bold w-4 text-center text-slate-700 dark:text-slate-300">{distribution.CLOZE_TEST}</span>
+                    <button type="button" onClick={() => handleDistributionChange('CLOZE_TEST', 1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">+</button>
+                  </div>
                 </div>
                 
-                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-100 dark:bg-gray-800/20 opacity-50">
+                {/* Nối cặp */}
+                <div className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50">
                   <div className="flex items-center gap-3">
                     <span className="text-[20px]">🔗</span>
-                    <span className="text-sm font-medium text-slate-500">Nối cặp <span className="text-[10px] ml-1 bg-slate-200 dark:bg-gray-700 px-1 py-0.5 rounded">Sắp có</span></span>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Nối cặp</span>
                   </div>
-                  <div className="text-sm font-bold w-4 text-center text-slate-500">0</div>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={() => handleDistributionChange('MATCHING', -1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">-</button>
+                    <span className="text-sm font-bold w-4 text-center text-slate-700 dark:text-slate-300">{distribution.MATCHING}</span>
+                    <button type="button" onClick={() => handleDistributionChange('MATCHING', 1)} className="size-8 flex items-center justify-center rounded-full bg-slate-200 dark:bg-gray-700 hover:bg-slate-300 transition-colors text-slate-600 dark:text-slate-300">+</button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -8,13 +8,15 @@ export const generateQuizQuestions = async ({
   count,
   type,
   difficulty,
-  language
+  language,
+  includeMetadata
 }: {
   topic: string;
   count: number;
   type: QuestionType;
   difficulty: string;
   language: string;
+  includeMetadata?: boolean;
 }) => {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("Lỗi Server: Chưa cấu hình OPENAI_API_KEY trong file .env");
@@ -26,7 +28,6 @@ export const generateQuizQuestions = async ({
     let formatInstructions = "";
     if (type === 'MULTIPLE_CHOICE') {
       formatInstructions = `
-      {
         "questions": [
           {
             "questionText": "string",
@@ -35,26 +36,57 @@ export const generateQuizQuestions = async ({
             ],
             "explanation": "string"
           }
-        ]
-      }`;
+        ]`;
     } else if (type === 'TRUE_FALSE') {
       formatInstructions = `
-      {
         "questions": [
           {
             "statement": "string",
             "isTrue": boolean,
             "explanation": "string"
           }
-        ]
-      }`;
+        ]`;
+    } else if (type === 'CLOZE_TEST') {
+      formatInstructions = `
+        "questions": [
+          {
+            "textWithBlanks": "string containing words to fill in wrapped with {{ and }}. Example: The capital of Vietnam is {{Hanoi}}.",
+            "caseSensitive": boolean,
+            "explanation": "string"
+          }
+        ]`;
+    } else if (type === 'MATCHING') {
+      formatInstructions = `
+        "questions": [
+          {
+            "instruction": "string describing the matching task",
+            "presentationType": "QUESTION_ANSWER",
+            "pairs": [
+              {
+                "leftText": "string",
+                "rightText": "string"
+              }
+            ],
+            "explanation": "string"
+          }
+        ]`;
     } else {
       throw new Error(`AI Generation for type ${type} is not yet supported.`);
     }
 
+    const metadataInstruction = includeMetadata ? `
+      "title": "A catchy, relevant title for this assignment",
+      "instructions": "General instructions for the students on how to do this assignment",
+      "shortDescription": "A short, engaging description for the library (max 200 chars)",
+      "targetAudiences": ["Kids", "Teens", "Adults", "Business"], // Pick 1 or more suitable target audiences from this list
+    ` : '';
+
     const prompt = `Generate ${count} ${difficulty} difficulty quiz questions about "${topic}" in ${langStr}. 
-    The output must be in JSON format and the question type format must be strictly as follows:
-    ${formatInstructions}
+    The output must be in JSON format and strictly follow this structure:
+    {
+      ${metadataInstruction}
+      ${formatInstructions}
+    }
     
     Ensure output is educational and factually accurate.`;
 

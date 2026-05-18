@@ -46,14 +46,14 @@ export async function generateMaterialThumbnail(assignment: { title: string; sub
   return `https://api.dicebear.com/7.x/identicon/svg?seed=${hash}&backgroundColor=f0f2f4&rowColor=${rowColor}`;
 }
 
-export async function createDraftMaterial() {
+export async function createDraftMaterial(type: any = 'READING') {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   const newAss = await prisma.assignment.create({
     data: {
       title: 'Bài học mới',
-      materialType: 'READING',
+      materialType: type,
       teacherId: session.user.id,
       status: 'DRAFT'
     }

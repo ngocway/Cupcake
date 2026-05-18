@@ -379,7 +379,16 @@ export function QuizEditor() {
     if (activeId === id) setActiveId(newQ[0].id);
   };
 
-  const handleAIGeneratedQuestions = (generatedData: { type: QuestionType, questions: any[] }[]) => {
+  const handleAIGeneratedQuestions = (generatedData: { type: QuestionType, questions: any[] }[], metadata?: any) => {
+    if (metadata) {
+      if (metadata.title) setTitle(metadata.title);
+      if (metadata.instructions) setInstructions(metadata.instructions);
+      if (metadata.shortDescription) setShortDescription(metadata.shortDescription);
+      if (metadata.targetAudiences && Array.isArray(metadata.targetAudiences)) {
+        setTargetAudiences(metadata.targetAudiences);
+      }
+    }
+
     const aiQuestions = generatedData.flatMap(({ type, questions }) => {
       return questions.map((gq: any) => {
         const id = uuidv4();
@@ -396,6 +405,17 @@ export function QuizEditor() {
         
         if (type === 'TRUE_FALSE') {
             content.displayStyle = 'TRUE_FALSE';
+        }
+        
+        if (type === 'MATCHING' && content.pairs) {
+          content.pairs = content.pairs.map((pair: any) => ({
+            ...pair,
+            id: uuidv4()
+          }));
+        }
+
+        if (type === 'CLOZE_TEST') {
+          content.caseSensitive = content.caseSensitive ?? false;
         }
 
         const explanation = content.explanation;
@@ -1039,8 +1059,8 @@ export function QuizEditor() {
             </div>
 
             <div className="px-8 py-6 border-t border-slate-100 dark:border-gray-700 bg-slate-50/30 flex flex-col gap-6">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-8">
+              <div className="flex items-center justify-between flex-wrap gap-4 w-full">
+                <div className="flex items-center gap-8 w-full">
                   {activeQuestion?.explanation !== undefined ? (
                     <div className="w-full">
                       <div className="flex items-center justify-between mb-2">

@@ -77,7 +77,7 @@ export function ClozeTestBuilder({ initialData, onChange }: ClozeTestBuilderProp
           onChange={(e) => handleChange({ textWithBlanks: e.target.value })}
           onSelect={handleSelection}
         />
-        <div className="relative z-0 pointer-events-none">
+        <div className="relative z-20 pointer-events-none">
           {parts.map((part, i) => {
             if (part.startsWith('{{') && part.endsWith('}}')) {
               const word = part.slice(2, -2);
@@ -85,6 +85,7 @@ export function ClozeTestBuilder({ initialData, onChange }: ClozeTestBuilderProp
                 <span key={i} className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold rounded-full border border-green-200 dark:border-green-800/50 mx-1 pointer-events-auto">
                   {word}
                   <button 
+                    type="button"
                     onClick={() => removeBlank(part, word)}
                     className="size-4 flex items-center justify-center hover:bg-green-200 dark:hover:bg-green-800 rounded-full transition-colors"
                   >
