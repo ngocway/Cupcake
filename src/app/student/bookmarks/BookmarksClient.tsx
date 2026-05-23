@@ -33,13 +33,13 @@ export default function BookmarksClient({
   return (
     <div className="space-y-8">
       {/* Tabs */}
-      <div className="flex gap-4 p-1.5 bg-slate-100 rounded-2xl w-fit">
+      <div className="flex gap-4 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl w-fit">
         <button
           onClick={() => setActiveTab('lessons')}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
             activeTab === 'lessons'
-              ? 'bg-white shadow-md text-primary'
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white/80 dark:bg-slate-700/80 shadow-md text-primary dark:text-blue-400'
+              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
           <BookOpen className="w-4 h-4" />
@@ -49,8 +49,8 @@ export default function BookmarksClient({
           onClick={() => setActiveTab('assignments')}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
             activeTab === 'assignments'
-              ? 'bg-white shadow-md text-primary'
-              : 'text-slate-500 hover:text-slate-700'
+              ? 'bg-white/80 dark:bg-slate-700/80 shadow-md text-primary dark:text-blue-400'
+              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >
           <AssignmentIcon className="w-4 h-4" />
@@ -65,7 +65,7 @@ export default function BookmarksClient({
             <Link 
               key={lesson.id} 
               href={`/student/lessons/${lesson.id}`}
-              className="group bg-white rounded-[2.5rem] overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              className="group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
               <div className="aspect-video relative overflow-hidden">
                 <img 
@@ -93,7 +93,7 @@ export default function BookmarksClient({
             <Link 
               key={assignment.id} 
               href={`/student/assignments/${assignment.id}/run`}
-              className="group bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              className="group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
               <div className="flex items-start justify-between mb-6">
                 <div className="p-4 bg-secondary/10 rounded-2xl text-secondary">

@@ -52,12 +52,12 @@ export function SecuritySettings({ user }: { user: any }) {
                         <Lock className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">Thay đổi mật khẩu</h3>
-                        <p className="text-xs text-slate-500">Đảm bảo mật khẩu của bạn mạnh để bảo vệ tài khoản</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thay đổi mật khẩu</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Đảm bảo mật khẩu của bạn mạnh để bảo vệ tài khoản</p>
                     </div>
                 </div>
 
-                <form onSubmit={handlePasswordChange} className="grid gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-200/50">
+                <form onSubmit={handlePasswordChange} className="grid gap-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-700">
                     <div className="grid gap-2">
                         <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Mật khẩu hiện tại</Label>
                         <div className="relative">
@@ -66,7 +66,7 @@ export function SecuritySettings({ user }: { user: any }) {
                                 type="password"
                                 value={oldPassword} 
                                 onChange={(e) => setOldPassword(e.target.value)}
-                                className="bg-white pl-12 h-12 rounded-xl border-slate-200"
+                                className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm pl-12 h-12 rounded-xl border-slate-200 dark:border-slate-600"
                                 required
                             />
                         </div>
@@ -81,7 +81,7 @@ export function SecuritySettings({ user }: { user: any }) {
                                     type="password"
                                     value={newPassword} 
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    className="bg-white pl-12 h-12 rounded-xl border-slate-200"
+                                    className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm pl-12 h-12 rounded-xl border-slate-200 dark:border-slate-600"
                                     required
                                 />
                             </div>
@@ -94,7 +94,7 @@ export function SecuritySettings({ user }: { user: any }) {
                                     type="password"
                                     value={confirmPassword} 
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="bg-white pl-12 h-12 rounded-xl border-slate-200"
+                                    className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm pl-12 h-12 rounded-xl border-slate-200 dark:border-slate-600"
                                     required
                                 />
                             </div>
@@ -125,7 +125,7 @@ export function SecuritySettings({ user }: { user: any }) {
                 </form>
             </section>
 
-            <section className="space-y-6 pt-6 border-t border-slate-100">
+            <section className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
                         <svg className="w-6 h-6" viewBox="0 0 24 24">
@@ -133,10 +133,10 @@ export function SecuritySettings({ user }: { user: any }) {
                         </svg>
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-lg font-bold text-slate-900">Liên kết tài khoản</h3>
-                        <p className="text-xs text-slate-500">Quản lý cách bạn đăng nhập vào hệ thống</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Liên kết tài khoản</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Quản lý cách bạn đăng nhập vào hệ thống</p>
                     </div>
-                    <Button variant="outline" className="rounded-full px-6 border-slate-200">
+                    <Button variant="outline" className="rounded-full px-6 border-slate-200 dark:border-slate-600">
                         {user.accounts?.length > 0 ? "Đã liên kết" : "Liên kết ngay"}
                     </Button>
                 </div>

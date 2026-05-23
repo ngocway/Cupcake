@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { 
   createCategory, 
   updateCategory, 
@@ -16,8 +17,7 @@ import {
   ChevronDown, 
   Save, 
   X,
-  GripVertical,
-  Image as ImageIcon
+  GripVertical
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -51,12 +51,12 @@ function SortableCategoryNode({
   setAddingTo, 
   deletingId, 
   setDeletingId, 
-  formName, 
-  setFormName, 
+  formNameVi, 
+  setFormNameVi, 
+  formNameEn, 
+  setFormNameEn, 
   formSlug, 
   setFormSlug,
-  formShowBg,
-  setFormShowBg,
   handleUpdate,
   handleDelete,
   handleCreate,
@@ -111,44 +111,43 @@ function SortableCategoryNode({
         <FolderTree className="w-4 h-4 text-primary opacity-70" />
 
         {isEditing ? (
-          <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-1 items-center gap-2 flex-wrap">
             <input 
               type="text" 
-              value={formName} 
-              onChange={e => setFormName(e.target.value)}
-              className="px-2 py-1 border rounded text-sm w-40"
-              placeholder="Tên danh mục"
+              value={formNameVi || ""} 
+              onChange={e => {
+                setFormNameVi(e.target.value);
+                if (!formSlug) {
+                  setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, '-'));
+                }
+              }}
+              className="px-2 py-1 border rounded text-sm w-40 focus:border-primary outline-none"
+              placeholder="Tên tiếng Việt"
             />
             <input 
               type="text" 
-              value={formSlug} 
+              value={formNameEn || ""} 
+              onChange={e => setFormNameEn(e.target.value)}
+              className="px-2 py-1 border rounded text-sm w-40 focus:border-primary outline-none"
+              placeholder="Tên tiếng Anh"
+            />
+            <input 
+              type="text" 
+              value={formSlug || ""} 
               onChange={e => setFormSlug(e.target.value)}
-              className="px-2 py-1 border rounded text-sm w-32"
+              className="px-2 py-1 border rounded text-sm w-32 focus:border-primary outline-none"
               placeholder="slug"
             />
-            <label className="flex items-center gap-1 cursor-pointer hover:bg-slate-100 p-1 rounded">
-              <input 
-                type="checkbox" 
-                checked={formShowBg} 
-                onChange={e => setFormShowBg(e.target.checked)}
-                className="w-4 h-4 rounded text-primary"
-              />
-              <span className="text-[10px] font-bold text-slate-500">Hiện BG</span>
-            </label>
-            <button onClick={() => handleUpdate(node.id)} className="p-1 text-emerald-600"><Save className="w-4 h-4" /></button>
-            <button onClick={() => setEditingId(null)} className="p-1 text-slate-400"><X className="w-4 h-4" /></button>
+            <button onClick={() => handleUpdate(node.id)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Save className="w-4 h-4" /></button>
+            <button onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded"><X className="w-4 h-4" /></button>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm text-on-surface">{node.name}</span>
+              <span className="font-medium text-sm text-on-surface">
+                {node.nameVi} <span className="text-slate-400 font-normal">| {node.nameEn}</span>
+              </span>
               <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{node.slug}</span>
-              {node.showClearBackground && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-bold border border-emerald-100 animate-pulse">
-                  <ImageIcon className="w-2.5 h-2.5" />
-                  BG HIỆN RÕ
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-1">
               {deletingId === node.id ? (
@@ -174,7 +173,8 @@ function SortableCategoryNode({
                   <button 
                     onClick={() => {
                       setAddingTo(node.id);
-                      setFormName("");
+                      setFormNameVi("");
+                      setFormNameEn("");
                       setFormSlug("");
                       toggleExpand(node.id);
                     }} 
@@ -186,9 +186,9 @@ function SortableCategoryNode({
                   <button 
                     onClick={() => {
                       setEditingId(node.id);
-                      setFormName(node.name);
-                      setFormSlug(node.slug);
-                      setFormShowBg(!!node.showClearBackground);
+                      setFormNameVi(node.nameVi || "");
+                      setFormNameEn(node.nameEn || "");
+                      setFormSlug(node.slug || "");
                     }}
                     className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-100 rounded-md transition-colors"
                   >
@@ -209,35 +209,33 @@ function SortableCategoryNode({
 
       {/* Add Child Form */}
       {isAdding && (
-        <div className="flex items-center gap-2 py-2" style={{ paddingLeft: `${(level + 1) * 24 + 12 + 20}px` }}>
-          <FolderTree className="w-4 h-4 text-primary/40" />
+        <div className="flex items-center gap-2 py-2 flex-wrap animate-in fade-in duration-300" style={{ paddingLeft: `${(level + 1) * 24 + 12 + 20}px` }}>
+          <FolderTree className="w-4 h-4 text-primary/40 animate-pulse" />
           <input 
             type="text" 
-            value={formName} 
+            value={formNameVi || ""} 
             onChange={e => {
-              setFormName(e.target.value);
-              setFormSlug(e.target.value.toLowerCase().replace(/ /g, '-'));
+              setFormNameVi(e.target.value);
+              setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, '-'));
             }}
-            className="px-2 py-1.5 border border-outline-variant/50 rounded-md text-sm w-48 focus:border-primary outline-none"
-            placeholder="Tên danh mục con..."
+            className="px-2 py-1.5 border border-outline-variant/50 rounded-md text-sm w-44 focus:border-primary outline-none bg-white"
+            placeholder="Tên tiếng Việt con..."
             autoFocus
           />
           <input 
             type="text" 
-            value={formSlug} 
+            value={formNameEn || ""} 
+            onChange={e => setFormNameEn(e.target.value)}
+            className="px-2 py-1.5 border border-outline-variant/50 rounded-md text-sm w-44 focus:border-primary outline-none bg-white"
+            placeholder="Tên tiếng Anh con..."
+          />
+          <input 
+            type="text" 
+            value={formSlug || ""} 
             onChange={e => setFormSlug(e.target.value)}
-            className="px-2 py-1.5 border border-outline-variant/50 rounded-md text-sm w-32 focus:border-primary outline-none"
+            className="px-2 py-1.5 border border-outline-variant/50 rounded-md text-sm w-28 focus:border-primary outline-none bg-white"
             placeholder="slug..."
           />
-          <label className="flex items-center gap-2 cursor-pointer bg-slate-50 px-2 py-1 rounded border border-outline-variant/30">
-            <input 
-              type="checkbox" 
-              checked={formShowBg} 
-              onChange={e => setFormShowBg(e.target.checked)}
-              className="w-4 h-4 text-primary"
-            />
-            <span className="text-xs font-medium text-slate-600">Hiện BG rõ</span>
-          </label>
           <button onClick={() => handleCreate(node.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded"><Save className="w-4 h-4" /></button>
           <button onClick={() => setAddingTo(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded"><X className="w-4 h-4" /></button>
         </div>
@@ -261,12 +259,12 @@ function SortableCategoryNode({
             setAddingTo={setAddingTo}
             deletingId={deletingId}
             setDeletingId={setDeletingId}
-            formName={formName}
-            setFormName={setFormName}
+            formNameVi={formNameVi}
+            setFormNameVi={setFormNameVi}
+            formNameEn={formNameEn}
+            setFormNameEn={setFormNameEn}
             formSlug={formSlug}
             setFormSlug={setFormSlug}
-            formShowBg={formShowBg}
-            setFormShowBg={setFormShowBg}
             handleUpdate={handleUpdate}
             handleDelete={handleDelete}
             handleCreate={handleCreate}
@@ -348,6 +346,7 @@ function SortableLevel({ nodes, level, onReorder, ...props }: any) {
 // --- Main Manager Component ---
 
 export default function CategoryManager({ initialTree }: { initialTree: any[] }) {
+  const router = useRouter();
   const [tree, setTree] = useState(initialTree);
   const [isPending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -356,26 +355,38 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
-  const [formName, setFormName] = useState("");
+  const [formNameVi, setFormNameVi] = useState("");
+  const [formNameEn, setFormNameEn] = useState("");
   const [formSlug, setFormSlug] = useState("");
-  const [formShowBg, setFormShowBg] = useState(false);
+
+  // Keep tree sync with initialTree from Server Component
+  useEffect(() => {
+    setTree(initialTree);
+  }, [initialTree]);
 
   const toggleExpand = (id: string) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleCreate = (parentId: string | null = null) => {
-    if (!formName || !formSlug) return toast.error("Vui lòng nhập tên và slug.");
+    if (!formNameVi || !formNameEn || !formSlug) {
+      return toast.error("Vui lòng nhập đầy đủ tên tiếng Việt, tiếng Anh và slug.");
+    }
     
     startTransition(async () => {
       try {
-        await createCategory({ name: formName, slug: formSlug, parentId: parentId || undefined, showClearBackground: formShowBg });
+        await createCategory({ 
+          nameVi: formNameVi, 
+          nameEn: formNameEn, 
+          slug: formSlug, 
+          parentId: parentId || undefined 
+        });
         toast.success("Thêm danh mục thành công.");
         setAddingTo(null);
-        setFormName("");
+        setFormNameVi("");
+        setFormNameEn("");
         setFormSlug("");
-        setFormShowBg(false);
-        window.location.reload();
+        router.refresh();
       } catch (e: any) {
         toast.error(e.message || "Lỗi tạo danh mục");
       }
@@ -383,17 +394,23 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
   };
 
   const handleUpdate = (id: string) => {
-    if (!formName || !formSlug) return toast.error("Vui lòng nhập tên và slug.");
+    if (!formNameVi || !formNameEn || !formSlug) {
+      return toast.error("Vui lòng nhập đầy đủ tên tiếng Việt, tiếng Anh và slug.");
+    }
     
     startTransition(async () => {
       try {
-        await updateCategory(id, { name: formName, slug: formSlug, showClearBackground: formShowBg });
+        await updateCategory(id, { 
+          nameVi: formNameVi, 
+          nameEn: formNameEn, 
+          slug: formSlug 
+        });
         toast.success("Cập nhật thành công.");
         setEditingId(null);
-        setFormName("");
+        setFormNameVi("");
+        setFormNameEn("");
         setFormSlug("");
-        setFormShowBg(false);
-        window.location.reload();
+        router.refresh();
       } catch (e: any) {
         toast.error(e.message || "Lỗi cập nhật danh mục");
       }
@@ -406,7 +423,7 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
         await deleteCategory(id, "MOVE_TO_PARENT");
         toast.success("Xóa danh mục thành công.");
         setDeletingId(null);
-        window.location.reload();
+        router.refresh();
       } catch (e: any) {
         toast.error(e.message || "Lỗi xóa danh mục");
       }
@@ -441,10 +458,10 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
       }));
       await reorderCategories(items);
       toast.success("Đã cập nhật thứ tự.");
+      router.refresh();
     } catch (error) {
       toast.error("Lỗi cập nhật thứ tự.");
-      // Rollback would go here, but reload is simpler for now
-      window.location.reload();
+      router.refresh();
     }
   };
 
@@ -458,7 +475,8 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
         <button 
           onClick={() => {
             setAddingTo("root");
-            setFormName("");
+            setFormNameVi("");
+            setFormNameEn("");
             setFormSlug("");
           }}
           className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg text-sm font-bold transition-colors"
@@ -469,37 +487,35 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
       </div>
 
       {addingTo === "root" && (
-        <div className="flex items-center gap-2 py-3 px-3 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-          <FolderTree className="w-4 h-4 text-primary/40" />
+        <div className="flex items-center gap-2 py-3 px-3 bg-slate-50 rounded-xl border border-dashed border-slate-300 flex-wrap animate-in fade-in duration-300">
+          <FolderTree className="w-4 h-4 text-primary/40 animate-bounce" />
           <input 
             type="text" 
-            value={formName} 
+            value={formNameVi || ""} 
             onChange={e => {
-              setFormName(e.target.value);
-              setFormSlug(e.target.value.toLowerCase().replace(/ /g, '-'));
+              setFormNameVi(e.target.value);
+              setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, '-'));
             }}
             className="px-3 py-1.5 border border-outline-variant/50 rounded-md text-sm w-48 focus:border-primary outline-none bg-white"
-            placeholder="Tên danh mục gốc..."
+            placeholder="Tên tiếng Việt gốc..."
             autoFocus
           />
           <input 
             type="text" 
-            value={formSlug} 
+            value={formNameEn || ""} 
+            onChange={e => setFormNameEn(e.target.value)}
+            className="px-3 py-1.5 border border-outline-variant/50 rounded-md text-sm w-48 focus:border-primary outline-none bg-white"
+            placeholder="Tên tiếng Anh gốc..."
+          />
+          <input 
+            type="text" 
+            value={formSlug || ""} 
             onChange={e => setFormSlug(e.target.value)}
             className="px-3 py-1.5 border border-outline-variant/50 rounded-md text-sm w-32 focus:border-primary outline-none bg-white"
             placeholder="root-slug..."
           />
-          <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-md border border-outline-variant/50">
-            <input 
-              type="checkbox" 
-              checked={formShowBg} 
-              onChange={e => setFormShowBg(e.target.checked)}
-              className="w-4 h-4 text-primary"
-            />
-            <span className="text-sm font-medium text-slate-600">Hiện BG rõ</span>
-          </label>
-          <button onClick={() => handleCreate(null)} disabled={isPending} className="px-3 py-1.5 bg-primary text-white rounded-md text-sm font-bold ml-2">Lưu</button>
-          <button onClick={() => setAddingTo(null)} className="px-3 py-1.5 text-slate-500 hover:bg-slate-200 rounded-md text-sm font-bold">Hủy</button>
+          <button onClick={() => handleCreate(null)} disabled={isPending} className="px-3 py-1.5 bg-primary text-white rounded-md text-sm font-bold ml-2 transition-transform hover:scale-105">Lưu</button>
+          <button onClick={() => setAddingTo(null)} className="px-3 py-1.5 text-slate-500 hover:bg-slate-200 rounded-md text-sm font-bold transition-colors">Hủy</button>
         </div>
       )}
 
@@ -522,12 +538,12 @@ export default function CategoryManager({ initialTree }: { initialTree: any[] })
           setAddingTo={setAddingTo}
           deletingId={deletingId}
           setDeletingId={setDeletingId}
-          formName={formName}
-          setFormName={setFormName}
+          formNameVi={formNameVi}
+          setFormNameVi={setFormNameVi}
+          formNameEn={formNameEn}
+          setFormNameEn={setFormNameEn}
           formSlug={formSlug}
           setFormSlug={setFormSlug}
-          formShowBg={formShowBg}
-          setFormShowBg={setFormShowBg}
           handleUpdate={handleUpdate}
           handleDelete={handleDelete}
           handleCreate={handleCreate}

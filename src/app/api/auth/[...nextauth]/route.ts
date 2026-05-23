@@ -1,3 +1,11 @@
 import { handlers } from "@/auth"
-console.log("Auth route initialized")
-export const { GET, POST } = handlers
+
+const { GET: AuthGET, POST: AuthPOST } = handlers;
+
+export async function GET(req: any, ctx: any) {
+  return AuthGET(req, ctx);
+}
+
+export async function POST(req: any, ctx: any) {
+  return AuthPOST(req, ctx);
+}

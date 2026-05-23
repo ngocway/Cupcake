@@ -11,10 +11,13 @@ export interface AILessonResponse {
   title: string;
   passage: string;
   shortDescription: string;
+  thumbnail?: string;
   vocabulary: {
     word: string;
     pronunciation: string;
     meaningVi: string;
+    meaningTh: string;
+    meaningId: string;
     explanationEn: string;
     examples: string[];
   }[];
@@ -84,13 +87,20 @@ export async function generateAILesson({
       YOUR TASKS:
       1. Write a complete reading passage (Body Text) in ${language} following the CONTENT GENERATION INSTRUCTIONS provided above.
          IMPORTANT requirements for the passage:
+         - The passage MUST be structured logically and divided into 3-5 distinct paragraphs. Each paragraph MUST be separated by EXACTLY two newlines (double newlines, e.g., "\n\n") to ensure proper paragraph structure and formatting.
          - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
          - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
       2. Identify 5-8 key vocabulary words from the passage you just wrote.
-      3. Create a Vocabulary list of those key words with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}
+      3. Create a Vocabulary list of those key words with definitions. Provide pronunciation, the English definition, the Vietnamese translation (meaningVi), the Thai translation (meaningTh), and the Indonesian translation (meaningId).
       4. Create a set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
          ${additionalInstructions ? `IMPORTANT: Follow these extra instructions for the questions: ${additionalInstructions}` : ""}
       5. Provide an engaging Title and a Short Description based on the passage you wrote.
+      6. Select a high-quality, relevant Unsplash stock photo to serve as a thumbnail image for this lesson. Use a real, valid stock photo URL from the domain https://images.unsplash.com/.
+         Examples of correct Unsplash URLs:
+         - For English/Language: https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80
+         - For Science/Tech: https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80
+         - For General/Study: https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80
+         - For Kids: https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80
       
       CRITICAL: ALL generated text MUST be in ${language}.`;
     } else {
@@ -104,10 +114,17 @@ export async function generateAILesson({
       2. A Short Description (1-2 sentences) written COMPLETELY in ${language}.
       3. A reading Passage (Body Text) written COMPLETELY in ${language} with approximately ${wordCount} words. 
          IMPORTANT requirements for the passage:
+         - The passage MUST be structured logically and divided into 3-5 distinct paragraphs. Each paragraph MUST be separated by EXACTLY two newlines (double newlines, e.g., "\n\n") to ensure proper paragraph structure and formatting.
          - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
          - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
-      4. A Vocabulary list of 5-8 key words from the passage with definitions. ${isVietnamese ? 'Provide pronunciation, the English definition, AND the Vietnamese translation (meaningVi).' : 'Provide pronunciation, meaning, and English definition.'}
+      4. A Vocabulary list of 5-8 key words from the passage with definitions. Provide pronunciation, the English definition, the Vietnamese translation (meaningVi), the Thai translation (meaningTh), and the Indonesian translation (meaningId).
       5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
+      6. Select a high-quality, relevant Unsplash stock photo to serve as a thumbnail image for this lesson. Use a real, valid stock photo URL from the domain https://images.unsplash.com/.
+         Examples of correct Unsplash URLs:
+         - For English/Language: https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80
+         - For Science/Tech: https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80
+         - For General/Study: https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80
+         - For Kids: https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80
       
       CRITICAL: ALL text in title, passage, and questions MUST be in ${language}. DO NOT use English if the Target Language is Vietnamese.`;
     }
@@ -118,12 +135,15 @@ export async function generateAILesson({
     {
       "title": "string",
       "shortDescription": "string",
+      "thumbnail": "string",
       "passage": "string",
       "vocabulary": [
         {
           "word": "string",
           "pronunciation": "string",
           "meaningVi": "string",
+          "meaningTh": "string",
+          "meaningId": "string",
           "explanationEn": "string",
           "examples": ["string"]
         }
@@ -179,16 +199,44 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         vocabMap.set(v.word.toLowerCase(), v);
       });
 
-      let passageHtml = data.passage;
+      let passageHtml = data.passage || "";
       
-      // If it doesn't look like HTML (no tags), wrap in paragraphs
-      if (!/<[a-z][\s\S]*>/i.test(passageHtml)) {
-        passageHtml = passageHtml
-          .split('\n\n')
-          .map(p => p.trim())
-          .filter(p => p.length > 0)
-          .map(p => `<p>${p}</p>`)
-          .join('');
+      // If it doesn't contain block-level elements (like <p>, <br>, <div>), wrap in paragraphs
+      if (!/<(p|br|div)\b/i.test(passageHtml)) {
+        // Normalize line endings
+        let normalizedText = passageHtml.replace(/\r\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
+        
+        let paragraphs = normalizedText.split('\n\n').map(p => p.trim()).filter(p => p.length > 0);
+        
+        // Fallback 1: If there's only 1 paragraph but single newlines exist, split if lines are substantial
+        if (paragraphs.length === 1 && normalizedText.includes('\n')) {
+          const singleLines = normalizedText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+          if (singleLines.length >= 2 && singleLines.every(line => line.length > 30)) {
+            paragraphs = singleLines;
+          }
+        }
+        
+        // Fallback 2: Auto-chunking extremely long paragraphs (> 150 words)
+        if (paragraphs.length === 1) {
+          const words = paragraphs[0].split(/\s+/);
+          if (words.length > 150) {
+            const sentences = paragraphs[0].match(/[^.!?]+[.!?]+(\s+|$)/g) || [paragraphs[0]];
+            if (sentences.length > 3) {
+              paragraphs = [];
+              let currentPara = "";
+              sentences.forEach((sentence, index) => {
+                currentPara += sentence;
+                if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
+                  paragraphs.push(currentPara.trim());
+                  currentPara = "";
+                }
+              });
+            }
+          }
+        }
+        
+        // Wrap paragraphs in HTML <p> tags
+        passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
       }
 
       passageHtml = passageHtml.replace(
@@ -201,6 +249,8 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
               data-word="${v.word}" 
               data-pronunciation="${v.pronunciation}" 
               data-meaning-vi="${v.meaningVi}" 
+              data-meaning-th="${v.meaningTh || ''}" 
+              data-meaning-id="${v.meaningId || ''}" 
               data-explanation-en="${v.explanationEn.replace(/"/g, '&quot;')}" 
               data-examples="${v.examples.join('; ').replace(/"/g, '&quot;')}"
               style="border-bottom: 2px dashed #facc15; cursor: help; color: #854d0e; font-weight: 700;"
@@ -220,6 +270,14 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
               <div style="margin-top: 5px;">
                 <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">VI</span>
                 <span>${v.meaningVi}</span>
+              </div>
+              <div style="margin-top: 5px;">
+                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">TH</span>
+                <span>${v.meaningTh || 'N/A'}</span>
+              </div>
+              <div style="margin-top: 5px;">
+                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">ID</span>
+                <span>${v.meaningId || 'N/A'}</span>
               </div>
               <div style="margin-top: 3px; color: #475569;">
                 <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; color: #0369a1;">EN</span>
@@ -244,7 +302,8 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
           status: "DRAFT",
           teacherId: session.user.id,
           isAiGenerated: true,
-          instructions: vocabHtml, 
+          instructions: vocabHtml,
+          thumbnail: data.thumbnail || null,
         }
       });
 
@@ -282,6 +341,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
           explanation: q.explanation,
           content: JSON.stringify(questionContent),
           isAiGenerated: true,
+          isBanked: false,
         };
       });
 
@@ -410,16 +470,78 @@ export async function saveParsedLesson(data: ParsedLessonData) {
   try {
     const resultId = await prisma.$transaction(async (tx) => {
       let passageHtml = data.passage || "";
-      if (passageHtml && !/<[a-z][\s\S]*>/i.test(passageHtml)) {
-        passageHtml = passageHtml.split('\n\n').map(p => `<p>${p}</p>`).join('');
+      if (passageHtml && !/<(p|br|div)\b/i.test(passageHtml)) {
+        // Normalize line endings
+        let normalizedText = passageHtml.replace(/\r\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
+        
+        let paragraphs = normalizedText.split('\n\n').map(p => p.trim()).filter(p => p.length > 0);
+        
+        // Fallback 1: If there's only 1 paragraph but single newlines exist, split if lines are substantial
+        if (paragraphs.length === 1 && normalizedText.includes('\n')) {
+          const singleLines = normalizedText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+          if (singleLines.length >= 2 && singleLines.every(line => line.length > 30)) {
+            paragraphs = singleLines;
+          }
+        }
+        
+        // Fallback 2: Auto-chunking extremely long paragraphs (> 150 words)
+        if (paragraphs.length === 1) {
+          const words = paragraphs[0].split(/\s+/);
+          if (words.length > 150) {
+            const sentences = paragraphs[0].match(/[^.!?]+[.!?]+(\s+|$)/g) || [paragraphs[0]];
+            if (sentences.length > 3) {
+              paragraphs = [];
+              let currentPara = "";
+              sentences.forEach((sentence, index) => {
+                currentPara += sentence;
+                if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
+                  paragraphs.push(currentPara.trim());
+                  currentPara = "";
+                }
+              });
+            }
+          }
+        }
+        
+        // Wrap paragraphs in HTML <p> tags
+        passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
       }
 
       let matchedCategory = null;
       if (data.subject) {
         matchedCategory = await tx.category.findFirst({
-          where: { name: { equals: data.subject, mode: 'insensitive' } },
+          where: {
+            OR: [
+              { nameVi: { equals: data.subject, mode: 'insensitive' } },
+              { nameEn: { equals: data.subject, mode: 'insensitive' } }
+            ]
+          },
           select: { id: true }
         });
+      }
+
+      let finalTags = "";
+      if (data.tags) {
+        const dbPopularTags = await tx.tag.findMany({
+          where: { isPopular: true },
+          select: { name: true }
+        });
+        const popularTags = dbPopularTags.map(t => t.name);
+        const tagList = data.tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+        const allowedTags: string[] = [];
+        let customTagCount = 0;
+        for (const tag of tagList) {
+          const isPopular = popularTags.some(p => p.toLowerCase() === tag.toLowerCase());
+          if (isPopular) {
+            allowedTags.push(tag);
+          } else {
+            if (customTagCount < 3) {
+              allowedTags.push(tag);
+              customTagCount++;
+            }
+          }
+        }
+        finalTags = allowedTags.join(',');
       }
 
       const assignment = await tx.assignment.create({
@@ -433,7 +555,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
           status: "DRAFT",
           teacherId: session.user.id,
           targetAudiences: data.targetAudience ? [data.targetAudience] : [],
-          tags: data.tags || "",
+          tags: finalTags,
           categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
         }
       });

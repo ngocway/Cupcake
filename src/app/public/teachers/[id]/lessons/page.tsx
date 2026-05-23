@@ -1,4 +1,3 @@
-
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -13,7 +12,7 @@ import {
   Video
 } from "lucide-react";
 import { format } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import BackButton from "@/components/ui/BackButton";
 
 export default async function TeacherLessonsPage({ 
@@ -80,12 +79,12 @@ export default async function TeacherLessonsPage({
                 )}
              </div>
              <div className="text-center md:text-left space-y-2 flex-1">
-                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Kho lưu trữ bài giảng</p>
+                <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Lesson Archive</p>
                 <h1 className="text-4xl font-black text-slate-900 tracking-tight">{teacher.name}</h1>
                 <div className="flex items-center justify-center md:justify-start gap-4 text-sm font-bold text-slate-400">
                    <span className="flex items-center gap-2">
                       <Video className="w-4 h-4 text-primary" />
-                      {lessons.length} Bài giảng hiển thị
+                      {lessons.length} Published Lessons
                    </span>
                 </div>
              </div>
@@ -93,7 +92,7 @@ export default async function TeacherLessonsPage({
                href={`/profile/${id}`}
                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm tracking-widest hover:scale-105 transition-all shadow-xl shadow-slate-900/10"
              >
-                XEM HỒ SƠ
+                VIEW PROFILE
              </Link>
           </div>
 
@@ -132,7 +131,7 @@ export default async function TeacherLessonsPage({
 
                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
                           <span className="text-white font-black text-xs tracking-widest flex items-center gap-2">
-                             XEM BÀI GIẢNG <ArrowRight className="w-4 h-4" />
+                             VIEW LESSON <ArrowRight className="w-4 h-4" />
                           </span>
                        </div>
                     </div>
@@ -142,11 +141,11 @@ export default async function TeacherLessonsPage({
                           <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                              <span className="flex items-center gap-1">
                                 <Clock className="w-3.5 h-3.5" />
-                                {format(lesson.createdAt, "dd/MM/yyyy", { locale: vi })}
+                                {format(lesson.createdAt, "dd/MM/yyyy", { locale: enUS })}
                              </span>
                              <span className="flex items-center gap-1">
                                 <Eye className="w-3.5 h-3.5" />
-                                {lesson.viewsCount} Lượt xem
+                                {lesson.viewsCount} Views
                              </span>
                           </div>
                           <h2 className="text-xl font-black text-slate-900 group-hover:text-primary transition-colors line-clamp-2 leading-tight">
@@ -156,7 +155,7 @@ export default async function TeacherLessonsPage({
 
                        <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
                           <div className="flex items-center gap-2 text-[10px] font-black text-primary bg-primary/5 px-3 py-1 rounded-full uppercase tracking-widest">
-                             {lesson.assignment?._count.questions} Câu hỏi rèn luyện
+                             {lesson.assignment?._count.questions} Practice Questions
                           </div>
                           <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-primary transition-colors">
                              <ChevronLeft className="w-4 h-4 rotate-180 group-hover:text-white" />
@@ -167,7 +166,7 @@ export default async function TeacherLessonsPage({
                ))
              ) : (
                <div className="col-span-full py-32 bg-white rounded-[3rem] border-2 border-dashed border-slate-200 text-center space-y-4">
-                  <p className="text-slate-400 font-bold">Giáo viên này chưa có bài giảng nào được hiển thị.</p>
+                  <p className="text-slate-400 font-bold">No published lessons found for this teacher.</p>
                </div>
              )}
           </div>

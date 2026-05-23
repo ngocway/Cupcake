@@ -67,31 +67,31 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
            </div>
            
            <div className="space-y-2">
-              <h2 className="text-3xl font-black text-slate-950 font-headline italic">Tuyệt vời! Bạn đã hoàn thành!</h2>
-              <p className="text-slate-500 font-medium">Bạn đã khám phá xong bài tập công khai này.</p>
+              <h2 className="text-3xl font-black text-slate-950 font-headline italic">Awesome! You have finished!</h2>
+              <p className="text-slate-500 font-medium">You have successfully completed this public assignment.</p>
            </div>
            
            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Kết quả tạm thời</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Temporary Result</p>
               <div className="text-4xl font-black text-slate-950">{score} / {questions.length}</div>
               <p className="text-[10px] text-slate-400 mt-2 font-bold uppercase tracking-widest italic animate-pulse">
-                * Kết quả này sẽ biến mất sau khi bạn đóng tab *
+                * This result will disappear after you close the tab *
               </p>
            </div>
 
            <div className="space-y-4 pt-4">
               <div className="flex flex-col gap-3">
                  <LoginButton className="w-full py-4 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <Rocket className="w-4 h-4" /> Đăng ký để lưu kết quả vĩnh viễn
+                    <Rocket className="w-4 h-4" /> Register to save results permanently
                  </LoginButton>
                  <button 
                   onClick={() => router.push("/")}
                   className="w-full py-4 bg-white border border-slate-200 text-slate-500 font-bold text-xs uppercase tracking-widest rounded-full hover:bg-slate-50 transition-all"
                  >
-                    Quay về trang chủ
+                    Back to Home
                  </button>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Scholar Script giúp hơn 50,000 học sinh theo dõi tiến bộ mỗi ngày.</p>
+              <p className="text-xs text-slate-400 font-medium">Scholar Script helps more than 50,000 students track their progress daily.</p>
            </div>
         </div>
       </div>
@@ -108,22 +108,22 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
           <div className="flex-1 border-r border-slate-100 flex flex-col bg-white overflow-hidden">
              <div className="h-14 border-b border-slate-50 flex items-center justify-between px-8 bg-slate-50/30">
                 <div className="flex items-center gap-3 text-[11px] font-black text-primary uppercase tracking-[0.3em]">
-                   <BookOpen className="w-4 h-4" /> Nội dung bài học
+                   <BookOpen className="w-4 h-4" /> Lesson Content
                 </div>
              </div>
              <div className="flex-1 overflow-y-auto no-scrollbar p-12 lg:p-16 prose prose-slate max-w-none prose-p:text-lg prose-p:leading-loose prose-p:text-slate-600 prose-headings:font-black">
                 <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
-             </div>
+              </div>
           </div>
         )}
 
         <div className={`${assignment.readingText ? 'w-[550px] lg:w-[650px]' : 'max-w-4xl mx-auto flex-1'} flex flex-col bg-slate-50/30`}>
           <div className="h-14 border-b border-slate-100 flex items-center justify-between px-8 bg-white/50">
              <div className="flex items-center gap-3 text-[11px] font-black text-indigo-500 uppercase tracking-[0.3em]">
-                <HelpCircle className="w-4 h-4" /> Phần câu hỏi
+                <HelpCircle className="w-4 h-4" /> Questions
              </div>
              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                Câu {currentIndex + 1} / {questions.length}
+                Question {currentIndex + 1} / {questions.length}
              </div>
           </div>
 
@@ -132,7 +132,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
               <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
                 <div className="space-y-4">
                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-2xl text-indigo-600 text-[10px] font-black uppercase tracking-widest">
-                      CHỦ ĐỀ: MULTIPLE CHOICE
+                      CATEGORY: MULTIPLE CHOICE
                    </div>
                    <h3 className="text-3xl font-black text-slate-950 leading-tight tracking-tight">
                      {currentQuestion.content}
@@ -156,7 +156,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
                           {String.fromCharCode(64 + opt)}
                        </div>
                        <div className="flex-1">
-                          Ví dụ về nội dung lựa chọn trong bài thi trắc nghiệm.
+                          Option content example for multiple-choice quiz.
                        </div>
                        {answers[currentQuestion.id] === opt && <div className="p-2 bg-primary text-white rounded-full animate-in zoom-in duration-300"><CheckCircle className="w-4 h-4" /></div>}
                      </button>
@@ -174,7 +174,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
                 className="flex items-center gap-3 px-6 py-3 rounded-2xl font-bold text-xs uppercase tracking-widest text-slate-400 hover:bg-slate-50 hover:text-slate-950 transition-all disabled:opacity-0"
              >
                 <ChevronLeft className="w-5 h-5 mx-1" />
-                Quay lại
+                Back
              </button>
 
              <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function PublicQuizRunner({ assignment, questions }: Props) {
                 onClick={handleNext}
                 className="flex items-center gap-3 px-10 py-3.5 bg-primary text-white rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
              >
-                {currentIndex === questions.length - 1 ? "KẾT THÚC" : "TIẾP THEO"}
+                {currentIndex === questions.length - 1 ? "SUBMIT" : "NEXT"}
                 <ChevronRight className="w-5 h-5 ml-1" />
              </button>
           </div>

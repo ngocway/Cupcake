@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getCategoryTree } from "@/actions/category-actions";
 import { ChevronRight, ChevronDown, CheckSquare, Square } from "lucide-react";
+import { useLocale } from "next-intl";
 
 // Client-side cache to prevent re-fetching when modal is closed/opened
 let categoryCache: any[] | null = null;
@@ -16,6 +17,7 @@ export default function CategorySelect({
 }) {
   const [tree, setTree] = useState<any[]>(categoryCache || []);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const locale = useLocale();
 
   useEffect(() => {
     if (categoryCache) {
@@ -45,6 +47,7 @@ export default function CategorySelect({
     const isExpanded = expanded[node.id];
     const isSelected = selectedIds.includes(node.id);
     const hasChildren = node.children?.length > 0;
+    const displayName = (locale === "vi" ? (node.nameVi || node.nameEn) : (node.nameEn || node.nameVi)) || "";
 
     return (
       <div key={node.id} className="select-none">
@@ -72,7 +75,7 @@ export default function CategorySelect({
             ) : (
               <Square className="w-4 h-4 text-slate-300" />
             )}
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{node.name}</span>
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{displayName}</span>
           </div>
         </div>
 

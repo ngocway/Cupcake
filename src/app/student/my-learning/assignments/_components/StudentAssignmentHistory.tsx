@@ -48,13 +48,13 @@ export function StudentAssignmentHistory({ initialSubmissions, translations }: P
   return (
     <div className="space-y-8">
       {/* Tabs & Search Bar */}
-      <div className="bg-white dark:bg-slate-900 p-2 rounded-[2.5rem] shadow-xl shadow-black/5 border border-slate-200/50 dark:border-slate-800/50 flex flex-col md:flex-row items-center gap-4">
-        <div className="flex p-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl w-full md:w-auto">
+      <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md p-2 rounded-[2.5rem] shadow-xl shadow-black/5 border border-slate-200/50 dark:border-slate-800/50 flex flex-col md:flex-row items-center gap-4">
+        <div className="flex p-1.5 bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-3xl w-full md:w-auto">
           <button 
             onClick={() => setActiveTab("completed")}
             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all ${
               activeTab === "completed" 
-              ? "bg-white dark:bg-slate-900 shadow-lg text-primary" 
+              ? "bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-lg text-primary" 
               : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -65,7 +65,7 @@ export function StudentAssignmentHistory({ initialSubmissions, translations }: P
             onClick={() => setActiveTab("in-progress")}
             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-2xl text-sm font-bold transition-all ${
               activeTab === "in-progress" 
-              ? "bg-white dark:bg-slate-900 shadow-lg text-amber-500" 
+              ? "bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-lg text-amber-500" 
               : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -81,7 +81,7 @@ export function StudentAssignmentHistory({ initialSubmissions, translations }: P
             placeholder={translations.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-[2rem] py-4 pl-14 pr-6 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+            className="w-full bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md border-none rounded-[2rem] py-4 pl-14 pr-6 text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
           />
         </div>
       </div>
@@ -92,7 +92,7 @@ export function StudentAssignmentHistory({ initialSubmissions, translations }: P
           {filtered.map((s) => (
             <div 
               key={s.id}
-              className="group bg-white dark:bg-slate-900 rounded-[8px] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col"
+              className="group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[8px] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col"
             >
               {/* Thumbnail */}
               <div className="aspect-video relative overflow-hidden bg-slate-100 rounded-[8px] shadow-xl">
@@ -178,8 +178,8 @@ export function StudentAssignmentHistory({ initialSubmissions, translations }: P
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-[3rem] py-24 text-center border border-dashed border-slate-200 dark:border-slate-800">
-            <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-[3rem] py-24 text-center border border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-20 h-20 bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6">
               <Filter className="w-10 h-10 text-slate-300" />
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{translations.noAssignments}</h3>

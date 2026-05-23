@@ -16,15 +16,24 @@ import {
   MessageCircle,
   X,
   CheckCircle2,
-  Check
+  Check,
+  MousePointer2,
+  RotateCcw,
+  CheckCircle,
+  XCircle,
+  FileText,
+  Volume2,
+  Info
 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
+import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
+import Link from "next/link";
 import { completeSubmission } from "@/actions/submission-actions";
 import { useTranslations } from "next-intl";
 
@@ -62,6 +71,24 @@ const getQuestionStatus = (q: any, answer: any) => {
     return answer === questionData.isTrue ? 'correct' : 'incorrect';
   }
 
+  if (qType === "CLOZE_TEST") {
+    const textWithBlanks = questionData.textWithBlanks || "";
+    const blanks = Array.from(textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)).map((m: any) => m[1]);
+    const userAnswer = answer || {};
+    
+    if (Object.keys(userAnswer).length === 0) return 'pending';
+    
+    const isAllCorrect = blanks.every((expectedWord, idx) => {
+      const userWord = (userAnswer[idx] || "").trim();
+      if (questionData.caseSensitive) {
+        return expectedWord === userWord;
+      }
+      return expectedWord.toLowerCase() === userWord.toLowerCase();
+    });
+    
+    return isAllCorrect ? 'correct' : 'incorrect';
+  }
+
   if (qType === "MATCHING") {
     const pairs = questionData.pairs || [];
     const userAnswer = answer || {};
@@ -72,6 +99,78 @@ const getQuestionStatus = (q: any, answer: any) => {
 
   return 'pending';
 };
+
+function ClozeTestQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange }: any) {
+  const textWithBlanks = questionData.textWithBlanks || "";
+  const parts = textWithBlanks.split(/(\{\{.*?\}\})/g);
+  let blankIndex = 0;
+
+  return (
+    <div className="w-full p-6 lg:p-10 bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-3xl text-xl lg:text-2xl font-medium text-slate-700 dark:text-slate-200 leading-[3rem] lg:leading-[4rem] relative shadow-inner">
+      <div className="relative z-20">
+        {parts.map((part: string, i: number) => {
+          if (part.startsWith('{{') && part.endsWith('}}')) {
+            const expectedWord = part.slice(2, -2);
+            const currentIndex = blankIndex++;
+            const userWord = (userAnswer || {})[currentIndex] || "";
+            
+            let isCorrect = false;
+            if (questionData.caseSensitive) {
+              isCorrect = expectedWord === userWord.trim();
+            } else {
+              isCorrect = expectedWord.toLowerCase() === userWord.trim().toLowerCase();
+            }
+
+            let borderClass = 'border-b-2 border-slate-300 dark:border-slate-600 focus:border-primary';
+            let bgClass = 'bg-white dark:bg-slate-800 focus:bg-primary/5';
+            let textClass = 'text-primary font-bold';
+
+            if (isChecked) {
+              if (isCorrect) {
+                borderClass = 'border-2 border-emerald-500 rounded-lg';
+                bgClass = 'bg-emerald-50 dark:bg-emerald-900/20';
+                textClass = 'text-emerald-700 dark:text-emerald-400 font-bold';
+              } else {
+                borderClass = 'border-2 border-rose-500 rounded-lg';
+                bgClass = 'bg-rose-50 dark:bg-rose-900/20';
+                textClass = 'text-rose-700 dark:text-rose-400 font-bold opacity-70 line-through';
+              }
+            }
+
+            const width = Math.max(userWord.length, isChecked && !isCorrect ? expectedWord.length : 5) * 1.2 + 2;
+
+            return (
+              <span key={i} className="inline-block relative mx-2 align-middle">
+                <input
+                  type="text"
+                  disabled={isChecked}
+                  value={userWord}
+                  onChange={(e) => {
+                    const currentAnswers = userAnswer || {};
+                    handleAnswerChange(q, {
+                      ...currentAnswers,
+                      [currentIndex]: e.target.value
+                    });
+                  }}
+                  className={`inline-block text-center outline-none transition-all px-2 py-1 ${borderClass} ${bgClass} ${textClass} min-w-[80px] disabled:opacity-100 disabled:cursor-not-allowed`}
+                  style={{ width: `${width}ch` }}
+                  placeholder="..."
+                />
+                {isChecked && !isCorrect && (
+                  <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-lg border border-emerald-200 shadow-md whitespace-nowrap z-30">
+                    {expectedWord}
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-emerald-100 rotate-45 border-r border-b border-emerald-200"></div>
+                  </span>
+                )}
+              </span>
+            );
+          }
+          return <span key={i}>{part}</span>;
+        })}
+      </div>
+    </div>
+  );
+}
 
 function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange, matchingColors }: any) {
   const t = useTranslations("student.quiz");
@@ -128,7 +227,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
             if (isChecked) strokeColor = isCorrect ? '#10B981' : '#EF4444';
 
             return (
-              <g key={`student-${leftId}`} onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? t('correct') : t('incorrect') })} onMouseLeave={() => setHoveredLine(null)}>
+              <g key={`student-${leftId}`} onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, isCorrect, content: isCorrect ? t('correct') : t('incorrect') })} onMouseLeave={() => setHoveredLine(null)}>
                 <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="15" className="cursor-help pointer-events-auto" />
                 <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isCorrect ? "4" : "2"} strokeDasharray={isChecked && !isCorrect ? "6,4" : "0"} className="transition-all duration-500 pointer-events-none" />
                 {isChecked && !isCorrect && (() => {
@@ -145,7 +244,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
         {hoveredLine && (
           <div className="fixed z-[100] px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold pointer-events-none shadow-xl -translate-x-1/2 -translate-y-full mb-4" style={{ left: hoveredLine.x, top: hoveredLine.y }}>
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${hoveredLine.content === 'Đúng' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+              <span className={`w-2 h-2 rounded-full ${hoveredLine.isCorrect ? 'bg-emerald-400' : 'bg-rose-400'}`} />
               {hoveredLine.content}
             </div>
           </div>
@@ -198,7 +297,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
                   }
                 }} className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
                 {rightText?.startsWith('http') || rightText?.startsWith('/') ? <img src={rightText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{rightText}</span>}
-                {isChecked && pairedLeftId && <span className={`material-symbols-outlined ml-auto ${isPairCorrect ? 'text-emerald-500' : 'text-rose-500'}`}>{isPairCorrect ? 'check_circle' : 'cancel'}</span>}
+                {isChecked && pairedLeftId && <div className="ml-auto">{isPairCorrect ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}</div>}
               </div>
             );
           })}
@@ -206,7 +305,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
       </div>
       {!isChecked && (
         <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-           <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary"><span className="material-symbols-outlined text-sm">gesture</span></div>
+           <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary"><MousePointer2 className="w-4 h-4" /></div>
            <p className="text-xs text-slate-500 font-medium">{t("matchingTip")}</p>
         </div>
       )}
@@ -248,6 +347,7 @@ export default function QuizClientRunner({
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState(initialAnswers);
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
 
@@ -369,6 +469,48 @@ export default function QuizClientRunner({
     });
   }, [questions, answers]);
 
+  // Dynamic sizing configuration based on question count to prevent horizontal overflows
+  const sizeConfig = useMemo(() => {
+    const qCount = questions.length;
+    if (qCount <= 10) {
+      return {
+        circle: "w-10 h-10 text-xs",
+        gap: "gap-3",
+        line: "w-3",
+        badgePos: "-top-3.5",
+        badgePadding: "p-1",
+        badgeIconSize: "w-2.5 h-2.5"
+      };
+    } else if (qCount <= 15) {
+      return {
+        circle: "w-9 h-9 text-xs",
+        gap: "gap-2",
+        line: "w-2",
+        badgePos: "-top-3.2",
+        badgePadding: "p-0.5",
+        badgeIconSize: "w-2.5 h-2.5"
+      };
+    } else if (qCount <= 22) {
+      return {
+        circle: "w-8 h-8 text-[10px]",
+        gap: "gap-1.5",
+        line: "w-1.5",
+        badgePos: "-top-3",
+        badgePadding: "p-0.5",
+        badgeIconSize: "w-2 h-2"
+      };
+    } else {
+      return {
+        circle: "w-7 h-7 text-[9px]",
+        gap: "gap-1",
+        line: "w-1",
+        badgePos: "-top-2.5",
+        badgePadding: "p-0.5",
+        badgeIconSize: "w-1.5 h-1.5"
+      };
+    }
+  }, [questions.length]);
+
   const isAllChecked = useMemo(() => {
     return questions.length > 0 && questions.every(q => checkedQuestions[q.id]);
   }, [questions, checkedQuestions]);
@@ -425,12 +567,24 @@ export default function QuizClientRunner({
         return { ...prev, [q.id]: newMatching };
       }
 
+      if (qType === "CLOZE_TEST") {
+        const currentCloze = (currentAnswer && typeof currentAnswer === 'object') ? currentAnswer : {};
+        return {
+          ...prev,
+          [q.id]: {
+            ...currentCloze,
+            ...value
+          }
+        };
+      }
+
       return {
         ...prev,
         [q.id]: value
       };
     });
   };
+
 
   const handleCheckAll = async () => {
     const unansweredIndices: number[] = [];
@@ -454,6 +608,11 @@ export default function QuizClientRunner({
     for (const q of questions) {
       await new Promise(resolve => setTimeout(resolve, 500)); // Delay between reveals
       setCheckedQuestions(prev => ({ ...prev, [q.id]: true }));
+      
+      const isCorrect = getQuestionStatus(q, answers[q.id]) === 'correct';
+      if (!isCorrect && q.explanation) {
+        setExpandedExplanations(prev => ({ ...prev, [q.id]: true }));
+      }
     }
     
     toast.success(t("checkAllSuccess"));
@@ -465,6 +624,7 @@ export default function QuizClientRunner({
     setAnswers(emptyAnswers);
     // Reset checked questions to hide answer reveals
     setCheckedQuestions({});
+    setExpandedExplanations({});
   };
 
   const handleSubmit = () => {
@@ -484,7 +644,7 @@ export default function QuizClientRunner({
   };
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 p-4 lg:p-6 font-body">
       {/* Floating Teacher Info */}
       <FloatingTeacherInfo 
         teacher={assignment.teacher} 
@@ -494,23 +654,23 @@ export default function QuizClientRunner({
       {/* Header removed as per user request */}
 
       {/* Integrated Workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-primary/5 rounded-[3.5rem] shadow-2xl shadow-primary/5">
         {/* Middle Column: Questions (70%) */}
-        <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30 relative">
+        <div className="w-[70%] shrink-0 flex flex-col border-r border-outline-variant/20 relative">
            {/* Progress Navigation Header (Sticky) */}
-           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/20 flex items-center px-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shrink-0 gap-6">
+           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/10 flex items-center px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-6">
               <div className="shrink-0">
                 <BackButton className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
-                  Quay lại
+                  Back
                 </BackButton>
               </div>
               
-              <div className="flex-1 flex flex-col items-center justify-center gap-2 pr-20"> {/* pr-20 to balance the back button */}
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 pr-20"> {/* pr-20 to balance the back button */}
                 <h2 className="text-[11px] font-black text-on-surface/80 uppercase tracking-[0.2em] line-clamp-1 max-w-[80%] text-center">
                   {assignment.title}
                 </h2>
-                <div className="flex items-center gap-3">
+                <div className={`flex items-center ${sizeConfig.gap}`}>
                    {questions.map((q, i) => {
                       const ans = answers[q.id];
                       const isCompleted = ans !== undefined && ans !== null && (
@@ -522,7 +682,7 @@ export default function QuizClientRunner({
                           <button
                             key={q.id}
                             onClick={() => scrollToQuestion(q.id)}
-                            className={`relative flex items-center justify-center w-10 h-10 rounded-full text-xs font-black transition-all duration-300 border-2 ${
+                            className={`relative flex items-center justify-center rounded-full font-black transition-all duration-300 border-2 ${sizeConfig.circle} ${
                               isActive 
                                ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
                                : isCompleted
@@ -534,14 +694,14 @@ export default function QuizClientRunner({
                              
                              {/* Feedback indicator above circle */}
                              {checkedQuestions[q.id] && (
-                               <div className="absolute -top-5 left-1/2 -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 duration-500 z-20">
+                               <div className={`absolute left-1/2 -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 duration-500 z-20 ${sizeConfig.badgePos}`}>
                                  {getQuestionStatus(q, answers[q.id]) === 'correct' ? (
-                                   <div className="bg-emerald-500 text-white rounded-full p-1 shadow-lg shadow-emerald-500/40 border-2 border-white dark:border-slate-900">
-                                     <Check className="w-2.5 h-2.5 stroke-[4px]" />
+                                   <div className={`bg-emerald-500 text-white rounded-full shadow-lg shadow-emerald-500/40 border-2 border-white dark:border-slate-900 ${sizeConfig.badgePadding}`}>
+                                     <Check className={`stroke-[4px] ${sizeConfig.badgeIconSize}`} />
                                    </div>
                                  ) : (
-                                   <div className="bg-rose-500 text-white rounded-full p-1 shadow-lg shadow-rose-500/40 border-2 border-white dark:border-slate-900">
-                                     <X className="w-2.5 h-2.5 stroke-[4px]" />
+                                   <div className={`bg-rose-500 text-white rounded-full shadow-lg shadow-rose-500/40 border-2 border-white dark:border-slate-900 ${sizeConfig.badgePadding}`}>
+                                     <X className={`stroke-[4px] ${sizeConfig.badgeIconSize}`} />
                                    </div>
                                  )}
                                </div>
@@ -549,7 +709,7 @@ export default function QuizClientRunner({
 
                              {/* Connection line between circles */}
                              {i < questions.length - 1 && (
-                               <div className={`absolute left-full w-3 h-0.5 -z-10 ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
+                               <div className={`absolute left-full h-0.5 -z-10 ${sizeConfig.line} ${isCompleted ? 'bg-primary/30' : 'bg-slate-100 dark:bg-slate-800'}`} />
                              )}
                           </button>
                       )
@@ -588,10 +748,12 @@ export default function QuizClientRunner({
                   className="space-y-8 pb-12 border-b border-outline-variant/10 last:border-0"
                 >
                   <div className="space-y-4">
-                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-lg text-secondary text-[10px] font-black uppercase tracking-widest">
+                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
                         {t("questionPrefix")} {idx + 1} • {
                           qType === "MULTIPLE_SELECT" ? t('multipleSelect') : 
                           qType === "MATCHING" ? t('matching') : 
+                          qType === "CLOZE_TEST" ? t('clozeTest') :
+                          qType === "TRUE_FALSE" ? t('trueFalse') :
                           t('multipleChoice')
                         }
                      </div>
@@ -604,8 +766,17 @@ export default function QuizClientRunner({
 
                   <div className="space-y-4">
                      {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
-                       <div className="grid grid-cols-1 gap-3">
-                         {(questionData.options || []).map((option: any, i: number) => {
+                       <div className="flex flex-wrap gap-4">
+                         {(() => {
+                           const blobShapes = [
+                             "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
+                             "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
+                             "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
+                             "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
+                             "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
+                           ];
+                           return (questionData.options || []).map((option: any, i: number) => {
+                             const blobShape = blobShapes[i % blobShapes.length];
                            const isSelected = isMultiSelect 
                              ? (Array.isArray(userAnswer) && userAnswer.includes(i))
                              : userAnswer === i;
@@ -642,73 +813,115 @@ export default function QuizClientRunner({
                                key={i}
                                disabled={isChecked}
                                onClick={() => handleAnswerChange(q, i)}
-                               className={`p-5 rounded-2xl border-2 text-left font-bold transition-all relative ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50'}`}
+                               className={`px-6 py-4 ${blobShape} border-2 text-left font-bold transition-all duration-300 relative inline-flex items-center gap-4 ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'}`}
                              >
-                               <div className="flex items-center gap-4">
-                                 <div className={`w-8 h-8 flex items-center justify-center text-xs font-black shrink-0 transition-all shadow-sm ${isMultiSelect ? 'rounded-lg' : 'rounded-full'} ${iconClass}`}>
-                                   {isMultiSelect ? (
-                                      <span className="material-symbols-outlined text-base">
-                                        {isSelected ? 'check_box' : 'check_box_outline_blank'}
-                                      </span>
-                                   ) : String.fromCharCode(65 + i)}
-                                 </div>
-                                 <span className="flex-1">{option.text}</span>
-                                 {isChecked && isCorrect && (
-                                   <span className="material-symbols-outlined text-emerald-600 ml-auto">check_circle</span>
-                                 )}
-                                 {isChecked && isSelected && !isCorrect && (
-                                   <span className="material-symbols-outlined text-rose-600 ml-auto">cancel</span>
-                                 )}
+                               <div className={`w-6 h-6 flex items-center justify-center text-xs font-black shrink-0 transition-all shadow-sm ${isMultiSelect ? 'rounded-md border-2' : 'rounded-full'} ${!isSelected && isMultiSelect ? 'border-primary/20 bg-white/50 dark:bg-slate-800/50' : 'border-transparent'} ${iconClass}`}>
+                                 {isMultiSelect ? (
+                                    <Check className={`w-4 h-4 transition-all duration-300 ${isSelected ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`} strokeWidth={3.5} />
+                                 ) : String.fromCharCode(65 + i)}
                                </div>
+                               <span className="text-sm">{option.text}</span>
+                               {isChecked && isCorrect && (
+                                 <CheckCircle2 className="text-emerald-600 ml-2 w-5 h-5 stroke-[2px]" />
+                               )}
+                               {isChecked && isSelected && !isCorrect && (
+                                 <XCircle className="text-rose-600 ml-2 w-5 h-5 stroke-[2px]" />
+                               )}
                              </button>
                            );
-                         })}
+                           });
+                         })()}
                        </div>
                      )}
 
                      {qType === "TRUE_FALSE" && (
-                        <div className="grid grid-cols-2 gap-4">
-                          {[
-                             { label: t("correct"), value: true },
-                             { label: t("incorrect"), value: false }
-                          ].map((opt) => {
-                            const isSelected = userAnswer === opt.value;
-                            const isCorrect = questionData.isTrue === opt.value;
-                            
-                            let borderClass = 'border-outline-variant/30';
-                            let bgClass = 'bg-white dark:bg-slate-900';
-                            let textClass = 'text-on-surface-variant';
+                        <div className="flex flex-wrap justify-center gap-6 py-4">
+                          {(() => {
+                            const blobShapes = [
+                              "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
+                              "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
+                            ];
+                            return [
+                               { label: t("correct"), value: true },
+                               { label: t("incorrect"), value: false }
+                            ].map((opt, i) => {
+                              const blobShape = blobShapes[i % blobShapes.length];
+                              const isSelected = userAnswer === opt.value;
+                              const isCorrect = questionData.isTrue === opt.value;
+                              let borderClass = '';
+                              let bgClass = '';
+                              let textClass = '';
+                              let iconClass = '';
 
-                            if (isSelected) {
-                              borderClass = 'border-amber-500';
-                              bgClass = 'bg-amber-50 dark:bg-amber-900/20';
-                              textClass = 'text-amber-700 dark:text-amber-400';
-                            }
+                              if (opt.value) {
+                                // True Button Default (Green)
+                                borderClass = 'border-emerald-200 dark:border-emerald-800/50';
+                                bgClass = 'bg-emerald-50/50 dark:bg-emerald-900/10';
+                                textClass = 'text-emerald-700 dark:text-emerald-400';
+                                iconClass = 'bg-emerald-100 text-emerald-600 dark:bg-emerald-800/50 dark:text-emerald-300';
 
-                            if (isChecked) {
-                              if (isCorrect) {
-                                borderClass = 'border-emerald-500 bg-emerald-500';
-                                textClass = 'text-white';
-                              } else if (isSelected && !isCorrect) {
-                                borderClass = 'border-rose-500 bg-rose-500';
-                                textClass = 'text-white';
+                                if (isSelected) {
+                                  borderClass = 'border-emerald-500';
+                                  bgClass = 'bg-emerald-100 dark:bg-emerald-900/30';
+                                  textClass = 'text-emerald-800 dark:text-emerald-300';
+                                  iconClass = 'bg-emerald-500 text-white';
+                                }
+                              } else {
+                                // False Button Default (Red)
+                                borderClass = 'border-rose-200 dark:border-rose-800/50';
+                                bgClass = 'bg-rose-50/50 dark:bg-rose-900/10';
+                                textClass = 'text-rose-700 dark:text-rose-400';
+                                iconClass = 'bg-rose-100 text-rose-600 dark:bg-rose-800/50 dark:text-rose-300';
+
+                                if (isSelected) {
+                                  borderClass = 'border-rose-500';
+                                  bgClass = 'bg-rose-100 dark:bg-rose-900/30';
+                                  textClass = 'text-rose-800 dark:text-rose-300';
+                                  iconClass = 'bg-rose-500 text-white';
+                                }
                               }
-                            }
 
-                            return (
-                              <button 
-                                key={opt.label}
-                                disabled={isChecked}
-                                onClick={() => handleAnswerChange(q, opt.value)}
-                                className={`p-6 rounded-2xl border-2 flex items-center justify-center gap-3 font-black transition-all ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50'}`}
-                              >
-                                <span className="material-symbols-outlined">
-                                  {isChecked && isCorrect ? 'check_circle' : (isChecked && isSelected && !isCorrect ? 'cancel' : (opt.value ? 'check_circle' : 'cancel'))}
-                                </span>
-                                {opt.label}
-                              </button>
-                            );
-                          })}
+                              if (isChecked) {
+                                if (isCorrect) {
+                                  borderClass = 'border-emerald-500';
+                                  bgClass = 'bg-emerald-500/10';
+                                  textClass = 'text-emerald-700';
+                                  iconClass = 'bg-emerald-500 text-white';
+                                } else if (isSelected && !isCorrect) {
+                                  borderClass = 'border-rose-500';
+                                  bgClass = 'bg-rose-500/10';
+                                  textClass = 'text-rose-700';
+                                  iconClass = 'bg-rose-500 text-white';
+                                } else {
+                                  // Dim unselected incorrect options
+                                  borderClass = 'border-slate-200 dark:border-slate-800 opacity-50';
+                                  bgClass = 'bg-slate-50 dark:bg-slate-900';
+                                  textClass = 'text-slate-400';
+                                  iconClass = 'bg-slate-100 text-slate-300';
+                                }
+                              }
+
+                              return (
+                                <button 
+                                  key={opt.label}
+                                  disabled={isChecked}
+                                  onClick={() => handleAnswerChange(q, opt.value)}
+                                  className={`px-12 py-5 min-w-[200px] justify-center ${blobShape} border-2 text-center font-bold transition-all duration-300 relative inline-flex items-center gap-4 ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'}`}
+                                >
+                                  <div className={`w-8 h-8 flex items-center justify-center shrink-0 transition-all shadow-sm rounded-full ${iconClass}`}>
+                                    {opt.value ? <Check className="w-5 h-5" strokeWidth={3}/> : <X className="w-5 h-5" strokeWidth={3}/>}
+                                  </div>
+                                  <span className="text-sm">{opt.label}</span>
+                                  {isChecked && isCorrect && (
+                                    <CheckCircle2 className="text-emerald-600 ml-2 w-5 h-5 stroke-[2px]" />
+                                  )}
+                                  {isChecked && isSelected && !isCorrect && (
+                                    <XCircle className="text-rose-600 ml-2 w-5 h-5 stroke-[2px]" />
+                                  )}
+                                </button>
+                              );
+                            });
+                          })()}
                         </div>
                       )}
 
@@ -721,6 +934,45 @@ export default function QuizClientRunner({
                           handleAnswerChange={handleAnswerChange}
                           matchingColors={matchingColors}
                         />
+                      )}
+
+                      {qType === "CLOZE_TEST" && (
+                        <ClozeTestQuestionBlock 
+                          q={q}
+                          questionData={questionData}
+                          userAnswer={userAnswer}
+                          isChecked={isChecked}
+                          handleAnswerChange={handleAnswerChange}
+                        />
+                      )}
+
+                      {/* Explanation Section */}
+                      {isChecked && q.explanation && (
+                        <div className="flex flex-col items-center mt-6 relative">
+                          <button
+                            onClick={() => setExpandedExplanations(prev => ({...prev, [q.id]: !prev[q.id]}))}
+                            className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary hover:border-primary transition-all duration-300 flex items-center justify-center shadow-sm z-10 group"
+                          >
+                            <ChevronDown className={`w-6 h-6 transition-transform duration-300 ${expandedExplanations[q.id] ? 'rotate-180' : ''}`} />
+                            {/* Custom Tooltip via CSS (group-hover) */}
+                            <div className="absolute -top-10 scale-0 group-hover:scale-100 transition-all bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap pointer-events-none shadow-xl border border-slate-700">
+                              {t("viewExplanation")}
+                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 border-r border-b border-slate-700"></div>
+                            </div>
+                          </button>
+                          
+                          {/* Animated Explanation Box */}
+                          <div className={`w-full mx-auto overflow-hidden transition-all duration-500 ease-in-out ${expandedExplanations[q.id] ? 'max-h-[800px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
+                            <div className="pt-5 pb-2 px-1">
+                              <div className="p-6 pt-6 bg-emerald-50/50 dark:bg-emerald-900/10 border-2 border-emerald-100 dark:border-emerald-900/30 rounded-3xl text-sm text-slate-700 dark:text-slate-300 leading-relaxed relative">
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/40 px-4 py-1 rounded-full text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-200 dark:border-emerald-900/50">
+                                  {t("explanation")}
+                                </div>
+                                <div className="whitespace-pre-wrap">{q.explanation}</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       )}
                   </div>
                 </div>
@@ -735,7 +987,7 @@ export default function QuizClientRunner({
                       className="flex items-center gap-3 px-10 py-4 bg-orange-500 text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-500/20 uppercase italic"
                     >
                       {t("resetAll")}
-                      <span className="material-symbols-outlined text-xl">restart_alt</span>
+                      <RotateCcw className="w-5 h-5 stroke-[2px]" />
                     </button>
                   ) : (
                     <button
@@ -743,7 +995,7 @@ export default function QuizClientRunner({
                       className="flex items-center gap-3 px-10 py-4 bg-secondary text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-secondary/20 uppercase italic"
                     >
                       {t("checkAll")}
-                      <span className="material-symbols-outlined text-xl">verified</span>
+                      <CheckCircle className="w-5 h-5 stroke-[2px]" />
                     </button>
                   )}
                   
@@ -767,12 +1019,8 @@ export default function QuizClientRunner({
         </div>
 
         {/* Right Column: Material / Reading Content & Reviews (30%) */}
-        <div className="w-[30%] shrink-0 flex flex-col bg-white dark:bg-slate-900 border-l border-outline-variant/30">
-           <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
-              <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
-                 <BookOpen className="w-4 h-4" />
-                 {t("resources")}
-              </div>
+        <div className="w-[30%] shrink-0 flex flex-col bg-white/40 dark:bg-slate-800/40">
+           <div className="h-12 border-b border-outline-variant/10 flex items-center justify-start px-6 bg-transparent shrink-0">
               <div className="flex items-center gap-4">
                  {!isGuest && (
                    <>
@@ -797,7 +1045,7 @@ export default function QuizClientRunner({
               {hasMaterialSection && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
-                    <span className="material-symbols-outlined text-sm">menu_book</span>
+                    <BookOpen className="w-4 h-4 stroke-[2px]" />
                     {t("studyMaterial")}
                   </div>
                   <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
@@ -822,14 +1070,14 @@ export default function QuizClientRunner({
                     {audioUrl && (
                       <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl flex items-center gap-4 mb-6 ring-1 ring-slate-200 dark:ring-slate-700">
                         <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                          <span className="material-symbols-outlined">audiotrack</span>
+                          <Volume2 className="w-6 h-6 stroke-[2px]" />
                         </div>
                         <audio src={audioUrl} className="flex-1 h-8" controls />
                       </div>
                     )}
 
                     <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
-                      <div dangerouslySetInnerHTML={{ __html: assignment.readingText }} />
+                      <InteractiveReadingContent html={assignment.readingText} isLoggedIn={!isGuest} />
                     </div>
                   </div>
                 </div>
@@ -839,9 +1087,13 @@ export default function QuizClientRunner({
               {assignment.tags && (
                 <div className="flex flex-wrap gap-2">
                   {assignment.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
-                    <span key={i} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-200/50 dark:border-slate-700/50">
+                    <Link 
+                      key={i} 
+                      href={`/tags/${encodeURIComponent(tag)}`}
+                      className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-300"
+                    >
                       #{tag}
-                    </span>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -850,11 +1102,11 @@ export default function QuizClientRunner({
               {hasInstructionText && (
                 <div className="space-y-6">
                   <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
-                    <span className="material-symbols-outlined text-sm">info</span>
+                    <Info className="w-4 h-4 stroke-[2px]" />
                     {t("instructions")}
                   </div>
                   <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
-                    <div dangerouslySetInnerHTML={{ __html: assignment.instructions }} />
+                    <InteractiveReadingContent html={assignment.instructions} isLoggedIn={!isGuest} />
                   </div>
                 </div>
               )}

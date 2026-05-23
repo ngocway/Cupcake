@@ -83,7 +83,7 @@ const LessonCard = memo(function LessonCard({
     <div
       onClick={handleLessonAccess}
       style={style}
-      className={`group bg-white dark:bg-slate-900 rounded-[8px] border border-outline-variant/10 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer ${isPending ? 'opacity-70 grayscale' : ''}`}
+      className={`group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[8px] border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer ${isPending ? 'opacity-70 grayscale' : ''}`}
     >
       {/* Video Thumbnail Placeholder */}
       <div className="relative aspect-video w-full overflow-hidden rounded-[8px] bg-slate-900 shadow-xl group">
@@ -292,8 +292,7 @@ export default function LessonsPageContent(props: Props) {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline group-focus-within:text-primary transition-colors" />
                   <input
                      type="text"
-                     placeholder={t("searchPlaceholder")}
-                     className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-outline-variant/50 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium"
+                     className="w-full pl-11 pr-4 py-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium"
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -306,7 +305,7 @@ export default function LessonsPageContent(props: Props) {
                         className={`px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
                            selectedClassId === "all"
                            ? "bg-on-surface text-white border-on-surface"
-                           : "bg-white dark:bg-slate-900 text-on-surface-variant border-outline-variant hover:border-primary"
+                           : "bg-white/60 dark:bg-slate-800/60 backdrop-blur-md text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary"
                         }`}
                      >
                         {t("allClasses")}
@@ -318,7 +317,7 @@ export default function LessonsPageContent(props: Props) {
                            className={`px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
                               selectedClassId === c.id
                               ? "bg-on-surface text-white border-on-surface"
-                              : "bg-white dark:bg-slate-900 text-on-surface-variant border-outline-variant hover:border-primary"
+                              : "bg-white/60 dark:bg-slate-800/60 backdrop-blur-md text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary"
                            }`}
                         >
                            {c.name}
@@ -403,7 +402,7 @@ export default function LessonsPageContent(props: Props) {
           )}
         </>
       ) : !isLoading && (
-        <div className="py-24 text-center space-y-6 bg-surface-container-low/30 rounded-[3rem] border border-dashed border-outline-variant/30">
+        <div className="py-24 text-center space-y-6 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-[3rem] border border-dashed border-slate-200 dark:border-slate-700">
            <div className="w-20 h-20 bg-white/50 backdrop-blur rounded-full flex items-center justify-center mx-auto shadow-sm">
               <Video className="w-8 h-8 text-outline-variant" />
            </div>

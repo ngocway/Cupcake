@@ -30,7 +30,6 @@ model User {
   location             String?
   education            String?
   teachingExperience   String?
-  studentViewTheme     String?              @default("DYNAMIC")
   userType             String?              @default("adults")
   themeColor           String?              @default("#00adef")
   logoUrl              String?
@@ -42,6 +41,7 @@ model User {
   adminRoleId          String?
   isBlocked            Boolean              @default(false)
   locale               String?              @default("en")
+  vocabLanguage        String?              @default("VI")
   accounts             Account[]
   assignments          Assignment[]
   assignmentReviews    AssignmentReview[]
@@ -105,21 +105,21 @@ model Follower {
 }
 
 model Class {
-  id            String            @id @default(cuid())
-  name          String
-  description   String?
-  gradeLevel    String?
-  classCode     String            @unique
-  joinCode      String            @unique
-  isJoinable    Boolean           @default(true)
-  teacherId     String
-  deletedAt     DateTime?
-  createdAt     DateTime          @default(now())
-  isBlocked     Boolean           @default(false)
-  announcements Announcement[]
-  assignments   AssignmentClass[]
-  teacher       User              @relation("TeacherClasses", fields: [teacherId], references: [id])
-  enrollments   ClassEnrollment[]
+  id              String            @id @default(cuid())
+  name            String
+  description     String?
+  gradeLevel      String?
+  classCode       String            @unique
+  joinCode        String            @unique
+  isJoinable      Boolean           @default(true)
+  teacherId       String
+  deletedAt       DateTime?
+  createdAt       DateTime          @default(now())
+  isBlocked       Boolean           @default(false)
+  announcements   Announcement[]
+  assignments     AssignmentClass[]
+  teacher         User              @relation("TeacherClasses", fields: [teacherId], references: [id])
+  enrollments     ClassEnrollment[]
   assignedLessons LessonClass[]
 }
 
@@ -293,34 +293,34 @@ model SubmissionAnswer {
 }
 
 model Lesson {
-  id             String           @id @default(cuid())
-  slug           String?          @unique
-  title          String
-  description    String?
-  videoUrl       String?
-  audioUrl       String?
-  isPremium      Boolean          @default(false)
-  price          Float            @default(0)
-  viewsCount     Int              @default(0)
-  purchasesCount Int              @default(0)
-  isEditorChoice Boolean          @default(false)
-  teacherId      String
-  assignmentId   String?          @unique
-  thumbnail      String?
-  targetAudiences String[]        @default([])
-  materialType   String?          @default("READING")
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  deletedAt      DateTime?
-  isBlocked      Boolean          @default(false)
-  favorites      FavoriteLesson[]
-  assignment     Assignment?      @relation(fields: [assignmentId], references: [id])
-  teacher        User             @relation(fields: [teacherId], references: [id])
-  reviews        LessonReview[]
-  purchases      Purchase[]
-  categories     Category[]
-  progress       LessonProgress[]
-  targetClasses  LessonClass[]
+  id              String           @id @default(cuid())
+  slug            String?          @unique
+  title           String
+  description     String?
+  videoUrl        String?
+  audioUrl        String?
+  isPremium       Boolean          @default(false)
+  price           Float            @default(0)
+  viewsCount      Int              @default(0)
+  purchasesCount  Int              @default(0)
+  isEditorChoice  Boolean          @default(false)
+  teacherId       String
+  assignmentId    String?          @unique
+  thumbnail       String?
+  targetAudiences String[]         @default([])
+  materialType    String?          @default("READING")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+  isBlocked       Boolean          @default(false)
+  favorites       FavoriteLesson[]
+  assignment      Assignment?      @relation(fields: [assignmentId], references: [id])
+  teacher         User             @relation(fields: [teacherId], references: [id])
+  reviews         LessonReview[]
+  purchases       Purchase[]
+  categories      Category[]
+  progress        LessonProgress[]
+  targetClasses   LessonClass[]
 
   @@index([deletedAt, isPremium, createdAt])
   @@index([viewsCount])
@@ -503,21 +503,22 @@ enum QuestionType {
 }
 
 model Category {
-  id          String     @id @default(cuid())
-  name        String
-  slug        String     @unique
-  icon        String?
-  color       String?
-  description String?
-  parentId    String?
-  orderIndex  Int        @default(0)
-  isHidden            Boolean    @default(false)
-  showClearBackground Boolean    @default(false)
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  id                  String   @id @default(cuid())
+  nameVi              String   @default("")
+  nameEn              String   @default("")
+  slug                String   @unique
+  icon                String?
+  color               String?
+  descriptionVi       String?
+  descriptionEn       String?
+  parentId            String?
+  orderIndex          Int      @default(0)
+  isHidden            Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children    Category[] @relation("CategoryHierarchy")
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
 
   assignments Assignment[]
   lessons     Lesson[]
@@ -527,25 +528,26 @@ model Category {
 }
 
 model HomepageFeed {
-  id            String   @id @default(cuid())
-  sourceId      String   @unique
-  contentType   String   // "EXERCISE" or "LESSON"
-  title         String
-  slug          String
-  thumbnail     String?
-  videoUrl      String?
-  audioUrl      String?
-  materialType  String?  @default("READING")
-  teacherId     String
-  teacherName   String
-  teacherImage  String?
-  viewCount     Int      @default(0)
-  reviewCount   Int      @default(0)
-  categoryId    String?
-  targetAudiences String[]   @default([])
-  status        String   @default("PUBLIC")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  sourceId        String   @unique
+  contentType     String // "EXERCISE" or "LESSON"
+  title           String
+  slug            String
+  thumbnail       String?
+  videoUrl        String?
+  audioUrl        String?
+  materialType    String?  @default("READING")
+  teacherId       String
+  teacherName     String
+  teacherImage    String?
+  viewCount       Int      @default(0)
+  reviewCount     Int      @default(0)
+  categoryId      String?
+  targetAudiences String[] @default([])
+  tags            String[] @default([])
+  status          String   @default("PUBLIC")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([contentType])
   @@index([status])
@@ -561,9 +563,9 @@ model LessonProgress {
   startedAt     DateTime  @default(now())
   completedAt   DateTime?
   attemptNumber Int       @default(1)
-  
-  student       User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  lesson        Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, lessonId, attemptNumber])
   @@index([studentId])
@@ -571,11 +573,19 @@ model LessonProgress {
 }
 
 model LessonClass {
-  lessonId    String
-  classId     String
-  assignedAt  DateTime @default(now())
-  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  class       Class    @relation(fields: [classId], references: [id])
+  lessonId   String
+  classId    String
+  assignedAt DateTime @default(now())
+  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  class      Class    @relation(fields: [classId], references: [id])
 
   @@id([lessonId, classId])
 }
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isPopular Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+

@@ -18,6 +18,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
         { href: "/admin/dashboard", icon: "dashboard", label: "Tổng quan" },
         { href: "/admin/users", icon: "group", label: "Người dùng" },
         { href: "/admin/categories", icon: "account_tree", label: "Cây Danh Mục" },
+        { href: "/admin/tags", icon: "sell", label: "Quản lý Thẻ" },
         { href: "/admin/materials", icon: "auto_stories", label: "Học liệu" },
         { href: "/admin/classes", icon: "school", label: "Lớp học" },
       ]

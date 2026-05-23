@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { LoginButton } from "@/components/LoginButton"
-import { LanguageToggle } from "@/components/LanguageToggle"
 import { signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -86,7 +85,6 @@ export function SmartHeader({ session }: SmartHeaderProps) {
             </div>
 
             <div className="flex items-center gap-6">
-              <LanguageToggle />
               {session ? (
                 <div className="relative" ref={menuRef}>
                   <button 

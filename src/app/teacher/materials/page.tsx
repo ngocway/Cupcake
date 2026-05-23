@@ -6,6 +6,7 @@ import { MaterialListItem } from './_components/MaterialListItem';
 import { MaterialStatus } from '@prisma/client';
 import { createDraftMaterial, bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials } from '@/actions/material-actions';
 import { useSession } from 'next-auth/react';
+import { Plus, Sparkles, ArrowLeft, Trash2, RotateCcw } from 'lucide-react';
 
 type Assignment = {
   id: string;
@@ -174,9 +175,9 @@ export default function MaterialLibraryPage() {
                 router.push(`/teacher/materials/${id}/edit`);
               } finally { setIsCreating(false); }
             }}
-            className="flex items-center gap-5 p-6 bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all text-left group disabled:opacity-50"
+            className="flex items-center gap-5 p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all text-left group disabled:opacity-50"
           >
-            <div className="size-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><span className="material-symbols-outlined text-[32px]">add</span></div>
+            <div className="size-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform"><Plus className="w-8 h-8 stroke-[2px]" /></div>
             <div><h3 className="text-lg font-bold">Tạo bài mới</h3><p className="text-sm text-[#617589]">Soạn thảo câu hỏi thủ công</p></div>
           </button>
           <button 
@@ -190,10 +191,10 @@ export default function MaterialLibraryPage() {
                 router.push(`/teacher/materials/${id}/edit?ai=true`);
               } finally { setIsCreating(false); }
             }}
-            className="relative flex items-center gap-5 p-6 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:shadow-md transition-all text-left group overflow-hidden disabled:opacity-50"
+            className="relative flex items-center gap-5 p-6 bg-gradient-to-br from-indigo-50/80 to-blue-50/80 dark:from-indigo-900/30 dark:to-blue-900/30 backdrop-blur-md rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:shadow-md transition-all text-left group overflow-hidden disabled:opacity-50"
           >
-            <div className="size-14 bg-indigo-500 rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform"><span className="material-symbols-outlined text-[32px]">auto_awesome</span></div>
-            <div><h3 className="text-lg font-bold">Tạo bằng AI</h3><p className="text-sm text-[#617589]">Tự động tạo từ tài liệu</p></div>
+            <div className="size-14 bg-indigo-500 rounded-xl flex items-center justify-center text-white group-hover:scale-110 transition-transform"><Sparkles className="w-8 h-8 stroke-[2px]" /></div>
+            <div><h3 className="text-lg font-bold">Tạo bằng AI</h3><p className="text-sm text-[#617589]">T tự động tạo từ tài liệu</p></div>
           </button>
         </div>
       </section>
@@ -204,8 +205,8 @@ export default function MaterialLibraryPage() {
             <h1 className="text-3xl font-extrabold tracking-tight">Tất cả bài tập</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowTrash(!showTrash)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all border ${showTrash ? 'bg-slate-100 text-slate-700 border-slate-200' : 'text-[#617589] border-[#f0f2f4] hover:bg-slate-50'}`}>
-              <span className="material-symbols-outlined text-[20px]">{showTrash ? 'arrow_back' : 'delete'}</span> {showTrash ? 'Quay lại' : 'Thùng rác'}
+            <button onClick={() => setShowTrash(!showTrash)} className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all border ${showTrash ? 'bg-slate-100/70 text-slate-700 border-slate-200' : 'text-[#617589] border-[#f0f2f4] hover:bg-slate-50/70 backdrop-blur-md'}`}>
+              {showTrash ? <ArrowLeft className="w-5 h-5 stroke-[2px]" /> : <Trash2 className="w-5 h-5 stroke-[2px]" />} {showTrash ? 'Quay lại' : 'Thùng rác'}
             </button>
           </div>
         </div>
@@ -213,7 +214,7 @@ export default function MaterialLibraryPage() {
         {/* List Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {loading ? (
-            [...Array(6)].map((_, i) => <div key={i} className="bg-white dark:bg-gray-800 p-5 rounded-2xl h-48 animate-pulse border border-[#f0f2f4]"></div>)
+            [...Array(6)].map((_, i) => <div key={i} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-5 rounded-2xl h-48 animate-pulse border border-[#f0f2f4]"></div>)
           ) : (
             filteredAssignments.slice((currentPage - 1) * 9, currentPage * 9).map((a) => (
               <MaterialListItem 
@@ -234,7 +235,7 @@ export default function MaterialLibraryPage() {
 
         {/* Toolbar */}
         {selectedIds.length > 0 && (
-          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 animate-in slide-in-from-bottom-10 pointer-events-auto" style={{ minWidth: '400px' }}>
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 animate-in slide-in-from-bottom-10 pointer-events-auto" style={{ minWidth: '400px' }}>
             <div className="flex flex-col">
               <span className="text-sm font-black text-slate-900 dark:text-white">Đã chọn {selectedIds.length} mục</span>
               <button onClick={() => setSelectedIds([])} className="text-[10px] font-bold text-primary hover:underline text-left uppercase tracking-widest">Hủy chọn</button>
@@ -257,10 +258,10 @@ export default function MaterialLibraryPage() {
       {/* Bulk Confirm Modal */}
       {confirmConfig.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-8 flex flex-col items-center text-center">
               <div className={`size-16 rounded-full flex items-center justify-center mb-6 ${confirmConfig.type === 'RESTORE' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
-                <span className="material-symbols-outlined text-[32px]">{confirmConfig.type === 'RESTORE' ? 'restore' : 'delete'}</span>
+                {confirmConfig.type === 'RESTORE' ? <RotateCcw className="w-8 h-8 stroke-[2px]" /> : <Trash2 className="w-8 h-8 stroke-[2px]" />}
               </div>
               <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">{confirmConfig.title}</h3>
               <p className="text-[#617589] dark:text-gray-400 text-sm">{confirmConfig.message}</p>

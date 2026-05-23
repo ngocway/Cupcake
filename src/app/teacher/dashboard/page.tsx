@@ -50,7 +50,7 @@ export default async function TeacherDashboard() {
   const totalViews = teacher.lessons.reduce((acc, l) => acc + (l.viewsCount || 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-20">
+    <div className="min-h-screen bg-transparent pb-20">
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
@@ -59,10 +59,10 @@ export default async function TeacherDashboard() {
             <p className="text-slate-500 font-medium mt-2">Dưới đây là những việc cần bạn xử lý trong hôm nay.</p>
           </div>
           <div className="flex gap-3">
-            <Link href="/teacher/lessons/new" className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all shadow-sm">
+            <Link href="/teacher/lessons/new" className="flex items-center gap-2 px-6 py-4 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-white dark:hover:bg-slate-700 transition-all shadow-sm">
                 <Plus className="w-4 h-4" /> Soạn bài mới
             </Link>
-            <Link href="/teacher/profile" className="flex items-center gap-2 px-6 py-4 bg-slate-900 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
+            <Link href="/teacher/profile" className="flex items-center gap-2 px-6 py-4 bg-blue-600 text-white font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20">
                 <LayoutDashboard className="w-4 h-4" /> Quản lý Portfolio
             </Link>
           </div>
@@ -80,17 +80,17 @@ export default async function TeacherDashboard() {
                <div className="space-y-4">
                   {/* Portfolio Visibility Alert */}
                   {!teacher.isPortfolioPublished && (
-                    <div className="bg-amber-50 border border-amber-100 p-6 rounded-[32px] flex items-center justify-between group">
+                    <div className="bg-amber-50/70 dark:bg-amber-900/10 backdrop-blur-md border border-amber-200/50 dark:border-amber-700/30 p-6 rounded-[32px] flex items-center justify-between group shadow-sm">
                         <div className="flex items-center gap-4">
                             <div className="size-14 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
                                 <AlertCircle className="w-7 h-7" />
                             </div>
                             <div>
-                                <h4 className="font-bold text-amber-900">Hồ sơ cá nhân chưa được công khai</h4>
-                                <p className="text-sm text-amber-700/70">Học sinh không thể tìm thấy bạn. Hãy hoàn thiện và bật chế độ công khai.</p>
+                                <h4 className="font-bold text-amber-900 dark:text-amber-400">Hồ sơ cá nhân chưa được công khai</h4>
+                                <p className="text-sm text-amber-700/70 dark:text-amber-500/70">Học sinh không thể tìm thấy bạn. Hãy hoàn thiện và bật chế độ công khai.</p>
                             </div>
                         </div>
-                        <Link href="/teacher/profile" className="p-3 bg-white text-amber-600 rounded-xl hover:bg-amber-100 transition-all">
+                        <Link href="/teacher/profile" className="p-3 bg-white/70 dark:bg-amber-900/50 text-amber-600 rounded-xl hover:bg-white dark:hover:bg-amber-800 transition-all shadow-sm">
                              <ChevronRight className="w-6 h-6" />
                         </Link>
                     </div>
@@ -98,18 +98,18 @@ export default async function TeacherDashboard() {
 
                   {/* Pending Inquiries */}
                   {hasInquiries && (
-                    <div className="bg-blue-50 border border-blue-100 p-6 rounded-[32px] flex items-center justify-between group">
+                    <div className="bg-blue-50/70 dark:bg-blue-900/10 backdrop-blur-md border border-blue-200/50 dark:border-blue-700/30 p-6 rounded-[32px] flex items-center justify-between group shadow-sm">
                         <div className="flex items-center gap-4">
                             <div className="size-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
                                 <MessageSquare className="w-7 h-7" />
                             </div>
                             <div>
-                                <h4 className="font-bold text-blue-900">Có {teacher.inquiries.length} yêu cầu dạy kèm mới</h4>
-                                <p className="text-sm text-blue-700/70">Các học sinh đang chờ bạn phản hồi yêu cầu liên hệ.</p>
+                                <h4 className="font-bold text-blue-900 dark:text-blue-400">Có {teacher.inquiries.length} yêu cầu dạy kèm mới</h4>
+                                <p className="text-sm text-blue-700/70 dark:text-blue-500/70">Các học sinh đang chờ bạn phản hồi yêu cầu liên hệ.</p>
                             </div>
                         </div>
 
-                        <Link href="/teacher/profile" className="p-3 bg-white text-blue-600 rounded-xl hover:bg-blue-100 transition-all">
+                        <Link href="/teacher/profile" className="p-3 bg-white/70 dark:bg-blue-900/50 text-blue-600 rounded-xl hover:bg-white dark:hover:bg-blue-800 transition-all shadow-sm">
                              <ChevronRight className="w-6 h-6" />
                         </Link>
                     </div>
@@ -149,26 +149,26 @@ export default async function TeacherDashboard() {
             <div className="space-y-4">
                 <h3 className="text-xs font-black uppercase tracking-[3px] text-slate-400 px-2">Hiệu quả nội dung</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                    <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-8 rounded-[40px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
-                            <div className="size-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
+                            <div className="size-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center">
                                 <Eye className="w-6 h-6" />
                             </div>
-                            <span className="text-[10px] font-black bg-purple-100 text-purple-700 px-3 py-1 rounded-full uppercase">Lượt xem</span>
+                            <span className="text-[10px] font-black bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-full uppercase">Lượt xem</span>
                         </div>
-                        <div className="text-4xl font-black text-slate-900 mb-1">{totalViews.toLocaleString()}</div>
-                        <p className="text-slate-500 text-sm font-medium">Tổng lượt xem trên tất cả bài giảng</p>
+                        <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{totalViews.toLocaleString()}</div>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Tổng lượt xem trên tất cả bài giảng</p>
                     </div>
 
-                    <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+                    <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-8 rounded-[40px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
-                            <div className="size-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
+                            <div className="size-12 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center">
                                 <TrendingUp className="w-6 h-6" />
                             </div>
-                            <span className="text-[10px] font-black bg-green-100 text-green-700 px-3 py-1 rounded-full uppercase">Tương tác</span>
+                            <span className="text-[10px] font-black bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full uppercase">Tương tác</span>
                         </div>
-                        <div className="text-4xl font-black text-slate-900 mb-1">{teacher.lessons.length}</div>
-                        <p className="text-slate-500 text-sm font-medium">Bài giảng đã được đăng công khai</p>
+                        <div className="text-4xl font-black text-slate-900 dark:text-white mb-1">{teacher.lessons.length}</div>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Bài giảng đã được đăng công khai</p>
                     </div>
                 </div>
             </div>
@@ -178,24 +178,24 @@ export default async function TeacherDashboard() {
           <div className="space-y-8">
             
             {/* Portfolio Status Card */}
-            <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-8 rounded-[40px] border border-slate-200/50 dark:border-slate-700/50 shadow-sm space-y-6">
                 <h4 className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-primary" /> Portfolio Cá nhân
+                    <GraduationCap className="w-4 h-4 text-blue-500" /> Portfolio Cá nhân
                 </h4>
                 
                 <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-600">Trạng thái:</span>
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${teacher.isPortfolioPublished ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
+                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">Trạng thái:</span>
+                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${teacher.isPortfolioPublished ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'}`}>
                         {teacher.isPortfolioPublished ? 'Công khai' : 'Đang ẩn'}
                     </span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-600">Mức giá:</span>
-                    <span className="text-sm font-black text-slate-900">{teacher.hourlyRate?.toLocaleString()}đ/h</span>
+                    <span className="text-sm font-bold text-slate-600 dark:text-slate-400">Mức giá:</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white">{teacher.hourlyRate?.toLocaleString()}đ/h</span>
                 </div>
 
-                <Link href={`/teacher/profile/${teacher.id}`} target="_blank" className="w-full py-4 bg-slate-50 text-slate-600 rounded-2xl text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2">
+                <Link href={`/teacher/profile/${teacher.id}`} target="_blank" className="w-full py-4 bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 rounded-2xl text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 shadow-sm border border-slate-200/50 dark:border-slate-600">
                     <Eye className="w-4 h-4" /> Xem trang cá nhân
                 </Link>
             </div>

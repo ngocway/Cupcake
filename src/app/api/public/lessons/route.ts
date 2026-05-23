@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getCategoryAndDescendantIds } from '@/lib/cached-queries'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (categoryId) {
-      leWhere.categories = { some: { id: categoryId } }
+      const categoryIds = await getCategoryAndDescendantIds(categoryId)
+      leWhere.categories = { some: { id: { in: categoryIds } } }
     }
 
     if (search) {

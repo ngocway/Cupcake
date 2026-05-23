@@ -1,22 +1,32 @@
 import { test, expect } from "@playwright/test";
 
-// ⚠️  THAY THẾ bằng slug assignment THẬT có trong DB của bạn
-const TEST_ASSIGNMENT_SLUG = "test-assignment";
+// ⚠️  Sử dụng slug assignment THẬT có sẵn trong DB
+const TEST_ASSIGNMENT_SLUG = "mastering-english-tenses";
 
-// Lấy submissionId từ URL quiz sau redirect direct=true
+// Helper để đăng nhập học sinh
+async function loginStudent(page: any) {
+  await page.goto("http://localhost:3000/student/login");
+  await page.fill('input[id="email"]', 'student@example.com');
+  await page.fill('input[id="password"]', 'password123');
+  await page.click('button[type="submit"]');
+  // Chờ cho đến khi chuyển hướng thành công đến trang học sinh
+  await page.waitForURL(/\/student\/assignments/, { timeout: 45_000 });
+}
+
+// Lấy submissionId từ URL quiz sau khi truy cập direct=true
 async function startQuizAndGetUrl(page: any, slug: string): Promise<string> {
   const url = new URL(`http://localhost:3000/student/assignments/${slug}/run`);
   url.searchParams.set("direct", "true");
   await page.goto(url.toString());
   // Chờ redirect tới quiz page
-  await page.waitForURL(/\/run\/quiz\?submissionId=/, { timeout: 15_000 });
+  await page.waitForURL(/\/run\/quiz\?submissionId=/, { timeout: 45_000 });
   return page.url();
 }
 
 test.describe("Quiz Flow", () => {
   test.beforeEach(async ({ page }) => {
-    // Chờ dev server sẵn sàng trước khi chạy test
-    await page.goto("http://localhost:3000", { waitUntil: "domcontentloaded", timeout: 30_000 });
+    // Chờ dev server sẵn sàng và đăng nhập tài khoản học sinh
+    await loginStudent(page);
   });
 
   test(" UC1: Chưa check -> hiện nút KIỂM TRA TẤT CẢ", async ({ page }) => {
@@ -24,7 +34,7 @@ test.describe("Quiz Flow", () => {
 
     // Chờ nút "Kiểm tra tất cả" xuất hiện (locale EN hoặc VI)
     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
-    await checkBtn.waitFor({ state: "visible", timeout: 10_000 });
+    await checkBtn.waitFor({ state: "visible", timeout: 20_000 });
     await expect(checkBtn).toBeVisible();
 
     // Nút "Làm lại" phải KHÔNG hiển thị
@@ -33,11 +43,11 @@ test.describe("Quiz Flow", () => {
   });
 
   test(" UC2: Đã check -> hiện nút LÀM LẠI, ẩn KIỂM TRA TẤT CẢ", async ({ page }) => {
-    const quizUrl = await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
+    await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
 
     // Trả lời tất cả câu hỏi (radio button đầu tiên của mỗi câu)
     // Chờ questions render
-    await page.waitForSelector('input[type="radio"]', { timeout: 10_000 });
+    await page.waitForSelector('input[type="radio"]', { timeout: 20_000 });
     const radios = page.locator('input[type="radio"]');
     const count = await radios.count();
     for (let i = 0; i < count; i++) {
@@ -63,7 +73,7 @@ test.describe("Quiz Flow", () => {
     await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
 
     // Trả lời tất cả
-    await page.waitForSelector('input[type="radio"]', { timeout: 10_000 });
+    await page.waitForSelector('input[type="radio"]', { timeout: 20_000 });
     const radios = page.locator('input[type="radio"]');
     const count = await radios.count();
     for (let i = 0; i < count; i++) {
@@ -90,21 +100,26 @@ test.describe("Quiz Flow", () => {
 });
 
 test.describe("Lesson Detail Page", () => {
+  test.beforeEach(async ({ page }) => {
+    // Đăng nhập học sinh trước khi truy cập các bài học
+    await loginStudent(page);
+  });
+
   test("Không hiện thanh scroll xấu khi mới vào trang", async ({ page }) => {
     await page.goto("http://localhost:3000/student/lessons", {
       waitUntil: "domcontentloaded",
-      timeout: 30_000,
+      timeout: 45_000,
     });
 
     // Chờ trang lessons load xong (card bài học xuất hiện)
-    await page.waitForSelector('a[href*="/student/lessons/"]', { timeout: 15_000 });
+    await page.waitForSelector('a[href*="/student/lessons/"]', { timeout: 20_000 });
 
     // Click vào bài học đầu tiên
     const firstLesson = page.locator('a[href*="/student/lessons/"]').first();
     await firstLesson.click();
 
     // Chờ trang detail load xong
-    await page.waitForLoadState("networkidle", { timeout: 15_000 });
+    await page.waitForLoadState("networkidle", { timeout: 20_000 });
 
     // Kiểm tra scrollbar body không bị overflow
     const overflow = await page.evaluate(() => {

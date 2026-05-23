@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react"
 import { updateTeacherProfile } from "@/actions/teacher-profile"
-import { uploadMedia } from "@/actions/upload-actions"
 import { GraduationCap, User, FileText, Image as ImageIcon, Link as LinkIcon, Save, Loader2, Plus, X, Globe, Facebook, Linkedin, Github, Youtube, MapPin, DollarSign, BookOpen, Briefcase, Eye, EyeOff, Upload, Camera, Construction, Tag } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -16,8 +15,10 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [uploadingCover, setUploadingCover] = useState(false);
     
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
     const [tagInput, setTagInput] = useState("");
 
     const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
         expertiseTags: profile?.expertiseTags || "",
         socialLinks: profile?.socialLinks || "{}",
         image: profile?.image || "",
+        coverImage: profile?.coverImage || "",
         isPortfolioPublished: profile?.isPortfolioPublished || false,
         hourlyRate: profile?.hourlyRate || 0,
         location: profile?.location || "",
@@ -56,30 +58,46 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
         setFormData(prev => ({ ...prev, socialLinks: JSON.stringify(newSocials) }));
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setUploadingAvatar(true);
-        try {
-            const uploadFormData = new FormData();
-            uploadFormData.append('file', file);
-            const res = await uploadMedia(uploadFormData);
-            
-            if (res.success) {
-                setFormData(prev => ({
-                    ...prev,
-                    image: res.url
-                }));
-            } else {
-                alert("Tải ảnh thất bại!");
-            }
-        } catch (error) {
-            console.error("Upload error:", error);
-            alert("Đã có lỗi xảy ra khi tải ảnh.");
-        } finally {
-            setUploadingAvatar(false);
+        if (file.size > 2 * 1024 * 1024) {
+            alert("Dung lượng ảnh đại diện quá lớn (tối đa 2MB). Vui lòng chọn ảnh nhẹ hơn.");
+            return;
         }
+
+        setUploadingAvatar(true);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            setFormData(prev => ({
+                ...prev,
+                image: ev.target?.result as string
+            }));
+            setUploadingAvatar(false);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Dung lượng ảnh bìa quá lớn (tối đa 5MB). Vui lòng chọn ảnh nhẹ hơn.");
+            return;
+        }
+
+        setUploadingCover(true);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            setFormData(prev => ({
+                ...prev,
+                coverImage: ev.target?.result as string
+            }));
+            setUploadingCover(false);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSave = async (e?: React.FormEvent) => {
@@ -131,7 +149,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                   <a 
                     href={`/teacher/profile/${profile.id}`} 
                     target="_blank"
-                    className="flex items-center gap-2 px-6 py-4 bg-white border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all"
+                    className="flex items-center gap-2 px-6 py-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                   >
                     <Eye className="w-4 h-4" />
                     Xem hồ sơ
@@ -150,7 +168,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
                     {/* Visibility Toggle */}
-                    <div className={`p-8 rounded-[40px] border transition-all duration-500 ${formData.isPortfolioPublished ? 'bg-green-50 border-green-100 shadow-green-900/5 shadow-xl' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className={`p-8 rounded-[40px] border transition-all duration-500 backdrop-blur-md ${formData.isPortfolioPublished ? 'bg-green-50/80 dark:bg-green-900/20 border-green-100 dark:border-green-900/50 shadow-green-900/5 shadow-xl' : 'bg-slate-50/80 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700'}`}>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={`size-14 rounded-3xl flex items-center justify-center transition-colors ${formData.isPortfolioPublished ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-400'}`}>
@@ -177,7 +195,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                     </div>
 
                     {/* Basic Info */}
-                    <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm space-y-8">
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-10 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-sm space-y-8">
                         <h3 className="text-xl font-bold flex items-center gap-3"><User className="w-6 h-6 text-primary" /> Thông tin cá nhân</h3>
                         
                         <div className="space-y-6">
@@ -218,7 +236,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                                     <Tag className="w-3 h-3" /> Lĩnh vực giảng dạy
                                 </label>
                                 
-                                <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-wrap gap-2">
+                                <div className="bg-slate-50/50 dark:bg-slate-700/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-600 flex flex-wrap gap-2">
                                     {currentTags.length > 0 ? (
                                         currentTags.map(tag => (
                                             <span key={tag} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold shadow-sm">
@@ -268,7 +286,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                     </div>
 
                     {/* Competency Details */}
-                    <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm space-y-8">
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-10 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-sm space-y-8">
                         <h3 className="text-xl font-bold flex items-center gap-3"><GraduationCap className="w-6 h-6 text-primary" /> Năng lực & Kinh nghiệm</h3>
                         
                         <div className="space-y-6">
@@ -297,7 +315,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
 
                 <div className="space-y-8">
                     {/* Media Section (Avatar only) */}
-                    <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-8 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-sm space-y-6">
                         <h3 className="text-lg font-bold flex items-center gap-2"><ImageIcon className="w-5 h-5 text-primary" /> Hình ảnh</h3>
                         
                         <div className="space-y-6">
@@ -339,11 +357,58 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                                   <Upload className="w-4 h-4" /> Thay đổi ảnh đại diện
                                 </button>
                             </div>
+
+                            {/* Cover Image Upload */}
+                            <div className="space-y-4 pt-6 border-t border-slate-100">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center block">Ảnh bìa (Cover)</label>
+                                <div className="flex justify-center">
+                                    <div 
+                                        onClick={() => coverInputRef.current?.click()}
+                                        className="relative group cursor-pointer w-full"
+                                    >
+                                        <div className="w-full aspect-video rounded-[32px] overflow-hidden border-4 border-slate-50 shadow-xl bg-slate-100 relative">
+                                            {uploadingCover ? (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-20">
+                                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                                </div>
+                                            ) : null}
+                                            {formData.coverImage ? (
+                                                <img 
+                                                    src={formData.coverImage} 
+                                                    alt="Cover" 
+                                                    className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" 
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 group-hover:bg-slate-200 transition-colors">
+                                                    <ImageIcon className="w-8 h-8 mb-2 opacity-30" />
+                                                    <span className="text-xs font-medium text-slate-500">Chưa có ảnh bìa</span>
+                                                </div>
+                                            )}
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/40 text-white z-10">
+                                                <Camera className="w-8 h-8" />
+                                            </div>
+                                        </div>
+                                        <input 
+                                            type="file" 
+                                            ref={coverInputRef} 
+                                            className="hidden" 
+                                            accept="image/*" 
+                                            onChange={handleCoverUpload} 
+                                        />
+                                    </div>
+                                </div>
+                                <button 
+                                  onClick={() => coverInputRef.current?.click()}
+                                  className="w-full py-4 bg-slate-50 text-slate-600 rounded-2xl text-xs font-bold hover:bg-slate-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <Upload className="w-4 h-4" /> Đổi ảnh bìa
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     {/* Under Development Section */}
-                    <div className="bg-slate-50 p-8 rounded-[40px] border border-dashed border-slate-200 shadow-sm space-y-6 relative overflow-hidden group">
+                    <div className="bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md p-8 rounded-[40px] border border-dashed border-slate-200 dark:border-slate-600 shadow-sm space-y-6 relative overflow-hidden group">
                         <div className="absolute -top-4 -right-4 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
                         <h3 className="text-lg font-bold flex items-center gap-2 text-slate-400"><Construction className="w-5 h-5" /> Dạy thêm</h3>
                         
@@ -366,7 +431,7 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                     </div>
 
                     {/* Social Links */}
-                    <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+                    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-8 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-sm space-y-6">
                         <h3 className="text-lg font-bold flex items-center gap-2"><LinkIcon className="w-5 h-5 text-primary" /> Mạng xã hội</h3>
                         
                         <div className="space-y-4">

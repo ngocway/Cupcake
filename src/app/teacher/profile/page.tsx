@@ -17,7 +17,7 @@ export default async function TeacherProfilePage() {
     if (!teacher) return notFound();
 
     return (
-        <div className="bg-[#fafbff] min-h-screen">
+        <div className="bg-transparent min-h-screen">
             <TeacherProfileEditor profile={teacher} />
         </div>
     );

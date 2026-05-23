@@ -5,6 +5,8 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { registerStudent, resetPassword } from "@/actions/auth-actions"
 import { useTranslations } from "next-intl"
+import { CheckCircle2, ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight, User, HelpCircle } from "lucide-react"
+import Link from "next/link"
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
@@ -109,77 +111,95 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex-grow flex flex-col md:flex-row items-stretch min-h-screen bg-surface font-body text-on-surface antialiased">
+    <main className="flex-grow flex flex-col md:flex-row items-stretch min-h-screen bg-background font-body text-on-surface antialiased">
       {/* Left Column: Branding & Illustration */}
-      <div className="hidden md:flex md:w-1/2 bg-surface-container relative overflow-hidden flex-col justify-center items-center p-16">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-fixed-dim opacity-20 rounded-full -mr-32 -mt-32"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary-fixed opacity-10 rounded-full -ml-48 -mb-48"></div>
+      <div className="hidden md:flex md:w-1/2 bg-surface-dim relative overflow-hidden flex-col justify-center items-center p-16">
+        {/* Organic background shapes */}
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary/10 rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem] -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/20 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] -ml-48 -mb-48"></div>
+
+        {/* Back to Home button */}
+        <div className="absolute top-10 left-10 z-20">
+          <Link href="/" className="flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur-sm rounded-full text-sm font-bold text-on-surface hover:bg-white hover:shadow-md transition-all">
+            <ArrowLeft className="w-4 h-4" />
+            Về trang chủ
+          </Link>
+        </div>
 
         <div className="relative z-10 max-w-md text-center">
-          <div className="mb-12 inline-flex items-center justify-center p-4 bg-surface-container-lowest rounded-xl shadow-[0_8px_24px_rgba(25,27,35,0.06)]">
-            <span className="material-symbols-outlined text-primary text-5xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-              school
-            </span>
+          <div className="mb-10 inline-flex items-center justify-center w-24 h-24 bg-primary text-white rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-xl shadow-primary/20 animate-float">
+            <span className="material-symbols-outlined text-[48px] animate-leaf-sway">eco</span>
           </div>
 
-          <h1 className="font-headline font-extrabold text-4xl text-on-surface mb-6 tracking-tight leading-tight">
-            Master English with <span className="text-primary">Clarified Academy</span>
+          <h1 className="font-headline font-black text-5xl text-on-surface mb-6 tracking-tight leading-tight">
+            Learn with <span className="text-primary italic relative inline-block">
+              Cupcakes
+              <div className="absolute -bottom-2 left-0 w-full h-3 bg-secondary/30 rounded-full -z-10 -rotate-2"></div>
+            </span>
           </h1>
 
-          <p className="text-on-surface-variant text-lg leading-relaxed mb-10">
-            Step into an editorial-grade learning workspace designed to help you communicate with clarity and confidence.
+          <p className="text-on-surface-variant text-lg leading-relaxed mb-10 font-medium">
+            Step into a fun, interactive workspace designed to help you communicate with clarity and confidence.
           </p>
 
           <div className="space-y-4 text-left">
-            <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors duration-300">
-              <span className="material-symbols-outlined text-secondary pt-1">check_circle</span>
+            <div className="flex items-start gap-4 p-5 rounded-[1.5rem] bg-white/40 backdrop-blur-sm hover:bg-white/70 hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-white/50">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="text-emerald-600 w-5 h-5 stroke-[3px]" />
+              </div>
               <div>
-                <h3 className="font-headline font-bold text-on-surface">Precision Writing</h3>
-                <p className="text-sm text-on-surface-variant">Our editorial architect tools refine every sentence you craft.</p>
+                <h3 className="font-headline font-bold text-on-surface">Interactive Learning</h3>
+                <p className="text-sm text-on-surface-variant mt-1 font-medium">Master concepts through engaging digital modules.</p>
               </div>
             </div>
             
-            <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors duration-300">
-              <span className="material-symbols-outlined text-secondary pt-1">check_circle</span>
+            <div className="flex items-start gap-4 p-5 rounded-[1.5rem] bg-white/40 backdrop-blur-sm hover:bg-white/70 hover:shadow-md hover:-translate-y-1 transition-all duration-300 border border-white/50">
+              <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center shrink-0 mt-0.5">
+                <CheckCircle2 className="text-secondary-dim w-5 h-5 stroke-[3px]" />
+              </div>
               <div>
-                <h3 className="font-headline font-bold text-on-surface">Interactive Vocabulary</h3>
-                <p className="text-sm text-on-surface-variant">Master nuances through high-fidelity digital modules.</p>
+                <h3 className="font-headline font-bold text-on-surface">Smart Vocabulary</h3>
+                <p className="text-sm text-on-surface-variant mt-1 font-medium">Learn new words in context with instant feedback.</p>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-16 w-full max-w-lg aspect-video rounded-xl overflow-hidden shadow-[0_8px_24px_rgba(25,27,35,0.06)] bg-surface-container-high relative">
-          <img 
-            alt="Students collaborating" 
-            className="w-full h-full object-cover grayscale mix-blend-multiply opacity-40" 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9lHcWALo2gWgpJo5V7poDF1iz1_hswdnpzrwerhfhQpUGt9eHJv0oMbsRPfuhQ-sUk1DWHYasWMNvWSuKUuzeVpqXmInMXWEz4PRJREIB_9BToSGnnVhCsbk0BnOMVX_vlbiqz5roR8TsmUp-ACTgmMD8hcwgkio551oVniMZA59bnBtmhMEqw0QGRIF6ziQc9zeYdvopffxzyd3BCmCPloIP4Ax7QGumT7P0bDrFGzaiiGGwird0CVP4tu1NfQDmyq4irX2g9JxX" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-transparent to-transparent"></div>
         </div>
       </div>
 
       {/* Right Column: Authentication Form */}
-      <div className="w-full md:w-1/2 bg-surface-container-lowest flex flex-col justify-center px-6 py-12 md:px-24 relative overflow-y-auto">
-        <div className="max-w-md w-full mx-auto">
+      <div className="w-full md:w-1/2 bg-background flex flex-col justify-center px-6 py-12 md:px-24 relative overflow-y-auto">
+        
+        {/* Mobile Header */}
+        <div className="md:hidden absolute top-6 left-6 z-20">
+          <Link href="/" className="flex items-center gap-2 p-2 bg-white/50 backdrop-blur-sm rounded-full text-sm font-bold text-on-surface">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+        </div>
+
+        <div className="max-w-md w-full mx-auto relative z-10">
           <div className="md:hidden mb-12 flex flex-col items-center">
-            <h2 className="font-headline font-extrabold text-2xl text-primary tracking-tight">Clarified Academy</h2>
-            <p className="text-sm text-on-surface-variant font-label">EngMaster Student Portal</p>
+            <div className="w-16 h-16 bg-primary text-white rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20 mb-4 animate-float">
+              <span className="material-symbols-outlined text-[32px] animate-leaf-sway">eco</span>
+            </div>
+            <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Cupcakes</h2>
+            <p className="text-xs text-on-surface-variant font-bold uppercase tracking-[0.2em] mt-1">Student Portal</p>
           </div>
 
           {(mode === "login" || mode === "register") && (
-            <div className="flex gap-8 mb-10 border-b border-outline-variant/15">
+            <div className="flex gap-8 mb-10 border-b border-outline-variant/20 relative">
               <button 
                 onClick={() => { setMode("login"); setErrorMessage(""); setSuccessMessage(""); }}
-                className={`pb-4 border-b-2 font-headline font-bold text-lg transition-colors ${mode === "login" ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"}`}
+                className={`pb-4 font-headline font-black text-xl transition-all relative ${mode === "login" ? "text-primary" : "text-on-surface-variant/50 hover:text-on-surface"}`}
               >
                 {t("login")}
+                {mode === "login" && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full"></div>}
               </button>
               <button 
                 onClick={() => { setMode("register"); setErrorMessage(""); setSuccessMessage(""); }}
-                className={`pb-4 border-b-2 font-headline font-bold text-lg transition-colors ${mode === "register" ? "border-primary text-primary" : "border-transparent text-on-surface-variant hover:text-on-surface"}`}
+                className={`pb-4 font-headline font-black text-xl transition-all relative ${mode === "register" ? "text-primary" : "text-on-surface-variant/50 hover:text-on-surface"}`}
               >
                 {t("signup")}
+                {mode === "register" && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary rounded-t-full"></div>}
               </button>
             </div>
           )}
@@ -188,24 +208,24 @@ export default function LoginPage() {
             <div className="mb-10">
               <button 
                 onClick={() => { setMode("login"); setErrorMessage(""); setSuccessMessage(""); }}
-                className="flex items-center text-primary font-label font-bold text-sm hover:underline mb-4 cursor-pointer"
+                className="flex items-center text-primary font-bold text-sm hover:underline mb-6 cursor-pointer bg-primary/5 px-4 py-2 rounded-full w-fit transition-colors hover:bg-primary/10"
               >
-                <span className="material-symbols-outlined text-sm mr-1">arrow_back</span>
+                <ArrowLeft className="w-4 h-4 mr-1" />
                 {t("backToLogin")}
               </button>
-              <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">{t("resetPassword")}</h2>
-              <p className="text-on-surface-variant font-body">{t("forgotSubtitle")}</p>
+              <h2 className="font-headline font-black text-3xl text-on-surface mb-2">{t("resetPassword")}</h2>
+              <p className="text-on-surface-variant font-medium">{t("forgotSubtitle")}</p>
             </div>
           )}
 
           {mode === "login" && (
-            <>
+            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="mb-8">
-                <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">{t("welcomeBack")}</h2>
-                <p className="text-on-surface-variant font-body">{t("loginSubtitle")}</p>
+                <h2 className="font-headline font-black text-3xl text-on-surface mb-2">{t("welcomeBack")}</h2>
+                <p className="text-on-surface-variant font-medium">{t("loginSubtitle")}</p>
               </div>
 
-              <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-label font-bold text-on-surface hover:bg-surface-container-low transition-all duration-200">
+              <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-white border border-outline-variant/30 rounded-2xl font-bold text-on-surface hover:bg-surface-container-low hover:-translate-y-0.5 hover:shadow-md transition-all duration-300">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
@@ -216,59 +236,60 @@ export default function LoginPage() {
               </button>
 
               <div className="relative mb-8 flex items-center">
-                <div className="flex-grow border-t border-outline-variant/15"></div>
-                <span className="px-4 text-xs font-label uppercase tracking-widest text-outline">{t("orWithEmail")}</span>
-                <div className="flex-grow border-t border-outline-variant/15"></div>
+                <div className="flex-grow border-t border-outline-variant/20"></div>
+                <span className="px-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50">{t("orWithEmail")}</span>
+                <div className="flex-grow border-t border-outline-variant/20"></div>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email">{t("emailLabel")}</label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
+                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant ml-2" htmlFor="email">{t("emailLabel")}</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                     <input 
                       id="email" 
                       name="email"
                       type="email" 
                       required
                       placeholder="name@example.com" 
-                      className="w-full pl-12 pr-4 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                      className="w-full pl-14 pr-5 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="password">{t("passwordLabel")}</label>
-                    <button type="button" onClick={() => { setMode("forgot"); setErrorMessage(""); setSuccessMessage(""); }} className="text-xs font-label text-primary font-bold hover:underline cursor-pointer">{t("forgotPassword")}</button>
+                  <div className="flex justify-between items-center ml-2">
+                    <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant" htmlFor="password">{t("passwordLabel")}</label>
+                    <button type="button" onClick={() => { setMode("forgot"); setErrorMessage(""); setSuccessMessage(""); }} className="text-xs font-bold text-secondary-dim hover:text-secondary-dim/80 hover:underline cursor-pointer">{t("forgotPassword")}</button>
                   </div>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                     <input 
                       id="password" 
                       name="password"
                       type={showPassword ? "text" : "password"} 
                       required
                       placeholder="••••••••" 
-                      className="w-full pl-12 pr-12 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                      className="w-full pl-14 pr-12 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                     />
                     <button 
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface flex items-center justify-center p-1 cursor-pointer" 
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-primary flex items-center justify-center transition-colors" 
                       type="button"
                     >
-                      <span className="material-symbols-outlined text-lg">{showPassword ? "visibility_off" : "visibility"}</span>
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 py-2">
-                  <input className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" id="remember" type="checkbox"/>
-                  <label className="font-body text-sm text-on-surface-variant" htmlFor="remember">{t("keepLoggedIn")}</label>
+                <div className="flex items-center gap-3 py-2 ml-2">
+                  <input className="w-5 h-5 rounded-md border-outline-variant/40 text-primary focus:ring-primary/50 cursor-pointer" id="remember" type="checkbox"/>
+                  <label className="text-sm font-medium text-on-surface-variant cursor-pointer select-none" htmlFor="remember">{t("keepLoggedIn")}</label>
                 </div>
 
                 {errorMessage && (
-                  <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
+                  <div className="p-4 text-sm text-rose-700 bg-rose-50 rounded-2xl border border-rose-200 font-bold flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
                     {errorMessage}
                   </div>
                 )}
@@ -276,23 +297,23 @@ export default function LoginPage() {
                 <button 
                   type="submit" 
                   disabled={isPending}
-                  className="w-full py-4 bg-gradient-to-br from-[#004ac6] to-[#2563eb] hover:from-[#003ea8] hover:to-[#1d4ed8] text-white font-label font-bold uppercase tracking-wider rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] transform transition-transform duration-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full mt-4 py-4 bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 transform transition-all duration-300 hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 group"
                 >
                   {isPending ? t("authenticating") : t("enterWorkspace")}
-                  {!isPending && <span className="material-symbols-outlined text-xl">arrow_forward</span>}
+                  {!isPending && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                 </button>
               </form>
-            </>
+            </div>
           )}
 
           {mode === "register" && (
-            <>
+            <div className="animate-in fade-in slide-in-from-left-4 duration-300">
               <div className="mb-8">
-                <h2 className="font-headline font-bold text-2xl text-on-surface mb-2">{t("createAccount")}</h2>
-                <p className="text-on-surface-variant font-body">{t("signupSubtitle")}</p>
+                <h2 className="font-headline font-black text-3xl text-on-surface mb-2">{t("createAccount")}</h2>
+                <p className="text-on-surface-variant font-medium">{t("signupSubtitle")}</p>
               </div>
 
-              <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-label font-bold text-on-surface hover:bg-surface-container-low transition-all duration-200">
+              <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-white border border-outline-variant/30 rounded-2xl font-bold text-on-surface hover:bg-surface-container-low hover:-translate-y-0.5 hover:shadow-md transition-all duration-300">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
@@ -303,86 +324,88 @@ export default function LoginPage() {
               </button>
 
               <div className="relative mb-8 flex items-center">
-                <div className="flex-grow border-t border-outline-variant/15"></div>
-                <span className="px-4 text-xs font-label uppercase tracking-widest text-outline">{t("orWithEmail")}</span>
-                <div className="flex-grow border-t border-outline-variant/15"></div>
+                <div className="flex-grow border-t border-outline-variant/20"></div>
+                <span className="px-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant/50">{t("orWithEmail")}</span>
+                <div className="flex-grow border-t border-outline-variant/20"></div>
               </div>
 
-              <form onSubmit={handleRegister} className="space-y-6">
+              <form onSubmit={handleRegister} className="space-y-5">
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="name">{t("fullName")}</label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">person</span>
+                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant ml-2" htmlFor="name">{t("fullName")}</label>
+                  <div className="relative group">
+                    <User className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                     <input 
                       id="name" 
                       name="name"
                       type="text" 
                       required
                       placeholder="John Doe" 
-                      className="w-full pl-12 pr-4 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                      className="w-full pl-14 pr-5 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email-reg">{t("emailLabel")}</label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
+                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant ml-2" htmlFor="email-reg">{t("emailLabel")}</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                     <input 
                       id="email-reg" 
                       name="email"
                       type="email" 
                       required
                       placeholder="name@example.com" 
-                      className="w-full pl-12 pr-4 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                      className="w-full pl-14 pr-5 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="password-reg">{t("passwordLabel")}</label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
+                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant ml-2" htmlFor="password-reg">{t("passwordLabel")}</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                     <input 
                       id="password-reg" 
                       name="password"
                       type={showPassword ? "text" : "password"} 
                       required
                       placeholder="••••••••" 
-                      className="w-full pl-12 pr-12 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                      className="w-full pl-14 pr-12 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                     />
                     <button 
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface flex items-center justify-center p-1 cursor-pointer" 
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 hover:text-primary flex items-center justify-center transition-colors" 
                       type="button"
                     >
-                      <span className="material-symbols-outlined text-lg">{showPassword ? "visibility_off" : "visibility"}</span>
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="confirmPassword">{t("confirmPassword")}</label>
-                  <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">lock</span>
+                  <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant ml-2" htmlFor="confirmPassword">{t("confirmPassword")}</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                     <input 
                       id="confirmPassword" 
                       name="confirmPassword"
                       type={showPassword ? "text" : "password"} 
                       required
                       placeholder="••••••••" 
-                      className="w-full pl-12 pr-12 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                      className="w-full pl-14 pr-12 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                     />
                   </div>
                 </div>
 
                 {errorMessage && (
-                  <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
+                  <div className="p-4 text-sm text-rose-700 bg-rose-50 rounded-2xl border border-rose-200 font-bold flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
                     {errorMessage}
                   </div>
                 )}
                 {successMessage && (
-                  <div className="p-3 text-sm text-green-700 bg-green-50 rounded-lg border border-green-200">
+                  <div className="p-4 text-sm text-emerald-700 bg-emerald-50 rounded-2xl border border-emerald-200 font-bold flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>
                     {successMessage}
                   </div>
                 )}
@@ -390,39 +413,41 @@ export default function LoginPage() {
                 <button 
                   type="submit" 
                   disabled={isPending}
-                  className="w-full py-4 bg-gradient-to-br from-[#004ac6] to-[#2563eb] hover:from-[#003ea8] hover:to-[#1d4ed8] text-white font-label font-bold uppercase tracking-wider rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] transform transition-transform duration-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full mt-4 py-4 bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 transform transition-all duration-300 hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 group"
                 >
                   {isPending ? t("settingUp") : t("signup")}
-                  {!isPending && <span className="material-symbols-outlined text-xl">arrow_forward</span>}
+                  {!isPending && <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                 </button>
               </form>
-            </>
+            </div>
           )}
 
           {mode === "forgot" && (
-            <form onSubmit={handleForgot} className="space-y-6">
+            <form onSubmit={handleForgot} className="space-y-5 animate-in fade-in zoom-in-95 duration-300">
               <div className="space-y-2">
-                <label className="block font-label text-sm font-bold text-on-surface-variant" htmlFor="email-forgot">{t("emailLabel")}</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-lg">mail</span>
+                <label className="block text-xs font-black uppercase tracking-widest text-on-surface-variant ml-2" htmlFor="email-forgot">{t("emailLabel")}</label>
+                <div className="relative group">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-on-surface-variant/40 group-focus-within:text-primary transition-colors w-5 h-5" />
                   <input 
                     id="email-forgot" 
                     name="email"
                     type="email" 
                     required
                     placeholder="name@example.com" 
-                    className="w-full pl-12 pr-4 py-4 bg-surface-variant/30 border border-transparent rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 font-body placeholder:text-outline" 
+                    className="w-full pl-14 pr-5 py-4 bg-white border border-outline-variant/30 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/50 transition-all duration-300 font-bold placeholder:text-on-surface-variant/30 shadow-sm" 
                   />
                 </div>
               </div>
 
               {errorMessage && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
+                <div className="p-4 text-sm text-rose-700 bg-rose-50 rounded-2xl border border-rose-200 font-bold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0"></div>
                   {errorMessage}
                 </div>
               )}
               {successMessage && (
-                <div className="p-3 text-sm text-green-700 bg-green-50 rounded-lg border border-green-200">
+                <div className="p-4 text-sm text-emerald-700 bg-emerald-50 rounded-2xl border border-emerald-200 font-bold flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></div>
                   {successMessage}
                 </div>
               )}
@@ -430,15 +455,15 @@ export default function LoginPage() {
               <button 
                 type="submit" 
                 disabled={isPending}
-                className="w-full py-4 bg-gradient-to-br from-[#004ac6] to-[#2563eb] hover:from-[#003ea8] hover:to-[#1d4ed8] text-white font-label font-bold uppercase tracking-wider rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] transform transition-transform duration-200 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full mt-4 py-4 bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 transform transition-all duration-300 hover:-translate-y-1 active:translate-y-0 active:scale-95 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {isPending ? t("sending") : t("sendReset")}
               </button>
             </form>
           )}
 
-          <footer className="mt-12 pt-8 border-t border-outline-variant/15 text-center">
-            <p className="text-xs text-on-surface-variant font-label leading-relaxed">
+          <footer className="mt-12 pt-8 border-t border-outline-variant/20 text-center">
+            <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
               {t("termsPrefix")} 
               <a className="text-primary font-bold hover:underline ml-1" href="#">{t("terms")}</a> {t("and")} 
               <a className="text-primary font-bold hover:underline ml-1" href="#">{t("privacy")}</a>.
@@ -446,10 +471,10 @@ export default function LoginPage() {
           </footer>
         </div>
         
-        <button className="hidden md:flex absolute bottom-8 right-8 bg-surface-container-lowest p-4 rounded-full shadow-[0_8px_24px_rgba(25,27,35,0.06)] text-primary hover:text-primary-container transition-all group items-center">
+        <button className="hidden md:flex absolute bottom-8 right-8 bg-white p-4 rounded-full shadow-lg border border-outline-variant/30 text-primary hover:bg-primary/5 transition-all group items-center">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>help</span>
-            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 font-label font-bold text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 px-1">Help Center</span>
+            <HelpCircle className="w-6 h-6 stroke-[2px]" />
+            <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 font-bold text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 px-1">Help Center</span>
           </div>
         </button>
 

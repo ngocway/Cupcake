@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { X, Search, Loader2, Users, ArrowRight } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -77,7 +78,7 @@ export function ClassStudentPopup({ classId, className, anchorRef, onClose }: Cl
   return (
     <div
       ref={popupRef}
-      className="absolute z-50 right-0 top-full mt-2 w-80 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-[#f0f2f4] dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
+      className="absolute z-50 right-0 top-full mt-2 w-80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-[#f0f2f4] dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top-right"
     >
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-[#f0f2f4] dark:border-gray-800 flex items-center justify-between gap-2">
@@ -89,14 +90,14 @@ export function ClassStudentPopup({ classId, className, anchorRef, onClose }: Cl
           onClick={onClose}
           className="size-7 flex items-center justify-center rounded-full hover:bg-[#f0f2f4] dark:hover:bg-gray-800 text-[#617589] transition-colors shrink-0"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <X className="w-[18px] h-[18px]" />
         </button>
       </div>
 
       {/* Search */}
       <div className="px-3 py-2 border-b border-[#f0f2f4] dark:border-gray-800">
         <div className="flex items-center gap-2 bg-[#f0f2f4] dark:bg-gray-800 rounded-lg px-3 py-1.5">
-          <span className="material-symbols-outlined text-[16px] text-[#617589]">search</span>
+          <Search className="w-4 h-4 text-[#617589]" />
           <input
             className="flex-1 bg-transparent text-xs text-[#111418] dark:text-white placeholder-[#617589] outline-none"
             placeholder="Tìm học sinh..."
@@ -106,7 +107,7 @@ export function ClassStudentPopup({ classId, className, anchorRef, onClose }: Cl
           />
           {search && (
             <button onClick={() => setSearch('')} className="text-[#617589] hover:text-[#111418]">
-              <span className="material-symbols-outlined text-[14px]">close</span>
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -116,11 +117,11 @@ export function ClassStudentPopup({ classId, className, anchorRef, onClose }: Cl
       <div className="max-h-72 overflow-y-auto">
         {isLoading ? (
           <div className="py-8 flex justify-center">
-            <span className="material-symbols-outlined text-[28px] text-[#617589] animate-spin">progress_activity</span>
+            <Loader2 className="w-7 h-7 text-[#617589] animate-spin mx-auto" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-8 text-center text-xs text-[#617589]">
-            <span className="material-symbols-outlined text-[32px] block mb-1 opacity-30">group_off</span>
+            <Users className="w-8 h-8 block mb-1 opacity-30 mx-auto" />
             {search ? 'Không tìm thấy học sinh nào.' : 'Chưa có học sinh trong lớp.'}
           </div>
         ) : (
@@ -154,7 +155,7 @@ export function ClassStudentPopup({ classId, className, anchorRef, onClose }: Cl
           onClick={onClose}
         >
           Quản lý lớp học
-          <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
     </div>

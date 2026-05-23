@@ -4,9 +4,19 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTranslations } from "next-intl"
 
+const getAudienceColor = (aud: string) => {
+  switch (aud.toLowerCase()) {
+    case "kids": return "bg-blue-500 text-white"
+    case "teens": return "bg-rose-500 text-white"
+    case "adults": return "bg-purple-500 text-white"
+    case "business": return "bg-slate-700 text-white"
+    default: return "bg-primary text-white"
+  }
+}
+
 export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: boolean }) {
   const t = useTranslations("home")
-  const views = item.viewCount || 0
+  const views = (item.viewCount || 0) + 1500
   const likes = ((item.id?.charCodeAt(0) || 0) * 7) % 1000
   const rating = (4.5 + (item.id?.length % 5) * 0.1).toFixed(1)
 
@@ -16,6 +26,12 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
     : `/public/assignments/${identifier}?direct=true`
 
   const thumbnailSrc = item.thumbnail || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=800"
+
+  const tagsArray = Array.isArray(item.tags)
+    ? item.tags
+    : typeof item.tags === "string"
+      ? item.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+      : []
 
   return (
     <div className="relative w-full group">
@@ -29,25 +45,28 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
           className="object-cover transition-transform duration-1000 group-hover:scale-105"
           priority={false}
         />
-        {/* Badge: Type */}
-        <div className="absolute top-4 left-4 z-10">
-          <span className={`${
-            item.materialType === 'READING' ? 'bg-tertiary' : 
-            item.materialType === 'FLASHCARD' ? 'bg-rose-500' : 
-            'bg-primary'
-          } text-white text-[10px] font-black px-5 py-2 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-2 backdrop-blur-md bg-opacity-90`}>
-            {item.materialType === 'READING' ? t('reading') : 
-             item.materialType === 'FLASHCARD' ? t('flashcard') : 
-             useTranslations("nav")("assignments")}
-          </span>
-        </div>
+        {/* Media Icons */}
+        {(item.videoUrl || item.audioUrl) && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {item.videoUrl && (
+              <div className="bg-black/60 text-white p-2 rounded-full shadow-lg flex items-center justify-center backdrop-blur-md border border-white/20">
+                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+              </div>
+            )}
+            {item.audioUrl && (
+              <div className="bg-black/60 text-white p-2 rounded-full shadow-lg flex items-center justify-center backdrop-blur-md border border-white/20">
+                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent opacity-60"></div>
       </div>
 
       {/* Overlapping Content Box */}
-      <div className="relative -mt-10 mx-3 bg-white dark:bg-slate-900 rounded-lg p-6 shadow-2xl z-20 border border-primary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-primary/10">
+      <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-primary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-primary/10 group-hover:bg-white/90">
         {/* Teacher Info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 relative">
@@ -73,7 +92,29 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
 
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-5 border-t border-primary/5">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center flex-wrap gap-2">
+            {item.targetAudiences && item.targetAudiences.length > 0 && (
+              <div className="flex items-center gap-1">
+                {item.targetAudiences.slice(0, 3).map((aud: string) => (
+                  <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
+                    {aud === 'kids' ? 'Kids' : aud === 'teens' ? 'Teens' : aud === 'adults' ? 'Adults' : aud === 'business' ? 'Business' : aud}
+                  </span>
+                ))}
+              </div>
+            )}
+            {tagsArray.length > 0 && (
+              <div className="flex items-center gap-1">
+                {tagsArray.slice(0, 3).map((tag: string) => (
+                  <Link 
+                    key={tag} 
+                    href={`/tags/${encodeURIComponent(tag)}`}
+                    className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-2 py-0.5 rounded text-[10px] font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300 relative z-30"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-primary/40">
               <span className="material-symbols-outlined !text-[18px]">visibility</span>
               <span className="text-tiny font-black">{views}</span>
@@ -93,13 +134,13 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
   const t = useTranslations("home")
   const isReading = item.type === 'READING_LESSON' || item.materialType === 'READING'
   
-  const thumb = isReading 
-    ? (item.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800")
-    : (item.videoUrl && item.videoUrl.includes("v=")
+  const thumb = item.thumbnail 
+    ? item.thumbnail 
+    : (!isReading && item.videoUrl && item.videoUrl.includes("v=")
         ? `https://img.youtube.com/vi/${item.videoUrl.split("v=")[1]?.split("&")[0]}/hqdefault.jpg`
-        : (item.thumbnail || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800"))
+        : "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=800")
 
-  const views = (item.viewCount !== undefined ? item.viewCount : item.viewsCount) || 0
+  const views = ((item.viewCount !== undefined ? item.viewCount : item.viewsCount) || 0) + 1500
   const rating = (4.5 + (item.id?.length % 5) * 0.1).toFixed(1)
   const reviewCount = item._count?.reviews || 0
 
@@ -107,6 +148,12 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
   const href = isLoggedIn 
     ? `/student/lessons/${identifier}` 
     : `/public/lessons/${identifier}`
+
+  const tagsArray = Array.isArray(item.tags)
+    ? item.tags
+    : typeof item.tags === "string"
+      ? item.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
+      : []
 
   return (
     <div className="relative w-full group">
@@ -120,25 +167,28 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
           className="object-cover transition-transform duration-1000 group-hover:scale-105"
           priority={false}
         />
-        {/* Badge: Type */}
-        <div className="absolute top-4 left-4 z-10">
-          <span className={`${
-            item.materialType === 'READING' ? 'bg-tertiary' : 
-            item.materialType === 'FLASHCARD' ? 'bg-rose-500' : 
-            'bg-secondary'
-          } text-white text-[10px] font-black px-5 py-2 rounded-full uppercase tracking-widest shadow-lg flex items-center gap-2 backdrop-blur-md bg-opacity-90`}>
-            {item.materialType === 'READING' ? t('reading') : 
-             item.materialType === 'FLASHCARD' ? t('flashcard') : 
-             useTranslations("nav")("lessons")}
-          </span>
-        </div>
+        {/* Media Icons */}
+        {(item.videoUrl || item.audioUrl) && (
+          <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+            {item.videoUrl && (
+              <div className="bg-black/60 text-white p-2 rounded-full shadow-lg flex items-center justify-center backdrop-blur-md border border-white/20">
+                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+              </div>
+            )}
+            {item.audioUrl && (
+              <div className="bg-black/60 text-white p-2 rounded-full shadow-lg flex items-center justify-center backdrop-blur-md border border-white/20">
+                <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-secondary/40 via-transparent to-transparent opacity-60"></div>
       </div>
 
       {/* Overlapping Content Box */}
-      <div className="relative -mt-10 mx-3 bg-white dark:bg-slate-900 rounded-lg p-6 shadow-2xl z-20 border border-secondary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-secondary/10">
+      <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-secondary/10 group-hover:bg-white/90">
         {/* Teacher Info */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-secondary/20 relative">
@@ -164,7 +214,29 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
 
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-5 border-t border-secondary/5">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center flex-wrap gap-2">
+            {item.targetAudiences && item.targetAudiences.length > 0 && (
+              <div className="flex items-center gap-1">
+                {item.targetAudiences.slice(0, 3).map((aud: string) => (
+                  <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
+                    {aud === 'kids' ? 'Kids' : aud === 'teens' ? 'Teens' : aud === 'adults' ? 'Adults' : aud === 'business' ? 'Business' : aud}
+                  </span>
+                ))}
+              </div>
+            )}
+            {tagsArray.length > 0 && (
+              <div className="flex items-center gap-1">
+                {tagsArray.slice(0, 3).map((tag: string) => (
+                  <Link 
+                    key={tag} 
+                    href={`/tags/${encodeURIComponent(tag)}`}
+                    className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-2 py-0.5 rounded text-[10px] font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300 relative z-30"
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-secondary/40">
               <span className="material-symbols-outlined !text-[18px]">visibility</span>
               <span className="text-tiny font-black">{views}</span>

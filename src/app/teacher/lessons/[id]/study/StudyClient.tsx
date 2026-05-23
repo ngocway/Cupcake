@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { getUserVocabLanguage, updateUserVocabLanguage } from '@/actions/vocab-settings';
 import { 
   ArrowLeft, 
   BookOpen, 
@@ -36,12 +37,15 @@ export default function StudyClient({ assignment }: { assignment: any }) {
     word: string;
     pronunciation: string;
     meaningVi: string;
+    meaningTh: string;
+    meaningId: string;
     explanationEn: string;
     examples: string;
     image: string;
     rect: DOMRect | null;
     side: 'top' | 'bottom' | 'left' | 'right';
   } | null>(null);
+  const [currentLang, setCurrentLang] = useState('VI');
   // Result message after checking answer
   const [answerResult, setAnswerResult] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -82,6 +86,25 @@ export default function StudyClient({ assignment }: { assignment: any }) {
   // Enter fullscreen automatically on mount
   useEffect(() => { enterFullscreen(); }, [enterFullscreen]);
 
+  // Load saved vocab language preference
+  useEffect(() => {
+    async function loadLang() {
+      const dbPref = await getUserVocabLanguage();
+      if (dbPref) {
+        setCurrentLang(dbPref);
+      } else {
+        setCurrentLang(localStorage.getItem('vocabLang') || 'VI');
+      }
+    }
+    loadLang();
+  }, []);
+
+  const handleLangChange = async (lang: string) => {
+    setCurrentLang(lang);
+    localStorage.setItem('vocabLang', lang);
+    await updateUserVocabLanguage(lang);
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const marker = target.closest('.custom-vocab-marker') as HTMLElement;
@@ -101,6 +124,8 @@ export default function StudyClient({ assignment }: { assignment: any }) {
         word: marker.getAttribute('data-word') || '',
         pronunciation: marker.getAttribute('data-pronunciation') || '',
         meaningVi: marker.getAttribute('data-meaning-vi') || '',
+        meaningTh: marker.getAttribute('data-meaning-th') || '',
+        meaningId: marker.getAttribute('data-meaning-id') || '',
         explanationEn: marker.getAttribute('data-explanation-en') || '',
         examples: marker.getAttribute('data-examples') || '',
         image: marker.getAttribute('data-image') || '',
@@ -116,6 +141,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
 
   const questions = assignment.questions || [];
   const cards = assignment.flashcardDeck?.cards || [];
+  const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
 
   const handleBack = async () => {
     await exitFullscreen();
@@ -123,9 +149,9 @@ export default function StudyClient({ assignment }: { assignment: any }) {
   };
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-[#f8fbfe] dark:bg-gray-950 flex flex-col relative">
+    <div ref={containerRef} className="min-h-screen bg-transparent flex flex-col relative">
       {/* Header */}
-      <header className="h-16 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-800 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm">
+      <header className="h-16 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm">
         <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 
@@ -139,23 +165,23 @@ export default function StudyClient({ assignment }: { assignment: any }) {
             <h1 className="font-bold text-slate-800 dark:text-white truncate max-w-[200px] lg:max-w-md">
               {assignment.title}
             </h1>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wider">
-              <Laptop className="w-3 h-3" /> Chế độ lớp học
+            <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-wider w-fit">
+              <Laptop className="w-3 h-3" /> Classroom Mode
             </div>
           </div>
         </div>
 
-        <nav className="hidden md:flex items-center bg-slate-100 dark:bg-gray-800 p-1 rounded-2xl">
+        <nav className="hidden md:flex items-center bg-slate-100/50 dark:bg-gray-800/50 backdrop-blur-sm p-1 rounded-2xl">
           <button 
             onClick={() => setActiveTab('reading')}
             className={cn(
               "flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all",
               activeTab === 'reading' 
-                ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm" 
+                ? "bg-white/80 dark:bg-gray-700/80 backdrop-blur-md text-indigo-600 shadow-sm" 
                 : "text-slate-500 hover:text-slate-700"
             )}
           >
-            <BookOpen className="w-4 h-4" /> Bài đọc
+            <BookOpen className="w-4 h-4" /> Reading
           </button>
           {cards.length > 0 && (
             <button 
@@ -163,11 +189,11 @@ export default function StudyClient({ assignment }: { assignment: any }) {
               className={cn(
                 "flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all",
                 activeTab === 'vocabulary' 
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm" 
+                  ? "bg-white/80 dark:bg-gray-700/80 backdrop-blur-md text-indigo-600 shadow-sm" 
                   : "text-slate-500 hover:text-slate-700"
               )}
             >
-              <Layers className="w-4 h-4" /> Từ vựng
+              <Layers className="w-4 h-4" /> Vocabulary
             </button>
           )}
           {questions.length > 0 && (
@@ -176,20 +202,20 @@ export default function StudyClient({ assignment }: { assignment: any }) {
               className={cn(
                 "flex items-center gap-2 px-6 py-2 rounded-xl text-sm font-bold transition-all",
                 activeTab === 'challenge' 
-                  ? "bg-white dark:bg-gray-700 text-indigo-600 shadow-sm" 
+                  ? "bg-white/80 dark:bg-gray-700/80 backdrop-blur-md text-indigo-600 shadow-sm" 
                   : "text-slate-500 hover:text-slate-700"
               )}
             >
-              <MessageCircleQuestion className="w-4 h-4" /> Câu hỏi
+              <MessageCircleQuestion className="w-4 h-4" /> Questions
             </button>
           )}
         </nav>
 
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Đang xem</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Now Viewing</p>
             <p className="text-sm font-bold text-slate-700 dark:text-gray-200">
-              {activeTab === 'reading' ? 'Nội dung bài học' : activeTab === 'vocabulary' ? `Thẻ ${currentCardIdx + 1}/${cards.length}` : `Câu hỏi ${currentQuestionIdx + 1}/${questions.length}`}
+              {activeTab === 'reading' ? 'Lesson Content' : activeTab === 'vocabulary' ? `Card ${currentCardIdx + 1}/${cards.length}` : `Question ${currentQuestionIdx + 1}/${questions.length}`}
             </p>
           </div>
           {/* Fullscreen toggle */}
@@ -198,7 +224,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
             size="icon"
             onClick={isFullscreen ? exitFullscreen : enterFullscreen}
             className="rounded-full border-slate-200 hover:bg-slate-100 hidden sm:flex"
-            title={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4 text-slate-500" /> : <Maximize2 className="w-4 h-4 text-slate-500" />}
           </Button>
@@ -215,7 +241,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
             onClick={handleBack}
             className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm text-slate-700 rounded-2xl shadow-lg border border-slate-200 font-bold text-sm hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all"
           >
-            <X className="w-4 h-4" /> Thoát lớp học
+            <X className="w-4 h-4" /> Exit Classroom
           </button>
         </div>
       )}
@@ -227,7 +253,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
           {/* 1. READING MODE */}
           {activeTab === 'reading' && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-white dark:bg-gray-900 rounded-[32px] p-8 md:p-12 shadow-xl shadow-indigo-100/20 border border-slate-100 dark:border-gray-800 relative overflow-hidden">
+              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-md rounded-[32px] p-8 md:p-12 shadow-xl shadow-indigo-100/20 border border-slate-100 dark:border-gray-800 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-bl-full -z-0"></div>
                 
                 {assignment.videoUrl && (
@@ -275,7 +301,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                   )}
                 >
                   {/* Front */}
-                  <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-900 rounded-[40px]">
+                  <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md rounded-[40px]">
                     <p className="text-12px font-bold text-indigo-500 mb-6 tracking-widest uppercase opacity-60">Thuật ngữ / Từ vựng</p>
                     <h2 className="text-6xl md:text-7xl font-extrabold text-slate-800 dark:text-white mb-4">
                       {cards[currentCardIdx].frontText}
@@ -312,7 +338,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                   <ChevronLeft className="w-8 h-8" />
                 </Button>
                 
-                <div className="px-8 py-3 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-slate-100 dark:border-gray-700 font-bold text-slate-500">
+                <div className="px-8 py-3 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md rounded-2xl shadow-sm border border-slate-100 dark:border-gray-700 font-bold text-slate-500">
                   <span className="text-indigo-600">{currentCardIdx + 1}</span> / {cards.length}
                 </div>
 
@@ -338,7 +364,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 flex-1">
                   
                   {/* Question Sidebar */}
-                  <div className="lg:col-span-1 bg-white dark:bg-gray-900 rounded-3xl p-6 border border-slate-100 dark:border-gray-800 shadow-sm flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                  <div className="lg:col-span-1 bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-3xl p-6 border border-slate-100 dark:border-gray-800 shadow-sm flex flex-col gap-6 max-h-[calc(100vh-200px)] overflow-y-auto">
                     <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                        <MessageCircleQuestion className="w-5 h-5 text-indigo-600" /> Danh sách câu hỏi
                     </h3>
@@ -354,7 +380,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                             "h-12 rounded-xl font-bold transition-all border-2",
                             currentQuestionIdx === idx 
                               ? "bg-indigo-600 text-white border-indigo-600" 
-                              : "bg-white dark:bg-gray-800 text-slate-400 border-slate-100 dark:border-gray-700 hover:border-indigo-200"
+                              : "bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm text-slate-400 border-slate-100 dark:border-gray-700 hover:border-indigo-200"
                           )}
                         >
                           {idx + 1}
@@ -365,7 +391,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
 
                   {/* Main Question Display */}
                   <div className="lg:col-span-3 flex flex-col gap-4">
-                     <div className="bg-white dark:bg-gray-900 rounded-[32px] p-10 md:p-14 shadow-xl border border-slate-100 dark:border-gray-800 flex-1 flex flex-col relative overflow-hidden min-h-[500px]">
+                     <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-md rounded-[32px] p-10 md:p-14 shadow-xl border border-slate-100 dark:border-gray-800 flex-1 flex flex-col relative overflow-hidden min-h-[500px]">
                         <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-br-full"></div>
                         
                         <div className="relative z-10 flex flex-col flex-1">
@@ -421,7 +447,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                                       // Highlight selected when not checked
                                       : (!showAnswer && (selectedOptions[currentQuestionIdx] || []).includes(i))
                                         ? "bg-indigo-100 border-indigo-500 text-indigo-800"
-                                        : "bg-slate-50 dark:bg-gray-800 border-transparent text-slate-600 dark:text-gray-300"
+                                        : "bg-slate-50/50 dark:bg-gray-800/50 backdrop-blur-md border-transparent text-slate-600 dark:text-gray-300"
                                   )}
                                  >
                                     <div className="flex items-center gap-4">
@@ -433,7 +459,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                                           // Selected option styling before checking
                                           : (!showAnswer && (selectedOptions[currentQuestionIdx] || []).includes(i))
                                             ? "bg-indigo-500 text-white"
-                                            : "bg-white dark:bg-gray-700 text-slate-400 shadow-sm"
+                                            : "bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm text-slate-400 shadow-sm"
                                       )}>
                                         {String.fromCharCode(65 + i)}
                                       </div>
@@ -529,7 +555,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
       {/* Vocabulary Hover Popup */}
       {hoveredVocab && hoveredVocab.rect && (
         <div 
-          className="fixed z-[100] w-80 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-gray-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200 pointer-events-none"
+          className="fixed z-[100] w-80 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200 dark:border-gray-800 overflow-hidden animate-in fade-in zoom-in-95 duration-200 pointer-events-none"
           style={{
             top: hoveredVocab.side === 'top' 
               ? hoveredVocab.rect.top - 10 
@@ -552,9 +578,49 @@ export default function StudyClient({ assignment }: { assignment: any }) {
             </div>
             
             <div className="space-y-4">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nghĩa tiếng Việt</p>
-                <p className="text-lg font-bold text-slate-700 dark:text-gray-200">{hoveredVocab.meaningVi}</p>
+              <div className="bg-slate-50 dark:bg-gray-800 p-3 rounded-xl border border-slate-100 dark:border-gray-700">
+                {/* Language Switcher Flags */}
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    onClick={() => handleLangChange('VI')}
+                    title="Vietnamese"
+                    className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
+                      currentLang === 'VI'
+                        ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
+                        : 'opacity-40 hover:opacity-80'
+                    }`}
+                  >
+                    <img src="/flags/flag-vi.png" alt="Vietnamese" className="w-full h-full object-cover" />
+                  </button>
+                  <button
+                    onClick={() => handleLangChange('TH')}
+                    title="Thai"
+                    className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
+                      currentLang === 'TH'
+                        ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
+                        : 'opacity-40 hover:opacity-80'
+                    }`}
+                  >
+                    <img src="/flags/flag-th.png" alt="Thai" className="w-full h-full object-cover" />
+                  </button>
+                  <button
+                    onClick={() => handleLangChange('ID')}
+                    title="Indonesian"
+                    className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
+                      currentLang === 'ID'
+                        ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
+                        : 'opacity-40 hover:opacity-80'
+                    }`}
+                  >
+                    <img src="/flags/flag-id.png" alt="Indonesian" className="w-full h-full object-cover" />
+                  </button>
+                </div>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">TRANSLATION</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-gray-200">
+                  {currentLang === 'VI' ? capitalize(hoveredVocab.meaningVi)
+                    : currentLang === 'TH' ? capitalize(hoveredVocab.meaningTh)
+                    : capitalize(hoveredVocab.meaningId)}
+                </p>
               </div>
 
               {hoveredVocab.explanationEn && (
@@ -566,7 +632,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
 
               {hoveredVocab.examples && (
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ví dụ</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Example</p>
                   <div className="text-sm text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
                     {hoveredVocab.examples}
                   </div>
@@ -578,13 +644,13 @@ export default function StudyClient({ assignment }: { assignment: any }) {
       )}
 
       {/* Tabs Mobile */}
-      <div className="md:hidden sticky bottom-0 left-0 right-0 h-16 bg-white dark:bg-gray-900 border-t border-slate-200 dark:border-gray-800 flex items-center justify-around z-20">
+      <div className="md:hidden sticky bottom-0 left-0 right-0 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-slate-200 dark:border-gray-800 flex items-center justify-around z-20">
           <button 
             onClick={() => setActiveTab('reading')}
             className={cn("flex flex-col items-center gap-1", activeTab === 'reading' ? "text-indigo-600" : "text-slate-400")}
           >
             <BookOpen className="w-5 h-5" />
-            <span className="text-[10px] font-bold">BÀI ĐỌC</span>
+            <span className="text-[10px] font-bold">READING</span>
           </button>
           {cards.length > 0 && (
             <button 
@@ -592,7 +658,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
               className={cn("flex flex-col items-center gap-1", activeTab === 'vocabulary' ? "text-indigo-600" : "text-slate-400")}
             >
               <Layers className="w-5 h-5" />
-              <span className="text-[10px] font-bold">TỪ VỰNG</span>
+              <span className="text-[10px] font-bold">VOCAB</span>
             </button>
           )}
           {questions.length > 0 && (
@@ -601,7 +667,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
               className={cn("flex flex-col items-center gap-1", activeTab === 'challenge' ? "text-indigo-600" : "text-slate-400")}
             >
               <MessageCircleQuestion className="w-5 h-5" />
-              <span className="text-[10px] font-bold">CÂU HỎI</span>
+              <span className="text-[10px] font-bold">QUESTIONS</span>
             </button>
           )}
       </div>

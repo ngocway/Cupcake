@@ -255,7 +255,7 @@ export async function autoSaveMaterial(payload: {
           imageUrl: q.imageUrl || null,
           audioUrl: q.audioUrl || null,
           videoUrl: q.videoUrl || null,
-          isBanked: q.isBanked !== undefined ? q.isBanked : true,
+          isBanked: q.isBanked !== undefined ? q.isBanked : (q.isAiGenerated ? false : true),
           isAiGenerated: q.isAiGenerated || false,
           originalId: q.originalId || null
         };
@@ -313,8 +313,62 @@ export async function autoSaveMaterial(payload: {
   syncToHomepageFeed(payload.id, "EXERCISE").catch(err => {
     console.error("[AutoSave] Background sync feed failed:", err);
   });
+  
+  if (updatedAssignment.lesson) {
+    syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
+      console.error("[AutoSave] Background sync feed failed for lesson:", err);
+    });
+  }
 
   return { success: true, savedAt: new Date() };
+}
+
+export async function saveMaterialThumbnail(id: string, thumbnail: string | null) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  if (!id) throw new Error('Missing ID');
+
+  // Verify ownership to prevent IDOR
+  const existing = await prisma.assignment.findUnique({ 
+    where: { id },
+    include: { lesson: true }
+  });
+  
+  const isDemoId = id === 'clp_reading_001';
+  if (!isDemoId && (!existing || existing.teacherId !== session.user.id)) {
+    throw new Error('Forbidden: You do not have permission to edit this material.');
+  }
+
+  // Update assignment thumbnail
+  const updatedAssignment = await prisma.assignment.update({
+    where: { id },
+    data: { thumbnail },
+    include: { lesson: true }
+  });
+
+  // Sync to Lesson if exists
+  if (updatedAssignment.lesson) {
+    await prisma.lesson.update({
+      where: { id: updatedAssignment.lesson.id },
+      data: { thumbnail }
+    });
+  }
+
+  // Sync to Homepage Feed (Background execution, non-blocking)
+  syncToHomepageFeed(id, "EXERCISE").catch(err => {
+    console.error("[SaveThumbnail] Background sync feed failed:", err);
+  });
+  
+  if (updatedAssignment.lesson) {
+    syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
+      console.error("[SaveThumbnail] Background sync feed failed for lesson:", err);
+    });
+  }
+
+  revalidatePath('/teacher/lessons');
+  revalidatePath('/teacher/materials');
+
+  return { success: true };
 }
 
 export async function getMyAssignments() {
@@ -774,6 +828,18 @@ export async function updateMaterialStatus(id: string, newStatus: MaterialStatus
   revalidatePath('/teacher/materials');
   revalidatePath('/teacher/dashboard');
   revalidatePath(`/teacher/materials/${id}`);
+
+  // Sync feed so visibility changes reflect immediately
+  syncToHomepageFeed(id, "EXERCISE").catch(err => {
+    console.error("[UpdateStatus] Background sync feed failed:", err);
+  });
+  
+  const updatedAss = await prisma.assignment.findUnique({ where: { id }, include: { lesson: true } });
+  if (updatedAss?.lesson) {
+    syncToHomepageFeed(updatedAss.lesson.id, "LESSON").catch(err => {
+      console.error("[UpdateStatus] Background sync feed failed for lesson:", err);
+    });
+  }
   
   return { success: true };
 }
@@ -960,21 +1026,36 @@ export async function updateQuestionBankTags(id: string, tags: string) {
 
 // Lấy danh sách metadata hệ thống để làm dữ liệu động cho AI Prompt
 export async function getSystemMetadata() {
-  const [assignments, categories] = await Promise.all([
+  const [assignments, categories, dbTags] = await Promise.all([
     prisma.assignment.findMany({
       select: { tags: true, gradeLevel: true, targetAudiences: true }
     }),
-    prisma.category.findMany({ select: { name: true } })
+    prisma.category.findMany({ select: { nameVi: true, nameEn: true } }),
+    prisma.tag.findMany({ select: { name: true } })
   ]);
 
-  const tagsSet = new Set<string>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
-  const gradesSet = new Set<string>(['Mầm non', 'Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Khác']);
-  const audienceSet = new Set<string>(['Kids', 'Teens', 'Adults', 'Business']);
+  const tagsSet = new Set<string>();
 
+  // Populate tagsSet from the Tag table in database!
+  dbTags.forEach(t => tagsSet.add(t.name.trim()));
+
+  // In case there are tags in assignments that are not yet seeded,
+  // let's still add them as a fallback
   assignments.forEach(a => {
     if (a.tags) {
       a.tags.split(',').forEach(t => tagsSet.add(t.trim()));
     }
+  });
+
+  // Default tags if the DB is completely empty (though getAdminTags seeds or we have tags created)
+  if (tagsSet.size === 0) {
+    ['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].forEach(t => tagsSet.add(t));
+  }
+
+  const gradesSet = new Set<string>(['Mầm non', 'Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Khác']);
+  const audienceSet = new Set<string>(['Kids', 'Teens', 'Adults', 'Business']);
+
+  assignments.forEach(a => {
     if (a.gradeLevel) gradesSet.add(a.gradeLevel.trim());
     if (a.targetAudiences && Array.isArray(a.targetAudiences)) {
       a.targetAudiences.forEach((aud: string) => audienceSet.add(aud.trim()));
@@ -985,6 +1066,6 @@ export async function getSystemMetadata() {
     tags: Array.from(tagsSet).filter(Boolean),
     gradeLevels: Array.from(gradesSet).filter(Boolean),
     targetAudiences: Array.from(audienceSet).filter(Boolean),
-    categories: categories.map(c => c.name).filter(Boolean)
+    categories: categories.flatMap(c => [c.nameVi, c.nameEn]).filter(Boolean)
   };
 }

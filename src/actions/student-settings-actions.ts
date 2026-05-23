@@ -62,19 +62,3 @@ export async function updateNotificationSettings(settings: any) {
     console.log("Updating notification settings:", settings)
     return { success: true }
 }
-export async function updateBackgroundPreference(isClear: boolean) {
-    const session = await auth()
-    if (!session?.user?.id) return { error: "Unauthorized" }
-
-    try {
-        await prisma.user.update({
-            where: { id: session.user.id },
-            data: {
-                studentViewTheme: isClear ? "CLEAR" : "BLURRED"
-            }
-        })
-        return { success: true }
-    } catch (error) {
-        return { error: "Failed to update background preference" }
-    }
-}

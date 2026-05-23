@@ -7,6 +7,7 @@ import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper
 import { SideNavItem } from "@/app/student/_components/SideNavItem"
 import { SmartHeader } from "@/components/student/SmartHeader"
 import { getTranslations } from "next-intl/server"
+import { LayoutDashboard, BookOpen, ClipboardList, Users, TrendingUp } from "lucide-react"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -33,7 +34,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   };
 
   return (
-    <div className="min-h-screen bg-surface font-body text-on-surface">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-body text-slate-900 dark:text-white">
       <SmartHeader session={publicSession} />
       
       {/* Admin/Teacher Impersonation Banner */}
@@ -107,25 +108,25 @@ export default async function StudentLayout({ children }: { children: React.Reac
       </MainContentWrapper>
  
       {/* BottomNavBar (Mobile Only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center py-4 md:hidden z-50">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center py-4 md:hidden z-50">
         <Link className="flex flex-col items-center gap-1 text-primary" href="/student/dashboard">
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>dashboard</span>
+          <LayoutDashboard className="w-6 h-6 stroke-[2.5px]" />
           <span className="text-[10px] font-label font-bold">{t("dash")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/lessons">
-          <span className="material-symbols-outlined">menu_book</span>
+          <BookOpen className="w-6 h-6 stroke-2" />
           <span className="text-[10px] font-label font-bold">{t("lessons")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/assignments">
-          <span className="material-symbols-outlined">assignment</span>
+          <ClipboardList className="w-6 h-6 stroke-2" />
           <span className="text-[10px] font-label font-bold">{t("work")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/classes">
-          <span className="material-symbols-outlined">group</span>
+          <Users className="w-6 h-6 stroke-2" />
           <span className="text-[10px] font-label font-bold">{t("class")}</span>
         </Link>
         <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/growth">
-          <span className="material-symbols-outlined">trending_up</span>
+          <TrendingUp className="w-6 h-6 stroke-2" />
           <span className="text-[10px] font-label font-bold">{t("growth")}</span>
         </Link>
       </nav>

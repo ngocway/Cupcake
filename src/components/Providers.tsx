@@ -32,11 +32,8 @@ export function Providers({ children, locale = "en", messages }: {
   
   useEffect(() => {
     setMounted(true);
-    // Initialize locale from localStorage for guests
-    const savedLocale = localStorage.getItem("preferred-locale");
-    if (savedLocale && ["en", "vi"].includes(savedLocale)) {
-      document.cookie = `NEXT_LOCALE=${savedLocale};path=/;max-age=31536000`;
-    }
+    // Force English locale
+    document.cookie = `NEXT_LOCALE=en;path=/;max-age=31536000`;
   }, []);
 
   return (

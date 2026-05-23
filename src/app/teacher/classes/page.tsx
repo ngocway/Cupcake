@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CreateClassModal } from "./_components/CreateClassModal";
 import { ClassStudentPopup } from "./_components/ClassStudentPopup";
+import { Plus, School, Settings, UserPlus, Users, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ClassData {
   id: string;
@@ -78,7 +79,7 @@ export default function ClassesIndexPage() {
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
         >
-          <span className="material-symbols-outlined text-[20px]">add</span>
+          <Plus className="w-5 h-5 stroke-[3px]" />
           <span>Tạo lớp học mới</span>
         </button>
       </div>
@@ -87,7 +88,7 @@ export default function ClassesIndexPage() {
         /* Loading skeletons */
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-[#f0f2f4] dark:border-gray-700 animate-pulse">
+            <div key={i} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-xl overflow-hidden shadow-sm border border-[#f0f2f4] dark:border-gray-700 animate-pulse">
               <div className="h-32 bg-gray-200 dark:bg-gray-700" />
               <div className="p-5 flex flex-col gap-3">
                 <div className="h-5 w-2/3 bg-gray-200 dark:bg-gray-700 rounded" />
@@ -100,14 +101,14 @@ export default function ClassesIndexPage() {
       ) : classes.length === 0 ? (
         /* Empty state */
         <div className="flex flex-col items-center justify-center py-24 gap-4 text-[#617589]">
-          <span className="material-symbols-outlined text-[56px] opacity-30">class</span>
+          <School className="w-14 h-14 opacity-30 stroke-[1.5px]" />
           <p className="text-lg font-bold text-[#111418] dark:text-white">Bạn chưa có lớp học nào</p>
           <p className="text-sm">Tạo lớp học mới để bắt đầu quản lý học sinh.</p>
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="mt-2 flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors"
           >
-            <span className="material-symbols-outlined text-[20px]">add</span>
+            <Plus className="w-5 h-5 stroke-[3px]" />
             Tạo lớp học mới
           </button>
         </div>
@@ -116,7 +117,7 @@ export default function ClassesIndexPage() {
           {classes.map(cls => (
             <div
               key={cls.id}
-              className="relative bg-white dark:bg-gray-800 rounded-xl overflow-visible shadow-sm hover:shadow-md transition-all group border border-transparent hover:border-primary/20"
+              className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-xl overflow-visible shadow-sm hover:shadow-md transition-all group border border-transparent hover:border-primary/20"
             >
               {/* Card banner */}
               <Link href={`/teacher/classes/${cls.id}`}>
@@ -129,7 +130,7 @@ export default function ClassesIndexPage() {
                       className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors"
                       onClick={e => { e.preventDefault(); e.stopPropagation(); }}
                     >
-                      <span className="material-symbols-outlined text-[20px]">settings</span>
+                      <Settings className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -155,7 +156,7 @@ export default function ClassesIndexPage() {
                     )}
                     {cls._count.enrollments === 0 && (
                       <div className="size-8 rounded-full border-2 border-dashed border-[#d0d5dd] dark:border-gray-600 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[14px] text-[#617589]">person_add</span>
+                        <UserPlus className="w-3.5 h-3.5 text-[#617589]" />
                       </div>
                     )}
                   </div>
@@ -171,11 +172,9 @@ export default function ClassesIndexPage() {
                           : 'text-[#617589] hover:text-primary hover:bg-primary/5'
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[16px]">group</span>
+                      <Users className="w-4 h-4" />
                       {cls._count.enrollments} Học sinh
-                      <span className="material-symbols-outlined text-[14px]">
-                        {openPopupClassId === cls.id ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                      </span>
+                      {openPopupClassId === cls.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
 
                     {/* Popup */}

@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { autoSaveMaterial, syncAssignmentClasses } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses, saveMaterialThumbnail } from '@/actions/material-actions';
+import { getPopularTags } from '@/actions/tag-actions';
 import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
-import { DUMMY_DICTIONARY } from '@/lib/dictionary-data';
+import { searchImagesAction } from '@/actions/image-search-actions';
+import { uploadMedia, uploadUrlMedia } from '@/actions/upload-actions';
+import { toast } from "sonner";
 import CategorySelect from '@/components/shared/CategorySelect';
 import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
 import {
@@ -22,6 +25,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -108,6 +112,55 @@ function SortableQuestionItem({
   );
 }
 
+function SortableTagItem({ 
+  tag, 
+  onRemove 
+}: { 
+  tag: string, 
+  onRemove: () => void 
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: tag });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`px-4 py-1.5 bg-yellow-400/10 text-yellow-600 rounded-lg text-xs font-bold border border-yellow-400/20 flex items-center gap-2 cursor-grab active:cursor-grabbing select-none transition-all ${
+        isDragging ? 'border-yellow-400 shadow-md ring-2 ring-yellow-400/20 scale-105' : ''
+      }`}
+    >
+      #{tag}
+      <button 
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }} 
+        className="p-0.5 hover:bg-yellow-400/20 rounded-full flex items-center justify-center cursor-pointer transition-colors"
+      >
+        <span className="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    </div>
+  );
+}
+
 export function ReadingExerciseBuilder({ 
   assignmentId: initialId, 
   onBack 
@@ -179,6 +232,7 @@ export function ReadingExerciseBuilder({
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [assignmentStatus, setAssignmentStatus] = useState<'DRAFT' | 'PRIVATE' | 'PUBLIC'>('DRAFT');
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const [validationModal, setValidationModal] = useState<{show: boolean, missingTitle: boolean, missingContent: boolean}>({show: false, missingTitle: false, missingContent: false});
   const [videoUrl, setVideoUrl] = useState('');
   const [videoThumbnail, setVideoThumbnail] = useState('');
@@ -187,6 +241,8 @@ export function ReadingExerciseBuilder({
   const [audioUrl, setAudioUrl] = useState('');
   const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
   const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
+
+
   const [instructions, setInstructions] = useState('');
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -199,11 +255,34 @@ export function ReadingExerciseBuilder({
   const [gradeLevel, setGradeLevel] = useState('Khác');
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [popularTagsList, setPopularTagsList] = useState<string[]>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [materialType, setMaterialType] = useState<string>('READING');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const handleThumbnailChange = async (newValue: string | null) => {
+    setIsUploadingThumbnail(true);
+    const previousThumbnail = thumbnail;
+    setThumbnail(newValue);
+    try {
+      const result = await saveMaterialThumbnail(assignmentId || initialId || 'clp_reading_001', newValue);
+      if (result.success) {
+        toast.success(newValue ? 'Tải ảnh đại diện thành công!' : 'Đã gỡ bỏ ảnh đại diện!');
+      } else {
+        throw new Error('Cơ sở dữ liệu phản hồi không thành công.');
+      }
+    } catch (err: any) {
+      console.error('Lỗi tải ảnh đại diện:', err);
+      setThumbnail(previousThumbnail);
+      toast.error(`Không thể lưu ảnh đại diện: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Lỗi lưu ảnh đại diện: ${err.message || 'Hệ thống không thể ghi nhận ảnh này. Vui lòng kiểm tra lại kích thước hoặc kết nối mạng.'}`);
+    } finally {
+      setIsUploadingThumbnail(false);
+    }
+  };
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
   const [imageControlPos, setImageControlPos] = useState({ top: 0, left: 0 });
   const [textToolbarPos, setTextToolbarPos] = useState({ top: 0, left: 0, show: false });
@@ -218,6 +297,12 @@ export function ReadingExerciseBuilder({
     isEdit?: boolean;
     vocabId?: string;
   } | null>(null);
+
+  const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false);
+  const [imageSearchResults, setImageSearchResults] = useState<any[]>([]);
+  const [isSearchingImage, setIsSearchingImage] = useState(false);
+  const [showAIPromptModal, setShowAIPromptModal] = useState(false);
+  const [isUploadingVocabImage, setIsUploadingVocabImage] = useState(false);
 
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'passage' | 'questions' | 'vocabulary'>('passage');
@@ -251,6 +336,17 @@ export function ReadingExerciseBuilder({
         const newIndex = items.findIndex((q) => q.id === over.id);
         const newItems = arrayMove(items, oldIndex, newIndex);
         return newItems;
+      });
+    }
+  };
+
+  const handleTagDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setTags((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        return arrayMove(items, oldIndex, newIndex);
       });
     }
   };
@@ -413,6 +509,15 @@ export function ReadingExerciseBuilder({
             setLastSavedQuestionsHash(JSON.stringify([]));
           }
         }
+        
+        // Fetch popular tags dynamically
+        getPopularTags().then(tagsList => {
+          if (tagsList && tagsList.length > 0) {
+            setPopularTagsList(tagsList);
+          }
+        }).catch(err => {
+          console.error("Failed to fetch popular tags:", err);
+        });
       } catch (err) {
         console.error('Initial fetch failed:', err);
       } finally {
@@ -628,15 +733,17 @@ export function ReadingExerciseBuilder({
     if (!vocabForm.isEdit && !vocabForm.range) return;
 
     const vocabId = vocabForm.isEdit ? vocabForm.vocabId : 'vocab-' + Date.now();
+    const escapeAttr = (str: string) => str ? str.replace(/"/g, '&quot;').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+    
     const html = `<span 
         class="relative inline-block custom-vocab-marker group/marker" 
         data-vocab-id="${vocabId}" 
-        data-word="${vocabForm.word}" 
-        data-pronunciation="${vocabForm.pronunciation || ''}" 
-        data-meaning-vi="${vocabForm.meaningVi || ''}" 
-        data-explanation-en="${vocabForm.explanationEn || ''}" 
-        data-examples="${vocabForm.examples || ''}" 
-        data-image="${vocabForm.image || ''}"
+        data-word="${escapeAttr(vocabForm.word)}" 
+        data-pronunciation="${escapeAttr(vocabForm.pronunciation || '')}" 
+        data-meaning-vi="${escapeAttr(vocabForm.meaningVi || '')}" 
+        data-explanation-en="${escapeAttr(vocabForm.explanationEn || '')}" 
+        data-examples="${escapeAttr(vocabForm.examples || '')}" 
+        data-image="${escapeAttr(vocabForm.image || '')}"
         contenteditable="false"
       ><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">${vocabForm.word}</span></span>&nbsp;`;
 
@@ -662,6 +769,7 @@ export function ReadingExerciseBuilder({
       document.execCommand('insertHTML', false, html);
     }
     setVocabForm(null);
+    refreshVocabList();
   };
 
   const handleAiFill = async () => {
@@ -1004,34 +1112,44 @@ export function ReadingExerciseBuilder({
                   </div>
                </div>
 
-               {/* Audio Upload */}
+               {/* Audio Upload / AI Generator */}
                <div className="px-4">
-                  <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer overflow-hidden min-h-[100px]">
-                     {audioUploadProgress !== null ? (
-                       <div className="w-full flex flex-col items-center px-2">
-                           <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
-                               <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${audioUploadProgress}%` }}></div>
+                  {audioUploadProgress !== null ? (
+                    <div className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-primary bg-white dark:bg-gray-800/50 min-h-[100px]">
+                        <div className="w-full flex flex-col items-center px-2">
+                            <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
+                                <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${audioUploadProgress}%` }}></div>
+                            </div>
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {audioUploadProgress}%</span>
+                        </div>
+                    </div>
+                  ) : audioUrl ? (
+                    <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-emerald-200 dark:border-emerald-950 bg-emerald-50/10 dark:bg-emerald-950/5 min-h-[100px] transition-all">
+                        <div className="w-full flex flex-col items-center p-1">
+                           <div className="w-full flex items-center justify-between gap-3 mb-2">
+                             <div className="flex items-center gap-2 min-w-0">
+                               <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center ring-1 ring-emerald-500/20 shadow-sm shrink-0">
+                                  <span className="material-symbols-outlined text-[20px]">music_note</span>
+                               </div>
+                               <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate tracking-wide uppercase font-bold">Audio sẵn sàng</span>
+                             </div>
+                             <button 
+                               onClick={() => { setAudioUrl(''); }} 
+                               className="size-6 bg-red-50 text-red-500 rounded-full flex items-center justify-center hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40 transition-all shadow-sm"
+                             >
+                                <span className="material-symbols-outlined text-[14px]">close</span>
+                             </button>
                            </div>
-                           <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {audioUploadProgress}%</span>
-                       </div>
-                     ) : audioUrl ? (
-                       <div className="w-full flex flex-col items-center">
-                          <div className="size-10 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 rounded-lg flex items-center justify-center mb-2 ring-1 ring-emerald-500/20 shadow-sm">
-                             <span className="material-symbols-outlined text-[24px]">check_circle</span>
-                          </div>
-                          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate w-full text-center tracking-wide">Audio đã tải lên</span>
-                          <button onClick={() => { setAudioUrl(''); }} className="absolute top-2 right-2 size-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 transition-all opacity-0 group-hover:opacity-100 shadow-sm">
-                             <span className="material-symbols-outlined text-[14px]">close</span>
-                          </button>
-                       </div>
-                     ) : (
-                       <>
-                          <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleAudioUpload} />
-                          <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">mic_none</span>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 group-hover:text-primary transition-colors">Tải lên Audio</span>
-                       </>
-                     )}
-                  </div>
+                           <audio src={audioUrl} controls className="w-full h-8 scale-95 opacity-90 hover:opacity-100 transition-opacity" />
+                        </div>
+                    </div>
+                  ) : (
+                    <div className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer min-h-[100px] w-full">
+                      <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleAudioUpload} />
+                      <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">mic_none</span>
+                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2 text-center group-hover:text-primary transition-colors">Tải lên file âm thanh</span>
+                    </div>
+                  )}
                </div>
             </div>
           </div>
@@ -1342,10 +1460,32 @@ export function ReadingExerciseBuilder({
                       <input type="text" value={vocabForm.pronunciation} onChange={e => setVocabForm({...vocabForm, pronunciation: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none font-mono" />
                     </div>
                   </div>
-                  <div className="w-32 h-32 shrink-0">
+                  <div className="w-32 shrink-0 flex flex-col gap-2">
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ảnh minh họa</label>
-                    <div className="w-full h-full rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 overflow-hidden relative group cursor-pointer" onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => setVocabForm({...vocabForm, image: ev.target?.result as string}); reader.readAsDataURL(file); } }; input.click(); }}>
-                      {vocabForm.image ? <img src={vocabForm.image} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="material-symbols-outlined text-[24px]">image</span><span className="text-[9px] font-bold mt-1 uppercase">Upload</span></div>}
+                    <div className="w-full h-32 rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 overflow-hidden relative group cursor-pointer shrink-0" onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = async (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) { setIsUploadingVocabImage(true); const formData = new FormData(); formData.append('file', file); try { const result = await uploadMedia(formData); if (result.success && result.url) { setVocabForm(prev => prev ? {...prev, image: result.url} : null); toast.success('Lưu ảnh thành công'); } else { toast.error('Lỗi lưu ảnh', { description: result.error }); } } catch (err) { toast.error('Lỗi hệ thống khi lưu ảnh'); } finally { setIsUploadingVocabImage(false); } } }; input.click(); }}>
+                      {isUploadingVocabImage ? <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-slate-50 dark:bg-gray-800"><span className="animate-spin material-symbols-outlined text-[24px]">progress_activity</span><span className="text-[9px] font-bold uppercase tracking-widest text-center">Đang lưu<br/>vào DB...</span></div> : vocabForm.image ? <img src={vocabForm.image} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="material-symbols-outlined text-[24px]">image</span><span className="text-[9px] font-bold mt-1 uppercase">Upload</span></div>}
+                    </div>
+                    <div className="flex gap-2 w-full mt-1">
+                      <button type="button" onClick={async () => {
+                        setIsSearchingImage(true);
+                        setShowImageSearchDrawer(true);
+                        try {
+                          const results = await searchImagesAction(vocabForm.word);
+                          setImageSearchResults(results);
+                        } catch (err: any) {
+                          console.error(err);
+                          toast.error("Lỗi tìm kiếm", {
+                            description: err.message || "Có lỗi xảy ra khi tìm ảnh từ Google, vui lòng thử lại sau.",
+                          });
+                        } finally {
+                          setIsSearchingImage(false);
+                        }
+                      }} className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-600 dark:text-slate-300 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tìm ảnh Internet">
+                        <span className="material-symbols-outlined text-[18px]">travel_explore</span>
+                      </button>
+                      <button type="button" onClick={() => setShowAIPromptModal(true)} className="flex-1 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-400 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tạo prompt AI">
+                        <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1366,6 +1506,113 @@ export function ReadingExerciseBuilder({
                   <button type="submit" className="px-6 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-blue-700 transition-colors editorial-shadow">Lưu Từ Vựng</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Image Search Drawer */}
+        {showImageSearchDrawer && (
+          <div className="fixed top-0 right-0 h-full w-[350px] bg-white dark:bg-gray-900 border-l border-slate-200 dark:border-gray-800 p-6 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">travel_explore</span>
+                  Tìm ảnh Internet
+                </h4>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Từ khoá: <span className="text-primary">{vocabForm?.word}</span>
+                </p>
+              </div>
+              <button type="button" onClick={() => setShowImageSearchDrawer(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">
+              {isSearchingImage ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                  <span className="animate-spin material-symbols-outlined text-[40px] text-primary">progress_activity</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">Đang tìm kiếm...</span>
+                </div>
+              ) : imageSearchResults.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 pb-8">
+                  {imageSearchResults.map((img) => (
+                    <div key={img.id} className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-slate-200 dark:border-gray-700 hover:border-primary hover:shadow-lg transition-all" onClick={async () => {
+                      if (vocabForm) {
+                        setIsUploadingVocabImage(true);
+                        setShowImageSearchDrawer(false);
+                        try {
+                          const result = await uploadUrlMedia(img.url);
+                          if (result.success && result.url) {
+                            setVocabForm(prev => prev ? {...prev, image: result.url} : null);
+                            toast.success('Lưu ảnh thành công');
+                          } else {
+                            toast.error('Lỗi lưu ảnh', { description: result.error });
+                          }
+                        } catch(err) {
+                           toast.error('Lỗi hệ thống khi lưu ảnh');
+                        } finally {
+                           setIsUploadingVocabImage(false);
+                        }
+                      }
+                    }}>
+                      <img src={img.thumb} alt="Search result" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                        <span className="text-[9px] text-white/80 font-medium truncate">by {img.author}</span>
+                      </div>
+                      <div className="absolute top-2 right-2 size-6 bg-primary text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-slate-400 text-xs mt-10">Không tìm thấy ảnh nào phù hợp.</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* AI Prompt Modal */}
+        {showAIPromptModal && vocabForm && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl w-full max-w-md shadow-2xl border border-slate-100 dark:border-gray-800 animate-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center mb-6">
+                <h4 className="text-lg font-black text-slate-800 dark:text-slate-200 flex items-center gap-2 font-headline">
+                  <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
+                  Tạo ảnh bằng AI
+                </h4>
+                <button type="button" onClick={() => setShowAIPromptModal(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 hover:text-slate-600 transition-colors">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 leading-relaxed font-medium">
+                Hãy copy đoạn lệnh (prompt) dưới đây và dán vào các công cụ AI tạo ảnh (như Gemini, ChatGPT, Midjourney) để lấy ảnh minh hoạ ưng ý nhất.
+              </p>
+              
+              <div className="bg-purple-50/50 dark:bg-purple-900/10 rounded-2xl p-5 border border-purple-100 dark:border-purple-900/30 relative group">
+                <p className="text-[15px] font-mono text-slate-700 dark:text-slate-300 break-words leading-relaxed select-all">
+                  Create a high-quality, flat vector educational illustration of the word "{vocabForm.word}" which means "{vocabForm.meaningVi}". The style should be clear, vibrant, cartoonish, with a clean white background. IMPORTANT: no text in image.
+                </p>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`Create a high-quality, flat vector educational illustration of the word "${vocabForm.word}" which means "${vocabForm.meaningVi}". The style should be clear, vibrant, cartoonish, with a clean white background. IMPORTANT: no text in image.`);
+                    toast.success("Đã copy Prompt!");
+                  }}
+                  className="absolute top-3 right-3 p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Copy Prompt"
+                >
+                  <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                </button>
+              </div>
+              
+              <div className="mt-8 flex justify-end">
+                <button type="button" onClick={() => setShowAIPromptModal(false)} className="px-8 py-3 bg-slate-900 dark:bg-slate-800 text-white font-bold rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-lg shadow-slate-900/20">
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1547,7 +1794,8 @@ export function ReadingExerciseBuilder({
                <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
                     <ThumbnailUploader 
                       value={thumbnail}
-                      onChange={setThumbnail}
+                      onChange={handleThumbnailChange}
+                      isUploading={isUploadingThumbnail}
                       label="Ảnh đại diện (16:9)"
                     />
 
@@ -1605,12 +1853,16 @@ export function ReadingExerciseBuilder({
                   <div className="space-y-4">
                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Gắn thẻ (Tags)</label>
                      <div className="flex flex-wrap gap-2">
-                        {['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].map(tag => (
+                        {popularTagsList.map(tag => (
                           <button
                             key={tag}
+                            type="button"
                             onClick={() => {
-                              if (tags.includes(tag)) setTags(tags.filter(t => t !== tag));
-                              else setTags([...tags, tag]);
+                              if (tags.includes(tag)) {
+                                setTags(tags.filter(t => t !== tag));
+                              } else {
+                                setTags([...tags, tag]);
+                              }
                             }}
                             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                               tags.includes(tag) 
@@ -1626,31 +1878,65 @@ export function ReadingExerciseBuilder({
                      <div className="relative">
                         <input 
                            type="text"
+                           value={newTagInput}
+                           onChange={(e) => setNewTagInput(e.target.value)}
                            placeholder="Nhập thẻ tự chọn và nhấn Enter..."
                            className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm pr-12"
                            onKeyDown={(e) => {
                              if (e.key === 'Enter') {
-                               const val = (e.target as HTMLInputElement).value.trim();
+                               e.preventDefault();
+                               const val = newTagInput.trim();
                                if (val && !tags.includes(val)) {
                                  setTags([...tags, val]);
-                                 (e.target as HTMLInputElement).value = '';
+                                 setNewTagInput('');
                                }
                              }
                            }}
                         />
-                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">add</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const val = newTagInput.trim();
+                            if (val && !tags.includes(val)) {
+                              setTags([...tags, val]);
+                              setNewTagInput('');
+                            }
+                          }}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors flex items-center justify-center p-1 rounded-full hover:bg-slate-100 dark:hover:bg-gray-700"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">add</span>
+                        </button>
                      </div>
                      
-                     {/* Custom tags preview with delete */}
-                     <div className="flex flex-wrap gap-3 mt-2">
-                        {tags.filter(t => !['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].includes(t)).map(t => (
-                          <div key={t} className="px-4 py-1.5 bg-yellow-400/10 text-yellow-600 rounded-lg text-xs font-bold border border-yellow-400/20 flex items-center gap-2">
-                             #{t}
-                             <button onClick={() => setTags(tags.filter(tag => tag !== t))} className="p-0.5 hover:bg-yellow-400/20 rounded-full">
-                                <span className="material-symbols-outlined text-[14px]">close</span>
-                             </button>
+                     {/* Sortable tags preview list containing ALL active tags */}
+                     <div className="mt-2">
+                        {tags.length > 0 ? (
+                          <div className="space-y-2">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Danh sách thẻ đã chọn (Kéo thả để sắp xếp thứ tự)</label>
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleTagDragEnd}
+                            >
+                              <SortableContext
+                                items={tags}
+                                strategy={rectSortingStrategy}
+                              >
+                                <div className="flex flex-wrap gap-3 p-1">
+                                  {tags.map(t => (
+                                    <SortableTagItem
+                                      key={t}
+                                      tag={t}
+                                      onRemove={() => setTags(tags.filter(tag => tag !== t))}
+                                    />
+                                  ))}
+                                </div>
+                              </SortableContext>
+                            </DndContext>
                           </div>
-                        ))}
+                        ) : (
+                          <p className="text-xs text-slate-400 italic px-1">Chưa có thẻ nào được gắn.</p>
+                        )}
                      </div>
                   </div>
                </div>
@@ -1658,7 +1944,7 @@ export function ReadingExerciseBuilder({
                {/* Modal Footer */}
                <div className="p-8 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-800 shrink-0">
                   <button 
-                    onClick={() => { setIsSettingsOpen(false); }}
+                    onClick={() => { setIsSettingsOpen(false); handleSave(); }}
                     className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-900/20"
                   >
                      Xác nhận & Lưu thiết lập
@@ -1667,6 +1953,7 @@ export function ReadingExerciseBuilder({
             </div>
           </div>
         )}
+
       </main>
       {showInstructionsModal && (
         <InstructionsModal 

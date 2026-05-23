@@ -195,3 +195,14 @@
 .content-card {
   @apply relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1;
 }
+
+/* Premium Micro-animations: Gentle Shake on Hover */
+@keyframes gentle-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(6deg); }
+}
+
+.shake-on-hover:hover .shake-target {
+  animation: gentle-shake 0.35s ease-in-out infinite;
+}

@@ -12,6 +12,20 @@ interface SideNavItemProps {
   comingSoon?: boolean;
 }
 
+import { LayoutDashboard, Compass, Globe, BookOpen, ClipboardList, Bookmark, Users, Star, TrendingUp, LucideIcon } from "lucide-react";
+
+const IconMap: Record<string, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  explore: Compass,
+  language: Globe,
+  menu_book: BookOpen,
+  assignment: ClipboardList,
+  bookmark: Bookmark,
+  group: Users,
+  star: Star,
+  trending_up: TrendingUp,
+};
+
 export function SideNavItem({ href, icon, label, comingSoon }: SideNavItemProps) {
   const t = useTranslations("common");
   const pathname = usePathname();
@@ -43,23 +57,20 @@ export function SideNavItem({ href, icon, label, comingSoon }: SideNavItemProps)
     }
   }, [pathname, searchParams, href]);
 
+  const IconComponent = IconMap[icon] || LayoutDashboard;
+
   return (
     <Link 
       href={comingSoon ? "#" : href} 
       onClick={comingSoon ? (e) => e.preventDefault() : undefined}
-      className={`flex items-center gap-3 py-3 transition-all duration-300 ${
+      className={`flex items-center gap-3 py-3 transition-all duration-300 shake-on-hover ${
         comingSoon ? "opacity-50 cursor-not-allowed px-4" :
         isActive 
         ? "text-primary font-black bg-primary/10 border-l-4 border-primary pl-3 pr-4 rounded-r-xl shadow-sm" 
         : "text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-blue-300 hover:bg-slate-50 dark:hover:bg-slate-800 px-4 rounded-xl"
       }`}
     >
-      <span 
-        className="material-symbols-outlined" 
-        style={isActive ? { fontVariationSettings: "'FILL' 1" } : {}}
-      >
-        {icon}
-      </span>
+      <IconComponent className={`shake-target w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
       <div className="flex-1 flex items-center justify-between gap-2">
         <span className="font-label text-sm">{label}</span>
         {comingSoon && (

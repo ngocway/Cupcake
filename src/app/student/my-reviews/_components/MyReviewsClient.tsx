@@ -104,15 +104,15 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
         translations={translations}
       />
 
-      <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+      <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2 bg-slate-100 rounded-2xl p-1.5">
+          <div className="flex items-center gap-2 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl p-1.5">
             <button
               onClick={() => setActiveTab("all")}
               className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
                 activeTab === "all"
-                   ? "bg-white shadow-sm text-slate-900"
-                   : "text-slate-500 hover:text-slate-700"
+                   ? "bg-white/80 dark:bg-slate-700/80 shadow-sm text-slate-900 dark:text-white"
+                   : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               {translations.all} ({combinedReviews.length})
@@ -121,8 +121,8 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               onClick={() => setActiveTab("lesson")}
               className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
                 activeTab === "lesson"
-                  ? "bg-white shadow-sm text-slate-900"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white/80 dark:bg-slate-700/80 shadow-sm text-slate-900 dark:text-white"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               <BookOpen className="w-4 h-4" />
@@ -132,8 +132,8 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               onClick={() => setActiveTab("assignment")}
               className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
                 activeTab === "assignment"
-                  ? "bg-white shadow-sm text-slate-900"
-                  : "text-slate-500 hover:text-slate-700"
+                  ? "bg-white/80 dark:bg-slate-700/80 shadow-sm text-slate-900 dark:text-white"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               <FileQuestion className="w-4 h-4" />
@@ -148,7 +148,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
               placeholder={translations.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 pr-4 py-3 bg-slate-50 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all w-full md:w-64"
+              className="pl-11 pr-4 py-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all w-full md:w-64 text-slate-900 dark:text-white"
             />
           </div>
         </div>
@@ -167,8 +167,8 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
           </div>
         ) : (
           <div className="py-20 text-center space-y-4">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-              <MessageSquare className="w-10 h-10 text-slate-200" />
+            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto">
+              <MessageSquare className="w-10 h-10 text-slate-200 dark:text-slate-600" />
             </div>
             <div className="space-y-2">
               <h3 className="text-xl font-black text-slate-900">{translations.noReviews}</h3>

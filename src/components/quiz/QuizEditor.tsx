@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { toast } from "sonner";
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
 import type { MaterialType } from './types';
-import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveMaterialThumbnail } from '@/actions/material-actions';
+import { getPopularTags } from '@/actions/tag-actions';
 import { MultipleChoiceBuilder } from './MultipleChoiceBuilder';
 import { ClozeTestBuilder } from './ClozeTestBuilder';
 import { MatchingBuilder } from './MatchingBuilder';
@@ -31,6 +33,7 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -109,6 +112,55 @@ function SortableQuestionItem({
   );
 }
 
+function SortableTagItem({ 
+  tag, 
+  onRemove 
+}: { 
+  tag: string, 
+  onRemove: () => void 
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: tag });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 100 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`px-4 py-1.5 bg-yellow-400/10 text-yellow-600 rounded-lg text-xs font-bold border border-yellow-400/20 flex items-center gap-2 cursor-grab active:cursor-grabbing select-none transition-all ${
+        isDragging ? 'border-yellow-400 shadow-md ring-2 ring-yellow-400/20 scale-105' : ''
+      }`}
+    >
+      #{tag}
+      <button 
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }} 
+        className="p-0.5 hover:bg-yellow-400/20 rounded-full flex items-center justify-center cursor-pointer transition-colors"
+      >
+        <span className="material-symbols-outlined text-[14px]">close</span>
+      </button>
+    </div>
+  );
+}
+
 export function QuizEditor() {
   const router = useRouter();
   const params = useParams();
@@ -137,12 +189,36 @@ export function QuizEditor() {
   const [gradeLevel, setGradeLevel] = useState('Khác');
   const [shortDescription, setShortDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [popularTagsList, setPopularTagsList] = useState<string[]>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const [materialType, setMaterialType] = useState<MaterialType>('EXERCISE');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const handleThumbnailChange = async (newValue: string | null) => {
+    setIsUploadingThumbnail(true);
+    const previousThumbnail = thumbnail;
+    setThumbnail(newValue);
+    try {
+      const result = await saveMaterialThumbnail(id || 'clp_reading_001', newValue);
+      if (result.success) {
+        toast.success(newValue ? 'Tải ảnh đại diện thành công!' : 'Đã gỡ bỏ ảnh đại diện!');
+      } else {
+        throw new Error('Cơ sở dữ liệu phản hồi không thành công.');
+      }
+    } catch (err: any) {
+      console.error('Lỗi tải ảnh đại diện:', err);
+      setThumbnail(previousThumbnail);
+      toast.error(`Không thể lưu ảnh đại diện: ${err.message || 'Lỗi hệ thống'}`);
+      alert(`Lỗi lưu ảnh đại diện: ${err.message || 'Hệ thống không thể ghi nhận ảnh này. Vui lòng kiểm tra lại kích thước hoặc kết nối mạng.'}`);
+    } finally {
+      setIsUploadingThumbnail(false);
+    }
+  };
 
   const [saveStatus, setSaveStatus] = useState<'SAVED' | 'SAVING' | 'ERROR'>('SAVED');
   const [showBankModal, setShowBankModal] = useState(false);
@@ -169,6 +245,17 @@ export function QuizEditor() {
       setQuestions((items) => {
         const oldIndex = items.findIndex((q) => q.id === active.id);
         const newIndex = items.findIndex((q) => q.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleTagDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setTags((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
@@ -216,6 +303,16 @@ export function QuizEditor() {
     fetchAssignment();
   }, [id]);
 
+  // Fetch popular tags dynamically
+  useEffect(() => {
+    getPopularTags().then(tagsList => {
+      if (tagsList && tagsList.length > 0) {
+        setPopularTagsList(tagsList);
+      }
+    }).catch(err => {
+      console.error("Failed to fetch popular tags:", err);
+    });
+  }, []);
 
   // Manual save function
   const handleSave = async () => {
@@ -425,7 +522,7 @@ export function QuizEditor() {
           id,
           type,
           points: 1.0,
-          isBanked: true,
+          isBanked: false,
           isAiGenerated: true,
           explanation: explanation || '',
           content
@@ -1236,7 +1333,8 @@ export function QuizEditor() {
             <div className="space-y-8">
               <ThumbnailUploader 
                 value={thumbnail}
-                onChange={setThumbnail}
+                onChange={handleThumbnailChange}
+                isUploading={isUploadingThumbnail}
                 label="Ảnh đại diện (16:9)"
               />
 
@@ -1296,17 +1394,20 @@ export function QuizEditor() {
                  />
               </div>
 
-              {/* Tagging System */}
               <div className="space-y-4">
                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Gắn thẻ bài học (Tags)</label>
                  
                  <div className="flex flex-wrap gap-2">
-                    {['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].map(tag => (
+                     {popularTagsList.map(tag => (
                       <button 
                         key={tag}
+                        type="button"
                         onClick={() => {
-                          if (tags.includes(tag)) setTags(tags.filter(t => t !== tag));
-                          else setTags([...tags, tag]);
+                          if (tags.includes(tag)) {
+                            setTags(tags.filter(t => t !== tag));
+                          } else {
+                            setTags([...tags, tag]);
+                          }
                         }}
                         className={`px-5 py-2 rounded-full text-[11px] font-bold transition-all ${
                           tags.includes(tag) 
@@ -1319,40 +1420,75 @@ export function QuizEditor() {
                     ))}
                  </div>
 
-                 <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-[24px] border border-slate-100">
+                 <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-[24px] border border-slate-100 relative pr-12">
                     <input 
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          const val = (e.target as HTMLInputElement).value.trim();
+                          e.preventDefault();
+                          const val = newTagInput.trim();
                           if (val && !tags.includes(val)) {
                             setTags([...tags, val]);
-                            (e.target as HTMLInputElement).value = '';
+                            setNewTagInput('');
                           }
                         }
                       }}
                       placeholder="Nhập thẻ riêng và nhấn Enter..."
                       className="bg-transparent border-none outline-none text-sm flex-1 px-4 py-2 font-medium"
                     />
-                    <div className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest">Custom</div>
+                    <div className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Custom</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = newTagInput.trim();
+                        if (val && !tags.includes(val)) {
+                          setTags([...tags, val]);
+                          setNewTagInput('');
+                        }
+                      }}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors flex items-center justify-center p-1 rounded-full hover:bg-slate-100"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">add</span>
+                    </button>
                  </div>
 
-                 {/* Custom tags preview with delete */}
-                 <div className="flex flex-wrap gap-3 mt-2">
-                    {tags.filter(t => !['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi'].includes(t)).map(t => (
-                      <div key={t} className="px-4 py-1.5 bg-yellow-400/10 text-yellow-600 rounded-lg text-xs font-bold border border-yellow-400/20 flex items-center gap-2">
-                         #{t}
-                         <button onClick={() => setTags(tags.filter(tag => tag !== t))} className="p-0.5 hover:bg-yellow-400/20 rounded-full">
-                           <span className="material-symbols-outlined text-[14px]">close</span>
-                         </button>
+                 {/* Sortable tags preview list containing ALL active tags */}
+                 <div className="mt-2">
+                    {tags.length > 0 ? (
+                      <div className="space-y-2">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Danh sách thẻ đã chọn (Kéo thả để sắp xếp thứ tự)</label>
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleTagDragEnd}
+                        >
+                          <SortableContext
+                            items={tags}
+                            strategy={rectSortingStrategy}
+                          >
+                            <div className="flex flex-wrap gap-3 p-1">
+                              {tags.map(t => (
+                                <SortableTagItem
+                                  key={t}
+                                  tag={t}
+                                  onRemove={() => setTags(tags.filter(tag => tag !== t))}
+                                />
+                              ))}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       </div>
-                    ))}
+                    ) : (
+                      <p className="text-xs text-slate-400 italic px-1">Chưa có thẻ nào được gắn.</p>
+                    )}
                  </div>
               </div>
             </div>
 
             <div className="mt-12 flex justify-end gap-3 pt-8 border-t border-slate-100">
               <button 
-                onClick={() => setShowSettingsModal(false)}
+                onClick={() => { setShowSettingsModal(false); handleSave(); }}
                 className="px-10 py-4 bg-primary text-white font-black text-xs uppercase tracking-widest rounded-full shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
               >
                 Lưu thiết lập

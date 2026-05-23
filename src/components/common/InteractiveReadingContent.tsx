@@ -2,18 +2,24 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Volume2, PlusCircle, GraduationCap, BookOpen } from 'lucide-react';
+import { Volume2, PlusCircle, BookOpen, LogIn } from 'lucide-react';
+import { getUserVocabLanguage, updateUserVocabLanguage } from '@/actions/vocab-settings';
 
 interface VocabularyInfo {
   word: string;
   pronunciation: string;
   meaningVi: string;
+  meaningTh: string;
+  meaningId: string;
   explanationEn: string;
   examples: string[];
+  image: string;
 }
 
-export function InteractiveReadingContent({ html }: { html: string }) {
+export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: string; isLoggedIn?: boolean }) {
+  const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
   const [mounted, setMounted] = useState(false);
+  const [currentLang, setCurrentLang] = useState('VI');
   const [activeVocab, setActiveVocab] = useState<VocabularyInfo | null>(null);
   const [position, setPosition] = useState({ 
     x: 0, 
@@ -22,13 +28,31 @@ export function InteractiveReadingContent({ html }: { html: string }) {
     arrowX: 0 
   });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    
+    async function loadLanguagePref() {
+      const dbPref = await getUserVocabLanguage();
+      if (dbPref) {
+        setCurrentLang(dbPref);
+      } else {
+        setCurrentLang(localStorage.getItem('vocabLang') || 'VI');
+      }
+    }
+    loadLanguagePref();
+
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
+
+  const handleLangChange = async (lang: string) => {
+    setCurrentLang(lang);
+    localStorage.setItem('vocabLang', lang);
+    await updateUserVocabLanguage(lang);
+  };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -61,8 +85,11 @@ export function InteractiveReadingContent({ html }: { html: string }) {
         word: marker.getAttribute('data-word') || '',
         pronunciation: marker.getAttribute('data-pronunciation') || '',
         meaningVi: marker.getAttribute('data-meaning-vi') || '',
+        meaningTh: marker.getAttribute('data-meaning-th') || '',
+        meaningId: marker.getAttribute('data-meaning-id') || '',
         explanationEn: marker.getAttribute('data-explanation-en') || '',
         examples: (marker.getAttribute('data-examples') || '').split(';').map(s => s.trim()),
+        image: marker.getAttribute('data-image') || '',
       };
       
       setActiveVocab(info);
@@ -73,12 +100,12 @@ export function InteractiveReadingContent({ html }: { html: string }) {
         arrowX: arrowRelativeX
       });
     } else {
-      // Tăng thời gian trễ lên 200ms để user kịp di chuyển chuột vào popup
+      // Tăng thời gian trễ lên 350ms để user kịp di chuyển chuột vào popup
       if (!timeoutRef.current) {
         timeoutRef.current = setTimeout(() => {
           setActiveVocab(null);
           timeoutRef.current = null;
-        }, 200);
+        }, 350);
       }
     }
   };
@@ -98,6 +125,17 @@ export function InteractiveReadingContent({ html }: { html: string }) {
     }
   };
 
+  const handlePlayAudio = () => {
+    if ('speechSynthesis' in window && activeVocab) {
+      // Cancel any ongoing speech to prevent overlapping
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(activeVocab.word);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9; // Slightly slower for clearer pronunciation
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const renderPopup = () => {
     if (!activeVocab || !mounted) return null;
 
@@ -112,39 +150,108 @@ export function InteractiveReadingContent({ html }: { html: string }) {
         }}
         onMouseEnter={handlePopupMouseEnter}
         onMouseLeave={handlePopupMouseLeave}
+        onMouseMove={(e) => e.stopPropagation()}
       >
         <div className="w-[560px] bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_35px_100px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-slate-800 p-8 animate-in fade-in zoom-in-95 duration-200 relative">
           <div className="flex gap-8 items-stretch">
             {/* Left Column */}
             <div className="w-[200px] flex flex-col">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                  <GraduationCap className="w-3.5 h-3.5 text-primary" />
+
+              {activeVocab.image && (
+                <div className="h-28 w-full rounded-[4px] overflow-hidden mb-4">
+                  <img src={activeVocab.image} alt={activeVocab.word} className="w-full h-full object-cover" />
                 </div>
-                <span className="text-[9px] font-black text-primary/60 uppercase tracking-[0.2em]">Vocab</span>
-              </div>
+              )}
               
               <div className="space-y-1 mb-6">
                 <h4 className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
                   {activeVocab.word}
                 </h4>
-                <div className="flex items-center gap-1.5 text-primary/60 font-bold text-xs">
+                <div 
+                  className="flex items-center gap-1.5 text-primary/60 font-bold text-xs cursor-pointer hover:text-primary transition-colors w-fit"
+                  onClick={handlePlayAudio}
+                  title="Nghe phát âm"
+                >
                   <Volume2 className="w-3.5 h-3.5" />
-                  <span className="font-mono tracking-wider">/{activeVocab.pronunciation}/</span>
+                  <span className="font-mono tracking-wider">{activeVocab.pronunciation.replace(/^\/+/, '/').replace(/\/+$/, '/')}</span>
                 </div>
               </div>
 
-              <div className="space-y-1 mb-auto">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Nghĩa Việt</p>
-                <p className="text-slate-800 dark:text-white font-black text-xl tracking-tight leading-tight">
-                  {activeVocab.meaningVi}
+              <div className="mb-auto space-y-1">
+                {/* TRANSLATION label + flag switcher on same row */}
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">TRANSLATION</p>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleLangChange('VI')}
+                      title="Vietnamese"
+                      className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
+                        currentLang === 'VI'
+                          ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                          : 'opacity-40 hover:opacity-80'
+                      }`}
+                    >
+                      <img src="/flags/flag-vi.png" alt="Vietnamese" className="w-full h-full object-cover" />
+                    </button>
+                    <button
+                      onClick={() => handleLangChange('TH')}
+                      title="Thai"
+                      className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
+                        currentLang === 'TH'
+                          ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                          : 'opacity-40 hover:opacity-80'
+                      }`}
+                    >
+                      <img src="/flags/flag-th.png" alt="Thai" className="w-full h-full object-cover" />
+                    </button>
+                    <button
+                      onClick={() => handleLangChange('ID')}
+                      title="Indonesian"
+                      className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
+                        currentLang === 'ID'
+                          ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                          : 'opacity-40 hover:opacity-80'
+                      }`}
+                    >
+                      <img src="/flags/flag-id.png" alt="Indonesian" className="w-full h-full object-cover" />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-tight">
+                  {currentLang === 'VI' ? capitalize(activeVocab.meaningVi)
+                   : currentLang === 'TH' ? capitalize(activeVocab.meaningTh)
+                   : capitalize(activeVocab.meaningId)}
                 </p>
               </div>
 
-              <button className="w-full h-12 bg-primary text-white rounded-2xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 mt-6 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors">
+
+              <button 
+                onClick={() => {
+                  if (!isLoggedIn) {
+                    setShowLoginPrompt(true);
+                    return;
+                  }
+                  // TODO: Add word to user's vocabulary list
+                }}
+                className="w-full h-12 bg-primary text-white rounded-2xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 mt-6 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+              >
                 <PlusCircle className="w-4 h-4" />
                 Add Word
               </button>
+              {showLoginPrompt && !isLoggedIn && (
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-2">
+                    Bạn cần đăng nhập để lưu từ vựng
+                  </p>
+                  <a 
+                    href="/student/login" 
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    Đăng nhập ngay
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Right Column */}
@@ -152,7 +259,7 @@ export function InteractiveReadingContent({ html }: { html: string }) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">English Explanation</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">English Definition</p>
                 </div>
                 <p className="text-slate-600 dark:text-slate-300 text-[14px] font-medium leading-relaxed">
                   {activeVocab.explanationEn}
@@ -160,9 +267,9 @@ export function InteractiveReadingContent({ html }: { html: string }) {
               </div>
 
               {activeVocab.examples[0] && (
-                <div className="relative p-5 bg-slate-50/80 dark:bg-slate-800/50 rounded-[1.8rem] border border-slate-100 dark:border-slate-800/50">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-2">Ví dụ minh họa</p>
-                  <p className="text-slate-700 dark:text-slate-200 text-[13px] italic font-medium leading-relaxed relative z-10">
+                <div className="space-y-2 pt-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Example</p>
+                  <p className="text-slate-600 dark:text-slate-300 text-[14px] italic font-medium leading-relaxed">
                     "{activeVocab.examples[0]}"
                   </p>
                 </div>

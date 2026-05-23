@@ -2,7 +2,7 @@
 
 import prisma from "@/lib/prisma"
 import { auth } from "@/auth"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
 
 export async function updateTeacherProfile(data: {
     name?: string,
@@ -20,7 +20,7 @@ export async function updateTeacherProfile(data: {
 }) {
     try {
         const session = await auth();
-        if (!session?.user?.id || session.user.role !== "TEACHER") {
+        if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
             return { error: "Không có quyền thực hiện" };
         }
 
@@ -45,6 +45,10 @@ export async function updateTeacherProfile(data: {
         revalidatePath("/teacher/profile");
         revalidatePath(`/teacher/profile/${session.user.id}`);
         revalidatePath(`/profile/${session.user.id}`);
+        revalidateTag("assignment", {});
+        revalidateTag("assignments", {});
+        revalidateTag("lesson", {});
+        revalidateTag("lessons", {});
         return { success: true };
     } catch (error) {
         console.error("Error updating profile:", error);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getMaterialAnalytics } from '@/actions/material-actions';
+import { LineChart, X, BarChart, List, AlertTriangle } from 'lucide-react';
 
 interface AnalyticsData {
   totalSubmissions: number;
@@ -41,11 +42,11 @@ export function MaterialAnalyticsModal({ isOpen, onClose, assignmentId, title }:
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="size-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white">
-              <span className="material-symbols-outlined">analytics</span>
+              <LineChart className="w-6 h-6 stroke-[2px]" />
             </div>
             <div>
               <h3 className="font-bold text-lg">Phân tích chi tiết bài tập</h3>
@@ -53,7 +54,7 @@ export function MaterialAnalyticsModal({ isOpen, onClose, assignmentId, title }:
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-            <span className="material-symbols-outlined">close</span>
+            <X className="w-6 h-6 stroke-[2px]" />
           </button>
         </div>
 
@@ -64,8 +65,8 @@ export function MaterialAnalyticsModal({ isOpen, onClose, assignmentId, title }:
                <p className="font-medium text-slate-500">Đang tổng hợp dữ liệu...</p>
              </div>
           ) : !data || data.totalSubmissions === 0 ? (
-            <div className="text-center py-20 bg-gray-50 dark:bg-gray-900 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
-               <span className="material-symbols-outlined text-5xl text-gray-300 mb-4">bar_chart_off</span>
+            <div className="text-center py-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+               <BarChart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4 stroke-[1.5px]" />
                <p className="text-gray-500 font-medium font-bold text-slate-700 dark:text-gray-200">Chưa có dữ liệu thống kê</p>
                <p className="text-xs text-gray-400 mt-1">Học sinh chưa làm bài tập này công khai hoặc trong lớp.</p>
             </div>
@@ -86,7 +87,7 @@ export function MaterialAnalyticsModal({ isOpen, onClose, assignmentId, title }:
               {/* Item Analysis Table */}
               <div className="flex flex-col gap-4">
                 <h4 className="font-bold text-[#111418] dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">list_alt</span>
+                  <List className="w-6 h-6 text-primary" />
                   Tỷ lệ đúng theo từng câu
                 </h4>
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -126,7 +127,7 @@ export function MaterialAnalyticsModal({ isOpen, onClose, assignmentId, title }:
                           <td className="px-6 py-4">
                              {q.isHard ? (
                                <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-                                 <span className="material-symbols-outlined text-[14px]">warning</span>
+                                 <AlertTriangle className="w-[14px] h-[14px]" />
                                  QUÁ KHÓ
                                </span>
                              ) : (

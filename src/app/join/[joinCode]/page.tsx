@@ -33,8 +33,8 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Mã không hợp lệ</h1>
-          <p className="text-slate-500">Chúng tôi không tìm thấy lớp học hoặc bài tập nào với mã này.</p>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Code</h1>
+          <p className="text-slate-500">We couldn't find any class or assignment with this code.</p>
         </div>
       </div>
     );
@@ -46,8 +46,8 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
       <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🔒</div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Lớp học đã đóng cửa</h1>
-          <p className="text-slate-500">Giáo viên đã khóa chức năng tham gia lớp học này. Vui lòng liên hệ giáo viên để biết thêm chi tiết.</p>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Class Closed</h1>
+          <p className="text-slate-500">The teacher has disabled joining this class. Please contact the teacher for more details.</p>
         </div>
       </div>
     );
@@ -82,10 +82,10 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
           <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
             <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
               <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⏳</div>
-              <h1 className="text-2xl font-bold text-slate-800 mb-2">Đang chờ duyệt</h1>
-              <p className="text-slate-500 mb-6">Yêu cầu tham gia lớp <strong>{classObj.name}</strong> của bạn đã được gửi. Vui lòng đợi giáo viên phê duyệt.</p>
+              <h1 className="text-2xl font-bold text-slate-800 mb-2">Pending Approval</h1>
+              <p className="text-slate-500 mb-6">Your request to join class <strong>{classObj.name}</strong> has been sent. Please wait for the teacher to approve.</p>
               <Link href="/student/dashboard" className="px-6 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors inline-block w-full">
-                Quay về trang chủ
+                Back to Dashboard
               </Link>
             </div>
           </div>
@@ -95,8 +95,8 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
           <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
             <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🚫</div>
-              <h1 className="text-2xl font-bold text-slate-800 mb-2">Không thể tham gia</h1>
-              <p className="text-slate-500">Bạn đã bị chặn khỏi lớp học này.</p>
+              <h1 className="text-2xl font-bold text-slate-800 mb-2">Cannot Join</h1>
+              <p className="text-slate-500">You have been blocked from this class.</p>
             </div>
           </div>
         );
@@ -151,32 +151,32 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
           🏫
         </div>
         
-        <h1 className="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Tham gia lớp học</h1>
+        <h1 className="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Join Class</h1>
         
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 mb-8 text-left mt-6">
           <div className="mb-4">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Lớp học</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Class</p>
             <p className="text-lg font-bold text-slate-900">{classObj.name}</p>
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Giáo viên</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Teacher</p>
             <p className="text-slate-800 font-medium">{classObj.teacher.name || classObj.teacher.email}</p>
           </div>
         </div>
 
         <p className="text-slate-500 mb-8 text-sm">
-          Bạn đang yêu cầu tham gia vào lớp học này. Yêu cầu của bạn sẽ được gửi đến giáo viên để chờ phê duyệt.
+          You are requesting to join this class. Your request will be sent to the teacher for approval.
         </p>
 
         <form action={requestJoinClass}>
           <button type="submit" className="w-full px-6 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20 transition-all focus:ring-4 focus:ring-blue-600/30 active:scale-[0.98]">
-            Gửi yêu cầu tham gia
+            Send Join Request
           </button>
         </form>
         
         <div className="mt-4">
           <Link href="/student/dashboard" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-            Hủy và quay lại
+            Cancel and go back
           </Link>
         </div>
       </div>

@@ -62,7 +62,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
          <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto">
             <AssignmentIcon className="w-8 h-8 text-on-surface-variant/30" />
          </div>
-         <p className="text-on-surface-variant font-medium text-sm italic leading-loose">Bài học này chưa có bài tập rèn luyện.</p>
+         <p className="text-on-surface-variant font-medium text-sm italic leading-loose">This lesson does not have any practice exercises yet.</p>
       </div>
     );
   }
@@ -128,7 +128,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
                     (typeof currentAnswer === 'object' && currentAnswer !== null && Object.keys(currentAnswer).length === 0);
 
     if (isEmpty) {
-      toast.error("Vui lòng hoàn thành câu hỏi trước khi kiểm tra!");
+      toast.error("Please complete the question before checking!");
       return;
     }
     setCheckedQuestions(prev => ({ ...prev, [currentQuestion.id]: true }));
@@ -158,7 +158,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
                  <AssignmentIcon className="w-8 h-8 text-on-primary" />
               </div>
               <div className="space-y-2">
-                 <p className="text-on-primary/60 text-xs font-label font-bold uppercase tracking-[0.2em]">Nhiệm vụ đi kèm</p>
+                 <p className="text-on-primary/60 text-xs font-label font-bold uppercase tracking-[0.2em]">Associated Task</p>
                  <h3 className="text-2xl font-headline font-bold leading-tight tracking-tight italic uppercase">{assignment.title}</h3>
               </div>
               <ul className="space-y-4">
@@ -167,12 +167,12 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
                         <CheckCircle className="w-3.5 h-3.5 text-on-primary" />
                      </div>
                      <span className="flex items-center gap-2">
-                       {questions.length} câu hỏi luyện tập
+                       {questions.length} practice questions
                        {hasInstructions && (
                          <button 
                            onClick={() => setIsInstructionsOpen(true)}
                            className="p-1 bg-white/10 hover:bg-white/20 text-on-primary rounded-full transition-all active:scale-95 flex items-center justify-center shadow-sm shadow-white/5 animate-pulse"
-                           title="Hướng dẫn làm bài"
+                           title="Instructions"
                          >
                            <Info className="w-3.5 h-3.5" />
                          </button>
@@ -183,7 +183,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
                      <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
                         <CheckCircle className="w-3.5 h-3.5 text-on-primary" />
                      </div>
-                     Chấm điểm & Phản hồi ngay
+                     Instant Grading & Feedback
                   </li>
               </ul>
               
@@ -191,7 +191,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
                  onClick={() => setIsDoingQuiz(true)}
                  className="flex items-center justify-center gap-3 w-full py-4 bg-on-primary text-primary rounded-full font-label font-bold text-sm tracking-wide uppercase hover:bg-surface transition-all group-hover:scale-[1.02] active:scale-95 shadow-lg shadow-black/10"
               >
-                 BẮT ĐẦU LÀM BÀI
+                 START PRACTICE
                  <ArrowRight className="w-5 h-5" />
               </button>
            </div>
@@ -203,10 +203,10 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
         <div className="bg-tertiary-container text-on-tertiary-container rounded-xl p-6 border border-tertiary/20 space-y-4 shadow-sm">
            <h5 className="font-headline font-bold text-sm uppercase tracking-widest flex items-center gap-2">
               <Star className="w-4 h-4 fill-current" />
-              Lời khuyên học tập
+              Study Advice
            </h5>
            <p className="text-sm font-body leading-relaxed opacity-90">
-              Hãy xem hết video bài giảng và ghi chép lại các cấu trúc quan trọng trước khi bắt đầu làm bài tập để đạt kết quả tốt nhất nhé!
+              Please watch the entire video lesson and note down important structures before starting the exercise to get the best results!
            </p>
         </div>
       </div>
@@ -226,7 +226,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
                 <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
                   <Info className="w-5 h-5" />
                 </div>
-                <h4 className="text-xl font-headline font-bold italic uppercase tracking-tight">Hướng dẫn làm bài</h4>
+                <h4 className="text-xl font-headline font-bold italic uppercase tracking-tight">Instructions</h4>
               </div>
 
               <div 
@@ -261,13 +261,13 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
       <div className="p-6 bg-surface-container-low border-b border-outline-variant/10 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 text-xs font-label font-bold text-primary uppercase tracking-widest">
           <div className="flex items-center gap-2">
-            Luyện tập
+            Practice
           </div>
           {hasInstructions && (
             <button 
               onClick={() => setIsInstructionsOpen(true)}
               className="p-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-all active:scale-95 flex items-center justify-center shadow-sm shadow-primary/5 animate-pulse"
-              title="Xem hướng dẫn làm bài"
+              title="View instructions"
             >
               <Info className="w-3.5 h-3.5" />
             </button>
@@ -290,12 +290,12 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
       <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
         <div className="space-y-2">
           <span className="text-[10px] font-label font-bold text-secondary uppercase tracking-[0.2em]">
-            {qType === "MULTIPLE_SELECT" ? 'Chọn nhiều đáp án' : 
-             qType === "MATCHING" ? 'Nối cặp đáp án' : 
-             'Chọn một đáp án'}
+            {qType === "MULTIPLE_SELECT" ? 'Multiple select' : 
+             qType === "MATCHING" ? 'Match pairs' : 
+             'Select one option'}
           </span>
           <h4 className="text-xl font-headline font-bold text-on-background leading-tight italic">
-            {questionText === "{}" ? "Nối các cặp từ phù hợp:" : questionText}
+            {questionText === "{}" ? "Match the correct pairs:" : questionText}
           </h4>
         </div>
 
@@ -355,8 +355,8 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
         {qType === "TRUE_FALSE" && (
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: "Đúng", value: true },
-              { label: "Sai", value: false }
+              { label: "True", value: true },
+              { label: "False", value: false }
             ].map((opt) => {
               const isSelected = userAnswer === opt.value;
               const isCorrect = questionData.isTrue === opt.value;
@@ -398,12 +398,12 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
         {qType === "MATCHING" && (
           <div className="space-y-4">
             <p className="text-[10px] text-slate-400 italic">
-              {isChecked ? "Kết quả đối chiếu:" : "Mẹo: Click 1 ô bên trái rồi click 1 ô bên phải để nối!"}
+              {isChecked ? "Matching results:" : "Tip: Click a box on the left, then click a box on the right to connect!"}
             </p>
             <div className="grid grid-cols-2 gap-4 relative">
               {/* Left items */}
               <div className="space-y-2">
-                <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Vế hỏi</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Question</span>
                 {(questionData.pairs || []).map((pair: any, idx: number) => {
                   const pairedRightText = userAnswer?.[pair.id];
                   const isCorrect = isChecked && pairedRightText === pair.rightText;
@@ -434,7 +434,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
 
               {/* Right items */}
               <div className="space-y-2">
-                <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Trả lời</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Answer</span>
                 {shuffledRightItems.map((rightText: string, idx: number) => {
                   const pairedLeftId = Object.keys(userAnswer || {}).find(k => userAnswer[k] === rightText);
                   const pair = pairedLeftId ? questionData.pairs.find((p:any) => p.id === pairedLeftId) : null;
@@ -472,7 +472,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
         {/* Explanation */}
         {isChecked && currentQuestion.explanation && (
           <div className="p-5 bg-tertiary-container/30 rounded-xl border-l-4 border-tertiary text-sm italic text-on-tertiary-container shadow-sm">
-            <span className="font-headline font-bold text-tertiary block mb-2 not-italic text-xs uppercase tracking-widest">GIẢI THÍCH:</span>
+            <span className="font-headline font-bold text-tertiary block mb-2 not-italic text-xs uppercase tracking-widest">EXPLANATION:</span>
             {currentQuestion.explanation}
           </div>
         )}
@@ -485,14 +485,14 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
           disabled={currentQuestionIndex === 0}
           className="p-2.5 rounded-lg font-label font-bold text-xs text-on-surface-variant/60 hover:bg-surface-container-highest disabled:opacity-30 disabled:pointer-events-none transition-all"
         >
-          Quay lại
+          Back
         </button>
 
         {isChecked ? (
           currentQuestionIndex === questions.length - 1 ? (
             <button 
               onClick={() => {
-                toast.success("Bạn đã hoàn thành bài tập!");
+                toast.success("You have completed the exercise!");
                 setIsDoingQuiz(false);
                 setCurrentQuestionIndex(0);
                 setAnswers({});
@@ -500,14 +500,14 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
               }}
               className="px-8 py-3 bg-emerald-600 text-white rounded-full font-label font-bold text-xs uppercase tracking-wide hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 animate-in zoom-in-95"
             >
-              Hoàn thành
+              Finish
             </button>
           ) : (
             <button 
               onClick={handleNext}
               className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-label font-bold text-xs uppercase tracking-wide hover:bg-primary-dim transition-all shadow-lg shadow-primary/20 animate-in zoom-in-95"
             >
-              Câu sau
+              Next
               <ChevronRight className="w-4 h-4" />
             </button>
           )
@@ -516,7 +516,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
             onClick={handleCheck}
             className="px-8 py-3 bg-gradient-to-r from-secondary to-secondary-dim text-on-secondary rounded-full font-label font-bold text-xs uppercase tracking-[0.1em] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-secondary/20"
           >
-            KIỂM TRA
+            CHECK
           </button>
         )}
       </div>
@@ -537,7 +537,7 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
               <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center">
                 <Info className="w-5 h-5" />
               </div>
-              <h4 className="text-xl font-black italic uppercase tracking-tight">Hướng dẫn làm bài</h4>
+              <h4 className="text-xl font-black italic uppercase tracking-tight">Instructions</h4>
             </div>
 
             <div 

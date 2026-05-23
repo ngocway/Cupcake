@@ -75,18 +75,18 @@ export default async function BookmarksPage() {
           <input 
             type="text" 
             placeholder={t("searchPlaceholder")}
-            className="w-full pl-12 pr-6 py-4 bg-white border-2 border-slate-100 rounded-2xl focus:outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all font-medium"
+            className="w-full pl-12 pr-6 py-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border-2 border-slate-100 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all font-medium text-slate-900 dark:text-white"
           />
         </div>
       </div>
 
       {!hasBookmarks ? (
-        <div className="bg-white/50 border-2 border-dashed border-slate-200 rounded-[3rem] p-20 text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
-          <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Plus className="w-12 h-12 text-slate-300" />
+        <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[3rem] p-20 text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
+          <div className="w-24 h-24 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Plus className="w-12 h-12 text-slate-300 dark:text-slate-500" />
           </div>
           <div className="max-w-md mx-auto space-y-4">
-            <h2 className="text-3xl font-black text-slate-800">{t("noBookmarks")}</h2>
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white">{t("noBookmarks")}</h2>
             <p className="text-slate-500 font-medium leading-relaxed italic">
               {t("emptyStateMessage")}
             </p>

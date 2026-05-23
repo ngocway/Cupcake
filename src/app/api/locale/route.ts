@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import prisma from "@/lib/prisma";
-import { locales } from "@/i18n";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,18 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { locale } = await request.json();
-
-    if (!locale || !locales.includes(locale as any)) {
-      return NextResponse.json({ error: "Invalid locale" }, { status: 400 });
-    }
-
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { locale },
-    });
-
-    return NextResponse.json({ success: true, locale });
+    // Bỏ ghi vào database để tránh truy cập DB không cần thiết và tối ưu hóa hiệu năng
+    return NextResponse.json({ success: true, locale: "en" });
   } catch (error) {
     console.error("Error saving locale:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -30,20 +18,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  try {
-    const session = await auth();
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ locale: "en" }, { status: 200 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { locale: true },
-    });
-
-    return NextResponse.json({ locale: user?.locale || "en" });
-  } catch (error) {
-    return NextResponse.json({ locale: "en" }, { status: 200 });
-  }
+  return NextResponse.json({ locale: "en" });
 }

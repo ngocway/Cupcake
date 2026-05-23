@@ -26,8 +26,8 @@ export function SettingsClientWrapper({ user, translations }: { user: any, trans
                         onClick={() => setActiveTab(tab.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
                             activeTab === tab.id 
-                            ? "bg-white shadow-md shadow-slate-200/50 text-slate-900 font-bold" 
-                            : "text-slate-500 hover:bg-slate-100"
+                            ? "bg-white/60 dark:bg-slate-800/60 backdrop-blur-md shadow-md shadow-slate-200/50 dark:shadow-slate-900/50 text-slate-900 dark:text-white font-bold" 
+                            : "text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm"
                         }`}
                     >
                         <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? tab.color : "text-slate-400"}`} />
@@ -36,7 +36,7 @@ export function SettingsClientWrapper({ user, translations }: { user: any, trans
                 ))}
             </aside>
 
-            <main className="lg:col-span-3 bg-white p-8 md:p-10 rounded-[40px] shadow-sm border border-slate-100 min-h-[600px]">
+            <main className="lg:col-span-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-8 md:p-10 rounded-[40px] shadow-sm border border-slate-200 dark:border-slate-700 min-h-[600px]">
                 {activeTab === "profile" && <ProfileSettings user={user} />}
                 {activeTab === "notifications" && <NotificationSettings />}
                 {activeTab === "security" && <SecuritySettings user={user} />}

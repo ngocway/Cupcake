@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
 import { MaterialStatus, MaterialType } from '@prisma/client';
+import { Image as ImageIcon, HelpCircle, Calendar, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
 
 type Assignment = {
   id: string;
@@ -59,7 +60,7 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
 
   return (
     <>
-      <div className={`bg-white dark:bg-gray-800 p-4 rounded-xl border border-[#f0f2f4] dark:border-gray-700 hover:border-primary/40 transition-all group flex items-center gap-5 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 rounded-xl border border-[#f0f2f4] dark:border-gray-700 hover:border-primary/40 transition-all group flex items-center gap-5 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
         {/* Thumbnail */}
         <div 
           className="size-16 rounded-lg bg-cover bg-center shrink-0 border border-gray-100 dark:border-gray-700 bg-[#f0f2f4]"
@@ -67,7 +68,7 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
         >
           {!assignment.thumbnail && (
             <div className="w-full h-full flex items-center justify-center text-[#617589]">
-              <span className="material-symbols-outlined">image</span>
+              <ImageIcon className="w-6 h-6 text-[#617589]" />
             </div>
           )}
         </div>
@@ -96,11 +97,11 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
             </div>
             <div className="flex items-center gap-4 text-sm text-[#617589]">
               <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">quiz</span> 
+                <HelpCircle className="w-4 h-4" /> 
                 <span>{assignment.questionCount} câu</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[16px]">calendar_today</span> 
+                <Calendar className="w-4 h-4" /> 
                 <span>{dateStr}</span>
               </div>
             </div>
@@ -113,7 +114,7 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
             disabled={isProcessing}
             className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all rounded-lg font-bold text-sm"
           >
-            <span className="material-symbols-outlined text-[20px]">restore</span>
+            <RotateCcw className="w-5 h-5" />
             Khôi phục
           </button>
           <button 
@@ -122,7 +123,7 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
             className="flex items-center justify-center size-10 border border-[#f0f2f4] dark:border-gray-700 rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors text-[#617589]"
             title="Xóa vĩnh viễn"
           >
-            <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+            <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -130,10 +131,10 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
       {/* Permanently Delete Confirmation Modal */}
       {showPermDeleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-8 flex flex-col items-center text-center">
               <div className="size-16 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-[32px]">warning</span>
+                <AlertTriangle className="w-8 h-8" />
               </div>
               <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">Xóa vĩnh viễn?</h3>
               <p className="text-[#617589] dark:text-gray-400 text-sm">

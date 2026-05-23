@@ -7,14 +7,14 @@
 # Test info
 
 - Name: quiz.spec.ts >> Quiz Flow >>  UC3: Bấm LÀM LẠI -> reset về UC1
-- Location: e2e\quiz.spec.ts:62:7
+- Location: e2e\quiz.spec.ts:72:7
 
 # Error details
 
 ```
-TimeoutError: page.goto: Timeout 30000ms exceeded.
+TimeoutError: page.waitForSelector: Timeout 20000ms exceeded.
 Call log:
-  - navigating to "http://localhost:3000/", waiting until "domcontentloaded"
+  - waiting for locator('input[type="radio"]') to be visible
 
 ```
 
@@ -23,356 +23,110 @@ Call log:
 ```yaml
 - generic [active] [ref=e1]:
   - region "Notifications alt+T"
-  - generic [ref=e2]:
-    - navigation [ref=e3]:
-      - generic [ref=e4]:
-        - link "auto_stories Scholar Script The Fluid Academy" [ref=e5] [cursor=pointer]:
-          - /url: /
-          - generic [ref=e7]: auto_stories
-          - generic [ref=e8]:
-            - generic [ref=e9]: Scholar Script
-            - generic [ref=e10]: The Fluid Academy
-        - generic [ref=e11]:
-          - link "Home" [ref=e12] [cursor=pointer]:
-            - /url: /
-          - link "Library" [ref=e13] [cursor=pointer]:
-            - /url: "#"
-          - link "Community" [ref=e14] [cursor=pointer]:
-            - /url: "#"
-      - generic [ref=e15]:
-        - generic [ref=e16]:
-          - generic [ref=e17]: search
-          - textbox "Search lessons, assignments..." [ref=e18]
-        - generic [ref=e19]:
-          - button "language EN expand_more" [ref=e21]:
-            - generic [ref=e22]: language
-            - generic [ref=e23]: EN
-            - generic [ref=e24]: expand_more
-          - button "Get Started" [ref=e25]
-    - generic [ref=e26]:
-      - complementary [ref=e27]:
-        - generic [ref=e28]:
-          - generic [ref=e29]:
-            - heading "Categories" [level=2] [ref=e30]
-            - generic [ref=e31]:
-              - generic [ref=e33] [cursor=pointer]:
-                - button [ref=e34]:
-                  - img [ref=e35]
-                - link "English" [ref=e37]:
-                  - /url: /?categoryId=cmokxyfib0003vt9cw2pe1a9a
-              - generic [ref=e39] [cursor=pointer]:
-                - button [ref=e40]:
-                  - img [ref=e41]
-                - link "Math" [ref=e43]:
-                  - /url: /?categoryId=cmokxzxj30005vt9c41kmtqu7
-              - generic [ref=e45] [cursor=pointer]:
-                - button [ref=e46]:
-                  - img [ref=e47]
-                - link "Global" [ref=e49]:
-                  - /url: /?categoryId=cmokzcrre000tvt9cugcm1jea
-          - generic [ref=e50]:
-            - heading "Popular Tags" [level=2] [ref=e51]
-            - generic [ref=e52]:
-              - link "IELTS" [ref=e53] [cursor=pointer]:
-                - /url: /?tags=IELTS
-              - link "TOEIC" [ref=e54] [cursor=pointer]:
-                - /url: /?tags=TOEIC
-              - link "Tiếng Anh" [ref=e55] [cursor=pointer]:
-                - /url: /?tags=Ti%E1%BA%BFng+Anh
-              - link "Từ vựng" [ref=e56] [cursor=pointer]:
-                - /url: /?tags=T%E1%BB%AB+v%E1%BB%B1ng
-              - link "advanced" [ref=e57] [cursor=pointer]:
-                - /url: /?tags=advanced
-              - link "grammar" [ref=e58] [cursor=pointer]:
-                - /url: /?tags=grammar
-              - link "intermediate" [ref=e59] [cursor=pointer]:
-                - /url: /?tags=intermediate
-              - link "tenses" [ref=e60] [cursor=pointer]:
-                - /url: /?tags=tenses
-      - main [ref=e61]:
-        - generic [ref=e62]:
-          - generic [ref=e64]:
-            - button "English" [ref=e65]:
-              - generic [ref=e66]: English
-              - img [ref=e68]
-            - button "Math" [ref=e71]:
-              - generic [ref=e72]: Math
-              - img [ref=e74]
-            - button "Global" [ref=e77]:
-              - generic [ref=e78]: Global
+  - main [ref=e4]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - button "Quay lại" [ref=e11]:
+            - img [ref=e12]
+            - text: Quay lại
+          - generic [ref=e14]:
+            - heading "Mastering English Tenses" [level=2] [ref=e15]
+            - generic [ref=e16]:
+              - button "1" [ref=e17]: "1"
+              - button "2" [ref=e19]: "2"
+              - button "3" [ref=e21]
+        - generic [ref=e22]:
+          - generic [ref=e24]:
+            - generic [ref=e25]: Question 1 • Select one answer
+            - heading "Which sentence is in the Present Perfect tense?" [level=3] [ref=e26]
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - generic [ref=e29]: Question 2 • True / False
+              - heading "\"I am going to the store\" is a Future tense sentence." [level=3] [ref=e30]
+            - generic [ref=e32]:
+              - button "Correct" [ref=e33]:
+                - img [ref=e35]
+                - generic [ref=e37]: Correct
+              - button "Incorrect" [ref=e38]:
+                - img [ref=e40]
+                - generic [ref=e43]: Incorrect
+          - generic [ref=e44]:
+            - generic [ref=e46]: Question 3 • Match the pairs
+            - generic [ref=e48]:
+              - generic [ref=e49]:
+                - img
+                - generic [ref=e50]:
+                  - generic [ref=e51]: Question Column
+                  - generic [ref=e54]: A
+                  - generic [ref=e58]: B
+                  - generic [ref=e62]: C
+                - generic [ref=e65]: Answer Column
+              - generic [ref=e72]:
+                - img [ref=e74]
+                - paragraph [ref=e76]: "Tip: Click a dot and drag to connect. You can re-drag existing lines to change your answer!"
+          - generic [ref=e78]:
+            - button "CHECK ALL" [ref=e79]:
+              - text: CHECK ALL
               - img [ref=e80]
-          - generic [ref=e83]:
-            - generic [ref=e84]:
-              - button "ASSIGNMENTS" [ref=e85]
-              - button "LESSONS" [ref=e86]
-            - generic [ref=e87]:
-              - button "Newest" [ref=e88]
-              - button "Popular" [ref=e89]
-          - generic [ref=e92]:
-            - generic [ref=e93]:
-              - generic [ref=e94]:
-                - img "Understanding Climate Change and Renewable Energy" [ref=e95]
-                - generic [ref=e97]:
-                  - generic [ref=e98]: menu_book
-                  - text: Reading
-              - generic [ref=e100]:
-                - generic [ref=e101]:
-                  - img "Teacher" [ref=e103]
-                  - generic [ref=e104]: Teacher Demo
-                - link "Understanding Climate Change and Renewable Energy" [ref=e105] [cursor=pointer]:
-                  - /url: /public/assignments/understanding-climate-change-and-renewable-energy?direct=true
-                  - heading "Understanding Climate Change and Renewable Energy" [level=3] [ref=e106]
-                - generic [ref=e107]:
-                  - generic [ref=e108]:
-                    - generic [ref=e109]:
-                      - generic [ref=e110]: visibility
-                      - generic [ref=e111]: "0"
-                    - generic [ref=e112]:
-                      - generic [ref=e113]: favorite
-                      - generic [ref=e114]: "693"
-                  - generic [ref=e115]:
-                    - generic [ref=e116]: star
-                    - generic [ref=e117]: "4.5"
-            - generic [ref=e118]:
-              - generic [ref=e119]:
-                - img "BT My morning routine" [ref=e120]
-                - generic [ref=e122]:
-                  - generic [ref=e123]: menu_book
-                  - text: Reading
-              - generic [ref=e125]:
-                - generic [ref=e126]:
-                  - img "Teacher" [ref=e128]
-                  - generic [ref=e129]: Admin Demo
-                - link "BT My morning routine" [ref=e130] [cursor=pointer]:
-                  - /url: /public/assignments/bt-my-morning-routine?direct=true
-                  - heading "BT My morning routine" [level=3] [ref=e131]
-                - generic [ref=e132]:
-                  - generic [ref=e133]:
-                    - generic [ref=e134]:
-                      - generic [ref=e135]: visibility
-                      - generic [ref=e136]: "28"
-                    - generic [ref=e137]:
-                      - generic [ref=e138]: favorite
-                      - generic [ref=e139]: "693"
-                  - generic [ref=e140]:
-                    - generic [ref=e141]: star
-                    - generic [ref=e142]: "4.5"
-            - generic [ref=e143]:
-              - generic [ref=e144]:
-                - img "BT Test nối từ" [ref=e145]
-                - generic [ref=e147]:
-                  - generic [ref=e148]: assignment
-                  - text: Assignments
-              - generic [ref=e150]:
-                - generic [ref=e151]:
-                  - img "Teacher" [ref=e153]
-                  - generic [ref=e154]: Admin Demo
-                - link "BT Test nối từ" [ref=e155] [cursor=pointer]:
-                  - /url: /public/assignments/bt-test-noi-tu?direct=true
-                  - heading "BT Test nối từ" [level=3] [ref=e156]
-                - generic [ref=e157]:
-                  - generic [ref=e158]:
-                    - generic [ref=e159]:
-                      - generic [ref=e160]: visibility
-                      - generic [ref=e161]: "6"
-                    - generic [ref=e162]:
-                      - generic [ref=e163]: favorite
-                      - generic [ref=e164]: "693"
-                  - generic [ref=e165]:
-                    - generic [ref=e166]: star
-                    - generic [ref=e167]: "4.5"
-            - generic [ref=e168]:
-              - generic [ref=e169]:
-                - img "BT rewrwe" [ref=e170]
-                - generic [ref=e172]:
-                  - generic [ref=e173]: assignment
-                  - text: Assignments
-              - generic [ref=e175]:
-                - generic [ref=e176]:
-                  - img "Teacher" [ref=e178]
-                  - generic [ref=e179]: Admin Demo
-                - link "BT rewrwe" [ref=e180] [cursor=pointer]:
-                  - /url: /public/assignments/bt-rewrwe?direct=true
-                  - heading "BT rewrwe" [level=3] [ref=e181]
-                - generic [ref=e182]:
-                  - generic [ref=e183]:
-                    - generic [ref=e184]:
-                      - generic [ref=e185]: visibility
-                      - generic [ref=e186]: "1"
-                    - generic [ref=e187]:
-                      - generic [ref=e188]: favorite
-                      - generic [ref=e189]: "693"
-                  - generic [ref=e190]:
-                    - generic [ref=e191]: star
-                    - generic [ref=e192]: "4.5"
-            - generic [ref=e193]:
-              - generic [ref=e194]:
-                - img "BT The Camping Adventure" [ref=e195]
-                - generic [ref=e197]:
-                  - generic [ref=e198]: menu_book
-                  - text: Reading
-              - generic [ref=e200]:
-                - generic [ref=e201]:
-                  - img "Teacher" [ref=e203]
-                  - generic [ref=e204]: Admin Demo
-                - link "BT The Camping Adventure" [ref=e205] [cursor=pointer]:
-                  - /url: /public/assignments/bt-the-camping-adventure?direct=true
-                  - heading "BT The Camping Adventure" [level=3] [ref=e206]
-                - generic [ref=e207]:
-                  - generic [ref=e208]:
-                    - generic [ref=e209]:
-                      - generic [ref=e210]: visibility
-                      - generic [ref=e211]: "2"
-                    - generic [ref=e212]:
-                      - generic [ref=e213]: favorite
-                      - generic [ref=e214]: "693"
-                  - generic [ref=e215]:
-                    - generic [ref=e216]: star
-                    - generic [ref=e217]: "4.5"
-            - generic [ref=e218]:
-              - generic [ref=e219]:
-                - img "BT Understanding Simple Sentences in English" [ref=e220]
-                - generic [ref=e222]:
-                  - generic [ref=e223]: menu_book
-                  - text: Reading
-              - generic [ref=e225]:
-                - generic [ref=e226]:
-                  - img "Teacher" [ref=e228]
-                  - generic [ref=e229]: Admin Demo
-                - link "BT Understanding Simple Sentences in English" [ref=e230] [cursor=pointer]:
-                  - /url: /public/assignments/bt-understanding-simple-sentences-in-english?direct=true
-                  - heading "BT Understanding Simple Sentences in English" [level=3] [ref=e231]
-                - generic [ref=e232]:
-                  - generic [ref=e233]:
-                    - generic [ref=e234]:
-                      - generic [ref=e235]: visibility
-                      - generic [ref=e236]: "0"
-                    - generic [ref=e237]:
-                      - generic [ref=e238]: favorite
-                      - generic [ref=e239]: "693"
-                  - generic [ref=e240]:
-                    - generic [ref=e241]: star
-                    - generic [ref=e242]: "4.5"
-            - generic [ref=e243]:
-              - generic [ref=e244]:
-                - img "Bài tập mới" [ref=e245]
-                - generic [ref=e247]:
-                  - generic [ref=e248]: assignment
-                  - text: Assignments
-              - generic [ref=e250]:
-                - generic [ref=e251]:
-                  - img "Teacher" [ref=e253]
-                  - generic [ref=e254]: Teacher Demo
-                - link "Bài tập mới" [ref=e255] [cursor=pointer]:
-                  - /url: /public/assignments/bai-tap-moi-2?direct=true
-                  - heading "Bài tập mới" [level=3] [ref=e256]
-                - generic [ref=e257]:
-                  - generic [ref=e258]:
-                    - generic [ref=e259]:
-                      - generic [ref=e260]: visibility
-                      - generic [ref=e261]: "0"
-                    - generic [ref=e262]:
-                      - generic [ref=e263]: favorite
-                      - generic [ref=e264]: "693"
-                  - generic [ref=e265]:
-                    - generic [ref=e266]: star
-                    - generic [ref=e267]: "4.5"
-            - generic [ref=e268]:
-              - generic [ref=e269]:
-                - img "Bài tập mới" [ref=e270]
-                - generic [ref=e272]:
-                  - generic [ref=e273]: assignment
-                  - text: Assignments
-              - generic [ref=e275]:
-                - generic [ref=e276]:
-                  - img "Teacher" [ref=e278]
-                  - generic [ref=e279]: Teacher Demo
-                - link "Bài tập mới" [ref=e280] [cursor=pointer]:
-                  - /url: /public/assignments/bai-tap-moi-3?direct=true
-                  - heading "Bài tập mới" [level=3] [ref=e281]
-                - generic [ref=e282]:
-                  - generic [ref=e283]:
-                    - generic [ref=e284]:
-                      - generic [ref=e285]: visibility
-                      - generic [ref=e286]: "0"
-                    - generic [ref=e287]:
-                      - generic [ref=e288]: favorite
-                      - generic [ref=e289]: "693"
-                  - generic [ref=e290]:
-                    - generic [ref=e291]: star
-                    - generic [ref=e292]: "4.5"
-            - generic [ref=e293]:
-              - generic [ref=e294]:
-                - img "BT Toán lớp 5 - Tuần 12" [ref=e295]
-                - generic [ref=e297]:
-                  - generic [ref=e298]: assignment
-                  - text: Assignments
-              - generic [ref=e300]:
-                - generic [ref=e301]:
-                  - img "Teacher" [ref=e303]
-                  - generic [ref=e304]: Admin Demo
-                - link "BT Toán lớp 5 - Tuần 12" [ref=e305] [cursor=pointer]:
-                  - /url: /public/assignments/bt-toan-lop-5-tuan-12?direct=true
-                  - heading "BT Toán lớp 5 - Tuần 12" [level=3] [ref=e306]
-                - generic [ref=e307]:
-                  - generic [ref=e308]:
-                    - generic [ref=e309]:
-                      - generic [ref=e310]: visibility
-                      - generic [ref=e311]: "0"
-                    - generic [ref=e312]:
-                      - generic [ref=e313]: favorite
-                      - generic [ref=e314]: "693"
-                  - generic [ref=e315]:
-                    - generic [ref=e316]: star
-                    - generic [ref=e317]: "4.5"
-            - generic [ref=e318]:
-              - generic [ref=e319]:
-                - img "BT Toán lớp 5 - Tuần 12" [ref=e320]
-                - generic [ref=e322]:
-                  - generic [ref=e323]: assignment
-                  - text: Assignments
-              - generic [ref=e325]:
-                - generic [ref=e326]:
-                  - img "Teacher" [ref=e328]
-                  - generic [ref=e329]: Admin Demo
-                - link "BT Toán lớp 5 - Tuần 12" [ref=e330] [cursor=pointer]:
-                  - /url: /public/assignments/bt-toan-lop-5-tuan-12-1?direct=true
-                  - heading "BT Toán lớp 5 - Tuần 12" [level=3] [ref=e331]
-                - generic [ref=e332]:
-                  - generic [ref=e333]:
-                    - generic [ref=e334]:
-                      - generic [ref=e335]: visibility
-                      - generic [ref=e336]: "0"
-                    - generic [ref=e337]:
-                      - generic [ref=e338]: favorite
-                      - generic [ref=e339]: "693"
-                  - generic [ref=e340]:
-                    - generic [ref=e341]: star
-                    - generic [ref=e342]: "4.5"
-            - generic [ref=e343]:
-              - generic [ref=e344]:
-                - 'img "BT Reading Exercise: Modern Ethics" [ref=e345]'
-                - generic [ref=e347]:
-                  - generic [ref=e348]: menu_book
-                  - text: Reading
-              - generic [ref=e350]:
-                - generic [ref=e351]:
-                  - img "Teacher" [ref=e353]
-                  - generic [ref=e354]: Admin Demo
-                - 'link "BT Reading Exercise: Modern Ethics" [ref=e355] [cursor=pointer]':
-                  - /url: /public/assignments/bt-reading-exercise-modern-ethics?direct=true
-                  - 'heading "BT Reading Exercise: Modern Ethics" [level=3] [ref=e356]'
-                - generic [ref=e357]:
-                  - generic [ref=e358]:
-                    - generic [ref=e359]:
-                      - generic [ref=e360]: visibility
-                      - generic [ref=e361]: "0"
-                    - generic [ref=e362]:
-                      - generic [ref=e363]: favorite
-                      - generic [ref=e364]: "693"
-                  - generic [ref=e365]:
-                    - generic [ref=e366]: star
-                    - generic [ref=e367]: "4.5"
+            - generic [ref=e83]:
+              - button "SUBMIT" [disabled] [ref=e84]:
+                - text: SUBMIT
+                - img [ref=e85]
+              - generic [ref=e88]: Coming Soon
+      - generic [ref=e89]:
+        - generic [ref=e91]:
+          - button "Add to bookmarks" [ref=e92]:
+            - img [ref=e93]
+          - button "REVIEW" [ref=e95]:
+            - img [ref=e96]
+            - generic [ref=e98]: REVIEW
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - generic [ref=e101]:
+              - img [ref=e102]
+              - text: Study Material
+            - iframe [ref=e106]:
+              - generic [active] [ref=f3e1]:
+                - generic "YouTube Video Player" [ref=f3e3]
+                - generic [ref=f3e5]:
+                  - generic:
+                    - generic:
+                      - button "Play video" [ref=f3e10] [cursor=pointer]:
+                        - generic [ref=f3e13]:
+                          - img
+                      - button "Hide player controls" [ref=f3e14] [cursor=pointer]
+                      - generic [ref=f3e21]:
+                        - generic [ref=f3e22]:
+                          - link "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)" [ref=f3e23] [cursor=pointer]:
+                            - /url: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+                          - link "Rick Astley" [ref=f3e24] [cursor=pointer]:
+                            - /url: /channel/UCuAXFkgsw1L7xaCfnd5JJOw
+                            - generic [ref=f3e25]: Rick Astley
+                        - generic [ref=f3e26]:
+                          - button "thumbnail-image" [ref=f3e27] [cursor=pointer]:
+                            - img "thumbnail-image" [ref=f3e28]
+                          - generic [ref=f3e30]:
+                            - generic: Rick Astley
+                            - generic: 4.5M subscribers
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - img [ref=e109]
+              - text: Instructions
+            - generic [ref=e113]: Watch the video first, then complete all 5 questions below.
+          - generic [ref=e114]:
+            - heading "Related Content" [level=4] [ref=e115]
+            - generic [ref=e116]:
+              - link "Advanced Present Perfect" [ref=e117] [cursor=pointer]:
+                - /url: /student/assignments/advanced-present-perfect/run?direct=true
+                - heading "Advanced Present Perfect" [level=5] [ref=e121]
+              - 'link "Grammar Deep Dive: English Tenses" [ref=e122] [cursor=pointer]':
+                - /url: /student/assignments/grammar-deep-dive-english-tenses/run?direct=true
+                - img [ref=e125]
+                - 'heading "Grammar Deep Dive: English Tenses" [level=5] [ref=e129]'
+  - button "Open Next.js Dev Tools" [ref=e135] [cursor=pointer]:
+    - img [ref=e136]
+  - alert [ref=e139]
 ```
 
 # Test source
@@ -380,122 +134,143 @@ Call log:
 ```ts
   1   | import { test, expect } from "@playwright/test";
   2   | 
-  3   | // ⚠️  THAY THẾ bằng slug assignment THẬT có trong DB của bạn
-  4   | const TEST_ASSIGNMENT_SLUG = "test-assignment";
+  3   | // ⚠️  Sử dụng slug assignment THẬT có sẵn trong DB
+  4   | const TEST_ASSIGNMENT_SLUG = "mastering-english-tenses";
   5   | 
-  6   | // Lấy submissionId từ URL quiz sau redirect direct=true
-  7   | async function startQuizAndGetUrl(page: any, slug: string): Promise<string> {
-  8   |   const url = new URL(`http://localhost:3000/student/assignments/${slug}/run`);
-  9   |   url.searchParams.set("direct", "true");
-  10  |   await page.goto(url.toString());
-  11  |   // Chờ redirect tới quiz page
-  12  |   await page.waitForURL(/\/run\/quiz\?submissionId=/, { timeout: 15_000 });
-  13  |   return page.url();
+  6   | // Helper để đăng nhập học sinh
+  7   | async function loginStudent(page: any) {
+  8   |   await page.goto("http://localhost:3000/student/login");
+  9   |   await page.fill('input[id="email"]', 'student@example.com');
+  10  |   await page.fill('input[id="password"]', 'password123');
+  11  |   await page.click('button[type="submit"]');
+  12  |   // Chờ cho đến khi chuyển hướng thành công đến trang học sinh
+  13  |   await page.waitForURL(/\/student\/assignments/, { timeout: 45_000 });
   14  | }
   15  | 
-  16  | test.describe("Quiz Flow", () => {
-  17  |   test.beforeEach(async ({ page }) => {
-  18  |     // Chờ dev server sẵn sàng trước khi chạy test
-> 19  |     await page.goto("http://localhost:3000", { waitUntil: "domcontentloaded", timeout: 30_000 });
-      |                ^ TimeoutError: page.goto: Timeout 30000ms exceeded.
-  20  |   });
-  21  | 
-  22  |   test(" UC1: Chưa check -> hiện nút KIỂM TRA TẤT CẢ", async ({ page }) => {
-  23  |     await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
-  24  | 
-  25  |     // Chờ nút "Kiểm tra tất cả" xuất hiện (locale EN hoặc VI)
-  26  |     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
-  27  |     await checkBtn.waitFor({ state: "visible", timeout: 10_000 });
-  28  |     await expect(checkBtn).toBeVisible();
-  29  | 
-  30  |     // Nút "Làm lại" phải KHÔNG hiển thị
-  31  |     const resetBtn = page.getByRole("button", { name: /LÀM LẠI|RETRY/i });
-  32  |     await expect(resetBtn).not.toBeVisible();
-  33  |   });
+  16  | // Lấy submissionId từ URL quiz sau khi truy cập direct=true
+  17  | async function startQuizAndGetUrl(page: any, slug: string): Promise<string> {
+  18  |   const url = new URL(`http://localhost:3000/student/assignments/${slug}/run`);
+  19  |   url.searchParams.set("direct", "true");
+  20  |   await page.goto(url.toString());
+  21  |   // Chờ redirect tới quiz page
+  22  |   await page.waitForURL(/\/run\/quiz\?submissionId=/, { timeout: 45_000 });
+  23  |   return page.url();
+  24  | }
+  25  | 
+  26  | test.describe("Quiz Flow", () => {
+  27  |   test.beforeEach(async ({ page }) => {
+  28  |     // Chờ dev server sẵn sàng và đăng nhập tài khoản học sinh
+  29  |     await loginStudent(page);
+  30  |   });
+  31  | 
+  32  |   test(" UC1: Chưa check -> hiện nút KIỂM TRA TẤT CẢ", async ({ page }) => {
+  33  |     await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
   34  | 
-  35  |   test(" UC2: Đã check -> hiện nút LÀM LẠI, ẩn KIỂM TRA TẤT CẢ", async ({ page }) => {
-  36  |     const quizUrl = await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
-  37  | 
-  38  |     // Trả lời tất cả câu hỏi (radio button đầu tiên của mỗi câu)
-  39  |     // Chờ questions render
-  40  |     await page.waitForSelector('input[type="radio"]', { timeout: 10_000 });
-  41  |     const radios = page.locator('input[type="radio"]');
-  42  |     const count = await radios.count();
-  43  |     for (let i = 0; i < count; i++) {
-  44  |       await radios.nth(i).check({ force: true });
-  45  |     }
-  46  | 
-  47  |     // Click KIỂM TRA TẤT CẢ
-  48  |     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
-  49  |     await checkBtn.click();
-  50  | 
-  51  |     // Chờ animation reveal đáp án xong
-  52  |     await page.waitForTimeout(3000);
-  53  | 
-  54  |     // Nút LÀM LẠI phải hiển thị
-  55  |     const resetBtn = page.getByRole("button", { name: /LÀM LẠI|RETRY/i });
-  56  |     await expect(resetBtn).toBeVisible();
-  57  | 
-  58  |     // Nút KIỂM TRA TẤT CẢ phải ẩn
-  59  |     await expect(checkBtn).not.toBeVisible();
-  60  |   });
-  61  | 
-  62  |   test(" UC3: Bấm LÀM LẠI -> reset về UC1", async ({ page }) => {
-  63  |     await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
-  64  | 
-  65  |     // Trả lời tất cả
-  66  |     await page.waitForSelector('input[type="radio"]', { timeout: 10_000 });
-  67  |     const radios = page.locator('input[type="radio"]');
-  68  |     const count = await radios.count();
-  69  |     for (let i = 0; i < count; i++) {
-  70  |       await radios.nth(i).check({ force: true });
-  71  |     }
-  72  | 
-  73  |     // Check all
-  74  |     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
-  75  |     await checkBtn.click();
-  76  |     await page.waitForTimeout(3000);
-  77  | 
-  78  |     // Bấm LÀM LẠI
-  79  |     const resetBtn = page.getByRole("button", { name: /LÀM LẠI|RETRY/i });
-  80  |     await resetBtn.click();
-  81  |     await page.waitForTimeout(500);
+  35  |     // Chờ nút "Kiểm tra tất cả" xuất hiện (locale EN hoặc VI)
+  36  |     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
+  37  |     await checkBtn.waitFor({ state: "visible", timeout: 20_000 });
+  38  |     await expect(checkBtn).toBeVisible();
+  39  | 
+  40  |     // Nút "Làm lại" phải KHÔNG hiển thị
+  41  |     const resetBtn = page.getByRole("button", { name: /LÀM LẠI|RETRY/i });
+  42  |     await expect(resetBtn).not.toBeVisible();
+  43  |   });
+  44  | 
+  45  |   test(" UC2: Đã check -> hiện nút LÀM LẠI, ẩn KIỂM TRA TẤT CẢ", async ({ page }) => {
+  46  |     await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
+  47  | 
+  48  |     // Trả lời tất cả câu hỏi (radio button đầu tiên của mỗi câu)
+  49  |     // Chờ questions render
+  50  |     await page.waitForSelector('input[type="radio"]', { timeout: 20_000 });
+  51  |     const radios = page.locator('input[type="radio"]');
+  52  |     const count = await radios.count();
+  53  |     for (let i = 0; i < count; i++) {
+  54  |       await radios.nth(i).check({ force: true });
+  55  |     }
+  56  | 
+  57  |     // Click KIỂM TRA TẤT CẢ
+  58  |     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
+  59  |     await checkBtn.click();
+  60  | 
+  61  |     // Chờ animation reveal đáp án xong
+  62  |     await page.waitForTimeout(3000);
+  63  | 
+  64  |     // Nút LÀM LẠI phải hiển thị
+  65  |     const resetBtn = page.getByRole("button", { name: /LÀM LẠI|RETRY/i });
+  66  |     await expect(resetBtn).toBeVisible();
+  67  | 
+  68  |     // Nút KIỂM TRA TẤT CẢ phải ẩn
+  69  |     await expect(checkBtn).not.toBeVisible();
+  70  |   });
+  71  | 
+  72  |   test(" UC3: Bấm LÀM LẠI -> reset về UC1", async ({ page }) => {
+  73  |     await startQuizAndGetUrl(page, TEST_ASSIGNMENT_SLUG);
+  74  | 
+  75  |     // Trả lời tất cả
+> 76  |     await page.waitForSelector('input[type="radio"]', { timeout: 20_000 });
+      |                ^ TimeoutError: page.waitForSelector: Timeout 20000ms exceeded.
+  77  |     const radios = page.locator('input[type="radio"]');
+  78  |     const count = await radios.count();
+  79  |     for (let i = 0; i < count; i++) {
+  80  |       await radios.nth(i).check({ force: true });
+  81  |     }
   82  | 
-  83  |     // Quay lại UC1: KIỂM TRA TẤT CẢ hiện lại
-  84  |     await expect(checkBtn).toBeVisible();
-  85  | 
-  86  |     // Tất cả radio đã chọn phải bị reset
-  87  |     const checkedRadios = page.locator('input[type="radio"]:checked');
-  88  |     await expect(checkedRadios).toHaveCount(0);
-  89  |   });
-  90  | });
-  91  | 
-  92  | test.describe("Lesson Detail Page", () => {
-  93  |   test("Không hiện thanh scroll xấu khi mới vào trang", async ({ page }) => {
-  94  |     await page.goto("http://localhost:3000/student/lessons", {
-  95  |       waitUntil: "domcontentloaded",
-  96  |       timeout: 30_000,
-  97  |     });
-  98  | 
-  99  |     // Chờ trang lessons load xong (card bài học xuất hiện)
-  100 |     await page.waitForSelector('a[href*="/student/lessons/"]', { timeout: 15_000 });
+  83  |     // Check all
+  84  |     const checkBtn = page.getByRole("button", { name: /KIỂM TRA TẤT CẢ|CHECK ALL/i });
+  85  |     await checkBtn.click();
+  86  |     await page.waitForTimeout(3000);
+  87  | 
+  88  |     // Bấm LÀM LẠI
+  89  |     const resetBtn = page.getByRole("button", { name: /LÀM LẠI|RETRY/i });
+  90  |     await resetBtn.click();
+  91  |     await page.waitForTimeout(500);
+  92  | 
+  93  |     // Quay lại UC1: KIỂM TRA TẤT CẢ hiện lại
+  94  |     await expect(checkBtn).toBeVisible();
+  95  | 
+  96  |     // Tất cả radio đã chọn phải bị reset
+  97  |     const checkedRadios = page.locator('input[type="radio"]:checked');
+  98  |     await expect(checkedRadios).toHaveCount(0);
+  99  |   });
+  100 | });
   101 | 
-  102 |     // Click vào bài học đầu tiên
-  103 |     const firstLesson = page.locator('a[href*="/student/lessons/"]').first();
-  104 |     await firstLesson.click();
-  105 | 
-  106 |     // Chờ trang detail load xong
-  107 |     await page.waitForLoadState("networkidle", { timeout: 15_000 });
-  108 | 
-  109 |     // Kiểm tra scrollbar body không bị overflow
-  110 |     const overflow = await page.evaluate(() => {
-  111 |       const body = document.body;
-  112 |       const html = document.documentElement;
-  113 |       return {
-  114 |         bodyOverflow: window.getComputedStyle(body).overflow,
-  115 |         htmlOverflow: window.getComputedStyle(html).overflow,
-  116 |         bodyHasScrollbar: body.scrollHeight > window.innerHeight,
-  117 |       };
-  118 |     });
-  119 | 
+  102 | test.describe("Lesson Detail Page", () => {
+  103 |   test.beforeEach(async ({ page }) => {
+  104 |     // Đăng nhập học sinh trước khi truy cập các bài học
+  105 |     await loginStudent(page);
+  106 |   });
+  107 | 
+  108 |   test("Không hiện thanh scroll xấu khi mới vào trang", async ({ page }) => {
+  109 |     await page.goto("http://localhost:3000/student/lessons", {
+  110 |       waitUntil: "domcontentloaded",
+  111 |       timeout: 45_000,
+  112 |     });
+  113 | 
+  114 |     // Chờ trang lessons load xong (card bài học xuất hiện)
+  115 |     await page.waitForSelector('a[href*="/student/lessons/"]', { timeout: 20_000 });
+  116 | 
+  117 |     // Click vào bài học đầu tiên
+  118 |     const firstLesson = page.locator('a[href*="/student/lessons/"]').first();
+  119 |     await firstLesson.click();
+  120 | 
+  121 |     // Chờ trang detail load xong
+  122 |     await page.waitForLoadState("networkidle", { timeout: 20_000 });
+  123 | 
+  124 |     // Kiểm tra scrollbar body không bị overflow
+  125 |     const overflow = await page.evaluate(() => {
+  126 |       const body = document.body;
+  127 |       const html = document.documentElement;
+  128 |       return {
+  129 |         bodyOverflow: window.getComputedStyle(body).overflow,
+  130 |         htmlOverflow: window.getComputedStyle(html).overflow,
+  131 |         bodyHasScrollbar: body.scrollHeight > window.innerHeight,
+  132 |       };
+  133 |     });
+  134 | 
+  135 |     // Body overflow phải là hidden hoặc clip, không phải auto/scroll
+  136 |     expect(overflow.bodyOverflow).not.toBe("auto");
+  137 |     expect(overflow.bodyOverflow).not.toBe("scroll");
+  138 |   });
+  139 | });
+  140 | 
 ```

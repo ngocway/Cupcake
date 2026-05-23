@@ -21,6 +21,9 @@ interface ContentState {
   selectedCategoryId: string
   selectedSubCategoryId: string
 
+  userType: string
+  setUserType: (val: string) => void
+
   setExercises: (items: any[]) => void
   setLessons: (items: any[]) => void
   addExercises: (items: any[]) => void
@@ -58,6 +61,9 @@ export const useContentStore = create<ContentState>((set) => ({
 
   selectedCategoryId: "",
   selectedSubCategoryId: "",
+
+  userType: "adults",
+  setUserType: (val) => set({ userType: val }),
 
   setExercises: (items) => set({ exercises: items }),
   setLessons: (items) => set({ lessons: items }),
@@ -98,6 +104,7 @@ export const useContentStore = create<ContentState>((set) => ({
     popularLessonsReady: false,
     isFiltering: false,
     selectedCategoryId: "",
-    selectedSubCategoryId: ""
+    selectedSubCategoryId: "",
+    userType: "adults"
   })
 }))

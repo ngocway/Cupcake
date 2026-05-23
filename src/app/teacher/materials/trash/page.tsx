@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { TrashListItem } from './_components/TrashListItem';
 import { MaterialStatus } from '@prisma/client';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 
 type Assignment = {
   id: string;
@@ -51,7 +52,7 @@ export default function MaterialsTrashPage() {
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 text-[#617589] dark:text-gray-400 mb-2">
               <Link href="/teacher/materials" className="hover:text-primary transition-colors flex items-center gap-1 text-sm">
-                <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                <ArrowLeft className="w-[18px] h-[18px]" />
                 <span>Thư viện bài tập</span>
               </Link>
             </div>
@@ -67,7 +68,7 @@ export default function MaterialsTrashPage() {
           {loading ? (
             // Skeleton Loading
             [...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-xl h-24 animate-pulse border border-[#f0f2f4] dark:border-gray-700"></div>
+              <div key={i} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 rounded-xl h-24 animate-pulse border border-[#f0f2f4] dark:border-slate-700"></div>
             ))
           ) : (
             <>
@@ -84,9 +85,9 @@ export default function MaterialsTrashPage() {
           )}
 
           {!loading && assignments.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-[#f0f2f4] dark:border-gray-700 mt-4 text-center p-8">
+            <div className="flex flex-col items-center justify-center py-20 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-[#f0f2f4] dark:border-slate-700 mt-4 text-center p-8">
               <div className="size-20 bg-gray-50 dark:bg-gray-700/50 text-gray-300 dark:text-gray-600 rounded-full flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-6xl">delete_outline</span>
+                <Trash2 className="w-14 h-14 stroke-[1.5px]" />
               </div>
               <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Thùng rác trống</h3>
               <p className="text-slate-500 max-w-sm mx-auto">Các bài tập mà bạn xóa sẽ xuất hiện ở đây. Bạn có thể khôi phục lại chúng bất cứ lúc nào.</p>

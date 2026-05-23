@@ -16,7 +16,7 @@ interface RelatedItem {
 function RelatedItemContent({ item }: { item: RelatedItem }) {
   return (
     <>
-      <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative">
+      <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
         {item.thumbnail ? (
           <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
         ) : (
@@ -47,13 +47,10 @@ export function RelatedAssignmentsSection({
   const t = useTranslations("header");
 
   return (
-    <div className="border-t border-outline-variant/20 pt-16 space-y-8">
-      <div className="space-y-1">
-        <h3 className="text-2xl font-black tracking-tight italic uppercase">{t("relatedContent")}</h3>
-        <p className="text-sm text-slate-500 font-medium">{t("relatedContentDescription")}</p>
-      </div>
+    <div className="glass rounded-3xl p-8 space-y-6 shadow-xl">
+      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{t("relatedContent")}</h4>
       
-      <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-4">
         {items.map((item) => {
           const href = isGuest 
             ? `/public/assignments/${item.slug || item.id}?direct=true`
@@ -64,7 +61,7 @@ export function RelatedAssignmentsSection({
               <Link 
                 key={item.id}
                 href={href}
-                className="flex items-center gap-4 group p-4 bg-slate-50 dark:bg-slate-800/50 rounded-[4px] border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all"
+                className="flex items-center gap-4 group"
               >
                 <RelatedItemContent item={item} />
               </Link>
@@ -75,7 +72,7 @@ export function RelatedAssignmentsSection({
             <DirectStartLink
               key={item.id}
               id={item.slug || item.id}
-              className="flex items-center gap-4 group p-4 bg-slate-50 dark:bg-slate-800/50 rounded-[4px] border border-slate-100 dark:border-slate-800 hover:border-primary/30 transition-all relative"
+              className="flex items-center gap-4 group relative"
             >
               <RelatedItemContent item={item} />
             </DirectStartLink>
@@ -83,7 +80,7 @@ export function RelatedAssignmentsSection({
         })}
 
         {items.length === 0 && (
-          <p className="text-sm italic text-slate-400 col-span-2 py-4">{t("noRelatedLessons")}</p>
+          <p className="text-xs italic text-slate-400 text-center py-4">{t("noRelatedLessons")}</p>
         )}
       </div>
     </div>

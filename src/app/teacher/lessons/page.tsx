@@ -5,8 +5,11 @@ import { ReadingExerciseBuilder } from '@/components/quiz/ReadingExerciseBuilder
 import { bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials, createDraftLesson } from '@/actions/material-actions';
 import { MaterialListItem } from '../materials/_components/MaterialListItem';
 import { AiGeneratorModal } from './_components/AiGeneratorModal';
+import { ArrowLeft, Trash2, Sparkles, PlusCircle, RotateCcw, Rss } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 export default function LessonsPage() {
+  const { data: session } = useSession();
   const [lessons, setLessons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -19,6 +22,7 @@ export default function LessonsPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Custom Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -146,6 +150,33 @@ export default function LessonsPage() {
     );
   }
 
+  const handleSyncFeed = async () => {
+    setIsSyncing(true);
+    try {
+      const publicLessons = lessons.filter(l => l.status === 'PUBLIC');
+      if (publicLessons.length === 0) {
+        alert('Không có bài học PUBLIC nào để đồng bộ.');
+        return;
+      }
+      const res = await fetch('/api/feed/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonIds: publicLessons.map(l => l.lessonId || l.id) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Đã đồng bộ ${data.synced} bài học lên trang chủ!`);
+      } else {
+        alert(data.error || 'Đồng bộ thất bại.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi khi đồng bộ feed.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 pb-24">
       <div className="flex items-center justify-between">
@@ -158,28 +189,38 @@ export default function LessonsPage() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setShowTrash(!showTrash)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all border ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all border backdrop-blur-md ${
               showTrash 
-                ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-gray-800 dark:text-white dark:border-gray-700' 
-                : 'text-[#617589] border-[#f0f2f4] dark:border-gray-700 hover:bg-slate-50'
+                ? 'bg-slate-100/80 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-white dark:border-slate-700' 
+                : 'bg-white/60 text-[#617589] border-[#f0f2f4] dark:bg-slate-800/60 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/60'
             }`}
           >
-            <span className="material-symbols-outlined">{showTrash ? 'arrow_back' : 'delete'}</span>
+            {showTrash ? <ArrowLeft className="w-5 h-5" /> : <Trash2 className="w-5 h-5" />}
             {showTrash ? 'Quay lại' : 'Thùng rác'}
           </button>
+          {session?.user?.role === 'ADMIN' && (
+            <button 
+              onClick={handleSyncFeed}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-6 py-3 bg-orange-500/90 backdrop-blur-md text-white border border-orange-400 rounded-xl font-bold text-sm hover:bg-orange-600 transition-all shadow-sm disabled:opacity-50"
+            >
+              <Rss className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Đang đồng bộ...' : 'Feed homepage'}
+            </button>
+          )}
           <button 
             onClick={() => setShowAiModal(true)} 
-            className="flex items-center gap-2 px-6 py-3 bg-neutral-800 text-blue-400 border border-neutral-700 rounded-xl font-bold text-sm hover:bg-neutral-700 transition-all shadow-sm"
+            className="flex items-center gap-2 px-6 py-3 bg-neutral-800/80 backdrop-blur-md text-blue-400 border border-neutral-700 rounded-xl font-bold text-sm hover:bg-neutral-700 transition-all shadow-sm"
           >
-            <span className="material-symbols-outlined text-xl">auto_awesome</span> AI Assistant
+            <Sparkles className="w-5 h-5" /> AI Assistant
           </button>
           {!showTrash && (
             <button 
               onClick={() => handleCreate()}
               disabled={isCreating}
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 bg-primary/90 backdrop-blur-md text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
             >
-              <span className="material-symbols-outlined">add_circle</span> {isCreating ? 'Đang tạo...' : 'Tạo bài học'}
+              <PlusCircle className="w-5 h-5" /> {isCreating ? 'Đang tạo...' : 'Tạo bài học'}
             </button>
           )}
         </div>
@@ -188,7 +229,7 @@ export default function LessonsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {loading ? (
           [...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-5 rounded-2xl h-48 animate-pulse border border-[#f0f2f4] dark:border-gray-700"></div>
+            <div key={i} className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-5 rounded-2xl h-48 animate-pulse border border-[#f0f2f4] dark:border-slate-700"></div>
           ))
         ) : (
           <>
@@ -220,7 +261,7 @@ export default function LessonsPage() {
           <button 
             onClick={loadMore}
             disabled={isLoadingMore}
-            className="px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl font-bold transition-all"
+            className="px-6 py-3 bg-slate-100/60 hover:bg-slate-200/60 backdrop-blur-md dark:bg-slate-800/60 dark:hover:bg-slate-700/60 text-slate-700 dark:text-gray-300 rounded-xl font-bold transition-all"
           >
             {isLoadingMore ? 'Đang tải...' : 'Tải thêm'}
           </button>
@@ -229,7 +270,7 @@ export default function LessonsPage() {
 
       {selectedIds.length > 0 && (
         <div 
-          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 animate-in slide-in-from-bottom-10"
+          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 animate-in slide-in-from-bottom-10"
           style={{ minWidth: '400px' }}
         >
           <div className="flex flex-col">
@@ -243,25 +284,25 @@ export default function LessonsPage() {
                 <button 
                   disabled={isBulkProcessing}
                   onClick={() => openConfirm('RESTORE')}
-                  className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-xs hover:bg-emerald-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-emerald-500/90 backdrop-blur-md text-white rounded-xl font-bold text-xs hover:bg-emerald-600 transition-all flex items-center gap-2 disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[18px]">restore</span> {isBulkProcessing ? 'Đang xử lý...' : 'Khôi phục'}
+                  <RotateCcw className="w-[18px] h-[18px]" /> {isBulkProcessing ? 'Đang xử lý...' : 'Khôi phục'}
                 </button>
                 <button 
                   disabled={isBulkProcessing}
                   onClick={() => openConfirm('PERMANENT_DELETE')}
-                  className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-red-500/90 backdrop-blur-md text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2 disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[18px]">delete_forever</span> {isBulkProcessing ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
+                  <Trash2 className="w-[18px] h-[18px]" /> {isBulkProcessing ? 'Đang xóa...' : 'Xóa vĩnh viễn'}
                 </button>
               </>
             ) : (
               <button 
                 disabled={isBulkProcessing}
                 onClick={() => openConfirm('DELETE')}
-                className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2 shadow-lg shadow-red-500/20 disabled:opacity-50"
+                className="px-6 py-2.5 bg-red-500/90 backdrop-blur-md text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2 shadow-lg shadow-red-500/20 disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[18px]">delete</span> {isBulkProcessing ? 'Đang xóa...' : 'Xóa đã chọn'}
+                <Trash2 className="w-[18px] h-[18px]" /> {isBulkProcessing ? 'Đang xóa...' : 'Xóa đã chọn'}
               </button>
             )}
           </div>
@@ -271,16 +312,14 @@ export default function LessonsPage() {
       {/* Custom Confirm Modal for Bulk Actions */}
       {confirmConfig.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-8 flex flex-col items-center text-center">
               <div className={`size-16 rounded-full flex items-center justify-center mb-6 ${
                 confirmConfig.type === 'RESTORE' 
                   ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500' 
                   : 'bg-red-50 dark:bg-red-900/20 text-red-500'
               }`}>
-                <span className="material-symbols-outlined text-[32px]">
-                  {confirmConfig.type === 'RESTORE' ? 'restore' : confirmConfig.type === 'PERMANENT_DELETE' ? 'delete_forever' : 'delete'}
-                </span>
+                {confirmConfig.type === 'RESTORE' ? <RotateCcw className="w-8 h-8" /> : <Trash2 className="w-8 h-8" />}
               </div>
               <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">{confirmConfig.title}</h3>
               <p className="text-[#617589] dark:text-gray-400 text-sm">{confirmConfig.message}</p>

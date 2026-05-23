@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma"
 import Image from "next/image"
 import Link from "next/link"
 import { getTranslations, getLocale } from "next-intl/server"
+import { redirect } from "next/navigation"
+import { Clock, Award, Flame, Calendar, Users, Book, TrendingUp, Star, ChevronRight, Library, Plus } from "lucide-react"
 
 export default async function StudentDashboardPage() {
   const session = await auth()
@@ -106,56 +108,56 @@ export default async function StudentDashboardPage() {
               })}
             </p>
           </div>
-          <div className="flex items-center gap-3 bg-surface-container-low p-2 rounded-2xl">
+          <div className="flex items-center gap-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 shadow-sm p-2 rounded-2xl">
             <div className="flex -space-x-2">
               <img
                 alt="friend 1"
-                className="w-8 h-8 rounded-full border-2 border-white"
+                className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuArdbulwq6CNd2Qt3Ep3jnR11Ew8R8PnoZUBC0tPZFhuaZPhcqwWKvaj-NIcbUgxvzet-GbHwJZj_pAnYXh0lD2na1DAiNjwR3YEuyvApNV63_XIwdNOQd8wvrV8gyR9hLNenCkISnXWrOmIZUnx2kO9Kv1lSNFw-zeY-pOo5yQPjdhrrGsO-AStHukbR6C13i5QWAh74pX5VF2VXd2zzua-tGRtuvQT1rTjb6UBWVoncOGXwz4amxm--0QLFWOXeBXnlBr1TNVO07_"
               />
               <img
                 alt="friend 2"
-                className="w-8 h-8 rounded-full border-2 border-white"
+                className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800"
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuCe0G28j43msQ2iWGuUSCW8TWXnfu3XvaDnLMS0jyai-DUnfkgC7gMxzHafBTeM5-olWcWzjOdXnVJzsD2ARJsYnS4s1kP1ogytqEPnxPf52Aq0eChWxl0m_2qhkfJ9-ONGmN5YhJ4Ds-MYAtPqw9sVxiSfnCABZXbkLOfu_1trEo739nCzW7VIFo6UiT36UCO_ytAeltuqHGfKehhdQQ4h4nfgakNlJeJpFyCYJS7ul7n9T7BIqcf73vsu0mVospIMY0zKSD3gZKZq"
               />
-              <div className="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] font-bold text-on-primary-fixed border-2 border-white">
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white border-2 border-white dark:border-slate-800">
                 +5
               </div>
             </div>
-            <span className="text-xs font-label font-semibold text-on-surface-variant px-2">{t("friendsOnline")}</span>
+            <span className="text-xs font-label font-semibold text-slate-500 dark:text-slate-400 px-2">{t("friendsOnline")}</span>
           </div>
         </div>
 
         {/* Bento Grid Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-surface-container-low p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
+          <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md shadow-sm border border-slate-200/50 dark:border-slate-700/50 p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300">
             <div className="flex justify-between items-start">
-              <span className="material-symbols-outlined text-primary-container text-4xl">pending_actions</span>
-              <span className="text-primary font-bold text-xs bg-primary-fixed px-3 py-1 rounded-full uppercase tracking-tighter">{t("dueSoon")}</span>
+              <Clock className="text-blue-500 w-10 h-10 stroke-[1.5px]" />
+              <span className="text-blue-600 font-bold text-xs bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-full uppercase tracking-tighter">{t("dueSoon")}</span>
             </div>
             <div>
               <h4 className="text-5xl font-black mt-4">{pendingTasks.length}</h4>
-              <p className="font-label text-on-surface-variant font-medium">{t("pendingTasks")}</p>
+              <p className="font-label text-slate-500 dark:text-slate-400 font-medium">{t("pendingTasks")}</p>
             </div>
           </div>
-          <div className="bg-secondary-container/20 p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300 border border-secondary-container/30">
+          <div className="bg-amber-50/70 dark:bg-amber-900/10 backdrop-blur-md shadow-sm p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300 border border-amber-200/50 dark:border-amber-700/30">
             <div className="flex justify-between items-start">
-              <span className="material-symbols-outlined text-secondary text-4xl">workspace_premium</span>
-              <span className="text-secondary font-bold text-xs bg-secondary-container px-3 py-1 rounded-full uppercase tracking-tighter">{t("academic")}</span>
+              <Award className="text-amber-500 w-10 h-10 stroke-[1.5px]" />
+              <span className="text-amber-600 dark:text-amber-400 font-bold text-xs bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full uppercase tracking-tighter">{t("academic")}</span>
             </div>
             <div>
               <h4 className="text-5xl font-black mt-4">{highScores}</h4>
-              <p className="font-label text-on-surface-variant font-medium">{t("highScores")}</p>
+              <p className="font-label text-slate-500 dark:text-slate-400 font-medium">{t("highScores")}</p>
             </div>
           </div>
-          <div className="bg-tertiary-fixed/30 p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300 border border-tertiary-fixed/30">
+          <div className="bg-emerald-50/70 dark:bg-emerald-900/10 backdrop-blur-md shadow-sm p-8 rounded-3xl flex flex-col justify-between transition-transform hover:scale-[1.02] duration-300 border border-emerald-200/50 dark:border-emerald-700/30">
             <div className="flex justify-between items-start">
-              <span className="material-symbols-outlined text-tertiary text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
-              <span className="text-tertiary font-bold text-xs bg-tertiary-fixed px-3 py-1 rounded-full uppercase tracking-tighter">{t("streak")}</span>
+              <Flame className="text-emerald-500 w-10 h-10 stroke-[1.5px]" />
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-xs bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1 rounded-full uppercase tracking-tighter">{t("streak")}</span>
             </div>
             <div>
               <h4 className="text-5xl font-black mt-4">{streak}</h4>
-              <p className="font-label text-on-surface-variant font-medium">{t("dayStreak")}</p>
+              <p className="font-label text-slate-500 dark:text-slate-400 font-medium">{t("dayStreak")}</p>
             </div>
           </div>
         </div>
@@ -173,12 +175,12 @@ export default async function StudentDashboardPage() {
 
           {/* Daily Mission Card */}
           {dailyMission ? (
-            <div className="relative overflow-hidden bg-surface-container-lowest border border-outline-variant/20 p-8 rounded-[2rem] shadow-sm">
+            <div className="relative overflow-hidden bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 p-8 rounded-[2rem] shadow-sm">
               <div className="absolute top-0 right-0 p-8">
-                <span className="bg-error text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">{t("priority")} 1</span>
+                <span className="bg-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">{t("priority")} 1</span>
               </div>
               <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div className="w-full md:w-48 h-48 rounded-2xl bg-surface-container overflow-hidden shrink-0">
+                <div className="w-full md:w-48 h-48 rounded-2xl bg-slate-100 dark:bg-slate-700 overflow-hidden shrink-0">
                   <img
                     alt="Literature assignment"
                     className="w-full h-full object-cover"
@@ -186,20 +188,20 @@ export default async function StudentDashboardPage() {
                   />
                 </div>
                 <div className="flex-1 space-y-4">
-                  <span className="font-label text-xs font-bold text-primary uppercase tracking-widest">{t("dailyMission")}</span>
+                  <span className="font-label text-xs font-bold text-blue-500 uppercase tracking-widest">{t("dailyMission")}</span>
                   <h3 className="text-2xl font-bold">{dailyMission.title}</h3>
-                  <div className="flex flex-wrap gap-4 items-center text-on-surface-variant text-sm font-medium">
+                  <div className="flex flex-wrap gap-4 items-center text-slate-500 dark:text-slate-400 text-sm font-medium">
                     <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-lg">calendar_today</span>
+                      <Calendar className="w-5 h-5 stroke-2" />
                       {dailyMission.dueDate ? t("due", { date: dailyMission.dueDate.toLocaleDateString(locale) }) : t("noDeadline")}
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-lg">class</span>
+                      <Users className="w-5 h-5 stroke-2" />
                       {dailyMission.className}
                     </div>
                   </div>
                   <Link href={`/student/assignments/${dailyMission.id}/run`}>
-                    <button className="bg-on-surface text-white px-8 py-3 rounded-full font-label text-sm font-bold hover:bg-primary transition-colors mt-2">
+                    <button className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-3 rounded-full font-label text-sm font-bold hover:bg-blue-600 dark:hover:bg-blue-500 dark:hover:text-white transition-colors mt-2 shadow-sm">
                       {t("resumeMission")}
                     </button>
                   </Link>
@@ -207,36 +209,36 @@ export default async function StudentDashboardPage() {
               </div>
             </div>
           ) : (
-             <div className="p-8 text-center bg-surface-container-low rounded-3xl">
-               <p className="text-on-surface-variant">{t("noPending")}</p>
+             <div className="p-8 text-center bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-3xl border border-slate-200/50 dark:border-slate-700/50">
+               <p className="text-slate-500 dark:text-slate-400">{t("noPending")}</p>
              </div>
           )}
 
           {/* Categorized Tabs */}
           <div className="space-y-6">
-            <div className="flex gap-8 border-b border-outline-variant/30 px-2 overflow-x-auto">
-              <button className="pb-4 text-primary font-bold border-b-2 border-primary text-sm font-label whitespace-nowrap">{t("inProgress")} ({pendingTasks.length})</button>
-              <button className="pb-4 text-outline font-medium hover:text-on-surface transition-colors text-sm font-label whitespace-nowrap">{t("completed")} ({submissions.length})</button>
+            <div className="flex gap-8 border-b border-slate-200 dark:border-slate-700 px-2 overflow-x-auto">
+              <button className="pb-4 text-blue-500 dark:text-blue-400 font-bold border-b-2 border-blue-500 dark:border-blue-400 text-sm font-label whitespace-nowrap">{t("inProgress")} ({pendingTasks.length})</button>
+              <button className="pb-4 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors text-sm font-label whitespace-nowrap">{t("completed")} ({submissions.length})</button>
             </div>
             
             <div className="space-y-4">
               {pendingTasks.slice(1, 4).map((task: any) => (
-                <Link href={`/student/assignments/${task.id}/run`} key={task.id} className="flex items-center justify-between p-6 bg-surface-container-low rounded-2xl hover:bg-surface-container transition-colors group">
+                <Link href={`/student/assignments/${task.id}/run`} key={task.id} className="flex items-center justify-between p-6 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-2xl hover:bg-white dark:hover:bg-slate-800 transition-colors group shadow-sm border border-slate-200/50 dark:border-slate-700/50">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm">
-                      <span className="material-symbols-outlined">library_books</span>
+                    <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shadow-sm">
+                      <Library className="w-6 h-6 stroke-[1.5px]" />
                     </div>
                     <div>
-                      <h4 className="font-bold group-hover:text-primary transition-colors">{task.title}</h4>
-                      <p className="text-xs text-on-surface-variant font-label mt-0.5">{task.className} • {task.dueDate ? t("due", { date: task.dueDate.toLocaleDateString(locale) }) : t("noDeadline")}</p>
+                      <h4 className="font-bold group-hover:text-blue-500 transition-colors">{task.title}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-label mt-0.5">{task.className} • {task.dueDate ? t("due", { date: task.dueDate.toLocaleDateString(locale) }) : t("noDeadline")}</p>
                     </div>
                   </div>
-                  <span className="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
+                  <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
                 </Link>
               ))}
               
               {pendingTasks.length <= 1 && (
-                <p className="text-sm text-on-surface-variant px-4">{t("allTasksCaughtUp")}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 px-4">{t("allTasksCaughtUp")}</p>
               )}
             </div>
           </div>
@@ -248,90 +250,90 @@ export default async function StudentDashboardPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold tracking-tight">{t("myClasses")}</h3>
-              <button className="text-primary font-bold text-xs uppercase tracking-widest flex items-center gap-1 hover:underline">
-                <span className="material-symbols-outlined text-sm">add</span> {t("join")}
+              <button className="text-blue-500 font-bold text-xs uppercase tracking-widest flex items-center gap-1 hover:underline">
+                <Plus className="w-4 h-4 stroke-[3px]" /> {t("join")}
               </button>
             </div>
             <div className="space-y-4">
               {enrollments.length > 0 ? enrollments.map((e: any) => (
-                <div key={e.classId} className="p-5 bg-surface-container rounded-2xl flex items-center gap-4 border border-transparent hover:border-primary/20 transition-all cursor-pointer">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center font-bold text-primary shadow-sm shrink-0">
+                <div key={e.classId} className="p-5 bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-2xl flex items-center gap-4 border border-slate-200/50 dark:border-slate-700/50 hover:border-blue-500/20 transition-all cursor-pointer shadow-sm">
+                  <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center font-bold text-slate-700 dark:text-slate-300 shadow-sm shrink-0">
                     {e.class.name.substring(0,2)}
                   </div>
                   <div className="flex-1">
                     <p className="font-bold text-sm">{e.class.name}</p>
-                    <p className="text-xs text-on-surface-variant">{e.class.description || t("activeClass")}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{e.class.description || t("activeClass")}</p>
                   </div>
-                  <span className="w-2 h-2 rounded-full bg-secondary shadow-[0_0_8px_rgba(0,110,47,0.4)]"></span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></span>
                 </div>
               )) : (
-                <p className="text-sm text-on-surface-variant">{t("noClasses")}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t("noClasses")}</p>
               )}
             </div>
           </div>
 
           {/* Growth Widgets: Vocabulary Vault */}
-          <div className="bg-surface-container-low rounded-[2rem] p-8 space-y-6">
+          <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-[2rem] shadow-sm border border-slate-200/50 dark:border-slate-700/50 p-8 space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>book</span>
+                <Book className="text-blue-500 w-5 h-5 stroke-2" />
                 {t("vocabularyVault")}
               </h3>
-              <span className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-md font-bold uppercase">{t("new")}</span>
+              <span className="text-[10px] bg-blue-500 text-white px-2 py-0.5 rounded-md font-bold uppercase">{t("new")}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {["Dilemma", "Incorporate", "Resilient", "Eloquent"].map((word, i) => (
-                <div key={i} className="px-4 py-2 bg-white border border-outline-variant/30 rounded-xl hover:bg-primary-fixed transition-colors cursor-pointer group">
-                  <p className="text-sm font-bold group-hover:text-primary">{word}</p>
-                  <p className="text-[10px] text-on-surface-variant">{t("word")}</p>
+                <div key={i} className="px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200/50 dark:border-slate-600 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer group">
+                  <p className="text-sm font-bold group-hover:text-blue-500">{word}</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">{t("word")}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Growth Widgets: Progress Pulse */}
-          <div className="bg-inverse-surface text-white rounded-[2rem] p-8 space-y-6 relative overflow-hidden">
+          <div className="bg-slate-900 text-white rounded-[2rem] p-8 space-y-6 relative overflow-hidden shadow-sm">
             <div className="relative z-10">
               <h3 className="font-bold text-lg">{t("progressPulse")}</h3>
               <p className="text-slate-400 text-xs mt-1">{t("averageScore")}</p>
               <div className="mt-8 flex items-end gap-2 h-24">
                 {/* Minimal Sparkline (Mocked blocks) */}
                 {[12, 16, 20, 24, 20, 22].map((h, i) => (
-                  <div key={i} className={`w-full bg-slate-700/50 rounded-t-lg relative group`} style={{ height: `${h * 4}px` }}>
-                    <div className={`absolute bottom-0 w-full ${i === 3 ? 'bg-secondary-fixed' : 'bg-primary'} transition-all`} style={{ height: `${h * 3.5}px` }}></div>
+                  <div key={i} className={`w-full bg-slate-800 rounded-t-lg relative group`} style={{ height: `${h * 4}px` }}>
+                    <div className={`absolute bottom-0 w-full ${i === 3 ? 'bg-amber-400' : 'bg-blue-500'} transition-all rounded-t-lg`} style={{ height: `${h * 3.5}px` }}></div>
                   </div>
                 ))}
               </div>
               <div className="mt-6 flex justify-between items-center">
                 <div>
                   <span className="text-3xl font-black">92%</span>
-                  <span className="text-xs text-secondary-fixed ml-1 font-bold">+4.2%</span>
+                  <span className="text-xs text-emerald-400 ml-1 font-bold">+4.2%</span>
                 </div>
-                <span className="material-symbols-outlined text-slate-500">trending_up</span>
+                <TrendingUp className="text-slate-500 w-6 h-6 stroke-2" />
               </div>
             </div>
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-primary/20 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
           </div>
 
           {/* Recent Notifications Feed */}
           <div className="space-y-4">
-            <h3 className="text-sm font-label font-bold uppercase tracking-widest text-on-surface-variant">{t("recentActivity")}</h3>
+            <h3 className="text-sm font-label font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{t("recentActivity")}</h3>
             <div className="space-y-4">
               {recentActivity.length > 0 ? recentActivity.map((sub: any) => (
-                <div key={sub.id} className="flex gap-4 p-4 hover:bg-surface-container-low rounded-2xl transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-secondary text-xl">grade</span>
+                <div key={sub.id} className="flex gap-4 p-4 hover:bg-white/70 dark:hover:bg-slate-800/70 backdrop-blur-md rounded-2xl transition-colors border border-transparent hover:border-slate-200/50 dark:hover:border-slate-700/50">
+                  <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                    <Star className="text-amber-500 w-5 h-5 stroke-[2px]" />
                   </div>
                   <div>
                     <p className="text-sm font-bold">{t("assignmentSubmitted")}</p>
-                    <p className="text-xs text-on-surface-variant mt-1">{sub.assignment.title}: <span className="font-bold text-secondary">{sub.score}%</span></p>
-                    <p className="text-[10px] text-outline mt-1 uppercase">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{sub.assignment.title}: <span className="font-bold text-amber-500 dark:text-amber-400">{sub.score}%</span></p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase">
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString(locale) : t("recently")}
                     </p>
                   </div>
                 </div>
               )) : (
-                <p className="text-sm text-on-surface-variant">{t("noRecentActivity")}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t("noRecentActivity")}</p>
               )}
             </div>
           </div>

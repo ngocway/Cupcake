@@ -26,7 +26,7 @@ export function ProfileSettings({ user }: { user: any }) {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col md:flex-row items-center gap-8">
                 <div className="relative group">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl bg-slate-100 flex items-center justify-center">
+                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-200 dark:border-slate-700 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                         <img 
                             src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
                             alt="Avatar" 
@@ -42,8 +42,8 @@ export function ProfileSettings({ user }: { user: any }) {
                 </div>
                 
                 <div className="flex-1 space-y-2">
-                    <h3 className="text-xl font-bold text-slate-900">{user.name || "Học sinh"}</h3>
-                    <p className="text-sm text-slate-500 flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">{user.name || "Học sinh"}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <Mail className="w-4 h-4" /> {user.email}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -57,7 +57,7 @@ export function ProfileSettings({ user }: { user: any }) {
                 </div>
             </div>
 
-            <div className="grid gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-200/50">
+            <div className="grid gap-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-700">
                 <div className="grid gap-2">
                     <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest text-slate-500">Họ và Tên</Label>
                     <div className="relative">
@@ -67,7 +67,7 @@ export function ProfileSettings({ user }: { user: any }) {
                             value={name} 
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Nhập họ tên của bạn"
-                            className="bg-white pl-12 h-12 rounded-xl border-slate-200 focus:ring-primary/20"
+                            className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm pl-12 h-12 rounded-xl border-slate-200 dark:border-slate-600 focus:ring-primary/20"
                         />
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1 italic">* Tên này sẽ hiển thị trong bảng điểm của giáo viên.</p>
@@ -81,7 +81,7 @@ export function ProfileSettings({ user }: { user: any }) {
                             id="email" 
                             value={user.email} 
                             disabled
-                            className="bg-slate-100 pl-12 h-12 rounded-xl border-slate-200"
+                            className="bg-slate-100/50 dark:bg-slate-700/50 backdrop-blur-sm pl-12 h-12 rounded-xl border-slate-200 dark:border-slate-600"
                         />
                     </div>
                 </div>

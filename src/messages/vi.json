@@ -132,8 +132,12 @@
       "question": "Câu {number}",
       "multipleChoice": "Chọn một đáp án",
       "multipleSelect": "Chọn nhiều đáp án",
+      "clozeTest": "Điền từ",
+      "trueFalse": "Đúng / Sai",
       "matching": "Nối cặp đáp án",
       "checkAll": "KIỂM TRA TẤT CẢ",
+      "viewExplanation": "Xem giải thích",
+      "explanation": "Giải thích chi tiết",
       "resetAll": "LÀM LẠI",
       "submit": "NỘP BÀI",
       "comingSoon": "Sắp ra mắt",
@@ -152,7 +156,7 @@
       "reviewSubmitSuccessWithPoints": "Thành công! Bạn đã nhận được {points} điểm thưởng.",
       "reviewSubmitError": "Lỗi khi gửi đánh giá.",
       "sending": "ĐANG GỬI...",
-      "sendReview": "GỬI ĐÁNH GIÁ",
+      "sendReview": "ĐÁNH GIÁ",
       "commentPlaceholder": "Viết nhận xét của bạn tại đây...",
       "navGuardTitle": "Xác nhận chuyển bài tập",
       "navGuardMessage": "{unfinished}bạn có muốn chuyển sang bài {title} không?",
@@ -179,7 +183,7 @@
       "reviewSubtitle": "Phản hồi của bạn thực sự quý giá với giáo viên.",
       "comment": "Bình luận (Tùy chọn)",
       "commentPlaceholder": "Viết cảm nhận của bạn...",
-      "sendReview": "Gửi đánh giá",
+      "sendReview": "Đánh giá",
       "sending": "Đang gửi...",
       "reviewApproved": "Đánh giá của bạn đã được duyệt",
       "reviewPending": "Đánh giá của bạn đã được ghi nhận và đang chờ phê duyệt."
@@ -439,7 +443,7 @@
     "hasVideo": "Có video",
     "hasAudio": "Có audio",
     "whatToLearn": "Bạn muốn học gì?",
-    "whoAreYou": "Xin chào, bạn là...."
+    "whoAreYou": "Mình là..."
   },
   "errors": {
     "notFound": "Không tìm thấy trang",

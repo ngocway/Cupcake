@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getQuestionBank, deleteFromQuestionBank, updateQuestionBankTags } from '@/actions/material-actions';
 import Link from 'next/link';
+import { Search, PackageOpen, Check, X, Edit2, Trash2 } from 'lucide-react';
 
 export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -85,10 +86,10 @@ export default function QuestionBankPage() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col flex-1 min-h-0">
+      <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col flex-1 min-h-0">
         <div className="flex gap-4 mb-4">
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+            <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text"
               placeholder="Tìm kiếm nội dung, thẻ..."
@@ -134,14 +135,14 @@ export default function QuestionBankPage() {
                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Đang tải...</p>
             </div>
           ) : displayedQuestions.length === 0 ? (
-            <div className="text-center py-20 bg-gray-50 dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
-               <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">inventory_2</span>
+            <div className="text-center py-20 bg-gray-50/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+               <PackageOpen className="w-16 h-16 text-slate-300 dark:text-slate-600 mb-4 mx-auto block stroke-[1.5px]" />
                <p className="text-gray-500 dark:text-gray-400 font-medium">Không tìm thấy câu hỏi nào.</p>
             </div>
           ) : (
             <div className="grid gap-4">
               {displayedQuestions.map(q => (
-                <div key={q.id} className="p-5 border border-gray-100 dark:border-gray-700 rounded-2xl bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 transition-colors group">
+                <div key={q.id} className="p-5 border border-gray-100 dark:border-gray-700 rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:border-gray-300 dark:hover:border-gray-600 transition-colors group">
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-3 flex-wrap">
@@ -164,10 +165,10 @@ export default function QuestionBankPage() {
                               autoFocus
                             />
                             <button type="submit" className="text-white bg-amber-500 hover:bg-amber-600 size-7 flex items-center justify-center rounded-lg">
-                              <span className="material-symbols-outlined text-[16px]">check</span>
+                              <Check className="w-4 h-4 stroke-[3px]" />
                             </button>
                             <button type="button" onClick={(e) => { e.stopPropagation(); setEditingTagsId(null); }} className="text-gray-500 bg-gray-100 hover:bg-gray-200 size-7 flex items-center justify-center rounded-lg">
-                              <span className="material-symbols-outlined text-[16px]">close</span>
+                              <X className="w-4 h-4 stroke-[3px]" />
                             </button>
                           </form>
                         ) : (
@@ -181,7 +182,7 @@ export default function QuestionBankPage() {
                               onClick={(e) => startEditTags(q.id, q.tags, e)}
                               className="text-[10px] flex items-center gap-1 font-bold px-2 py-0.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-md transition-colors opacity-0 group-hover:opacity-100"
                             >
-                              <span className="material-symbols-outlined text-[14px]">edit</span> Edit
+                              <Edit2 className="w-[14px] h-[14px]" /> Edit
                             </button>
                           </div>
                         )}
@@ -224,7 +225,7 @@ export default function QuestionBankPage() {
                         type="button"
                         className="size-10 flex shrink-0 items-center justify-center rounded-xl transition-all text-red-500 bg-red-50 hover:bg-red-100 hover:text-red-600 dark:bg-red-900/10 dark:hover:bg-red-900/20"
                       >
-                        <span className="material-symbols-outlined">delete</span>
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     )}
                   </div>

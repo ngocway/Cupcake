@@ -14,6 +14,7 @@ import {
   BookOpen,
   ChevronLeft,
   Star,
+  History
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
@@ -81,7 +82,7 @@ async function SubmissionHistoryWrapper({
     <div className="space-y-6 pt-4 animate-in fade-in duration-700">
       <div className="flex items-center justify-between">
          <h3 className="text-xl font-black tracking-tight uppercase italic flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary">history</span>
+            <History className="w-5 h-5 text-blue-500 stroke-[2px]" />
             {t("submissionHistory")}
          </h3>
       </div>
@@ -92,17 +93,17 @@ async function SubmissionHistoryWrapper({
             const correctCount = sub.answers.filter(a => a.isCorrect).length;
             
             return (
-              <div key={sub.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-outline-variant/10 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-primary/30 transition-all group">
+              <div key={sub.id} className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-blue-500/30 transition-all group">
                 <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${correctCount >= (totalQuestions * 0.5) ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                    <BarChart3 className="w-7 h-7" />
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${correctCount >= (totalQuestions * 0.5) ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400'}`}>
+                    <BarChart3 className="w-7 h-7 stroke-[1.5px]" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-outline uppercase tracking-widest">{t("attempt", { number: sub.attemptNumber })}</p>
-                    <h5 className="font-black text-2xl text-on-surface">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("attempt", { number: sub.attemptNumber })}</p>
+                    <h5 className="font-black text-2xl text-slate-900 dark:text-white">
                       {t("correctAnswers", { count: correctCount, total: totalQuestions })}
                     </h5>
-                    <p className="text-xs text-on-surface-variant mt-1 font-medium">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                       {sub.submittedAt ? format(sub.submittedAt, "HH:mm, dd/MM", { locale: dateLocale }) : "N/A"}
                     </p>
                   </div>
@@ -112,11 +113,11 @@ async function SubmissionHistoryWrapper({
           })}
         </div>
       ) : (
-        <div className="p-10 border-2 border-dashed border-outline-variant/20 rounded-2xl flex flex-col items-center text-center space-y-4">
-           <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center text-outline">
-              <BarChart3 className="w-8 h-8" />
+        <div className="p-10 border-2 border-dashed border-slate-200/50 dark:border-slate-700/50 rounded-2xl flex flex-col items-center text-center space-y-4">
+           <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-600 shadow-sm">
+              <BarChart3 className="w-8 h-8 stroke-[1.5px]" />
            </div>
-           <p className="text-on-surface-variant font-medium italic">{t("noAttempts")}</p>
+           <p className="text-slate-500 dark:text-slate-400 font-medium italic">{t("noAttempts")}</p>
         </div>
       )}
     </div>
@@ -189,40 +190,40 @@ export default async function StudentAssignmentLobbyPage({
   const dateLocale = locale === "vi" ? vi : enUS;
 
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-slate-50 dark:bg-slate-950 font-body">
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-transparent font-body">
       {/* Background Pre-fetcher (Hướng 2: Sẵn sàng câu hỏi ngầm) */}
       <QuizPrefetcher assignmentId={assignment.id} />
 
-      <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-white dark:bg-slate-900 shrink-0 z-50 shadow-sm">
+      <div className="h-12 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-6 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md shrink-0 z-50 shadow-sm">
         <div className="flex items-center gap-4">
-          <BackButton className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
-            <ChevronLeft className="w-4 h-4" />
+          <BackButton className="flex items-center gap-2 px-4 py-2 bg-white/50 hover:bg-white dark:bg-slate-800/50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200/50 dark:border-slate-700/50 transition-all active:scale-95 shadow-sm">
+            <ChevronLeft className="w-4 h-4 stroke-[2px]" />
             {t("back")}
           </BackButton>
-          <div className="h-4 w-px bg-outline-variant/20" />
-          <div className="flex items-center gap-2 text-[11px] font-black text-on-surface-variant uppercase tracking-[0.2em]">
-            <BookOpen className="w-4 h-4 text-primary" />
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
+          <div className="flex items-center gap-2 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">
+            <BookOpen className="w-4 h-4 text-blue-500 stroke-[2px]" />
             {t("assignmentDetail")}
           </div>
         </div>
         <div className="flex items-center gap-4">
-           <div className="text-[10px] font-black text-outline uppercase tracking-widest px-3 py-1 bg-surface-container rounded-full border border-outline-variant/10">
+           <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-1 bg-slate-50 dark:bg-slate-800 rounded-full border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
               {t("attemptsCount", { count: completedCount, total: assignment.maxAttempts })}
            </div>
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/30 dark:bg-slate-950/30 border-r border-outline-variant/30">
+        <div className="w-[70%] shrink-0 flex flex-col bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur-sm border-r border-slate-200/50 dark:border-slate-800/50">
           <div className="flex-1 overflow-y-auto no-scrollbar p-8 lg:p-12 pl-32 lg:pl-40 space-y-12">
             
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-500">
               <div className="space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
-                  <Star className="w-3 h-3 fill-primary" />
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest shadow-sm">
+                  <Star className="w-3 h-3 fill-blue-600 dark:fill-blue-400" />
                   {t("lessonInfo")}
                 </div>
-                <h1 className="text-4xl md:text-5xl font-black text-on-surface tracking-tight leading-[1.1] uppercase italic font-headline max-w-3xl">
+                <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] uppercase italic font-headline max-w-3xl">
                   {assignment.title}
                 </h1>
                 
@@ -234,16 +235,16 @@ export default async function StudentAssignmentLobbyPage({
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: t("time"), value: assignment.timeLimit ? `${assignment.timeLimit}'` : t("free"), icon: Clock, color: "text-primary", bg: "bg-primary/5" },
-                  { label: t("questions"), value: t("questionsCount", { count: totalQuestions }), icon: Info, color: "text-secondary", bg: "bg-secondary/5" },
-                  { label: t("deadline"), value: assignment.deadline ? format(assignment.deadline, 'dd/MM', { locale: dateLocale }) : "∞", icon: Calendar, color: "text-error", bg: "bg-error/5" },
-                  { label: t("attempts"), value: `${completedCount}/${assignment.maxAttempts}`, icon: Award, color: "text-amber-500", bg: "bg-amber-50" }
+                  { label: t("time"), value: assignment.timeLimit ? `${assignment.timeLimit}'` : t("free"), icon: Clock, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-900/10" },
+                  { label: t("questions"), value: t("questionsCount", { count: totalQuestions }), icon: Info, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/10" },
+                  { label: t("deadline"), value: assignment.deadline ? format(assignment.deadline, 'dd/MM', { locale: dateLocale }) : "∞", icon: Calendar, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-900/10" },
+                  { label: t("attempts"), value: `${completedCount}/${assignment.maxAttempts}`, icon: Award, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/10" }
                 ].map((stat, i) => (
-                  <div key={i} className={`p-5 rounded-2xl border border-outline-variant/10 ${stat.bg} space-y-3`}>
-                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider">{stat.label}</p>
+                  <div key={i} className={`p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/30 ${stat.bg} space-y-3 shadow-sm backdrop-blur-sm`}>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
                     <div className="flex items-center gap-2">
-                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                      <span className="text-lg font-black text-on-surface">{stat.value}</span>
+                      <stat.icon className={`w-5 h-5 ${stat.color} stroke-[2px]`} />
+                      <span className="text-lg font-black text-slate-900 dark:text-white">{stat.value}</span>
                     </div>
                   </div>
                 ))}
@@ -279,7 +280,7 @@ export default async function StudentAssignmentLobbyPage({
             </div>
           </div>
 
-          <div className="h-20 border-t border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center justify-center gap-12 lg:gap-24 px-6 shrink-0 z-50">
+          <div className="h-20 border-t border-slate-200/50 dark:border-slate-800/50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex items-center justify-center gap-12 lg:gap-24 px-6 shrink-0 z-50">
 
              <div className="flex flex-col items-center">
                 {activeSubmission ? (
@@ -287,7 +288,7 @@ export default async function StudentAssignmentLobbyPage({
                 ) : (hasAttemptsLeft && !isDeadlinePassed) ? (
                   <StartButton assignmentId={assignment.id} label={completedCount > 0 ? t("retry") : t("start")} />
                 ) : (
-                  <div className="px-10 py-3 bg-surface-container text-on-surface-variant rounded-xl font-black text-sm tracking-widest uppercase italic border border-outline-variant/20 opacity-50">
+                  <div className="px-10 py-3 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl font-black text-sm tracking-widest uppercase italic border border-slate-200/50 dark:border-slate-700/50 opacity-50 shadow-sm">
                       {t("locked")}
                   </div>
                 )}
@@ -295,10 +296,10 @@ export default async function StudentAssignmentLobbyPage({
           </div>
         </div>
 
-        <div className="w-[30%] shrink-0 flex flex-col bg-white dark:bg-slate-900 border-l border-outline-variant/30">
-          <div className="h-12 border-b border-outline-variant/20 flex items-center justify-between px-6 bg-slate-50/50 dark:bg-slate-800/20 shrink-0">
-            <div className="flex items-center gap-2 text-[11px] font-black text-primary uppercase tracking-[0.2em]">
-              <BookOpen className="w-4 h-4" />
+        <div className="w-[30%] shrink-0 flex flex-col bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-l border-slate-200/50 dark:border-slate-800/50">
+          <div className="h-12 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-6 bg-white/50 dark:bg-slate-800/50 shrink-0">
+            <div className="flex items-center gap-2 text-[11px] font-black text-blue-500 uppercase tracking-[0.2em]">
+              <BookOpen className="w-4 h-4 stroke-[2px]" />
               {t("resourcesAndReviews")}
             </div>
             <div className="flex items-center gap-3">

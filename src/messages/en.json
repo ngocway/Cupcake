@@ -133,8 +133,12 @@
       "question": "Question {number}",
       "multipleChoice": "Select one answer",
       "multipleSelect": "Select multiple answers",
+      "clozeTest": "Fill in the blanks",
+      "trueFalse": "True / False",
       "matching": "Match the pairs",
       "checkAll": "CHECK ALL",
+      "viewExplanation": "View Explanation",
+      "explanation": "Detailed Explanation",
       "resetAll": "RETRY",
       "submit": "SUBMIT",
       "comingSoon": "Coming Soon",
@@ -153,7 +157,7 @@
       "reviewSubmitSuccessWithPoints": "Success! You've earned {points} points.",
       "reviewSubmitError": "Error submitting review.",
       "sending": "SENDING...",
-      "sendReview": "SEND REVIEW",
+      "sendReview": "REVIEW",
       "commentPlaceholder": "Write your feedback here...",
       "navGuardTitle": "Confirm navigation",
       "navGuardMessage": "You haven't finished the current assignment, do you want to switch to {title}?",
@@ -179,7 +183,7 @@
       "reviewSubtitle": "Your feedback is really valuable to teachers.",
       "comment": "Comment (Optional)",
       "commentPlaceholder": "Write your feelings...",
-      "sendReview": "Send Review",
+      "sendReview": "Review",
       "sending": "Sending...",
       "reviewApproved": "Your review has been approved",
       "reviewPending": "Your review has been recorded and is pending approval."
@@ -439,7 +443,7 @@
     "hasVideo": "Has video",
     "hasAudio": "Has audio",
     "whatToLearn": "What do you want to learn?",
-    "whoAreYou": "Tell us who you are"
+    "whoAreYou": "I am..."
   },
   "errors": {
     "notFound": "Page not found",

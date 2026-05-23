@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X, ImagePlus } from 'lucide-react';
 
 interface CreateClassModalProps {
   isOpen: boolean;
@@ -61,14 +62,14 @@ export function CreateClassModal({ isOpen, onClose, onSuccess }: CreateClassModa
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#111418]/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="px-8 pt-8 pb-4 flex items-center justify-between">
           <h2 className="text-2xl font-black text-[#111418] dark:text-white">Tạo lớp học mới</h2>
           <button 
             onClick={onClose}
             className="size-10 flex items-center justify-center rounded-full hover:bg-[#f0f2f4] dark:hover:bg-gray-800 text-[#617589] transition-colors"
           >
-            <span className="material-symbols-outlined">close</span>
+            <X className="w-6 h-6 stroke-[2px]" />
           </button>
         </div>
         
@@ -102,7 +103,7 @@ export function CreateClassModal({ isOpen, onClose, onSuccess }: CreateClassModa
                   className="aspect-video col-span-2 rounded-xl border-2 border-dashed border-[#e5e7eb] dark:border-gray-700 flex flex-col items-center justify-center gap-1 text-[#617589] hover:border-primary hover:text-primary transition-all group" 
                   type="button"
                 >
-                  <span className="material-symbols-outlined text-[24px]">add_photo_alternate</span>
+                  <ImagePlus className="w-6 h-6" />
                   <span className="text-[10px] font-bold">Tải ảnh lên</span>
                 </button>
                 <div className="col-span-3 flex flex-wrap gap-2.5 items-center pl-2">

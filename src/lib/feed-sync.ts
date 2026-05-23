@@ -1,5 +1,5 @@
-
 import prisma from "@/lib/prisma";
+import { revalidateTag } from "next/cache";
 
 export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "LESSON") {
   try {
@@ -32,8 +32,10 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: ass.teacher.image ?? undefined,
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
-          categoryId: ass.categories[0]?.id ?? undefined,
+          categoryId: ass.categories.length > 0 ? ass.categories.map(c => c.id).join(',') : null,
           status: ass.status,
+          targetAudiences: ass.targetAudiences,
+          tags: ass.tags ? ass.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           updatedAt: new Date()
         },
         create: {
@@ -50,8 +52,10 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: ass.teacher.image ?? undefined,
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
-          categoryId: ass.categories[0]?.id ?? undefined,
+          categoryId: ass.categories.length > 0 ? ass.categories.map(c => c.id).join(',') : null,
           status: ass.status,
+          targetAudiences: ass.targetAudiences,
+          tags: ass.tags ? ass.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           createdAt: ass.createdAt
         }
       });
@@ -61,11 +65,12 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         include: { 
           teacher: true, 
           categories: true,
+          assignment: { select: { tags: true, status: true } },
           _count: { select: { reviews: true } }
         }
       });
 
-      if (!lesson || lesson.deletedAt || lesson.isBlocked || lesson.isPremium) {
+      if (!lesson || lesson.deletedAt || lesson.isBlocked || lesson.isPremium || !lesson.assignment || lesson.assignment.status !== 'PUBLIC') {
         await prisma.homepageFeed.deleteMany({ where: { sourceId } });
         return;
       }
@@ -83,7 +88,10 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: lesson.teacher.image ?? undefined,
           viewCount: lesson.viewsCount,
           reviewCount: lesson._count.reviews,
-          categoryId: lesson.categories[0]?.id ?? undefined,
+          categoryId: lesson.categories.length > 0 ? lesson.categories.map(c => c.id).join(',') : null,
+          status: lesson.assignment.status,
+          targetAudiences: lesson.targetAudiences,
+          tags: lesson.assignment?.tags ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           updatedAt: new Date()
         },
         create: {
@@ -100,12 +108,22 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: lesson.teacher.image ?? undefined,
           viewCount: lesson.viewsCount,
           reviewCount: lesson._count.reviews,
-          categoryId: lesson.categories[0]?.id ?? undefined,
+          categoryId: lesson.categories.length > 0 ? lesson.categories.map(c => c.id).join(',') : null,
+          status: lesson.assignment.status,
+          targetAudiences: lesson.targetAudiences,
+          tags: lesson.assignment?.tags ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           createdAt: lesson.createdAt
         }
       });
     }
     console.log(`[FeedSync] Successfully synced ${type} ${sourceId}`);
+    try {
+      revalidateTag("home-feed", {});
+      revalidateTag("assignments", {});
+      revalidateTag("lessons", {});
+    } catch (e) {
+      console.log("[FeedSync] Failed to revalidate tags:", e);
+    }
   } catch (error) {
     console.error(`[FeedSync] Error syncing ${type} ${sourceId}:`, error);
   }

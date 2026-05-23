@@ -4,6 +4,7 @@ import React from 'react';
 import { useSession } from 'next-auth/react';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTransition } from 'react';
 
 export function HomeShell({ children }: { children?: React.ReactNode }) {
   const { data: session } = useSession();
@@ -11,11 +12,25 @@ export function HomeShell({ children }: { children?: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  const [isPending, startTransition] = useTransition();
+
   const setSearch = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (val) params.set("search", val);
     else params.delete("search");
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+    
+    // Smoothly scroll to the content tabs
+    setTimeout(() => {
+      const target = document.getElementById('content-tabs');
+      if (target) {
+        const targetPosition = target.getBoundingClientRect().top + window.scrollY - 100; // offset for header
+        window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   return (
@@ -29,8 +44,17 @@ export function HomeShell({ children }: { children?: React.ReactNode }) {
         } : null}
         search={searchParams.get("search") || ""}
         setSearch={setSearch}
+        isPendingSearch={isPending}
       />
-      {children}
+      <div className={`relative transition-all duration-300 ${isPending ? "opacity-60 pointer-events-none" : ""}`}>
+        {isPending && (
+          <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-2xl border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
+             <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+             <span className="font-bold text-primary text-sm uppercase tracking-wider">Đang tìm kiếm...</span>
+          </div>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

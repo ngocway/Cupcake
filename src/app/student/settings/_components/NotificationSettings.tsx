@@ -31,14 +31,14 @@ export function NotificationSettings() {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid gap-6">
-                <div className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-3xl group hover:border-primary/20 transition-colors">
+                <div className="flex items-center justify-between p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-3xl group hover:border-primary/20 transition-colors">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white shadow-sm rounded-2xl text-primary group-hover:scale-110 transition-transform">
+                        <div className="p-3 bg-white dark:bg-slate-700 shadow-sm rounded-2xl text-primary group-hover:scale-110 transition-transform">
                             <Bell className="w-5 h-5" />
                         </div>
                         <div>
-                            <Label className="text-sm font-bold text-slate-900">Bài tập mới</Label>
-                            <p className="text-[10px] text-slate-500 mt-0.5">Thông báo khi giáo viên giao nhiệm vụ học tập mới</p>
+                            <Label className="text-sm font-bold text-slate-900 dark:text-white">Bài tập mới</Label>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Thông báo khi giáo viên giao nhiệm vụ học tập mới</p>
                         </div>
                     </div>
                     <Switch 
@@ -47,14 +47,14 @@ export function NotificationSettings() {
                     />
                 </div>
 
-                <div className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-3xl group hover:border-orange-200 transition-colors">
+                <div className="flex items-center justify-between p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-3xl group hover:border-orange-200 transition-colors">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white shadow-sm rounded-2xl text-orange-500 group-hover:scale-110 transition-transform">
+                        <div className="p-3 bg-white dark:bg-slate-700 shadow-sm rounded-2xl text-orange-500 group-hover:scale-110 transition-transform">
                             <Clock className="w-5 h-5" />
                         </div>
                         <div>
-                            <Label className="text-sm font-bold text-slate-900">Nhắc nhở hạn nộp</Label>
-                            <p className="text-[10px] text-slate-500 mt-0.5">Nhận cảnh báo khi các bài tập sắp đến deadline</p>
+                            <Label className="text-sm font-bold text-slate-900 dark:text-white">Nhắc nhở hạn nộp</Label>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Nhận cảnh báo khi các bài tập sắp đến deadline</p>
                         </div>
                     </div>
                     <Switch 
@@ -63,14 +63,14 @@ export function NotificationSettings() {
                     />
                 </div>
 
-                <div className="flex items-center justify-between p-6 bg-slate-50 border border-slate-100 rounded-3xl group hover:border-green-200 transition-colors">
+                <div className="flex items-center justify-between p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-3xl group hover:border-green-200 transition-colors">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white shadow-sm rounded-2xl text-green-500 group-hover:scale-110 transition-transform">
+                        <div className="p-3 bg-white dark:bg-slate-700 shadow-sm rounded-2xl text-green-500 group-hover:scale-110 transition-transform">
                             <GraduationCap className="w-5 h-5" />
                         </div>
                         <div>
-                            <Label className="text-sm font-bold text-slate-900">Kết quả & Nhận xét</Label>
-                            <p className="text-[10px] text-slate-500 mt-0.5">Thông báo khi có điểm số hoặc lời khuyên từ giáo viên</p>
+                            <Label className="text-sm font-bold text-slate-900 dark:text-white">Kết quả & Nhận xét</Label>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Thông báo khi có điểm số hoặc lời khuyên từ giáo viên</p>
                         </div>
                     </div>
                     <Switch 
@@ -80,13 +80,13 @@ export function NotificationSettings() {
                 </div>
             </div>
 
-            <div className="pt-6 border-t border-slate-100">
+            <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Kênh nhận thông báo</h4>
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Smartphone className="w-4 h-4 text-slate-400" />
-                            <span className="text-sm text-slate-700">Thông báo đẩy (Browser Push)</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">Thông báo đẩy (Browser Push)</span>
                         </div>
                         <Switch 
                             checked={settings.pushNotify} 
@@ -96,7 +96,7 @@ export function NotificationSettings() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 text-slate-400">
                             <Mail className="w-4 h-4" />
-                            <span className="text-sm text-slate-700">Email (Hàng tuần)</span>
+                            <span className="text-sm text-slate-700 dark:text-slate-300">Email (Hàng tuần)</span>
                         </div>
                         <Switch 
                             checked={settings.emailNotify} 

@@ -17,7 +17,7 @@ export default async function TeacherSettingsPage() {
     if (!teacher) return notFound();
 
     return (
-        <div className="bg-[#fafbff] min-h-screen">
+        <div className="bg-transparent min-h-screen">
             <SettingsForm user={teacher} />
         </div>
     );

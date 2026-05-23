@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { getAssignmentReviews, getAssignmentInstructions, getAssignmentTeacher } from "./data";
-import { BookOpen, ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, FileText, FileImage } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 export async function SidebarReviewsWrapper({ assignmentId }: { assignmentId: string }) {
@@ -15,9 +15,9 @@ export async function SidebarReviewsWrapper({ assignmentId }: { assignmentId: st
   if (reviews.length === 0) return null;
 
   return (
-    <div className="border-t border-outline-variant/20 pt-10 space-y-8 animate-in fade-in duration-500">
+    <div className="border-t border-slate-200/50 dark:border-slate-700/50 pt-10 space-y-8 animate-in fade-in duration-500">
       <div className="space-y-1">
-        <h3 className="text-xl font-black tracking-tight italic uppercase">{t("studentFeedback")}</h3>
+        <h3 className="text-xl font-black tracking-tight italic uppercase text-slate-900 dark:text-white">{t("studentFeedback")}</h3>
         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{t("feedbackSubtitle")}</p>
       </div>
       <ReviewList reviews={reviews as any} />
@@ -59,11 +59,11 @@ export async function InstructionsWrapper({ id }: { id: string }) {
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {data.instructions && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
-            <span className="material-symbols-outlined text-sm">menu_book</span>
+          <div className="flex items-center gap-2 text-blue-500 font-black text-xs uppercase tracking-widest">
+            <FileText className="w-4 h-4 stroke-[2px]" />
             {t("instructions")}
           </div>
-          <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-loose prose-p:text-sm bg-primary/5 p-6 rounded-2xl border border-primary/10">
+          <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-loose prose-p:text-sm bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-500/10">
             <div dangerouslySetInnerHTML={{ __html: data.instructions }} />
           </div>
         </div>
@@ -71,18 +71,18 @@ export async function InstructionsWrapper({ id }: { id: string }) {
 
       {data.readingText && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
-            <span className="material-symbols-outlined text-sm">description</span>
+          <div className="flex items-center gap-2 text-emerald-500 font-black text-xs uppercase tracking-widest">
+            <FileImage className="w-4 h-4 stroke-[2px]" />
             {t("studyMaterial")}
           </div>
-          <div className="p-5 bg-secondary/5 rounded-2xl border border-secondary/10 flex items-center justify-between group cursor-pointer hover:bg-secondary/10 transition-all">
+          <div className="p-5 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-500/10 flex items-center justify-between group cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all">
              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-secondary shadow-sm">
-                   <BookOpen className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-emerald-500 shadow-sm">
+                   <BookOpen className="w-5 h-5 stroke-[2px]" />
                 </div>
-                <span className="text-sm font-black text-on-surface">{t("studyMaterial")}</span>
+                <span className="text-sm font-black text-slate-900 dark:text-white">{t("studyMaterial")}</span>
              </div>
-             <ChevronRight className="w-5 h-5 text-secondary transform group-hover:translate-x-1 transition-transform" />
+             <ChevronRight className="w-5 h-5 text-emerald-500 transform group-hover:translate-x-1 transition-transform stroke-[2px]" />
           </div>
         </div>
       )}
@@ -99,12 +99,12 @@ export async function TeacherInfoWrapper({ id }: { id: string }) {
 
   return (
     <div className="flex items-center gap-3 py-2 animate-in fade-in duration-300">
-       <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-xs font-black overflow-hidden">
+       <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-black overflow-hidden">
           {teacher.image ? <img src={teacher.image} alt="" className="w-full h-full object-cover" /> : (teacher.name?.charAt(0) || "T")}
        </div>
        <div className="flex flex-col">
-          <span className="text-[10px] font-bold text-outline uppercase tracking-widest">{t("instructor")}</span>
-          <span className="text-sm font-black text-on-surface">{teacher.name || "Cố định"}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("instructor")}</span>
+          <span className="text-sm font-black text-slate-900 dark:text-white">{teacher.name || "Cố định"}</span>
        </div>
     </div>
   );

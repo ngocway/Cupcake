@@ -15,8 +15,7 @@ export default function SettingsForm({ user }: { user: any }) {
         isIncognito: user.isIncognito || false,
         notifySubmission: user.notifySubmission || true,
         notifyReview: user.notifyReview || true,
-        notifyWeekly: user.notifyWeekly || false,
-        studentViewTheme: user.studentViewTheme || "DYNAMIC"
+        notifyWeekly: user.notifyWeekly || false
     });
 
     const [account, setAccount] = useState({
@@ -78,7 +77,6 @@ export default function SettingsForm({ user }: { user: any }) {
                 <div className="flex flex-col gap-2">
                     {[
                         { id: 'account', label: 'Tài khoản', icon: Shield },
-                        { id: 'branding', label: 'Thương hiệu', icon: Palette },
                         { id: 'notify', label: 'Thông báo', icon: Bell },
                         { id: 'privacy', label: 'Riêng tư', icon: EyeOff }
                     ].map(t => (
@@ -98,8 +96,8 @@ export default function SettingsForm({ user }: { user: any }) {
                 </div>
 
                 {/* Main Settings Panel */}
-                <div className="lg:col-span-3 bg-white p-10 rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+                <div className="lg:col-span-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-10 rounded-[48px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50/50 dark:bg-slate-700/50 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
                     
                     {tab === 'account' && (
                         <div className="space-y-10 animate-in fade-in slide-in-from-right-10 duration-500">
@@ -152,63 +150,6 @@ export default function SettingsForm({ user }: { user: any }) {
                         </div>
                     )}
 
-                    {tab === 'branding' && (
-                        <div className="space-y-10 animate-in fade-in slide-in-from-right-10 duration-500">
-                            <h3 className="text-2xl font-black font-headline italic">Nhận diện giáo viên</h3>
-                            <div className="space-y-8">
-                                {/* Theme Selection Section Only */}
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Giao diện hiển thị với học sinh</label>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <button 
-                                            onClick={() => setSettings({...settings, studentViewTheme: 'DYNAMIC'})}
-                                            className={`p-6 rounded-3xl border-2 transition-all text-left group ${
-                                                settings.studentViewTheme === 'DYNAMIC' 
-                                                ? "border-primary bg-primary/5" 
-                                                : "border-slate-100 hover:border-slate-200"
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className={`p-3 rounded-2xl ${settings.studentViewTheme === 'DYNAMIC' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                                    <Sparkles className="w-6 h-6" />
-                                                </div>
-                                                {settings.studentViewTheme === 'DYNAMIC' && <CheckCircle2 className="w-5 h-5 text-primary" />}
-                                            </div>
-                                            <h4 className="font-black text-slate-900 leading-tight">Giao diện Sinh động</h4>
-                                            <p className="text-xs text-slate-500 mt-1">Màu sắc rực rỡ, hiệu ứng chuyển động mượt mà, phù hợp với học sinh trẻ tuổi.</p>
-                                        </button>
-
-                                        <button 
-                                            onClick={() => setSettings({...settings, studentViewTheme: 'PROFESSIONAL'})}
-                                            className={`p-6 rounded-3xl border-2 transition-all text-left ${
-                                                settings.studentViewTheme === 'PROFESSIONAL' 
-                                                ? "border-slate-900 bg-slate-50" 
-                                                : "border-slate-100 hover:border-slate-200"
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className={`p-3 rounded-2xl ${settings.studentViewTheme === 'PROFESSIONAL' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                                                    <Briefcase className="w-6 h-6" />
-                                                </div>
-                                                {settings.studentViewTheme === 'PROFESSIONAL' && <CheckCircle2 className="w-5 h-5 text-slate-900" />}
-                                            </div>
-                                            <h4 className="font-black text-slate-900 leading-tight">Giao diện Chuyên nghiệp</h4>
-                                            <p className="text-xs text-slate-500 mt-1">Tối giản, trang trọng, tập trung tối đa vào nội dung bài giảng và học thuật.</p>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button 
-                                    onClick={handleSaveSettings}
-                                    className="flex items-center gap-3 px-10 py-5 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 shadow-xl shadow-primary/20 transition-all"
-                                >
-                                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    Lưu nhận diện
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     {tab === 'notify' && (
                         <div className="space-y-10 animate-in fade-in slide-in-from-right-10 duration-500">
                             <h3 className="text-2xl font-black font-headline italic">Thông báo & Báo cáo</h3>
@@ -218,7 +159,7 @@ export default function SettingsForm({ user }: { user: any }) {
                                     { id: 'notifyReview', label: 'Đánh giá tinh thần', desc: 'Nhận thông báo khi có học sinh gửi feedback hoặc theo dõi bạn.' },
                                     { id: 'notifyWeekly', label: 'Báo cáo hàng tuần', desc: 'Nhận email tổng hợp kết quả giảng dạy vào tối Chủ Nhật.' }
                                 ].map(n => (
-                                    <div key={n.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl group hover:bg-white border border-transparent hover:border-slate-100 transition-all">
+                                    <div key={n.id} className="flex items-center justify-between p-6 bg-slate-50/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-3xl group hover:bg-white/80 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition-all">
                                         <div>
                                             <p className="font-bold text-slate-900">{n.label}</p>
                                             <p className="text-xs text-slate-500 mt-0.5">{n.desc}</p>
@@ -250,8 +191,8 @@ export default function SettingsForm({ user }: { user: any }) {
                         <div className="space-y-10 animate-in fade-in slide-in-from-right-10 duration-500">
                             <h3 className="text-2xl font-black font-headline italic">Quyền riêng tư</h3>
                             <div className="space-y-8">
-                                <div className="p-8 bg-indigo-50 rounded-[40px] border border-indigo-100 flex items-start gap-6">
-                                    <div className="p-4 bg-white rounded-2xl text-indigo-500 shadow-sm">
+                                <div className="p-8 bg-indigo-50/50 dark:bg-indigo-900/20 backdrop-blur-sm rounded-[40px] border border-indigo-100 dark:border-indigo-900/50 flex items-start gap-6">
+                                    <div className="p-4 bg-white/80 dark:bg-slate-800 rounded-2xl text-indigo-500 shadow-sm">
                                         <EyeOff className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 space-y-4">
@@ -271,8 +212,8 @@ export default function SettingsForm({ user }: { user: any }) {
                                 </div>
                                 <div className="space-y-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Danh sách chặn</h4>
-                                    <div className="bg-slate-50 p-8 rounded-[40px] text-center space-y-4 border border-slate-100">
-                                        <AlertCircle className="w-8 h-8 mx-auto text-slate-300" />
+                                    <div className="bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm p-8 rounded-[40px] text-center space-y-4 border border-slate-100 dark:border-slate-700">
+                                        <AlertCircle className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
                                         <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Không có người dùng nào bị chặn</p>
                                     </div>
                                 </div>

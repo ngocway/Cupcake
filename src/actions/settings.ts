@@ -11,8 +11,7 @@ export async function updateTeacherSettings(data: {
     isIncognito?: boolean,
     notifySubmission?: boolean,
     notifyReview?: boolean,
-    notifyWeekly?: boolean,
-    studentViewTheme?: string
+    notifyWeekly?: boolean
 }) {
     try {
         const session = await auth();
@@ -28,8 +27,7 @@ export async function updateTeacherSettings(data: {
                 isIncognito: data.isIncognito,
                 notifySubmission: data.notifySubmission,
                 notifyReview: data.notifyReview,
-                notifyWeekly: data.notifyWeekly,
-                studentViewTheme: data.studentViewTheme
+                notifyWeekly: data.notifyWeekly
             }
         });
 

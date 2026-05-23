@@ -57,10 +57,10 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                                 </div>
                                 <div className="flex flex-wrap items-center gap-6 text-white/70">
                                     <span className="text-sm md:text-lg font-bold flex items-center gap-2">
-                                        <GraduationCap className="w-5 h-5 text-primary" /> {profile.professionalTitle || "Giáo viên Scholar Script"}
+                                        <GraduationCap className="w-5 h-5 text-primary" /> {profile.professionalTitle || "Scholar Script Instructor"}
                                     </span>
                                     <span className="text-sm md:text-lg font-bold flex items-center gap-2">
-                                        <MapPin className="w-5 h-5 text-primary" /> Việt Nam
+                                        <MapPin className="w-5 h-5 text-primary" /> Vietnam
                                     </span>
                                 </div>
                             </div>
@@ -88,14 +88,14 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                     <div className="bg-slate-950 p-10 rounded-[48px] text-white shadow-2xl relative overflow-hidden">
                         <div className="absolute -top-12 -right-12 w-48 h-48 bg-primary/20 rounded-full blur-3xl"></div>
                         <h3 className="text-xs font-black uppercase tracking-[0.4em] text-primary mb-10 flex items-center gap-2">
-                            <Zap className="w-4 h-4 fill-primary" /> Đóng góp hệ thống
+                            <Zap className="w-4 h-4 fill-primary" /> System Contributions
                         </h3>
                         <div className="space-y-10">
                             {[
-                                { label: "Tổng lượt xem tài liệu", value: profile.stats.totalViews.toLocaleString(), icon: Globe, color: "text-blue-400" },
-                                { label: "Lượt học sinh nộp bài", value: profile.stats.totalSubmissions.toLocaleString(), icon: Users, color: "text-green-400" },
-                                { label: "Mức độ hài lòng", value: `${(profile.stats.satisfaction || 0).toFixed(1)}/5`, icon: Star, color: "text-yellow-400" },
-                                { label: "Người theo dõi", value: profile.stats.followers.toLocaleString(), icon: Heart, color: "text-pink-400" }
+                                { label: "Total Document Views", value: profile.stats.totalViews.toLocaleString(), icon: Globe, color: "text-blue-400" },
+                                { label: "Student Submissions", value: profile.stats.totalSubmissions.toLocaleString(), icon: Users, color: "text-green-400" },
+                                { label: "Satisfaction Level", value: `${(profile.stats.satisfaction || 0).toFixed(1)}/5`, icon: Star, color: "text-yellow-400" },
+                                { label: "Followers", value: profile.stats.followers.toLocaleString(), icon: Heart, color: "text-pink-400" }
                             ].map((s, idx) => (
                                 <div key={idx} className="flex items-center gap-6">
                                     <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 ${s.color}`}>
@@ -113,21 +113,21 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                     {/* Basic Info */}
                     <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm space-y-8">
                         <div className="space-y-4">
-                            <h3 className="text-xl font-black font-headline italic">Giới thiệu chuyên môn</h3>
+                            <h3 className="text-xl font-black font-headline italic">Professional Bio</h3>
                             <p className="text-sm leading-relaxed text-slate-600 font-medium whitespace-pre-line">
-                                {profile.bio || "Hướng tới việc xây dựng thế hệ tương lai thông qua kiến thức sáng tạo."}
+                                {profile.bio || "Aiming to build the future generation through creative knowledge."}
                             </p>
                         </div>
 
                         <div className="space-y-6 pt-6 border-t border-slate-50">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Thông tin liên hệ</h3>
+                            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Contact Information</h3>
                             <div className="space-y-4">
                                 <div className="flex items-center gap-4 group cursor-pointer">
                                     <div className="p-3 bg-slate-50 rounded-xl text-slate-400 group-hover:bg-primary group-hover:text-white transition-all">
                                         <Mail className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Email công việc</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Work Email</p>
                                         <p className="text-sm font-bold text-slate-700">{profile.email}</p>
                                     </div>
                                 </div>
@@ -157,17 +157,17 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                         <div className="space-y-8">
                             <div className="flex items-center gap-4">
                                 <Users className="w-7 h-7 text-primary" />
-                                <h2 className="text-3xl font-black font-headline italic">Lớp học tiêu biểu</h2>
+                                <h2 className="text-3xl font-black font-headline italic">Featured Classes</h2>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
                                 {profile.classes.map((cls: any) => (
                                     <div key={cls.id} className="relative group overflow-hidden bg-white border border-slate-100 p-8 rounded-[40px] hover:border-primary transition-all shadow-sm hover:shadow-2xl hover:shadow-primary/5">
                                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform"></div>
                                         <div className="relative z-10 space-y-6">
-                                            <div className="inline-flex px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{cls.gradeLevel || "Cơ bản"}</div>
+                                            <div className="inline-flex px-4 py-1.5 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{cls.gradeLevel || "Basic"}</div>
                                             <h4 className="text-2xl font-black text-slate-950 leading-tight">{cls.name}</h4>
-                                            <p className="text-sm text-slate-500 line-clamp-2">{cls.description || "Tham gia lớp học để nhận các bài giảng độc quyền từ giảng viên."}</p>
-                                            <button className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary transition-all">Đăng ký tham gia</button>
+                                            <p className="text-sm text-slate-500 line-clamp-2">{cls.description || "Join the class to receive exclusive materials from the instructor."}</p>
+                                            <button className="w-full h-14 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary transition-all">Register to Join</button>
                                         </div>
                                     </div>
                                 ))}
@@ -179,8 +179,8 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                     <div className="space-y-10">
                         <div className="flex items-center justify-between border-b border-slate-100">
                              <div className="flex gap-16">
-                                <button className="text-sm font-black uppercase tracking-widest text-slate-950 border-b-4 border-primary pb-6">Bài tập cá nhân ({profile.stats.assignments})</button>
-                                <button className="text-sm font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors pb-6">Bài học video ({profile.stats.lessons})</button>
+                                <button className="text-sm font-black uppercase tracking-widest text-slate-950 border-b-4 border-primary pb-6">Assignments ({profile.stats.assignments})</button>
+                                <button className="text-sm font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors pb-6">Video Lessons ({profile.stats.lessons})</button>
                              </div>
                         </div>
 
@@ -197,8 +197,8 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                                     </div>
                                     <div className="space-y-3 px-2">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{assignment.subject || "Khám phá"}</span>
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Layers className="w-3 h-3" /> {assignment._count.questions} câu hỏi</span>
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{assignment.subject || "Explore"}</span>
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5"><Layers className="w-3 h-3" /> {assignment._count.questions} questions</span>
                                         </div>
                                         <h4 className="text-xl font-bold text-slate-900 leading-tight group-hover:text-primary transition-colors line-clamp-2">{assignment.title}</h4>
                                     </div>
@@ -211,7 +211,7 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
                     <div className="space-y-10 pt-10 border-t border-slate-100">
                          <div className="flex items-center gap-4">
                             <MessageCircle className="w-7 h-7 text-primary" />
-                            <h2 className="text-3xl font-black font-headline italic">Phản hồi từ học sinh</h2>
+                            <h2 className="text-3xl font-black font-headline italic">Student Feedback</h2>
                          </div>
                          <ReviewList reviews={reviews as any} />
                     </div>

@@ -1,12 +1,19 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { MaterialStatus, MaterialType } from '@prisma/client';
 import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
 import { useRouter } from 'next/navigation';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
 import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';
+import {
+  Check, Edit2, FileEdit, Lock, Globe, MoreHorizontal, Eye, Copy, 
+  GraduationCap, Edit, LineChart, Trash2, HelpCircle, 
+  CheckCircle, List, Users, PlayCircle, Calendar, Clock, 
+  PlusCircle, RefreshCw, Send, X
+} from 'lucide-react';
 
 type Assignment = {
   id: string;
@@ -32,10 +39,10 @@ type Assignment = {
   lessonId?: string;
 };
 
-const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: string; className: string }> = {
-  DRAFT: { label: 'BẢN NHÁP', icon: 'edit_note', className: 'badge-draft' },
-  PUBLIC: { label: 'CÔNG KHAI', icon: 'public', className: 'bg-green-500 text-white' },
-  PRIVATE: { label: 'RIÊNG TƯ', icon: 'lock', className: 'bg-gray-500 text-white' },
+const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: any; className: string }> = {
+  DRAFT: { label: 'BẢN NHÁP', icon: FileEdit, className: 'badge-draft' },
+  PUBLIC: { label: 'CÔNG KHAI', icon: Globe, className: 'bg-green-500 text-white' },
+  PRIVATE: { label: 'RIÊNG TƯ', icon: Lock, className: 'bg-gray-500 text-white' },
 };
 
 const SUBJECT_CONFIG: Record<string, string> = {
@@ -72,7 +79,20 @@ export function MaterialListItem({
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [teacherClasses, setTeacherClasses] = useState<ClassOption[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const updateMenuPos = useCallback(() => {
+    if (menuBtnRef.current) {
+      const rect = menuBtnRef.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 8,
+        left: rect.right - 192, // w-48 = 12rem = 192px, align right edge
+      });
+    }
+  }, []);
 
   const handleRestore = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -103,10 +123,16 @@ export function MaterialListItem({
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsMenuOpen(false);
+      const target = e.target as Node;
+      // Check if click is outside both the trigger button area and the portal dropdown
+      if (isMenuOpen) {
+        const isInsideBtn = menuRef.current?.contains(target);
+        const isInsideDropdown = menuDropdownRef.current?.contains(target);
+        if (!isInsideBtn && !isInsideDropdown) {
+          setIsMenuOpen(false);
+        }
       }
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+      if (popupRef.current && !popupRef.current.contains(target)) {
         setShowClassesPopup(false);
       }
     };
@@ -115,6 +141,19 @@ export function MaterialListItem({
     }
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isMenuOpen, showClassesPopup]);
+
+  // Recalculate menu position on scroll/resize when open
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    updateMenuPos();
+    const handleScrollOrResize = () => updateMenuPos();
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isMenuOpen, updateMenuPos]);
 
   const handleEdit = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -239,7 +278,7 @@ export function MaterialListItem({
     <>
       <div 
         onClick={() => handleEdit()}
-        className={`bg-white dark:bg-gray-800 p-0 rounded-2xl border transition-all group flex flex-col relative ${
+        className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-0 rounded-2xl border transition-all group flex flex-col relative overflow-visible ${
           selected 
             ? 'border-primary ring-2 ring-primary/10 shadow-lg' 
             : 'border-slate-200 dark:border-gray-700 shadow-md hover:border-primary/40 hover:shadow-lg'
@@ -258,14 +297,14 @@ export function MaterialListItem({
                 : 'bg-white/90 border-slate-300 text-transparent'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px] font-bold">check</span>
+            <Check className="w-4 h-4 stroke-[3px]" />
           </button>
         </div>
         
         <div className="flex gap-4 p-5">
           <div 
             onClick={(e) => { e.stopPropagation(); handleEdit(); }}
-            className="size-24 rounded-xl bg-slate-100 dark:bg-gray-700 overflow-hidden flex-shrink-0 cursor-pointer border border-slate-100 dark:border-gray-600 relative group/thumb"
+            className="size-24 rounded-xl bg-slate-100/50 dark:bg-slate-700/50 overflow-hidden flex-shrink-0 cursor-pointer border border-slate-100 dark:border-slate-600 relative group/thumb"
           >
             <img 
               src={assignment.thumbnail || `https://api.dicebear.com/7.x/identicon/svg?seed=${assignment.id}&backgroundColor=f0f2f4`} 
@@ -273,7 +312,7 @@ export function MaterialListItem({
               className="size-full object-cover group-hover/thumb:scale-110 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all">
-              <span className="material-symbols-outlined text-white">edit</span>
+              <Edit2 className="text-white w-6 h-6 stroke-[2px]" />
             </div>
           </div>
 
@@ -286,7 +325,7 @@ export function MaterialListItem({
                 {assignment.title}
               </h3>
               <span className={`${status.className} text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase flex items-center gap-1`}>
-                <span className="material-symbols-outlined text-[12px]">{status.icon}</span>
+                <status.icon className="w-3 h-3" />
                 {status.label}
               </span>
             </div>
@@ -305,14 +344,20 @@ export function MaterialListItem({
           {!isTrash && (
             <div className="relative group/menu shrink-0" ref={menuRef}>
             <button 
-              onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
+              ref={menuBtnRef}
+              onClick={(e) => { e.stopPropagation(); updateMenuPos(); setIsMenuOpen(!isMenuOpen); }}
               className="size-8 flex items-center justify-center rounded-lg hover:bg-[#f0f2f4] dark:hover:bg-gray-700 transition-colors text-[#617589]"
             >
-              <span className="material-symbols-outlined text-[20px]">more_horiz</span>
+              <MoreHorizontal className="w-5 h-5" />
             </button>
-            {isMenuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-700 rounded-xl shadow-xl border border-[#f0f2f4] dark:border-gray-600 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                <div className="px-4 py-2 border-b border-[#f0f2f4] dark:border-gray-600 bg-slate-50/50 dark:bg-gray-800/50">
+            {isMenuOpen && typeof document !== 'undefined' && createPortal(
+              <div 
+                ref={menuDropdownRef}
+                className="fixed w-48 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl shadow-xl border border-[#f0f2f4] dark:border-slate-600 py-1 z-[9999] animate-in fade-in zoom-in-95 duration-100 overflow-y-auto max-h-[80vh]"
+                style={{ top: menuPos.top, left: menuPos.left }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="px-4 py-2 border-b border-[#f0f2f4] dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50">
                   <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Trạng thái</span>
                 </div>
                 <button 
@@ -326,21 +371,21 @@ export function MaterialListItem({
                   title={assignment.assignedCount > 0 ? "Không thể chuyển về Bản nháp khi bài tập đang được giao" : ""}
                 >
                   <span className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px]">edit_note</span> Bản nháp
+                    <FileEdit className="w-[18px] h-[18px]" /> Bản nháp
                   </span>
-                  {assignment.assignedCount > 0 && <span className="material-symbols-outlined text-[14px]">lock</span>}
+                  {assignment.assignedCount > 0 && <Lock className="w-[14px] h-[14px]" />}
                 </button>
                 <button 
                   onClick={(e) => handleStatusChange('PRIVATE', e)}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PRIVATE' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">lock</span> Riêng tư
+                  <Lock className="w-[18px] h-[18px]" /> Riêng tư
                 </button>
                 <button 
                   onClick={(e) => handleStatusChange('PUBLIC', e)}
                   className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PUBLIC' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
                 >
-                  <span className="material-symbols-outlined text-[18px]">public</span> Công khai
+                  <Globe className="w-[18px] h-[18px]" /> Công khai
                 </button>
                 
                 <div className="h-[1px] bg-[#f0f2f4] dark:bg-gray-600 my-1"></div>
@@ -354,13 +399,13 @@ export function MaterialListItem({
                   onClick={(e) => e.stopPropagation()}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">visibility</span> Xem trước
+                  <Eye className="w-[18px] h-[18px]" /> Xem trước
                 </Link>
                 <button 
                   onClick={handleDuplicate}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">content_copy</span> Nhân bản
+                  <Copy className="w-[18px] h-[18px]" /> Nhân bản
                 </button>
                 <button 
                   onClick={(e) => { 
@@ -370,13 +415,13 @@ export function MaterialListItem({
                   }}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2 text-indigo-600 font-semibold"
                 >
-                  <span className="material-symbols-outlined text-[18px]">school</span> Học ngay
+                  <GraduationCap className="w-[18px] h-[18px]" /> Học ngay
                 </button>
                 <button 
                   onClick={handleEdit}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">edit</span> Chỉnh sửa
+                  <Edit className="w-[18px] h-[18px]" /> Chỉnh sửa
                 </button>
                 <button 
                   onClick={(e) => {
@@ -386,7 +431,7 @@ export function MaterialListItem({
                   }}
                   className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">analytics</span> Thống kê
+                  <LineChart className="w-[18px] h-[18px]" /> Thống kê
                 </button>
                 <button 
                   onClick={(e) => {
@@ -396,9 +441,10 @@ export function MaterialListItem({
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">delete</span> Xóa
+                  <Trash2 className="w-[18px] h-[18px]" /> Xóa
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           )}
@@ -407,17 +453,17 @@ export function MaterialListItem({
         <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#f0f2f4] dark:border-gray-700/50">
           <div className="flex items-center gap-3 text-sm text-[#617589]">
             <div className="flex items-center gap-1" title="Số câu hỏi">
-              <span className="material-symbols-outlined text-[18px]">quiz</span> {assignment.questionCount}
+              <HelpCircle className="w-[18px] h-[18px]" /> {assignment.questionCount}
             </div>
 
             <div className="w-[1px] h-3 bg-slate-200 dark:bg-gray-700 mx-1"></div>
 
             <div className="flex items-center gap-1" title="Lượt xem công khai">
-              <span className="material-symbols-outlined text-[18px]">visibility</span> {assignment.viewCount || 0}
+              <Eye className="w-[18px] h-[18px]" /> {assignment.viewCount || 0}
             </div>
 
             <div className="flex items-center gap-1" title="Lượt làm bài công khai">
-              <span className="material-symbols-outlined text-[18px]">task_alt</span> {assignment.publicSubmissionCount || 0}
+              <CheckCircle className="w-[18px] h-[18px]" /> {assignment.publicSubmissionCount || 0}
             </div>
             
             <div className="w-[1px] h-3 bg-slate-200 dark:bg-gray-700 mx-1"></div>
@@ -430,21 +476,21 @@ export function MaterialListItem({
                   }}
                   className="flex items-center gap-1 text-primary font-semibold hover:bg-primary/5 px-1.5 py-0.5 rounded transition-colors group/popup text-[13px]"
                 >
-                  <span className="material-symbols-outlined text-[16px] group-hover/popup:animate-pulse">overview</span> 
+                  <List className="w-4 h-4 group-hover/popup:animate-pulse" /> 
                   <span>{assignment.assignedCount} lớp</span>
                 </button>
 
                 {showClassesPopup && (
                   <div 
                     ref={popupRef}
-                    className="absolute bottom-full left-0 mb-4 w-[400px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-gray-700 overflow-hidden z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300"
+                    className="absolute bottom-full left-0 mb-4 w-[400px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300"
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-700">
                       <div className="flex items-center gap-3">
                         <div className="bg-primary/10 text-primary p-2 rounded-lg">
-                          <span className="material-symbols-outlined">assignment_turned_in</span>
+                          <CheckCircle className="w-6 h-6" />
                         </div>
                         <h2 className="text-lg font-bold text-slate-800 dark:text-gray-100">Quản lý giao bài</h2>
                       </div>
@@ -452,7 +498,7 @@ export function MaterialListItem({
                         onClick={() => setShowClassesPopup(false)}
                         className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 transition-colors p-1"
                       >
-                        <span className="material-symbols-outlined">close</span>
+                        <X className="w-5 h-5" />
                       </button>
                     </div>
 
@@ -468,23 +514,23 @@ export function MaterialListItem({
                             <div className="group flex items-center justify-between p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-gray-600">
                               <div className="flex items-center gap-4">
                                 <div className="size-11 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-sky-600 dark:text-sky-400">
-                                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
+                                  <Users className="w-6 h-6 stroke-[2.5px]" />
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-[15px] font-bold text-slate-900 dark:text-gray-100 leading-tight">{cls.name}</span>
                                   <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5 min-h-[16px]">
                                     {cls.startDate && (
                                       <div className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-bold">
-                                        <span className="material-symbols-outlined text-[14px]">play_circle</span>
+                                        <PlayCircle className="w-[14px] h-[14px]" />
                                         Bắt đầu: {new Date(cls.startDate).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}
                                       </div>
                                     )}
                                     <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-gray-400">
-                                      <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                      <Calendar className="w-[14px] h-[14px]" />
                                       Giao: {cls.assignedAt ? new Date(cls.assignedAt).toLocaleDateString('vi-VN') : '---'}
                                     </div>
                                     <div className="flex items-center gap-1 text-[11px] font-medium text-red-500">
-                                      <span className="material-symbols-outlined text-[14px]">alarm</span>
+                                      <Clock className="w-[14px] h-[14px]" />
                                       Hạn: {cls.dueDate ? new Date(cls.dueDate).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : 'Không có'}
                                     </div>
                                   </div>
@@ -520,7 +566,7 @@ export function MaterialListItem({
                         }}
                         className="flex-1 py-1.5 px-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 shadow-md shadow-primary/20 transition-colors uppercase tracking-wide text-[10px] flex items-center justify-center gap-2"
                       >
-                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                        <PlusCircle className="w-4 h-4" />
                         Giao cho lớp mới
                       </button>
                     </div>
@@ -530,7 +576,7 @@ export function MaterialListItem({
             )}
             
             <div className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[18px]">calendar_today</span> {dateStr}
+              <Calendar className="w-[18px] h-[18px]" /> {dateStr}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -541,13 +587,13 @@ export function MaterialListItem({
                   className="px-3 h-9 rounded-lg border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center shadow-sm"
                   title="Xóa vĩnh viễn"
                 >
-                  <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                  <Trash2 className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={handleRestore}
                   className="bg-emerald-600 dark:bg-emerald-700 text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">restore</span>
+                  <RefreshCw className="w-[18px] h-[18px]" />
                   Khôi phục
                 </button>
               </>
@@ -561,14 +607,14 @@ export function MaterialListItem({
                   }}
                   className="bg-indigo-50 text-indigo-600 border border-indigo-100 h-9 px-4 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">school</span>
+                  <GraduationCap className="w-[18px] h-[18px]" />
                   Học ngay
                 </button>
                 <button 
                   onClick={openAssignModal}
                   className="bg-primary text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2"
                 >
-                  <span className="material-symbols-outlined text-[18px]">send</span>
+                  <Send className="w-[18px] h-[18px]" />
                   Giao bài
                 </button>
               </>
@@ -580,10 +626,10 @@ export function MaterialListItem({
       {/* Custom Delete Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-8 flex flex-col items-center text-center">
               <div className="size-16 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-[32px]">delete_forever</span>
+                <Trash2 className="w-8 h-8 stroke-[2px]" />
               </div>
               <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">{isTrash ? 'Xóa vĩnh viễn?' : 'Xóa bài tập?'}</h3>
               <p className="text-[#617589] dark:text-gray-400 text-sm">

@@ -137,13 +137,13 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
 }
 
 async function SidebarWrapper({ teacher, lessonId }: { teacher: any, lessonId: string }) {
-  const relatedLessons = await getRelatedLessons(teacher.id, lessonId);
+  const relatedLessons = await getRelatedLessons(lessonId);
 
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-700">
       <LearningSidebar 
         teacher={teacher} 
-        relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: null }))} 
+        relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: l.thumbnail || null }))} 
         isGuest={false}
       />
     </div>
@@ -165,7 +165,7 @@ async function ReadingContentWrapper({ lessonId }: { lessonId: string }) {
       </div>
       
       <div className="prose prose-slate prose-lg max-w-none dark:prose-invert">
-        <InteractiveReadingContent html={readingText} />
+        <InteractiveReadingContent html={readingText} isLoggedIn={true} />
       </div>
     </div>
   );
@@ -221,7 +221,7 @@ export default async function StudentLessonDetailPage({
                {/* Back Button */}
                <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/50 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
-                  Quay lại
+                  Back
                </BackButton>
                {/* Video Player (Facade Optimization) */}
                {(videoId || lesson.videoUrl) && (
@@ -259,6 +259,25 @@ export default async function StudentLessonDetailPage({
                      <h2 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
                         {lesson.title}
                      </h2>
+                     {(() => {
+                        const tagsArray = lesson.assignment?.tags
+                           ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+                           : [];
+                        if (tagsArray.length === 0) return null;
+                        return (
+                           <div className="flex flex-wrap gap-2 mt-4">
+                              {tagsArray.map((tag: string) => (
+                                 <Link 
+                                    key={tag} 
+                                    href={`/tags/${encodeURIComponent(tag)}`}
+                                    className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300"
+                                 >
+                                    #{tag}
+                                 </Link>
+                              ))}
+                           </div>
+                        );
+                     })()}
                   </div>
 
                   <div className="space-y-10">

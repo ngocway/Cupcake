@@ -16,8 +16,8 @@ export function AppearanceSettings() {
                         <Languages className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900">Ngôn ngữ giao diện</h3>
-                        <p className="text-xs text-slate-500">Chọn ngôn ngữ để bạn cảm thấy thoải mái nhất</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Ngôn ngữ giao diện</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Chọn ngôn ngữ để bạn cảm thấy thoải mái nhất</p>
                     </div>
                 </div>
 
@@ -27,13 +27,13 @@ export function AppearanceSettings() {
                         className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all text-left ${
                             lang === "vi" 
                             ? "border-primary bg-primary/5 shadow-md shadow-primary/10" 
-                            : "border-slate-100 hover:border-slate-200"
+                            : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
                         }`}
                     >
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-xl">🇻🇳</div>
+                        <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm text-xl">🇻🇳</div>
                         <div className="flex-1">
-                            <span className="block text-sm font-bold text-slate-900">Tiếng Việt</span>
-                            <span className="block text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">Vietnamese (Primary)</span>
+                            <span className="block text-sm font-bold text-slate-900 dark:text-white">Tiếng Việt</span>
+                            <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">Vietnamese (Primary)</span>
                         </div>
                         {lang === "vi" && <div className="p-1 bg-primary text-white rounded-full"><Check className="w-3 h-3" /></div>}
                     </button>
@@ -43,13 +43,13 @@ export function AppearanceSettings() {
                         className={`flex items-center gap-4 p-5 rounded-3xl border-2 transition-all text-left ${
                             lang === "en" 
                             ? "border-primary bg-primary/5 shadow-md shadow-primary/10" 
-                            : "border-slate-100 hover:border-slate-200"
+                            : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
                         }`}
                     >
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-xl">🇺🇸</div>
+                        <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm text-xl">🇺🇸</div>
                         <div className="flex-1">
-                            <span className="block text-sm font-bold text-slate-900">English</span>
-                            <span className="block text-[10px] text-slate-500 uppercase tracking-widest mt-0.5">English (US)</span>
+                            <span className="block text-sm font-bold text-slate-900 dark:text-white">English</span>
+                            <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">English (US)</span>
                         </div>
                         {lang === "en" && <div className="p-1 bg-primary text-white rounded-full"><Check className="w-3 h-3" /></div>}
                     </button>

@@ -29,10 +29,23 @@ function SectionSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12 animate-pulse">
       {[1, 2, 3, 4, 5, 6].map(i => (
-        <div key={i} className="space-y-4">
-          <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-2xl" />
-          <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-800 rounded" />
-          <div className="h-4 w-1/2 bg-slate-200 dark:bg-slate-800 rounded" />
+        <div key={i} className="group flex flex-col h-full rounded-2xl relative">
+          <div className="w-full aspect-video rounded-3xl overflow-hidden relative shadow-lg bg-secondary/10" />
+          <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-full bg-secondary/20" />
+              <div className="h-3 w-20 bg-secondary/20 rounded" />
+            </div>
+            <div className="h-6 w-full bg-secondary/20 rounded mb-2" />
+            <div className="h-6 w-2/3 bg-secondary/20 rounded mb-6" />
+            <div className="flex items-center justify-between pt-5 border-t border-secondary/5">
+              <div className="flex gap-2">
+                <div className="h-4 w-12 bg-secondary/20 rounded" />
+                <div className="h-4 w-12 bg-secondary/20 rounded" />
+              </div>
+              <div className="h-6 w-16 bg-secondary/20 rounded-full" />
+            </div>
+          </div>
         </div>
       ))}
     </div>
@@ -46,16 +59,39 @@ function CategoryMenuSection({ promise }: { promise: Promise<any[]> }) {
   return <VisualCategoryMenu categoryTree={categoryTree} />
 }
 
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-500">
+      <div className="relative w-48 h-48 mb-8">
+        <img src="/images/bird.png" alt="No results" className="w-full h-full object-contain drop-shadow-xl opacity-60 grayscale" />
+      </div>
+      <h3 className="text-2xl font-headline font-black text-primary mb-3">Oops! Không tìm thấy kết quả.</h3>
+      <p className="text-on-surface-variant max-w-md mx-auto mb-8">
+        Chúng mình không tìm thấy nội dung nào phù hợp với từ khóa <strong className="text-primary">"{keyword}"</strong>. Bạn thử kiểm tra lại chính tả hoặc dùng từ khóa khác xem sao nhé.
+      </p>
+    </div>
+  )
+}
+
 // ─── Newest content lists (rendered via use() — fast, no extra round-trips) ──
 
 function ExerciseNewestList({
   promise,
   isLoggedIn,
+  searchKeyword,
+  onClear,
 }: {
   promise: Promise<{ items: any[] }>
   isLoggedIn: boolean
+  searchKeyword?: string
+  onClear: () => void
 }) {
   const { items } = use(promise)
+  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
       {items.map((ex: any) => (
@@ -68,11 +104,18 @@ function ExerciseNewestList({
 function LessonNewestList({
   promise,
   isLoggedIn,
+  searchKeyword,
+  onClear,
 }: {
   promise: Promise<{ items: any[] }>
   isLoggedIn: boolean
+  searchKeyword?: string
+  onClear: () => void
 }) {
   const { items } = use(promise)
+  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
       {items.map((le: any) => (
@@ -84,10 +127,13 @@ function LessonNewestList({
 
 // ─── Popular content lists (rendered from Zustand store) ─────────────────────
 
-function ExercisePopularList({ isLoggedIn }: { isLoggedIn: boolean }) {
+function ExercisePopularList({ isLoggedIn, searchKeyword, onClear }: { isLoggedIn: boolean, searchKeyword?: string, onClear: () => void }) {
   const items = useContentStore(s => s.popularExercises)
   const ready = useContentStore(s => s.popularExercisesReady)
   if (!ready) return <SectionSkeleton />
+  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
       {items.map((ex: any) => (
@@ -97,10 +143,13 @@ function ExercisePopularList({ isLoggedIn }: { isLoggedIn: boolean }) {
   )
 }
 
-function LessonPopularList({ isLoggedIn }: { isLoggedIn: boolean }) {
+function LessonPopularList({ isLoggedIn, searchKeyword, onClear }: { isLoggedIn: boolean, searchKeyword?: string, onClear: () => void }) {
   const items = useContentStore(s => s.popularLessons)
   const ready = useContentStore(s => s.popularLessonsReady)
   if (!ready) return <SectionSkeleton />
+  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
       {items.map((le: any) => (
@@ -128,15 +177,28 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   )
 
   // User type selection (Kids, Teens, Adults, Business)
-  const [userType, setUserType] = useState<string>(initialUserType)
+  const userType            = useContentStore(s => s.userType)
+  const setUserType         = useContentStore(s => s.setUserType)
+
+  const setPopularExercises = useContentStore(s => s.setPopularExercises)
+  const setPopularLessons   = useContentStore(s => s.setPopularLessons)
+  const isFiltering         = useContentStore(s => s.isFiltering)
+  const setFiltering        = useContentStore(s => s.setFiltering)
+
+  useEffect(() => {
+    if (initialUserType) {
+      setUserType(initialUserType);
+    }
+  }, [initialUserType, setUserType]);
 
   const handleUserTypeChange = (typeId: string) => {
     if (userType === typeId) return; // Không làm gì nếu click lại cái đang chọn
     
+    setFiltering(true)
     setUserType(typeId)
     // Save preference to Cookie and Database in the background
     startTransition(() => {
-      setUserTypePreference(typeId)
+      setUserTypePreference(typeId).finally(() => setFiltering(false))
     })
     
     // Tăng delay lên 300ms để đợi hiệu ứng phóng to Avatar (500ms) diễn ra được một nửa,
@@ -167,10 +229,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       requestAnimationFrame(animation);
     }, 300);
   }
-
-  const setPopularExercises = useContentStore(s => s.setPopularExercises)
-  const setPopularLessons   = useContentStore(s => s.setPopularLessons)
-  const isFiltering         = useContentStore(s => s.isFiltering)
 
   // ── Background prefetch: fire-and-forget after page renders ────────────────
   useEffect(() => {
@@ -216,6 +274,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     window.history.pushState(null, "", `?${p.toString()}`)
   }
 
+  const handleClearSearch = () => {
+    const p = new URLSearchParams(window.location.search)
+    p.delete("search")
+    router.push(`?${p.toString()}`, { scroll: false })
+  }
+
   return (
     <div className="space-y-6 relative">
       {/* Hướng 2: Top progress bar */}
@@ -241,7 +305,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                     <button
                       key={type.id}
                       onClick={() => handleUserTypeChange(type.id)}
-                      className={`group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none`}
+                      className={`shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none`}
                     >
                       <div className={`relative w-[100px] h-[100px] rounded-full overflow-hidden transition-all duration-500 border-[6px] ${
                         isActive 
@@ -251,7 +315,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                         <img 
                           src={type.src} 
                           alt={type.label} 
-                          className="w-full h-full object-cover" 
+                          className="shake-target w-full h-full object-cover" 
                         />
                       </div>
                       <span className={`text-sm font-black uppercase tracking-[0.1em] transition-all duration-300 ${
@@ -361,31 +425,28 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       </div>
 
       {/* ── Content grids ───────────────────────────────────────────────────── */}
-      <div className={`min-h-[600px] relative transition-opacity duration-300 ${isFiltering ? "opacity-40 pointer-events-none" : "opacity-100"}`}>
-        {isFiltering && (
-          <div className="absolute top-0 right-0 z-10 flex items-center gap-2 px-4 py-2 glass rounded-2xl shadow-lg animate-in fade-in duration-200">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-tiny font-bold text-on-surface-variant">{t("filtering")}</span>
-          </div>
-        )}
-
+      <div className="min-h-[600px] relative transition-opacity duration-300">
         <div className={activeTab === "exercises" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
-          {activeSort === "newest" ? (
-            <Suspense fallback={<SectionSkeleton />}>
-              <ExerciseNewestList promise={promises.assignments} isLoggedIn={isLoggedIn} />
-            </Suspense>
-          ) : (
-            <ExercisePopularList isLoggedIn={isLoggedIn} />
+          {isFiltering ? <SectionSkeleton /> : (
+            activeSort === "newest" ? (
+              <Suspense key={`ex-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
+                <ExerciseNewestList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
+              </Suspense>
+            ) : (
+              <ExercisePopularList isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
+            )
           )}
         </div>
 
         <div className={activeTab === "lessons" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
-          {activeSort === "newest" ? (
-            <Suspense fallback={<SectionSkeleton />}>
-              <LessonNewestList promise={promises.lessons} isLoggedIn={isLoggedIn} />
-            </Suspense>
-          ) : (
-            <LessonPopularList isLoggedIn={isLoggedIn} />
+          {isFiltering ? <SectionSkeleton /> : (
+            activeSort === "newest" ? (
+              <Suspense key={`le-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
+                <LessonNewestList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
+              </Suspense>
+            ) : (
+              <LessonPopularList isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
+            )
           )}
         </div>
       </div>

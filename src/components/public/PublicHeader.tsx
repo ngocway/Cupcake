@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { LoginButton } from "@/components/LoginButton"
-import { LanguageToggle } from "@/components/LanguageToggle"
 import { signOut } from "next-auth/react"
 
 import { usePathname } from "next/navigation"
@@ -13,9 +12,10 @@ interface PublicHeaderProps {
   session: { id: string; name: string | null; image: string | null; role: string | null } | null
   search?: string
   setSearch?: (val: string) => void
+  isPendingSearch?: boolean
 }
 
-export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) {
+export function PublicHeader({ session, search, setSearch, isPendingSearch }: PublicHeaderProps) {
   const t = useTranslations("header")
   const pathname = usePathname()
   
@@ -27,6 +27,17 @@ export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) 
   const [isAtTop, setIsAtTop] = useState(true)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [localSearch, setLocalSearch] = useState(search || "")
+
+  useEffect(() => {
+    setLocalSearch(search || "")
+  }, [search])
+
+  const handleTriggerSearch = () => {
+    if (setSearch && localSearch !== (search || "")) {
+      setSearch(localSearch)
+    }
+  }
 
   useEffect(() => {
     const handleScroll = (e: Event) => {
@@ -84,10 +95,22 @@ export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) 
       <div className="flex items-center gap-6">
         {setSearch && (
           <div className="relative hidden xl:block group">
-            <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-primary/20 group-focus-within:text-primary transition-all duration-500">search</span>
+            {isPendingSearch ? (
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <span 
+                onClick={handleTriggerSearch}
+                className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-primary/20 group-focus-within:text-primary transition-all duration-500 cursor-pointer hover:scale-110 z-10"
+              >
+                search
+              </span>
+            )}
             <input 
-              value={search || ""}
-              onChange={e => setSearch(e.target.value)}
+              value={localSearch}
+              onChange={e => setLocalSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleTriggerSearch()}
               className="bg-primary/5 border-transparent rounded-full py-3.5 pl-14 pr-8 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:bg-white focus:border-primary/20 w-80 transition-all duration-500 outline-none placeholder:text-primary/20" 
               placeholder={t("searchPlaceholder")} 
               type="text" 
@@ -96,7 +119,6 @@ export function PublicHeader({ session, search, setSearch }: PublicHeaderProps) 
         )}
         
         <div className="flex items-center gap-4">
-          <LanguageToggle />
           {session ? (
             <div className="relative" ref={menuRef}>
               <button 

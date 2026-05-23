@@ -20,26 +20,44 @@ export const getCachedCategoryTree = unstable_cache(
 
     return buildTree(null);
   },
-  ["category-tree-flat"],
+  ["category-tree-flat-v2"],
   { revalidate: 3600, tags: ["categories"] }
 );
 
+export async function getCategoryAndDescendantIds(categoryId: string): Promise<string[]> {
+  const allCategories = await prisma.category.findMany({
+    select: { id: true, parentId: true }
+  });
+
+  const ids = [categoryId];
+  const queue = [categoryId];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const children = allCategories.filter(c => c.parentId === current).map(c => c.id);
+    for (const childId of children) {
+      if (!ids.includes(childId)) {
+        ids.push(childId);
+        queue.push(childId);
+      }
+    }
+  }
+
+  return ids;
+}
+
 export const getCachedTags = unstable_cache(
   async () => {
-    const rawTags = await prisma.assignment.findMany({
-      where: { status: "PUBLIC", deletedAt: null, tags: { not: { equals: "" } } },
-      select: { tags: true },
-      take: 200
+    const popularDbTags = await prisma.tag.findMany({
+      where: { isPopular: true },
+      select: { name: true },
+      orderBy: { name: "asc" }
     });
 
-    const allTags = [...new Set(
-      rawTags.flatMap(a => (a.tags || "").split(",").map((t: string) => t.trim()).filter(Boolean))
-    )].sort();
-
-    return allTags;
+    return popularDbTags.map(t => t.name);
   },
   ["public-tags"],
-  { revalidate: 1800, tags: ["assignments", "tags"] }
+  { revalidate: 1800, tags: ["tags"] }
 );
 
 // ─── Shared mapper ────────────────────────────────────────────────────────────
@@ -57,63 +75,83 @@ function mapFeedItem(item: any) {
   };
 }
 
-// ─── EXERCISES (newest) ───────────────────────────────────────────────────────
+// Server-side: newest exercises only — fast first load. Popular is fetched client-side.
+export const getCachedAssignments = async (params: any) => {
+  const { categoryId, search, userType } = params;
 
-/** Server-side: newest exercises only — fast first load. Popular is fetched client-side. */
-export const getCachedAssignments = (params: any) => unstable_cache(
-  async () => {
-    const { categoryId, search, userType } = params;
+  const where: any = { status: "PUBLIC", contentType: "EXERCISE" };
 
-    const where: any = { status: "PUBLIC", contentType: "EXERCISE" };
-    if (categoryId) where.categoryId = categoryId;
-    if (search) where.title = { contains: search, mode: 'insensitive' };
-    if (userType) {
-      where.OR = [
-        { targetAudiences: { has: userType } },
-        { targetAudiences: { equals: [] } }
+  if (categoryId) {
+    const categoryIds = await getCategoryAndDescendantIds(categoryId);
+    where.OR = categoryIds.map(id => ({
+      categoryId: { contains: id }
+    }));
+  }
+  if (search) where.title = { contains: search, mode: 'insensitive' };
+  if (userType) {
+    const defaultOR = [
+      { targetAudiences: { has: userType } },
+      { targetAudiences: { equals: [] } }
+    ];
+    if (where.OR) {
+      // If we already have categoryId filters in where.OR, we combine them
+      where.AND = [
+        { OR: where.OR },
+        { OR: defaultOR }
       ];
+      delete where.OR;
+    } else {
+      where.OR = defaultOR;
     }
+  }
 
-    const items = await prisma.homepageFeed.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 12
-    });
+  const items = await prisma.homepageFeed.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 12
+  });
 
-    return { items: items.map(mapFeedItem), total: items.length };
-  },
-  ["home-assignments-newest-v4", JSON.stringify(params)],
-  { revalidate: 300, tags: ["assignments", "home-feed"] }
-)();
+  return { items: items.map(mapFeedItem), total: items.length };
+};
 
 // ─── LESSONS (newest) ─────────────────────────────────────────────────────────
 
-/** Server-side: newest lessons only — fast first load. Popular is fetched client-side. */
-export const getCachedLessons = (params: any) => unstable_cache(
-  async () => {
-    const { categoryId, search, userType } = params;
+// Server-side: newest lessons only — fast first load. Popular is fetched client-side.
+export const getCachedLessons = async (params: any) => {
+  const { categoryId, search, userType } = params;
 
-    const where: any = { status: "PUBLIC", contentType: "LESSON" };
-    if (categoryId) where.categoryId = categoryId;
-    if (search) where.title = { contains: search, mode: 'insensitive' };
-    if (userType) {
-      where.OR = [
-        { targetAudiences: { has: userType } },
-        { targetAudiences: { equals: [] } }
+  const where: any = { status: "PUBLIC", contentType: "LESSON" };
+  if (categoryId) {
+    const categoryIds = await getCategoryAndDescendantIds(categoryId);
+    where.OR = categoryIds.map(id => ({
+      categoryId: { contains: id }
+    }));
+  }
+  if (search) where.title = { contains: search, mode: 'insensitive' };
+  if (userType) {
+    const defaultOR = [
+      { targetAudiences: { has: userType } },
+      { targetAudiences: { equals: [] } }
+    ];
+    if (where.OR) {
+      where.AND = [
+        { OR: where.OR },
+        { OR: defaultOR }
       ];
+      delete where.OR;
+    } else {
+      where.OR = defaultOR;
     }
+  }
 
-    const items = await prisma.homepageFeed.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: 12
-    });
+  const items = await prisma.homepageFeed.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 12
+  });
 
-    return {
-      items: items.map(item => ({ ...mapFeedItem(item), type: 'VIDEO_LESSON' })),
-      total: items.length
-    };
-  },
-  ["home-lessons-newest-v4", JSON.stringify(params)],
-  { revalidate: 300, tags: ["assignments", "lessons", "home-feed"] }
-)();
+  return {
+    items: items.map(item => ({ ...mapFeedItem(item), type: 'VIDEO_LESSON' })),
+    total: items.length
+  };
+};

@@ -32,7 +32,7 @@ export default async function NotificationCenter() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-20">
+    <div className="min-h-screen bg-transparent pb-20">
       <div className="max-w-4xl mx-auto px-6 py-12">
         
         {/* Header Area */}
@@ -49,18 +49,18 @@ export default async function NotificationCenter() {
             <p className="text-slate-500 font-medium mt-2">Theo dõi và quản lý toàn bộ tương tác từ học sinh của bạn.</p>
           </div>
           
-          <button className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all shadow-sm">
+          <button className="flex items-center gap-2 px-6 py-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm">
              <CheckCircle2 className="w-4 h-4" /> Đọc tất cả
           </button>
         </div>
 
         {/* Filters Bar */}
-        <div className="flex flex-wrap gap-2 mb-8 p-1.5 bg-slate-100 rounded-[24px] w-fit">
-            <button className="px-6 py-2.5 bg-white text-slate-900 font-black text-[10px] uppercase tracking-widest rounded-[18px] shadow-sm">Tất cả</button>
-            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 transition-colors">Chưa đọc</button>
-            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 transition-colors">Bài tập</button>
-            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 transition-colors">Lớp học</button>
-            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 transition-colors">Portfolio</button>
+        <div className="flex flex-wrap gap-2 mb-8 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-[24px] w-fit">
+            <button className="px-6 py-2.5 bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-black text-[10px] uppercase tracking-widest rounded-[18px] shadow-sm">Tất cả</button>
+            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 dark:hover:text-white transition-colors">Chưa đọc</button>
+            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 dark:hover:text-white transition-colors">Bài tập</button>
+            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 dark:hover:text-white transition-colors">Lớp học</button>
+            <button className="px-6 py-2.5 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-[18px] hover:text-slate-900 dark:hover:text-white transition-colors">Portfolio</button>
         </div>
 
         {/* Notifications List */}
@@ -71,8 +71,8 @@ export default async function NotificationCenter() {
                 key={n.id} 
                 className={`group p-6 rounded-[2rem] border transition-all duration-300 flex items-start gap-6 ${
                   !n.isRead 
-                  ? "bg-white border-primary/20 shadow-xl shadow-primary/5 ring-1 ring-primary/5" 
-                  : "bg-white/50 border-slate-100 opacity-80 hover:opacity-100 hover:bg-white"
+                  ? "bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-primary/20 shadow-xl shadow-primary/5 ring-1 ring-primary/5" 
+                  : "bg-white/40 dark:bg-slate-800/40 backdrop-blur-sm border-slate-100 dark:border-slate-700 opacity-80 hover:opacity-100 hover:bg-white/60 dark:hover:bg-slate-800/60"
                 }`}
               >
                 {/* Icon Column */}
@@ -133,11 +133,11 @@ export default async function NotificationCenter() {
               </div>
             ))
           ) : (
-            <div className="py-24 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
-                <div className="size-20 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="py-24 text-center bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-[40px] border border-dashed border-slate-200 dark:border-slate-700">
+                <div className="size-20 bg-slate-50 dark:bg-slate-800 text-slate-200 dark:text-slate-600 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Inbox className="w-10 h-10" />
                 </div>
-                <h3 className="text-xl font-black text-slate-900">Hộp thư trống</h3>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white">Hộp thư trống</h3>
                 <p className="text-slate-400 mt-2">Bạn không có thông báo nào vào lúc này.</p>
             </div>
           )}

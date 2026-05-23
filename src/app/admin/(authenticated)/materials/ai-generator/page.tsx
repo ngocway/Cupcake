@@ -248,7 +248,20 @@ export default function AILessonGeneratorPage() {
                             <span className="text-xl font-bold text-blue-700">{v.word}</span>
                             <span className="text-sm font-mono text-slate-500">{v.pronunciation}</span>
                           </div>
-                          <p className="text-sm font-bold text-slate-800 mb-1">{v.meaningVi}</p>
+                          <div className="grid grid-cols-3 gap-4 mb-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Tiếng Việt</span>
+                              <p className="text-sm font-bold text-slate-850">{v.meaningVi || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Tiếng Thái</span>
+                              <p className="text-sm font-bold text-slate-850">{v.meaningTh || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Tiếng Indo</span>
+                              <p className="text-sm font-bold text-slate-850">{v.meaningId || '—'}</p>
+                            </div>
+                          </div>
                           <p className="text-sm text-slate-600 italic mb-2">"{v.explanationEn}"</p>
                           <div className="pl-4 border-l-2 border-blue-200 space-y-1">
                             {v.examples.map((ex, j) => (

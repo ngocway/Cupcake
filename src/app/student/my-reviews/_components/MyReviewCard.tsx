@@ -71,7 +71,7 @@ export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyRev
   const typeLabel = review.type === "lesson" ? translations.lesson : translations.assignment;
 
   return (
-    <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
+    <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-8 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl transition-all duration-300 group">
       {isEditing ? (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -100,7 +100,7 @@ export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyRev
           </div>
 
           <textarea
-            className="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px]"
+            className="w-full bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-md border-none rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all min-h-[100px] text-slate-900 dark:text-white"
             value={editComment}
             onChange={(e) => setEditComment(e.target.value)}
             placeholder={translations.placeholder}
@@ -109,7 +109,7 @@ export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyRev
           <div className="flex gap-3">
             <button
               onClick={() => setIsEditing(false)}
-              className="flex-1 h-12 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
+              className="flex-1 h-12 bg-slate-100/50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
             >
               {translations.cancel}
             </button>
@@ -134,12 +134,12 @@ export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyRev
 
             <div className="flex items-center gap-2">
               {review.isApproved ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full border border-green-100 text-[10px] font-black uppercase tracking-widest">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50/50 dark:bg-green-900/50 backdrop-blur-md text-green-600 dark:text-green-400 rounded-full border border-green-100 dark:border-green-800 text-[10px] font-black uppercase tracking-widest">
                   <CheckCircle className="w-3 h-3" />
                   {translations.approvedStatus}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full border border-amber-100 text-[10px] font-black uppercase tracking-widest">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50/50 dark:bg-amber-900/50 backdrop-blur-md text-amber-600 dark:text-amber-400 rounded-full border border-amber-100 dark:border-amber-800 text-[10px] font-black uppercase tracking-widest">
                   <Clock className="w-3 h-3" />
                   {translations.pendingStatus}
                 </span>
@@ -188,7 +188,7 @@ export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyRev
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={review.isApproved}
-                className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-primary hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2.5 bg-slate-100/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-primary hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 title={review.isApproved ? translations.cannotEditApproved : translations.editReview}
               >
                 <Edit2 className="w-4 h-4" />
@@ -196,7 +196,7 @@ export function MyReviewCard({ review, onUpdate, onDelete, translations }: MyRev
               <button
                 onClick={handleDelete}
                 disabled={loading}
-                className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
+                className="p-2.5 bg-red-50/50 dark:bg-red-900/50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"
                 title={translations.deleteReview}
               >
                 {loading ? (

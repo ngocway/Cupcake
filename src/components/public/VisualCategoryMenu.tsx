@@ -1,6 +1,7 @@
 "use client"
 import React, { useMemo } from "react";
 import { useContentStore } from "@/store/useContentStore";
+import { useLocale } from "next-intl";
 import { 
   BookOpen, 
   Calculator, 
@@ -12,7 +13,8 @@ import {
 
 interface Category {
   id: string;
-  name: string;
+  nameVi: string;
+  nameEn: string;
   children?: Category[];
 }
 
@@ -21,10 +23,20 @@ interface Props {
 }
 
 export function VisualCategoryMenu({ categoryTree }: Props) {
+  const router = require("next/navigation").useRouter();
+  const searchParams = require("next/navigation").useSearchParams();
+  const [isPending, startTransition] = React.useTransition();
+  const locale = useLocale();
+
   const { 
     selectedCategoryId, setSelectedCategoryId,
-    selectedSubCategoryId, setSelectedSubCategoryId 
+    selectedSubCategoryId, setSelectedSubCategoryId,
+    setFiltering
   } = useContentStore();
+
+  React.useEffect(() => {
+    setFiltering(isPending);
+  }, [isPending, setFiltering]);
 
   const activeCategory = useMemo(() => {
     return categoryTree.find(cat => cat.id === selectedCategoryId);
@@ -39,8 +51,8 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
     { icon: Sparkles, color: "text-amber-900", bg: "bg-amber-100", border: "border-amber-300", iconBg: "bg-amber-200", shadow: "shadow-amber-900/10" },
   ];
 
-  const getStyleByName = (name: string, index: number) => {
-    const n = name.toLowerCase();
+  const getStyleByName = (name: string | undefined | null, index: number) => {
+    const n = (name || "").toLowerCase();
     if (n.includes("anh") || n.includes("english")) return solarpunkStyles[0];
     if (n.includes("toán") || n.includes("math")) return solarpunkStyles[1];
     if (n.includes("global") || n.includes("xã hội")) return solarpunkStyles[2];
@@ -63,7 +75,8 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-6">
         {categoryTree.map((cat, idx) => {
           const isActive = selectedCategoryId === cat.id;
-          const style = getStyleByName(cat.name, idx);
+          const displayName = (locale === "vi" ? (cat.nameVi || cat.nameEn) : (cat.nameEn || cat.nameVi)) || "";
+          const style = getStyleByName(displayName, idx);
           const blobShape = blobShapes[idx % blobShapes.length];
           const Icon = style.icon;
           
@@ -72,13 +85,28 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
               key={cat.id}
               onClick={() => {
                 const updateState = () => {
+                  let newCatId = "";
                   if (isActive) {
                     setSelectedCategoryId("");
                     setSelectedSubCategoryId("");
                   } else {
                     setSelectedCategoryId(cat.id);
                     setSelectedSubCategoryId(""); 
+                    newCatId = cat.id;
                   }
+                  
+                  // Construct URL
+                  const qs = new URLSearchParams(searchParams.toString());
+                  if (newCatId) {
+                    qs.set("categoryId", newCatId);
+                  } else {
+                    qs.delete("categoryId");
+                  }
+                  
+                  setFiltering(true);
+                  startTransition(() => {
+                    router.push(`/?${qs.toString()}`, { scroll: false });
+                  });
                 };
 
                 if (typeof document !== "undefined" && (document as any).startViewTransition) {
@@ -96,14 +124,14 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
               {/* Category Icon 'Nổi' on the edge */}
               <div className={`absolute -top-5 -left-4 rounded-2xl shadow-lg transition-all duration-700 flex items-center justify-center w-14 h-14 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
                 {typeof Icon === "string" ? (
-                  <img src={Icon} alt={cat.name} className="w-10 h-10 object-contain drop-shadow-sm" />
+                  <img src={Icon} alt={displayName} className="w-10 h-10 object-contain drop-shadow-sm" />
                 ) : (
                   <Icon size={36} strokeWidth={2.5} />
                 )}
               </div>
 
               <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 ${isActive ? style.color + " scale-105" : "text-foreground/80"}`}>
-                {cat.name}
+                {displayName}
               </div>
               
               {isActive && (
@@ -128,13 +156,32 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
           >
             {activeCategory?.children?.map((sub, idx) => {
               const isSubActive = selectedSubCategoryId === sub.id;
+              const subDisplayName = (locale === "vi" ? (sub.nameVi || sub.nameEn) : (sub.nameEn || sub.nameVi)) || "";
               const blobShape = blobShapes[(idx + 2) % blobShapes.length]; // Offset to vary shapes
               
               return (
                 <button
                   key={sub.id}
                   onClick={() => {
-                    setSelectedSubCategoryId(isSubActive ? "" : sub.id);
+                    const newSubId = isSubActive ? "" : sub.id;
+                    setSelectedSubCategoryId(newSubId);
+                    
+                    // Update URL: If sub is active, clear it and fall back to parent category.
+                    // Otherwise, set categoryId to the sub-category's id.
+                    const qs = new URLSearchParams(searchParams.toString());
+                    if (newSubId) {
+                      qs.set("categoryId", newSubId);
+                    } else if (activeCategory) {
+                      qs.set("categoryId", activeCategory.id);
+                    } else {
+                      qs.delete("categoryId");
+                    }
+
+                    setFiltering(true);
+                    startTransition(() => {
+                      router.push(`/?${qs.toString()}`, { scroll: false });
+                    });
+
                     // Scroll to content tabs
                     setTimeout(() => {
                       document.getElementById("content-tabs")?.scrollIntoView({ 
@@ -149,7 +196,7 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
                       : "bg-white border-primary/10 text-primary/60 hover:border-primary/40 hover:text-primary"
                   }`}
                 >
-                  {sub.name}
+                  {subDisplayName}
                 </button>
               );
             })}

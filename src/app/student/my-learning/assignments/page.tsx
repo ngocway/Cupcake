@@ -56,7 +56,7 @@ export default async function MyAssignmentsPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 pb-20">
+    <div className="min-h-screen bg-transparent pb-20">
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 pt-10">
         <StudentAssignmentHistory 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getCategoryAndDescendantIds } from '@/lib/cached-queries'
 
 /**
  * GET /api/feed?type=exercises|lessons[&categoryId=...][&search=...]
@@ -18,13 +19,29 @@ export async function GET(req: NextRequest) {
   const contentType = type === 'lessons' ? 'LESSON' : 'EXERCISE'
 
   const where: any = { status: 'PUBLIC', contentType }
-  if (categoryId) where.categoryId = categoryId
+  
+  if (categoryId) {
+    const categoryIds = await getCategoryAndDescendantIds(categoryId)
+    where.OR = categoryIds.map(id => ({
+      categoryId: { contains: id }
+    }))
+  }
+  
   if (search)     where.title = { contains: search, mode: 'insensitive' }
   if (userType) {
-    where.OR = [
+    const defaultOR = [
       { targetAudiences: { has: userType } },
       { targetAudiences: { equals: [] } }
     ]
+    if (where.OR) {
+      where.AND = [
+        { OR: where.OR },
+        { OR: defaultOR }
+      ]
+      delete where.OR
+    } else {
+      where.OR = defaultOR
+    }
   }
 
   const items = await prisma.homepageFeed.findMany({

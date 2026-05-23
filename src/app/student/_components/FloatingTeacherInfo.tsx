@@ -43,6 +43,10 @@ export function FloatingTeacherInfo({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
+  if (!teacher.isPortfolioPublished) {
+    return null;
+  }
+
   return (
     <div className="fixed top-24 left-8 z-[150]">
       {/* Floating Avatar Button */}

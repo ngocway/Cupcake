@@ -1,11 +1,13 @@
+"use client";
 
-"use client"
 import React, { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { FilterLink } from "@/components/public/FilterLink";
+import { useLocale } from "next-intl";
 
 export function SidebarCategoryList({ categories, activeId }: { categories: any[], activeId?: string }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const locale = useLocale();
 
   const toggleExpand = (id: string) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
@@ -15,6 +17,7 @@ export function SidebarCategoryList({ categories, activeId }: { categories: any[
     const isExpanded = expanded[node.id] || activeId === node.id || node.children?.some((c: any) => c.id === activeId);
     const isSelected = activeId === node.id;
     const hasChildren = node.children && node.children.length > 0;
+    const displayName = (locale === "vi" ? (node.nameVi || node.nameEn) : (node.nameEn || node.nameVi)) || "";
 
     return (
       <div key={node.id} className="space-y-1">
@@ -41,7 +44,7 @@ export function SidebarCategoryList({ categories, activeId }: { categories: any[
             href={`/?categoryId=${node.id}`}
             className={`text-sm font-bold flex-1 truncate ${isSelected ? "text-white" : "text-slate-700 dark:text-slate-200"}`}
           >
-            {node.name}
+            {displayName}
           </FilterLink>
         </div>
 
