@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
 import crypto from 'crypto';
 import { MaterialStatus } from '@/generated/client';
+import { after } from 'next/server';
 
 export async function generateMaterialThumbnail(assignment: { title: string; subject: string | null }, questions: any[]) {
   // Analyze content to create a stable seed
@@ -89,6 +90,18 @@ export async function createDraftLesson() {
   });
 
   return newAssignment.id; // Return assignment ID for the editor
+}
+
+function deepEqual(obj1: any, obj2: any): boolean {
+  if (obj1 === obj2) return true;
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 == null || obj2 == null) return false;
+  const keys1 = Object.keys(obj1);
+  const keys2 = Object.keys(obj2);
+  if (keys1.length !== keys2.length) return false;
+  for (const key of keys1) {
+    if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false;
+  }
+  return true;
 }
 
 export async function autoSaveMaterial(payload: { 
@@ -267,8 +280,20 @@ export async function autoSaveMaterial(payload: {
           
           if (currentQ) {
             for (const key of Object.keys(questionData)) {
-              // Deep compare values
-              if (currentQ[key as keyof typeof currentQ] !== questionData[key as keyof typeof questionData]) {
+              let isDifferent = false;
+              if (key === 'content') {
+                try {
+                  const currentContentObj = typeof currentQ.content === 'string' ? JSON.parse(currentQ.content || "{}") : currentQ.content;
+                  const newContentObj = typeof questionData.content === 'string' ? JSON.parse(questionData.content || "{}") : questionData.content;
+                  isDifferent = !deepEqual(currentContentObj, newContentObj);
+                } catch(e) {
+                  isDifferent = currentQ.content !== questionData.content;
+                }
+              } else {
+                isDifferent = currentQ[key as keyof typeof currentQ] !== questionData[key as keyof typeof questionData];
+              }
+              
+              if (isDifferent) {
                 uData[key] = questionData[key as keyof typeof questionData];
                 changed = true;
               }
@@ -310,15 +335,17 @@ export async function autoSaveMaterial(payload: {
     }
 
   // Sync to Homepage Feed (Background execution, non-blocking)
-  syncToHomepageFeed(payload.id, "EXERCISE").catch(err => {
-    console.error("[AutoSave] Background sync feed failed:", err);
-  });
-  
-  if (updatedAssignment.lesson) {
-    syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
-      console.error("[AutoSave] Background sync feed failed for lesson:", err);
+  after(() => {
+    syncToHomepageFeed(payload.id, "EXERCISE").catch(err => {
+      console.error("[AutoSave] Background sync feed failed:", err);
     });
-  }
+    
+    if (updatedAssignment.lesson) {
+      syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
+        console.error("[AutoSave] Background sync feed failed for lesson:", err);
+      });
+    }
+  });
 
   return { success: true, savedAt: new Date() };
 }
@@ -355,15 +382,17 @@ export async function saveMaterialThumbnail(id: string, thumbnail: string | null
   }
 
   // Sync to Homepage Feed (Background execution, non-blocking)
-  syncToHomepageFeed(id, "EXERCISE").catch(err => {
-    console.error("[SaveThumbnail] Background sync feed failed:", err);
-  });
-  
-  if (updatedAssignment.lesson) {
-    syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
-      console.error("[SaveThumbnail] Background sync feed failed for lesson:", err);
+  after(() => {
+    syncToHomepageFeed(id, "EXERCISE").catch(err => {
+      console.error("[SaveThumbnail] Background sync feed failed:", err);
     });
-  }
+    
+    if (updatedAssignment.lesson) {
+      syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
+        console.error("[SaveThumbnail] Background sync feed failed for lesson:", err);
+      });
+    }
+  });
 
   revalidatePath('/teacher/lessons');
   revalidatePath('/teacher/materials');

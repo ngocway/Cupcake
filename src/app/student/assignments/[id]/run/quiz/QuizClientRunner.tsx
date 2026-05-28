@@ -33,6 +33,7 @@ import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
+import KidTeenQuizRunner from "./KidTeenQuizRunner";
 import Link from "next/link";
 import { completeSubmission } from "@/actions/submission-actions";
 import { useTranslations } from "next-intl";
@@ -184,7 +185,8 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
     return [...questionData.pairs]
       .map(p => p.rightText)
       .sort(() => (seed.length % 2 === 0 ? 1 : -1) * 0.5 - Math.random());
-  }, [q.id, questionData.pairs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.id, JSON.stringify(questionData.pairs)]);
 
   const getDotCoords = (id: string, side: 'left' | 'right') => {
     const el = document.getElementById(`dot-${side}-${q.id}-${id}`);
@@ -201,18 +203,32 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
     <div className="space-y-6 select-none">
       <div 
         ref={containerRef}
-        className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-6 relative p-4"
-        onMouseMove={(e) => {
+        className="grid grid-cols-2 gap-x-8 md:gap-x-16 gap-y-4 relative p-2 md:p-4"
+        style={{ touchAction: "none" }}
+        onPointerMove={(e) => {
           if (!dragging || !containerRef.current) return;
           const rect = containerRef.current.getBoundingClientRect();
-          setDragging({
-            ...dragging,
-            x2: e.clientX - rect.left,
-            y2: e.clientY - rect.top
-          });
+          setDragging({ ...dragging, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
         }}
-        onMouseUp={() => setDragging(null)}
-        onMouseLeave={() => setDragging(null)}
+        onPointerUp={(e) => {
+          if (dragging) {
+            const target = document.elementFromPoint(e.clientX, e.clientY);
+            const dot = target?.closest('[id^="dot-"]');
+            if (dot) {
+              const id = dot.id;
+              if (dragging.fromSide === 'left' && id.includes('dot-right-')) {
+                const idx = parseInt(id.split('-').pop()!);
+                if (!isNaN(idx) && shuffledRightItems[idx] !== undefined)
+                  handleAnswerChange(q, { leftId: dragging.fromId, rightText: shuffledRightItems[idx] });
+              } else if (dragging.fromSide === 'right' && id.includes('dot-left-')) {
+                const pairId = id.replace(`dot-left-${q.id}-`, '');
+                handleAnswerChange(q, { leftId: pairId, rightText: shuffledRightItems[parseInt(dragging.fromId)] });
+              }
+            }
+          }
+          setDragging(null);
+        }}
+        onPointerCancel={() => setDragging(null)}
       >
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ minHeight: '300px' }}>
           {Object.entries(userAnswer || {}).map(([leftId, rightText], idx) => {
@@ -229,12 +245,12 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
             return (
               <g key={`student-${leftId}`} onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, isCorrect, content: isCorrect ? t('correct') : t('incorrect') })} onMouseLeave={() => setHoveredLine(null)}>
                 <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="15" className="cursor-help pointer-events-auto" />
-                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isCorrect ? "4" : "2"} strokeDasharray={isChecked && !isCorrect ? "6,4" : "0"} className="transition-all duration-500 pointer-events-none" />
+                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isChecked ? (isCorrect ? "5" : "3") : "3"} strokeDasharray={isChecked && !isCorrect ? "6,4" : "none"} opacity={isChecked && isCorrect ? "1" : "0.9"} className="transition-all duration-500 pointer-events-none" />
                 {isChecked && !isCorrect && (() => {
                   const correctIdx = shuffledRightItems.indexOf(pair.rightText);
                   if (correctIdx === -1) return null;
                   const correctCoords = getDotCoords(correctIdx.toString(), 'right');
-                  return <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="#CBD5E1" strokeWidth="2" strokeDasharray="2,4" className="opacity-60 pointer-events-none" />;
+                  return <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="#10B981" strokeWidth="3" strokeDasharray="6,4" opacity="0.7" className="pointer-events-none" />;
                 })()}
               </g>
             );
@@ -249,55 +265,93 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
             </div>
           </div>
         )}
-        <div className="space-y-4 z-20">
-          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">{t("matchingLeftColumn")}</span>
+        <div className="space-y-3 z-20">
+
           {(questionData.pairs || []).map((pair: any, idx: number) => {
             const pairedRightText = userAnswer?.[pair.id];
+            const leftIsImage = !!(pair.leftImageUrl || pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/'));
             return (
-              <div key={pair.id || idx} className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
-                <div className="flex items-center gap-4">
-                   <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-xs font-black shrink-0">{String.fromCharCode(65 + idx)}</div>
-                   {pair.leftImageUrl || (pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/')) ? <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{pair.leftText}</span>}
-                </div>
-                <div id={`dot-left-${q.id}-${pair.id}`} onMouseDown={(e) => {
-                  if (isChecked) return;
-                  const coords = getDotCoords(pair.id, 'left');
-                  setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
-                }} onMouseUp={() => {
-                  if (dragging && dragging.fromSide === 'right') {
-                    handleAnswerChange(q, { leftId: pair.id, rightText: shuffledRightItems[parseInt(dragging.fromId)] });
-                    setDragging(null);
-                  }
-                }} className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+              <div key={pair.id || idx} className="relative transition-all" style={leftIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
+                {leftIsImage ? (
+                  <div
+                    className="relative"
+                    style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
+                  >
+                    <img src={pair.leftImageUrl || pair.leftText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
+                    <div id={`dot-left-${q.id}-${pair.id}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const coords = getDotCoords(pair.id, 'left');
+                        setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                      }}
+                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                  </div>
+                ) : (
+                  <div className={`relative flex items-center justify-between p-5 rounded-2xl border-2 ${pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
+                    <span className="font-bold text-on-surface">{pair.leftText}</span>
+                    <div id={`dot-left-${q.id}-${pair.id}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const coords = getDotCoords(pair.id, 'left');
+                        setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                      }}
+                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-        <div className="space-y-4 z-20">
-          <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest block mb-2 px-2">{t("matchingRightColumn")}</span>
+        <div className="space-y-3 z-20">
+
           {shuffledRightItems.map((rightText: string, idx: number) => {
             const pairedLeftId = Object.keys(userAnswer || {}).find(k => userAnswer[k] === rightText);
             const isPairCorrect = isChecked && pairedLeftId && (questionData.pairs.find((p:any) => p.id === pairedLeftId)?.rightText === rightText);
+            const rightIsImage = !!(rightText?.startsWith('http') || rightText?.startsWith('/'));
             return (
-              <div key={idx} className={`group relative p-5 rounded-2xl border-2 transition-all flex items-center gap-4 ${pairedLeftId ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
-                <div id={`dot-right-${q.id}-${idx}`} onMouseUp={() => {
-                  if (dragging && dragging.fromSide === 'left') {
-                    handleAnswerChange(q, { leftId: dragging.fromId, rightText });
-                    setDragging(null);
-                  }
-                }} onMouseDown={(e) => {
-                  if (isChecked) return;
-                  const rect = containerRef.current!.getBoundingClientRect();
-                  if (pairedLeftId) {
-                    const coords = getDotCoords(pairedLeftId, 'left');
-                    setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
-                  } else {
-                    const coords = getDotCoords(idx.toString(), 'right');
-                    setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
-                  }
-                }} className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
-                {rightText?.startsWith('http') || rightText?.startsWith('/') ? <img src={rightText} alt="" className="h-16 w-16 object-cover rounded-lg border border-outline-variant" /> : <span className="font-bold text-on-surface">{rightText}</span>}
-                {isChecked && pairedLeftId && <div className="ml-auto">{isPairCorrect ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}</div>}
+              <div key={idx} className="relative transition-all" style={rightIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
+                {rightIsImage ? (
+                  <div
+                    className="relative"
+                    style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
+                  >
+                    <div id={`dot-right-${q.id}-${idx}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const rect = containerRef.current!.getBoundingClientRect();
+                        if (pairedLeftId) {
+                          const coords = getDotCoords(pairedLeftId, 'left');
+                          setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                        } else {
+                          const coords = getDotCoords(idx.toString(), 'right');
+                          setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                        }
+                      }}
+                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                    <img src={rightText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
+                    {isChecked && pairedLeftId && (
+                      <div className="absolute top-2 right-2">{isPairCorrect ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 ${pairedLeftId ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
+                    <div id={`dot-right-${q.id}-${idx}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const rect = containerRef.current!.getBoundingClientRect();
+                        if (pairedLeftId) {
+                          const coords = getDotCoords(pairedLeftId, 'left');
+                          setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                        } else {
+                          const coords = getDotCoords(idx.toString(), 'right');
+                          setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                        }
+                      }}
+                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                    <span className="font-bold text-on-surface">{rightText}</span>
+                    {isChecked && pairedLeftId && <div className="ml-auto">{isPairCorrect ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}</div>}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -344,6 +398,19 @@ export default function QuizClientRunner({
   isGuest = false
 }: Props) {
   const t = useTranslations("student.quiz");
+
+  // ── Kid/Teen mode detection ──────────────────────────────
+  // Applies ONLY to assignments not linked to any lesson (assignment.lesson === null)
+  // AND targeting KID or TEEN audiences.
+  const isKidTeenMode = useMemo(() => {
+    const audiences: string[] = assignment.targetAudiences || [];
+    const isKidOrTeen = audiences.includes("kids") || audiences.includes("teens");
+    // assignment.lesson is null when no Lesson links to this assignment (Lesson.assignmentId relation)
+    const hasNoLesson = assignment.lesson == null;
+    return isKidOrTeen && hasNoLesson;
+  }, [assignment.targetAudiences, assignment.lesson]);
+
+  // ────────────────────────────────────────────────────────
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState(initialAnswers);
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
@@ -614,8 +681,6 @@ export default function QuizClientRunner({
         setExpandedExplanations(prev => ({ ...prev, [q.id]: true }));
       }
     }
-    
-    toast.success(t("checkAllSuccess"));
   };
 
   const handleReset = () => {
@@ -643,8 +708,25 @@ export default function QuizClientRunner({
     });
   };
 
+  // ── Kid/Teen mode: delegate AFTER all hooks are called ────────────────────
+  if (isKidTeenMode) {
+    return (
+      <KidTeenQuizRunner
+        assignment={assignment}
+        submissionId={submissionId}
+        questions={questions}
+        initialAnswers={initialAnswers}
+        isBookmarked={isBookmarked}
+        initialReview={initialReview}
+        allReviews={allReviews}
+        relatedAssignments={relatedAssignments}
+        isGuest={isGuest}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 p-4 lg:p-6 font-body">
+    <div className="flex flex-col min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 p-3 lg:p-6 font-body">
       {/* Floating Teacher Info */}
       <FloatingTeacherInfo 
         teacher={assignment.teacher} 
@@ -654,9 +736,9 @@ export default function QuizClientRunner({
       {/* Header removed as per user request */}
 
       {/* Integrated Workspace */}
-      <div className="flex flex-1 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-primary/5 rounded-[3.5rem] shadow-2xl shadow-primary/5">
-        {/* Middle Column: Questions (70%) */}
-        <div className="w-[70%] shrink-0 flex flex-col border-r border-outline-variant/20 relative">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-primary/5 rounded-[2.5rem] lg:rounded-[3.5rem] shadow-2xl shadow-primary/5">
+        {/* Middle Column: Questions (100% mobile, 70% desktop) */}
+        <div className="w-full lg:w-[70%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-outline-variant/20 relative">
            {/* Progress Navigation Header (Sticky) */}
            <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/10 flex items-center px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-6">
               <div className="shrink-0">
@@ -718,7 +800,7 @@ export default function QuizClientRunner({
               </div>
            </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar p-8 lg:p-12 pl-12 lg:pl-20 space-y-24 scroll-smooth">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 lg:p-12 lg:pl-20 space-y-24 scroll-smooth">
             {/* All Questions Rendered */}
             {questions.map((q, idx) => {
               let questionData: any;
@@ -974,17 +1056,32 @@ export default function QuizClientRunner({
                           </div>
                         </div>
                       )}
+                  {/* Next Question Button - mobile only */}
+                  {idx < questions.length - 1 && (
+                    <div className="md:hidden flex justify-center pt-4">
+                      <button
+                        onClick={() => {
+                          const nextEl = document.getElementById(questions[idx + 1].id);
+                          nextEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }}
+                        className="flex flex-col items-center gap-0.5 text-primary font-black text-sm uppercase tracking-widest active:opacity-70 transition-opacity"
+                      >
+                        Next
+                        <ChevronDown className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
                   </div>
                 </div>
               )
             })}
             {/* Bottom Actions */}
-            <div className="pt-20 pb-40 flex flex-col items-center gap-8">
-                <div className="flex items-center gap-6">
+            <div className="pt-8 md:pt-20 pb-24 md:pb-40 flex flex-col items-center gap-4">
+                <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 w-full px-4 md:px-0 md:w-auto">
                   {isAllChecked ? (
                     <button
                       onClick={handleReset}
-                      className="flex items-center gap-3 px-10 py-4 bg-orange-500 text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-500/20 uppercase italic"
+                      className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3 md:px-10 md:py-4 bg-orange-500 text-white rounded-[2rem] font-black text-base md:text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-orange-500/20 uppercase italic"
                     >
                       {t("resetAll")}
                       <RotateCcw className="w-5 h-5 stroke-[2px]" />
@@ -992,25 +1089,23 @@ export default function QuizClientRunner({
                   ) : (
                     <button
                       onClick={handleCheckAll}
-                      className="flex items-center gap-3 px-10 py-4 bg-secondary text-white rounded-[2rem] font-black text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-secondary/20 uppercase italic"
+                      className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3 md:px-10 md:py-4 bg-secondary text-white rounded-[2rem] font-black text-base md:text-lg tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-secondary/20 uppercase italic"
                     >
                       {t("checkAll")}
                       <CheckCircle className="w-5 h-5 stroke-[2px]" />
                     </button>
                   )}
                   
-                  <div className="relative">
-                    <button 
-                        disabled
-                        className="flex items-center gap-3 px-10 py-4 bg-primary/20 text-primary/40 cursor-not-allowed rounded-[2rem] font-black text-lg tracking-widest transition-all uppercase italic border-2 border-primary/10"
-                    >
-                        {t("submit")}
-                        <Send className="w-5 h-5" />
-                    </button>
-                    <div className="absolute -top-3 -right-3 bg-amber-500 text-white text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded-full shadow-lg border-2 border-white transform rotate-12">
-                      {t("comingSoon")}
-                    </div>
-                  </div>
+                  <button 
+                      disabled
+                      className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3 md:px-10 md:py-4 bg-primary/20 text-primary/40 cursor-not-allowed rounded-[2rem] font-black text-base md:text-lg tracking-widest transition-all uppercase italic border-2 border-primary/10"
+                  >
+                      {t("submit")}
+                      <Send className="w-5 h-5" />
+                      <span className="bg-amber-500 text-white text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full">
+                        {t("comingSoon")}
+                      </span>
+                  </button>
                 </div>
             </div>
           </div>
@@ -1018,8 +1113,8 @@ export default function QuizClientRunner({
           {/* Footer removed/collapsed into main scroll area or bottom bar */}
         </div>
 
-        {/* Right Column: Material / Reading Content & Reviews (30%) */}
-        <div className="w-[30%] shrink-0 flex flex-col bg-white/40 dark:bg-slate-800/40">
+        {/* Right Column: Material / Reading Content & Reviews (100% mobile, 30% desktop) */}
+        <div className="w-full lg:w-[30%] shrink-0 flex flex-col bg-white/40 dark:bg-slate-800/40">
            <div className="h-12 border-b border-outline-variant/10 flex items-center justify-start px-6 bg-transparent shrink-0">
               <div className="flex items-center gap-4">
                  {!isGuest && (

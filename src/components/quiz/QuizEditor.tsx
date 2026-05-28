@@ -18,6 +18,7 @@ import { InstructionsModal } from './InstructionsModal';
 import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
 import CategorySelect from '@/components/shared/CategorySelect';
 import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
+import { TagAutocompleteInput } from './TagAutocompleteInput';
 
 import {
   DndContext,
@@ -1420,37 +1421,19 @@ export function QuizEditor() {
                     ))}
                  </div>
 
-                 <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-[24px] border border-slate-100 relative pr-12">
-                    <input 
-                      value={newTagInput}
-                      onChange={(e) => setNewTagInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = newTagInput.trim();
-                          if (val && !tags.includes(val)) {
-                            setTags([...tags, val]);
-                            setNewTagInput('');
-                          }
-                        }
-                      }}
-                      placeholder="Nhập thẻ riêng và nhấn Enter..."
-                      className="bg-transparent border-none outline-none text-sm flex-1 px-4 py-2 font-medium"
-                    />
-                    <div className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Custom</div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = newTagInput.trim();
-                        if (val && !tags.includes(val)) {
-                          setTags([...tags, val]);
-                          setNewTagInput('');
-                        }
-                      }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors flex items-center justify-center p-1 rounded-full hover:bg-slate-100"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">add</span>
-                    </button>
+                 <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-[24px] border border-slate-100 relative w-full">
+                    <div className="w-full flex-1">
+                      <TagAutocompleteInput 
+                         onAddTag={(tagName) => {
+                            if (!tags.includes(tagName)) {
+                               setTags([...tags, tagName]);
+                            }
+                         }}
+                         placeholder="Nhập thẻ riêng và nhấn Enter..."
+                         className="flex-1"
+                      />
+                    </div>
+                    <div className="px-3 py-1 bg-slate-200 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2 shrink-0">Custom</div>
                  </div>
 
                  {/* Sortable tags preview list containing ALL active tags */}

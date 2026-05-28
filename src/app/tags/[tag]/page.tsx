@@ -92,27 +92,7 @@ export default async function TagPage({
 
   return (
     <HomeShell>
-      <div className="w-full pt-28 pb-20 px-6 md:px-10 max-w-[1600px] mx-auto min-h-screen">
-        {/* Header Hero Section */}
-        <div className="relative mb-12 p-8 md:p-12 rounded-[2.5rem] overflow-hidden bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-primary/10 shadow-2xl shadow-primary/5 text-center">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/5 rounded-full blur-3xl pointer-events-none translate-y-1/2 -translate-x-1/3" />
-
-          <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
-            <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 border border-primary/20">
-              <span className="material-symbols-outlined !text-[14px]">tag</span>
-              Explore Topic
-            </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight lowercase italic">
-              #{tag}
-            </h1>
-            <p className="text-sm md:text-base font-semibold text-slate-500 dark:text-slate-400">
-              Found <span className="text-primary font-black">{mappedLessons.length}</span> lessons and{" "}
-              <span className="text-secondary font-black">{assignments.length}</span> assignments related to this topic.
-            </p>
-          </div>
-        </div>
-
+      <div className="w-full pt-40 pb-20 px-6 md:px-10 max-w-[1600px] mx-auto min-h-screen">
         {/* Tab contents (Client Component for interactive switcher) */}
         <TagTabsClient 
           initialLessons={mappedLessons} 

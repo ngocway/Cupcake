@@ -7,6 +7,7 @@ import { syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassig
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
 import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 type Assignment = {
   id: string;
@@ -51,6 +52,13 @@ export function AssignmentCard({ assignment }: { assignment: Assignment }) {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/public/assignments/${assignment.id}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Đã sao chép đường dẫn bài tập');
+    setIsMenuOpen(false);
+  };
 
   const handleSyncClasses = async (data: any) => {
     try {
@@ -191,6 +199,12 @@ export function AssignmentCard({ assignment }: { assignment: Assignment }) {
                 >
                   <span className="material-symbols-outlined text-[18px]">visibility</span> Xem trước
                 </Link>
+                <button 
+                  onClick={handleShare}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">link</span> Chia sẻ
+                </button>
                 <button 
                   onClick={() => {
                     duplicateMaterial(assignment.id).then(newId => router.push(`/teacher/materials/${newId}/edit`));

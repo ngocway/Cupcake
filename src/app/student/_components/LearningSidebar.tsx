@@ -57,7 +57,7 @@ export function LearningSidebar({
                </div>
             </div>
 
-            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed max-w-[280px]">
+            <p className="text-lg font-medium text-slate-600 dark:text-slate-300 leading-loose max-w-[280px]">
                {teacher.bio || t("defaultBio")}
             </p>
 
@@ -95,7 +95,7 @@ export function LearningSidebar({
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                    </div>
                    <div className="flex-1 overflow-hidden">
-                      <h5 className="text-xs font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                      <h5 className="text-lg font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
                         {item.title}
                       </h5>
                    </div>

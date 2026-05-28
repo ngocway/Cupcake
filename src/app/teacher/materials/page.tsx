@@ -21,6 +21,7 @@ type Assignment = {
   viewCount: number;
   publicSubmissionCount: number;
   tags: string[];
+  targetAudiences?: string[];
   createdAt: string;
   classes?: any[];
 };

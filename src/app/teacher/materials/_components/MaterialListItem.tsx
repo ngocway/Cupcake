@@ -12,8 +12,9 @@ import {
   Check, Edit2, FileEdit, Lock, Globe, MoreHorizontal, Eye, Copy, 
   GraduationCap, Edit, LineChart, Trash2, HelpCircle, 
   CheckCircle, List, Users, PlayCircle, Calendar, Clock, 
-  PlusCircle, RefreshCw, Send, X
+  PlusCircle, RefreshCw, Send, X, Link2
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 type Assignment = {
   id: string;
@@ -37,6 +38,7 @@ type Assignment = {
   }[];
   createdAt: string;
   lessonId?: string;
+  targetAudiences?: string[];
 };
 
 const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: any; className: string }> = {
@@ -51,6 +53,13 @@ const SUBJECT_CONFIG: Record<string, string> = {
   'Ngữ Văn': 'bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
   'Khoa học': 'bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
   'Lịch sử': 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+};
+
+const AUDIENCE_CONFIG: Record<string, { label: string; className: string }> = {
+  kids:     { label: 'Kid',      className: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
+  teens:    { label: 'Teen',     className: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' },
+  adults:   { label: 'Adult',    className: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+  business: { label: 'Business', className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
 };
 
 export function MaterialListItem({ 
@@ -82,17 +91,40 @@ export function MaterialListItem({
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const menuDropdownRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
-  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; left: number }>({ top: 0, left: 0 });
 
   const updateMenuPos = useCallback(() => {
     if (menuBtnRef.current) {
       const rect = menuBtnRef.current.getBoundingClientRect();
-      setMenuPos({
-        top: rect.bottom + 8,
-        left: rect.right - 192, // w-48 = 12rem = 192px, align right edge
-      });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const menuHeight = 350; // Ước lượng chiều cao menu
+
+      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        // Mở ngược lên trên
+        setMenuPos({
+          bottom: window.innerHeight - rect.top + 8,
+          left: rect.right - 192,
+        });
+      } else {
+        // Mở xuống dưới
+        setMenuPos({
+          top: rect.bottom + 8,
+          left: rect.right - 192,
+        });
+      }
     }
   }, []);
+
+  const handleShare = () => {
+    const path = assignment.lessonId 
+      ? `/public/lessons/${assignment.lessonId}` 
+      : `/public/assignments/${assignment.id}`;
+    const url = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(url);
+    toast.success(assignment.lessonId ? 'Đã sao chép đường dẫn bài học' : 'Đã sao chép đường dẫn bài tập');
+    setIsMenuOpen(false);
+  };
 
   const handleRestore = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -301,324 +333,338 @@ export function MaterialListItem({
           </button>
         </div>
         
-        <div className="flex gap-4 p-5">
-          <div 
-            onClick={(e) => { e.stopPropagation(); handleEdit(); }}
-            className="size-24 rounded-xl bg-slate-100/50 dark:bg-slate-700/50 overflow-hidden flex-shrink-0 cursor-pointer border border-slate-100 dark:border-slate-600 relative group/thumb"
-          >
-            <img 
-              src={assignment.thumbnail || `https://api.dicebear.com/7.x/identicon/svg?seed=${assignment.id}&backgroundColor=f0f2f4`} 
-              alt={assignment.title}
-              className="size-full object-cover group-hover/thumb:scale-110 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all">
-              <Edit2 className="text-white w-6 h-6 stroke-[2px]" />
-            </div>
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 
-                onClick={(e) => { e.stopPropagation(); handleEdit(); }}
-                className="font-bold text-lg text-[#111418] dark:text-white truncate group-hover:text-primary transition-colors cursor-pointer"
-              >
-                {assignment.title}
-              </h3>
-              <span className={`${status.className} text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 uppercase flex items-center gap-1`}>
-                <status.icon className="w-3 h-3" />
-                {status.label}
-              </span>
-            </div>
-            <div className="flex items-center flex-wrap gap-2">
-              {/* Subject and Grade Level hidden to simplify UI */}
-              {Array.isArray(assignment.tags) && assignment.tags.slice(0, 3).map(tag => (
-                <span key={tag} className="px-2 py-0.5 bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 text-[10px] font-bold rounded-md border border-yellow-100 dark:border-yellow-800/30">
-                   #{tag}
-                </span>
-              ))}
-            </div>
-            {assignment.tags?.length > 3 && (
-              <span className="text-[10px] text-slate-400 font-bold mt-1 px-1">+{assignment.tags.length - 3} thẻ khác</span>
-            )}
-          </div>
-          {!isTrash && (
-            <div className="relative group/menu shrink-0" ref={menuRef}>
-            <button 
-              ref={menuBtnRef}
-              onClick={(e) => { e.stopPropagation(); updateMenuPos(); setIsMenuOpen(!isMenuOpen); }}
-              className="size-8 flex items-center justify-center rounded-lg hover:bg-[#f0f2f4] dark:hover:bg-gray-700 transition-colors text-[#617589]"
+        <div className="p-4 flex flex-col h-full">
+          <div className="flex gap-4">
+            <div 
+              onClick={(e) => { e.stopPropagation(); handleEdit(); }}
+              className="w-[120px] h-[90px] rounded-xl bg-slate-100/50 dark:bg-slate-700/50 overflow-hidden flex-shrink-0 cursor-pointer border border-slate-200/60 dark:border-slate-700 relative group/thumb"
             >
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
-            {isMenuOpen && typeof document !== 'undefined' && createPortal(
-              <div 
-                ref={menuDropdownRef}
-                className="fixed w-48 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl shadow-xl border border-[#f0f2f4] dark:border-slate-600 py-1 z-[9999] animate-in fade-in zoom-in-95 duration-100 overflow-y-auto max-h-[80vh]"
-                style={{ top: menuPos.top, left: menuPos.left }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="px-4 py-2 border-b border-[#f0f2f4] dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50">
-                  <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Trạng thái</span>
-                </div>
-                <button 
-                  onClick={(e) => handleStatusChange('DRAFT', e)}
-                  disabled={assignment.assignedCount > 0}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between gap-2 ${
-                    assignment.status === 'DRAFT' 
-                      ? 'text-primary font-bold' 
-                      : (assignment.assignedCount > 0 ? 'text-slate-300 cursor-not-allowed opacity-50' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600')
-                  }`}
-                  title={assignment.assignedCount > 0 ? "Không thể chuyển về Bản nháp khi bài tập đang được giao" : ""}
-                >
-                  <span className="flex items-center gap-2">
-                    <FileEdit className="w-[18px] h-[18px]" /> Bản nháp
-                  </span>
-                  {assignment.assignedCount > 0 && <Lock className="w-[14px] h-[14px]" />}
-                </button>
-                <button 
-                  onClick={(e) => handleStatusChange('PRIVATE', e)}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PRIVATE' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
-                >
-                  <Lock className="w-[18px] h-[18px]" /> Riêng tư
-                </button>
-                <button 
-                  onClick={(e) => handleStatusChange('PUBLIC', e)}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PUBLIC' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
-                >
-                  <Globe className="w-[18px] h-[18px]" /> Công khai
-                </button>
-                
-                <div className="h-[1px] bg-[#f0f2f4] dark:bg-gray-600 my-1"></div>
-                
-                <div className="px-4 py-1.5 bg-slate-50/30 dark:bg-gray-800/30">
-                  <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Thao tác</span>
-                </div>
-                <Link 
-                  href={assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run`}
-                  target="_blank"
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
-                >
-                  <Eye className="w-[18px] h-[18px]" /> Xem trước
-                </Link>
-                <button 
-                  onClick={handleDuplicate}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
-                >
-                  <Copy className="w-[18px] h-[18px]" /> Nhân bản
-                </button>
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    const url = assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run?direct=true`;
-                    router.push(url); 
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2 text-indigo-600 font-semibold"
-                >
-                  <GraduationCap className="w-[18px] h-[18px]" /> Học ngay
-                </button>
-                <button 
-                  onClick={handleEdit}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
-                >
-                  <Edit className="w-[18px] h-[18px]" /> Chỉnh sửa
-                </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowAnalyticsModal(true);
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
-                >
-                  <LineChart className="w-[18px] h-[18px]" /> Thống kê
-                </button>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeleteModal(true);
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                >
-                  <Trash2 className="w-[18px] h-[18px]" /> Xóa
-                </button>
-              </div>,
-              document.body
-            )}
-          </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-[#f0f2f4] dark:border-gray-700/50">
-          <div className="flex items-center gap-3 text-sm text-[#617589]">
-            <div className="flex items-center gap-1" title="Số câu hỏi">
-              <HelpCircle className="w-[18px] h-[18px]" /> {assignment.questionCount}
+              <img 
+                src={assignment.thumbnail || `https://api.dicebear.com/7.x/identicon/svg?seed=${assignment.id}&backgroundColor=f0f2f4`} 
+                alt={assignment.title}
+                className="w-full h-full object-cover group-hover/thumb:scale-110 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/20 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-all">
+                <Edit2 className="text-white w-5 h-5 stroke-[2px]" />
+              </div>
             </div>
 
-            <div className="w-[1px] h-3 bg-slate-200 dark:bg-gray-700 mx-1"></div>
-
-            <div className="flex items-center gap-1" title="Lượt xem công khai">
-              <Eye className="w-[18px] h-[18px]" /> {assignment.viewCount || 0}
-            </div>
-
-            <div className="flex items-center gap-1" title="Lượt làm bài công khai">
-              <CheckCircle className="w-[18px] h-[18px]" /> {assignment.publicSubmissionCount || 0}
-            </div>
-            
-            <div className="w-[1px] h-3 bg-slate-200 dark:bg-gray-700 mx-1"></div>
-            {assignment.assignedCount > 0 && (
-              <div className="relative">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowClassesPopup(!showClassesPopup);
-                  }}
-                  className="flex items-center gap-1 text-primary font-semibold hover:bg-primary/5 px-1.5 py-0.5 rounded transition-colors group/popup text-[13px]"
-                >
-                  <List className="w-4 h-4 group-hover/popup:animate-pulse" /> 
-                  <span>{assignment.assignedCount} lớp</span>
-                </button>
-
-                {showClassesPopup && (
-                  <div 
-                    ref={popupRef}
-                    className="absolute bottom-full left-0 mb-4 w-[400px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300"
-                    onClick={(e) => e.stopPropagation()}
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={`${status.className} text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 uppercase tracking-wider flex items-center gap-1`}>
+                      <status.icon className="w-2.5 h-2.5" />
+                      {status.label}
+                    </span>
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400">
+                      <span className="flex items-center gap-1" title="Số câu hỏi"><HelpCircle className="w-3 h-3" />{assignment.questionCount}</span>
+                      <span className="flex items-center gap-1" title="Lượt xem"><Eye className="w-3 h-3" />{assignment.viewCount || 0}</span>
+                      <span className="flex items-center gap-1" title="Lượt làm bài"><CheckCircle className="w-3 h-3" />{assignment.publicSubmissionCount || 0}</span>
+                    </div>
+                  </div>
+                  <h3 
+                    onClick={(e) => { e.stopPropagation(); handleEdit(); }}
+                    className="font-extrabold text-base text-[#111418] dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors cursor-pointer"
+                    title={assignment.title}
                   >
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-700">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-primary/10 text-primary p-2 rounded-lg">
-                          <CheckCircle className="w-6 h-6" />
-                        </div>
-                        <h2 className="text-lg font-bold text-slate-800 dark:text-gray-100">Quản lý giao bài</h2>
-                      </div>
-                      <button 
-                        onClick={() => setShowClassesPopup(false)}
-                        className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 transition-colors p-1"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                    {assignment.title}
+                  </h3>
+                  {/* Audience badges */}
+                  {assignment.targetAudiences && assignment.targetAudiences.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {assignment.targetAudiences.map(aud => {
+                        const cfg = AUDIENCE_CONFIG[aud];
+                        if (!cfg) return null;
+                        return (
+                          <span key={aud} className={`${cfg.className} text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider`}>
+                            {cfg.label}
+                          </span>
+                        );
+                      })}
                     </div>
-
-                    {/* Content List */}
-                    <div className="p-2 max-h-[350px] overflow-y-auto custom-scrollbar">
-                      {assignment.classes?.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400">
-                          Chưa có lớp học nào được giao bài tập này.
-                        </div>
-                      ) : (
-                        assignment.classes?.map((cls, idx) => (
-                          <React.Fragment key={cls.id}>
-                            <div className="group flex items-center justify-between p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-gray-600">
-                              <div className="flex items-center gap-4">
-                                <div className="size-11 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-sky-600 dark:text-sky-400">
-                                  <Users className="w-6 h-6 stroke-[2.5px]" />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-[15px] font-bold text-slate-900 dark:text-gray-100 leading-tight">{cls.name}</span>
-                                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5 min-h-[16px]">
-                                    {cls.startDate && (
-                                      <div className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-bold">
-                                        <PlayCircle className="w-[14px] h-[14px]" />
-                                        Bắt đầu: {new Date(cls.startDate).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}
-                                      </div>
-                                    )}
-                                    <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-gray-400">
-                                      <Calendar className="w-[14px] h-[14px]" />
-                                      Giao: {cls.assignedAt ? new Date(cls.assignedAt).toLocaleDateString('vi-VN') : '---'}
-                                    </div>
-                                    <div className="flex items-center gap-1 text-[11px] font-medium text-red-500">
-                                      <Clock className="w-[14px] h-[14px]" />
-                                      Hạn: {cls.dueDate ? new Date(cls.dueDate).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : 'Không có'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              <button 
-                                onClick={() => handleUnassign(cls.id)}
-                                className="px-3 py-1.5 border border-red-200 dark:border-red-900/30 text-red-500 text-[12px] font-bold rounded-lg hover:bg-red-500 hover:text-white dark:hover:bg-red-600 transition-all"
-                              >
-                                Hủy giao
-                              </button>
-                            </div>
-                            {idx < (assignment.classes?.length || 0) - 1 && (
-                              <div className="mx-4 border-b border-slate-50 dark:border-gray-700/50"></div>
-                            )}
-                          </React.Fragment>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="p-4 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-700 flex gap-3">
-                      <button 
-                        onClick={() => setShowClassesPopup(false)}
-                        className="flex-1 py-1.5 px-4 bg-slate-200 dark:bg-gray-700 text-slate-700 dark:text-gray-300 font-bold rounded-xl hover:bg-slate-300 dark:hover:bg-gray-600 transition-colors uppercase tracking-wide text-[10px]"
-                      >
-                        Đóng
-                      </button>
-                      <button 
-                        onClick={() => {
-                          setShowClassesPopup(false);
-                          openAssignModal();
+                  )}
+                </div>
+                {!isTrash && (
+                  <div className="relative group/menu shrink-0 -mt-1 -mr-1" ref={menuRef}>
+                    <button 
+                      ref={menuBtnRef}
+                      onClick={(e) => { e.stopPropagation(); updateMenuPos(); setIsMenuOpen(!isMenuOpen); }}
+                      className="size-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                    {isMenuOpen && typeof document !== 'undefined' && createPortal(
+                      <div 
+                        ref={menuDropdownRef}
+                        className="fixed w-48 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl shadow-xl border border-[#f0f2f4] dark:border-slate-600 py-1 z-[9999] animate-in fade-in zoom-in-95 duration-100 overflow-y-auto max-h-[80vh]"
+                        style={{ 
+                          ...(menuPos.top !== undefined ? { top: menuPos.top } : { bottom: menuPos.bottom }), 
+                          left: menuPos.left 
                         }}
-                        className="flex-1 py-1.5 px-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 shadow-md shadow-primary/20 transition-colors uppercase tracking-wide text-[10px] flex items-center justify-center gap-2"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <PlusCircle className="w-4 h-4" />
-                        Giao cho lớp mới
-                      </button>
-                    </div>
+                        <div className="px-4 py-2 border-b border-[#f0f2f4] dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50">
+                          <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Trạng thái</span>
+                        </div>
+                        <button 
+                          onClick={(e) => handleStatusChange('DRAFT', e)}
+                          disabled={assignment.assignedCount > 0}
+                          className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between gap-2 ${
+                            assignment.status === 'DRAFT' 
+                              ? 'text-primary font-bold' 
+                              : (assignment.assignedCount > 0 ? 'text-slate-300 cursor-not-allowed opacity-50' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600')
+                          }`}
+                          title={assignment.assignedCount > 0 ? "Không thể chuyển về Bản nháp khi bài tập đang được giao" : ""}
+                        >
+                          <span className="flex items-center gap-2">
+                            <FileEdit className="w-[18px] h-[18px]" /> Bản nháp
+                          </span>
+                          {assignment.assignedCount > 0 && <Lock className="w-[14px] h-[14px]" />}
+                        </button>
+                        <button 
+                          onClick={(e) => handleStatusChange('PRIVATE', e)}
+                          className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PRIVATE' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
+                        >
+                          <Lock className="w-[18px] h-[18px]" /> Riêng tư
+                        </button>
+                        <button 
+                          onClick={(e) => handleStatusChange('PUBLIC', e)}
+                          className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${assignment.status === 'PUBLIC' ? 'text-primary font-bold' : 'hover:bg-[#f0f2f4] dark:hover:bg-gray-600'}`}
+                        >
+                          <Globe className="w-[18px] h-[18px]" /> Công khai
+                        </button>
+                        
+                        <div className="h-[1px] bg-[#f0f2f4] dark:bg-gray-600 my-1"></div>
+                        
+                        <div className="px-4 py-1.5 bg-slate-50/30 dark:bg-gray-800/30">
+                          <span className="text-[10px] font-bold text-[#617589] uppercase tracking-wider">Thao tác</span>
+                        </div>
+                        <Link 
+                          href={assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run`}
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                        >
+                          <Eye className="w-[18px] h-[18px]" /> Xem trước
+                        </Link>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                        >
+                          <Link2 className="w-[18px] h-[18px]" /> Chia sẻ
+                        </button>
+                        <button 
+                          onClick={handleDuplicate}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                        >
+                          <Copy className="w-[18px] h-[18px]" /> Nhân bản
+                        </button>
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            const url = assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run?direct=true`;
+                            router.push(url); 
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2 text-indigo-600 font-semibold"
+                        >
+                          <GraduationCap className="w-[18px] h-[18px]" /> Học ngay
+                        </button>
+                        <button 
+                          onClick={handleEdit}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                        >
+                          <Edit className="w-[18px] h-[18px]" /> Chỉnh sửa
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowAnalyticsModal(true);
+                            setIsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-[#f0f2f4] dark:hover:bg-gray-600 flex items-center gap-2"
+                        >
+                          <LineChart className="w-[18px] h-[18px]" /> Thống kê
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteModal(true);
+                            setIsMenuOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                        >
+                          <Trash2 className="w-[18px] h-[18px]" /> Xóa
+                        </button>
+                      </div>,
+                      document.body
+                    )}
                   </div>
                 )}
               </div>
-            )}
-            
-            <div className="flex items-center gap-1">
-              <Calendar className="w-[18px] h-[18px]" /> {dateStr}
+              
+              <div className="flex items-end justify-between mt-auto pt-2">
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> {dateStr}
+                    </span>
+                    {assignment.assignedCount > 0 && (
+                      <div className="relative">
+                        <span className="text-slate-300 mx-0.5">•</span>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setShowClassesPopup(!showClassesPopup); }}
+                          className="flex items-center gap-1 text-primary font-bold hover:underline"
+                        >
+                          <List className="w-3 h-3" /> Giao cho {assignment.assignedCount} lớp
+                        </button>
+                        {showClassesPopup && (
+                          <div 
+                            ref={popupRef}
+                            className="absolute bottom-full left-0 mb-4 w-[400px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-700">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary/10 text-primary p-2 rounded-lg">
+                                  <CheckCircle className="w-6 h-6" />
+                                </div>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-gray-100">Quản lý giao bài</h2>
+                              </div>
+                              <button 
+                                onClick={() => setShowClassesPopup(false)}
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 transition-colors p-1"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+
+                            <div className="p-2 max-h-[350px] overflow-y-auto custom-scrollbar">
+                              {assignment.classes?.length === 0 ? (
+                                <div className="p-8 text-center text-slate-400">
+                                  Chưa có lớp học nào được giao bài tập này.
+                                </div>
+                              ) : (
+                                assignment.classes?.map((cls, idx) => (
+                                  <React.Fragment key={cls.id}>
+                                    <div className="group flex items-center justify-between p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-700/50 transition-all border border-transparent hover:border-slate-100 dark:hover:border-gray-600">
+                                      <div className="flex items-center gap-4">
+                                        <div className="size-11 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-sky-600 dark:text-sky-400">
+                                          <Users className="w-6 h-6 stroke-[2.5px]" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <span className="text-[15px] font-bold text-slate-900 dark:text-gray-100 leading-tight">{cls.name}</span>
+                                          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5 min-h-[16px]">
+                                            {cls.startDate && (
+                                              <div className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-bold">
+                                                <PlayCircle className="w-[14px] h-[14px]" />
+                                                Bắt đầu: {new Date(cls.startDate).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}
+                                              </div>
+                                            )}
+                                            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-gray-400">
+                                              <Calendar className="w-[14px] h-[14px]" />
+                                              Giao: {cls.assignedAt ? new Date(cls.assignedAt).toLocaleDateString('vi-VN') : '---'}
+                                            </div>
+                                            <div className="flex items-center gap-1 text-[11px] font-medium text-red-500">
+                                              <Clock className="w-[14px] h-[14px]" />
+                                              Hạn: {cls.dueDate ? new Date(cls.dueDate).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : 'Không có'}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <button 
+                                        onClick={(e) => handleUnassign(cls.id, e)}
+                                        className="px-3 py-1.5 border border-red-200 dark:border-red-900/30 text-red-500 text-[12px] font-bold rounded-lg hover:bg-red-500 hover:text-white dark:hover:bg-red-600 transition-all"
+                                      >
+                                        Hủy giao
+                                      </button>
+                                    </div>
+                                    {idx < (assignment.classes?.length || 0) - 1 && (
+                                      <div className="mx-4 border-b border-slate-50 dark:border-gray-700/50"></div>
+                                    )}
+                                  </React.Fragment>
+                                ))
+                              )}
+                            </div>
+
+                            <div className="p-4 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-700 flex gap-3">
+                              <button 
+                                onClick={() => setShowClassesPopup(false)}
+                                className="flex-1 py-1.5 px-4 bg-slate-200 dark:bg-gray-700 text-slate-700 dark:text-gray-300 font-bold rounded-xl hover:bg-slate-300 dark:hover:bg-gray-600 transition-colors uppercase tracking-wide text-[10px]"
+                              >
+                                Đóng
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setShowClassesPopup(false);
+                                  openAssignModal();
+                                }}
+                                className="flex-1 py-1.5 px-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 shadow-md shadow-primary/20 transition-colors uppercase tracking-wide text-[10px] flex items-center justify-center gap-2"
+                              >
+                                <PlusCircle className="w-4 h-4" />
+                                Giao cho lớp mới
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center flex-wrap gap-1.5">
+                    {Array.isArray(assignment.tags) && assignment.tags.slice(0, 2).map(tag => (
+                      <span key={tag} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 text-[10px] font-bold rounded">
+                         #{tag}
+                      </span>
+                    ))}
+                    {assignment.tags?.length > 2 && (
+                      <span className="text-[10px] text-slate-400 font-bold px-1">+{assignment.tags.length - 2}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isTrash ? (
+                    <>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
+                        className="size-7 rounded-md border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center shadow-sm"
+                        title="Xóa vĩnh viễn"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={handleRestore}
+                        className="bg-emerald-600 dark:bg-emerald-700 text-white h-7 px-2.5 rounded-md text-[11px] font-bold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Khôi phục
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          const url = assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run?direct=true`;
+                          router.push(url);
+                        }}
+                        className="h-7 px-2.5 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all flex items-center gap-1.5 shadow-sm"
+                      >
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        Học thử
+                      </button>
+                      <button 
+                        onClick={openAssignModal}
+                        className="h-7 px-3 rounded-md text-[11px] font-bold bg-primary text-white hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-sm shadow-primary/20"
+                      >
+                        <Send className="w-3 h-3" />
+                        Giao bài
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isTrash ? (
-              <>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true); }}
-                  className="px-3 h-9 rounded-lg border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center shadow-sm"
-                  title="Xóa vĩnh viễn"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={handleRestore}
-                  className="bg-emerald-600 dark:bg-emerald-700 text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
-                >
-                  <RefreshCw className="w-[18px] h-[18px]" />
-                  Khôi phục
-                </button>
-              </>
-            ) : (
-              <>
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    const url = assignment.lessonId ? `/student/lessons/${assignment.lessonId}` : `/student/assignments/${assignment.id}/run?direct=true`;
-                    router.push(url);
-                  }}
-                  className="bg-indigo-50 text-indigo-600 border border-indigo-100 h-9 px-4 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-2"
-                >
-                  <GraduationCap className="w-[18px] h-[18px]" />
-                  Học ngay
-                </button>
-                <button 
-                  onClick={openAssignModal}
-                  className="bg-primary text-white h-9 px-4 rounded-lg text-sm font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2"
-                >
-                  <Send className="w-[18px] h-[18px]" />
-                  Giao bài
-                </button>
-              </>
-            )}
           </div>
         </div>
       </div>

@@ -66,6 +66,8 @@ function mapFeedItem(item: any) {
   return {
     ...item,
     id: item.sourceId,
+    // Normalize empty string slug to null so consumers can safely do `slug || id`
+    slug: item.slug || null,
     teacher: {
       id: item.teacherId,
       name: item.teacherName,
@@ -105,11 +107,21 @@ export const getCachedAssignments = async (params: any) => {
     }
   }
 
-  const items = await prisma.homepageFeed.findMany({
+  const idRows = await prisma.homepageFeed.findMany({
     where,
-    orderBy: { createdAt: "desc" },
-    take: 12
+    select: { id: true }
   });
+
+  const randomIds = idRows
+    .map(row => row.id)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 12);
+
+  const items = randomIds.length > 0 
+    ? await prisma.homepageFeed.findMany({ where: { id: { in: randomIds } } })
+    : [];
+
+  items.sort(() => 0.5 - Math.random());
 
   return { items: items.map(mapFeedItem), total: items.length };
 };
@@ -144,11 +156,21 @@ export const getCachedLessons = async (params: any) => {
     }
   }
 
-  const items = await prisma.homepageFeed.findMany({
+  const idRows = await prisma.homepageFeed.findMany({
     where,
-    orderBy: { createdAt: "desc" },
-    take: 12
+    select: { id: true }
   });
+
+  const randomIds = idRows
+    .map(row => row.id)
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 12);
+
+  const items = randomIds.length > 0 
+    ? await prisma.homepageFeed.findMany({ where: { id: { in: randomIds } } })
+    : [];
+
+  items.sort(() => 0.5 - Math.random());
 
   return {
     items: items.map(item => ({ ...mapFeedItem(item), type: 'VIDEO_LESSON' })),

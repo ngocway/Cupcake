@@ -58,7 +58,7 @@ export default async function MyAssignmentsPage() {
   return (
     <div className="min-h-screen bg-transparent pb-20">
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 pt-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10">
         <StudentAssignmentHistory 
           initialSubmissions={formattedSubmissions as any} 
           translations={{

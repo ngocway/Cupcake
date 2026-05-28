@@ -170,22 +170,20 @@ export default async function StudentAssignmentLobbyPage({
   const totalQuestions = assignment._count.questions;
   const maxScore = assignment.defaultPoints * totalQuestions;
 
-  // Direct start logic
-  if (direct === 'true') {
-    const identifier = assignment.slug || assignment.id;
-    if (activeSubmission) {
-      redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
-    } else if (hasAttemptsLeft && !isDeadlinePassed) {
-      const nextAttemptNumber = completedCount + 1;
-      const newSubmission = await prisma.submission.create({
-        data: {
-          assignmentId: assignment.id,
-          studentId: userId,
-          attemptNumber: nextAttemptNumber
-        }
-      });
-      redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}`);
-    }
+  // ── Always go directly to quiz (no lobby) ──────────────────────────────
+  const identifier = assignment.slug || assignment.id;
+  if (activeSubmission) {
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
+  } else {
+    const nextAttemptNumber = completedCount + 1;
+    const newSubmission = await prisma.submission.create({
+      data: {
+        assignmentId: assignment.id,
+        studentId: userId,
+        attemptNumber: nextAttemptNumber
+      }
+    });
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}`);
   }
   const dateLocale = locale === "vi" ? vi : enUS;
 

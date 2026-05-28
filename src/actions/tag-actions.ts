@@ -316,3 +316,105 @@ export async function getPopularTags() {
   });
   return popularTags.map(t => t.name);
 }
+
+export async function deleteMultipleTags(tagNames: string[]) {
+  await requireAdmin();
+
+  if (!tagNames || tagNames.length === 0) {
+    return { success: false, error: "Không có thẻ nào được chọn." };
+  }
+
+  const trimmedTags = tagNames.map(t => t.trim()).filter(Boolean);
+  if (trimmedTags.length === 0) {
+    return { success: false, error: "Danh sách thẻ không hợp lệ." };
+  }
+
+  // 1. Delete from Tag table
+  await prisma.tag.deleteMany({
+    where: {
+      name: {
+        in: trimmedTags,
+        mode: 'insensitive'
+      }
+    }
+  });
+
+  // 2. Process Assignments
+  const allAssignments = await prisma.assignment.findMany({
+    where: { NOT: [{ tags: null }, { tags: "" }] },
+    include: { lesson: true }
+  });
+
+  const affectedAssignments = allAssignments.filter(a => {
+    const tagsList = (a.tags || "").split(',').map(t => t.trim());
+    return tagsList.some(t => trimmedTags.includes(t));
+  });
+
+  for (const a of affectedAssignments) {
+    const tagsList = (a.tags || "").split(',').map(t => t.trim());
+    const newTagsList = tagsList.filter(t => !trimmedTags.includes(t));
+    const uniqueTags = [...new Set(newTagsList)].join(', ');
+
+    await prisma.assignment.update({
+      where: { id: a.id },
+      data: { tags: uniqueTags }
+    });
+
+    // Sync to Homepage Feed
+    await syncToHomepageFeed(a.id, "EXERCISE").catch(() => {});
+    if (a.lesson) {
+      await syncToHomepageFeed(a.lesson.id, "LESSON").catch(() => {});
+    }
+  }
+
+  // 3. Process Questions in Bank
+  const allQuestions = await prisma.questionBank.findMany({
+    where: { NOT: [{ tags: null }, { tags: "" }] }
+  });
+
+  const affectedQuestions = allQuestions.filter(q => {
+    const tagsList = (q.tags || "").split(',').map(t => t.trim());
+    return tagsList.some(t => trimmedTags.includes(t));
+  });
+
+  for (const q of affectedQuestions) {
+    const tagsList = (q.tags || "").split(',').map(t => t.trim());
+    const newTagsList = tagsList.filter(t => !trimmedTags.includes(t));
+    const uniqueTags = [...new Set(newTagsList)].join(', ');
+
+    await prisma.questionBank.update({
+      where: { id: q.id },
+      data: { tags: uniqueTags }
+    });
+  }
+
+  // 4. Invalidate Cache
+  revalidateTag("assignments", {});
+  revalidateTag("lessons", {});
+  revalidateTag("tags", {});
+
+  return { success: true };
+}
+
+export async function searchTags(query: string) {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
+
+  if (!query || query.trim().length === 0) {
+    return [];
+  }
+
+  const tags = await prisma.tag.findMany({
+    where: {
+      name: {
+        contains: query.trim()
+      }
+    },
+    take: 10,
+    select: { name: true }
+  });
+
+  return tags.map(t => ({ name: t.name, usageCount: 0 }));
+}

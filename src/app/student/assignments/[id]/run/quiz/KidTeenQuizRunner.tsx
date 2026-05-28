@@ -1,0 +1,1335 @@
+"use client";
+
+import React, { useState, useTransition, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  X,
+  CheckCircle2,
+  XCircle,
+  MousePointer2,
+  RotateCcw,
+  CheckCircle,
+  Volume2,
+  Info,
+  BookOpen,
+  Star,
+  MessageCircle,
+  HelpCircle,
+  ChevronDown,
+} from "lucide-react";
+import BackButton from "@/components/ui/BackButton";
+import { BookmarkButton } from "@/components/common/BookmarkButton";
+import { submitAssignmentReview } from "@/actions/reviews";
+import { toast } from "sonner";
+import { ReviewList } from "@/components/reviews/ReviewList";
+import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
+import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
+import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+
+// ============================================================
+// HELPERS (duplicated from QuizClientRunner to avoid coupling)
+// ============================================================
+
+const getQuestionStatus = (q: any, answer: any) => {
+  if (answer === undefined || answer === null) return "pending";
+  let questionData: any;
+  try {
+    questionData = typeof q.content === "string" ? JSON.parse(q.content) : q.content;
+  } catch {
+    questionData = {};
+  }
+  const qType = questionData.type || q.type;
+
+  if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
+    const options = questionData.options || [];
+    if (qType === "MULTIPLE_SELECT") {
+      const answersArray = Array.isArray(answer) ? answer : [];
+      const correctIndices = options
+        .map((opt: any, i: number) => (opt.isCorrect ? i : -1))
+        .filter((i: number) => i !== -1);
+      if (answersArray.length === 0) return "pending";
+      if (answersArray.length !== correctIndices.length) return "incorrect";
+      return answersArray.every((v: number) => correctIndices.includes(v)) ? "correct" : "incorrect";
+    } else {
+      const correctIndex = options.findIndex((opt: any) => opt.isCorrect);
+      return answer === correctIndex ? "correct" : "incorrect";
+    }
+  }
+  if (qType === "TRUE_FALSE") {
+    return answer === questionData.isTrue ? "correct" : "incorrect";
+  }
+  if (qType === "CLOZE_TEST") {
+    const textWithBlanks = questionData.textWithBlanks || "";
+    const blanks = Array.from(textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)).map((m: any) => m[1]);
+    const userAnswer = answer || {};
+    if (Object.keys(userAnswer).length === 0) return "pending";
+    const isAllCorrect = blanks.every((expectedWord: string, idx: number) => {
+      const userWord = (userAnswer[idx] || "").trim();
+      return questionData.caseSensitive
+        ? expectedWord === userWord
+        : expectedWord.toLowerCase() === userWord.toLowerCase();
+    });
+    return isAllCorrect ? "correct" : "incorrect";
+  }
+  if (qType === "MATCHING") {
+    const pairs = questionData.pairs || [];
+    const userAnswer = answer || {};
+    if (Object.keys(userAnswer).length === 0) return "pending";
+    const isAllCorrect = pairs.every((p: any) => userAnswer[p.id] === p.rightText);
+    return isAllCorrect ? "correct" : "incorrect";
+  }
+  return "pending";
+};
+
+const getYoutubeVideoId = (url: string | null) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
+
+// ============================================================
+// CLOZE TEST BLOCK (Kid/Teen style)
+// ============================================================
+function ClozeTestBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange }: any) {
+  const textWithBlanks = questionData.textWithBlanks || "";
+  const parts = textWithBlanks.split(/(\{\{.*?\}\})/g);
+  let blankIndex = 0;
+
+  return (
+    <div className="w-full p-6 bg-white border-2 border-slate-200 rounded-3xl text-xl lg:text-2xl font-medium text-slate-700 leading-[3.5rem] lg:leading-[4.5rem] shadow-inner">
+      {parts.map((part: string, i: number) => {
+        if (part.startsWith("{{") && part.endsWith("}}")) {
+          const expectedWord = part.slice(2, -2);
+          const currentIndex = blankIndex++;
+          const userWord = (userAnswer || {})[currentIndex] || "";
+          const isCorrect = questionData.caseSensitive
+            ? expectedWord === userWord.trim()
+            : expectedWord.toLowerCase() === userWord.trim().toLowerCase();
+
+          let inputClass = "border-b-4 border-primary/60 bg-primary/5 text-primary font-bold focus:border-primary";
+          if (isChecked) {
+            inputClass = isCorrect
+              ? "border-4 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold rounded-xl"
+              : "border-4 border-rose-500 bg-rose-50 text-rose-700 font-bold opacity-70 line-through rounded-xl";
+          }
+          const width = Math.max(userWord.length, isChecked && !isCorrect ? expectedWord.length : 5) * 1.2 + 2;
+
+          return (
+            <span key={i} className="inline-block relative mx-2 align-middle">
+              <input
+                type="text"
+                disabled={isChecked}
+                value={userWord}
+                onChange={(e) => handleAnswerChange(q, { ...(userAnswer || {}), [currentIndex]: e.target.value })}
+                className={`inline-block text-center outline-none transition-all px-3 py-1 min-w-[100px] disabled:opacity-100 disabled:cursor-not-allowed text-xl ${inputClass}`}
+                style={{ width: `${width}ch` }}
+                placeholder="..."
+              />
+              {isChecked && !isCorrect && (
+                <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-200 shadow-md whitespace-nowrap z-30">
+                  {expectedWord}
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-emerald-100 rotate-45 border-r border-b border-emerald-200" />
+                </span>
+              )}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// MATCHING BLOCK (Kid/Teen style)
+// ============================================================
+function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange, matchingColors }: any) {
+  const t = useTranslations("student.quiz");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<any>(null);
+  const [hoveredLine, setHoveredLine] = useState<any>(null);
+
+  const shuffledRightItems = useMemo(() => {
+    if (!questionData.pairs) return [];
+    const seed = q.id;
+    return [...questionData.pairs]
+      .map((p: any) => p.rightText)
+      .sort(() => (seed.length % 2 === 0 ? 1 : -1) * 0.5 - Math.random());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.id, JSON.stringify(questionData.pairs)]);
+
+  const getDotCoords = (id: string, side: "left" | "right") => {
+    const el = document.getElementById(`kid-dot-${side}-${q.id}-${id}`);
+    if (!el || !containerRef.current) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    return { x: rect.left - containerRect.left + rect.width / 2, y: rect.top - containerRect.top + rect.height / 2 };
+  };
+
+  return (
+    <div className="space-y-6 select-none">
+      <div
+        ref={containerRef}
+        className="grid grid-cols-2 gap-x-8 md:gap-x-16 gap-y-4 relative p-2 md:p-4"
+        style={{ touchAction: "none" }}
+        onPointerMove={(e) => {
+          if (!dragging || !containerRef.current) return;
+          const rect = containerRef.current.getBoundingClientRect();
+          setDragging({ ...dragging, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+        }}
+        onPointerUp={(e) => {
+          if (dragging) {
+            const target = document.elementFromPoint(e.clientX, e.clientY);
+            const dot = target?.closest('[id^="kid-dot-"]');
+            if (dot) {
+              const id = dot.id;
+              if (dragging.fromSide === 'left' && id.includes('kid-dot-right-')) {
+                const idx = parseInt(id.split('-').pop()!);
+                if (!isNaN(idx) && shuffledRightItems[idx] !== undefined)
+                  handleAnswerChange(q, { leftId: dragging.fromId, rightText: shuffledRightItems[idx] });
+              } else if (dragging.fromSide === 'right' && id.includes('kid-dot-left-')) {
+                const pairId = id.replace(`kid-dot-left-${q.id}-`, '');
+                handleAnswerChange(q, { leftId: pairId, rightText: shuffledRightItems[parseInt(dragging.fromId)] });
+              }
+            }
+          }
+          setDragging(null);
+        }}
+        onPointerCancel={() => setDragging(null)}
+      >
+        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ minHeight: "300px" }}>
+          {Object.entries(userAnswer || {}).map(([leftId, rightText], idx) => {
+            const pair = questionData.pairs.find((p: any) => p.id === leftId);
+            if (!pair) return null;
+            const isCorrect = isChecked && pair.rightText === rightText;
+            const coords1 = getDotCoords(leftId, "left");
+            const rightItemIdx = shuffledRightItems.indexOf(rightText as string);
+            if (rightItemIdx === -1) return null;
+            const coords2 = getDotCoords(rightItemIdx.toString(), "right");
+            let strokeColor = matchingColors[idx % matchingColors.length];
+            if (isChecked) strokeColor = isCorrect ? "#10B981" : "#EF4444";
+            return (
+              <g
+                key={`kid-${leftId}`}
+                onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, isCorrect, content: isCorrect ? t("correct") : t("incorrect") })}
+                onMouseLeave={() => setHoveredLine(null)}
+              >
+                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="20" className="cursor-help pointer-events-auto" />
+                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isChecked ? (isCorrect ? "6" : "3") : "4"} strokeDasharray={isChecked && !isCorrect ? "8,5" : "none"} opacity={isChecked && isCorrect ? "1" : "0.9"} className="transition-all duration-500 pointer-events-none" />
+                {isChecked && !isCorrect && (() => {
+                  const correctIdx = shuffledRightItems.indexOf(pair.rightText);
+                  if (correctIdx === -1) return null;
+                  const correctCoords = getDotCoords(correctIdx.toString(), "right");
+                  return <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="#10B981" strokeWidth="3" strokeDasharray="6,4" opacity="0.7" className="pointer-events-none" />;
+                })()}
+              </g>
+            );
+          })}
+          {dragging && <line x1={dragging.x1} y1={dragging.y1} x2={dragging.x2} y2={dragging.y2} stroke="#8B5CF6" strokeWidth="4" strokeDasharray="8,5" />}
+        </svg>
+
+        {hoveredLine && (
+          <div
+            className="fixed z-[100] px-3 py-1.5 rounded-xl bg-slate-900 text-white text-sm font-bold pointer-events-none shadow-xl -translate-x-1/2 -translate-y-full"
+            style={{ left: hoveredLine.x, top: hoveredLine.y }}
+          >
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-full ${hoveredLine.isCorrect ? "bg-emerald-400" : "bg-rose-400"}`} />
+              {hoveredLine.content}
+            </div>
+          </div>
+        )}
+
+        {/* Left column */}
+        <div className="space-y-3 z-20">
+
+          {(questionData.pairs || []).map((pair: any, idx: number) => {
+            const pairedRightText = userAnswer?.[pair.id];
+            const leftIsImage = !!(pair.leftImageUrl || pair.leftText?.startsWith("http") || pair.leftText?.startsWith("/"));
+            return (
+              <div key={pair.id || idx} className="relative transition-all" style={leftIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
+                {leftIsImage ? (
+                  <div
+                    className="relative"
+                    style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
+                  >
+                    <img src={pair.leftImageUrl || pair.leftText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
+                    <div
+                      id={`kid-dot-left-${q.id}-${pair.id}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const coords = getDotCoords(pair.id, "left");
+                        setDragging({ fromId: pair.id, fromSide: "left", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                      }}
+                      className={`w-6 h-6 rounded-full border-4 border-white shadow-md cursor-crosshair absolute -right-3 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
+                    />
+                  </div>
+                ) : (
+                  <div className={`relative flex items-center justify-between p-4 rounded-2xl border-2 ${pairedRightText ? "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}>
+                    <span className="font-bold text-slate-700">{pair.leftText}</span>
+                    <div
+                      id={`kid-dot-left-${q.id}-${pair.id}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const coords = getDotCoords(pair.id, "left");
+                        setDragging({ fromId: pair.id, fromSide: "left", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                      }}
+                      className={`w-6 h-6 rounded-full border-4 border-white shadow-md cursor-crosshair absolute -right-3 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-3 z-20">
+
+          {shuffledRightItems.map((rightText: string, idx: number) => {
+            const pairedLeftId = Object.keys(userAnswer || {}).find((k) => userAnswer[k] === rightText);
+            const isPairCorrect = isChecked && pairedLeftId && questionData.pairs.find((p: any) => p.id === pairedLeftId)?.rightText === rightText;
+            const rightIsImage = !!(rightText?.startsWith("http") || rightText?.startsWith("/"));
+            return (
+              <div key={idx} className="relative transition-all" style={rightIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
+                {rightIsImage ? (
+                  <div
+                    className="relative"
+                    style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
+                  >
+                    <div
+                      id={`kid-dot-right-${q.id}-${idx}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const rect = containerRef.current!.getBoundingClientRect();
+                        if (pairedLeftId) {
+                          const coords = getDotCoords(pairedLeftId, "left");
+                          setDragging({ fromId: pairedLeftId, fromSide: "left", x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                        } else {
+                          const coords = getDotCoords(idx.toString(), "right");
+                          setDragging({ fromId: idx.toString(), fromSide: "right", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                        }
+                      }}
+                      className={`w-6 h-6 rounded-full border-4 border-white shadow-md cursor-crosshair absolute -left-3 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
+                    />
+                    <img src={rightText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
+                    {isChecked && pairedLeftId && (
+                      <div className="absolute top-2 right-2">{isPairCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className={`relative flex items-center p-4 rounded-2xl border-2 ${pairedLeftId ? "border-purple-400 bg-purple-50" : "border-slate-200 bg-white"}`}>
+                    <div
+                      id={`kid-dot-right-${q.id}-${idx}`}
+                      onPointerDown={(e) => {
+                        if (isChecked) return;
+                        const rect = containerRef.current!.getBoundingClientRect();
+                        if (pairedLeftId) {
+                          const coords = getDotCoords(pairedLeftId, "left");
+                          setDragging({ fromId: pairedLeftId, fromSide: "left", x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                        } else {
+                          const coords = getDotCoords(idx.toString(), "right");
+                          setDragging({ fromId: idx.toString(), fromSide: "right", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                        }
+                      }}
+                      className={`w-6 h-6 rounded-full border-4 border-white shadow-md cursor-crosshair absolute -left-3 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
+                    />
+                    <span className="font-bold text-slate-700">{rightText}</span>
+                    {isChecked && pairedLeftId && (
+                      <div className="ml-auto">{isPairCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {!isChecked && (
+        <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-2xl border-2 border-dashed border-purple-200">
+          <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-purple-500 shrink-0">
+            <MousePointer2 className="w-5 h-5" />
+          </div>
+          <p className="text-sm text-purple-600 font-medium">{t("matchingTip")}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// OPTION COLOR PALETTE (per option index)
+// ============================================================
+const OPTION_COLORS = [
+  { base: "border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-400 hover:bg-blue-100", label: "bg-blue-500 text-white" },
+  { base: "border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100", label: "bg-emerald-500 text-white" },
+  { base: "border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-400 hover:bg-amber-100", label: "bg-amber-500 text-white" },
+  { base: "border-purple-200 bg-purple-50 text-purple-800 hover:border-purple-400 hover:bg-purple-100", label: "bg-purple-500 text-white" },
+  { base: "border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-400 hover:bg-rose-100", label: "bg-rose-500 text-white" },
+];
+
+const SIDE_PANEL_W = 400;
+
+// ============================================================
+// PROPS
+// ============================================================
+interface Props {
+  assignment: any;
+  submissionId?: string;
+  questions: any[];
+  initialAnswers: any;
+  isBookmarked: boolean;
+  initialReview: any;
+  allReviews: any[];
+  relatedAssignments: any[];
+  isGuest?: boolean;
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
+export default function KidTeenQuizRunner({
+  assignment,
+  submissionId,
+  questions,
+  initialAnswers,
+  isBookmarked,
+  initialReview,
+  allReviews = [],
+  relatedAssignments = [],
+  isGuest = false,
+}: Props) {
+  const t = useTranslations("student.quiz");
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+
+  // ── Core quiz state ──────────────────────────────────────
+  const [answers, setAnswers] = useState(initialAnswers);
+  const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
+
+  // ── Kid/Teen navigation state ────────────────────────────
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isAutoRevealing, setIsAutoRevealing] = useState(false);
+  const [scoreResult, setScoreResult] = useState<{ correct: number; total: number } | null>(null);
+  const [isShowingResultScreen, setIsShowingResultScreen] = useState(false);
+
+  // ── Review state ─────────────────────────────────────────
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [userReview, setUserReview] = useState<any>(initialReview);
+  const [reviewRating, setReviewRating] = useState(initialReview?.rating || 0);
+  const [reviewComment, setReviewComment] = useState(initialReview?.comment || "");
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  // ── Nav guard ────────────────────────────────────────────
+  const [navGuard, setNavGuard] = useState<{ isOpen: boolean; targetUrl: string; targetTitle: string }>({
+    isOpen: false,
+    targetUrl: "",
+    targetTitle: "",
+  });
+
+  const matchingColors = ["#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#EC4899"];
+
+  // ── Media ────────────────────────────────────────────────
+  const videoUrl = assignment.videoUrl || assignment.lesson?.videoUrl;
+  const audioUrl = assignment.audioUrl || assignment.lesson?.audioUrl;
+  const youtubeId = getYoutubeVideoId(videoUrl);
+
+  const hasMaterialSection = useMemo(() => {
+    if (videoUrl || audioUrl) return true;
+    if (assignment?.readingText) {
+      const clean = String(assignment.readingText).replace(/<[^>]*>/g, "").trim();
+      if (clean.length > 0) return true;
+      if (/<(img|video|audio|iframe|embed)\b/i.test(String(assignment.readingText))) return true;
+    }
+    return false;
+  }, [assignment?.readingText, videoUrl, audioUrl]);
+
+  const hasInstructionText = useMemo(() => {
+    if (!assignment?.instructions) return false;
+    const clean = String(assignment.instructions).replace(/<[^>]*>/g, "").trim();
+    if (clean.length > 0) return true;
+    return /<(img|video|audio|iframe|embed)\b/i.test(String(assignment.instructions));
+  }, [assignment?.instructions]);
+
+  // ── Computed ─────────────────────────────────────────────
+  const isDirty = Object.keys(answers).length > 0;
+
+  const isAllChecked = useMemo(
+    () => questions.length > 0 && questions.every((q) => checkedQuestions[q.id]),
+    [questions, checkedQuestions]
+  );
+
+  const allCompleted = useMemo(
+    () =>
+      questions.every((q) => {
+        const ans = answers[q.id];
+        return ans !== undefined && ans !== null && (typeof ans === "object" ? Object.keys(ans).length > 0 : true);
+      }),
+    [questions, answers]
+  );
+
+  // ── Before-unload guard ──────────────────────────────────
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (isDirty) { e.preventDefault(); e.returnValue = ""; }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  // ── Navigation helpers ───────────────────────────────────
+  const handleSafeNavigate = (href: string, title?: string) => {
+    if (isDirty) {
+      setNavGuard({ isOpen: true, targetUrl: href, targetTitle: title || "..." });
+    } else {
+      router.push(href);
+    }
+  };
+
+  const navigateTo = (newIndex: number) => {
+    if (newIndex === currentIndex && !isShowingResultScreen) return;
+    if (isAutoRevealing) return;
+    if (isShowingResultScreen) setIsShowingResultScreen(false);
+    setSlideDirection(newIndex > currentIndex ? "left" : "right");
+    setCurrentIndex(newIndex);
+  };
+
+  // ── Answer change ────────────────────────────────────────
+  const handleAnswerChange = (q: any, value: any) => {
+    if (checkedQuestions[q.id]) return;
+    let questionData: any;
+    try { questionData = JSON.parse(q.content); } catch { questionData = {}; }
+    const qType = questionData.type || q.type;
+
+    setAnswers((prev: any) => {
+      const cur = prev[q.id];
+      if (qType === "MULTIPLE_SELECT") {
+        const arr = Array.isArray(cur) ? cur : [];
+        return arr.includes(value)
+          ? { ...prev, [q.id]: arr.filter((v: any) => v !== value) }
+          : { ...prev, [q.id]: [...arr, value] };
+      }
+      if (qType === "MATCHING") {
+        const m = cur && typeof cur === "object" ? { ...cur } : {};
+        if (value.rightText === null) {
+          delete m[value.leftId];
+        } else {
+          Object.keys(m).forEach((k) => { if (m[k] === value.rightText) delete m[k]; });
+          m[value.leftId] = value.rightText;
+        }
+        return { ...prev, [q.id]: m };
+      }
+      if (qType === "CLOZE_TEST") {
+        const c = cur && typeof cur === "object" ? cur : {};
+        return { ...prev, [q.id]: { ...c, ...value } };
+      }
+      return { ...prev, [q.id]: value };
+    });
+  };
+
+  // ── Check all (auto-reveal) ──────────────────────────────
+  const handleCheckAll = async () => {
+    const unanswered: number[] = [];
+    questions.forEach((q, idx) => {
+      const ans = answers[q.id];
+      const empty =
+        ans === undefined ||
+        (Array.isArray(ans) && ans.length === 0) ||
+        (typeof ans === "object" && ans !== null && Object.keys(ans).length === 0);
+      if (empty) unanswered.push(idx);
+    });
+
+    if (unanswered.length > 0) {
+      toast.error(t("unansweredError", { numbers: unanswered.map((i) => i + 1).join(", ") }));
+      navigateTo(unanswered[0]);
+      return;
+    }
+
+    setIsAutoRevealing(true);
+    
+    const newChecked: Record<string, boolean> = {};
+    const newExpanded: Record<string, boolean> = {};
+    let currentRevealIndex = 0;
+
+    const revealInterval = setInterval(() => {
+      if (currentRevealIndex >= questions.length) {
+        clearInterval(revealInterval);
+        
+        const correct = questions.filter((q) => getQuestionStatus(q, answers[q.id]) === "correct").length;
+        setScoreResult({ correct, total: questions.length });
+
+        // Wait a brief moment after the last question is revealed before popping up the result screen
+        setTimeout(() => {
+          setIsShowingResultScreen(true);
+          setIsSidePanelOpen(false);
+          setIsAutoRevealing(false);
+        }, 800);
+        return;
+      }
+      
+      const q = questions[currentRevealIndex];
+      newChecked[q.id] = true;
+      
+      const isCorrect = getQuestionStatus(q, answers[q.id]) === "correct";
+      if (!isCorrect && q.explanation) {
+        newExpanded[q.id] = true;
+      }
+
+      // Update state incrementally to trigger re-renders
+      setCheckedQuestions({ ...newChecked });
+      setExpandedExplanations({ ...newExpanded });
+      
+      currentRevealIndex++;
+    }, 400); // 400ms delay per question
+  };
+
+  // ── Reset ────────────────────────────────────────────────
+  const handleReset = () => {
+    setAnswers({});
+    setCheckedQuestions({});
+    setExpandedExplanations({});
+    setCurrentIndex(0);
+    setSlideDirection("right");
+    setScoreResult(null);
+    setIsSidePanelOpen(false);
+    setIsShowingResultScreen(false);
+  };
+
+  // ── Review submit ────────────────────────────────────────
+  const handleReviewSubmit = async () => {
+    if (reviewRating === 0) { toast.error(t("starRatingError")); return; }
+    setIsSubmittingReview(true);
+    try {
+      const result = await submitAssignmentReview(assignment.id, reviewRating, reviewComment);
+      if (result.success) {
+        toast.success(result.message);
+        setUserReview({ rating: reviewRating, comment: reviewComment, isApproved: false });
+        setTimeout(() => setIsReviewModalOpen(false), 2000);
+      } else {
+        toast.error(result.message);
+      }
+    } catch {
+      toast.error(t("reviewSubmitError"));
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  // ── Current question data ────────────────────────────────
+  const currentQuestion = questions[currentIndex];
+  let currentQuestionData: any;
+  try { currentQuestionData = JSON.parse(currentQuestion?.content || "{}"); }
+  catch { currentQuestionData = { questionText: currentQuestion?.content }; }
+
+  const qType = currentQuestionData.type || currentQuestion?.type;
+  const isMultiSelect = qType === "MULTIPLE_SELECT";
+  let questionText =
+    currentQuestionData.instruction ??
+    currentQuestionData.questionText ??
+    currentQuestionData.statement ??
+    currentQuestion?.content;
+  if (questionText?.startsWith("{") && questionText?.endsWith("}")) questionText = "";
+
+  const userAnswer = answers[currentQuestion?.id];
+  const isChecked = checkedQuestions[currentQuestion?.id] || false;
+
+  const questionStatus = currentQuestion ? getQuestionStatus(currentQuestion, userAnswer) : "pending";
+  const isCorrectNow = isChecked && questionStatus === "correct";
+  const isWrongNow = isChecked && questionStatus !== "correct" && questionStatus !== "pending";
+
+  // ── Score helpers ────────────────────────────────────────
+  const getScoreEmoji = (c: number, t2: number) => {
+    const p = c / t2;
+    if (p >= 0.8) return "🌟";
+    if (p >= 0.5) return "👏";
+    return "💪";
+  };
+  const getScoreMsg = (c: number, t2: number) => {
+    const p = c / t2;
+    if (p >= 0.8) return "Excellent!";
+    if (p >= 0.5) return "Not bad!";
+    return "Keep trying!";
+  };
+  const getStars = (c: number, t2: number) => {
+    const p = c / t2;
+    if (p >= 0.8) return 3;
+    if (p >= 0.5) return 2;
+    return 1;
+  };
+
+  if (!currentQuestion) return null;
+
+  // ── Render ───────────────────────────────────────────────
+  return (
+    <div className="min-h-screen font-body flex flex-col bg-[#8cd2f6]">
+      {/* ── TOP HEADER (Glass) ── */}
+      <div className="relative z-30 bg-white/70 backdrop-blur-md px-4 py-3 shadow-sm border-b border-white/20">
+        {/* Row 1: Back button + Title */}
+        <div className="flex items-center gap-3">
+          <div className="shrink-0">
+            <BackButton className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 font-black text-sm tracking-wider rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm">
+              <ChevronLeft className="w-5 h-5 text-purple-500" />
+              BACK
+            </BackButton>
+          </div>
+          <div className="absolute left-6 top-3 z-40 hidden md:block">
+            <FloatingTeacherInfo teacher={assignment.teacher} onNavigate={handleSafeNavigate} />
+          </div>
+          <h2 className="flex-1 text-sm font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight pr-2">
+            {assignment.title || "FUN WITH SCHOOL TOOLS: QUIZ FOR LITTLE LEARNERS"}
+          </h2>
+        </div>
+
+        {/* Question Map */}
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-3 max-w-6xl mx-auto px-2">
+          {questions.map((q, i) => {
+            const active = i === currentIndex;
+            
+            // Check answer status
+            const ans = answers[q.id];
+            let isAnswered = false;
+            if (ans !== undefined && ans !== null) {
+              if (Array.isArray(ans)) {
+                isAnswered = ans.length > 0;
+              } else if (typeof ans === "object") {
+                isAnswered = Object.keys(ans).length > 0;
+              } else {
+                isAnswered = true;
+              }
+            }
+
+            // Check if graded
+            const isGraded = checkedQuestions[q.id];
+            let status = "pending";
+            if (isGraded) {
+              status = getQuestionStatus(q, ans);
+            }
+
+            // Determine classes based on state
+            let btnClass = "";
+            
+            if (isGraded) {
+              if (status === "correct") {
+                btnClass = active 
+                  ? "bg-emerald-500 text-white border-4 border-emerald-200 shadow-lg shadow-emerald-500/40 scale-110" 
+                  : "bg-emerald-500 text-white border-2 border-emerald-600 hover:bg-emerald-600 opacity-90";
+              } else if (status === "incorrect") {
+                btnClass = active 
+                  ? "bg-rose-500 text-white border-4 border-rose-200 shadow-lg shadow-rose-500/40 scale-110" 
+                  : "bg-rose-500 text-white border-2 border-rose-600 hover:bg-rose-600 opacity-90";
+              } else {
+                // skipped/unanswered
+                btnClass = active
+                  ? "bg-slate-500 text-white border-4 border-slate-200 shadow-lg shadow-slate-500/40 scale-110"
+                  : "bg-slate-100 text-slate-400 border-2 border-slate-300 border-dashed hover:bg-slate-200";
+              }
+            } else {
+              // Not graded yet
+              if (active) {
+                btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-4 border-orange-200 scale-110 z-10";
+              } else if (isAnswered) {
+                btnClass = "bg-purple-500 border-2 border-purple-600 text-white shadow-md shadow-purple-500/20 hover:bg-purple-600 hover:border-purple-700";
+              } else {
+                btnClass = "bg-white border-2 border-slate-200 text-slate-400 hover:border-purple-300 hover:text-purple-500";
+              }
+            }
+
+            return (
+              <button
+                key={q.id}
+                onClick={() => navigateTo(i)}
+                disabled={isAutoRevealing}
+                className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full font-black text-sm sm:text-base transition-all duration-300 shrink-0 flex items-center justify-center ${btnClass}`}
+              >
+                {i + 1}
+                {isGraded && !active && status === "correct" && (
+                   <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
+                     <Check className="w-2.5 h-2.5 text-emerald-600" strokeWidth={4} />
+                   </div>
+                )}
+                {isGraded && !active && status === "incorrect" && (
+                   <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
+                     <X className="w-2.5 h-2.5 text-rose-600" strokeWidth={4} />
+                   </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Decorative Sun removed */}
+      </div>
+
+      {/* ── MAIN CONTENT (Image Background) ── */}
+      <div 
+        className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+      >
+      {questions.length > 0 && (
+        <>
+        <div className="w-full max-w-4xl mx-auto z-10 relative">
+
+        {isShowingResultScreen && scoreResult ? (
+          <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
+            <div className="bg-white rounded-[2rem] border-4 border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden flex flex-col items-center text-center p-12 relative">
+              {/* Decorative elements */}
+              <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-400 via-amber-400 to-primary"></div>
+              
+              <div className="text-8xl mb-6 animate-bounce">
+                {getScoreEmoji(scoreResult.correct, scoreResult.total)}
+              </div>
+              <h2 className="text-4xl font-black text-slate-800 mb-2">{getScoreMsg(scoreResult.correct, scoreResult.total)}</h2>
+              <p className="text-lg text-slate-500 font-medium mb-10">
+                You answered <span className="text-primary font-black text-3xl px-1">{scoreResult.correct}</span> / {scoreResult.total} questions correctly.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+                <button
+                  onClick={() => {
+                    setIsShowingResultScreen(false);
+                    navigateTo(0);
+                  }}
+                  className="px-8 py-4 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-black text-lg transition-all active:scale-95 flex items-center justify-center gap-3 w-full sm:w-auto"
+                >
+                  <Info className="w-6 h-6" />
+                  Review details
+                </button>
+                <button
+                  onClick={handleReset}
+                  className="px-8 py-4 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-lg transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-3 w-full sm:w-auto"
+                >
+                  <RotateCcw className="w-6 h-6" />
+                  Retry assignment
+                </button>
+              </div>
+            </div>
+
+            {/* Related Content (only if not empty) */}
+            {relatedAssignments && relatedAssignments.length > 0 && (
+              <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
+                <RelatedAssignmentsSection
+                  items={relatedAssignments.map((a) => ({ ...a, type: "ASSIGNMENT" as const }))}
+                  isGuest={isGuest}
+                  onNavigate={handleSafeNavigate}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Question Card */}
+            <div
+              key={`${currentIndex}-${slideDirection}`}
+          className={`w-full ${
+            slideDirection === "left"
+              ? "animate-in slide-in-from-right-16 fade-in-0"
+              : "animate-in slide-in-from-left-16 fade-in-0"
+          } duration-300`}
+        >
+          {/* Card Wrapper: add top padding to make room for QUESTION pill */}
+          <div className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-colors duration-500 relative border-[6px] flex flex-col max-h-[85dvh] ${
+            isCorrectNow
+              ? "border-emerald-400"
+              : isWrongNow
+              ? "border-rose-400"
+              : "border-[#9A89FF]"
+          }`}>
+
+            {/* Header Label - inside card at top, no negative absolute, no clipping */}
+            <div className="flex justify-start px-4 pt-4 pb-1 relative z-20">
+              <div className="bg-[#7C66FF] rounded-full px-5 py-2 flex items-center shadow-md">
+                <span className="text-white font-black text-sm tracking-widest uppercase">
+                  QUESTION {currentIndex + 1} / {questions.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Optional Type Label (moved to top right) */}
+            <div className="absolute -top-6 right-10 z-20 hidden sm:block">
+              <span className="bg-[#9A89FF] text-white text-sm font-bold px-5 py-2 rounded-full shadow-md whitespace-nowrap">
+                {qType === "MULTIPLE_SELECT" ? "Multiple Select"
+                  : qType === "MATCHING" ? "Matching"
+                  : qType === "CLOZE_TEST" ? "Fill in the blank"
+                  : qType === "TRUE_FALSE" ? "True / False"
+                  : "Choose the correct answer"}
+              </span>
+            </div>
+
+            {isChecked && (
+              <div className="absolute -top-6 right-10 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-20">
+                <div className={`flex items-center gap-2 text-white font-black text-sm whitespace-nowrap px-5 py-2 rounded-full shadow-md ${isCorrectNow ? "bg-emerald-500" : "bg-rose-500"}`}>
+                  {isCorrectNow
+                    ? <><CheckCircle2 className="w-5 h-5" /> Correct! 🎉</>
+                    : <><XCircle className="w-5 h-5" /> Incorrect! 😅</>}
+                </div>
+              </div>
+            )}
+
+            {/* Card body */}
+            <div className="px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)] flex-1 overflow-y-auto min-h-0 relative">
+              {/* Question text */}
+              {questionText && questionText !== "{}" && (
+                <div className="text-center relative w-full">
+                  <h3 className="text-[clamp(1.25rem,3.5dvh,2rem)] font-[800] text-[#2D366D] leading-tight" style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
+                    {questionText}
+                  </h3>
+                </div>
+              )}
+
+              {/* ── MULTIPLE CHOICE / SELECT ── */}
+              {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-8 gap-y-[clamp(1rem,4dvh,2rem)] pt-[clamp(0.5rem,1.5dvh,1rem)]">
+                  {(currentQuestionData.options || []).map((option: any, i: number) => {
+                    const isSelected = isMultiSelect
+                      ? Array.isArray(userAnswer) && userAnswer.includes(i)
+                      : userAnswer === i;
+                    const isCorrectOpt = option.isCorrect;
+
+                    const solarpunkStyles = [
+                      { 
+                        color: "text-emerald-900", bg: "bg-emerald-100", border: "border-emerald-300", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10",
+                        selectedBg: "bg-emerald-500", selectedBorder: "border-emerald-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-emerald-600", selectedShadow: "shadow-emerald-500/40"
+                      },
+                      { 
+                        color: "text-orange-900", bg: "bg-orange-100", border: "border-orange-300", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10",
+                        selectedBg: "bg-orange-500", selectedBorder: "border-orange-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-orange-600", selectedShadow: "shadow-orange-500/40"
+                      },
+                      { 
+                        color: "text-sky-900", bg: "bg-sky-100", border: "border-sky-300", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10",
+                        selectedBg: "bg-sky-500", selectedBorder: "border-sky-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-sky-600", selectedShadow: "shadow-sky-500/40"
+                      },
+                      { 
+                        color: "text-purple-900", bg: "bg-purple-100", border: "border-purple-300", iconBg: "bg-purple-200", shadow: "shadow-purple-900/10",
+                        selectedBg: "bg-purple-500", selectedBorder: "border-purple-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-purple-600", selectedShadow: "shadow-purple-500/40"
+                      },
+                      { 
+                        color: "text-rose-900", bg: "bg-rose-100", border: "border-rose-300", iconBg: "bg-rose-200", shadow: "shadow-rose-900/10",
+                        selectedBg: "bg-rose-500", selectedBorder: "border-rose-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-rose-600", selectedShadow: "shadow-rose-500/40"
+                      },
+                    ];
+                    
+                    const blobShapes = [
+                      "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
+                      "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
+                      "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
+                      "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
+                      "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
+                    ];
+
+                    const theme = solarpunkStyles[i % solarpunkStyles.length];
+                    const blobShape = blobShapes[i % blobShapes.length];
+
+                    let containerClass = `${theme.bg} ${theme.border} ${theme.shadow}`;
+                    let textClass = theme.color;
+                    let iconClass = `${theme.iconBg} ${theme.color}`;
+
+                    if (isChecked) {
+                      if (isCorrectOpt) {
+                        containerClass = "bg-emerald-100 border-emerald-400 shadow-emerald-900/10 scale-[1.02]";
+                        textClass = "text-emerald-900";
+                        iconClass = "bg-emerald-500 text-white";
+                      } else if (isSelected) {
+                        containerClass = "bg-rose-100 border-rose-400 shadow-rose-900/10";
+                        textClass = "text-rose-900";
+                        iconClass = "bg-rose-500 text-white";
+                      } else {
+                        containerClass = "bg-slate-50 border-slate-200 opacity-60";
+                        textClass = "text-slate-500";
+                        iconClass = "bg-slate-200 text-slate-500";
+                      }
+                    } else if (isSelected) {
+                      containerClass = `${theme.selectedBg} ${theme.selectedBorder} scale-[1.05] shadow-2xl ${theme.selectedShadow} z-10 animate-solar-pulse border-4`;
+                      textClass = theme.selectedColor;
+                      iconClass = `${theme.selectedIconBg} ${theme.selectedIconColor} scale-110 -rotate-6 shadow-xl`;
+                    }
+
+                    return (
+                      <button
+                        key={i}
+                        disabled={isChecked}
+                        onClick={() => handleAnswerChange(currentQuestion, i)}
+                        className={`group relative min-h-[clamp(4.5rem,9dvh,6rem)] w-full ${blobShape} py-[clamp(0.75rem,2dvh,1.25rem)] px-[clamp(1rem,3vw,1.5rem)] transition-all duration-700 flex flex-col items-center justify-center border-[3px] shadow-lg ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.03]" : ""}`}
+                        style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                      >
+                        {/* Floating Badge (A, B, C, D) */}
+                        <div className={`absolute -top-3 -left-2 sm:-top-4 sm:-left-3 rounded-full shadow-lg transition-all duration-700 flex items-center justify-center w-10 h-10 text-xl font-[900] ${iconClass} ${!isChecked && !isSelected ? "group-hover:scale-110 group-hover:-rotate-12" : ""}`}>
+                          {isMultiSelect
+                            ? <Check className={`w-6 h-6 transition-all ${isSelected ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} strokeWidth={4} />
+                            : String.fromCharCode(65 + i)}
+                        </div>
+
+                        <span className={`relative z-10 font-[800] text-[clamp(1rem,2.5dvh,1.25rem)] tracking-tight transition-all duration-500 ${textClass} text-center`}>
+                          {option.text}
+                        </span>
+
+                        {/* Status Icons */}
+                        {isChecked && isCorrectOpt && <CheckCircle2 className="absolute top-4 right-4 w-8 h-8 text-emerald-600 shrink-0" />}
+                        {isChecked && isSelected && !isCorrectOpt && <XCircle className="absolute top-4 right-4 w-8 h-8 text-rose-600 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── TRUE / FALSE ── */}
+              {qType === "TRUE_FALSE" && (
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: "✅ True", value: true },
+                    { label: "❌ False", value: false },
+                  ].map((opt, i) => {
+                    const isSelected = userAnswer === opt.value;
+                    const isCorrectOpt = currentQuestionData.isTrue === opt.value;
+                    let cls = "";
+                    if (isChecked) {
+                      if (isCorrectOpt) cls = "border-emerald-500 bg-emerald-50 text-emerald-800";
+                      else if (isSelected) cls = "border-rose-500 bg-rose-50 text-rose-800";
+                      else cls = "border-slate-200 bg-slate-50 text-slate-400 opacity-50";
+                    } else {
+                      cls = isSelected
+                        ? opt.value
+                          ? "border-emerald-500 bg-emerald-500 text-white shadow-emerald-200"
+                          : "border-rose-500 bg-rose-500 text-white shadow-rose-200"
+                        : opt.value
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100"
+                        : "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100";
+                    }
+                    return (
+                      <button
+                        key={i}
+                        disabled={isChecked}
+                        onClick={() => handleAnswerChange(currentQuestion, opt.value)}
+                        className={`flex flex-col items-center justify-center py-8 rounded-3xl border-2 font-black text-2xl transition-all duration-200 shadow-md ${cls} ${!isChecked ? "hover:shadow-lg hover:-translate-y-1 active:scale-95" : "cursor-default"}`}
+                      >
+                        {opt.label}
+                        {isChecked && isCorrectOpt && <CheckCircle2 className="mt-2 w-6 h-6" />}
+                        {isChecked && isSelected && !isCorrectOpt && <XCircle className="mt-2 w-6 h-6" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ── MATCHING ── */}
+              {qType === "MATCHING" && (
+                <MatchingBlock
+                  q={currentQuestion}
+                  questionData={currentQuestionData}
+                  userAnswer={userAnswer}
+                  isChecked={isChecked}
+                  handleAnswerChange={handleAnswerChange}
+                  matchingColors={matchingColors}
+                />
+              )}
+
+              {/* ── CLOZE TEST ── */}
+              {qType === "CLOZE_TEST" && (
+                <ClozeTestBlock
+                  q={currentQuestion}
+                  questionData={currentQuestionData}
+                  userAnswer={userAnswer}
+                  isChecked={isChecked}
+                  handleAnswerChange={handleAnswerChange}
+                />
+              )}
+
+              {/* ── EXPLANATION ── */}
+              {isChecked && currentQuestion?.explanation && (
+                <div className="space-y-3 mt-2">
+                  <button
+                    onClick={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
+                    className="w-full flex items-center justify-between px-5 py-3 bg-amber-50 border-2 border-amber-200 rounded-2xl text-amber-700 font-bold hover:bg-amber-100 transition-all"
+                  >
+                    <span className="flex items-center gap-2 text-sm">
+                      <Info className="w-4 h-4" />
+                      View explanation
+                    </span>
+                    <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedExplanations[currentQuestion.id] ? "rotate-180" : ""}`} />
+                  </button>
+                  <div className={`overflow-hidden transition-all duration-400 ease-in-out ${expandedExplanations[currentQuestion.id] ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
+                    <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl text-slate-700 leading-relaxed text-base whitespace-pre-wrap">
+                      {currentQuestion.explanation}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+
+            {/* ── CARD FOOTER (NAVIGATION) ── */}
+            <div className="w-full bg-transparent px-[clamp(1rem,4vw,3rem)] py-[clamp(0.75rem,2dvh,1.25rem)] flex items-center justify-between border-t-2 border-slate-100 shrink-0 z-20">
+              {/* Back */}
+              <button
+                disabled={currentIndex === 0 || isAutoRevealing}
+                onClick={() => navigateTo(currentIndex - 1)}
+                className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 ${
+                  currentIndex === 0 || isAutoRevealing
+                    ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                    : "border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95"
+                }`}
+              >
+                <ChevronLeft className="w-5 h-5" />
+                <span className="hidden sm:inline">Previous</span>
+              </button>
+
+              {/* Progress Dots removed by user request, keeping flex-1 for spacing */}
+              <div className="flex-1" />
+
+              {/* Next / Check / Reset */}
+              {currentIndex < questions.length - 1 ? (
+                <button
+                  disabled={isAutoRevealing}
+                  onClick={() => navigateTo(currentIndex + 1)}
+                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 ${
+                    isAutoRevealing
+                      ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                      : "border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95"
+                  }`}
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              ) : isAllChecked ? (
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95 transition-all"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  <span className="hidden sm:inline">Try again</span>
+                </button>
+              ) : (
+                <button
+                  disabled={isAutoRevealing}
+                  onClick={handleCheckAll}
+                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 ${
+                    isAutoRevealing
+                      ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                      : "border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white hover:shadow-lg active:scale-95"
+                  }`}
+                >
+                  {isAutoRevealing ? (
+                    <>
+                      <span className="animate-spin inline-block">⏳</span>
+                      <span className="hidden sm:inline">Grading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Submit</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        </>
+        )}
+      </div>
+      </>
+      )}
+      </div>
+    {/* ── SIDE PANEL TOGGLE BUTTON ── */}
+      <button
+        onClick={() => setIsSidePanelOpen((p) => !p)}
+        className="fixed top-1/2 right-0 z-50 w-9 h-16 bg-primary text-white flex items-center justify-center rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out"
+        style={{ transform: `translateY(-50%) translateX(${isSidePanelOpen ? -SIDE_PANEL_W : 0}px)` }}
+        title={isSidePanelOpen ? "Close panel" : "Open panel"}
+      >
+        {isSidePanelOpen ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+      </button>
+
+      {/* ── RIGHT SLIDE PANEL ── */}
+      <div
+        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden"
+        style={{ width: `${SIDE_PANEL_W}px`, transform: isSidePanelOpen ? "translateX(0)" : `translateX(${SIDE_PANEL_W}px)` }}
+      >
+        {/* Panel header */}
+        <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
+          <h3 className="font-black text-slate-700 uppercase tracking-wider text-sm">Results & Info</h3>
+          {!isGuest && (
+            <div className="flex items-center gap-2">
+              <BookmarkButton id={assignment.id} type="ASSIGNMENT" initialIsBookmarked={assignment.favoriteAssignments?.length > 0} />
+              <button
+                onClick={() => setIsReviewModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-all"
+              >
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span className="text-xs font-bold text-amber-700">{t("sendReview")}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Panel body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-8 pb-24">
+          {/* Study material */}
+          {hasMaterialSection && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
+                <BookOpen className="w-4 h-4" />
+                {t("studyMaterial")}
+              </div>
+              <div className="space-y-4">
+                {videoUrl && (
+                  <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg">
+                    {youtubeId
+                      ? <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?rel=0`} title={assignment.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                      : <video src={videoUrl} className="w-full h-full" controls />}
+                  </div>
+                )}
+                {audioUrl && (
+                  <div className="bg-slate-100 p-4 rounded-2xl flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                      <Volume2 className="w-5 h-5 text-primary" />
+                    </div>
+                    <audio src={audioUrl} className="flex-1 h-8" controls />
+                  </div>
+                )}
+                <div className="prose prose-slate max-w-none prose-p:leading-loose prose-p:text-base">
+                  <InteractiveReadingContent html={assignment.readingText} isLoggedIn={!isGuest} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Instructions */}
+          {hasInstructionText && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
+                <Info className="w-4 h-4" />
+                {t("instructions")}
+              </div>
+              <div className="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10">
+                <InteractiveReadingContent html={assignment.instructions} isLoggedIn={!isGuest} />
+              </div>
+            </div>
+          )}
+
+          {/* Tags */}
+          {assignment.tags && (
+            <div className="flex flex-wrap gap-2">
+              {assignment.tags.split(",").map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
+                <Link key={i} href={`/tags/${encodeURIComponent(tag)}`} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-200 transition-all">
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Reviews */}
+          {allReviews.some((r) => r.isApproved) && (
+            <div className="space-y-4 border-t border-slate-100 pt-5">
+              <h4 className="font-black text-slate-700 uppercase tracking-wider text-sm">{t("studentFeedback")}</h4>
+              <ReviewList reviews={allReviews} />
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ── REVIEW MODAL ── */}
+      {isReviewModalOpen && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300"
+          onClick={() => setIsReviewModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg p-8 relative animate-in zoom-in-95 slide-in-from-bottom-10 duration-500"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button onClick={() => setIsReviewModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-2xl font-black text-slate-900 uppercase">{t("yourReview")}</h4>
+                <p className="text-slate-500 text-sm mt-1">{t("reviewSubtitle")}</p>
+              </div>
+              {userReview ? (
+                <div className="py-10 text-center space-y-4 bg-slate-50 rounded-3xl border border-green-100">
+                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-lg font-black">{t("thankYou")}</h5>
+                  <p className="text-sm text-slate-500 italic">{userReview.isApproved ? t("reviewApproved") : t("reviewPending")}</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div className="flex justify-center gap-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} onClick={() => setReviewRating(star)} className="transition-transform hover:scale-110 active:scale-90">
+                        <Star className={`w-9 h-9 ${star <= (hoverRating || reviewRating) ? "text-amber-400 fill-amber-400" : "text-slate-200"} transition-colors`} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <MessageCircle className="absolute top-4 left-4 w-5 h-5 text-slate-300" />
+                    <textarea
+                      placeholder={t("commentPlaceholder")}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pl-12 min-h-[120px] text-base focus:border-primary outline-none transition-all resize-none"
+                    />
+                  </div>
+                  <button
+                    onClick={handleReviewSubmit}
+                    disabled={isSubmittingReview || reviewRating === 0}
+                    className="w-full h-12 bg-slate-900 text-white rounded-full font-black tracking-widest hover:bg-primary transition-all disabled:opacity-50 shadow-xl"
+                  >
+                    {isSubmittingReview ? t("sending") : t("sendReview")}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── NAV GUARD MODAL ── */}
+      {navGuard.isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 backdrop-blur-sm bg-slate-900/60 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md p-8 relative animate-in zoom-in-95 duration-300">
+            <button onClick={() => setNavGuard({ ...navGuard, isOpen: false })} className="absolute top-5 left-5 p-1.5 text-slate-400 hover:text-slate-900 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="mt-6 space-y-5 text-center">
+              <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
+                <HelpCircle className="w-7 h-7 text-amber-600" />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-xl font-black text-slate-900">{t("navGuardTitle")}</h4>
+                <p className="text-slate-500 text-sm leading-relaxed">{t("navGuardMessage", { unfinished: allCompleted ? "" : t("unfinished"), title: navGuard.targetTitle })}</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => { setNavGuard({ ...navGuard, isOpen: false }); router.push(navGuard.targetUrl); }}
+                  className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm tracking-widest hover:bg-primary/90 transition-all shadow-xl uppercase italic"
+                >
+                  {t("confirm")}
+                </button>
+                <button
+                  onClick={() => setNavGuard({ ...navGuard, isOpen: false })}
+                  className="w-full py-3 text-slate-500 font-bold text-xs hover:text-slate-800 transition-colors uppercase tracking-widest"
+                >
+                  {t("continue")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

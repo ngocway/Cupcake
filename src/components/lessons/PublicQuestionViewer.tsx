@@ -317,11 +317,12 @@ export default function PublicQuestionViewer({
                       <div className="space-y-4 z-20">
                         {questionData.pairs.map((pair: any, idx: number) => {
                           const pairedRightText = (answers[currentQuestion.id]?.value || {})[pair.id];
+                          const leftIsImage = !!(pair.leftImageUrl || pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/'));
                           return (
-                            <div key={pair.id} className={`relative p-4 rounded-xl border-2 flex items-center gap-3 ${pairedRightText ? 'border-primary/40 bg-primary/5' : 'border-slate-100 bg-white'}`}>
-                              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black shrink-0">{String.fromCharCode(65 + idx)}</div>
-                              {pair.leftImageUrl || (pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/')) ? (
-                                <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-14 w-14 object-cover rounded-lg" />
+                            <div key={pair.id} className={`relative flex items-center ${leftIsImage ? 'justify-end p-1' : `gap-3 p-4 rounded-xl border-2 ${pairedRightText ? 'border-primary/40 bg-primary/5' : 'border-slate-100 bg-white'}`}`} style={leftIsImage ? { transform: idx % 2 === 0 ? 'translateX(-40px)' : 'translateX(0px)' } : undefined}>
+                              {!leftIsImage && <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black shrink-0">{String.fromCharCode(65 + idx)}</div>}
+                              {leftIsImage ? (
+                                <img src={pair.leftImageUrl || pair.leftText} alt="" className="h-24 w-24 object-cover rounded-xl" />
                               ) : (
                                 <span className="font-bold text-slate-700">{pair.leftText}</span>
                               )}
@@ -353,8 +354,9 @@ export default function PublicQuestionViewer({
                       <div className="space-y-4 z-20">
                         {shuffledRightItems.map((rightText: string, idx: number) => {
                           const pairedLeftId = Object.keys(answers[currentQuestion.id]?.value || {}).find(k => (answers[currentQuestion.id]?.value || {})[k] === rightText);
+                          const rightIsImage = !!(rightText.startsWith('http') || rightText.startsWith('/'));
                           return (
-                            <div key={idx} className={`relative p-4 rounded-xl border-2 flex items-center gap-3 ${pairedLeftId ? 'border-primary/40 bg-primary/5' : 'border-slate-100 bg-white'}`}>
+                            <div key={idx} className={`relative flex items-center gap-3 ${rightIsImage ? 'p-1' : `p-4 rounded-xl border-2 ${pairedLeftId ? 'border-primary/40 bg-primary/5' : 'border-slate-100 bg-white'}`}`} style={rightIsImage ? { transform: idx % 2 === 0 ? 'translateX(40px)' : 'translateX(0px)' } : undefined}>
                               <div 
                                 id={`dot-right-${idx}`}
                                 onMouseUp={() => {
@@ -392,8 +394,8 @@ export default function PublicQuestionViewer({
                                 }}
                                 className={`w-4 h-4 rounded-full border-2 border-white shadow-sm absolute -left-2 top-1/2 -translate-y-1/2 z-30 cursor-crosshair ${pairedLeftId ? 'bg-primary' : 'bg-slate-300'}`}
                               />
-                              {rightText.startsWith('http') || rightText.startsWith('/') ? (
-                                <img src={rightText} alt="" className="h-14 w-14 object-cover rounded-lg" />
+                              {rightIsImage ? (
+                                <img src={rightText} alt="" className="h-24 w-24 object-cover rounded-xl" />
                               ) : (
                                 <span className="font-bold text-slate-700">{rightText}</span>
                               )}

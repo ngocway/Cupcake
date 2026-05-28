@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Volume2, PlusCircle, BookOpen, LogIn } from 'lucide-react';
 import { getUserVocabLanguage, updateUserVocabLanguage } from '@/actions/vocab-settings';
+import { SelectionTranslator } from './SelectionTranslator';
 
 interface VocabularyInfo {
   word: string;
@@ -21,6 +22,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   const [mounted, setMounted] = useState(false);
   const [currentLang, setCurrentLang] = useState('VI');
   const [activeVocab, setActiveVocab] = useState<VocabularyInfo | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [position, setPosition] = useState({ 
     x: 0, 
     y: 0, 
@@ -29,6 +31,8 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const playingAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -45,8 +49,37 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (playingAudioRef.current) {
+        playingAudioRef.current.pause();
+        playingAudioRef.current = null;
+      }
     };
   }, []);
+
+  useEffect(() => {
+    // Imperatively update the styling of the currently playing marker
+    // since they are rendered via dangerouslySetInnerHTML
+    const markers = document.querySelectorAll('.inline-audio-marker');
+    markers.forEach(marker => {
+      if (marker.getAttribute('data-audio-url') === playingAudioUrl) {
+        marker.classList.add('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+        marker.classList.remove('bg-primary/10', 'text-primary');
+        const icon = marker.querySelector('.material-symbols-outlined');
+        if (icon) {
+          icon.textContent = 'graphic_eq';
+          icon.classList.add('animate-pulse');
+        }
+      } else {
+        marker.classList.remove('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+        marker.classList.add('bg-primary/10', 'text-primary');
+        const icon = marker.querySelector('.material-symbols-outlined');
+        if (icon) {
+          icon.textContent = 'volume_up';
+          icon.classList.remove('animate-pulse');
+        }
+      }
+    });
+  }, [playingAudioUrl]);
 
   const handleLangChange = async (lang: string) => {
     setCurrentLang(lang);
@@ -54,14 +87,46 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
     await updateUserVocabLanguage(lang);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    
+    // 1. Handle Inline Audio Click
+    const audioMarker = target.closest('.inline-audio-marker');
+    if (audioMarker) {
+      e.preventDefault();
+      const url = audioMarker.getAttribute('data-audio-url');
+      if (url) {
+        if (playingAudioRef.current) {
+          playingAudioRef.current.pause();
+          playingAudioRef.current.currentTime = 0;
+        }
+        
+        // If clicking the same audio that is playing, just stop it
+        if (playingAudioUrl === url) {
+          setPlayingAudioUrl(null);
+          return;
+        }
+        
+        const audio = new Audio(url);
+        playingAudioRef.current = audio;
+        setPlayingAudioUrl(url);
+        audio.play().catch(e => console.error("Audio playback failed", e));
+        
+        audio.onended = () => {
+          setPlayingAudioUrl(null);
+        };
+        return;
+      }
+    }
+    
+    // 2. Handle Vocab click
     const marker = target.closest('.custom-vocab-marker');
     
     if (marker) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
+      const clickedWord = marker.getAttribute('data-word') || '';
+      if (activeVocab?.word === clickedWord) {
+        setActiveVocab(null);
+        return;
       }
       
       const rect = marker.getBoundingClientRect();
@@ -99,31 +164,13 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
         side,
         arrowX: arrowRelativeX
       });
+      setImageError(false);
     } else {
-      // Tăng thời gian trễ lên 350ms để user kịp di chuyển chuột vào popup
-      if (!timeoutRef.current) {
-        timeoutRef.current = setTimeout(() => {
-          setActiveVocab(null);
-          timeoutRef.current = null;
-        }, 350);
-      }
+      setActiveVocab(null);
     }
   };
 
-  const handlePopupMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
 
-  const handlePopupMouseLeave = () => {
-    setActiveVocab(null);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  };
 
   const handlePlayAudio = () => {
     if ('speechSynthesis' in window && activeVocab) {
@@ -148,18 +195,21 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
           transform: position.side === 'top' ? 'translateX(0) translateY(-100%)' : 'translateX(0) translateY(0)',
           margin: position.side === 'top' ? '0 0 -16px 0' : '-16px 0 0 0' // Bù trừ cho padding đệm
         }}
-        onMouseEnter={handlePopupMouseEnter}
-        onMouseLeave={handlePopupMouseLeave}
-        onMouseMove={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="w-[560px] bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_35px_100px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-slate-800 p-8 animate-in fade-in zoom-in-95 duration-200 relative">
           <div className="flex gap-8 items-stretch">
             {/* Left Column */}
             <div className="w-[200px] flex flex-col">
 
-              {activeVocab.image && (
+              {activeVocab.image && !imageError && (
                 <div className="h-28 w-full rounded-[4px] overflow-hidden mb-4">
-                  <img src={activeVocab.image} alt={activeVocab.word} className="w-full h-full object-cover" />
+                  <img 
+                    src={activeVocab.image} 
+                    alt={activeVocab.word} 
+                    className="w-full h-full object-cover" 
+                    onError={() => setImageError(true)}
+                  />
                 </div>
               )}
               
@@ -299,32 +349,52 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
     );
   };
 
+  let fixedHtml = html;
+  if (fixedHtml && fixedHtml.includes('Nghe Audio')) {
+    // Replace old "Nghe Audio" text and update classes for legacy markers
+    fixedHtml = fixedHtml
+      .replace(/<span class="material-symbols-outlined[^>]*>volume_up<\/span>\s*Nghe Audio/g, '<span class="material-symbols-outlined text-[16px]">volume_up</span>')
+      .replace(/class="inline-audio-marker[^"]+"/g, 'class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center select-none hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" title="Nghe Audio"');
+  }
+
   return (
     <div 
       className="relative"
-      onMouseMove={handleMouseMove}
+      onClick={handleClick}
     >
       <div 
-        dangerouslySetInnerHTML={{ __html: html }} 
+        dangerouslySetInnerHTML={{ __html: fixedHtml }} 
         className="interactive-reading-content"
       />
 
       {renderPopup()}
+      <SelectionTranslator />
 
       <style jsx global>{`
-        .custom-vocab-marker {
+        .custom-vocab-marker,
+        .custom-vocab-marker * {
           background-color: transparent !important;
-          border-bottom: 2px dashed #facc15 !important;
-          cursor: help !important;
-          padding: 0 1px;
-          color: #854d0e !important;
-          font-weight: 700 !important;
-          transition: all 0.2s;
+          background: transparent !important;
+          cursor: pointer !important;
+          padding: 0 !important;
+          color: inherit !important;
+          font-weight: inherit !important;
+          transition: all 0.2s !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
         }
-        .custom-vocab-marker:hover {
-          background-color: #fef9c3 !important;
-          border-bottom-style: solid !important;
-          color: #713f12 !important;
+
+        .custom-vocab-marker {
+          text-decoration-line: underline !important;
+          text-decoration-color: #eab308 !important;
+          text-decoration-thickness: 2px !important;
+          text-underline-offset: 4px !important;
+        }
+
+        .custom-vocab-marker:hover,
+        .custom-vocab-marker:hover * {
+          color: #eab308 !important;
         }
       `}</style>
     </div>

@@ -93,6 +93,7 @@ export async function generateAILesson({
       2. Identify 5-8 key vocabulary words from the passage you just wrote.
       3. Create a Vocabulary list of those key words with definitions. Provide pronunciation, the English definition, the Vietnamese translation (meaningVi), the Thai translation (meaningTh), and the Indonesian translation (meaningId).
       4. Create a set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
+         For EACH question, you MUST provide a very detailed "explanation" (at least 2-3 sentences). The explanation MUST explicitly state why the correct answer is correct AND explicitly analyze why the other options are incorrect. IMPORTANT: The explanation MUST be written entirely in ENGLISH. DO NOT refer to options by their position (e.g., "the first option", "option A") since options will be shuffled. Always quote the actual text of the option.
          ${additionalInstructions ? `IMPORTANT: Follow these extra instructions for the questions: ${additionalInstructions}` : ""}
       5. Provide an engaging Title and a Short Description based on the passage you wrote.
       6. Select a high-quality, relevant Unsplash stock photo to serve as a thumbnail image for this lesson. Use a real, valid stock photo URL from the domain https://images.unsplash.com/.
@@ -119,6 +120,7 @@ export async function generateAILesson({
          - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
       4. A Vocabulary list of 5-8 key words from the passage with definitions. Provide pronunciation, the English definition, the Vietnamese translation (meaningVi), the Thai translation (meaningTh), and the Indonesian translation (meaningId).
       5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
+         For EACH question, you MUST provide a very detailed "explanation" (at least 2-3 sentences). The explanation MUST explicitly state why the correct answer is correct AND explicitly analyze why the other options are incorrect. IMPORTANT: The explanation MUST be written entirely in ENGLISH. DO NOT refer to options by their position (e.g., "the first option", "option A") since options will be shuffled. Always quote the actual text of the option.
       6. Select a high-quality, relevant Unsplash stock photo to serve as a thumbnail image for this lesson. Use a real, valid stock photo URL from the domain https://images.unsplash.com/.
          Examples of correct Unsplash URLs:
          - For English/Language: https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80

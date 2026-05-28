@@ -1,7 +1,27 @@
 "use server"
 
 import { auth } from '@/auth';
-import { createClient } from '@supabase/supabase-js';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+
+const getR2Client = () => {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error('Cloudflare R2 environment variables are missing');
+  }
+
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle: true,
+  });
+};
 
 export async function uploadMedia(formData: FormData) {
   const session = await auth();
@@ -14,35 +34,35 @@ export async function uploadMedia(formData: FormData) {
     return { success: false, error: 'No file provided' };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Supabase environment variables are missing');
+  if (!bucketName || !publicUrlBase) {
+    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  try {
+    const s3Client = getR2Client();
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
+    const filePath = `uploads/${fileName}`;
 
-  // Generate a unique filename using userId and timestamp to prevent collisions
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-  const filePath = `uploads/${fileName}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-  // Upload to the 'engmaster-media' bucket
-  const { data, error } = await supabase.storage
-    .from('engmaster-media')
-    .upload(filePath, file);
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: filePath,
+      Body: buffer,
+      ContentType: file.type,
+    });
 
-  if (error) {
+    await s3Client.send(command);
+
+    const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
+    return { success: true, url: publicUrl };
+  } catch (error: any) {
     return { success: false, error: 'Upload failed: ' + error.message };
   }
-
-  // Retrieve the public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from('engmaster-media')
-    .getPublicUrl(filePath);
-
-  return { success: true, url: publicUrl };
 }
 
 export async function uploadUrlMedia(imageUrl: string) {
@@ -55,40 +75,39 @@ export async function uploadUrlMedia(imageUrl: string) {
     return { success: false, error: 'No URL provided' };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Supabase environment variables are missing');
+  if (!bucketName || !publicUrlBase) {
+    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
   try {
+    const s3Client = getR2Client();
     const response = await fetch(imageUrl);
     if (!response.ok) {
       return { success: false, error: 'Failed to fetch external image' };
     }
-    const blob = await response.blob();
-    const mimeType = blob.type || 'image/jpeg';
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const mimeType = response.headers.get('content-type') || 'image/jpeg';
     let ext = mimeType.split('/')[1] || 'jpg';
     if (ext === 'jpeg') ext = 'jpg';
     
     const fileName = `${session.user.id}-${Date.now()}.${ext}`;
     const filePath = `uploads/${fileName}`;
 
-    const { data, error } = await supabase.storage
-      .from('engmaster-media')
-      .upload(filePath, blob, { contentType: mimeType });
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: filePath,
+      Body: buffer,
+      ContentType: mimeType,
+    });
 
-    if (error) {
-      return { success: false, error: 'Upload failed: ' + error.message };
-    }
+    await s3Client.send(command);
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('engmaster-media')
-      .getPublicUrl(filePath);
-
+    const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
     return { success: true, url: publicUrl };
   } catch (error: any) {
     return { success: false, error: error.message || 'Error processing image URL' };

@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { LessonCard, ExerciseCard } from "@/components/public/ContentCards";
 
 interface Props {
@@ -12,34 +14,45 @@ interface Props {
 
 export function TagTabsClient({ initialLessons, initialAssignments, isLoggedIn, tagName }: Props) {
   const [activeTab, setActiveTab] = useState<"lessons" | "assignments">("lessons");
+  const router = useRouter();
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Tabs Control */}
-      <div className="flex justify-center">
-        <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full border border-primary/5 shadow-inner relative max-w-md w-full">
+      {/* Header & Tabs Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-4">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => router.back()}
+            className="flex items-center gap-2 w-fit px-4 py-2 bg-white/60 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-white/40 shadow-sm backdrop-blur-md transition-all active:scale-95"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight lowercase italic">
+            #{tagName}
+          </h1>
+        </div>
+
+        <div className="inline-flex items-center gap-4">
           <button
             onClick={() => setActiveTab("lessons")}
-            className={`flex-1 py-3 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 relative z-10 flex items-center justify-center gap-2 ${
+            className={`px-8 py-3.5 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
               activeTab === "lessons"
-                ? "bg-white dark:bg-slate-900 text-primary shadow-lg"
-                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
+                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
             }`}
           >
-            <span className="material-symbols-outlined !text-[18px]">menu_book</span>
-            Lessons ({initialLessons.length})
+            LESSONS ({initialLessons.length})
           </button>
-          
           <button
             onClick={() => setActiveTab("assignments")}
-            className={`flex-1 py-3 px-6 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 relative z-10 flex items-center justify-center gap-2 ${
+            className={`px-8 py-3.5 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
               activeTab === "assignments"
-                ? "bg-white dark:bg-slate-900 text-secondary shadow-lg"
-                : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                ? "bg-secondary border-secondary text-on-secondary shadow-lg shadow-secondary/20 scale-[1.03] translate-y-[-2px]"
+                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
             }`}
           >
-            <span className="material-symbols-outlined !text-[18px]">assignment</span>
-            Assignments ({initialAssignments.length})
+            ASSIGNMENTS ({initialAssignments.length})
           </button>
         </div>
       </div>

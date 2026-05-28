@@ -196,14 +196,14 @@ export default async function PublicLessonPage({
   const videoId = getYoutubeId(lesson.videoUrl);
 
   return (
-    <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex flex-col h-screen overflow-hidden font-body">
+    <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex flex-col lg:h-screen lg:overflow-hidden font-body">
       <PublicHeader session={session} />
       
       {/* 2-Column Learning Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
          {/* Main Column: Video & Content & Reviews */}
-         <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto custom-scrollbar">
-            <div className="px-8 lg:px-12 pt-7 pb-12 space-y-6 max-w-5xl mx-auto w-full">
+         <div className="w-full lg:w-[70%] flex flex-col bg-transparent lg:overflow-y-auto no-scrollbar">
+            <div className="px-4 md:px-8 lg:px-12 pt-4 pb-8 space-y-6 max-w-5xl mx-auto w-full">
                {/* Back Button */}
                <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/60 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-white/40 shadow-sm backdrop-blur-md transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
@@ -269,20 +269,9 @@ export default async function PublicLessonPage({
 
 
                   <div className="space-y-10">
-                     <div className="text-on-surface-variant leading-loose text-lg font-medium prose prose-slate max-w-none">
-                        {lesson.description || "No description provided for this lesson."}
-                     </div>
-
                      {lesson.assignment?.readingText && (
-                        <div className="space-y-8 animate-in fade-in duration-500 pt-8 border-t border-slate-100">
-                           <div className="flex items-center gap-4">
-                              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                              <div className="px-6 py-2 rounded-full border border-slate-200 bg-white/50 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-                                 Lesson Content
-                              </div>
-                              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-                           </div>
-                           <div className="prose prose-slate prose-lg max-w-none dark:prose-invert">
+                        <div className="animate-in fade-in duration-500">
+                           <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
                               <InteractiveReadingContent html={lesson.assignment.readingText} isLoggedIn={!!session} />
                            </div>
                         </div>
@@ -395,7 +384,7 @@ export default async function PublicLessonPage({
          </div>
 
          {/* Right Column: Teacher & Related */}
-         <div className="w-[30%]">
+         <div className="w-full lg:w-[30%]">
             <LearningSidebar 
               teacher={lesson.teacher as any} 
               relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: l.thumbnail || null }))} 

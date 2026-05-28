@@ -17,15 +17,17 @@ import { startLessonProgress, completeLessonProgress } from "@/actions/lesson-pr
 
 export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail, lessonId, studentId }: LessonVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  
+  // Compute initial source synchronously for SSR/LCP
+  const initialImgSrc = videoId 
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` 
+    : (thumbnail || null);
+
+  const [imgSrc, setImgSrc] = useState<string | null>(initialImgSrc);
 
   useEffect(() => {
-    // Try highest quality YouTube thumbnail first
-    if (videoId) {
-      setImgSrc(`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`);
-    } else if (thumbnail) {
-      setImgSrc(thumbnail);
-    }
+    // Update if props change
+    setImgSrc(videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : (thumbnail || null));
   }, [videoId, thumbnail]);
 
   const handlePlay = () => {
@@ -78,10 +80,13 @@ export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail, lessonI
     >
       {/* Background Image / Mesh Gradient */}
       {imgSrc ? (
-        <img 
+        <Image 
           src={imgSrc} 
           alt={title} 
-          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 70vw"
+          className="object-cover transition-transform duration-1000 group-hover:scale-105"
           onError={handleImgError}
         />
       ) : (

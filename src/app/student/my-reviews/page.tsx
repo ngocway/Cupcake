@@ -47,7 +47,7 @@ export default async function MyReviewsPage() {
   ]);
 
   return (
-    <div className="p-8 space-y-8 min-h-screen bg-transparent">
+    <div className="p-4 sm:p-6 md:p-8 space-y-8 min-h-screen bg-transparent">
       <div className="flex items-center gap-4">
         <div className="p-4 bg-primary/10 rounded-2xl">
           <Star className="w-8 h-8 text-primary" />

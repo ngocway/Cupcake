@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
           createdAt: true,
           isPremium: true,
           price: true,
+          targetAudiences: true,
           teacher: {
             select: {
               name: true
@@ -45,6 +46,7 @@ export async function GET(req: NextRequest) {
               subject: true,
               gradeLevel: true,
               thumbnail: true,
+              targetAudiences: true,
               tags: true,
               publicSubmissionCount: true,
               _count: {
@@ -85,6 +87,7 @@ export async function GET(req: NextRequest) {
         questionCount: l.assignment?._count?.questions || 0,
         assignedCount: l.assignment?._count?.targetClasses || 0,
         publicSubmissionCount: l.assignment?.publicSubmissionCount || 0,
+        targetAudiences: l.targetAudiences?.length ? l.targetAudiences : (l.assignment?.targetAudiences || []),
         createdAt: l.createdAt,
         teacher: l.teacher,
         isPremium: l.isPremium,

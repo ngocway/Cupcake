@@ -16,7 +16,7 @@ import {
   Plus,
   Star
 } from "lucide-react";
-import { renameTag, deleteTag, getAdminTags, createTag, toggleTagPopularity } from "@/actions/tag-actions";
+import { renameTag, deleteTag, getAdminTags, createTag, toggleTagPopularity, deleteMultipleTags } from "@/actions/tag-actions";
 
 interface TagInfo {
   name: string;
@@ -62,6 +62,10 @@ export default function TagManager({ initialTags }: Props) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Bulk action states
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Create tag action
   const handleCreate = async () => {
@@ -177,6 +181,42 @@ export default function TagManager({ initialTags }: Props) {
     });
   };
 
+  // Bulk Selection Handlers
+  const toggleTagSelection = (tagName: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tagName) ? prev.filter(t => t !== tagName) : [...prev, tagName]
+    );
+  };
+
+  const selectAll = () => {
+    setSelectedTags(filteredTags.map(t => t.name));
+  };
+
+  const deselectAll = () => {
+    setSelectedTags([]);
+  };
+
+  // Bulk Delete action
+  const handleBulkDelete = async () => {
+    if (selectedTags.length === 0) return;
+    
+    setActionError(null);
+    startTransition(async () => {
+      try {
+        const res = await deleteMultipleTags(selectedTags);
+        if (res.success) {
+          await refreshTags();
+          setSelectedTags([]);
+          setIsBulkDeleting(false);
+        } else {
+          setActionError(res.error || "Có lỗi xảy ra khi xóa nhiều thẻ.");
+        }
+      } catch (err: any) {
+        setActionError("Lỗi hệ thống khi xóa nhiều thẻ.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Search and Sort Toolbar */}
@@ -254,9 +294,16 @@ export default function TagManager({ initialTags }: Props) {
               >
                 {/* Tag Name Header */}
                 <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <input 
+                      type="checkbox"
+                      checked={selectedTags.includes(tag.name)}
+                      onChange={() => toggleTagSelection(tag.name)}
+                      disabled={isPending}
+                      className="w-4 h-4 rounded border-neutral-700 bg-neutral-900 text-blue-600 focus:ring-blue-500/50 focus:ring-offset-0 cursor-pointer shrink-0"
+                    />
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors.dot}`} />
-                    <span className="font-headline font-black text-lg text-white truncate drop-shadow-sm">
+                    <span className="font-headline font-black text-lg text-white truncate drop-shadow-sm" title={tag.name}>
                       {tag.name}
                     </span>
                   </div>
@@ -315,6 +362,40 @@ export default function TagManager({ initialTags }: Props) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Bulk Actions Floating Bar */}
+      {selectedTags.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 fade-in duration-300">
+          <div className="bg-neutral-900 border border-neutral-700 shadow-2xl shadow-black/50 rounded-2xl p-4 flex items-center gap-4">
+            <span className="text-white font-bold text-sm bg-blue-600/20 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/20">
+              Đã chọn {selectedTags.length} thẻ
+            </span>
+            <div className="w-px h-6 bg-neutral-800" />
+            <div className="flex gap-2">
+              <button
+                onClick={selectAll}
+                className="px-4 py-2 hover:bg-neutral-800 text-neutral-300 font-bold rounded-xl text-sm transition-all border border-transparent hover:border-neutral-700"
+              >
+                Chọn tất cả
+              </button>
+              <button
+                onClick={deselectAll}
+                className="px-4 py-2 hover:bg-neutral-800 text-neutral-300 font-bold rounded-xl text-sm transition-all border border-transparent hover:border-neutral-700"
+              >
+                Bỏ chọn
+              </button>
+              <button
+                onClick={() => { setIsBulkDeleting(true); setActionError(null); }}
+                disabled={isPending}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 shadow-lg shadow-red-600/20"
+              >
+                <Trash className="w-4 h-4" />
+                Xóa các thẻ đã chọn
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -441,6 +522,66 @@ export default function TagManager({ initialTags }: Props) {
                   <>
                     <Trash className="w-4 h-4" />
                     Xóa ngay
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Dialog Modal */}
+      {isBulkDeleting && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-neutral-950 border border-red-900/40 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl p-6 space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-headline font-black text-red-400 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                Xác nhận Xóa Hàng Loạt
+              </h3>
+              <button
+                onClick={() => setIsBulkDeleting(false)}
+                className="text-neutral-500 hover:text-white p-1 hover:bg-neutral-900 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-neutral-400 leading-relaxed">
+              Bạn có chắc chắn muốn xóa <strong className="text-white">{selectedTags.length} thẻ</strong> đã chọn?
+              Hành động này sẽ gỡ các thẻ này ra khỏi toàn bộ bài tập và câu hỏi liên quan trong hệ thống.
+            </p>
+
+            <div className="p-4 bg-red-500/5 border border-red-500/10 text-red-400/90 text-xs font-semibold leading-relaxed rounded-xl">
+              Lưu ý: Thao tác này KHÔNG xóa các bài tập hay câu hỏi gốc, chỉ gỡ nhãn thẻ. Quá trình này có thể mất vài giây nếu số lượng bài tập bị ảnh hưởng lớn.
+            </div>
+
+            {actionError && (
+              <div className="p-3.5 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium rounded-xl flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end pt-2">
+              <button
+                onClick={() => setIsBulkDeleting(false)}
+                disabled={isPending}
+                className="px-5 py-3 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-bold rounded-xl text-sm transition-all"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isPending}
+                className="px-5 py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-sm transition-all flex items-center gap-2 min-w-[100px] justify-center"
+              >
+                {isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash className="w-4 h-4" />
+                    Xóa {selectedTags.length} thẻ
                   </>
                 )}
               </button>

@@ -7,10 +7,21 @@ import { getPopularTags } from '@/actions/tag-actions';
 import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { searchImagesAction } from '@/actions/image-search-actions';
+import { toast } from 'sonner';
 import { uploadMedia, uploadUrlMedia } from '@/actions/upload-actions';
-import { toast } from "sonner";
+import { sliceAudioFile } from '@/utils/audioSlicer';
+
+type MediaAttachment = {
+  id: string;
+  url: string;
+  name: string;
+  status: 'uploading' | 'processing_ai' | 'success' | 'error';
+  progress: number;
+};
+
 import CategorySelect from '@/components/shared/CategorySelect';
 import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
+import { TagAutocompleteInput } from './TagAutocompleteInput';
 import {
   DndContext,
   closestCenter,
@@ -241,6 +252,20 @@ export function ReadingExerciseBuilder({
   const [audioUrl, setAudioUrl] = useState('');
   const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
   const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
+  const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([]);
+
+  useEffect(() => {
+    if (assignmentId && isInitialLoadDone) {
+      fetch(`/api/media-attachments?assignmentId=${assignmentId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setMediaAttachments(data.map(d => ({ ...d, status: 'success', progress: 100 })));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [assignmentId, isInitialLoadDone]);
 
 
   const [instructions, setInstructions] = useState('');
@@ -290,6 +315,8 @@ export function ReadingExerciseBuilder({
     word: string;
     pronunciation: string;
     meaningVi: string;
+    meaningTh: string;
+    meaningId: string;
     explanationEn: string;
     examples: string;
     image: string;
@@ -351,25 +378,13 @@ export function ReadingExerciseBuilder({
     }
   };
 
-  const [hoveredVocab, setHoveredVocab] = useState<{
-    vocabId: string;
-    word: string;
-    pronunciation: string;
-    meaningVi: string;
-    explanationEn: string;
-    examples: string;
-    image: string;
-    rect: DOMRect | null;
-    side: 'top' | 'bottom' | 'left' | 'right';
-  } | null>(null);
-
   const handleDeleteVocab = (vocabId: string) => {
     const marker = document.querySelector(`[data-vocab-id="${vocabId}"]`);
     if (marker) {
       const innerSpan = marker.querySelector('span');
       const text = innerSpan?.textContent || marker.textContent || '';
       marker.replaceWith(document.createTextNode(text));
-      setHoveredVocab(null);
+      setVocabList([]);
     }
   };
 
@@ -382,6 +397,8 @@ export function ReadingExerciseBuilder({
       word: m.getAttribute('data-word') || '',
       pronunciation: m.getAttribute('data-pronunciation') || '',
       meaningVi: m.getAttribute('data-meaning-vi') || '',
+      meaningTh: m.getAttribute('data-meaning-th') || '',
+      meaningId: m.getAttribute('data-meaning-id') || '',
       explanationEn: m.getAttribute('data-explanation-en') || '',
       examples: m.getAttribute('data-examples') || '',
       image: m.getAttribute('data-image') || ''
@@ -590,23 +607,86 @@ export function ReadingExerciseBuilder({
     }
   };
 
-  const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 20 * 1024 * 1024) return alert('Audio dung lượng quá lớn (tối đa 20MB)');
-      setAudioUploadProgress(0);
-      const reader = new FileReader();
-      reader.onprogress = (event) => {
-        if (event.lengthComputable) {
-          setAudioUploadProgress(Math.round((event.loaded / event.total) * 100));
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    
+    // Clear the input so the same files can be selected again
+    e.target.value = '';
+    
+    const newAttachments: MediaAttachment[] = files.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      url: '',
+      name: file.name,
+      status: 'uploading',
+      progress: 0
+    }));
+
+    setMediaAttachments(prev => [...newAttachments, ...prev]);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const attachmentId = newAttachments[i].id;
+      
+      if (file.size > 20 * 1024 * 1024) {
+        setMediaAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, status: 'error', name: 'File quá lớn (>20MB)' } : a));
+        continue;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Mock progress for now
+        setMediaAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, progress: 50 } : a));
+        
+        const result = await uploadMedia(formData);
+        
+        if (result.success && result.url) {
+          setMediaAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, status: 'processing_ai', url: result.url, progress: 100 } : a));
+          
+          let finalName = file.name;
+          
+          try {
+            const slicedBlob = await sliceAudioFile(file, 3.5);
+            const aiFormData = new FormData();
+            aiFormData.append('file', slicedBlob);
+            
+            const aiRes = await fetch('/api/ai/transcribe', {
+              method: 'POST',
+              body: aiFormData
+            });
+            const aiData = await aiRes.json();
+            if (aiData.transcript && aiData.transcript.trim() !== '') {
+              finalName = aiData.transcript.substring(0, 50) + (aiData.transcript.length > 50 ? '...' : '');
+            }
+          } catch (aiErr) {
+            console.error("AI Transcription failed", aiErr);
+          }
+          
+          const saveRes = await fetch('/api/media-attachments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              assignmentId: assignmentId || initialId || 'clp_reading_001',
+              url: result.url,
+              name: finalName,
+              type: 'AUDIO'
+            })
+          });
+          
+          const savedData = await saveRes.json();
+          
+          setMediaAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, status: 'success', name: finalName, id: savedData.id || a.id } : a));
+          toast.success(`Đã tải lên: ${finalName}`);
+        } else {
+          setMediaAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, status: 'error' } : a));
+          toast.error(`Lỗi tải file: ${file.name}`);
         }
-      };
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setAudioUrl(result);
-        setAudioUploadProgress(null);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        setMediaAttachments(prev => prev.map(a => a.id === attachmentId ? { ...a, status: 'error' } : a));
+        toast.error(`Lỗi hệ thống: ${file.name}`);
+      }
     }
   };
 
@@ -668,20 +748,228 @@ export function ReadingExerciseBuilder({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageInsert = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageInsert = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const imgHtml = `<img src="${event.target?.result}" alt="Inserted" draggable="true" style="max-width: 100%; width: 50%; display: inline-block; border-radius: 0.75rem; margin: 0.5rem; cursor: move; transition: all 0.2s;" class="custom-editable-image" />&nbsp;`;
-        const editor = document.getElementById('rich-text-editor');
-        if (editor && document.activeElement !== editor) {
-            editor.focus();
+      setSavingStatus('saving'); // Tạm dùng status này để báo UI đang tải
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const { uploadMedia } = await import('@/actions/upload-actions');
+        const res = await uploadMedia(formData);
+        
+        if (res.success && res.url) {
+          const imgHtml = `<img src="${res.url}" alt="Inserted" draggable="true" style="max-width: 100%; width: 50%; display: inline-block; border-radius: 0.75rem; margin: 0.5rem; cursor: move; transition: all 0.2s;" class="custom-editable-image" />&nbsp;`;
+          const editor = document.getElementById('rich-text-editor');
+          if (editor && document.activeElement !== editor) {
+              editor.focus();
+          }
+          document.execCommand('insertHTML', false, imgHtml);
+        } else {
+          console.error('Upload failed:', res.error);
+          alert('Tải ảnh thất bại: ' + res.error);
         }
-        document.execCommand('insertHTML', false, imgHtml);
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Upload failed:', error);
+        alert('Có lỗi xảy ra khi tải ảnh lên.');
+      } finally {
+        setSavingStatus('idle');
+      }
     }
+  };
+
+  const audioInputRef = useRef<HTMLInputElement>(null);
+  const [savedAudioRange, setSavedAudioRange] = useState<Range | null>(null);
+  const [dragOverPos, setDragOverPos] = useState({ show: false, x: 0, y: 0 });
+  const playingAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const markers = document.querySelectorAll('#rich-text-editor .inline-audio-marker');
+    markers.forEach(marker => {
+      if (marker.getAttribute('data-audio-url') === playingAudioUrl) {
+        marker.classList.add('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+        marker.classList.remove('bg-primary/10', 'text-primary');
+        const icon = marker.querySelector('.material-symbols-outlined');
+        if (icon) {
+          icon.textContent = 'graphic_eq';
+          icon.classList.add('animate-pulse');
+        }
+      } else {
+        marker.classList.remove('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+        marker.classList.add('bg-primary/10', 'text-primary');
+        const icon = marker.querySelector('.material-symbols-outlined');
+        if (icon) {
+          icon.textContent = 'volume_up';
+          icon.classList.remove('animate-pulse');
+        }
+      }
+    });
+  }, [playingAudioUrl]);
+
+  useEffect(() => {
+    // Retroactively add draggable="true" to any existing audio markers
+    const editor = document.getElementById('rich-text-editor');
+    if (editor) {
+      const markers = editor.querySelectorAll('.inline-audio-marker');
+      markers.forEach(marker => {
+        marker.setAttribute('draggable', 'true');
+        marker.classList.remove('select-none');
+      });
+    }
+  }, [isInitialLoadDone]);
+
+  useEffect(() => {
+    return () => {
+      if (playingAudioRef.current) {
+        playingAudioRef.current.pause();
+      }
+    };
+  }, []);
+  
+  /**
+   * Insert an HTML string at an exact Range position using the DOM Range API.
+   * This avoids the block-splitting bug of `execCommand('insertHTML')` when the
+   * cursor sits at the very end of a block-level element (p / div).
+   */
+  const insertNodeAtCursor = (html: string, range: Range) => {
+    // Parse the HTML string into real DOM nodes via a temporary container
+    const temp = document.createElement('span');
+    temp.innerHTML = html;
+    const frag = document.createDocumentFragment();
+    let lastNode: Node | null = null;
+    while (temp.firstChild) {
+      lastNode = frag.appendChild(temp.firstChild);
+    }
+    // Collapse to the insert point (don't delete any selection)
+    range.collapse(true);
+    // Insert via Range — no block splitting, no unwanted line breaks
+    range.insertNode(frag);
+    // Move caret to right after the inserted content
+    if (lastNode) {
+      const newRange = document.createRange();
+      newRange.setStartAfter(lastNode);
+      newRange.collapse(true);
+      const sel = window.getSelection();
+      if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      }
+    }
+  };
+
+  const handleInsertAudioClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const selection = window.getSelection();
+    const editor = document.getElementById('rich-text-editor');
+    
+    if (!selection || selection.rangeCount === 0 || !selection.anchorNode || !editor?.contains(selection.anchorNode)) {
+      toast.error('Vui lòng click đặt con trỏ vào vị trí muốn chèn audio trong bài đọc');
+      return;
+    }
+    
+    setSavedAudioRange(selection.getRangeAt(0));
+    audioInputRef.current?.click();
+  };
+
+  const handleInsertAudioFromLibrary = (url: string) => {
+    const editor = document.getElementById('rich-text-editor');
+    const selection = window.getSelection();
+
+    if (!editor || !selection || selection.rangeCount === 0 || !selection.anchorNode || !editor.contains(selection.anchorNode)) {
+      toast.error('Vui lòng click đặt con trỏ vào vị trí muốn chèn audio trong bài đọc');
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const escapeAttr = (str: string) => str ? str.replace(/"/g, '&quot;').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+    const html = `<span class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" data-audio-url="${escapeAttr(url)}" contenteditable="false" draggable="true" title="Nghe Audio"><span class="material-symbols-outlined text-[16px]">volume_up</span></span>&nbsp;`;
+
+    insertNodeAtCursor(html, range);
+    toast.success('Đã chèn audio vào bài');
+  };
+
+
+  const processAudioFile = async (file: File, targetRange: Range | null = null) => {
+    const toastId = toast.loading('Đang tải lên âm thanh...');
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const result = await uploadMedia(formData);
+      if (result.success && result.url) {
+        const escapeAttr = (str: string) => str ? str.replace(/"/g, '&quot;').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        const html = `<span class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" data-audio-url="${escapeAttr(result.url)}" contenteditable="false" draggable="true" title="Nghe Audio"><span class="material-symbols-outlined text-[16px]">volume_up</span></span>&nbsp;`;
+        
+        const activeRange = targetRange || savedAudioRange;
+        if (activeRange) {
+          insertNodeAtCursor(html, activeRange);
+        }
+        toast.success('Chèn Audio thành công', { id: toastId });
+      } else {
+        toast.error('Lỗi tải lên audio: ' + (result.error || 'Unknown error'), { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error('Lỗi hệ thống tải audio: ' + (err.message || String(err)), { id: toastId });
+    }
+  };
+
+  const handleInlineAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error('Audio dung lượng quá lớn (tối đa 20MB)');
+        return;
+      }
+      await processAudioFile(file);
+      if (audioInputRef.current) audioInputRef.current.value = '';
+    }
+  };
+
+  const handleEditorDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    setDragOverPos({ show: true, x: e.clientX, y: e.clientY });
+  };
+
+  const handleEditorDragLeave = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    setDragOverPos({ show: false, x: 0, y: 0 });
+  };
+
+  const handleEditorDrop = async (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    setDragOverPos({ show: false, x: 0, y: 0 });
+    
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('audio/')) {
+      toast.error('Chỉ hỗ trợ file âm thanh (audio)');
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Dung lượng file tối đa 2MB');
+      return;
+    }
+
+    let range: Range | null = null;
+    if (document.caretRangeFromPoint) {
+      range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    } else if ((document as any).caretPositionFromPoint) {
+      const pos = (document as any).caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+      }
+    }
+
+    await processAudioFile(file, range);
   };
 
   useEffect(() => {
@@ -719,6 +1007,8 @@ export function ReadingExerciseBuilder({
         word: selection.toString().trim(),
         pronunciation: '',
         meaningVi: '',
+        meaningTh: '',
+        meaningId: '',
         explanationEn: '',
         examples: '',
         image: '',
@@ -741,6 +1031,8 @@ export function ReadingExerciseBuilder({
         data-word="${escapeAttr(vocabForm.word)}" 
         data-pronunciation="${escapeAttr(vocabForm.pronunciation || '')}" 
         data-meaning-vi="${escapeAttr(vocabForm.meaningVi || '')}" 
+        data-meaning-th="${escapeAttr(vocabForm.meaningTh || '')}" 
+        data-meaning-id="${escapeAttr(vocabForm.meaningId || '')}" 
         data-explanation-en="${escapeAttr(vocabForm.explanationEn || '')}" 
         data-examples="${escapeAttr(vocabForm.examples || '')}" 
         data-image="${escapeAttr(vocabForm.image || '')}"
@@ -777,23 +1069,6 @@ export function ReadingExerciseBuilder({
     setIsAiLoading(true);
     const word = vocabForm.word.trim().replace(/[.,!?;:]/g, '');
     const cleanLookup = word.toLowerCase();
-    
-    const localData = DUMMY_DICTIONARY[cleanLookup];
-    if (localData) {
-      setVocabForm(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          pronunciation: localData.pronunciation || '',
-          meaningVi: localData.meaningVi || '',
-          explanationEn: localData.explanationEn || '',
-          examples: localData.examples || '',
-          image: localData.image || ''
-        };
-      });
-      setIsAiLoading(false);
-      return;
-    }
 
     try {
       const result = await generateVocabularyDetails(word);
@@ -805,9 +1080,10 @@ export function ReadingExerciseBuilder({
             word: result.word || prev.word,
             pronunciation: result.pronunciation || '...',
             meaningVi: result.meaningVi || `(Nghĩa của từ "${prev.word}")`,
+            meaningTh: result.meaningTh || '',
+            meaningId: result.meaningId || '',
             explanationEn: result.explanationEn || '',
-            examples: Array.isArray(result.examples) ? result.examples.join('\n') : (result.examples || ''),
-            image: `https://source.unsplash.com/featured/400x300/?${encodeURIComponent(result.imageSearchKeywords || word)}` 
+            examples: Array.isArray(result.examples) ? result.examples.join('\n') : (result.examples || '')
           };
         });
         setIsAiLoading(false);
@@ -837,10 +1113,10 @@ export function ReadingExerciseBuilder({
       const mVi = transData?.responseData?.translatedText || '';
       setVocabForm(prev => {
         if (!prev) return null;
-        return { ...prev, pronunciation: p || '...', meaningVi: mVi || `(Nghĩa của từ "${prev.word}")`, explanationEn: exEn || `Definition for '${prev.word}' not found.`, examples: exs || `Example of using ${prev.word} in context.`, image: `https://loremflickr.com/400/300/${encodeURIComponent(word)},professional` };
+        return { ...prev, pronunciation: p || '...', meaningVi: mVi || `(Nghĩa của từ "${prev.word}")`, meaningTh: '', meaningId: '', explanationEn: exEn || `Definition for '${prev.word}' not found.`, examples: exs || `Example of using ${prev.word} in context.`, image: `https://loremflickr.com/400/300/${encodeURIComponent(word)},professional` };
       });
     } catch (innerError) {
-      setVocabForm(prev => { if (!prev) return null; return { ...prev, pronunciation: `/.../`, meaningVi: `(Lỗi kết nối AI)`, explanationEn: `Could not fetch data for "${prev.word}". Please fill in manually.`, examples: '', image: `https://loremflickr.com/400/300/abstract,academic` }; });
+      setVocabForm(prev => { if (!prev) return null; return { ...prev, pronunciation: `/.../`, meaningVi: `(Lỗi kết nối AI)`, meaningTh: '', meaningId: '', explanationEn: `Could not fetch data for "${prev.word}". Please fill in manually.`, examples: '', image: `https://loremflickr.com/400/300/abstract,academic` }; });
     } finally {
       setIsAiLoading(false);
     }
@@ -866,40 +1142,39 @@ export function ReadingExerciseBuilder({
     });
   };
 
-  const handleEditorMouseMove = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const marker = target.closest('.custom-vocab-marker') as HTMLElement;
-    if (marker) {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-      const rect = marker.getBoundingClientRect();
-      const popupHeight = 450;
-      const popupWidth = 320;
-      let side: 'top' | 'bottom' | 'left' | 'right' = 'top';
-      if (rect.top < popupHeight) {
-        side = 'bottom';
-      } else if (window.innerHeight - rect.bottom < popupHeight) {
-        side = 'top';
-      }
-      setHoveredVocab({
-        vocabId: marker.getAttribute('data-vocab-id') || '',
-        word: marker.getAttribute('data-word') || '',
-        pronunciation: marker.getAttribute('data-pronunciation') || '',
-        meaningVi: marker.getAttribute('data-meaning-vi') || '',
-        explanationEn: marker.getAttribute('data-explanation-en') || '',
-        examples: marker.getAttribute('data-examples') || '',
-        image: marker.getAttribute('data-image') || '',
-        rect,
-        side
-      });
-    } else {
-      if (!hoveredVocab) return;
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = setTimeout(() => setHoveredVocab(null), 100);
-    }
-  };
+
 
   const handleEditorClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    
+    const audioMarker = target.closest('.inline-audio-marker');
+    if (audioMarker) {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = audioMarker.getAttribute('data-audio-url');
+      if (url) {
+        if (playingAudioRef.current) {
+          playingAudioRef.current.pause();
+          playingAudioRef.current.currentTime = 0;
+        }
+        
+        if (playingAudioUrl === url) {
+          setPlayingAudioUrl(null);
+          return;
+        }
+        
+        const audio = new Audio(url);
+        playingAudioRef.current = audio;
+        setPlayingAudioUrl(url);
+        audio.play().catch(e => console.error("Audio playback failed", e));
+        
+        audio.onended = () => {
+          setPlayingAudioUrl(null);
+        };
+      }
+      return;
+    }
+
     const vocabMarker = target.closest('.custom-vocab-marker') as HTMLElement;
     if (vocabMarker) {
       e.preventDefault();
@@ -908,6 +1183,8 @@ export function ReadingExerciseBuilder({
         word: vocabMarker.getAttribute('data-word') || '',
         pronunciation: vocabMarker.getAttribute('data-pronunciation') || '',
         meaningVi: vocabMarker.getAttribute('data-meaning-vi') || '',
+        meaningTh: vocabMarker.getAttribute('data-meaning-th') || '',
+        meaningId: vocabMarker.getAttribute('data-meaning-id') || '',
         explanationEn: vocabMarker.getAttribute('data-explanation-en') || '',
         examples: vocabMarker.getAttribute('data-examples') || '',
         image: vocabMarker.getAttribute('data-image') || '',
@@ -1026,11 +1303,11 @@ export function ReadingExerciseBuilder({
             <span className="material-symbols-outlined text-[18px]">menu_book</span> Hướng dẫn làm bài
           </button>
           {/* Multimedia Attachments */}
-          <div className="px-4 mt-8 space-y-6">
+          <div className="mt-8 space-y-6">
             <div className="flex flex-col gap-3">
-               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Multimedia Attachments</h3>
+               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Multimedia Attachments</h3>
                {/* Video Upload */}
-               <div className="px-4">
+               <div className="px-2">
                   <div className="flex flex-col gap-2">
                     {/* Tab switcher */}
                     <div className="flex rounded-xl overflow-hidden border border-slate-200 dark:border-gray-700 text-[10px] font-black uppercase tracking-widest">
@@ -1113,43 +1390,52 @@ export function ReadingExerciseBuilder({
                </div>
 
                {/* Audio Upload / AI Generator */}
-               <div className="px-4">
-                  {audioUploadProgress !== null ? (
-                    <div className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-primary bg-white dark:bg-gray-800/50 min-h-[100px]">
-                        <div className="w-full flex flex-col items-center px-2">
-                            <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-2.5 mb-3 overflow-hidden shadow-inner">
-                                <div className="bg-primary h-full rounded-full transition-all duration-300 ease-out" style={{ width: `${audioUploadProgress}%` }}></div>
-                            </div>
-                            <span className="text-[10px] font-black text-primary uppercase tracking-widest text-center animate-pulse">Đang tải... {audioUploadProgress}%</span>
-                        </div>
-                    </div>
-                  ) : audioUrl ? (
-                    <div className="flex flex-col items-center justify-center p-4 rounded-2xl border border-emerald-200 dark:border-emerald-950 bg-emerald-50/10 dark:bg-emerald-950/5 min-h-[100px] transition-all">
-                        <div className="w-full flex flex-col items-center p-1">
-                           <div className="w-full flex items-center justify-between gap-3 mb-2">
-                             <div className="flex items-center gap-2 min-w-0">
-                               <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg flex items-center justify-center ring-1 ring-emerald-500/20 shadow-sm shrink-0">
-                                  <span className="material-symbols-outlined text-[20px]">music_note</span>
-                               </div>
-                               <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 truncate tracking-wide uppercase font-bold">Audio sẵn sàng</span>
-                             </div>
-                             <button 
-                               onClick={() => { setAudioUrl(''); }} 
-                               className="size-6 bg-red-50 text-red-500 rounded-full flex items-center justify-center hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40 transition-all shadow-sm"
-                             >
+               <div className="px-2">
+                 <div className="w-full flex flex-col gap-2 relative">
+                  <div className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer min-h-[100px] w-full">
+                    <input type="file" multiple accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleAudioUpload} />
+                    <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">mic_none</span>
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2 text-center group-hover:text-primary transition-colors">Tải lên file âm thanh</span>
+                  </div>
+
+                  {mediaAttachments.length > 0 && (
+                    <div className="flex flex-col gap-1 mt-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                      {mediaAttachments.map(attachment => (
+                        <div key={attachment.id} className="flex items-center gap-1.5 px-1 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800 group transition-colors relative">
+                          <span className={`material-symbols-outlined text-[16px] shrink-0 ${attachment.status === 'success' ? 'text-emerald-500' : attachment.status === 'error' ? 'text-red-400' : 'text-blue-400 animate-pulse'}`}>
+                            {attachment.status === 'success' ? 'music_note' : attachment.status === 'error' ? 'error' : attachment.status === 'processing_ai' ? 'smart_toy' : 'cloud_upload'}
+                          </span>
+                          <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate flex-1" title={attachment.name}>{attachment.name}</span>
+                          {attachment.status === 'success' && (
+                            <>
+                              <button
+                                title="Chèn vào bài học"
+                                onClick={() => handleInsertAudioFromLibrary(attachment.url!)}
+                                className="size-5 flex items-center justify-center rounded-md text-primary hover:bg-primary/10 transition-all shrink-0"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">arrow_insert</span>
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await fetch(`/api/media-attachments?id=${attachment.id}`, { method: 'DELETE' });
+                                    setMediaAttachments(prev => prev.filter(a => a.id !== attachment.id));
+                                    toast.success('Đã xóa âm thanh');
+                                  } catch (err) {
+                                    toast.error('Lỗi khi xóa');
+                                  }
+                                }}
+                                className="size-4 flex items-center justify-center text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                              >
                                 <span className="material-symbols-outlined text-[14px]">close</span>
-                             </button>
-                           </div>
-                           <audio src={audioUrl} controls className="w-full h-8 scale-95 opacity-90 hover:opacity-100 transition-opacity" />
+                              </button>
+                            </>
+                          )}
                         </div>
-                    </div>
-                  ) : (
-                    <div className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer min-h-[100px] w-full">
-                      <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleAudioUpload} />
-                      <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">mic_none</span>
-                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2 text-center group-hover:text-primary transition-colors">Tải lên file âm thanh</span>
+                      ))}
                     </div>
                   )}
+                </div>
                </div>
             </div>
           </div>
@@ -1190,6 +1476,11 @@ export function ReadingExerciseBuilder({
               <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageInsert} />
               <span className="flex items-center gap-2 text-[13px] font-bold text-primary dark:text-primary-fixed uppercase tracking-wide">
                 <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span> Chèn Ảnh
+              </span>
+            </div>
+            <div className="px-5 py-2 rounded-lg flex items-center border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors cursor-pointer" onMouseDown={handleInsertAudioClick}>
+              <span className="flex items-center gap-2 text-[13px] font-bold text-emerald-600 uppercase tracking-wide">
+                <span className="material-symbols-outlined text-[18px]">volume_up</span> Chèn Audio
               </span>
             </div>
             <button 
@@ -1276,8 +1567,18 @@ export function ReadingExerciseBuilder({
                   </div>
                 )}
 
-                <article id="rich-text-editor" onClick={handleEditorClick} onMouseMove={handleEditorMouseMove} className="prose prose-slate dark:prose-invert max-w-none outline-none focus:outline-none min-h-[500px]" contentEditable suppressContentEditableWarning>
+                {dragOverPos.show && (
+                  <div 
+                    className="fixed pointer-events-none z-[9999] flex flex-col items-center justify-center -translate-x-1/2 -translate-y-1/2 opacity-80 mix-blend-multiply dark:mix-blend-screen"
+                    style={{ left: dragOverPos.x, top: dragOverPos.y }}
+                  >
+                    <span className="material-symbols-outlined text-primary text-[24px]">volume_up</span>
+                    <div className="h-6 w-0.5 bg-primary animate-pulse mt-1"></div>
+                  </div>
+                )}
+                <article id="rich-text-editor" onClick={handleEditorClick} onDragOver={handleEditorDragOver} onDragLeave={handleEditorDragLeave} onDrop={handleEditorDrop} className="prose prose-slate dark:prose-invert max-w-none outline-none focus:outline-none min-h-[500px] mt-12" contentEditable suppressContentEditableWarning>
                 </article>
+                <input type="file" accept="audio/*" ref={audioInputRef} onChange={handleInlineAudioUpload} className="hidden" />
               </div>
             </div>
           </div>
@@ -1462,7 +1763,7 @@ export function ReadingExerciseBuilder({
                   </div>
                   <div className="w-32 shrink-0 flex flex-col gap-2">
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ảnh minh họa</label>
-                    <div className="w-full h-32 rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 overflow-hidden relative group cursor-pointer shrink-0" onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = async (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) { setIsUploadingVocabImage(true); const formData = new FormData(); formData.append('file', file); try { const result = await uploadMedia(formData); if (result.success && result.url) { setVocabForm(prev => prev ? {...prev, image: result.url} : null); toast.success('Lưu ảnh thành công'); } else { toast.error('Lỗi lưu ảnh', { description: result.error }); } } catch (err) { toast.error('Lỗi hệ thống khi lưu ảnh'); } finally { setIsUploadingVocabImage(false); } } }; input.click(); }}>
+                    <div className="w-full h-32 rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 overflow-hidden relative group cursor-pointer shrink-0" onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = async (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) { setIsUploadingVocabImage(true); const formData = new FormData(); formData.append('file', file); try { const result = await uploadMedia(formData); if (result.success && result.url) { setVocabForm(prev => prev ? {...prev, image: result.url} : null); toast.success('Lưu ảnh thành công'); } else { toast.error('Lỗi lưu ảnh', { description: result.error }); } } catch (err: any) { toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) }); } finally { setIsUploadingVocabImage(false); } } }; input.click(); }}>
                       {isUploadingVocabImage ? <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-slate-50 dark:bg-gray-800"><span className="animate-spin material-symbols-outlined text-[24px]">progress_activity</span><span className="text-[9px] font-bold uppercase tracking-widest text-center">Đang lưu<br/>vào DB...</span></div> : vocabForm.image ? <img src={vocabForm.image} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="material-symbols-outlined text-[24px]">image</span><span className="text-[9px] font-bold mt-1 uppercase">Upload</span></div>}
                     </div>
                     <div className="flex gap-2 w-full mt-1">
@@ -1494,6 +1795,14 @@ export function ReadingExerciseBuilder({
                   <input type="text" value={vocabForm.meaningVi} onChange={e => setVocabForm({...vocabForm, meaningVi: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" required />
                 </div>
                 <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Thái</label>
+                  <input type="text" value={vocabForm.meaningTh || ''} onChange={e => setVocabForm({...vocabForm, meaningTh: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Indo</label>
+                  <input type="text" value={vocabForm.meaningId || ''} onChange={e => setVocabForm({...vocabForm, meaningId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" />
+                </div>
+                <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Giải nghĩa Tiếng Anh</label>
                   <textarea value={vocabForm.explanationEn} onChange={e => setVocabForm({...vocabForm, explanationEn: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none min-h-[80px]"></textarea>
                 </div>
@@ -1512,7 +1821,7 @@ export function ReadingExerciseBuilder({
 
         {/* Image Search Drawer */}
         {showImageSearchDrawer && (
-          <div className="fixed top-0 right-0 h-full w-[350px] bg-white dark:bg-gray-900 border-l border-slate-200 dark:border-gray-800 p-6 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
+          <div className="fixed top-0 right-0 h-full w-[350px] bg-white dark:bg-gray-900 border-l border-slate-200 dark:border-gray-800 p-6 shadow-2xl flex flex-col z-[150] animate-in slide-in-from-right duration-300">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
@@ -1549,8 +1858,8 @@ export function ReadingExerciseBuilder({
                           } else {
                             toast.error('Lỗi lưu ảnh', { description: result.error });
                           }
-                        } catch(err) {
-                           toast.error('Lỗi hệ thống khi lưu ảnh');
+                        } catch (err: any) {
+                           toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) });
                         } finally {
                            setIsUploadingVocabImage(false);
                         }
@@ -1617,83 +1926,7 @@ export function ReadingExerciseBuilder({
           </div>
         )}
 
-        {hoveredVocab && hoveredVocab.rect && (
-          <div 
-            className={`fixed z-[9999] w-80 glass-panel bg-white/95 dark:bg-gray-800/95 rounded-2xl p-0 overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 pointer-events-auto border border-black/5 dark:border-white/10`}
-            style={{ 
-              top: hoveredVocab.side === 'bottom' ? hoveredVocab.rect.bottom + 12 : (hoveredVocab.side === 'top' ? 'auto' : (hoveredVocab.side === 'right' || hoveredVocab.side === 'left' ? hoveredVocab.rect.top : 'auto')),
-              bottom: hoveredVocab.side === 'top' ? (window.innerHeight - hoveredVocab.rect.top) + 12 : 'auto',
-              left: hoveredVocab.side === 'right' ? hoveredVocab.rect.right + 12 : (hoveredVocab.side === 'left' ? hoveredVocab.rect.left - 320 - 12 : Math.max(12, Math.min(window.innerWidth - 332, hoveredVocab.rect.left + (hoveredVocab.rect.width/2) - 160))),
-            }}
-            onMouseEnter={() => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }}
-            onMouseLeave={() => setHoveredVocab(null)}
-          >
-            {hoveredVocab.image ? (
-              <div className="w-full h-36 overflow-hidden relative">
-                <img src={hoveredVocab.image} className="w-full h-full object-cover" alt={hoveredVocab.word} />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-3 left-4 right-4 text-white">
-                  <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-0.5 font-label">Vocabulary Word</p>
-                  <h3 className="text-xl font-black leading-tight font-headline">{hoveredVocab.word}</h3>
-                </div>
-              </div>
-            ) : (
-              <div className="px-5 pt-5 pb-3 bg-gradient-to-br from-indigo-50/50 to-white dark:from-gray-900 dark:to-gray-800 border-b border-indigo-100/50 dark:border-gray-700">
-                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5 font-label">Vocabulary Word</p>
-                <h3 className="text-2xl font-black text-indigo-900 dark:text-indigo-200 font-headline leading-tight">{hoveredVocab.word}</h3>
-              </div>
-            )}
 
-            <div className="p-5 space-y-4">
-              {hoveredVocab.pronunciation && (
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-indigo-500 text-lg">volume_up</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 font-mono text-base font-medium tracking-wide">/{hoveredVocab.pronunciation}/</span>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 font-label">Nghĩa Tiếng Việt</p>
-                  <p className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{hoveredVocab.meaningVi || 'Đang cập nhật...'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 font-label">English Explanation</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-label">{hoveredVocab.explanationEn || 'No explanation available.'}</p>
-                </div>
-              </div>
-
-              {hoveredVocab.examples && (
-                <div className="pt-4 border-t border-slate-100 dark:border-gray-700/50">
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 font-label">Ví dụ minh họa</p>
-                  <div className="max-h-[140px] overflow-y-auto custom-scrollbar space-y-2">
-                    {hoveredVocab.examples.split('\n').filter(Boolean).map((ex, idx) => (
-                      <div key={idx} className="bg-slate-50 dark:bg-gray-900 p-3 rounded-lg border border-slate-100 dark:border-gray-700">
-                        <p className="text-xs italic text-slate-700 dark:text-slate-400">"{ex}"</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="flex gap-2 mt-2">
-                <button 
-                  onClick={() => handleDeleteVocab(hoveredVocab.vocabId)}
-                  className="px-3 py-2.5 rounded-lg border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center justify-center shadow-sm"
-                  title="Xóa từ vựng này"
-                >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-                <button className="flex-1 bg-primary hover:bg-blue-700 text-white py-2.5 rounded-lg font-label text-[12px] font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm">
-                  <span className="material-symbols-outlined text-[18px]">bookmark_add</span> Add to Lesson List
-                </button>
-              </div>
-            </div>
-            
-            {(hoveredVocab.side === 'top' || hoveredVocab.side === 'bottom') && (
-               <div className={`absolute left-1/2 -translate-x-1/2 w-4 h-4 bg-white dark:bg-gray-800 border-slate-200/50 dark:border-gray-700 rotate-45 z-[-1] shadow-sm`} style={{ [hoveredVocab.side === 'bottom' ? 'top' : 'bottom']: '-8px', borderTopWidth: hoveredVocab.side === 'bottom' ? 1 : 0, borderLeftWidth: hoveredVocab.side === 'bottom' ? 1 : 0, borderBottomWidth: hoveredVocab.side === 'top' ? 1 : 0, borderRightWidth: hoveredVocab.side === 'top' ? 1 : 0, }} />
-            )}
-          </div>
-        )}
 
         {/* Vocab disable warning modal */}
         {showVocabDisableWarning && (
@@ -1875,38 +2108,14 @@ export function ReadingExerciseBuilder({
                         ))}
                      </div>
 
-                     <div className="relative">
-                        <input 
-                           type="text"
-                           value={newTagInput}
-                           onChange={(e) => setNewTagInput(e.target.value)}
-                           placeholder="Nhập thẻ tự chọn và nhấn Enter..."
-                           className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm pr-12"
-                           onKeyDown={(e) => {
-                             if (e.key === 'Enter') {
-                               e.preventDefault();
-                               const val = newTagInput.trim();
-                               if (val && !tags.includes(val)) {
-                                 setTags([...tags, val]);
-                                 setNewTagInput('');
-                               }
-                             }
-                           }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const val = newTagInput.trim();
-                            if (val && !tags.includes(val)) {
-                              setTags([...tags, val]);
-                              setNewTagInput('');
-                            }
-                          }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary transition-colors flex items-center justify-center p-1 rounded-full hover:bg-slate-100 dark:hover:bg-gray-700"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">add</span>
-                        </button>
-                     </div>
+                     <TagAutocompleteInput 
+                        onAddTag={(tagName) => {
+                           if (!tags.includes(tagName)) {
+                              setTags([...tags, tagName]);
+                           }
+                        }}
+                        placeholder="Nhập thẻ tự chọn và nhấn Enter..."
+                     />
                      
                      {/* Sortable tags preview list containing ALL active tags */}
                      <div className="mt-2">
@@ -2129,6 +2338,16 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
             </div>
           )}
           
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">Giải thích đáp án (Tuỳ chọn)</label>
+            <textarea 
+              value={formData.explanation || ''}
+              onChange={e => setFormData({...formData, explanation: e.target.value})}
+              className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-primary outline-none font-medium min-h-[120px] resize-none"
+              placeholder="Nhập giải thích chi tiết tại sao chọn đáp án đúng và tại sao các đáp án khác sai..."
+            />
+          </div>
+
           <div className="flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-gray-800">
              <button type="button" onClick={onClose} className="px-8 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors">Hủy</button>
              <button type="submit" className="px-10 py-3 bg-primary text-white rounded-2xl font-bold editorial-shadow hover:scale-105 active:scale-95 transition-all">Lưu câu hỏi</button>

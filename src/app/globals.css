@@ -205,4 +205,31 @@
 
 .shake-on-hover:hover .shake-target {
   animation: gentle-shake 0.35s ease-in-out infinite;
+}
+
+/* Custom Vocabulary Marker Override */
+.custom-vocab-marker,
+.custom-vocab-marker * {
+  background-color: transparent !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-weight: inherit !important;
+  transition: all 0.2s !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.custom-vocab-marker {
+  text-decoration-line: underline !important;
+  text-decoration-color: #eab308 !important;
+  text-decoration-thickness: 2px !important;
+  text-underline-offset: 4px !important;
+}
+
+.custom-vocab-marker:hover,
+.custom-vocab-marker:hover * {
+  color: #eab308 !important;
 }

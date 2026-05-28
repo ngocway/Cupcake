@@ -1,7 +1,9 @@
 import { unstable_cache } from "next/cache";
 import prisma from "@/lib/prisma";
 
-export const getLessonDetail = async (id: string) => {
+import { cache } from "react";
+
+export const getLessonBasic = cache(async (id: string) => {
   return prisma.lesson.findFirst({
     where: {
       OR: [{ id }, { slug: id }]
@@ -13,26 +15,28 @@ export const getLessonDetail = async (id: string) => {
       description: true,
       videoUrl: true,
       teacherId: true,
-      targetAudiences: true,
-      teacher: {
+      assignment: {
         select: {
           id: true,
-          name: true,
-          image: true,
-          professionalTitle: true,
-          bio: true,
-          isPortfolioPublished: true,
-          _count: {
-            select: { lessons: true, assignments: true }
-          }
+          slug: true,
+          thumbnail: true
         }
-      },
+      }
+    }
+  });
+});
+
+export const getLessonExtra = cache(async (id: string) => {
+  return prisma.lesson.findFirst({
+    where: {
+      OR: [{ id }, { slug: id }]
+    },
+    select: {
       assignment: {
         select: {
           id: true,
           slug: true,
           title: true,
-          thumbnail: true,
           tags: true,
           _count: { select: { questions: true } }
         }
@@ -42,7 +46,24 @@ export const getLessonDetail = async (id: string) => {
       }
     }
   });
-};
+});
+
+export const getTeacherBasic = cache(async (teacherId: string) => {
+  return prisma.user.findUnique({
+    where: { id: teacherId },
+    select: {
+      id: true,
+      name: true,
+      image: true,
+      professionalTitle: true,
+      bio: true,
+      isPortfolioPublished: true,
+      _count: {
+        select: { lessons: true, assignments: true }
+      }
+    }
+  });
+});
 
 export const getLessonReadingText = async (lessonId: string) => {
   const assignment = await prisma.assignment.findFirst({

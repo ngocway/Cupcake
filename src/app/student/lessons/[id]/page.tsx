@@ -26,11 +26,20 @@ import { ReviewTrigger } from "@/components/reviews/ReviewTrigger";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
-import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
-import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
+import dynamic from 'next/dynamic';
+
+const InteractiveReadingContent = dynamic(
+  () => import('@/components/common/InteractiveReadingContent').then(mod => mod.InteractiveReadingContent),
+  { loading: () => <div className="h-64 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-2xl w-full" /> }
+);
+
+const CustomAudioPlayer = dynamic(
+  () => import('@/components/common/CustomAudioPlayer').then(mod => mod.CustomAudioPlayer),
+  { loading: () => <div className="h-24 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-3xl w-full" /> }
+);
 import { Suspense } from "react";
 import { LessonVideoPlayer } from "./_components/LessonVideoPlayer";
-import { getLessonDetail, getLessonReviews, getRelatedLessons, getLessonReadingText } from "./data";
+import { getLessonBasic, getLessonExtra, getTeacherBasic, getLessonReviews, getRelatedLessons, getLessonReadingText } from "./data";
 import { getTranslations, getLocale } from "next-intl/server";
 
 import BackButton from "@/components/ui/BackButton";
@@ -136,8 +145,11 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
   );
 }
 
-async function SidebarWrapper({ teacher, lessonId }: { teacher: any, lessonId: string }) {
-  const relatedLessons = await getRelatedLessons(lessonId);
+async function SidebarWrapper({ teacherId, lessonId }: { teacherId: string | null, lessonId: string }) {
+  const [teacher, relatedLessons] = await Promise.all([
+    teacherId ? getTeacherBasic(teacherId) : Promise.resolve(null),
+    getRelatedLessons(lessonId)
+  ]);
 
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-700">
@@ -150,21 +162,92 @@ async function SidebarWrapper({ teacher, lessonId }: { teacher: any, lessonId: s
   );
 }
 
+async function LessonActionsWrapper({ lessonId, studentId }: { lessonId: string, studentId: string }) {
+  const extra = await getLessonExtra(lessonId);
+  const isBookmarked = extra?.favorites?.some((f: any) => f.studentId === studentId) || false;
+  
+  return (
+    <div className="flex items-center justify-end">
+      <div className="flex items-center gap-3">
+         <BookmarkButton 
+             id={lessonId}
+             type="LESSON"
+             initialIsBookmarked={isBookmarked}
+         />
+         <ReviewTrigger 
+             type="lesson"
+             id={lessonId}
+             isLoggedIn={true} inline
+         />
+      </div>
+    </div>
+  );
+}
+
+async function LessonTagsWrapper({ lessonId }: { lessonId: string }) {
+  const extra = await getLessonExtra(lessonId);
+  const tagsArray = extra?.assignment?.tags
+     ? extra.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+     : [];
+  if (tagsArray.length === 0) return null;
+  return (
+     <div className="flex flex-wrap gap-2 mt-4 animate-in fade-in duration-500">
+        {tagsArray.map((tag: string) => (
+           <Link 
+              key={tag} 
+              href={`/tags/${encodeURIComponent(tag)}`}
+              className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300"
+           >
+              #{tag}
+           </Link>
+        ))}
+     </div>
+  );
+}
+
+async function LessonAssignmentBannerWrapper({ lessonId }: { lessonId: string }) {
+  const t = await getTranslations("student.lessonDetail");
+  const extra = await getLessonExtra(lessonId);
+  const assignment = extra?.assignment;
+
+  if (!assignment) return null;
+
+  return (
+      <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10 mt-32 animate-in fade-in duration-500">
+         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                     <AssignmentIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">{t("relatedAssignment")}</p>
+               </div>
+               <h3 className="text-2xl font-black tracking-tight uppercase italic">{assignment.title}</h3>
+               <div className="flex items-center gap-6 text-xs font-bold">
+                  <span>{t("questionsCount", { count: assignment._count?.questions || 0 })}</span>
+                  <span>{t("autoGrading")}</span>
+               </div>
+            </div>
+            <Link 
+               href={`/student/assignments/${assignment.slug || assignment.id}/run?direct=true`}
+               className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
+            >
+               {t("startAssignment")}
+               <ArrowRight className="w-5 h-5" />
+            </Link>
+         </div>
+      </div>
+  );
+}
+
 async function ReadingContentWrapper({ lessonId }: { lessonId: string }) {
   const t = await getTranslations("student.lessonDetail");
   const readingText = await getLessonReadingText(lessonId);
   if (!readingText) return null;
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex items-center gap-4">
-        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-        <div className="px-6 py-2 rounded-full border border-slate-200 bg-white/50 text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-            {t("lessonContent")}
-        </div>
-        <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-      </div>
+    <div className="animate-in fade-in duration-500">
       
-      <div className="prose prose-slate prose-lg max-w-none dark:prose-invert">
+      <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
         <InteractiveReadingContent html={readingText} isLoggedIn={true} />
       </div>
     </div>
@@ -183,7 +266,7 @@ export default async function StudentLessonDetailPage({
   // Parallel fetch auth and cached lesson detail
   const [sessionData, lesson, t] = await Promise.all([
     auth(),
-    getLessonDetail(id),
+    getLessonBasic(id),
     getTranslations("student.lessonDetail")
   ]);
 
@@ -202,8 +285,6 @@ export default async function StudentLessonDetailPage({
     redirect(`/student/lessons/${lesson.slug}`);
   }
 
-  const isBookmarked = lesson.favorites.some(f => f.studentId === session.id);
-
   const getYoutubeId = (url: string | null) => {
     if (!url) return null;
     const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -213,11 +294,11 @@ export default async function StudentLessonDetailPage({
   const videoId = getYoutubeId(lesson.videoUrl);
 
   return (
-    <div className="min-h-screen bg-transparent flex flex-col h-screen overflow-hidden font-body">
+    <div className="min-h-screen bg-transparent flex flex-col lg:h-screen lg:overflow-hidden font-body">
       
-      <div className="flex flex-1 overflow-hidden">
-         <div className="w-[70%] flex flex-col bg-transparent overflow-y-auto no-scrollbar">
-            <div className="px-8 lg:px-12 pt-4 pb-8 space-y-6 max-w-5xl mx-auto w-full">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
+         <div className="w-full lg:w-[70%] flex flex-col bg-transparent lg:overflow-y-auto no-scrollbar">
+            <div className="px-4 md:px-8 lg:px-12 pt-4 pb-8 space-y-6 max-w-5xl mx-auto w-full">
                {/* Back Button */}
                <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/50 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
@@ -242,48 +323,18 @@ export default async function StudentLessonDetailPage({
 
                <div className="glass rounded-3xl p-10 lg:p-12 space-y-12 shadow-xl border border-white/40 mb-12">
                   <div className="space-y-6">
-                     <div className="flex items-center justify-end">
-                        <div className="flex items-center gap-3">
-                           <BookmarkButton 
-                               id={lesson.id}
-                               type="LESSON"
-                               initialIsBookmarked={isBookmarked}
-                           />
-                           <ReviewTrigger 
-                               type="lesson"
-                               id={lesson.id}
-                               isLoggedIn={true} inline
-                           />
-                        </div>
-                     </div>
+                     <Suspense fallback={<div className="h-8 flex justify-end"><div className="w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-full" /></div>}>
+                        <LessonActionsWrapper lessonId={lesson.id} studentId={session.id} />
+                     </Suspense>
                      <h2 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
                         {lesson.title}
                      </h2>
-                     {(() => {
-                        const tagsArray = lesson.assignment?.tags
-                           ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
-                           : [];
-                        if (tagsArray.length === 0) return null;
-                        return (
-                           <div className="flex flex-wrap gap-2 mt-4">
-                              {tagsArray.map((tag: string) => (
-                                 <Link 
-                                    key={tag} 
-                                    href={`/tags/${encodeURIComponent(tag)}`}
-                                    className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300"
-                                 >
-                                    #{tag}
-                                 </Link>
-                              ))}
-                           </div>
-                        );
-                     })()}
+                     <Suspense fallback={<div className="flex gap-2 mt-4"><div className="w-16 h-6 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-full" /></div>}>
+                        <LessonTagsWrapper lessonId={lesson.id} />
+                     </Suspense>
                   </div>
 
                   <div className="space-y-10">
-                     <div className="text-on-surface-variant leading-loose text-lg font-medium prose prose-slate max-w-none">
-                        {lesson.description || t("noDescription")}
-                     </div>
 
                      {lesson.assignment && (
                         <Suspense fallback={<div className="h-96 bg-slate-50 dark:bg-slate-900 animate-pulse rounded-2xl" />}>
@@ -292,30 +343,9 @@ export default async function StudentLessonDetailPage({
                      )}
 
                      {lesson.assignment && (
-                        <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10 mt-32">
-                           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                              <div className="space-y-4">
-                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                                       <AssignmentIcon className="w-5 h-5 text-white" />
-                                    </div>
-                                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">{t("relatedAssignment")}</p>
-                                 </div>
-                                 <h3 className="text-2xl font-black tracking-tight uppercase italic">{lesson.assignment.title}</h3>
-                                 <div className="flex items-center gap-6 text-xs font-bold">
-                                    <span>{t("questionsCount", { count: lesson.assignment._count.questions })}</span>
-                                    <span>{t("autoGrading")}</span>
-                                 </div>
-                              </div>
-                              <Link 
-                                 href={`/student/assignments/${lesson.assignment.slug || lesson.assignment.id}/run?direct=true`}
-                                 className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
-                              >
-                                 {t("startAssignment")}
-                                 <ArrowRight className="w-5 h-5" />
-                              </Link>
-                           </div>
-                        </div>
+                        <Suspense fallback={<div className="h-48 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-[2.5rem] mt-32" />}>
+                           <LessonAssignmentBannerWrapper lessonId={lesson.id} />
+                        </Suspense>
                      )}
                   </div>
 
@@ -327,10 +357,10 @@ export default async function StudentLessonDetailPage({
             </div>
          </div>
 
-         <div className="w-[30%]">
+         <div className="w-full lg:w-[30%]">
             {/* Sidebar (Streamed) */}
             <Suspense fallback={<div className="w-full h-full bg-slate-50 dark:bg-slate-950 animate-pulse" />}>
-               <SidebarWrapper teacher={lesson.teacher} lessonId={lesson.id} />
+               <SidebarWrapper teacherId={lesson.teacherId} lessonId={lesson.id} />
             </Suspense>
          </div>
       </div>

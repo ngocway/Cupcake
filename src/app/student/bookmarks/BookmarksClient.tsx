@@ -33,7 +33,7 @@ export default function BookmarksClient({
   return (
     <div className="space-y-8">
       {/* Tabs */}
-      <div className="flex gap-4 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl w-fit">
+      <div className="flex flex-wrap gap-3 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl w-full sm:w-fit">
         <button
           onClick={() => setActiveTab('lessons')}
           className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${

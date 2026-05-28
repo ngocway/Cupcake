@@ -75,9 +75,9 @@ function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () =
   )
 }
 
-// ─── Newest content lists (rendered via use() — fast, no extra round-trips) ──
+// ─── Content lists (rendered via use() — fast, no extra round-trips) ──
 
-function ExerciseNewestList({
+function ExerciseList({
   promise,
   isLoggedIn,
   searchKeyword,
@@ -101,7 +101,7 @@ function ExerciseNewestList({
   )
 }
 
-function LessonNewestList({
+function LessonList({
   promise,
   isLoggedIn,
   searchKeyword,
@@ -113,40 +113,6 @@ function LessonNewestList({
   onClear: () => void
 }) {
   const { items } = use(promise)
-  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
-  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-      {items.map((le: any) => (
-        <LessonCard key={le.id} item={le} isLoggedIn={isLoggedIn} />
-      ))}
-    </div>
-  )
-}
-
-// ─── Popular content lists (rendered from Zustand store) ─────────────────────
-
-function ExercisePopularList({ isLoggedIn, searchKeyword, onClear }: { isLoggedIn: boolean, searchKeyword?: string, onClear: () => void }) {
-  const items = useContentStore(s => s.popularExercises)
-  const ready = useContentStore(s => s.popularExercisesReady)
-  if (!ready) return <SectionSkeleton />
-  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
-  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-      {items.map((ex: any) => (
-        <ExerciseCard key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
-      ))}
-    </div>
-  )
-}
-
-function LessonPopularList({ isLoggedIn, searchKeyword, onClear }: { isLoggedIn: boolean, searchKeyword?: string, onClear: () => void }) {
-  const items = useContentStore(s => s.popularLessons)
-  const ready = useContentStore(s => s.popularLessonsReady)
-  if (!ready) return <SectionSkeleton />
   if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
   if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
 
@@ -171,17 +137,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const nt = useTranslations("nav")
 
   // Local states — switching never triggers server roundtrip
-  const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "exercises")
-  const [activeSort, setActiveSort] = useState<'newest' | 'popular'>(
-    searchParams.sort === 'popular' ? 'popular' : 'newest'
-  )
+  const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "lessons")
 
   // User type selection (Kids, Teens, Adults, Business)
   const userType            = useContentStore(s => s.userType)
   const setUserType         = useContentStore(s => s.setUserType)
 
-  const setPopularExercises = useContentStore(s => s.setPopularExercises)
-  const setPopularLessons   = useContentStore(s => s.setPopularLessons)
   const isFiltering         = useContentStore(s => s.isFiltering)
   const setFiltering        = useContentStore(s => s.setFiltering)
 
@@ -230,31 +191,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     }, 300);
   }
 
-  // ── Background prefetch: fire-and-forget after page renders ────────────────
-  useEffect(() => {
-    const qs = new URLSearchParams()
-    if (searchParams.categoryId) qs.set('categoryId', searchParams.categoryId)
-    if (searchParams.search)     qs.set('search',     searchParams.search)
-    if (userType)                qs.set('userType',   userType)
-    const base = qs.toString() ? `&${qs}` : ''
 
-    fetch(`/api/feed?type=exercises${base}`)
-      .then(r => r.json())
-      .then(data => setPopularExercises(data.items))
-      .catch(() => {}) // silent fail — popular is a bonus, not critical
-
-    fetch(`/api/feed?type=lessons${base}`)
-      .then(r => r.json())
-      .then(data => setPopularLessons(data.items))
-      .catch(() => {})
-  }, [searchParams.categoryId, searchParams.search, userType]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync URL → state (e.g. browser Back button) ───────────────────────────
   useEffect(() => {
     const tab  = currentParams.get("tab")
-    const sort = currentParams.get("sort") as 'newest' | 'popular' | null
     if (tab  && tab  !== activeTab)  setActiveTab(tab)
-    if (sort && sort !== activeSort) setActiveSort(sort === 'popular' ? 'popular' : 'newest')
   }, [currentParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Tab / sort handlers — no server roundtrip ─────────────────────────────
@@ -263,14 +205,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     setActiveTab(tab)
     const p = new URLSearchParams(window.location.search)
     p.set("tab", tab)
-    window.history.pushState(null, "", `?${p.toString()}`)
-  }
-
-  const handleSortChange = (sort: 'newest' | 'popular') => {
-    if (sort === activeSort) return
-    setActiveSort(sort)
-    const p = new URLSearchParams(window.location.search)
-    p.set("sort", sort)
     window.history.pushState(null, "", `?${p.toString()}`)
   }
 
@@ -347,7 +281,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
           </div>
         </div>
 
-        <div className="lg:col-span-2 relative animate-in zoom-in fade-in duration-1000 delay-300 transition-all duration-700 ease-in-out">
+        <div className="hidden lg:block lg:col-span-2 relative animate-in zoom-in fade-in duration-1000 delay-300 transition-all duration-700 ease-in-out">
           {/* H1 moved here to the right column */}
           <h1 className="text-2xl md:text-4xl font-headline font-black text-primary leading-[1.1] tracking-tight mb-6">
             The Future of <br />
@@ -386,16 +320,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       <div id="content-tabs" className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-10">
         <div className="inline-flex items-center gap-4">
           <button
-            onClick={() => handleTabChange("exercises")}
-            className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-              activeTab === "exercises"
-                ? "bg-secondary border-secondary text-on-secondary shadow-lg shadow-secondary/20 scale-[1.03] translate-y-[-2px]"
-                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
-            }`}
-          >
-            {nt("assignments").toUpperCase()}
-          </button>
-          <button
             onClick={() => handleTabChange("lessons")}
             className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
               activeTab === "lessons"
@@ -405,22 +329,16 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
           >
             {nt("lessons").toUpperCase()}
           </button>
-        </div>
-
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-white/50 border border-outline/10 backdrop-blur-sm">
-          {(["newest", "popular"] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => handleSortChange(s)}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-[0.2em] ${
-                activeSort === s
-                  ? "bg-primary text-on-primary shadow-md"
-                  : "text-slate-400 hover:text-primary hover:bg-primary/5"
-              }`}
-            >
-              {s === "newest" ? t("newest") : t("popular")}
-            </button>
-          ))}
+          <button
+            onClick={() => handleTabChange("exercises")}
+            className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
+              activeTab === "exercises"
+                ? "bg-secondary border-secondary text-on-secondary shadow-lg shadow-secondary/20 scale-[1.03] translate-y-[-2px]"
+                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+            }`}
+          >
+            {nt("assignments").toUpperCase()}
+          </button>
         </div>
       </div>
 
@@ -428,25 +346,17 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       <div className="min-h-[600px] relative transition-opacity duration-300">
         <div className={activeTab === "exercises" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
           {isFiltering ? <SectionSkeleton /> : (
-            activeSort === "newest" ? (
-              <Suspense key={`ex-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
-                <ExerciseNewestList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
-              </Suspense>
-            ) : (
-              <ExercisePopularList isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
-            )
+            <Suspense key={`ex-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
+              <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
+            </Suspense>
           )}
         </div>
 
         <div className={activeTab === "lessons" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
           {isFiltering ? <SectionSkeleton /> : (
-            activeSort === "newest" ? (
-              <Suspense key={`le-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
-                <LessonNewestList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
-              </Suspense>
-            ) : (
-              <LessonPopularList isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
-            )
+            <Suspense key={`le-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
+              <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
+            </Suspense>
           )}
         </div>
       </div>

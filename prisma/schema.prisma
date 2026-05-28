@@ -13,6 +13,7 @@ model User {
   id                   String               @id @default(cuid())
   email                String               @unique
   name                 String?
+  emailVerified        DateTime?
   image                String?
   password             String?
   role                 Role?                @default(STUDENT)
@@ -181,6 +182,7 @@ model Assignment {
   questions             Question[]
   submissions           Submission[]
   categories            Category[]
+  mediaAttachments      MediaAttachment[]
 
   @@index([status])
   @@index([materialType])
@@ -587,5 +589,17 @@ model Tag {
   name      String   @unique
   isPopular Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model MediaAttachment {
+  id           String     @id @default(cuid())
+  assignmentId String
+  url          String
+  name         String
+  type         String     @default("AUDIO")
+  createdAt    DateTime   @default(now())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@index([assignmentId])
 }
 

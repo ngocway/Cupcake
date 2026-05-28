@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, memo, useRef } from "react";
+import { useState, useMemo, memo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { format } from "date-fns"
 import { vi } from "date-fns/locale"
@@ -178,9 +178,22 @@ export default function AssignmentsPageContent(props: Props) {
     });
   }, [assignments, searchQuery, selectedClassId]);
 
+  const [columns, setColumns] = useState(3);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) setColumns(1);
+      else if (window.innerWidth < 1024) setColumns(2);
+      else setColumns(3);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Virtual scrolling
   const rowVirtualizer = useVirtualizer({
-    count: Math.ceil(filteredAssignments.length / 3),
+    count: Math.ceil(filteredAssignments.length / columns),
     getScrollElement: () => parentRef.current,
     estimateSize: () => 520,
     overscan: 3,
@@ -294,8 +307,8 @@ export default function AssignmentsPageContent(props: Props) {
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 absolute w-full"
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const startIndex = virtualRow.index * 3;
-                  const rowAssignments = filteredAssignments.slice(startIndex, startIndex + 3);
+                  const startIndex = virtualRow.index * columns;
+                  const rowAssignments = filteredAssignments.slice(startIndex, startIndex + columns);
                   
                   return (
                     <div
@@ -306,7 +319,7 @@ export default function AssignmentsPageContent(props: Props) {
                         transform: `translateY(${virtualRow.start}px)`,
                         width: "100%",
                         display: "grid",
-                        gridTemplateColumns: "repeat(3, 1fr)",
+                        gridTemplateColumns: `repeat(${columns}, 1fr)`,
                         gap: "2rem",
                       }}
                     >
