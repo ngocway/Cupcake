@@ -48,7 +48,7 @@ export function FloatingTeacherInfo({
   }
 
   return (
-    <div className="fixed top-24 left-8 z-[150]">
+    <div className="hidden md:block fixed top-24 left-8 z-[150]">
       {/* Floating Avatar Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

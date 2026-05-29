@@ -47,7 +47,7 @@ export function RelatedAssignmentsSection({
   const t = useTranslations("header");
 
   return (
-    <div className="glass rounded-3xl p-8 space-y-6 shadow-xl">
+    <div className="glass rounded-3xl p-5 md:p-8 space-y-6 shadow-xl">
       <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{t("relatedContent")}</h4>
       
       <div className="space-y-4">

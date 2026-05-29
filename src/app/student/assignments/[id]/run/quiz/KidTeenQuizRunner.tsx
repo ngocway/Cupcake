@@ -19,9 +19,11 @@ import {
   MessageCircle,
   HelpCircle,
   ChevronDown,
+  Bookmark,
 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
+import { LoginModal } from "@/components/LoginButton";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
@@ -290,7 +292,7 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
         </div>
 
         {/* Right column */}
-        <div className="space-y-3 z-20">
+        <div className="flex flex-col justify-around gap-3 z-20">
 
           {shuffledRightItems.map((rightText: string, idx: number) => {
             const pairedLeftId = Object.keys(userAnswer || {}).find((k) => userAnswer[k] === rightText);
@@ -352,14 +354,7 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
         </div>
       </div>
 
-      {!isChecked && (
-        <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-2xl border-2 border-dashed border-purple-200">
-          <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-purple-500 shrink-0">
-            <MousePointer2 className="w-5 h-5" />
-          </div>
-          <p className="text-sm text-purple-600 font-medium">{t("matchingTip")}</p>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -429,6 +424,7 @@ export default function KidTeenQuizRunner({
   const [reviewRating, setReviewRating] = useState(initialReview?.rating || 0);
   const [reviewComment, setReviewComment] = useState(initialReview?.comment || "");
   const [hoverRating, setHoverRating] = useState(0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   // ── Nav guard ────────────────────────────────────────────
@@ -1140,36 +1136,47 @@ export default function KidTeenQuizRunner({
       </>
       )}
       </div>
+    {/* ── BACKDROP ── */}
+      {isSidePanelOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 transition-opacity"
+          onClick={() => setIsSidePanelOpen(false)}
+        />
+      )}
+
     {/* ── SIDE PANEL TOGGLE BUTTON ── */}
       <button
-        onClick={() => setIsSidePanelOpen((p) => !p)}
-        className="fixed top-1/2 right-0 z-50 w-9 h-16 bg-primary text-white flex items-center justify-center rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out"
-        style={{ transform: `translateY(-50%) translateX(${isSidePanelOpen ? -SIDE_PANEL_W : 0}px)` }}
-        title={isSidePanelOpen ? "Close panel" : "Open panel"}
+        onClick={() => setIsSidePanelOpen(true)}
+        className={`fixed top-1/2 right-0 z-30 w-9 h-16 bg-primary text-white flex items-center justify-center rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
+        style={{ transform: 'translateY(-50%)' }}
+        title="Open panel"
       >
-        {isSidePanelOpen ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+        <ChevronLeft className="w-5 h-5" />
       </button>
 
       {/* ── RIGHT SLIDE PANEL ── */}
       <div
-        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden"
-        style={{ width: `${SIDE_PANEL_W}px`, transform: isSidePanelOpen ? "translateX(0)" : `translateX(${SIDE_PANEL_W}px)` }}
+        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden w-[100vw] max-w-[400px]"
+        style={{ transform: isSidePanelOpen ? "translateX(0)" : "translateX(100%)" }}
       >
         {/* Panel header */}
         <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
           <h3 className="font-black text-slate-700 uppercase tracking-wider text-sm">Results & Info</h3>
-          {!isGuest && (
-            <div className="flex items-center gap-2">
-              <BookmarkButton id={assignment.id} type="ASSIGNMENT" initialIsBookmarked={assignment.favoriteAssignments?.length > 0} />
-              <button
-                onClick={() => setIsReviewModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-all"
-              >
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span className="text-xs font-bold text-amber-700">{t("sendReview")}</span>
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+              <>
+                <BookmarkButton id={assignment.id} type="ASSIGNMENT" initialIsBookmarked={assignment.favoriteAssignments?.length > 0} isLoggedIn={!isGuest} />
+                <button
+                  onClick={() => isGuest ? setShowLoginModal(true) : setIsReviewModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-all hidden sm:flex"
+                >
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span className="text-xs font-bold text-amber-700">{t("sendReview")}</span>
+                </button>
+              </>
+            <button onClick={() => setIsSidePanelOpen(false)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-rose-500 rounded-full transition-colors ml-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Panel body */}
@@ -1330,6 +1337,7 @@ export default function KidTeenQuizRunner({
           </div>
         </div>
       )}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
     </div>
   );
 }

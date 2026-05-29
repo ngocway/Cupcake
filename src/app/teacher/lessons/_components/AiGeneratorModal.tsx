@@ -67,18 +67,20 @@ Diem: 1
 Giai thich: Sau enjoy dùng V-ing.`;
 
 const generateCustomPrompt = (params: any) => {
-  const { topic, referenceUrl, audience, category, language, length, mcqCount, mcqMultiCount, tfCount, clozeCount, vocabCount } = params;
+  const { reference, audience, category, language, length, mcqCount, mcqMultiCount, tfCount, clozeCount, vocabCount } = params;
   const totalQuestions = mcqCount + mcqMultiCount + tfCount + clozeCount;
 
   let prompt = `Đóng vai một chuyên gia giáo dục và người tạo nội dung khóa học. `;
-  if (topic.trim()) {
-    prompt += `Hãy tạo cho tôi một bài học theo chủ đề: "${topic.trim()}".\n`;
+  
+  const refText = reference ? reference.trim() : "";
+  if (refText) {
+    if (refText.startsWith('http://') || refText.startsWith('https://') || refText.startsWith('www.')) {
+      prompt += `Vui lòng tạo một bài học dựa trên nội dung từ đường link tham khảo sau: ${refText}\n`;
+    } else {
+      prompt += `Hãy tạo cho tôi một bài học theo chủ đề: "${refText}".\n`;
+    }
   } else {
     prompt += `Hãy tự chọn một chủ đề thú vị và sáng tạo để tạo bài học.\n`;
-  }
-
-  if (referenceUrl.trim()) {
-    prompt += `Vui lòng tham khảo thông tin từ đường link sau để xây dựng nội dung: ${referenceUrl.trim()}\n`;
   }
 
   prompt += `\nBài học này dành cho đối tượng: ${audience === 'All' ? 'Tất cả mọi người' : audience}.\n`;
@@ -213,8 +215,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
   const [progress, setProgress] = useState(0);
 
   // Form states
-  const [topic, setTopic] = useState("");
-  const [referenceUrl, setReferenceUrl] = useState("");
+  const [reference, setReference] = useState("");
   const [audience, setAudience] = useState("All");
   const [category, setCategory] = useState("Tiếng Anh");
   const [language, setLanguage] = useState("Tiếng Anh");
@@ -264,7 +265,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
 
   const handleGeneratePrompt = () => {
     const prompt = generateCustomPrompt({
-      topic, referenceUrl, audience, category, language, length, mcqCount, mcqMultiCount, tfCount, clozeCount, vocabCount
+      reference, audience, category, language, length, mcqCount, mcqMultiCount, tfCount, clozeCount, vocabCount
     });
     setGeneratedPrompt(prompt);
   };
@@ -429,15 +430,30 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
     });
     // Auto-highlight vocabularies in passage (first occurrence only to avoid clutter)
     if (data.passage && data.vocabularies && data.vocabularies.length > 0) {
+      const placeholders: Record<string, string> = {};
+      const uniqueRunId = Date.now();
+      
       data.vocabularies.forEach((vocab: any, index: number) => {
-        const vocabId = 'vocab-' + Date.now() + '-' + index;
+        const vocabId = 'vocab-' + uniqueRunId + '-' + index;
         const escapedWord = vocab.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         // Match the exact word, case-insensitive, capture it to retain original casing
         const regex = new RegExp(`\\b(${escapedWord})\\b`, 'i'); 
-        const escapeHtml = (str: string) => (str || '').replace(/"/g, '&quot;');
-        const html = `<span class="relative inline-block custom-vocab-marker group/marker" data-vocab-id="${vocabId}" data-word="${escapeHtml(vocab.word)}" data-pronunciation="${escapeHtml(vocab.pronunciation)}" data-meaning-vi="${escapeHtml(vocab.meaningVi)}" data-meaning-th="${escapeHtml(vocab.meaningTh || '')}" data-meaning-id="${escapeHtml(vocab.meaningId || '')}" data-explanation-en="${escapeHtml(vocab.explanationEn)}" data-examples="${escapeHtml(vocab.examples)}" data-image="" contenteditable="false"><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">$1</span></span>`;
         
-        data.passage = data.passage.replace(regex, html);
+        const match = data.passage.match(regex);
+        if (match) {
+          const actualWord = match[1];
+          const placeholderKey = `__VOCAB_PLACEHOLDER_${uniqueRunId}_${index}__`;
+          const escapeHtml = (str: string) => (str || '').replace(/"/g, '&quot;');
+          const html = `<span class="relative inline-block custom-vocab-marker group/marker" data-vocab-id="${vocabId}" data-word="${escapeHtml(vocab.word)}" data-pronunciation="${escapeHtml(vocab.pronunciation)}" data-meaning-vi="${escapeHtml(vocab.meaningVi)}" data-meaning-th="${escapeHtml(vocab.meaningTh || '')}" data-meaning-id="${escapeHtml(vocab.meaningId || '')}" data-explanation-en="${escapeHtml(vocab.explanationEn)}" data-examples="${escapeHtml(vocab.examples)}" data-image="" contenteditable="false"><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">${actualWord}</span></span>`;
+          
+          placeholders[placeholderKey] = html;
+          data.passage = data.passage.replace(regex, placeholderKey);
+        }
+      });
+      
+      // Restore placeholders
+      Object.keys(placeholders).forEach(key => {
+        data.passage = data.passage.replace(key, () => placeholders[key]);
       });
     }
 
@@ -516,13 +532,8 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Chủ đề bài học (Tùy chọn)</label>
-                  <input type="text" className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Để trống AI sẽ tự sáng tạo..." value={topic} onChange={e => setTopic(e.target.value)} />
-                </div>
-                
-                <div className="flex flex-col gap-1 md:col-span-2">
-                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Link tham khảo (Tùy chọn)</label>
-                  <input type="text" className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="https://..." value={referenceUrl} onChange={e => setReferenceUrl(e.target.value)} />
+                  <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Chủ đề hoặc Link tham khảo (Tùy chọn)</label>
+                  <input type="text" className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder='VD: "My Family" hoặc dán đường link https://...' value={reference} onChange={e => setReference(e.target.value)} />
                 </div>
 
                 <div className="flex flex-col gap-1">

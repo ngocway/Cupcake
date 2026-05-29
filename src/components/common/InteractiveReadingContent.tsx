@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Volume2, PlusCircle, BookOpen, LogIn } from 'lucide-react';
+import { Volume2, PlusCircle, BookOpen, LogIn, X } from 'lucide-react';
+import { LoginModal } from '@/components/LoginButton';
 import { getUserVocabLanguage, updateUserVocabLanguage } from '@/actions/vocab-settings';
 import { SelectionTranslator } from './SelectionTranslator';
 
@@ -31,6 +32,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   });
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const playingAudioRef = useRef<HTMLAudioElement | null>(null);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
 
@@ -198,6 +200,12 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="w-[560px] bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_35px_100px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-slate-800 p-8 animate-in fade-in zoom-in-95 duration-200 relative">
+          <button 
+            onClick={() => setActiveVocab(null)}
+            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X className="w-5 h-5" />
+          </button>
           <div className="flex gap-8 items-stretch">
             {/* Left Column */}
             <div className="w-[200px] flex flex-col">
@@ -293,13 +301,16 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                   <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-2">
                     Bạn cần đăng nhập để lưu từ vựng
                   </p>
-                  <a 
-                    href="/student/login" 
+                  <button 
+                    onClick={() => {
+                      setActiveVocab(null);
+                      setShowLoginModal(true);
+                    }}
                     className="flex items-center justify-center gap-2 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
                   >
                     <LogIn className="w-3.5 h-3.5" />
                     Đăng nhập ngay
-                  </a>
+                  </button>
                 </div>
               )}
             </div>
@@ -397,6 +408,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
           color: #eab308 !important;
         }
       `}</style>
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import { submitAssignmentReview, submitLessonReview } from "@/actions/reviews"
 import { Star, X, CheckCircle2, MessageSquare, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { LoginModal } from "@/components/LoginButton"
 
 interface ReviewTriggerProps {
     type: 'assignment' | 'lesson'
@@ -21,6 +22,7 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -47,13 +49,14 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
         }
     };
 
-    if (!isLoggedIn) return null;
-
     if (inline) {
         return (
             <>
                 <button 
-                    onClick={() => setIsOpen(true)}
+                    onClick={() => {
+                        if (!isLoggedIn) setShowLoginModal(true);
+                        else setIsOpen(true);
+                    }}
                     className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-yellow-500 transition-all active:scale-95"
                     title={t("sendReview")}
                 >
@@ -121,16 +124,20 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                     </div>,
                     document.body
                 )}
-            </>
-        )
-    }
+            <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
+        </>
+    )
+}
 
     return (
         <>
             {!isOpen && (
                 <div className="fixed bottom-10 right-10 z-[100]">
                     <button 
-                        onClick={() => setIsOpen(true)}
+                        onClick={() => {
+                            if (!isLoggedIn) setShowLoginModal(true);
+                            else setIsOpen(true);
+                        }}
                         className="w-16 h-16 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-400 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 hover:text-yellow-400 hover:border-yellow-100 transition-all group relative"
                     >
                         <Star className="w-8 h-8 group-hover:fill-yellow-400" />
@@ -201,6 +208,7 @@ export function ReviewTrigger({ type, id, isLoggedIn, inline }: ReviewTriggerPro
                 </div>,
                 document.body
             )}
+            <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
         </>
     );
 }

@@ -35,6 +35,7 @@ import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherIn
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 import KidTeenQuizRunner from "./KidTeenQuizRunner";
 import Link from "next/link";
+import { LoginModal } from "@/components/LoginButton";
 import { completeSubmission } from "@/actions/submission-actions";
 import { useTranslations } from "next-intl";
 
@@ -357,12 +358,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
           })}
         </div>
       </div>
-      {!isChecked && (
-        <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-           <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary"><MousePointer2 className="w-4 h-4" /></div>
-           <p className="text-xs text-slate-500 font-medium">{t("matchingTip")}</p>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -417,6 +413,7 @@ export default function QuizClientRunner({
   const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isPending, startTransition] = useTransition();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const videoUrl = assignment.videoUrl || assignment.lesson?.videoUrl;
   const audioUrl = assignment.audioUrl || assignment.lesson?.audioUrl;
@@ -672,6 +669,11 @@ export default function QuizClientRunner({
     // Start sequential reveal
     setCheckedQuestions({}); // Reset first
     
+    // Scroll to top on mobile so student can watch the progress circles change color
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
     for (const q of questions) {
       await new Promise(resolve => setTimeout(resolve, 500)); // Delay between reveals
       setCheckedQuestions(prev => ({ ...prev, [q.id]: true }));
@@ -695,7 +697,7 @@ export default function QuizClientRunner({
   const handleSubmit = () => {
     if (isGuest) {
       if (confirm(t("guestSubmitConfirm"))) {
-        router.push(`/student/login?callbackUrl=/student/assignments/${assignment.id}/run?direct=true`);
+        setShowLoginModal(true);
       }
       return;
     }
@@ -726,7 +728,8 @@ export default function QuizClientRunner({
   }
 
   return (
-    <div className="flex flex-col min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 p-3 lg:p-6 font-body">
+    <div className="flex flex-col min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 lg:p-6 font-body">
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
       {/* Floating Teacher Info */}
       <FloatingTeacherInfo 
         teacher={assignment.teacher} 
@@ -736,40 +739,46 @@ export default function QuizClientRunner({
       {/* Header removed as per user request */}
 
       {/* Integrated Workspace */}
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-primary/5 rounded-[2.5rem] lg:rounded-[3.5rem] shadow-2xl shadow-primary/5">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-primary/5 rounded-none lg:rounded-[3.5rem] shadow-2xl shadow-primary/5">
         {/* Middle Column: Questions (100% mobile, 70% desktop) */}
         <div className="w-full lg:w-[70%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-outline-variant/20 relative">
            {/* Progress Navigation Header (Sticky) */}
-           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/10 flex items-center px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-6">
-              <div className="shrink-0">
+           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6">
+              <div className="shrink-0 w-full md:w-auto flex justify-start">
                 <BackButton className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
                   Back
                 </BackButton>
               </div>
               
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 pr-20"> {/* pr-20 to balance the back button */}
-                <h2 className="text-[11px] font-black text-on-surface/80 uppercase tracking-[0.2em] line-clamp-1 max-w-[80%] text-center">
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 md:gap-4 pr-0 md:pr-20 w-full min-w-0"> {/* min-w-0 to allow flex child to shrink properly */}
+                <h2 className="text-[11px] font-black text-on-surface/80 uppercase tracking-[0.2em] line-clamp-1 max-w-[100%] md:max-w-[80%] text-center">
                   {assignment.title}
                 </h2>
-                <div className={`flex items-center ${sizeConfig.gap}`}>
+                <div className={`flex items-center max-w-full overflow-x-auto no-scrollbar px-4 pt-4 pb-2 ${sizeConfig.gap}`}>
                    {questions.map((q, i) => {
                       const ans = answers[q.id];
                       const isCompleted = ans !== undefined && ans !== null && (
                         (typeof ans === 'object' ? Object.keys(ans).length > 0 : true)
                       );
                       const isActive = activeQuestionId === q.id;
+                      const isChecked = checkedQuestions[q.id];
+                      const status = isChecked ? getQuestionStatus(q, ans) : null;
 
                       return (
                           <button
                             key={q.id}
                             onClick={() => scrollToQuestion(q.id)}
-                            className={`relative flex items-center justify-center rounded-full font-black transition-all duration-300 border-2 ${sizeConfig.circle} ${
+                            className={`relative shrink-0 flex items-center justify-center rounded-full font-black transition-all duration-300 border-2 ${sizeConfig.circle} ${
                               isActive 
                                ? "bg-amber-100 border-amber-500 text-amber-600 scale-110 shadow-lg shadow-amber-500/20" 
-                               : isCompleted
-                                 ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
-                                 : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
+                               : status === 'correct'
+                                 ? "bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/20"
+                                 : status === 'incorrect'
+                                   ? "bg-rose-500 border-rose-500 text-white shadow-md shadow-rose-500/20"
+                                   : isCompleted
+                                     ? "bg-primary border-primary text-white shadow-md shadow-primary/20"
+                                     : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
                             }`}
                           >
                              {i + 1}
@@ -800,7 +809,7 @@ export default function QuizClientRunner({
               </div>
            </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar p-5 lg:p-12 lg:pl-20 space-y-24 scroll-smooth">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 lg:p-12 lg:pl-20 space-y-12 scroll-smooth">
             {/* All Questions Rendered */}
             {questions.map((q, idx) => {
               let questionData: any;
@@ -827,7 +836,7 @@ export default function QuizClientRunner({
                   key={q.id}
                   id={q.id}
                   ref={el => { questionRefs.current[q.id] = el }}
-                  className="space-y-8 pb-12 border-b border-outline-variant/10 last:border-0"
+                  className="space-y-8 pb-8 border-b border-outline-variant/10 last:border-0"
                 >
                   <div className="space-y-4">
                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
@@ -1117,25 +1126,24 @@ export default function QuizClientRunner({
         <div className="w-full lg:w-[30%] shrink-0 flex flex-col bg-white/40 dark:bg-slate-800/40">
            <div className="h-12 border-b border-outline-variant/10 flex items-center justify-start px-6 bg-transparent shrink-0">
               <div className="flex items-center gap-4">
-                 {!isGuest && (
                    <>
                      <BookmarkButton 
                        id={assignment.id} 
                        type="ASSIGNMENT" 
                        initialIsBookmarked={assignment.favoriteAssignments?.length > 0} 
+                       isLoggedIn={!isGuest}
                      />
                      <button 
-                       onClick={() => setIsReviewModalOpen(true)}
+                       onClick={() => isGuest ? setShowLoginModal(true) : setIsReviewModalOpen(true)}
                        className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-outline-variant/20 hover:scale-105 active:scale-95 transition-all"
                      >
                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">{t("sendReview")}</span>
                      </button>
                    </>
-                 )}
               </div>
            </div>
-           <div className="flex-1 overflow-y-auto no-scrollbar p-10 custom-scrollbar pb-20 space-y-12">
+           <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-8 lg:p-10 custom-scrollbar lg:pb-20 pb-20 space-y-12">
               {/* Instructions Section */}
               {hasMaterialSection && (
                 <div className="space-y-4">

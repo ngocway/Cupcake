@@ -229,13 +229,12 @@ export default async function PublicLessonPage({
                      <div className="flex items-center justify-end">
                         
                         <div className="flex items-center gap-3">
-                           {session && (
-                             <BookmarkButton 
-                                id={lesson.id}
-                                type="LESSON"
-                                initialIsBookmarked={isBookmarked}
-                             />
-                           )}
+                           <BookmarkButton 
+                              id={lesson.id}
+                              type="LESSON"
+                              initialIsBookmarked={isBookmarked}
+                              isLoggedIn={!!session}
+                           />
                            <ReviewTrigger 
                               type="lesson"
                               id={lesson.id}

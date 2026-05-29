@@ -1245,14 +1245,6 @@ export function ReadingExerciseBuilder({
                <span className="material-symbols-outlined text-[18px]">arrow_back</span> Quay lại danh sách
              </button>
            )}
-           <h1 className="text-lg font-black text-blue-700 font-headline mb-1 leading-tight">Reading Exercise Builder</h1>
-           <p className="text-[10px] font-semibold font-label text-slate-500 uppercase tracking-widest mt-2">Teacher Dashboard</p>
-        </div>
-        <div className="px-4 mb-8">
-          <div className="bg-surface-container-low rounded-xl p-4 flex flex-col gap-1 border border-black/5 dark:border-white/5">
-            <span className="text-blue-700 font-bold font-headline text-sm">English Grade 10</span>
-            <span className="text-slate-500 font-label text-xs">Unit 4: Modern Ethics</span>
-          </div>
         </div>
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar pb-6">
           <button 
@@ -1478,11 +1470,7 @@ export function ReadingExerciseBuilder({
                 <span className="material-symbols-outlined text-[18px]">add_photo_alternate</span> Chèn Ảnh
               </span>
             </div>
-            <div className="px-5 py-2 rounded-lg flex items-center border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors cursor-pointer" onMouseDown={handleInsertAudioClick}>
-              <span className="flex items-center gap-2 text-[13px] font-bold text-emerald-600 uppercase tracking-wide">
-                <span className="material-symbols-outlined text-[18px]">volume_up</span> Chèn Audio
-              </span>
-            </div>
+
             <button 
               onClick={() => handleSave()} 
               disabled={savingStatus === 'saving'} 
