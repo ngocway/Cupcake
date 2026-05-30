@@ -144,7 +144,7 @@ export default async function StudentAssignmentLobbyPage({
   const userId = sessionData.user.id;
 
   // Hướng 1 & 4: Parallel queries + Meta-only fetch (Cực nhanh)
-  const [assignment, submissionStatus, t, locale] = await Promise.all([
+  const [rawAssignment, submissionStatus, t, locale] = await Promise.all([
     getAssignmentMeta(id),
     prisma.submission.findMany({
       where: { assignmentId: id, studentId: userId },
@@ -155,10 +155,11 @@ export default async function StudentAssignmentLobbyPage({
     getLocale()
   ]);
 
-  if (!assignment) {
+  if (!rawAssignment) {
     notFound();
     return null;
   }
+  const assignment = rawAssignment;
   
   // Canonical redirect
   if (id === assignment.id && assignment.slug && id !== assignment.slug) {
@@ -238,7 +239,7 @@ export default async function StudentAssignmentLobbyPage({
                 {[
                   { label: t("time"), value: assignment.timeLimit ? `${assignment.timeLimit}'` : t("free"), icon: Clock, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-900/10" },
                   { label: t("questions"), value: t("questionsCount", { count: totalQuestions }), icon: Info, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-900/10" },
-                  { label: t("deadline"), value: assignment.deadline ? format(assignment.deadline, 'dd/MM', { locale: dateLocale }) : "∞", icon: Calendar, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-900/10" },
+                  { label: t("deadline"), value: assignment.deadline ? format(assignment.deadline as Date, 'dd/MM', { locale: dateLocale }) : "∞", icon: Calendar, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-900/10" },
                   { label: t("attempts"), value: `${completedCount}/${assignment.maxAttempts}`, icon: Award, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/10" }
                 ].map((stat, i) => (
                   <div key={i} className={`p-5 rounded-2xl border border-slate-200/50 dark:border-slate-700/30 ${stat.bg} space-y-3 shadow-sm backdrop-blur-sm`}>

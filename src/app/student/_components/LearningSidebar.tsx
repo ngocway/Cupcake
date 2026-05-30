@@ -29,7 +29,7 @@ export function LearningSidebar({
   relatedItems,
   isGuest = false
 }: { 
-  teacher: TeacherInfo
+  teacher: TeacherInfo | null
   relatedItems: RelatedItem[]
   isGuest?: boolean
 }) {
@@ -38,7 +38,7 @@ export function LearningSidebar({
   return (
     <aside className="w-full h-full flex flex-col bg-transparent overflow-y-auto no-scrollbar p-10 pt-7 space-y-10">
        {/* Teacher Profile Card */}
-       {teacher.isPortfolioPublished && (
+       {teacher?.isPortfolioPublished && (
          <div className="glass rounded-3xl p-8 space-y-8 flex flex-col items-center text-center shadow-xl">
             <div className="space-y-4 flex flex-col items-center w-full">
                <div className="w-28 h-28 rounded-full border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden bg-white">
