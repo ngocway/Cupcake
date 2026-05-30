@@ -37,29 +37,31 @@ export default async function StudentLayout({ children }: { children: React.Reac
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-body text-slate-900 dark:text-white">
       <SmartHeader session={publicSession} />
       
-      {/* Admin/Teacher Impersonation Banner */}
+      {/* Admin/Teacher Impersonation Floating Button */}
       {(session.user.role === 'ADMIN' || isTeacher) && (
-        <div className={`sticky top-0 z-[100] w-full ${isTeacher ? 'bg-primary text-white' : 'bg-amber-500 text-amber-950'} flex items-center justify-between px-6 py-2.5 shadow-lg pt-32`}>
-          <div className="flex items-center gap-2">
+        <a
+          href={isTeacher ? "/teacher/materials" : "/admin/staff"}
+          className={`fixed z-[100] bottom-24 md:bottom-8 right-6 flex items-center gap-3 px-5 py-3 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 border group ${
+            isTeacher 
+              ? 'bg-primary/95 text-white border-white/20 hover:bg-primary shadow-primary/30' 
+              : 'bg-amber-500/95 text-amber-950 border-amber-900/20 hover:bg-amber-500 shadow-amber-500/30'
+          } backdrop-blur-md`}
+        >
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full ${isTeacher ? 'bg-white/20' : 'bg-amber-950/10'}`}>
             <span className="material-symbols-outlined text-[18px]">
               {isTeacher ? 'visibility' : 'admin_panel_settings'}
             </span>
-            <span className="text-xs font-black uppercase tracking-widest">
+          </div>
+          <div className="flex flex-col items-start leading-tight">
+            <span className="text-[9px] font-bold opacity-80 uppercase tracking-widest">
               {isTeacher ? t("studentViewMode") : t("adminViewMode")}
             </span>
+            <span className="text-xs font-black uppercase tracking-widest flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
+              {isTeacher ? t("backToLibrary") : t("exitToAdmin")}
+            </span>
           </div>
-          <a
-            href={isTeacher ? "/teacher/materials" : "/admin/staff"}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all border ${
-              isTeacher 
-                ? 'bg-white/10 hover:bg-white/20 border-white/20' 
-                : 'bg-amber-950/10 hover:bg-amber-950/20 border-amber-950/20'
-            }`}
-          >
-            <span className="material-symbols-outlined text-sm">arrow_back</span>
-            {isTeacher ? t("backToLibrary") : t("exitToAdmin")}
-          </a>
-        </div>
+        </a>
       )}
       {/* TopNavBar */}
       {/* TopNavBar removed as per user request to hide header on non-homepage routes */}

@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import fs from 'fs';
 import path from 'path';
+import { generateUniqueSlug } from '@/lib/slugify';
 
 export interface AILessonResponse {
   title: string;
@@ -293,9 +294,12 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         </ul>
       `;
 
+      const assignmentSlug = await generateUniqueSlug(data.title || "Untitled Lesson", 'assignment');
+
       const assignment = await tx.assignment.create({
         data: {
           title: (data.title || "Untitled AI Lesson").trim(),
+          slug: assignmentSlug,
           shortDescription: data.shortDescription,
           readingText: passageHtml,
           gradeLevel: data.gradeLevel,
@@ -309,10 +313,13 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         }
       });
 
+      const lessonSlug = await generateUniqueSlug(assignment.title, 'lesson');
+
       // Create a Lesson record linked to this assignment
       await tx.lesson.create({
         data: {
           title: assignment.title,
+          slug: lessonSlug,
           description: assignment.shortDescription,
           teacherId: session.user.id,
           assignmentId: assignment.id,
@@ -546,9 +553,12 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         finalTags = allowedTags.join(',');
       }
 
+      const assignmentSlug = await generateUniqueSlug(data.title || "Untitled Lesson", 'assignment');
+
       const assignment = await tx.assignment.create({
         data: {
           title: data.title || "Untitled Lesson",
+          slug: assignmentSlug,
           shortDescription: data.shortDescription,
           readingText: passageHtml,
           gradeLevel: data.gradeLevel || "Khác",
@@ -562,9 +572,12 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         }
       });
 
+      const lessonSlug = await generateUniqueSlug(assignment.title, 'lesson');
+
       await tx.lesson.create({
         data: {
           title: assignment.title,
+          slug: lessonSlug,
           description: assignment.shortDescription,
           teacherId: session.user.id,
           assignmentId: assignment.id,

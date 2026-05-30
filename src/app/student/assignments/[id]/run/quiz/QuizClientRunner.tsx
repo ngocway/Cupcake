@@ -50,7 +50,7 @@ const getQuestionStatus = (q: any, answer: any) => {
     questionData = {};
   }
   
-  const qType = questionData.type || q.type;
+  const qType = questionData.isMultiple ? "MULTIPLE_SELECT" : (questionData.type || q.type);
 
   if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
     const options = questionData.options || [];
@@ -680,7 +680,7 @@ export default function QuizClientRunner({
     } catch (e) {
       questionData = {};
     }
-    const qType = questionData.type || q.type;
+    const qType = questionData.isMultiple ? "MULTIPLE_SELECT" : (questionData.type || q.type);
 
     setAnswers((prev: any) => {
       const currentAnswer = prev[q.id];
@@ -896,7 +896,7 @@ export default function QuizClientRunner({
                 questionData = { questionText: q.content };
               }
 
-              const qType = questionData.type || q.type;
+              const qType = questionData.isMultiple ? "MULTIPLE_SELECT" : (questionData.type || q.type);
               const isMultiSelect = qType === "MULTIPLE_SELECT";
               let questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? q.content;
               

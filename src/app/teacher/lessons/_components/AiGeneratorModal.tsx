@@ -280,6 +280,10 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
     const parseErrors: string[] = [];
     const data: any = { title: "", subject: "", gradeLevel: "", targetAudience: "", shortDescription: "", tags: "", passage: "", vocabularies: [], questions: [] };
 
+    if (text.includes("Đóng vai một chuyên gia giáo dục") || text.includes("<Tiêu đề bài học>") || text.includes("<Nội dung bài đọc") || text.includes("<Nhận định đúng sai>")) {
+      return { data, errors: ["⚠️ AI CHƯA TẠO ĐƯỢC BÀI HỌC THỰC SỰ!\n\nCó vẻ như ChatGPT đã 'lười biếng' và chỉ trả lại nguyên xi cấu trúc mẫu chứa các thẻ như <Tiêu đề bài học>, <Nhận định đúng sai>... thay vì điền nội dung thật.\n\nCách khắc phục:\n1. Quay lại ChatGPT và nhắn thêm: 'Hãy viết nội dung thật để thay thế vào các chỗ <...>, KHÔNG trả về định dạng mẫu.'\n2. Hoặc bạn có thể thử mở một đoạn chat mới trên ChatGPT/Claude và dán lại lệnh."] };
+    }
+
     // Support both Windows \r\n and Unix \n newlines
     const lines = text.split(/\r?\n/);
     let currentSection = "";
@@ -428,6 +432,11 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
         };
       }
     });
+
+    if (!data.title) parseErrors.push("Không tìm thấy Tiêu đề bài học (hoặc sai định dạng [THONG TIN]).");
+    if (!data.passage) parseErrors.push("Không tìm thấy Nội dung bài đọc (hoặc sai định dạng [BAI DOC]).");
+    if (data.questions.length === 0) parseErrors.push("Không tìm thấy Câu hỏi nào (hoặc sai định dạng [CAU HOI ...]).");
+
     // Auto-highlight vocabularies in passage (first occurrence only to avoid clutter)
     if (data.passage && data.vocabularies && data.vocabularies.length > 0) {
       const placeholders: Record<string, string> = {};
