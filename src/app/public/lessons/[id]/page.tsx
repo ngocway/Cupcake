@@ -27,164 +27,229 @@ import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
 import BackButton from "@/components/ui/BackButton";
+import { Suspense } from "react";
+
+// Reuse data fetching from student page
+import { getLessonBasic, getLessonExtra, getTeacherBasic, getLessonReviews, getRelatedLessons, getLessonReadingText } from "@/app/student/lessons/[id]/data";
+
+// --- Sub-components for Streaming ---
+
+async function PublicReviewsWrapper({ lessonId }: { lessonId: string }) {
+  const reviews = await getLessonReviews(lessonId);
+
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    : "0";
+
+  return (
+    <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-primary/5 rounded-[2.5rem] p-10 space-y-12 mb-20 shadow-xl shadow-primary/5">
+      <div className="space-y-4">
+        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Student Reviews</h3>
+        <div className="flex items-end gap-6">
+          <div className="text-6xl font-black text-slate-900 dark:text-white leading-none">
+            {averageRating}/5
+          </div>
+          <div className="space-y-1 pb-1">
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />
+              ))}
+            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{reviews.length} reviews</p>
+          </div>
+        </div>
+      </div>
+
+      {reviews.length > 0 ? (
+        <div className="space-y-10">
+          {reviews.map((review) => (
+            <div key={review.id} className="space-y-4 animate-in fade-in duration-500">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
+                  {review.student.image ? (
+                    <img src={review.student.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold">
+                      {review.student.name?.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm font-black text-slate-800 dark:text-white">{review.student.name}</p>
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className={`w-3 h-3 ${review.rating >= s ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
+                    {review.comment}
+                  </p>
+                  <div className="flex items-center gap-6 pt-1">
+                    <button className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-primary transition-colors">
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <span>12</span>
+                    </button>
+                    <button className="text-xs font-bold text-slate-400 hover:text-primary transition-colors">Reply</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="py-16 text-center space-y-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border-2 border-dashed border-primary/20 shadow-xl shadow-primary/5">
+          <MessageSquare className="w-10 h-10 text-slate-300 mx-auto" />
+          <p className="text-slate-400 italic font-medium text-sm">No reviews yet from students.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+async function PublicSidebarWrapper({ teacherId, lessonId, isGuest }: { teacherId: string | null, lessonId: string, isGuest: boolean }) {
+  const [teacher, relatedLessons] = await Promise.all([
+    teacherId ? getTeacherBasic(teacherId) : Promise.resolve(null),
+    getRelatedLessons(lessonId)
+  ]);
+
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-700 h-full">
+      <LearningSidebar 
+        teacher={teacher} 
+        relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: l.thumbnail || null }))} 
+        isGuest={isGuest}
+      />
+    </div>
+  );
+}
+
+async function PublicActionsWrapper({ lessonId, studentId }: { lessonId: string, studentId: string | undefined }) {
+  const extra = await getLessonExtra(lessonId);
+  const isBookmarked = studentId ? (extra?.favorites?.some((f: any) => f.studentId === studentId) || false) : false;
+  
+  return (
+    <div className="flex items-center justify-end">
+      <div className="flex items-center gap-3">
+         <BookmarkButton 
+             id={lessonId}
+             type="LESSON"
+             initialIsBookmarked={isBookmarked}
+             isLoggedIn={!!studentId}
+         />
+         <ReviewTrigger 
+             type="lesson"
+             id={lessonId}
+             isLoggedIn={!!studentId} inline
+         />
+      </div>
+    </div>
+  );
+}
+
+async function PublicTagsWrapper({ lessonId }: { lessonId: string }) {
+  const extra = await getLessonExtra(lessonId);
+  const tagsArray = extra?.assignment?.tags
+     ? extra.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+     : [];
+  if (tagsArray.length === 0) return null;
+  return (
+     <div className="flex flex-wrap gap-2 mt-4 animate-in fade-in duration-500">
+        {tagsArray.map((tag: string) => (
+           <Link 
+              key={tag} 
+              href={`/tags/${encodeURIComponent(tag)}`}
+              className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300"
+           >
+              #{tag}
+           </Link>
+        ))}
+     </div>
+  );
+}
+
+async function PublicReadingContentWrapper({ lessonId, sessionExists }: { lessonId: string, sessionExists: boolean }) {
+  const readingText = await getLessonReadingText(lessonId);
+  if (!readingText) return null;
+  return (
+    <div className="animate-in fade-in duration-500">
+      <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
+        <InteractiveReadingContent html={readingText} isLoggedIn={sessionExists} />
+      </div>
+    </div>
+  );
+}
+
+async function PublicLessonAssignmentBannerWrapper({ lessonId, sessionExists }: { lessonId: string, sessionExists: boolean }) {
+  const extra = await getLessonExtra(lessonId);
+  const assignment = extra?.assignment;
+
+  if (!assignment) return null;
+
+  return (
+      <div className="p-10 bg-primary text-white rounded-[2.5rem] shadow-2xl shadow-primary/30 relative overflow-hidden group border border-white/10 mt-32 animate-in fade-in duration-500">
+         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                     <AssignmentIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">Attached Assignment</p>
+               </div>
+               <h3 className="text-2xl font-black tracking-tight uppercase italic">{assignment.title}</h3>
+               <div className="flex items-center gap-6">
+                  <span className="flex items-center gap-2 text-xs font-bold">
+                     <CheckCircle className="w-4 h-4 text-white/40" />
+                     {assignment._count?.questions || 0} questions
+                  </span>
+                  <span className="flex items-center gap-2 text-xs font-bold">
+                     <CheckCircle className="w-4 h-4 text-white/40" />
+                     Auto-graded
+                  </span>
+               </div>
+            </div>
+            <Link 
+               href={sessionExists ? `/student/assignments/${assignment.slug || assignment.id}/run?direct=true` : `/public/assignments/${assignment.slug || assignment.id}?direct=true`}
+               className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
+            >
+               START ASSIGNMENT
+               <ArrowRight className="w-5 h-5" />
+            </Link>
+         </div>
+         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+      </div>
+  );
+}
+
+// --- Main Page Component ---
 
 export default async function PublicLessonPage({ 
   params 
 }: { 
   params: Promise<{ id: string }> 
 }) {
-  const sessionData = await auth();
+  const { id } = await params;
+  
+  // Parallel fetch auth and lesson basic data
+  const [sessionData, lesson] = await Promise.all([
+    auth(),
+    getLessonBasic(id)
+  ]);
+
   const session = sessionData?.user ? {
     id: sessionData.user.id!,
     name: sessionData.user.name ?? null,
     image: sessionData.user.image ?? null,
     role: sessionData.user.role ?? null,
   } : null;
-  
-  const { id } = await params;
-
-  const lesson = await prisma.lesson.findFirst({
-    where: {
-      OR: [
-        { id },
-        { slug: id }
-      ]
-    },
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          professionalTitle: true,
-          bio: true,
-          isPortfolioPublished: true,
-          _count: {
-            select: {
-              lessons: true,
-              assignments: true
-            }
-          }
-        }
-      },
-      assignment: {
-        include: {
-          _count: {
-             select: { questions: true }
-          }
-        }
-      },
-      ...(session ? {
-        favorites: {
-          where: { studentId: session.id }
-        }
-      } : {}),
-      reviews: {
-        where: { isApproved: true },
-        include: {
-          student: {
-            select: { name: true, image: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      }
-    }
-  });
 
   if (!lesson) notFound();
 
-  // Fetch popular tags
-  const popularTags = await prisma.tag.findMany({
-    where: { isPopular: true },
-    select: { name: true }
-  });
-  const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
-
-  // Get current lesson's tags (excluding popular tags)
-  const currentTags = lesson.assignment?.tags
-    ? lesson.assignment.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
-    : [];
-  const filteredTags = currentTags.filter(tag => !popularTagNames.has(tag));
-
-  const currentAudiences = lesson.targetAudiences || [];
-
-  let relatedLessons: any[] = [];
-
-  if (filteredTags.length > 0) {
-    const candidates = await prisma.lesson.findMany({
-      where: {
-        id: { not: lesson.id },
-        deletedAt: null,
-        isBlocked: false,
-        isPremium: false,
-        ...(currentAudiences.length > 0 && {
-          targetAudiences: { hasSome: currentAudiences }
-        }),
-        assignment: {
-          OR: filteredTags.map(tag => ({
-            tags: { contains: tag, mode: 'insensitive' }
-          }))
-        }
-      },
-      take: 100,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        thumbnail: true,
-        teacher: {
-          select: { name: true }
-        },
-        assignment: {
-          select: { tags: true }
-        }
-      }
-    });
-
-    const getOverlapCount = (tagsStr: string | null | undefined) => {
-      if (!tagsStr) return 0;
-      const tags = tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-      return tags.filter(tag => filteredTags.includes(tag)).length;
-    };
-
-    candidates.sort((a, b) => {
-      const overlapA = getOverlapCount(a.assignment?.tags);
-      const overlapB = getOverlapCount(b.assignment?.tags);
-      return overlapB - overlapA;
-    });
-
-    relatedLessons = candidates.slice(0, 10);
+  // Canonical redirect
+  if (id === lesson.id && lesson.slug && id !== lesson.slug) {
+    redirect(`/public/lessons/${lesson.slug}`);
   }
-
-  // Fallback: If no lessons found or no filtered tags exist, fetch the latest public lessons
-  if (relatedLessons.length === 0) {
-    relatedLessons = await prisma.lesson.findMany({
-      where: {
-        id: { not: lesson.id },
-        deletedAt: null,
-        isBlocked: false,
-        isPremium: false,
-        ...(currentAudiences.length > 0 && {
-          targetAudiences: { hasSome: currentAudiences }
-        })
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 10,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        thumbnail: true,
-        teacher: {
-          select: { name: true }
-        }
-      }
-    });
-  }
-
-  const isBookmarked = session ? (lesson as any).favorites?.length > 0 : false;
 
   // Parse Youtube ID if applicable
   const getYoutubeId = (url: string | null) => {
@@ -197,7 +262,7 @@ export default async function PublicLessonPage({
 
   return (
     <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex flex-col lg:h-screen lg:overflow-hidden font-body">
-      <PublicHeader session={session} />
+      <PublicHeader session={session as any} />
       
       {/* 2-Column Learning Layout */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
@@ -211,7 +276,7 @@ export default async function PublicLessonPage({
                </BackButton>
 
                {/* Video Player */}
-               {videoId && (
+               {(videoId || lesson.videoUrl) && (
                   <div className="aspect-video bg-black rounded-[2.5rem] overflow-hidden shadow-2xl shadow-black/20 group relative shrink-0 border border-white/10">
                      <iframe
                        className="w-full h-full"
@@ -226,169 +291,46 @@ export default async function PublicLessonPage({
                {/* Lesson Details Card */}
                <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-[3.5rem] p-10 lg:p-12 space-y-12 shadow-2xl shadow-primary/5 border border-primary/5 mb-12">
                   <div className="space-y-6">
-                     <div className="flex items-center justify-end">
-                        
-                        <div className="flex items-center gap-3">
-                           <BookmarkButton 
-                              id={lesson.id}
-                              type="LESSON"
-                              initialIsBookmarked={isBookmarked}
-                              isLoggedIn={!!session}
-                           />
-                           <ReviewTrigger 
-                              type="lesson"
-                              id={lesson.id}
-                              isLoggedIn={!!session} inline
-                           />
-                        </div>
-                     </div>
+                     <Suspense fallback={<div className="h-8 flex justify-end"><div className="w-24 bg-white/50 animate-pulse rounded-full" /></div>}>
+                        <PublicActionsWrapper lessonId={lesson.id} studentId={session?.id} />
+                     </Suspense>
+                     
                      <h2 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
                         {lesson.title}
                      </h2>
-                     {(() => {
-                        const tagsArray = lesson.assignment?.tags
-                           ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
-                           : [];
-                        if (tagsArray.length === 0) return null;
-                        return (
-                           <div className="flex flex-wrap gap-2 mt-4">
-                              {tagsArray.map((tag: string) => (
-                                 <Link 
-                                    key={tag} 
-                                    href={`/tags/${encodeURIComponent(tag)}`}
-                                    className="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400 px-3 py-1 rounded-full text-xs font-bold shadow-sm border border-yellow-100 dark:border-yellow-800/30 hover:scale-105 hover:bg-yellow-100 transition-all duration-300"
-                                 >
-                                    #{tag}
-                                 </Link>
-                              ))}
-                           </div>
-                        );
-                     })()}
+                     
+                     <Suspense fallback={<div className="flex gap-2 mt-4"><div className="w-16 h-6 bg-white/50 animate-pulse rounded-full" /></div>}>
+                        <PublicTagsWrapper lessonId={lesson.id} />
+                     </Suspense>
                   </div>
 
-
                   <div className="space-y-10">
-                     {lesson.assignment?.readingText && (
-                        <div className="animate-in fade-in duration-500">
-                           <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
-                              <InteractiveReadingContent html={lesson.assignment.readingText} isLoggedIn={!!session} />
-                           </div>
-                        </div>
+                     {lesson.assignment && (
+                        <Suspense fallback={<div className="h-96 bg-white/30 animate-pulse rounded-2xl" />}>
+                           <PublicReadingContentWrapper lessonId={lesson.id} sessionExists={!!session} />
+                        </Suspense>
                      )}
 
                      {lesson.assignment && (
-                        <div className="p-10 bg-primary text-white rounded-[2.5rem] shadow-2xl shadow-primary/30 relative overflow-hidden group border border-white/10">
-                           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                              <div className="space-y-4">
-                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                                       <AssignmentIcon className="w-5 h-5 text-white" />
-                                    </div>
-                                    <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">Attached Assignment</p>
-                                 </div>
-                                 <h3 className="text-2xl font-black tracking-tight uppercase italic">{lesson.assignment.title}</h3>
-                                 <div className="flex items-center gap-6">
-                                    <span className="flex items-center gap-2 text-xs font-bold">
-                                       <CheckCircle className="w-4 h-4 text-white/40" />
-                                       {lesson.assignment._count.questions} questions
-                                    </span>
-                                    <span className="flex items-center gap-2 text-xs font-bold">
-                                       <CheckCircle className="w-4 h-4 text-white/40" />
-                                       Auto-graded
-                                    </span>
-                                 </div>
-                              </div>
-                              <Link 
-                                 href={session ? `/student/assignments/${lesson.assignment.id}/run?direct=true` : `/public/assignments/${lesson.assignment.id}?direct=true`}
-                                 className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
-                              >
-                                 START ASSIGNMENT
-                                 <ArrowRight className="w-5 h-5" />
-                              </Link>
-                           </div>
-                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl" />
-                        </div>
+                        <Suspense fallback={<div className="h-48 bg-white/30 animate-pulse rounded-[2.5rem] mt-32" />}>
+                           <PublicLessonAssignmentBannerWrapper lessonId={lesson.id} sessionExists={!!session} />
+                        </Suspense>
                      )}
                   </div>
 
                   {/* Reviews & Comments Section */}
-                  <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-primary/5 rounded-[2.5rem] p-10 space-y-12 mb-20 shadow-xl shadow-primary/5">
-                     <div className="space-y-4">
-                        <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Student Reviews</h3>
-                        <div className="flex items-end gap-6">
-                           <div className="text-6xl font-black text-slate-900 dark:text-white leading-none">
-                              {lesson.reviews.length > 0 
-                                 ? (lesson.reviews.reduce((acc, r) => acc + r.rating, 0) / lesson.reviews.length).toFixed(1)
-                                 : "0"
-                              }/5
-                           </div>
-                           <div className="space-y-1 pb-1">
-                              <div className="flex gap-0.5">
-                                 {[1, 2, 3, 4, 5].map((s) => (
-                                    <Star key={s} className="w-4 h-4 text-amber-400 fill-amber-400" />
-                                 ))}
-                              </div>
-                              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{lesson.reviews.length} reviews</p>
-                           </div>
-                        </div>
-                     </div>
-
-                     {lesson.reviews.length > 0 ? (
-                        <div className="space-y-10">
-                           {lesson.reviews.map((review) => (
-                              <div key={review.id} className="space-y-4 animate-in fade-in duration-500">
-                                 <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm">
-                                       {review.student.image ? (
-                                          <img src={review.student.image} alt="" className="w-full h-full object-cover" />
-                                       ) : (
-                                          <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold">
-                                             {review.student.name?.charAt(0)}
-                                          </div>
-                                       )}
-                                    </div>
-                                    <div className="flex-1 space-y-2">
-                                       <div className="flex items-center gap-3">
-                                          <p className="text-sm font-black text-slate-800 dark:text-white">{review.student.name}</p>
-                                          <div className="flex gap-0.5">
-                                             {[1, 2, 3, 4, 5].map((s) => (
-                                                <Star key={s} className={`w-3 h-3 ${review.rating >= s ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
-                                             ))}
-                                          </div>
-                                       </div>
-                                       <p className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed">
-                                          {review.comment}
-                                       </p>
-                                       <div className="flex items-center gap-6 pt-1">
-                                          <button className="flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-primary transition-colors">
-                                             <ThumbsUp className="w-3.5 h-3.5" />
-                                             <span>12</span>
-                                          </button>
-                                          <button className="text-xs font-bold text-slate-400 hover:text-primary transition-colors">Reply</button>
-                                       </div>
-                                    </div>
-                                 </div>
-                              </div>
-                           ))}
-                        </div>
-                     ) : (
-                        <div className="py-16 text-center space-y-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl rounded-[2.5rem] border-2 border-dashed border-primary/20 shadow-xl shadow-primary/5">
-                           <MessageSquare className="w-10 h-10 text-slate-300 mx-auto" />
-                           <p className="text-slate-400 italic font-medium text-sm">No reviews yet from students.</p>
-                        </div>
-                     )}
-                  </div>
+                  <Suspense fallback={<div className="h-64 bg-white/30 animate-pulse rounded-[2.5rem]" />}>
+                     <PublicReviewsWrapper lessonId={lesson.id} />
+                  </Suspense>
                </div>
             </div>
          </div>
 
          {/* Right Column: Teacher & Related */}
          <div className="w-full lg:w-[30%]">
-            <LearningSidebar 
-              teacher={lesson.teacher as any} 
-              relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: l.thumbnail || null }))} 
-              isGuest={!session}
-            />
+            <Suspense fallback={<div className="w-full h-full bg-slate-50/50 dark:bg-slate-950/50 animate-pulse" />}>
+               <PublicSidebarWrapper teacherId={lesson.teacherId} lessonId={lesson.id} isGuest={!session} />
+            </Suspense>
          </div>
       </div>
    </div>
