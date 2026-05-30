@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { MaterialStatus, MaterialType } from '@prisma/client';
+import { MaterialStatus, MaterialType } from '@/generated/client';
 import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
 import { useRouter } from 'next/navigation';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';

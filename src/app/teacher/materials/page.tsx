@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MaterialListItem } from './_components/MaterialListItem';
-import { MaterialStatus } from '@prisma/client';
+import { MaterialStatus } from '@/generated/client';
 import { createDraftMaterial, bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials } from '@/actions/material-actions';
 import { useSession } from 'next-auth/react';
 import { Plus, Sparkles, ArrowLeft, Trash2, RotateCcw } from 'lucide-react';
