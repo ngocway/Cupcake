@@ -10,7 +10,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacher: true, 
           categories: true,
           lesson: true,
-          _count: { select: { reviews: true } }
+          _count: { select: { reviews: true, questions: true } }
         }
       });
 
@@ -32,6 +32,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: ass.teacher.image ?? undefined,
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
+          questionCount: ass._count.questions,
           categoryId: ass.categories.length > 0 ? ass.categories.map(c => c.id).join(',') : null,
           status: ass.status,
           targetAudiences: ass.targetAudiences,
@@ -52,6 +53,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: ass.teacher.image ?? undefined,
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
+          questionCount: ass._count.questions,
           categoryId: ass.categories.length > 0 ? ass.categories.map(c => c.id).join(',') : null,
           status: ass.status,
           targetAudiences: ass.targetAudiences,

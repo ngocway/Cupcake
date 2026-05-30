@@ -260,93 +260,99 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
     { name: "Thùng rác", href: "/teacher/materials/trash", icon: "delete" },
   ];
 
+  const isEditMode = pathname.endsWith('/edit') || pathname.includes('/edit/');
+
   return (
     <div className={`teacher-theme ${lexend.variable} font-display bg-[#eef8fa] dark:bg-slate-900 text-slate-900 dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
       {session?.user?.role === 'ADMIN' && <AdminModeBanner mode="TEACHER" />}
-      <header className="sticky top-0 z-50 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-3 shadow-sm">
-        <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
-          <div className="flex items-center gap-8 flex-1">
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="size-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-sm">
-                <BookOpen className="w-5 h-5 stroke-[2px]" />
-              </div>
-              <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight hidden lg:block">Teacher's Library</h2>
-            </div>
-            <div className="flex-1 max-w-xl">
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                  <Search className="w-5 h-5 stroke-[2px]" />
+      {!isEditMode && (
+        <header id="teacher-header" className="sticky top-0 z-50 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-3 shadow-sm">
+          <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
+            <div className="flex items-center gap-8 flex-1">
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="size-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-sm">
+                  <BookOpen className="w-5 h-5 stroke-[2px]" />
                 </div>
-                <input 
-                  className="block w-full rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm py-2.5 pl-10 pr-4 text-base placeholder-slate-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30 transition-all font-medium" 
-                  placeholder="Tìm kiếm bài tập, tài liệu..." 
-                  type="text"
-                  defaultValue={new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('q') || ''}
-                  onChange={(e) => {
-                    const params = new URLSearchParams(window.location.search);
-                    if (e.target.value) {
-                      params.set('q', e.target.value);
-                    } else {
-                      params.delete('q');
-                    }
-                    const newPath = `${window.location.pathname}?${params.toString()}`;
-                    window.history.replaceState({}, '', newPath);
-                    window.dispatchEvent(new Event('search-change'));
-                  }}
-                />
+                <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight hidden lg:block">Teacher's Library</h2>
+              </div>
+              <div className="flex-1 max-w-xl">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <Search className="w-5 h-5 stroke-[2px]" />
+                  </div>
+                  <input 
+                    className="block w-full rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm py-2.5 pl-10 pr-4 text-base placeholder-slate-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/30 transition-all font-medium" 
+                    placeholder="Tìm kiếm bài tập, tài liệu..." 
+                    type="text"
+                    defaultValue={new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('q') || ''}
+                    onChange={(e) => {
+                      const params = new URLSearchParams(window.location.search);
+                      if (e.target.value) {
+                        params.set('q', e.target.value);
+                      } else {
+                        params.delete('q');
+                      }
+                      const newPath = `${window.location.pathname}?${params.toString()}`;
+                      window.history.replaceState({}, '', newPath);
+                      window.dispatchEvent(new Event('search-change'));
+                    }}
+                  />
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-4">
+              <NotificationBell />
+              <TeacherProfile />
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <NotificationBell />
-            <TeacherProfile />
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <div className="flex flex-1 max-w-[1440px] mx-auto w-full px-6 py-8 gap-8">
-        <aside className="w-64 shrink-0 hidden md:flex flex-col gap-6">
-          <div className="flex flex-col gap-1">
-            <p className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Điều hướng</p>
-            {navItems.map((item) => {
-              const Icon = IconMap[item.icon] || LayoutGrid;
-              return (
-                <Link 
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group ${
-                    pathname === item.href 
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold" 
-                      : "hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 group-hover:scale-110 transition-transform ${pathname === item.href ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
-          </div>
-          <div className="flex flex-col gap-1">
-            <p className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Thư viện của tôi</p>
-            {libraryItems.map((item) => {
-              const Icon = IconMap[item.icon] || LayoutGrid;
-              return (
-                <Link 
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group ${
-                    pathname === item.href 
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold" 
-                      : "hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  <Icon className={`w-5 h-5 group-hover:scale-110 transition-transform ${pathname === item.href ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-                  <span>{item.name}</span>
-                </Link>
-              )
-            })}
-          </div>
-        </aside>
+      <div id="teacher-layout-wrapper" className={`flex flex-1 ${isEditMode ? 'w-full' : 'max-w-[1440px] mx-auto px-6 py-8 gap-8'} w-full`}>
+        {!isEditMode && (
+          <aside id="teacher-sidebar" className="w-64 shrink-0 hidden md:flex flex-col gap-6">
+            <div className="flex flex-col gap-1">
+              <p className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Điều hướng</p>
+              {navItems.map((item) => {
+                const Icon = IconMap[item.icon] || LayoutGrid;
+                return (
+                  <Link 
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group ${
+                      pathname === item.href 
+                        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold" 
+                        : "hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 group-hover:scale-110 transition-transform ${pathname === item.href ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+                    <span>{item.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Thư viện của tôi</p>
+              {libraryItems.map((item) => {
+                const Icon = IconMap[item.icon] || LayoutGrid;
+                return (
+                  <Link 
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium transition-all group ${
+                      pathname === item.href 
+                        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold" 
+                        : "hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Icon className={`w-5 h-5 group-hover:scale-110 transition-transform ${pathname === item.href ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+                    <span>{item.name}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </aside>
+        )}
         
         <main className="flex-1 min-w-0">
           {children}

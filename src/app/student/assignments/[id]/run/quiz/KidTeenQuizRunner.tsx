@@ -156,6 +156,18 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<any>(null);
   const [hoveredLine, setHoveredLine] = useState<any>(null);
+  const [, setForceUpdate] = useState({});
+
+  useEffect(() => {
+    // Force a re-render after mount to ensure DOM nodes exist for getDotCoords
+    setForceUpdate({});
+    
+    // Also re-calculate lines if window resizes
+    const handleResize = () => setForceUpdate({});
+    window.addEventListener("resize", handleResize);
+    
+    return () => window.removeEventListener("resize", handleResize);
+  }, [q.id]);
 
   const shuffledRightItems = useMemo(() => {
     if (!questionData.pairs) return [];
@@ -219,22 +231,69 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
             return (
               <g
                 key={`kid-${leftId}`}
-                onMouseEnter={(e) => isChecked && setHoveredLine({ x: e.clientX, y: e.clientY, isCorrect, content: isCorrect ? t("correct") : t("incorrect") })}
+                onMouseEnter={(e) => isChecked && setHoveredLine({ 
+                  x: e.clientX, 
+                  y: e.clientY, 
+                  isCorrect, 
+                  content: isCorrect ? t("correct") : t("yourIncorrectMatch", { defaultMessage: "Lựa chọn của em (Sai)" }) 
+                })}
                 onMouseLeave={() => setHoveredLine(null)}
               >
-                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="20" className="cursor-help pointer-events-auto" />
-                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke={strokeColor} strokeWidth={isChecked ? (isCorrect ? "6" : "3") : "4"} strokeDasharray={isChecked && !isCorrect ? "8,5" : "none"} opacity={isChecked && isCorrect ? "1" : "0.9"} className="transition-all duration-500 pointer-events-none" />
+                {/* Vùng vô hình mở rộng để dễ hover */}
+                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="30" className="cursor-help pointer-events-auto" />
+                {/* Nét vẽ của học sinh (luôn là nét liền) */}
+                <line 
+                  x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} 
+                  stroke={strokeColor} 
+                  strokeWidth={isChecked ? (isCorrect ? "8" : "6") : "5"} 
+                  strokeDasharray="none" 
+                  opacity={isChecked && isCorrect ? "1" : "0.9"} 
+                  className="transition-all duration-500 pointer-events-none" 
+                />
+                
+                {/* Đáp án đúng của hệ thống (nét đứt mờ, chỉ hiện khi học sinh làm sai) */}
                 {isChecked && !isCorrect && (() => {
                   const correctIdx = shuffledRightItems.indexOf(pair.rightText);
                   if (correctIdx === -1) return null;
                   const correctCoords = getDotCoords(correctIdx.toString(), "right");
-                  return <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="#10B981" strokeWidth="3" strokeDasharray="6,4" opacity="0.7" className="pointer-events-none" />;
+                  return (
+                    <g
+                      onMouseEnter={(e) => setHoveredLine({ 
+                        x: e.clientX, 
+                        y: e.clientY, 
+                        isCorrect: true, 
+                        content: t("correctAnswer", { defaultMessage: "Đáp án đúng" }) 
+                      })}
+                      onMouseLeave={() => setHoveredLine(null)}
+                      className="cursor-help pointer-events-auto"
+                    >
+                      <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="transparent" strokeWidth="20" />
+                      <line 
+                        x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} 
+                        stroke="#10B981" 
+                        strokeWidth="5" 
+                        strokeDasharray="8,6" 
+                        opacity="0.8" 
+                        className="pointer-events-none" 
+                        style={{ animation: "dash 1s linear infinite" }}
+                      />
+                    </g>
+                  );
                 })()}
               </g>
             );
           })}
-          {dragging && <line x1={dragging.x1} y1={dragging.y1} x2={dragging.x2} y2={dragging.y2} stroke="#8B5CF6" strokeWidth="4" strokeDasharray="8,5" />}
+          {dragging && <line x1={dragging.x1} y1={dragging.y1} x2={dragging.x2} y2={dragging.y2} stroke="#8B5CF6" strokeWidth="5" />}
         </svg>
+
+        {/* CSS Animation cho nét đứt chạy rần rần */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes dash {
+            to {
+              stroke-dashoffset: -14;
+            }
+          }
+        `}} />
 
         {hoveredLine && (
           <div
@@ -248,8 +307,7 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
           </div>
         )}
 
-        {/* Left column */}
-        <div className="space-y-3 z-20">
+        <div className="flex flex-col justify-between gap-3 z-20">
 
           {(questionData.pairs || []).map((pair: any, idx: number) => {
             const pairedRightText = userAnswer?.[pair.id];
@@ -291,8 +349,7 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
           })}
         </div>
 
-        {/* Right column */}
-        <div className="flex flex-col justify-around gap-3 z-20">
+        <div className="flex flex-col justify-between gap-3 z-20">
 
           {shuffledRightItems.map((rightText: string, idx: number) => {
             const pairedLeftId = Object.keys(userAnswer || {}).find((k) => userAnswer[k] === rightText);
@@ -354,6 +411,23 @@ function MatchingBlock({ q, questionData, userAnswer, isChecked, handleAnswerCha
         </div>
       </div>
 
+      {/* Bảng chú giải (Legend) */}
+      {isChecked && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-8 px-6 py-3 bg-white/90 backdrop-blur-md rounded-2xl border-2 border-slate-200 shadow-sm mx-auto w-fit">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-1.5 bg-emerald-500 rounded-full"></div>
+            <span className="text-sm font-bold text-slate-700">{t("yourCorrectMatch", { defaultMessage: "Lựa chọn đúng" })}</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-1.5 bg-rose-500 rounded-full"></div>
+            <span className="text-sm font-bold text-slate-700">{t("yourIncorrectMatch", { defaultMessage: "Lựa chọn sai" })}</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 border-t-[4px] border-dashed border-emerald-500"></div>
+            <span className="text-sm font-bold text-slate-700">{t("correctAnswer", { defaultMessage: "Đáp án đúng" })}</span>
+          </div>
+        </div>
+      )}
 
     </div>
   );

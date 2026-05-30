@@ -20,42 +20,59 @@ export default async function PublicAssignmentPage({
 
   const { id } = await params;
   
-  const assignment = await prisma.assignment.findFirst({
-    where: {
-      OR: [
-        { id },
-        { slug: id }
-      ]
-    },
-    include: {
-      teacher: {
-        include: {
-          _count: {
-            select: {
-               lessons: true,
-               assignments: true
+  const [assignment, questions, popularTags] = await Promise.all([
+    prisma.assignment.findFirst({
+      where: {
+        OR: [
+          { id },
+          { slug: id }
+        ]
+      },
+      include: {
+        teacher: {
+          include: {
+            _count: {
+              select: {
+                 lessons: true,
+                 assignments: true
+              }
             }
           }
+        },
+        _count: {
+          select: { questions: true }
+        },
+        ...(session ? {
+          favoriteAssignments: {
+            where: { studentId: session.id }
+          }
+        } : {}),
+        reviews: {
+          where: { isApproved: true },
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        },
+        lesson: {
+          select: { id: true }
         }
-      },
-      _count: {
-        select: { questions: true }
-      },
-      ...(session ? {
-        favoriteAssignments: {
-          where: { studentId: session.id }
-        }
-      } : {}),
-      reviews: {
-        where: { isApproved: true },
-        orderBy: { createdAt: 'desc' },
-        take: 10
-      },
-      lesson: {
-        select: { id: true }
       }
-    }
-  });
+    }),
+    prisma.question.findMany({
+      where: { 
+        assignment: {
+          OR: [
+            { id },
+            { slug: id }
+          ]
+        }
+      },
+      orderBy: { orderIndex: 'asc' }
+    }),
+    prisma.tag.findMany({
+      where: { isPopular: true },
+      select: { name: true }
+    })
+  ]);
 
   if (!assignment) {
     notFound();
@@ -86,17 +103,6 @@ export default async function PublicAssignmentPage({
     }
   }
 
-  // For guests: fetch questions and render QuizClientRunner directly
-  const questions = await prisma.question.findMany({
-    where: { assignmentId: assignment.id },
-    orderBy: { orderIndex: 'asc' }
-  });
-
-  // Fetch popular tags
-  const popularTags = await prisma.tag.findMany({
-    where: { isPopular: true },
-    select: { name: true }
-  });
   const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
 
   const currentTags = assignment.tags

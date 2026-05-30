@@ -73,7 +73,7 @@ function mapFeedItem(item: any) {
       name: item.teacherName,
       image: item.teacherImage
     },
-    _count: { reviews: item.reviewCount }
+    _count: { reviews: item.reviewCount, questions: item.questionCount }
   };
 }
 
@@ -117,9 +117,11 @@ export const getCachedAssignments = async (params: any) => {
     .sort(() => 0.5 - Math.random())
     .slice(0, 12);
 
-  const items = randomIds.length > 0 
-    ? await prisma.homepageFeed.findMany({ where: { id: { in: randomIds } } })
-    : [];
+  let items: any[] = [];
+  if (randomIds.length > 0) {
+    const placeholders = randomIds.map((_, i) => `$${i + 1}`).join(',');
+    items = await prisma.$queryRawUnsafe(`SELECT * FROM "HomepageFeed" WHERE id IN (${placeholders})`, ...randomIds);
+  }
 
   items.sort(() => 0.5 - Math.random());
 

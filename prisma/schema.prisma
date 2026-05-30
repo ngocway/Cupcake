@@ -544,6 +544,7 @@ model HomepageFeed {
   teacherImage    String?
   viewCount       Int      @default(0)
   reviewCount     Int      @default(0)
+  questionCount   Int      @default(0)
   categoryId      String?
   targetAudiences String[] @default([])
   tags            String[] @default([])

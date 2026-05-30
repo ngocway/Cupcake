@@ -115,6 +115,12 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
                 ))}
               </div>
             )}
+            {item._count?.questions !== undefined && (
+              <div className="flex items-center gap-1.5 text-primary/40 ml-1">
+                <span className="material-symbols-outlined !text-[18px]">help</span>
+                <span className="text-tiny font-black">{item._count.questions} Qs</span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-primary/40">
               <span className="material-symbols-outlined !text-[18px]">visibility</span>
               <span className="text-tiny font-black">{views}</span>

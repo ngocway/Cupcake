@@ -428,6 +428,30 @@ export function ReadingExerciseBuilder({
   }, [activeTab]);
 
   useEffect(() => {
+    // Hide layout elements when editor is active
+    const header = document.getElementById('teacher-header');
+    const aside = document.getElementById('teacher-sidebar');
+    const wrapper = document.getElementById('teacher-layout-wrapper');
+    
+    if (header) header.style.display = 'none';
+    if (aside) aside.style.display = 'none';
+    if (wrapper) {
+      wrapper.classList.remove('max-w-[1440px]', 'mx-auto', 'px-6', 'py-8', 'gap-8');
+      wrapper.classList.add('w-full');
+    }
+
+    return () => {
+      // Restore layout elements when editor is unmounted
+      if (header) header.style.display = '';
+      if (aside) aside.style.display = '';
+      if (wrapper) {
+        wrapper.classList.add('max-w-[1440px]', 'mx-auto', 'px-6', 'py-8', 'gap-8');
+        wrapper.classList.remove('w-full');
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     async function init() {
       if (isFetched.current) return;
       isFetched.current = true;
