@@ -155,7 +155,10 @@ export default async function StudentAssignmentLobbyPage({
     getLocale()
   ]);
 
-  if (!assignment) notFound();
+  if (!assignment) {
+    notFound();
+    return null;
+  }
   
   // Canonical redirect
   if (id === assignment.id && assignment.slug && id !== assignment.slug) {
