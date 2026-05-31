@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition, useRef } from "react"
-import { uploadMedia } from "@/actions/upload-actions"
+import { uploadMedia, uploadUrlMedia } from "@/actions/upload-actions"
 import { 
   adminCreateFlashcard, 
   adminUpdateFlashcard, 
@@ -10,7 +10,10 @@ import {
   adminUpdateTopic,
   adminDeleteTopic
 } from "@/actions/admin-flashcards"
-import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle } from "lucide-react"
+import { generateVocabularyDetails } from "@/actions/ai-actions"
+import { searchImagesAction } from "@/actions/image-search-actions"
+import { toast } from "sonner"
+import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy } from "lucide-react"
 
 // TypeScript interfaces
 interface Topic {
@@ -120,6 +123,14 @@ export function AdminFlashcardsClient({
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // AI & Image Search states
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [isSearchingImage, setIsSearchingImage] = useState(false)
+  const [isUploadingVocabImage, setIsUploadingVocabImage] = useState(false)
+  const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false)
+  const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
+  const [showAIPromptModal, setShowAIPromptModal] = useState(false)
+
   // -------------------------------------------------------------
   // FLASHCARD FILTERING LOGIC
   // -------------------------------------------------------------
@@ -167,6 +178,138 @@ export function AdminFlashcardsClient({
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  // -------------------------------------------------------------
+  // AI AUTO-FILL HANDLER
+  // -------------------------------------------------------------
+  const handleAiFill = async () => {
+    if (!cardForm.word || !cardForm.word.trim()) {
+      toast.error("Vui lòng nhập từ vựng tiếng Anh trước.")
+      return
+    }
+
+    setIsAiLoading(true)
+    const word = cardForm.word.trim().replace(/[.,!?;:]/g, "")
+    const cleanLookup = word.toLowerCase()
+
+    try {
+      // 1. Try generateVocabularyDetails
+      const result = await generateVocabularyDetails(word)
+      if (result && !result.error) {
+        setCardForm(prev => ({
+          ...prev,
+          word: result.word || prev.word,
+          phonetic: result.pronunciation || prev.phonetic || "...",
+          definition: result.explanationEn || prev.definition || "",
+          definitionVi: result.meaningVi || prev.definitionVi || "",
+          definitionTh: result.meaningTh || prev.definitionTh || "",
+          definitionId: result.meaningId || prev.definitionId || "",
+          exampleSentence: Array.isArray(result.examples) && result.examples.length > 0 
+            ? result.examples[0] 
+            : (typeof result.examples === "string" ? result.examples : prev.exampleSentence || "")
+        }))
+
+        toast.success("AI tự điền thông tin thành công!")
+        
+        // 2. Automatically trigger Google Image search as requested!
+        setIsAiLoading(false)
+        await handleGoogleImageSearch(result.word || word)
+        return
+      } else if (result?.error) {
+        console.warn("AI details error response:", result.error)
+      }
+    } catch (error) {
+      console.error("AI autofill error:", error)
+    }
+
+    // 2. Fallback to dictionary and MyMemory translation APIs
+    try {
+      toast.info("Đang tra cứu từ điển dự phòng...")
+      const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${cleanLookup}`)
+      const dictData = await dictRes.json()
+      
+      let pronunciation = ""
+      let explanationEn = ""
+      let exampleSentence = ""
+      
+      if (Array.isArray(dictData) && dictData.length > 0) {
+        const entry = dictData[0]
+        pronunciation = entry.phonetic || entry.phonetics?.find((ph: any) => ph.text)?.text || ""
+        const firstMeaning = entry.meanings?.[0]
+        if (firstMeaning) {
+          explanationEn = firstMeaning.definitions?.[0]?.definition || ""
+          exampleSentence = firstMeaning.definitions?.[0]?.example || ""
+        }
+      }
+
+      const transRes = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=en|vi`)
+      const transData = await transRes.json()
+      const meaningVi = transData?.responseData?.translatedText || ""
+
+      setCardForm(prev => ({
+        ...prev,
+        phonetic: pronunciation || prev.phonetic || "/.../",
+        definition: explanationEn || prev.definition || `Definition for '${prev.word}' not found.`,
+        definitionVi: meaningVi || prev.definitionVi || `(Nghĩa của từ "${prev.word}")`,
+        exampleSentence: exampleSentence || prev.exampleSentence || ""
+      }))
+
+      toast.success("Tự điền thông tin từ điển thành công!")
+      await handleGoogleImageSearch(word)
+    } catch (innerError) {
+      console.error("Fallback dictionary error:", innerError)
+      toast.error("Không thể lấy thông tin tự động. Vui lòng nhập thủ công.")
+    } finally {
+      setIsAiLoading(false)
+    }
+  }
+
+  // -------------------------------------------------------------
+  // GOOGLE IMAGE SEARCH HANDLER
+  // -------------------------------------------------------------
+  const handleGoogleImageSearch = async (searchTerm: string) => {
+    if (!searchTerm || !searchTerm.trim()) {
+      toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh.")
+      return
+    }
+
+    setIsSearchingImage(true)
+    setShowImageSearchDrawer(true)
+
+    try {
+      const results = await searchImagesAction(searchTerm)
+      setImageSearchResults(results || [])
+    } catch (err: any) {
+      console.error(err)
+      toast.error("Lỗi tìm ảnh: " + (err.message || "Không thể tải ảnh từ Google Images."))
+    } finally {
+      setIsSearchingImage(false)
+    }
+  }
+
+  // -------------------------------------------------------------
+  // IMAGE SELECT & R2 UPLOAD HANDLER
+  // -------------------------------------------------------------
+  const handleImageSelect = async (imageUrl: string) => {
+    setIsUploadingVocabImage(true)
+    setShowImageSearchDrawer(false)
+    toast.info("Đang đồng bộ ảnh về R2...")
+
+    try {
+      const result = await uploadUrlMedia(imageUrl)
+      if (result.success && result.url) {
+        setCardForm(prev => ({ ...prev, imageUrl: result.url }))
+        toast.success("Lưu ảnh lên Cloudflare R2 thành công!")
+      } else {
+        toast.error("Lưu ảnh thất bại: " + result.error)
+      }
+    } catch (err: any) {
+      console.error("Image upload URL error:", err)
+      toast.error("Lỗi đồng bộ ảnh: " + (err.message || String(err)))
+    } finally {
+      setIsUploadingVocabImage(false)
     }
   }
 
@@ -715,11 +858,26 @@ export function AdminFlashcardsClient({
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 w-full max-w-2xl shadow-2xl space-y-6 my-8 max-h-[90vh] overflow-y-auto scrollbar-thin">
             
-            <div>
-              <h2 className="text-2xl font-black text-white tracking-tight">
-                {editingCard ? "Chỉnh sửa Thẻ học" : "Tạo Thẻ học Mới"}
-              </h2>
-              <p className="text-xs text-neutral-400 font-semibold mt-1">Thiết lập các thông tin chi tiết và nghĩa dịch cho từ vựng.</p>
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-white tracking-tight">
+                  {editingCard ? "Chỉnh sửa Thẻ học" : "Tạo Thẻ học Mới"}
+                </h2>
+                <p className="text-xs text-neutral-400 font-semibold mt-1">Thiết lập các thông tin chi tiết và nghĩa dịch cho từ vựng.</p>
+              </div>
+              <button
+                type="button"
+                disabled={isAiLoading}
+                onClick={handleAiFill}
+                className="px-4 py-2.5 bg-violet-600 hover:bg-violet-700 active:scale-95 text-white font-bold rounded-2xl flex items-center gap-1.5 transition-all text-xs shadow-lg shadow-violet-600/20 disabled:opacity-50 shrink-0"
+              >
+                {isAiLoading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                <span>AI Tự Điền</span>
+              </button>
             </div>
 
             <form onSubmit={handleSaveCard} className="space-y-6">
@@ -781,8 +939,8 @@ export function AdminFlashcardsClient({
               {/* R2 Image Uploader & custom link */}
               <div className="space-y-2">
                 <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Hình ảnh thẻ học (Image URL)</label>
-                <div className="flex gap-3">
-                  <div className="relative flex-grow">
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-grow min-w-[200px]">
                     <input
                       type="text"
                       value={cardForm.imageUrl}
@@ -815,20 +973,54 @@ export function AdminFlashcardsClient({
                     )}
                     <span>Tải ảnh lên R2</span>
                   </button>
+
+                  <button
+                    type="button"
+                    disabled={isSearchingImage}
+                    onClick={() => handleGoogleImageSearch(cardForm.word)}
+                    className="px-4 py-3 bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 active:scale-95 text-blue-400 font-bold rounded-2xl transition-all whitespace-nowrap text-sm flex items-center gap-1.5 disabled:opacity-50"
+                    title="Tìm ảnh trên Google"
+                  >
+                    {isSearchingImage ? (
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Globe className="w-4.5 h-4.5" />
+                    )}
+                    <span>Web</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAIPromptModal(true)}
+                    className="px-4 py-3 bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 active:scale-95 text-purple-400 font-bold rounded-2xl transition-all whitespace-nowrap text-sm flex items-center gap-1.5"
+                    title="Tạo prompt AI"
+                  >
+                    <Wand2 className="w-4.5 h-4.5" />
+                    <span>AI Prompt</span>
+                  </button>
                 </div>
               </div>
 
               {/* Image preview frame */}
-              {cardForm.imageUrl && (
-                <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-neutral-800 bg-neutral-950 relative group">
-                  <img src={cardForm.imageUrl} alt="Form preview" className="w-full h-full object-cover" />
-                  <button 
-                    type="button"
-                    onClick={() => setCardForm(prev => ({ ...prev, imageUrl: "" }))}
-                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-black text-rose-500 transition-opacity"
-                  >
-                    Xóa ảnh
-                  </button>
+              {(cardForm.imageUrl || isUploadingVocabImage) && (
+                <div className="w-24 h-24 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-950 relative group">
+                  {isUploadingVocabImage ? (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-neutral-900 border border-neutral-800">
+                      <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-center">Đang lưu R2</span>
+                    </div>
+                  ) : (
+                    <>
+                      <img src={cardForm.imageUrl} alt="Form preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button"
+                        onClick={() => setCardForm(prev => ({ ...prev, imageUrl: "" }))}
+                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-black text-rose-500 transition-opacity"
+                      >
+                        Xóa ảnh
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1054,6 +1246,122 @@ export function AdminFlashcardsClient({
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================================
+          SLIDE-OUT DRAWER: TÌM ẢNH TỪ GOOGLE IMAGES
+          ======================================================================= */}
+      {showImageSearchDrawer && (
+        <div className="fixed top-0 right-0 h-full w-[360px] bg-neutral-900 border-l border-neutral-800 p-6 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
+          
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h4 className="text-base font-bold text-white flex items-center gap-2">
+                <Globe className="text-blue-500 w-5 h-5" />
+                Tìm ảnh Internet
+              </h4>
+              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1">
+                Từ khoá: <span className="text-blue-500">{cardForm?.word}</span>
+              </p>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setShowImageSearchDrawer(false)} 
+              className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+            {isSearchingImage ? (
+              <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-3">
+                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-black uppercase tracking-widest">Đang tìm kiếm...</span>
+              </div>
+            ) : imageSearchResults.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 pb-8">
+                {imageSearchResults.map((img) => (
+                  <div 
+                    key={img.id} 
+                    className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-neutral-850 hover:border-blue-500 hover:shadow-lg transition-all" 
+                    onClick={() => handleImageSelect(img.url)}
+                  >
+                    <img 
+                      src={img.thumb} 
+                      alt="Google result" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      loading="lazy" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                      <span className="text-[9px] text-white/80 font-medium truncate">by {img.author}</span>
+                    </div>
+                    <div className="absolute top-2 right-2 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                      <span className="material-symbols-outlined text-[14px]">check</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-neutral-500 text-xs mt-10">Không tìm thấy ảnh nào phù hợp.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =======================================================================
+          MODAL 4: AI PROMPT COPIER
+          ======================================================================= */}
+      {showAIPromptModal && cardForm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-[32px] w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            
+            <div className="flex justify-between items-center">
+              <h4 className="text-lg font-black text-white flex items-center gap-2">
+                <Wand2 className="text-purple-500 w-5 h-5" />
+                Tạo ảnh bằng AI
+              </h4>
+              <button 
+                type="button" 
+                onClick={() => setShowAIPromptModal(false)} 
+                className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            
+            <p className="text-sm text-neutral-400 leading-relaxed font-medium">
+              Sao chép đoạn lệnh (prompt) tối ưu hóa dưới đây và dán vào các mô hình vẽ tranh (như Gemini, ChatGPT, Midjourney) để thu về hình ảnh vector giáo dục tuyệt đẹp cho thẻ học này:
+            </p>
+            
+            <div className="bg-purple-900/10 rounded-2xl p-5 border border-purple-900/30 relative group">
+              <p className="text-[14px] font-mono text-neutral-300 break-words leading-relaxed select-all">
+                Create a high-quality, flat vector educational illustration of the word "{cardForm.word}" which means "{cardForm.definitionVi || cardForm.definition}". The style should be clear, vibrant, cartoonish, with a clean white background. IMPORTANT: no text in image.
+              </p>
+              <button 
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(`Create a high-quality, flat vector educational illustration of the word "${cardForm.word}" which means "${cardForm.definitionVi || cardForm.definition}". The style should be clear, vibrant, cartoonish, with a clean white background. IMPORTANT: no text in image.`);
+                  toast.success("Đã sao chép Prompt!");
+                }}
+                className="absolute top-3 right-3 p-2 bg-neutral-800 rounded-xl shadow-sm border border-neutral-700 text-neutral-400 hover:text-purple-400 transition-colors opacity-0 group-hover:opacity-100"
+                title="Copy Prompt"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex justify-end pt-2">
+              <button 
+                type="button" 
+                onClick={() => setShowAIPromptModal(false)} 
+                className="px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-2xl transition-all active:scale-95 shadow-lg"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}
