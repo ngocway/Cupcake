@@ -136,6 +136,21 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     }
   }
 
+  // Hàm phát âm từ vựng (Ưu tiên dùng audio lồng tiếng tải lên nếu có, nếu không thì dùng Web Speech API)
+  const handlePlayAudio = (card: any) => {
+    if (!card) return
+    if (card.audioUrl && card.audioUrl.trim()) {
+      const audio = new Audio(card.audioUrl)
+      audio.play().catch(err => {
+        console.error("Lỗi phát audio tùy chỉnh:", err)
+        // Fallback to speech synthesis
+        handleSpeak(card.word)
+      })
+    } else {
+      handleSpeak(card.word)
+    }
+  }
+
   // Tự động phát âm khi lật sang mặt sau (áp dụng riêng cho Kids 2-5 và Kid 6-12)
   useEffect(() => {
     if (isFlipped && selectedCategory && flashcards[currentIndex]) {
@@ -143,7 +158,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       if (isKidCategory) {
         // Delay nhẹ để âm thanh phát ra đồng thời cùng lúc xoay mặt thẻ xong
         const timer = setTimeout(() => {
-          handleSpeak(flashcards[currentIndex].word)
+          handlePlayAudio(flashcards[currentIndex])
         }, 150)
         return () => clearTimeout(timer)
       }
@@ -576,7 +591,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation()
-                          handleSpeak(activeCard?.word)
+                          handlePlayAudio(activeCard)
                         }}
                         className="p-2.5 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-all active:scale-90"
                         title="Pronounce word"
@@ -634,7 +649,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     <button 
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleSpeak(activeCard?.word)
+                        handlePlayAudio(activeCard)
                       }}
                       className={`p-2.5 rounded-full bg-gradient-to-r ${focusThemeColor} text-white flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 shadow-orange-300/30`}
                       title="Listen to pronunciation"

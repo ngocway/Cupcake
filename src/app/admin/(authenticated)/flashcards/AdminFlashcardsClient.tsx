@@ -53,6 +53,7 @@ interface Flashcard {
   definitionId: string | null
   exampleSentence: string | null
   imageUrl: string | null
+  audioUrl: string | null
   createdAt: Date
   topic: {
     id: string
@@ -98,6 +99,7 @@ export function AdminFlashcardsClient({
     word: "",
     phonetic: "",
     imageUrl: "",
+    audioUrl: "",
     definition: "",
     definitionVi: "",
     definitionTh: "",
@@ -130,6 +132,8 @@ export function AdminFlashcardsClient({
   const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false)
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
   const [showAIPromptModal, setShowAIPromptModal] = useState(false)
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false)
+  const audioInputRef = useRef<HTMLInputElement>(null)
 
   // -------------------------------------------------------------
   // FLASHCARD FILTERING LOGIC
@@ -314,6 +318,33 @@ export function AdminFlashcardsClient({
   }
 
   // -------------------------------------------------------------
+  // AUDIO UPLOAD HANDLER
+  // -------------------------------------------------------------
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingAudio(true)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const res = await uploadMedia(formData)
+      if (res.success && res.url) {
+        setCardForm(prev => ({ ...prev, audioUrl: res.url }))
+        toast.success("Tải audio lên R2 thành công!")
+      } else {
+        alert("Upload audio thất bại: " + res.error)
+      }
+    } catch (err: any) {
+      alert("Lỗi tải audio lên R2: " + err.message)
+    } finally {
+      setIsUploadingAudio(false)
+      if (audioInputRef.current) audioInputRef.current.value = ""
+    }
+  }
+
+  // -------------------------------------------------------------
   // OPEN FLASHCARD MODAL
   // -------------------------------------------------------------
   const openCardModal = (card: Flashcard | null = null) => {
@@ -325,6 +356,7 @@ export function AdminFlashcardsClient({
         word: card.word,
         phonetic: card.phonetic || "",
         imageUrl: card.imageUrl || "",
+        audioUrl: card.audioUrl || "",
         definition: card.definition || "",
         definitionVi: card.definitionVi || "",
         definitionTh: card.definitionTh || "",
@@ -342,6 +374,7 @@ export function AdminFlashcardsClient({
         word: "",
         phonetic: "",
         imageUrl: "",
+        audioUrl: "",
         definition: "",
         definitionVi: "",
         definitionTh: "",
@@ -381,6 +414,7 @@ export function AdminFlashcardsClient({
           word: cardForm.word,
           phonetic: cardForm.phonetic,
           imageUrl: cardForm.imageUrl,
+          audioUrl: cardForm.audioUrl,
           definition: cardForm.definition,
           definitionVi: cardForm.definitionVi,
           definitionTh: cardForm.definitionTh,
@@ -413,6 +447,7 @@ export function AdminFlashcardsClient({
           word: cardForm.word,
           phonetic: cardForm.phonetic,
           imageUrl: cardForm.imageUrl,
+          audioUrl: cardForm.audioUrl,
           definition: cardForm.definition,
           definitionVi: cardForm.definitionVi,
           definitionTh: cardForm.definitionTh,
@@ -1023,6 +1058,70 @@ export function AdminFlashcardsClient({
                   )}
                 </div>
               )}
+
+              {/* Audio Uploader & Play test */}
+              <div className="space-y-2 pt-2 border-t border-neutral-800/50">
+                <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Phát âm tùy chỉnh (Audio URL)</label>
+                <div className="flex flex-wrap gap-3">
+                  <div className="relative flex-grow min-w-[200px]">
+                    <input
+                      type="text"
+                      value={cardForm.audioUrl}
+                      onChange={(e) => setCardForm(prev => ({ ...prev, audioUrl: e.target.value }))}
+                      placeholder="Nhập URL âm thanh (.mp3, .wav) hoặc chọn file lồng tiếng..."
+                      className="w-full pl-11 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold"
+                    />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
+                      <Volume2 className="w-4.5 h-4.5" />
+                    </div>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    ref={audioInputRef}
+                    onChange={handleAudioUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={isUploadingAudio}
+                    onClick={() => audioInputRef.current?.click()}
+                    className="px-5 py-3 bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 active:scale-95 text-purple-400 font-bold rounded-2xl transition-all whitespace-nowrap text-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isUploadingAudio ? (
+                      <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Volume2 className="w-4.5 h-4.5" />
+                    )}
+                    <span>Tải audio lên R2</span>
+                  </button>
+
+                  {cardForm.audioUrl && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const audio = new Audio(cardForm.audioUrl)
+                          audio.play().catch(err => toast.error("Không thể phát âm thanh: " + err.message))
+                        }}
+                        className="w-12 h-12 rounded-2xl bg-neutral-800 hover:bg-neutral-750 text-emerald-400 flex items-center justify-center transition-all border border-neutral-700 active:scale-90"
+                        title="Nghe thử"
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCardForm(prev => ({ ...prev, audioUrl: "" }))}
+                        className="w-12 h-12 rounded-2xl bg-neutral-800 hover:bg-rose-500/10 text-rose-400 flex items-center justify-center transition-all border border-neutral-700 active:scale-90"
+                        title="Xóa audio"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* 4 Languages Translation block */}
               <div className="border-t border-neutral-800/80 pt-6 space-y-4">

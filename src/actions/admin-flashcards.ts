@@ -42,6 +42,7 @@ interface CreateFlashcardData {
   definitionId?: string
   exampleSentence?: string
   imageUrl?: string
+  audioUrl?: string
 }
 
 export async function adminCreateFlashcard(data: CreateFlashcardData) {
@@ -69,6 +70,7 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
         definitionId: data.definitionId?.trim() || null,
         exampleSentence: data.exampleSentence?.trim() || null,
         imageUrl: data.imageUrl?.trim() || null,
+        audioUrl: data.audioUrl?.trim() || null,
         orderIndex
       }
     })
@@ -93,6 +95,7 @@ interface UpdateFlashcardData {
   definitionId?: string | null
   exampleSentence?: string | null
   imageUrl?: string | null
+  audioUrl?: string | null
 }
 
 export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData) {
@@ -110,7 +113,8 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
         definitionTh: data.definitionTh !== undefined ? (data.definitionTh?.trim() || null) : undefined,
         definitionId: data.definitionId !== undefined ? (data.definitionId?.trim() || null) : undefined,
         exampleSentence: data.exampleSentence !== undefined ? (data.exampleSentence?.trim() || null) : undefined,
-        imageUrl: data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : undefined
+        imageUrl: data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : undefined,
+        audioUrl: data.audioUrl !== undefined ? (data.audioUrl?.trim() || null) : undefined
       }
     })
 
