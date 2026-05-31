@@ -28,6 +28,7 @@ import {
 import BackButton from "@/components/ui/BackButton";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
+import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
@@ -445,11 +446,108 @@ interface Props {
   submissionId?: string;
   questions: any[];
   initialAnswers: any;
-  isBookmarked: boolean;
-  initialReview: any;
-  allReviews: any[];
-  relatedAssignments: any[];
+  extraDataPromise: Promise<any>;
+  relatedAssignmentsPromise?: Promise<any[]>;
   isGuest?: boolean;
+}
+
+function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
+  const extraData = React.use(promise);
+  if (!extraData || !extraData.teacher) return null;
+  return <FloatingTeacherInfo teacher={extraData.teacher} onNavigate={handleSafeNavigate} />;
+}
+
+function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }: any) {
+  const extraData = React.use(promise);
+  if (!extraData) return null;
+
+  const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
+  const audioUrl = extraData.lesson?.audioUrl || extraData.audioUrl;
+  const youtubeId = getYoutubeVideoId(videoUrl);
+
+  const hasMaterialSection = videoUrl || audioUrl || extraData.readingText;
+  const hasInstructionText = !!extraData.instructions;
+
+  return (
+    <>
+      <div className="h-12 border-b border-outline-variant/10 flex items-center justify-start px-6 bg-transparent shrink-0">
+        <div className="flex items-center gap-4">
+             <BookmarkButton 
+               id={extraData.id} 
+               type="ASSIGNMENT" 
+               initialIsBookmarked={extraData.favoriteAssignments?.length > 0} 
+               isLoggedIn={!isGuest}
+             />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-8 lg:p-10 custom-scrollbar lg:pb-20 pb-20 space-y-12">
+        {/* Instructions Section */}
+        {hasMaterialSection && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
+              <BookOpen className="w-4 h-4 stroke-[2px]" />
+              {t("studyMaterial")}
+            </div>
+            <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
+              {/* Video Player */}
+              {videoUrl && (
+                <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10 shrink-0 mb-6">
+                  {youtubeId ? (
+                    <iframe
+                      className="w-full h-full"
+                      src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
+                      title="Video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <video src={videoUrl} className="w-full h-full" controls />
+                  )}
+                </div>
+              )}
+
+              {/* Audio Player */}
+              {audioUrl && (
+                <GlobalAudioPlayer audioUrl={audioUrl} />
+              )}
+
+              <div className="prose prose-slate prose-lg dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-xl text-lg leading-loose">
+                <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tags Section */}
+        {extraData.tags && (
+          <div className="flex flex-wrap gap-2">
+            {extraData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
+              <Link 
+                key={i} 
+                href={`/tags/${encodeURIComponent(tag)}`}
+                className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-300"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Material Section */}
+        {hasInstructionText && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
+              <Info className="w-4 h-4 stroke-[2px]" />
+              {t("instructions")}
+            </div>
+            <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
+              <InteractiveReadingContent html={extraData.instructions} isLoggedIn={!isGuest} />
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
 }
 
 const getYoutubeVideoId = (url: string | null) => {
@@ -459,15 +557,25 @@ const getYoutubeVideoId = (url: string | null) => {
   return (match && match[2].length === 11) ? match[2] : null;
 };
 
+function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise: Promise<any[]>, isGuest: boolean, onNavigate: (url: string) => void }) {
+  const relatedAssignments = React.use(promise);
+  if (!relatedAssignments || relatedAssignments.length === 0) return null;
+  return (
+    <RelatedAssignmentsSection 
+      items={relatedAssignments.map((a: any) => ({ ...a, type: "ASSIGNMENT" as const }))} 
+      isGuest={isGuest}
+      onNavigate={onNavigate}
+    />
+  );
+}
+
 export default function QuizClientRunner({ 
   assignment, 
   submissionId, 
   questions, 
   initialAnswers,
-  isBookmarked,
-  initialReview,
-  allReviews = [],
-  relatedAssignments = [],
+  extraDataPromise,
+  relatedAssignmentsPromise,
   isGuest = false
 }: Props) {
   const t = useTranslations("student.quiz");
@@ -488,7 +596,7 @@ export default function QuizClientRunner({
   const [answers, setAnswers] = useState(initialAnswers);
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
   const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -515,9 +623,9 @@ export default function QuizClientRunner({
 
   // Review State
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [userReview, setUserReview] = useState<any>(initialReview);
-  const [reviewRating, setReviewRating] = useState(initialReview?.rating || 0);
-  const [reviewComment, setReviewComment] = useState(initialReview?.comment || "");
+  const [userReview, setUserReview] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
   const [hoverRating, setHoverRating] = useState(0);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
@@ -795,10 +903,8 @@ export default function QuizClientRunner({
         submissionId={submissionId}
         questions={questions}
         initialAnswers={initialAnswers}
-        isBookmarked={isBookmarked}
-        initialReview={initialReview}
-        allReviews={allReviews}
-        relatedAssignments={relatedAssignments}
+        extraDataPromise={extraDataPromise}
+        relatedAssignmentsPromise={relatedAssignmentsPromise}
         isGuest={isGuest}
       />
     );
@@ -807,18 +913,17 @@ export default function QuizClientRunner({
   return (
     <div className="flex flex-col min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 lg:p-6 font-body">
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
-      {/* Floating Teacher Info */}
-      <FloatingTeacherInfo 
-        teacher={assignment.teacher} 
-        onNavigate={handleSafeNavigate}
-      />
       
       {/* Header removed as per user request */}
 
+      <React.Suspense fallback={null}>
+        <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
+      </React.Suspense>
+
       {/* Integrated Workspace */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-primary/5 rounded-none lg:rounded-[3.5rem] shadow-2xl shadow-primary/5">
-        {/* Middle Column: Questions (100% mobile, 70% desktop) */}
-        <div className="w-full lg:w-[70%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-outline-variant/20 relative">
+        {/* Main Column: Questions (Full width now since right column is a drawer) */}
+        <div className="w-full shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-outline-variant/20 relative">
            {/* Progress Navigation Header (Sticky) */}
            <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6">
               <div className="shrink-0 w-full md:w-auto flex justify-start">
@@ -915,8 +1020,8 @@ export default function QuizClientRunner({
                   ref={el => { questionRefs.current[q.id] = el }}
                   className="space-y-8 pb-8 border-b border-outline-variant/10 last:border-0"
                 >
-                  <div className="space-y-4">
-                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary/10 rounded-lg text-primary text-[10px] font-black uppercase tracking-widest">
+                  <div className="space-y-4 flex flex-col items-center text-center">
+                     <div className="inline-flex items-center justify-center gap-2 px-4 py-1.5 bg-secondary/10 rounded-xl text-primary text-[10px] font-black uppercase tracking-widest">
                         {t("questionPrefix")} {idx + 1} • {
                           qType === "MULTIPLE_SELECT" ? t('multipleSelect') : 
                           qType === "MATCHING" ? t('matching') : 
@@ -926,15 +1031,15 @@ export default function QuizClientRunner({
                         }
                      </div>
                       {questionText && questionText !== "{}" && (
-                        <h3 className="text-xl font-black text-on-surface leading-snug">
+                        <h3 className="text-2xl md:text-3xl font-black text-on-surface leading-tight text-center">
                           {questionText}
                         </h3>
                       )}
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-6 flex flex-col items-center">
                      {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
-                       <div className="flex flex-wrap gap-4">
+                       <div className="flex flex-wrap justify-center gap-4 w-full">
                          {(() => {
                            const blobShapes = [
                              "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
@@ -1003,7 +1108,7 @@ export default function QuizClientRunner({
                      )}
 
                      {qType === "TRUE_FALSE" && (
-                        <div className="flex flex-wrap justify-center gap-6 py-4">
+                        <div className="flex flex-row justify-center gap-3 sm:gap-6 py-4 w-full">
                           {(() => {
                             const blobShapes = [
                               "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
@@ -1069,25 +1174,25 @@ export default function QuizClientRunner({
                                 }
                               }
 
-                              return (
-                                <button 
-                                  key={opt.label}
-                                  disabled={isChecked}
-                                  onClick={() => handleAnswerChange(q, opt.value)}
-                                  className={`px-12 py-5 min-w-[200px] justify-center ${blobShape} border-2 text-center font-bold transition-all duration-300 relative inline-flex items-center gap-4 ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'}`}
-                                >
-                                  <div className={`w-8 h-8 flex items-center justify-center shrink-0 transition-all shadow-sm rounded-full ${iconClass}`}>
-                                    {opt.value ? <Check className="w-5 h-5" strokeWidth={3}/> : <X className="w-5 h-5" strokeWidth={3}/>}
-                                  </div>
-                                  <span className="text-sm">{opt.label}</span>
-                                  {isChecked && isCorrect && (
-                                    <CheckCircle2 className="text-emerald-600 ml-2 w-5 h-5 stroke-[2px]" />
-                                  )}
-                                  {isChecked && isSelected && !isCorrect && (
-                                    <XCircle className="text-rose-600 ml-2 w-5 h-5 stroke-[2px]" />
-                                  )}
-                                </button>
-                              );
+                               return (
+                                 <button
+                                   key={i}
+                                   disabled={isChecked}
+                                   onClick={() => handleAnswerChange(q, opt.value)}
+                                   className={`flex-1 sm:flex-none w-full sm:w-auto px-4 sm:px-8 py-4 sm:py-5 ${blobShape} border-2 font-bold transition-all duration-300 relative inline-flex items-center justify-center gap-2 sm:gap-3 ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:-translate-y-1 hover:shadow-lg'}`}
+                                 >
+                                   <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 ${iconClass}`}>
+                                     {opt.value ? <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3px]" /> : <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3px]" />}
+                                   </div>
+                                   <span className="text-sm sm:text-base tracking-wide whitespace-nowrap">{opt.label}</span>
+                                   {isChecked && isSelected && !isCorrect && (
+                                     <XCircle className="text-rose-600 ml-2 w-4 h-4 sm:w-5 sm:h-5 stroke-[2px]" />
+                                   )}
+                                   {isChecked && isCorrect && (
+                                     <CheckCircle2 className="text-emerald-600 ml-2 w-4 h-4 sm:w-5 sm:h-5 stroke-[2px]" />
+                                   )}
+                                 </button>
+                               );
                             });
                           })()}
                         </div>
@@ -1193,133 +1298,53 @@ export default function QuizClientRunner({
                       </span>
                   </button>
                 </div>
+                
+                {/* Related Assignments Section moved below questions */}
+                {relatedAssignmentsPromise && (
+                  <div className="mt-12 pt-8 border-t border-outline-variant/10">
+                    <React.Suspense fallback={<div className="p-6"><div className="h-40 bg-slate-200 dark:bg-slate-700 animate-pulse rounded-2xl w-full" /></div>}>
+                      <RelatedAssignmentsConsumer 
+                        promise={relatedAssignmentsPromise} 
+                        isGuest={isGuest} 
+                        onNavigate={handleSafeNavigate} 
+                      />
+                    </React.Suspense>
+                  </div>
+                )}
             </div>
           </div>
 
           {/* Footer removed/collapsed into main scroll area or bottom bar */}
         </div>
+      </div>
 
-        {/* Right Column: Material / Reading Content & Reviews (100% mobile, 30% desktop) */}
-        <div className="w-full lg:w-[30%] shrink-0 flex flex-col bg-white/40 dark:bg-slate-800/40">
-           <div className="h-12 border-b border-outline-variant/10 flex items-center justify-start px-6 bg-transparent shrink-0">
-              <div className="flex items-center gap-4">
-                   <>
-                     <BookmarkButton 
-                       id={assignment.id} 
-                       type="ASSIGNMENT" 
-                       initialIsBookmarked={assignment.favoriteAssignments?.length > 0} 
-                       isLoggedIn={!isGuest}
-                     />
-                     <button 
-                       onClick={() => isGuest ? setShowLoginModal(true) : setIsReviewModalOpen(true)}
-                       className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-outline-variant/20 hover:scale-105 active:scale-95 transition-all"
-                     >
-                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">{t("sendReview")}</span>
-                     </button>
-                   </>
-              </div>
-           </div>
-           <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-8 lg:p-10 custom-scrollbar lg:pb-20 pb-20 space-y-12">
-              {/* Instructions Section */}
-              {hasMaterialSection && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
-                    <BookOpen className="w-4 h-4 stroke-[2px]" />
-                    {t("studyMaterial")}
-                  </div>
-                  <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
-                    {/* Video Player */}
-                    {videoUrl && (
-                      <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10 shrink-0 mb-6">
-                        {youtubeId ? (
-                          <iframe
-                            className="w-full h-full"
-                            src={`https://www.youtube.com/embed/${youtubeId}?rel=0`}
-                            title={assignment.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        ) : (
-                          <video src={videoUrl} className="w-full h-full" controls />
-                        )}
-                      </div>
-                    )}
+      {/* Floating Toggle Button */}
+      <button
+        onClick={() => setIsSidebarOpen(true)}
+        className={`fixed top-1/2 right-0 -translate-y-1/2 z-[90] px-4 py-3 bg-primary text-white rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.15)] flex items-center justify-center hover:pr-6 active:scale-95 transition-all duration-300 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100 translate-x-0'}`}
+      >
+        <span className="font-black text-xs uppercase tracking-widest">Hint</span>
+      </button>
 
-                    {/* Audio Player */}
-                    {audioUrl && (
-                      <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl flex items-center gap-4 mb-6 ring-1 ring-slate-200 dark:ring-slate-700">
-                        <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                          <Volume2 className="w-6 h-6 stroke-[2px]" />
-                        </div>
-                        <audio src={audioUrl} className="flex-1 h-8" controls />
-                      </div>
-                    )}
+      {/* Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
-                    <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-lg">
-                      <InteractiveReadingContent html={assignment.readingText} isLoggedIn={!isGuest} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Tags Section */}
-              {assignment.tags && (
-                <div className="flex flex-wrap gap-2">
-                  {assignment.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
-                    <Link 
-                      key={i} 
-                      href={`/tags/${encodeURIComponent(tag)}`}
-                      className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-slate-200/50 dark:border-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-300"
-                    >
-                      #{tag}
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {/* Material Section */}
-              {hasInstructionText && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
-                    <Info className="w-4 h-4 stroke-[2px]" />
-                    {t("instructions")}
-                  </div>
-                  <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
-                    <InteractiveReadingContent html={assignment.instructions} isLoggedIn={!isGuest} />
-                  </div>
-                </div>
-              )}
-
-              {/* Reviews Section below material */}
-              {allReviews.some(r => r.isApproved) && (
-                <div className="border-t border-outline-variant/20 pt-16 space-y-12">
-                   <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                         <h3 className="text-2xl font-black tracking-tight italic uppercase">{t("studentFeedback")}</h3>
-                         <p className="text-sm text-slate-500 font-medium">{t("feedbackSubtitle")}</p>
-                      </div>
-                      {allReviews.length > 0 && (
-                         <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 rounded-2xl border border-amber-100">
-                            <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                            <span className="font-black text-amber-700">
-                               {(allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length).toFixed(1)}
-                            </span>
-                         </div>
-                      )}
-                   </div>
-                    <ReviewList reviews={allReviews} />
-                </div>
-              )}
-
-              {/* Related Assignments Section at the bottom of right column */}
-              <RelatedAssignmentsSection 
-                items={relatedAssignments.map(a => ({ ...a, type: "ASSIGNMENT" as const }))} 
-                isGuest={isGuest}
-                onNavigate={handleSafeNavigate}
-              />
-           </div>
-        </div>
+      {/* Sliding Right Column / Drawer */}
+      <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 z-[110] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <button 
+          onClick={() => setIsSidebarOpen(false)} 
+          className="absolute top-6 right-6 z-50 p-2.5 text-slate-400 hover:text-slate-800 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-all hover:scale-110 active:scale-95"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        <React.Suspense fallback={<div className="p-8 space-y-8 animate-pulse"><div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-lg w-1/3"></div><div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-2xl w-full"></div></div>}>
+          <AssignmentExtraDataConsumer promise={extraDataPromise} isGuest={isGuest} handleSafeNavigate={handleSafeNavigate} t={t} />
+        </React.Suspense>
       </div>
 
       {/* Review Modal */}

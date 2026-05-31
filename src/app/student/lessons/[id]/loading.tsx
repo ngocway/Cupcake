@@ -8,7 +8,7 @@ export default function LessonLoading() {
       
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Skeleton */}
-        <div className="w-[70%] p-8 lg:p-12 space-y-12 overflow-y-auto">
+        <div className="w-[70%] p-8 lg:p-12 space-y-12 overflow-y-auto no-scrollbar">
           <div className="aspect-video bg-slate-200 dark:bg-slate-800 rounded-3xl animate-pulse" />
           <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-xl w-3/4 animate-pulse" />
           <div className="space-y-4">

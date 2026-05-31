@@ -28,6 +28,7 @@ import { submitAssignmentReview } from "@/actions/reviews";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
+import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 import Link from "next/link";
@@ -454,11 +455,85 @@ interface Props {
   submissionId?: string;
   questions: any[];
   initialAnswers: any;
-  isBookmarked: boolean;
-  initialReview: any;
-  allReviews: any[];
-  relatedAssignments: any[];
+  extraDataPromise: Promise<any>;
+  relatedAssignmentsPromise?: Promise<any[]>;
   isGuest?: boolean;
+}
+
+function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<any>, isGuest: boolean, t: any }) {
+  const extraData = React.use(promise);
+  if (!extraData) return null;
+
+  const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
+  const audioUrl = extraData.lesson?.audioUrl || extraData.audioUrl;
+  const youtubeId = getYoutubeVideoId(videoUrl);
+
+  const hasMaterialSection = videoUrl || audioUrl || extraData.readingText;
+  const hasInstructionText = !!extraData.instructions;
+
+  return (
+    <>
+      {hasMaterialSection && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
+            <BookOpen className="w-4 h-4" />
+            {t("studyMaterial")}
+          </div>
+          <div className="space-y-6">
+            {videoUrl && (
+              <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg">
+                {youtubeId ? (
+                  <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?rel=0`} title="Video" allowFullScreen />
+                ) : (
+                  <video src={videoUrl} className="w-full h-full" controls />
+                )}
+              </div>
+            )}
+            {audioUrl && (
+              <GlobalAudioPlayer audioUrl={audioUrl} />
+            )}
+            <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
+              <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasInstructionText && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
+            <Info className="w-4 h-4" />
+            {t("instructions")}
+          </div>
+          <div className="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10">
+            <InteractiveReadingContent html={extraData.instructions} isLoggedIn={!isGuest} />
+          </div>
+        </div>
+      )}
+
+      {extraData.tags && (
+        <div className="flex flex-wrap gap-2">
+          {extraData.tags.split(",").map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
+            <Link key={i} href={`/tags/${encodeURIComponent(tag)}`} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-200 transition-all">
+              #{tag}
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise: Promise<any[]>, isGuest: boolean, onNavigate: (url: string) => void }) {
+  const relatedAssignments = React.use(promise);
+  if (!relatedAssignments || relatedAssignments.length === 0) return null;
+  return (
+    <RelatedAssignmentsSection 
+      items={relatedAssignments.map((a: any) => ({ ...a, type: "ASSIGNMENT" as const }))} 
+      isGuest={isGuest}
+      onNavigate={onNavigate}
+    />
+  );
 }
 
 // ============================================================
@@ -469,10 +544,8 @@ export default function KidTeenQuizRunner({
   submissionId,
   questions,
   initialAnswers,
-  isBookmarked,
-  initialReview,
-  allReviews = [],
-  relatedAssignments = [],
+  extraDataPromise,
+  relatedAssignmentsPromise,
   isGuest = false,
 }: Props) {
   const t = useTranslations("student.quiz");
@@ -1237,16 +1310,6 @@ export default function KidTeenQuizRunner({
         <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
           <h3 className="font-black text-slate-700 uppercase tracking-wider text-sm">Results & Info</h3>
           <div className="flex items-center gap-2">
-              <>
-                <BookmarkButton id={assignment.id} type="ASSIGNMENT" initialIsBookmarked={assignment.favoriteAssignments?.length > 0} isLoggedIn={!isGuest} />
-                <button
-                  onClick={() => isGuest ? setShowLoginModal(true) : setIsReviewModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl hover:bg-amber-100 transition-all hidden sm:flex"
-                >
-                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                  <span className="text-xs font-bold text-amber-700">{t("sendReview")}</span>
-                </button>
-              </>
             <button onClick={() => setIsSidePanelOpen(false)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-rose-500 rounded-full transition-colors ml-1">
               <X className="w-5 h-5" />
             </button>
@@ -1254,69 +1317,10 @@ export default function KidTeenQuizRunner({
         </div>
 
         {/* Panel body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-8 pb-24">
-          {/* Study material */}
-          {hasMaterialSection && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
-                <BookOpen className="w-4 h-4" />
-                {t("studyMaterial")}
-              </div>
-              <div className="space-y-4">
-                {videoUrl && (
-                  <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg">
-                    {youtubeId
-                      ? <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?rel=0`} title={assignment.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                      : <video src={videoUrl} className="w-full h-full" controls />}
-                  </div>
-                )}
-                {audioUrl && (
-                  <div className="bg-slate-100 p-4 rounded-2xl flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-                      <Volume2 className="w-5 h-5 text-primary" />
-                    </div>
-                    <audio src={audioUrl} className="flex-1 h-8" controls />
-                  </div>
-                )}
-                <div className="prose prose-slate max-w-none prose-p:leading-loose prose-p:text-base">
-                  <InteractiveReadingContent html={assignment.readingText} isLoggedIn={!isGuest} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Instructions */}
-          {hasInstructionText && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
-                <Info className="w-4 h-4" />
-                {t("instructions")}
-              </div>
-              <div className="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10">
-                <InteractiveReadingContent html={assignment.instructions} isLoggedIn={!isGuest} />
-              </div>
-            </div>
-          )}
-
-          {/* Tags */}
-          {assignment.tags && (
-            <div className="flex flex-wrap gap-2">
-              {assignment.tags.split(",").map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
-                <Link key={i} href={`/tags/${encodeURIComponent(tag)}`} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-200 transition-all">
-                  #{tag}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Reviews */}
-          {allReviews.some((r) => r.isApproved) && (
-            <div className="space-y-4 border-t border-slate-100 pt-5">
-              <h4 className="font-black text-slate-700 uppercase tracking-wider text-sm">{t("studentFeedback")}</h4>
-              <ReviewList reviews={allReviews} />
-            </div>
-          )}
-
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+          <React.Suspense fallback={<div className="space-y-4 animate-pulse"><div className="h-40 bg-slate-100 rounded-2xl w-full"></div><div className="h-8 bg-slate-100 rounded-lg w-1/2"></div></div>}>
+            <KidTeenExtraDataConsumer promise={extraDataPromise} isGuest={isGuest} t={t} />
+          </React.Suspense>
         </div>
       </div>
 

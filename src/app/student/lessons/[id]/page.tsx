@@ -162,7 +162,9 @@ async function SidebarWrapper({ teacherId, lessonId }: { teacherId: string | nul
   );
 }
 
-async function LessonActionsWrapper({ lessonId, studentId }: { lessonId: string, studentId: string }) {
+async function LessonActionsWrapper({ lessonId }: { lessonId: string }) {
+  const sessionData = await auth();
+  const studentId = sessionData?.user?.id || "";
   const extra = await getLessonExtra(lessonId);
   const isBookmarked = extra?.favorites?.some((f: any) => f.studentId === studentId) || false;
   
@@ -177,7 +179,7 @@ async function LessonActionsWrapper({ lessonId, studentId }: { lessonId: string,
          <ReviewTrigger 
              type="lesson"
              id={lessonId}
-             isLoggedIn={true} inline
+             isLoggedIn={!!studentId} inline
          />
       </div>
     </div>
@@ -240,17 +242,28 @@ async function LessonAssignmentBannerWrapper({ lessonId }: { lessonId: string })
   );
 }
 
-async function ReadingContentWrapper({ lessonId }: { lessonId: string }) {
-  const t = await getTranslations("student.lessonDetail");
-  const readingText = await getLessonReadingText(lessonId);
-  if (!readingText) return null;
+async function LessonVideoPlayerWrapper({ lesson }: { lesson: any }) {
+  const sessionData = await auth();
+  const studentId = sessionData?.user?.id || "";
+
+  const getYoutubeId = (url: string | null) => {
+    if (!url) return null;
+    const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    return match ? match[1] : null;
+  };
+  const videoId = getYoutubeId(lesson.videoUrl);
+
+  if (!videoId && !lesson.videoUrl) return null;
+
   return (
-    <div className="animate-in fade-in duration-500">
-      
-      <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
-        <InteractiveReadingContent html={readingText} isLoggedIn={true} />
-      </div>
-    </div>
+    <LessonVideoPlayer 
+      lessonId={lesson.id}
+      studentId={studentId}
+      videoId={videoId}
+      videoUrl={lesson.videoUrl}
+      title={lesson.title}
+      thumbnail={lesson.assignment?.thumbnail}
+    />
   );
 }
 
@@ -263,35 +276,16 @@ export default async function StudentLessonDetailPage({
 }) {
   const { id } = await params;
 
-  // Parallel fetch auth and cached lesson detail
-  const [sessionData, lesson, t] = await Promise.all([
-    auth(),
+  const [lesson, t] = await Promise.all([
     getLessonBasic(id),
     getTranslations("student.lessonDetail")
   ]);
 
   if (!lesson) notFound();
-
-  // Session is guaranteed by StudentLayout, but we need the ID
-  const session = {
-    id: sessionData?.user?.id || "",
-    name: sessionData?.user?.name ?? null,
-    image: sessionData?.user?.image ?? null,
-    role: (sessionData?.user as any)?.role ?? null
-  };
-  if (!session.id) redirect("/student/login");
   
   if (id === lesson.id && lesson.slug && id !== lesson.slug) {
     redirect(`/student/lessons/${lesson.slug}`);
   }
-
-  const getYoutubeId = (url: string | null) => {
-    if (!url) return null;
-    const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    return match ? match[1] : null;
-  };
-
-  const videoId = getYoutubeId(lesson.videoUrl);
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col lg:h-screen lg:overflow-hidden font-body">
@@ -305,16 +299,9 @@ export default async function StudentLessonDetailPage({
                   Back
                </BackButton>
                {/* Video Player (Facade Optimization) */}
-               {(videoId || lesson.videoUrl) && (
-                  <LessonVideoPlayer 
-                    lessonId={lesson.id}
-                    studentId={session.id}
-                    videoId={videoId}
-                    videoUrl={lesson.videoUrl}
-                    title={lesson.title}
-                    thumbnail={lesson.assignment?.thumbnail}
-                  />
-               )}
+               <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-3xl" />}>
+                  <LessonVideoPlayerWrapper lesson={lesson} />
+               </Suspense>
 
                {/* Audio Player (Streamed) */}
                <Suspense fallback={<div className="h-24 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-3xl" />}>
@@ -324,7 +311,7 @@ export default async function StudentLessonDetailPage({
                <div className="glass rounded-3xl p-10 lg:p-12 space-y-12 shadow-xl border border-white/40 mb-12">
                   <div className="space-y-6">
                      <Suspense fallback={<div className="h-8 flex justify-end"><div className="w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-full" /></div>}>
-                        <LessonActionsWrapper lessonId={lesson.id} studentId={session.id} />
+                        <LessonActionsWrapper lessonId={lesson.id} />
                      </Suspense>
                      <h2 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
                         {lesson.title}
@@ -336,10 +323,12 @@ export default async function StudentLessonDetailPage({
 
                   <div className="space-y-10">
 
-                     {lesson.assignment && (
-                        <Suspense fallback={<div className="h-96 bg-slate-50 dark:bg-slate-900 animate-pulse rounded-2xl" />}>
-                           <ReadingContentWrapper lessonId={lesson.id} />
-                        </Suspense>
+                     {lesson.assignment?.readingText && (
+                        <div className="animate-in fade-in duration-500">
+                           <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
+                              <InteractiveReadingContent html={lesson.assignment.readingText} isLoggedIn={true} />
+                           </div>
+                        </div>
                      )}
 
                      {lesson.assignment && (

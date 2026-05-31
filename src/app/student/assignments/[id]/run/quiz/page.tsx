@@ -3,88 +3,7 @@ import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import QuizClientRunner from "./QuizClientRunner";
 
-async function getQuizData(assignmentId: string, studentId: string) {
-  return prisma.assignment.findFirst({
-    where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
-    include: {
-      teacher: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          professionalTitle: true,
-          bio: true,
-          isPortfolioPublished: true,
-          _count: { select: { lessons: true, assignments: true } }
-        }
-      },
-      questions: { orderBy: { orderIndex: 'asc' } },
-      favoriteAssignments: { where: { studentId }, select: { studentId: true } },
-      lesson: {
-        select: {
-          videoUrl: true,
-          audioUrl: true
-        }
-      },
-      reviews: {
-        where: { isApproved: true },
-        include: { student: { select: { name: true, image: true } } },
-        orderBy: { createdAt: 'desc' }
-      }
-    }
-  });
-}
-
-export default async function StudentQuizPage({
-  searchParams,
-  params
-}: {
-  searchParams: Promise<{ submissionId: string }>;
-  params: Promise<{ id: string }>;
-}) {
-  const [session, { submissionId }, { id: paramsId }] = await Promise.all([
-    auth(),
-    searchParams,
-    params
-  ]);
-
-  if (!session?.user?.id) redirect("/student/login");
-  const userId = session.user.id;
-
-  if (!submissionId) {
-    redirect(`/student/assignments/${paramsId}/run`);
-  }
-
-  // Fetch submission first to get the real assignmentId (CUID)
-  const submission = await prisma.submission.findUnique({
-    where: { id: submissionId },
-    select: { 
-      id: true, 
-      studentId: true, 
-      assignmentId: true, 
-      submittedAt: true, 
-      answersDraft: true 
-    }
-  });
-
-  // Verify submission belongs to user
-  if (!submission || submission.studentId !== userId) {
-    notFound();
-  }
-
-  // Fetch assignment using CUID
-  const assignment = await getQuizData(submission.assignmentId, userId);
-
-  if (!assignment) {
-    notFound();
-  }
-
-  if (submission.submittedAt) {
-    const identifier = assignment.slug || assignment.id;
-    redirect(`/student/assignments/${identifier}/run`);
-  }
-
-  // Tối ưu hóa: Lấy nội dung liên quan (không thuộc bài học nào, ưu tiên trùng nhiều tag, trừ tag phổ biến, giới hạn 10)
+async function getRelatedAssignments(assignment: any) {
   const popularTags = await prisma.tag.findMany({
     where: { isPopular: true },
     select: { name: true }
@@ -92,9 +11,9 @@ export default async function StudentQuizPage({
   const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
 
   const currentTags = assignment.tags
-    ? assignment.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    ? assignment.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
     : [];
-  const filteredTags = currentTags.filter(tag => !popularTagNames.has(tag));
+  const filteredTags = currentTags.filter((tag: string) => !popularTagNames.has(tag));
 
   const currentAudiences = assignment.targetAudiences || [];
 
@@ -110,7 +29,7 @@ export default async function StudentQuizPage({
         ...(currentAudiences.length > 0 && {
           targetAudiences: { hasSome: currentAudiences }
         }),
-        OR: filteredTags.map(tag => ({
+        OR: filteredTags.map((tag: string) => ({
           tags: { contains: tag, mode: 'insensitive' }
         }))
       },
@@ -135,7 +54,6 @@ export default async function StudentQuizPage({
     relatedAssignments = candidates.slice(0, 10);
   }
 
-  // Fallback: Lấy các bài tập mới nhất không thuộc bài học nào
   if (relatedAssignments.length === 0) {
     relatedAssignments = await prisma.assignment.findMany({
       where: {
@@ -147,30 +65,102 @@ export default async function StudentQuizPage({
           targetAudiences: { hasSome: currentAudiences }
         })
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
+      orderBy: { createdAt: 'desc' },
       take: 10,
-      include: {
-        teacher: { select: { name: true, image: true } }
-      }
+      include: { teacher: { select: { name: true, image: true } } }
     });
   }
 
-  const isBookmarked = assignment.favoriteAssignments.length > 0;
-  const myReview = assignment.reviews.find(r => r.studentId === userId);
+  return relatedAssignments;
+}
+
+export default async function StudentQuizPage({
+  searchParams,
+  params
+}: {
+  searchParams: Promise<{ submissionId: string }>;
+  params: Promise<{ id: string }>;
+}) {
+  const [session, { submissionId }, { id: paramsId }] = await Promise.all([
+    auth(),
+    searchParams,
+    params
+  ]);
+
+  if (!session?.user?.id) redirect("/student/login");
+  const userId = session.user.id;
+
+  if (!submissionId) {
+    redirect(`/student/assignments/${paramsId}/run`);
+  }
+
+  const submission = await prisma.submission.findUnique({
+    where: { id: submissionId },
+    include: { 
+      assignment: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          tags: true,
+          questions: { orderBy: { orderIndex: 'asc' } }
+        }
+      }
+    }
+  });
+
+  if (!submission || submission.studentId !== userId || !submission.assignment) {
+    notFound();
+  }
+
+  const assignmentCore = submission.assignment;
+
+  if (submission.submittedAt) {
+    const identifier = assignmentCore.slug || assignmentCore.id;
+    redirect(`/student/assignments/${identifier}/run`);
+  }
+
+  // Luồng 2: Tải ngầm dữ liệu phụ (Teacher, Lesson, Nội dung đọc hiểu, Hướng dẫn...)
+  const extraDataPromise = prisma.assignment.findUnique({
+    where: { id: assignmentCore.id },
+    select: {
+      readingText: true,
+      instructions: true,
+      videoUrl: true,
+      audioUrl: true,
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          professionalTitle: true,
+          bio: true,
+          isPortfolioPublished: true,
+          _count: { select: { lessons: true, assignments: true } }
+        }
+      },
+      lesson: {
+        select: {
+          videoUrl: true,
+          audioUrl: true
+        }
+      },
+      favoriteAssignments: { where: { studentId: userId }, select: { studentId: true } }
+    }
+  });
+
+  const relatedAssignmentsPromise = getRelatedAssignments(assignmentCore);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
        <QuizClientRunner 
-          assignment={assignment as any}
+          assignment={assignmentCore as any}
           submissionId={submissionId}
-          questions={assignment.questions}
-          initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft) : {}}
-          isBookmarked={isBookmarked}
-          initialReview={myReview as any}
-          allReviews={assignment.reviews as any}
-          relatedAssignments={relatedAssignments as any}
+          questions={assignmentCore.questions}
+          initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft as string) : {}}
+          extraDataPromise={extraDataPromise}
+          relatedAssignmentsPromise={relatedAssignmentsPromise}
+          isGuest={!userId}
        />
     </div>
   );

@@ -163,10 +163,8 @@ export default async function PublicAssignmentPage({
           assignment={assignment}
           questions={questions}
           initialAnswers={{}}
-          isBookmarked={false}
-          initialReview={null}
-          allReviews={assignment.reviews || []}
-          relatedAssignments={relatedAssignments}
+          extraDataPromise={Promise.resolve(assignment)}
+          relatedAssignmentsPromise={Promise.resolve(relatedAssignments)}
           isGuest={true}
        />
     </div>

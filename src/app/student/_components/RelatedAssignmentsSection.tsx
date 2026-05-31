@@ -47,10 +47,10 @@ export function RelatedAssignmentsSection({
   const t = useTranslations("header");
 
   return (
-    <div className="glass rounded-3xl p-5 md:p-8 space-y-6 shadow-xl">
+    <div className="glass rounded-3xl p-5 md:p-8 space-y-6 shadow-xl w-full">
       <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{t("relatedContent")}</h4>
       
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((item) => {
           const href = isGuest 
             ? `/public/assignments/${item.slug || item.id}?direct=true`
@@ -61,7 +61,7 @@ export function RelatedAssignmentsSection({
               <Link 
                 key={item.id}
                 href={href}
-                className="flex items-center gap-4 group"
+                className="flex items-center gap-4 group bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50"
               >
                 <RelatedItemContent item={item} />
               </Link>
@@ -72,7 +72,7 @@ export function RelatedAssignmentsSection({
             <DirectStartLink
               key={item.id}
               id={item.slug || item.id}
-              className="flex items-center gap-4 group relative"
+              className="flex items-center gap-4 group relative bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50"
             >
               <RelatedItemContent item={item} />
             </DirectStartLink>
@@ -80,7 +80,7 @@ export function RelatedAssignmentsSection({
         })}
 
         {items.length === 0 && (
-          <p className="text-xs italic text-slate-400 text-center py-4">{t("noRelatedLessons")}</p>
+          <p className="text-xs italic text-slate-400 text-center py-4 col-span-full">{t("noRelatedLessons")}</p>
         )}
       </div>
     </div>

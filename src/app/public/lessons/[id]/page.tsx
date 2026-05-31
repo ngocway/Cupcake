@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { ReviewTrigger } from "@/components/reviews/ReviewTrigger";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
+import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
@@ -305,6 +306,9 @@ export default async function PublicLessonPage({
                   </div>
 
                   <div className="space-y-10">
+                     {lesson.assignment && (lesson.audioUrl || lesson.assignment.audioUrl) && (
+                        <GlobalAudioPlayer audioUrl={lesson.audioUrl || lesson.assignment.audioUrl || ''} />
+                     )}
                      {lesson.assignment && (
                         <Suspense fallback={<div className="h-96 bg-white/30 animate-pulse rounded-2xl" />}>
                            <PublicReadingContentWrapper lessonId={lesson.id} sessionExists={!!session} />

@@ -475,6 +475,29 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   else if (selectedCategory.slug === "teen") focusThemeColor = "from-indigo-400 to-violet-500 text-indigo-500"
   else if (selectedCategory.slug === "readers") focusThemeColor = "from-pink-400 to-rose-500 text-pink-500"
 
+  // Dynamic rich style configurations for both buttons to prevent interaction confusion
+  const themeConfig = {
+    "kids-2-5": {
+      revealBg: "from-amber-400 to-orange-500 text-white shadow-orange-300/40 border-white",
+      nextBg: "bg-white border-4 border-orange-400 text-orange-600 shadow-orange-100/60 hover:bg-orange-50/40 hover:border-orange-500",
+    },
+    "kid-6-12": {
+      revealBg: "from-emerald-400 to-teal-500 text-white shadow-teal-300/40 border-white",
+      nextBg: "bg-white border-4 border-teal-400 text-teal-600 shadow-teal-100/60 hover:bg-teal-50/40 hover:border-teal-500",
+    },
+    "teen": {
+      revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-transparent",
+      nextBg: "bg-white border-2 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
+    },
+    "readers": {
+      revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-transparent",
+      nextBg: "bg-white border-2 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
+    }
+  }[selectedCategory.slug] || {
+    revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-transparent",
+    nextBg: "bg-white border-2 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
+  }
+
   // Dynamic visual configurations
   const pageBg = isKidMode
     ? "bg-gradient-to-tr from-amber-100 via-pink-50 to-sky-100 text-slate-800"
@@ -537,9 +560,8 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
         {/* 3D Depth Container */}
         <div 
-          className="w-full max-w-[480px] h-[360px] md:h-[420px] cursor-pointer"
+          className="w-full max-w-[480px] h-[360px] md:h-[420px]"
           style={{ perspective: "1200px" }}
-          onClick={() => setIsFlipped(!isFlipped)}
         >
           {/* Card Inner wrapper */}
           <div 
@@ -568,10 +590,6 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     alt="Flashcard illustration"
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   />
-                  {/* Bubbly Guide tip */}
-                  <span className="absolute bottom-4 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full bg-white/95 backdrop-blur-md text-[11px] font-black text-amber-700 tracking-wider shadow-md border-2 border-amber-200 uppercase select-none flex items-center gap-1.5 whitespace-nowrap animate-pulse">
-                    <span>✨ Tap to Reveal Details</span>
-                  </span>
                 </div>
               ) : (
                 // TEEN & READERS: Clean modern image and word on front
@@ -750,30 +768,38 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 )}
               </div>
 
-              {/* 3. Footer Tip */}
-              <span className={`text-[10px] font-black uppercase tracking-widest text-center select-none shrink-0 pt-2 ${
-                isKidMode ? "text-amber-400" : "text-slate-400"
-              }`}>
-                Tap to flip back
-              </span>
             </div>
 
           </div>
         </div>
 
-        {/* Next Card button */}
+        {/* Sequential Action Button */}
         <div className="mt-8 shrink-0 flex justify-center w-full">
-          <button
-            onClick={handleNext}
-            className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
-              isKidMode
-                ? `px-12 py-4.5 rounded-full bg-gradient-to-r ${focusThemeColor} hover:scale-105 border-4 border-white shadow-xl shadow-amber-300/40 text-base text-white`
-                : `px-8 py-3.5 rounded-full bg-gradient-to-r ${focusThemeColor} hover:scale-105 shadow-md shadow-indigo-100/30 text-sm text-white`
-            }`}
-          >
-            <span>Next Card</span>
-            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          {!isFlipped ? (
+            <button
+              onClick={() => setIsFlipped(true)}
+              className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
+                isKidMode
+                  ? `px-12 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`
+                  : `px-8 py-3.5 rounded-full shadow-md hover:scale-105 text-sm bg-gradient-to-r ${themeConfig.revealBg}`
+              }`}
+            >
+              <span>Reveal Details</span>
+              <Sparkles className="w-5 h-5 group-hover:animate-pulse text-white" />
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 shadow-lg ${
+                isKidMode
+                  ? `px-12 py-4.5 rounded-full text-base ${themeConfig.nextBg}`
+                  : `px-8 py-3.5 rounded-full text-sm ${themeConfig.nextBg}`
+              }`}
+            >
+              <span>Next Card</span>
+              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          )}
         </div>
 
       </main>
@@ -796,7 +822,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
         <div className={`text-center text-[10px] font-black uppercase tracking-widest hidden sm:block select-none ${
           isKidMode ? "text-amber-500/80" : "text-slate-400"
         }`}>
-          Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> or click to flip, use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch cards
+          Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> to flip, use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch cards
         </div>
       </footer>
 

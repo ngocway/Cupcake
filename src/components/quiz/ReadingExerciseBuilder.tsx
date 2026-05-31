@@ -714,6 +714,39 @@ export function ReadingExerciseBuilder({
     }
   };
 
+  const handleGlobalAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('File audio quá lớn (>20MB)');
+      return;
+    }
+    
+    e.target.value = '';
+    setAudioUploadProgress(0);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const { uploadMedia } = await import('@/actions/upload-actions');
+      const result = await uploadMedia(formData);
+      
+      if (result.success && result.url) {
+        setAudioUrl(result.url);
+        toast.success('Đã tải lên audio bài học');
+      } else {
+        toast.error('Lỗi tải file audio');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi hệ thống');
+    } finally {
+      setAudioUploadProgress(null);
+    }
+  };
+
+
   const handleSave = async (customTitle?: string, customVideoUrl?: string, customAudioUrl?: string) => {
     const idToSave = assignmentId || initialId || 'clp_reading_001';
     if (!idToSave) return;
@@ -1405,17 +1438,52 @@ export function ReadingExerciseBuilder({
                   </div>
                </div>
 
-               {/* Audio Upload / AI Generator */}
-               <div className="px-2">
+               {/* Audio Upload Section */}
+               <div className="px-2 mb-6 grid grid-cols-2 gap-3">
+                 
+                 {/* Audio Toàn Bài Học */}
                  <div className="w-full flex flex-col gap-2 relative">
-                  <div className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer min-h-[100px] w-full">
-                    <input type="file" multiple accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleAudioUpload} />
-                    <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[28px]">mic_none</span>
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2 text-center group-hover:text-primary transition-colors">Tải lên file âm thanh</span>
-                  </div>
+                   <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-900/10 hover:border-emerald-400 transition-all cursor-pointer h-24 w-full">
+                     <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleGlobalAudioUpload} />
+                     <span className="material-symbols-outlined text-emerald-400 group-hover:text-emerald-500 transition-colors text-[24px]">library_music</span>
+                     <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-1.5 text-center group-hover:text-emerald-700 transition-colors">
+                       Audio Bài Học
+                     </span>
+                     {audioUrl && (
+                       <div className="absolute top-1 right-1 text-emerald-600 flex items-center gap-0.5 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                         <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                       </div>
+                     )}
+                     {audioUploadProgress !== null && (
+                       <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex flex-col items-center justify-center rounded-2xl">
+                         <span className="material-symbols-outlined text-[20px] text-emerald-500 animate-spin">progress_activity</span>
+                       </div>
+                     )}
+                   </div>
+                   {audioUrl && (
+                     <div className="flex justify-between items-center px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
+                       <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate flex-1">{audioUrl.split('/').pop()}</span>
+                       <button onClick={(e) => { e.preventDefault(); setAudioUrl(''); }} className="text-red-500 hover:text-red-700 p-1 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 ml-1">
+                         <span className="material-symbols-outlined text-[14px]">delete</span>
+                       </button>
+                     </div>
+                   )}
+                 </div>
 
-                  {mediaAttachments.length > 0 && (
-                    <div className="flex flex-col gap-1 mt-1 max-h-[200px] overflow-y-auto custom-scrollbar">
+                 {/* Audio Upload / AI Generator (Paragraphs) */}
+                 <div className="w-full flex flex-col gap-2 relative">
+                  <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-primary/50 dark:hover:border-primary/30 transition-all cursor-pointer h-24 w-full">
+                    <input type="file" multiple accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleAudioUpload} />
+                    <span className="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors text-[24px]">mic_none</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5 text-center group-hover:text-primary transition-colors">Tải lên File Âm thanh</span>
+                  </div>
+                 </div>
+               </div>
+
+               {/* Audio Attachments List (Full width) */}
+               <div className="px-2 mb-6">
+                 {mediaAttachments.length > 0 && (
+                   <div className="flex flex-col gap-1 mt-1 max-h-[200px] overflow-y-auto custom-scrollbar">
                       {mediaAttachments.map(attachment => (
                         <div key={attachment.id} className="flex items-center gap-1.5 px-1 py-1 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800 group transition-colors relative">
                           <span className={`material-symbols-outlined text-[16px] shrink-0 ${attachment.status === 'success' ? 'text-emerald-500' : attachment.status === 'error' ? 'text-red-400' : 'text-blue-400 animate-pulse'}`}>
@@ -1451,7 +1519,6 @@ export function ReadingExerciseBuilder({
                       ))}
                     </div>
                   )}
-                </div>
                </div>
             </div>
           </div>

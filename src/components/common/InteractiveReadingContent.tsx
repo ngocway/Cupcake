@@ -59,6 +59,22 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   }, []);
 
   useEffect(() => {
+    const handleGlobalPause = (e: CustomEvent) => {
+      if (e.detail?.source !== 'InteractiveReadingContent') {
+        if (playingAudioRef.current) {
+          playingAudioRef.current.pause();
+          playingAudioRef.current.currentTime = 0;
+          setPlayingAudioUrl(null);
+        }
+      }
+    };
+    window.addEventListener('pauseAllAudio', handleGlobalPause as EventListener);
+    return () => {
+      window.removeEventListener('pauseAllAudio', handleGlobalPause as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     // Imperatively update the styling of the currently playing marker
     // since they are rendered via dangerouslySetInnerHTML
     const markers = document.querySelectorAll('.inline-audio-marker');
@@ -108,6 +124,8 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
           setPlayingAudioUrl(null);
           return;
         }
+        
+        window.dispatchEvent(new CustomEvent('pauseAllAudio', { detail: { source: 'InteractiveReadingContent' } }));
         
         const audio = new Audio(url);
         playingAudioRef.current = audio;
