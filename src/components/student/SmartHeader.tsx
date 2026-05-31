@@ -74,13 +74,17 @@ export function SmartHeader({ session }: SmartHeaderProps) {
               </Link>
               <div className="hidden lg:flex gap-8 items-center">
                 <Link 
-                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
-                  href="/"
+                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/flashcards') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
+                  href="/flashcards"
                 >
-                  {t("home")}
+                  {t("flashcards")}
                 </Link>
-                <Link className="text-small font-black uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all duration-300" href="#">{t("library")}</Link>
-                <Link className="text-small font-black uppercase tracking-widest text-on-surface-variant hover:text-primary transition-all duration-300" href="#">{t("community")}</Link>
+                <Link 
+                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
+                  href="#"
+                >
+                  {t("game")}
+                </Link>
               </div>
             </div>
 

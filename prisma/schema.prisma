@@ -604,3 +604,43 @@ model MediaAttachment {
   @@index([assignmentId])
 }
 
+model FlashcardCategory {
+  id        String           @id @default(cuid())
+  name      String           // e.g. "Kids (2-5 years old)"
+  slug      String           @unique
+  topics    FlashcardTopic[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model FlashcardTopic {
+  id          String            @id @default(cuid())
+  categoryId  String
+  name        String            // e.g. "Animals"
+  slug        String
+  category    FlashcardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  flashcards  GlobalFlashcard[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([categoryId, slug])
+}
+
+model GlobalFlashcard {
+  id              String         @id @default(cuid())
+  topicId         String
+  word            String
+  phonetic        String?        // e.g. "/ˈæn.ɪ.məl/"
+  definition      String?        // English definition
+  definitionVi    String?        // Vietnamese definition
+  definitionTh    String?        // Thai definition
+  definitionId    String?        // Indonesian definition
+  exampleSentence String?        // e.g. "The cat is an animal."
+  imageUrl        String?
+  topic           FlashcardTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  orderIndex      Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+

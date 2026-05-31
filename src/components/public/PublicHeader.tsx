@@ -82,13 +82,17 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         </Link>
         <div className="hidden lg:flex gap-8 items-center">
           <Link 
-            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/') ? 'text-primary scale-110' : 'text-foreground/40 hover:text-primary hover:scale-105'}`} 
-            href="/"
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-foreground/40 hover:text-primary hover:scale-105'}`} 
+            href="/flashcards"
           >
-            {t("home")}
+            {t("flashcards")}
           </Link>
-          <Link className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40 hover:text-primary transition-all duration-500 hover:scale-105" href="#">{t("library")}</Link>
-          <Link className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground/40 hover:text-primary transition-all duration-500 hover:scale-105" href="#">{t("community")}</Link>
+          <Link 
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-foreground/40 hover:text-primary hover:scale-105'}`} 
+            href="#"
+          >
+            {t("game")}
+          </Link>
         </div>
       </div>
 
