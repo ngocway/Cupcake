@@ -200,104 +200,134 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
     const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
     const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
 
-    const result = await prisma.$transaction(async (tx) => {
-      const vocabMap = new Map();
-      data.vocabulary.forEach(v => {
-        vocabMap.set(v.word.toLowerCase(), v);
-      });
+    const vocabMap = new Map();
+    data.vocabulary.forEach(v => {
+      vocabMap.set(v.word.toLowerCase(), v);
+    });
 
-      let passageHtml = data.passage || "";
+    let passageHtml = data.passage || "";
+    
+    // If it doesn't contain block-level elements (like <p>, <br>, <div>), wrap in paragraphs
+    if (!/<(p|br|div)\b/i.test(passageHtml)) {
+      // Normalize line endings
+      let normalizedText = passageHtml.replace(/\r\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
       
-      // If it doesn't contain block-level elements (like <p>, <br>, <div>), wrap in paragraphs
-      if (!/<(p|br|div)\b/i.test(passageHtml)) {
-        // Normalize line endings
-        let normalizedText = passageHtml.replace(/\r\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
-        
-        let paragraphs = normalizedText.split('\n\n').map(p => p.trim()).filter(p => p.length > 0);
-        
-        // Fallback 1: If there's only 1 paragraph but single newlines exist, split if lines are substantial
-        if (paragraphs.length === 1 && normalizedText.includes('\n')) {
-          const singleLines = normalizedText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
-          if (singleLines.length >= 2 && singleLines.every(line => line.length > 30)) {
-            paragraphs = singleLines;
-          }
+      let paragraphs = normalizedText.split('\n\n').map(p => p.trim()).filter(p => p.length > 0);
+      
+      // Fallback 1: If there's only 1 paragraph but single newlines exist, split if lines are substantial
+      if (paragraphs.length === 1 && normalizedText.includes('\n')) {
+        const singleLines = normalizedText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+        if (singleLines.length >= 2 && singleLines.every(line => line.length > 30)) {
+          paragraphs = singleLines;
         }
-        
-        // Fallback 2: Auto-chunking extremely long paragraphs (> 150 words)
-        if (paragraphs.length === 1) {
-          const words = paragraphs[0].split(/\s+/);
-          if (words.length > 150) {
-            const sentences = paragraphs[0].match(/[^.!?]+[.!?]+(\s+|$)/g) || [paragraphs[0]];
-            if (sentences.length > 3) {
-              paragraphs = [];
-              let currentPara = "";
-              sentences.forEach((sentence, index) => {
-                currentPara += sentence;
-                if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
-                  paragraphs.push(currentPara.trim());
-                  currentPara = "";
-                }
-              });
-            }
-          }
-        }
-        
-        // Wrap paragraphs in HTML <p> tags
-        passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
       }
-
-      passageHtml = passageHtml.replace(
-        /<span class="custom-vocab-marker" data-vocab-id="([^"]+)">([^<]+)<\/span>/g,
-        (match, vocabId, wordText) => {
-          const v = vocabMap.get(vocabId.toLowerCase());
-          if (v) {
-            return `<span class="custom-vocab-marker" 
-              data-vocab-id="${vocabId}" 
-              data-word="${v.word}" 
-              data-pronunciation="${v.pronunciation}" 
-              data-meaning-vi="${v.meaningVi}" 
-              data-meaning-th="${v.meaningTh || ''}" 
-              data-meaning-id="${v.meaningId || ''}" 
-              data-explanation-en="${v.explanationEn.replace(/"/g, '&quot;')}" 
-              data-examples="${v.examples.join('; ').replace(/"/g, '&quot;')}"
-              style="border-bottom: 2px dashed #facc15; cursor: help; color: #854d0e; font-weight: 700;"
-            >${wordText}</span>`;
+      
+      // Fallback 2: Auto-chunking extremely long paragraphs (> 150 words)
+      if (paragraphs.length === 1) {
+        const words = paragraphs[0].split(/\s+/);
+        if (words.length > 150) {
+          const sentences = paragraphs[0].match(/[^.!?]+[.!?]+(\s+|$)/g) || [paragraphs[0]];
+          if (sentences.length > 3) {
+            paragraphs = [];
+            let currentPara = "";
+            sentences.forEach((sentence, index) => {
+              currentPara += sentence;
+              if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
+                paragraphs.push(currentPara.trim());
+                currentPara = "";
+              }
+            });
           }
-          return match;
         }
-      );
+      }
+      
+      // Wrap paragraphs in HTML <p> tags
+      passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
+    }
 
-      const vocabHtml = `
-        <h3>Vocabulary List</h3>
-        <ul style="list-style-type: none; padding: 0;">
-          ${data.vocabulary.map(v => `
-            <li style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-              <strong style="font-size: 1.1em; color: #2563eb;">${v.word}</strong> 
-              <span style="color: #64748b; font-style: italic;">[${v.pronunciation}]</span>
-              <div style="margin-top: 5px;">
-                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">VI</span>
-                <span>${v.meaningVi}</span>
-              </div>
-              <div style="margin-top: 5px;">
-                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">TH</span>
-                <span>${v.meaningTh || 'N/A'}</span>
-              </div>
-              <div style="margin-top: 5px;">
-                <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">ID</span>
-                <span>${v.meaningId || 'N/A'}</span>
-              </div>
-              <div style="margin-top: 3px; color: #475569;">
-                <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; color: #0369a1;">EN</span>
-                <span>${v.explanationEn}</span>
-              </div>
-              <div style="margin-top: 5px; font-size: 0.9em; color: #64748b;">
-                <strong>Example:</strong> ${v.examples[0]}
-              </div>
-            </li>
-          `).join('')}
-        </ul>
-      `;
+    passageHtml = passageHtml.replace(
+      /<span class="custom-vocab-marker" data-vocab-id="([^"]+)">([^<]+)<\/span>/g,
+      (match, vocabId, wordText) => {
+        const v = vocabMap.get(vocabId.toLowerCase());
+        if (v) {
+          return `<span class="custom-vocab-marker" 
+            data-vocab-id="${vocabId}" 
+            data-word="${v.word}" 
+            data-pronunciation="${v.pronunciation}" 
+            data-meaning-vi="${v.meaningVi}" 
+            data-meaning-th="${v.meaningTh || ''}" 
+            data-meaning-id="${v.meaningId || ''}" 
+            data-explanation-en="${v.explanationEn.replace(/"/g, '&quot;')}" 
+            data-examples="${v.examples.join('; ').replace(/"/g, '&quot;')}"
+            style="border-bottom: 2px dashed #facc15; cursor: help; color: #854d0e; font-weight: 700;"
+          >${wordText}</span>`;
+        }
+        return match;
+      }
+    );
 
+    const vocabHtml = `
+      <h3>Vocabulary List</h3>
+      <ul style="list-style-type: none; padding: 0;">
+        ${data.vocabulary.map(v => `
+          <li style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+            <strong style="font-size: 1.1em; color: #2563eb;">${v.word}</strong> 
+            <span style="color: #64748b; font-style: italic;">[${v.pronunciation}]</span>
+            <div style="margin-top: 5px;">
+              <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">VI</span>
+              <span>${v.meaningVi}</span>
+            </div>
+            <div style="margin-top: 5px;">
+              <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">TH</span>
+              <span>${v.meaningTh || 'N/A'}</span>
+            </div>
+            <div style="margin-top: 5px;">
+              <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">ID</span>
+              <span>${v.meaningId || 'N/A'}</span>
+            </div>
+            <div style="margin-top: 3px; color: #475569;">
+              <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; color: #0369a1;">EN</span>
+              <span>${v.explanationEn}</span>
+            </div>
+            <div style="margin-top: 5px; font-size: 0.9em; color: #64748b;">
+              <strong>Example:</strong> ${v.examples[0]}
+            </div>
+          </li>
+        `).join('')}
+      </ul>
+    `;
+
+    let questionsData: any[] = [];
+    if (data.questions && data.questions.length > 0) {
+      questionsData = data.questions.map((q, idx) => {
+        let questionContent: any;
+        if (q.type === "MULTIPLE_CHOICE" || q.type === "MULTIPLE_SELECT") {
+          questionContent = {
+            type: q.type, // Preserve the specific type (choice vs select)
+            questionText: q.questionText,
+            options: q.options || []
+          };
+        } else {
+          questionContent = {
+            type: q.type,
+            statement: q.questionText,
+            isTrue: q.isTrue ?? true
+          };
+        }
+
+        return {
+          type: (q.type === "MULTIPLE_SELECT" ? "MULTIPLE_CHOICE" : q.type) as any,
+          orderIndex: idx,
+          points: 1.0,
+          explanation: q.explanation,
+          content: JSON.stringify(questionContent),
+          isAiGenerated: true,
+          isBanked: false,
+        };
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
       const assignment = await tx.assignment.create({
         data: {
           title: assignmentTitle,
@@ -326,37 +356,16 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         }
       });
 
-      const questionsData = data.questions.map((q, idx) => {
-        let questionContent: any;
-        if (q.type === "MULTIPLE_CHOICE" || q.type === "MULTIPLE_SELECT") {
-          questionContent = {
-            type: q.type, // Preserve the specific type (choice vs select)
-            questionText: q.questionText,
-            options: q.options || []
-          };
-        } else {
-          questionContent = {
-            type: q.type,
-            statement: q.questionText,
-            isTrue: q.isTrue ?? true
-          };
-        }
-
-        return {
+      if (questionsData.length > 0) {
+        const finalQuestionsData = questionsData.map(q => ({
+          ...q,
           assignmentId: assignment.id,
-          type: (q.type === "MULTIPLE_SELECT" ? "MULTIPLE_CHOICE" : q.type) as any,
-          orderIndex: idx,
-          points: 1.0,
-          explanation: q.explanation,
-          content: JSON.stringify(questionContent),
-          isAiGenerated: true,
-          isBanked: false,
-        };
-      });
+        }));
 
-      await tx.question.createMany({
-        data: questionsData
-      });
+        await tx.question.createMany({
+          data: finalQuestionsData
+        });
+      }
 
       return assignment.id;
     }, {
@@ -484,82 +493,94 @@ export async function saveParsedLesson(data: ParsedLessonData) {
     const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
     const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
 
-    const resultId = await prisma.$transaction(async (tx) => {
-      let passageHtml = data.passage || "";
-      if (passageHtml && !/<(p|br|div)\b/i.test(passageHtml)) {
-        // Normalize line endings
-        let normalizedText = passageHtml.replace(/\r\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
-        
-        let paragraphs = normalizedText.split('\n\n').map(p => p.trim()).filter(p => p.length > 0);
-        
-        // Fallback 1: If there's only 1 paragraph but single newlines exist, split if lines are substantial
-        if (paragraphs.length === 1 && normalizedText.includes('\n')) {
-          const singleLines = normalizedText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
-          if (singleLines.length >= 2 && singleLines.every(line => line.length > 30)) {
-            paragraphs = singleLines;
+    let passageHtml = data.passage || "";
+    if (passageHtml && !/<(p|br|div)\b/i.test(passageHtml)) {
+      // Normalize line endings
+      let normalizedText = passageHtml.replace(/\r\n/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
+      
+      let paragraphs = normalizedText.split('\n\n').map(p => p.trim()).filter(p => p.length > 0);
+      
+      // Fallback 1: If there's only 1 paragraph but single newlines exist, split if lines are substantial
+      if (paragraphs.length === 1 && normalizedText.includes('\n')) {
+        const singleLines = normalizedText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
+        if (singleLines.length >= 2 && singleLines.every(line => line.length > 30)) {
+          paragraphs = singleLines;
+        }
+      }
+      
+      // Fallback 2: Auto-chunking extremely long paragraphs (> 150 words)
+      if (paragraphs.length === 1) {
+        const words = paragraphs[0].split(/\s+/);
+        if (words.length > 150) {
+          const sentences = paragraphs[0].match(/[^.!?]+[.!?]+(\s+|$)/g) || [paragraphs[0]];
+          if (sentences.length > 3) {
+            paragraphs = [];
+            let currentPara = "";
+            sentences.forEach((sentence, index) => {
+              currentPara += sentence;
+              if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
+                paragraphs.push(currentPara.trim());
+                currentPara = "";
+              }
+            });
           }
         }
-        
-        // Fallback 2: Auto-chunking extremely long paragraphs (> 150 words)
-        if (paragraphs.length === 1) {
-          const words = paragraphs[0].split(/\s+/);
-          if (words.length > 150) {
-            const sentences = paragraphs[0].match(/[^.!?]+[.!?]+(\s+|$)/g) || [paragraphs[0]];
-            if (sentences.length > 3) {
-              paragraphs = [];
-              let currentPara = "";
-              sentences.forEach((sentence, index) => {
-                currentPara += sentence;
-                if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
-                  paragraphs.push(currentPara.trim());
-                  currentPara = "";
-                }
-              });
-            }
-          }
-        }
-        
-        // Wrap paragraphs in HTML <p> tags
-        passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
       }
+      
+      // Wrap paragraphs in HTML <p> tags
+      passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
+    }
 
-      let matchedCategory = null;
-      if (data.subject) {
-        matchedCategory = await tx.category.findFirst({
-          where: {
-            OR: [
-              { nameVi: { equals: data.subject, mode: 'insensitive' } },
-              { nameEn: { equals: data.subject, mode: 'insensitive' } }
-            ]
-          },
-          select: { id: true }
-        });
-      }
+    let matchedCategory = null;
+    if (data.subject) {
+      matchedCategory = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { nameVi: { equals: data.subject, mode: 'insensitive' } },
+            { nameEn: { equals: data.subject, mode: 'insensitive' } }
+          ]
+        },
+        select: { id: true }
+      });
+    }
 
-      let finalTags = "";
-      if (data.tags) {
-        const dbPopularTags = await tx.tag.findMany({
-          where: { isPopular: true },
-          select: { name: true }
-        });
-        const popularTags = dbPopularTags.map(t => t.name);
-        const tagList = data.tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
-        const allowedTags: string[] = [];
-        let customTagCount = 0;
-        for (const tag of tagList) {
-          const isPopular = popularTags.some(p => p.toLowerCase() === tag.toLowerCase());
-          if (isPopular) {
+    let finalTags = "";
+    if (data.tags) {
+      const dbPopularTags = await prisma.tag.findMany({
+        where: { isPopular: true },
+        select: { name: true }
+      });
+      const popularTags = dbPopularTags.map(t => t.name);
+      const tagList = data.tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      const allowedTags: string[] = [];
+      let customTagCount = 0;
+      for (const tag of tagList) {
+        const isPopular = popularTags.some(p => p.toLowerCase() === tag.toLowerCase());
+        if (isPopular) {
+          allowedTags.push(tag);
+        } else {
+          if (customTagCount < 3) {
             allowedTags.push(tag);
-          } else {
-            if (customTagCount < 3) {
-              allowedTags.push(tag);
-              customTagCount++;
-            }
+            customTagCount++;
           }
         }
-        finalTags = allowedTags.join(',');
       }
+      finalTags = allowedTags.join(',');
+    }
 
+    let questionsData: any[] = [];
+    if (data.questions && data.questions.length > 0) {
+      questionsData = data.questions.map((q, idx) => ({
+        type: q.type as any,
+        orderIndex: idx,
+        points: q.points || 1.0,
+        explanation: q.explanation || "",
+        content: JSON.stringify(q.content),
+        isAiGenerated: false
+      }));
+    }
+
+    const resultId = await prisma.$transaction(async (tx) => {
       const assignment = await tx.assignment.create({
         data: {
           title: assignmentTitle,
@@ -589,19 +610,14 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         }
       });
 
-      if (data.questions && data.questions.length > 0) {
-        const questionsData = data.questions.map((q, idx) => ({
-          assignmentId: assignment.id,
-          type: q.type as any,
-          orderIndex: idx,
-          points: q.points || 1.0,
-          explanation: q.explanation || "",
-          content: JSON.stringify(q.content),
-          isAiGenerated: false
+      if (questionsData.length > 0) {
+        const finalQuestionsData = questionsData.map(q => ({
+          ...q,
+          assignmentId: assignment.id
         }));
 
         await tx.question.createMany({
-          data: questionsData
+          data: finalQuestionsData
         });
       }
 
