@@ -567,9 +567,9 @@ export default function KidTeenQuizRunner({
 
   // ── Review state ─────────────────────────────────────────
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [userReview, setUserReview] = useState<any>(initialReview);
-  const [reviewRating, setReviewRating] = useState(initialReview?.rating || 0);
-  const [reviewComment, setReviewComment] = useState(initialReview?.comment || "");
+  const [userReview, setUserReview] = useState<any>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState("");
   const [hoverRating, setHoverRating] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -958,14 +958,12 @@ export default function KidTeenQuizRunner({
               </div>
             </div>
 
-            {/* Related Content (only if not empty) */}
-            {relatedAssignments && relatedAssignments.length > 0 && (
+            {/* Related Content */}
+            {relatedAssignmentsPromise && (
               <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
-                <RelatedAssignmentsSection
-                  items={relatedAssignments.map((a) => ({ ...a, type: "ASSIGNMENT" as const }))}
-                  isGuest={isGuest}
-                  onNavigate={handleSafeNavigate}
-                />
+                <React.Suspense fallback={<div className="h-40 animate-pulse bg-slate-100 rounded-xl w-full"></div>}>
+                  <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
+                </React.Suspense>
               </div>
             )}
           </div>

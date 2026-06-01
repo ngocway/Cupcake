@@ -452,13 +452,13 @@ interface Props {
 }
 
 function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
-  const extraData = React.use(promise);
+  const extraData = React.use(promise) as any;
   if (!extraData || !extraData.teacher) return null;
   return <FloatingTeacherInfo teacher={extraData.teacher} onNavigate={handleSafeNavigate} />;
 }
 
 function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }: any) {
-  const extraData = React.use(promise);
+  const extraData = React.use(promise) as any;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
