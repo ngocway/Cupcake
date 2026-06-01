@@ -330,7 +330,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
 
     const assignmentId = randomUUID();
 
-    const assignmentQuery = prisma.assignment.create({
+    await prisma.assignment.create({
       data: {
         id: assignmentId,
         title: assignmentTitle,
@@ -348,7 +348,7 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
       }
     });
 
-    const lessonQuery = prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         title: assignmentTitle,
         slug: lessonSlug,
@@ -358,20 +358,17 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
       }
     });
 
-    const queries: any[] = [assignmentQuery, lessonQuery];
-
     if (questionsData.length > 0) {
       const finalQuestionsData = questionsData.map(q => ({
         ...q,
         assignmentId: assignmentId,
       }));
 
-      queries.push(prisma.question.createMany({
+      await prisma.question.createMany({
         data: finalQuestionsData
-      }));
+      });
     }
 
-    await prisma.$transaction(queries);
     const result = assignmentId;
 
     revalidatePath("/teacher/lessons");
@@ -583,7 +580,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
 
     const assignmentId = randomUUID();
 
-    const assignmentQuery = prisma.assignment.create({
+    await prisma.assignment.create({
       data: {
         id: assignmentId,
         title: assignmentTitle,
@@ -601,7 +598,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
       }
     });
 
-    const lessonQuery = prisma.lesson.create({
+    await prisma.lesson.create({
       data: {
         title: assignmentTitle,
         slug: lessonSlug,
@@ -613,20 +610,17 @@ export async function saveParsedLesson(data: ParsedLessonData) {
       }
     });
 
-    const queries: any[] = [assignmentQuery, lessonQuery];
-
     if (questionsData.length > 0) {
       const finalQuestionsData = questionsData.map(q => ({
         ...q,
         assignmentId: assignmentId
       }));
 
-      queries.push(prisma.question.createMany({
+      await prisma.question.createMany({
         data: finalQuestionsData
-      }));
+      });
     }
 
-    await prisma.$transaction(queries);
     const resultId = assignmentId;
 
     revalidatePath("/teacher/lessons");
