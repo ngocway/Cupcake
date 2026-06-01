@@ -359,6 +359,9 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
       });
 
       return assignment.id;
+    }, {
+      maxWait: 5000,
+      timeout: 20000
     });
 
     revalidatePath("/teacher/lessons");
@@ -603,6 +606,9 @@ export async function saveParsedLesson(data: ParsedLessonData) {
       }
 
       return assignment.id;
+    }, {
+      maxWait: 5000,
+      timeout: 20000
     });
 
     revalidatePath("/teacher/lessons");
