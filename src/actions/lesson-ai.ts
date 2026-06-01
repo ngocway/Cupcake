@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { generateUniqueSlug } from '@/lib/slugify';
 
 export interface AILessonResponse {
@@ -327,51 +328,51 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
       });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const assignment = await tx.assignment.create({
-        data: {
-          title: assignmentTitle,
-          slug: assignmentSlug,
-          shortDescription: data.shortDescription,
-          readingText: passageHtml,
-          gradeLevel: data.gradeLevel,
-          subject: data.subject,
-          materialType: "READING",
-          status: "DRAFT",
-          teacherId: session.user.id,
-          isAiGenerated: true,
-          instructions: vocabHtml,
-          thumbnail: data.thumbnail || null,
-        }
-      });
+    const assignmentId = randomUUID();
 
-      // Create a Lesson record linked to this assignment
-      await tx.lesson.create({
-        data: {
-          title: assignmentTitle,
-          slug: lessonSlug,
-          description: assignment.shortDescription,
-          teacherId: session.user.id,
-          assignmentId: assignment.id,
-        }
-      });
-
-      if (questionsData.length > 0) {
-        const finalQuestionsData = questionsData.map(q => ({
-          ...q,
-          assignmentId: assignment.id,
-        }));
-
-        await tx.question.createMany({
-          data: finalQuestionsData
-        });
+    const assignmentQuery = prisma.assignment.create({
+      data: {
+        id: assignmentId,
+        title: assignmentTitle,
+        slug: assignmentSlug,
+        shortDescription: data.shortDescription,
+        readingText: passageHtml,
+        gradeLevel: data.gradeLevel,
+        subject: data.subject,
+        materialType: "READING",
+        status: "DRAFT",
+        teacherId: session.user.id,
+        isAiGenerated: true,
+        instructions: vocabHtml,
+        thumbnail: data.thumbnail || null,
       }
-
-      return assignment.id;
-    }, {
-      maxWait: 5000,
-      timeout: 20000
     });
+
+    const lessonQuery = prisma.lesson.create({
+      data: {
+        title: assignmentTitle,
+        slug: lessonSlug,
+        description: data.shortDescription,
+        teacherId: session.user.id,
+        assignmentId: assignmentId,
+      }
+    });
+
+    const queries: any[] = [assignmentQuery, lessonQuery];
+
+    if (questionsData.length > 0) {
+      const finalQuestionsData = questionsData.map(q => ({
+        ...q,
+        assignmentId: assignmentId,
+      }));
+
+      queries.push(prisma.question.createMany({
+        data: finalQuestionsData
+      }));
+    }
+
+    await prisma.$transaction(queries);
+    const result = assignmentId;
 
     revalidatePath("/teacher/lessons");
     revalidatePath("/teacher/materials");
@@ -580,52 +581,53 @@ export async function saveParsedLesson(data: ParsedLessonData) {
       }));
     }
 
-    const resultId = await prisma.$transaction(async (tx) => {
-      const assignment = await tx.assignment.create({
-        data: {
-          title: assignmentTitle,
-          slug: assignmentSlug,
-          shortDescription: data.shortDescription,
-          readingText: passageHtml,
-          gradeLevel: data.gradeLevel || "Khác",
-          subject: data.subject || "Khác",
-          materialType: "READING",
-          status: "DRAFT",
-          teacherId: session.user.id,
-          targetAudiences: data.targetAudience ? [data.targetAudience] : [],
-          tags: finalTags,
-          categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
-        }
-      });
+    const assignmentId = randomUUID();
 
-      await tx.lesson.create({
-        data: {
-          title: assignmentTitle,
-          slug: lessonSlug,
-          description: assignment.shortDescription,
-          teacherId: session.user.id,
-          assignmentId: assignment.id,
-          targetAudiences: data.targetAudience ? [data.targetAudience] : [],
-          categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
-        }
-      });
-
-      if (questionsData.length > 0) {
-        const finalQuestionsData = questionsData.map(q => ({
-          ...q,
-          assignmentId: assignment.id
-        }));
-
-        await tx.question.createMany({
-          data: finalQuestionsData
-        });
+    const assignmentQuery = prisma.assignment.create({
+      data: {
+        id: assignmentId,
+        title: assignmentTitle,
+        slug: assignmentSlug,
+        shortDescription: data.shortDescription,
+        readingText: passageHtml,
+        gradeLevel: data.gradeLevel || "Khác",
+        subject: data.subject || "Khác",
+        materialType: "READING",
+        status: "DRAFT",
+        teacherId: session.user.id,
+        targetAudiences: data.targetAudience ? [data.targetAudience] : [],
+        tags: finalTags,
+        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
       }
-
-      return assignment.id;
-    }, {
-      maxWait: 5000,
-      timeout: 20000
     });
+
+    const lessonQuery = prisma.lesson.create({
+      data: {
+        title: assignmentTitle,
+        slug: lessonSlug,
+        description: data.shortDescription,
+        teacherId: session.user.id,
+        assignmentId: assignmentId,
+        targetAudiences: data.targetAudience ? [data.targetAudience] : [],
+        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+      }
+    });
+
+    const queries: any[] = [assignmentQuery, lessonQuery];
+
+    if (questionsData.length > 0) {
+      const finalQuestionsData = questionsData.map(q => ({
+        ...q,
+        assignmentId: assignmentId
+      }));
+
+      queries.push(prisma.question.createMany({
+        data: finalQuestionsData
+      }));
+    }
+
+    await prisma.$transaction(queries);
+    const resultId = assignmentId;
 
     revalidatePath("/teacher/lessons");
     revalidatePath("/teacher/materials");
