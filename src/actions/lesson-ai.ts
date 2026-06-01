@@ -196,6 +196,10 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
   }
 
   try {
+    const assignmentTitle = (data.title || "Untitled AI Lesson").trim();
+    const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
+    const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
+
     const result = await prisma.$transaction(async (tx) => {
       const vocabMap = new Map();
       data.vocabulary.forEach(v => {
@@ -294,11 +298,9 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         </ul>
       `;
 
-      const assignmentSlug = await generateUniqueSlug(data.title || "Untitled Lesson", 'assignment');
-
       const assignment = await tx.assignment.create({
         data: {
-          title: (data.title || "Untitled AI Lesson").trim(),
+          title: assignmentTitle,
           slug: assignmentSlug,
           shortDescription: data.shortDescription,
           readingText: passageHtml,
@@ -313,12 +315,10 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         }
       });
 
-      const lessonSlug = await generateUniqueSlug(assignment.title, 'lesson');
-
       // Create a Lesson record linked to this assignment
       await tx.lesson.create({
         data: {
-          title: assignment.title,
+          title: assignmentTitle,
           slug: lessonSlug,
           description: assignment.shortDescription,
           teacherId: session.user.id,
@@ -480,6 +480,10 @@ export async function saveParsedLesson(data: ParsedLessonData) {
   if (!session?.user?.id) return { error: "Unauthorized" };
 
   try {
+    const assignmentTitle = (data.title || "Untitled Lesson").trim();
+    const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
+    const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
+
     const resultId = await prisma.$transaction(async (tx) => {
       let passageHtml = data.passage || "";
       if (passageHtml && !/<(p|br|div)\b/i.test(passageHtml)) {
@@ -556,11 +560,9 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         finalTags = allowedTags.join(',');
       }
 
-      const assignmentSlug = await generateUniqueSlug(data.title || "Untitled Lesson", 'assignment');
-
       const assignment = await tx.assignment.create({
         data: {
-          title: data.title || "Untitled Lesson",
+          title: assignmentTitle,
           slug: assignmentSlug,
           shortDescription: data.shortDescription,
           readingText: passageHtml,
@@ -575,11 +577,9 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         }
       });
 
-      const lessonSlug = await generateUniqueSlug(assignment.title, 'lesson');
-
       await tx.lesson.create({
         data: {
-          title: assignment.title,
+          title: assignmentTitle,
           slug: lessonSlug,
           description: assignment.shortDescription,
           teacherId: session.user.id,
