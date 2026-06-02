@@ -510,8 +510,8 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   // -------------------------------------------------------------
   // VIEW 2: FOCUS MODE (Bright Style & Cute Kindergarten/Preschool details for kids)
   // -------------------------------------------------------------
-  const isKidMode = selectedCategory.slug === "kids-2-5" || selectedCategory.slug === "kid-6-12"
-  
+  // Người dùng yêu cầu dùng chung phong cách Kid cho tất cả độ tuổi
+  const isKidMode = true;
   // Theme colors for Focus Mode
   let focusThemeColor = "from-amber-400 to-orange-500 text-orange-500"
   if (selectedCategory.slug === "kid-6-12") focusThemeColor = "from-emerald-400 to-teal-500 text-emerald-500"
@@ -566,10 +566,13 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     ? "font-extrabold text-base md:text-lg text-amber-900"
     : "font-extrabold text-base md:text-lg text-slate-800"
 
+  let cardBorderColor = "border-amber-300 shadow-amber-200/80"
+  if (selectedCategory.slug === "kid-6-12") cardBorderColor = "border-emerald-300 shadow-emerald-200/80"
+  else if (selectedCategory.slug === "teen") cardBorderColor = "border-indigo-300 shadow-indigo-200/80"
+  else if (selectedCategory.slug === "readers") cardBorderColor = "border-rose-300 shadow-rose-200/80"
+
   const cardContainerClass = isKidMode
-    ? `absolute inset-0 w-full h-full rounded-[48px] bg-white border-8 ${
-        selectedCategory.slug === "kids-2-5" ? "border-amber-300 shadow-amber-200/80" : "border-emerald-300 shadow-emerald-200/80"
-      } flex flex-col justify-between overflow-hidden shadow-[0_24px_50px_rgba(251,191,36,0.12)]`
+    ? `absolute inset-0 w-full h-full rounded-[48px] bg-white border-8 ${cardBorderColor} flex flex-col justify-between overflow-hidden shadow-[0_24px_50px_rgba(251,191,36,0.12)]`
     : "absolute inset-0 w-full h-full rounded-[36px] bg-white border border-slate-200/80 flex flex-col justify-between overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.05)]"
 
   return (
