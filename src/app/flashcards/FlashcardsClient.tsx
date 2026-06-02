@@ -685,7 +685,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
               </div>
 
               {/* 2. Central Area */}
-              <div className="flex-1 flex flex-col justify-center gap-4 px-2 overflow-y-auto max-h-[calc(100%-60px)] scrollbar-thin">
+              <div className="flex-1 flex flex-col justify-center gap-4 px-2 overflow-y-auto max-h-[calc(100%-60px)] no-scrollbar">
                 {/* Word, Phonetic & Audio */}
                 <div className="flex flex-col items-center text-center space-y-2 shrink-0">
                   <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-slate-800"}`}>
