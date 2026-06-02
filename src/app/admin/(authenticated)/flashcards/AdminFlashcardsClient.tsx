@@ -650,7 +650,7 @@ export function AdminFlashcardsClient({
 
         const words = vocabRes.vocabularies
         let successCount = 0
-        const newLocalCards = []
+        const newLocalCards: Flashcard[] = []
 
         for (let i = 0; i < words.length; i++) {
           setGeneratingStatus(`Đang tìm ảnh và tạo thẻ ${i + 1}/${words.length}: ${words[i].word}...`)
