@@ -619,7 +619,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 A. FRONT SIDE
                 ======================================================== */}
             <div 
-              className={`${cardContainerClass} ${isKidMode ? 'p-2' : 'p-0'}`}
+              className={`${cardContainerClass} ${isKidMode ? 'p-2' : 'p-6'}`}
               style={{ backfaceVisibility: "hidden" }}
             >
               {/* Soft interior background gradient */}
@@ -636,20 +636,18 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                   />
                 </div>
               ) : (
-                // TEEN & READERS: Full-bleed premium edge-to-edge design
-                <div className="w-full h-full relative group">
-                  <img 
-                    key={activeCard?.id}
-                    src={activeCard?.imageUrl || ""} 
-                    alt="Flashcard illustration"
-                    className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                  />
-                  {/* Heavy dark gradient at the bottom for text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/30 to-transparent pointer-events-none" />
-                  
-                  {/* Word overlay with glassmorphism */}
-                  <div className="absolute bottom-0 left-0 w-full p-8 flex flex-col justify-end">
-                    <h3 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg">
+                // TEEN & READERS: Clean modern image and word on front
+                <div className="w-full h-full flex flex-col justify-between">
+                  <div className="w-full h-[68%] rounded-2xl overflow-hidden relative border border-slate-100 bg-slate-50 shrink-0">
+                    <img 
+                      key={activeCard?.id}
+                      src={activeCard?.imageUrl || ""} 
+                      alt="Flashcard illustration"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center items-center pt-4">
+                    <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none text-center">
                       {activeCard?.word}
                     </h3>
                   </div>
@@ -661,50 +659,39 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 B. BACK SIDE
                 ======================================================== */}
             <div 
-              className={`${cardContainerClass} ${isKidMode ? 'p-5 md:p-6' : 'p-0 flex flex-col relative'}`}
+              className={`${cardContainerClass} ${isKidMode ? 'p-5 md:p-6' : 'p-6'}`}
               style={{ 
                 backfaceVisibility: "hidden", 
                 transform: "rotateY(180deg)"
               }}
             >
-              {/* Background */}
-              {isKidMode ? (
-                <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none" />
-              ) : (
-                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-                  <img 
-                    src={activeCard?.imageUrl || ""} 
-                    alt="" 
-                    className="w-full h-full object-cover blur-3xl scale-125 opacity-40"
-                  />
-                  <div className="absolute inset-0 bg-slate-950/80" />
-                </div>
-              )}
+              {/* Soft interior background gradient */}
+              <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none" />
 
               {/* 1. Header Badge */}
-              <div className={`w-full text-center shrink-0 relative z-10 ${!isKidMode ? 'pt-6 pb-2 border-b border-white/10' : ''}`}>
+              <div className="w-full text-center shrink-0">
                 {isKidMode ? (
                   <span className="inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 border border-amber-200 text-amber-700 shadow-sm">
                     ⭐ Fun Vocabulary ⭐
                   </span>
                 ) : (
-                  <span className="inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white/50">
-                    Detailed View
+                  <span className="inline-flex px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-50 border border-slate-200 text-slate-500">
+                    Word Details
                   </span>
                 )}
               </div>
 
               {/* 2. Central Area */}
-              <div className={`flex-1 flex flex-col justify-center gap-4 overflow-y-auto scrollbar-thin relative z-10 ${isKidMode ? 'px-2 max-h-[calc(100%-60px)]' : 'p-6 max-h-full'}`}>
+              <div className="flex-1 flex flex-col justify-center gap-4 px-2 overflow-y-auto max-h-[calc(100%-60px)] scrollbar-thin">
                 {/* Word, Phonetic & Audio */}
-                <div className="flex flex-col items-center text-center space-y-3 shrink-0">
-                  <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-white"}`}>
+                <div className="flex flex-col items-center text-center space-y-2 shrink-0">
+                  <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-slate-800"}`}>
                     {activeCard?.word}
                   </h2>
                   
                   <div className="flex items-center justify-center gap-3">
                     {activeCard?.phonetic && (
-                      <span className={`${isKidMode ? "text-amber-600" : "text-white/80 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20"} font-mono text-xs md:text-sm tracking-wide font-extrabold`}>
+                      <span className={`${isKidMode ? "text-amber-600" : "text-primary"} font-mono text-xs md:text-sm tracking-wide font-extrabold`}>
                         {activeCard.phonetic}
                       </span>
                     )}
@@ -714,7 +701,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                         e.stopPropagation()
                         handlePlayAudio(activeCard)
                       }}
-                      className={`p-2.5 rounded-full bg-gradient-to-r ${focusThemeColor} text-white flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 ${!isKidMode ? 'shadow-indigo-500/30' : 'shadow-orange-300/30'}`}
+                      className={`p-2.5 rounded-full bg-gradient-to-r ${focusThemeColor} text-white flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 shadow-orange-300/30`}
                       title="Listen to pronunciation"
                     >
                       <Volume2 className="w-4.5 h-4.5" />
@@ -722,17 +709,17 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                   </div>
                 </div>
 
-                <hr className={`${isKidMode ? "border-amber-100" : "border-white/10"} shrink-0`} />
+                <hr className={`${isKidMode ? "border-amber-100" : "border-slate-100"} shrink-0`} />
 
                 {/* Multilingual Definition */}
-                <div className="space-y-3 shrink-0">
+                <div className="space-y-2 shrink-0">
                   <div className="flex items-center justify-between px-2">
-                    <span className={`text-[10px] font-black uppercase tracking-widest block ${isKidMode ? "text-amber-500" : "text-white/50"}`}>
-                      Meaning
+                    <span className={`text-[10px] font-black uppercase tracking-widest block ${isKidMode ? "text-amber-500" : "text-slate-400"}`}>
+                      Definition
                     </span>
                     
                     {/* Flag Selector Row */}
-                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full border ${isKidMode ? "bg-amber-50 border-amber-200/60" : "bg-white/10 border-white/20 backdrop-blur-md"}`}>
+                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full border ${isKidMode ? "bg-amber-50 border-amber-200/60" : "bg-slate-50 border-slate-200"}`}>
                       {/* US - English */}
                       <button 
                         onClick={(e) => { e.stopPropagation(); handleLangChange('EN'); }}
@@ -784,8 +771,8 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     </div>
                   </div>
 
-                  <p className={`text-center min-h-[40px] flex items-center justify-center px-4 ${
-                    isKidMode ? "font-black text-amber-950 text-base md:text-lg" : "font-bold text-white/90 text-lg md:text-xl drop-shadow-md"
+                  <p className={`text-center min-h-[40px] flex items-center justify-center px-4 font-black ${
+                    isKidMode ? "text-amber-950 text-base md:text-lg" : "text-slate-700 text-sm md:text-base"
                   }`}>
                     {currentLang === 'VI' ? (activeCard?.definitionVi || activeCard?.definition)
                      : currentLang === 'TH' ? (activeCard?.definitionTh || activeCard?.definition)
@@ -796,16 +783,16 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
                 {/* Example Sentence */}
                 {activeCard?.exampleSentence && (
-                  <div className={`space-y-2 p-4 shrink-0 ${
+                  <div className={`space-y-1.5 p-3.5 shrink-0 ${
                     isKidMode 
                       ? "bg-amber-50/50 border-2 border-amber-100 rounded-[24px] text-center" 
-                      : "bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-left shadow-lg"
+                      : "bg-slate-50 border border-slate-100 rounded-2xl text-left"
                   }`}>
-                    <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isKidMode ? "text-amber-500 block" : "text-white/50"}`}>
-                      {!isKidMode && <Sparkles className="w-3 h-3 text-white/50" />} Example
+                    <span className={`text-[10px] font-black uppercase tracking-widest block ${isKidMode ? "text-amber-500" : "text-slate-400"}`}>
+                      Example Sentence
                     </span>
-                    <p className={`leading-relaxed ${
-                      isKidMode ? "italic text-amber-800 font-extrabold text-xs md:text-sm" : "text-white/80 font-semibold text-sm md:text-base"
+                    <p className={`italic leading-relaxed ${
+                      isKidMode ? "text-amber-800 font-extrabold text-xs md:text-sm" : "text-slate-600 font-medium text-xs md:text-sm"
                     }`}>
                       "{activeCard.exampleSentence}"
                     </p>
