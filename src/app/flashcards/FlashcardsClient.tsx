@@ -179,17 +179,14 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     }
   }
 
-  // Tự động phát âm khi lật sang mặt sau (áp dụng riêng cho Kids 2-5 và Kid 6-12)
+  // Tự động phát âm khi lật sang mặt sau (áp dụng cho mọi nhóm tuổi)
   useEffect(() => {
     if (isFlipped && selectedCategory && flashcards[currentIndex]) {
-      const isKidCategory = selectedCategory.slug === "kids-2-5" || selectedCategory.slug === "kid-6-12"
-      if (isKidCategory) {
-        // Delay nhẹ để âm thanh phát ra đồng thời cùng lúc xoay mặt thẻ xong
-        const timer = setTimeout(() => {
-          handlePlayAudio(flashcards[currentIndex])
-        }, 150)
-        return () => clearTimeout(timer)
-      }
+      // Delay nhẹ để âm thanh phát ra đồng thời cùng lúc xoay mặt thẻ xong
+      const timer = setTimeout(() => {
+        handlePlayAudio(flashcards[currentIndex])
+      }, 150)
+      return () => clearTimeout(timer)
     }
   }, [isFlipped, currentIndex, selectedCategory, flashcards])
 
@@ -639,33 +636,22 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                   />
                 </div>
               ) : (
-                // TEEN & READERS: Clean modern image and word on front
-                <div className="w-full h-full flex flex-col justify-between">
-                  <div className="w-full h-[68%] rounded-2xl overflow-hidden relative border border-slate-100 bg-slate-50 shrink-0">
+                // TEEN & READERS: Premium modern design
+                <div className="w-full h-full flex flex-col justify-between group">
+                  <div className="w-full h-[75%] rounded-[28px] overflow-hidden relative shadow-md border border-slate-200/60 bg-slate-50 shrink-0">
                     <img 
                       key={activeCard?.id}
                       src={activeCard?.imageUrl || ""} 
                       alt="Flashcard illustration"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
                     />
+                    {/* Subtle gradient overlay for premium feel */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent pointer-events-none" />
                   </div>
-                  <div className="flex-1 flex flex-col justify-center items-center pt-4">
-                    <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none text-center">
+                  <div className="flex-1 flex flex-col justify-center items-center">
+                    <h3 className="text-4xl font-black text-slate-800 tracking-tighter leading-none text-center">
                       {activeCard?.word}
                     </h3>
-                    <div className="flex items-center gap-2 mt-2.5">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handlePlayAudio(activeCard)
-                        }}
-                        className="p-2.5 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-800 transition-all active:scale-90"
-                        title="Pronounce word"
-                      >
-                        <Volume2 className="w-4 h-4" />
-                      </button>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">US Accent</span>
-                    </div>
                   </div>
                 </div>
               )}
@@ -691,23 +677,23 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     ⭐ Fun Vocabulary ⭐
                   </span>
                 ) : (
-                  <span className="inline-flex px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-50 border border-slate-200 text-slate-500">
-                    Word Details
-                  </span>
+                  <div className="flex justify-center">
+                    <div className="h-1 w-12 bg-slate-200 rounded-full mb-2" />
+                  </div>
                 )}
               </div>
 
               {/* 2. Central Area */}
               <div className="flex-1 flex flex-col justify-center gap-4 px-2 overflow-y-auto max-h-[calc(100%-60px)] scrollbar-thin">
                 {/* Word, Phonetic & Audio */}
-                <div className="flex flex-col items-center text-center space-y-2 shrink-0">
-                  <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-slate-800"}`}>
+                <div className="flex flex-col items-center text-center space-y-3 shrink-0">
+                  <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-slate-900"}`}>
                     {activeCard?.word}
                   </h2>
                   
                   <div className="flex items-center justify-center gap-3">
                     {activeCard?.phonetic && (
-                      <span className={`${isKidMode ? "text-amber-600" : "text-primary"} font-mono text-xs md:text-sm tracking-wide font-extrabold`}>
+                      <span className={`${isKidMode ? "text-amber-600" : "text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200"} font-mono text-xs md:text-sm tracking-wide font-extrabold`}>
                         {activeCard.phonetic}
                       </span>
                     )}
@@ -728,10 +714,10 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 <hr className={`${isKidMode ? "border-amber-100" : "border-slate-100"} shrink-0`} />
 
                 {/* Multilingual Definition */}
-                <div className="space-y-2 shrink-0">
+                <div className="space-y-3 shrink-0">
                   <div className="flex items-center justify-between px-2">
                     <span className={`text-[10px] font-black uppercase tracking-widest block ${isKidMode ? "text-amber-500" : "text-slate-400"}`}>
-                      Definition
+                      Meaning
                     </span>
                     
                     {/* Flag Selector Row */}
@@ -787,8 +773,8 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     </div>
                   </div>
 
-                  <p className={`text-center min-h-[40px] flex items-center justify-center px-4 font-black ${
-                    isKidMode ? "text-amber-950 text-base md:text-lg" : "text-slate-700 text-sm md:text-base"
+                  <p className={`text-center min-h-[40px] flex items-center justify-center px-4 ${
+                    isKidMode ? "font-black text-amber-950 text-base md:text-lg" : "font-bold text-slate-800 text-lg md:text-xl"
                   }`}>
                     {currentLang === 'VI' ? (activeCard?.definitionVi || activeCard?.definition)
                      : currentLang === 'TH' ? (activeCard?.definitionTh || activeCard?.definition)
@@ -799,16 +785,16 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
                 {/* Example Sentence */}
                 {activeCard?.exampleSentence && (
-                  <div className={`space-y-1.5 p-3.5 shrink-0 ${
+                  <div className={`space-y-2 p-4 shrink-0 ${
                     isKidMode 
                       ? "bg-amber-50/50 border-2 border-amber-100 rounded-[24px] text-center" 
-                      : "bg-slate-50 border border-slate-100 rounded-2xl text-left"
+                      : "bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200/60 rounded-2xl text-left shadow-inner"
                   }`}>
-                    <span className={`text-[10px] font-black uppercase tracking-widest block ${isKidMode ? "text-amber-500" : "text-slate-400"}`}>
-                      Example Sentence
+                    <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${isKidMode ? "text-amber-500 block" : "text-slate-400"}`}>
+                      {!isKidMode && <Sparkles className="w-3 h-3 text-slate-400" />} Example
                     </span>
-                    <p className={`italic leading-relaxed ${
-                      isKidMode ? "text-amber-800 font-extrabold text-xs md:text-sm" : "text-slate-600 font-medium text-xs md:text-sm"
+                    <p className={`leading-relaxed ${
+                      isKidMode ? "italic text-amber-800 font-extrabold text-xs md:text-sm" : "text-slate-700 font-semibold text-sm md:text-base"
                     }`}>
                       "{activeCard.exampleSentence}"
                     </p>
