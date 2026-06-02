@@ -12,6 +12,8 @@ import {
 } from "@/actions/admin-flashcards"
 import { generateVocabularyDetails, generateExampleSentence } from "@/actions/ai-actions"
 import { searchImagesAction } from "@/actions/image-search-actions"
+import { generateFlashcardVocabularyList, generateSingleFlashcardWithImage } from "@/actions/admin-flashcards-ai"
+
 import { toast } from "sonner"
 import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy } from "lucide-react"
 
@@ -111,7 +113,8 @@ export function AdminFlashcardsClient({
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [topicForm, setTopicForm] = useState({
     categoryId: "",
-    name: ""
+    name: "",
+    sampleCount: ""
   })
 
   // Delete confirms
@@ -122,6 +125,8 @@ export function AdminFlashcardsClient({
 
   // Action status
   const [isPending, startTransition] = useTransition()
+  const [isGeneratingSamples, setIsGeneratingSamples] = useState(false)
+  const [generatingStatus, setGeneratingStatus] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -438,7 +443,7 @@ export function AdminFlashcardsClient({
       setEditingCard(null)
       // Pick first category and its first topic as default
       const defaultCat = categories[0]
-      const defaultTopic = defaultCat?.topics[0]
+      const defaultTopic = topics.find(t => t.categoryId === defaultCat?.id)
       setCardForm({
         categoryId: defaultCat?.id || "",
         topicId: defaultTopic?.id || "",
@@ -458,8 +463,7 @@ export function AdminFlashcardsClient({
 
   // Handle dynamic category change inside Card modal to update topics dropdown
   const handleModalCategoryChange = (catId: string) => {
-    const targetCat = categories.find(c => c.id === catId)
-    const targetTopic = targetCat?.topics[0]
+    const targetTopic = topics.find(t => t.categoryId === catId)
     setCardForm(prev => ({
       ...prev,
       categoryId: catId,
@@ -556,13 +560,15 @@ export function AdminFlashcardsClient({
       setEditingTopic(topic)
       setTopicForm({
         categoryId: topic.categoryId,
-        name: topic.name
+        name: topic.name,
+        sampleCount: ""
       })
     } else {
       setEditingTopic(null)
       setTopicForm({
         categoryId: categories[0]?.id || "",
-        name: ""
+        name: "",
+        sampleCount: ""
       })
     }
     setShowTopicModal(true)
@@ -571,19 +577,18 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   // SAVE TOPIC ACTION
   // -------------------------------------------------------------
-  const handleSaveTopic = (e: React.FormEvent) => {
+  const handleSaveTopic = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!topicForm.name || !topicForm.categoryId) {
       alert("Vui lòng nhập tên chủ đề.")
       return
     }
 
-    startTransition(async () => {
-      if (editingTopic) {
+    if (editingTopic) {
+      startTransition(async () => {
         // UPDATE
         const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.categoryId)
         if (res.success && res.topic) {
-          // Update in local state
           const updatedLocalTopic = {
             ...editingTopic,
             ...res.topic,
@@ -597,26 +602,91 @@ export function AdminFlashcardsClient({
         } else {
           alert("Lỗi sửa chủ đề: " + res.error)
         }
-      } else {
-        // CREATE
-        const res = await adminCreateTopic(topicForm.categoryId, topicForm.name)
-        if (res.success && res.topic) {
-          const newLocalTopic = {
-            ...res.topic,
-            category: {
-              name: categories.find(c => c.id === topicForm.categoryId)?.name || "",
-              slug: categories.find(c => c.id === topicForm.categoryId)?.slug || ""
-            },
-            _count: { flashcards: 0 }
-          }
-          // Prepend as it is the newest
-          setTopics(prev => [newLocalTopic, ...prev])
-          setShowTopicModal(false)
-        } else {
-          alert("Lỗi tạo chủ đề: " + res.error)
-        }
+      })
+      return
+    }
+
+    // CREATE
+    const parsedSampleCount = parseInt(topicForm.sampleCount, 10)
+    const isGenerating = !isNaN(parsedSampleCount) && parsedSampleCount > 0
+
+    if (isGenerating) {
+      setIsGeneratingSamples(true)
+      setGeneratingStatus(`Đang yêu cầu AI lên danh sách ${parsedSampleCount} từ vựng...`)
+    } else {
+      setIsGeneratingSamples(true) // Reuse loading state for simple create
+    }
+
+    try {
+      const createRes = await adminCreateTopic(topicForm.categoryId, topicForm.name)
+      if (!createRes.success || !createRes.topic) {
+        alert("Lỗi tạo chủ đề: " + createRes.error)
+        setIsGeneratingSamples(false)
+        return
       }
-    })
+
+      const categoryName = categories.find(c => c.id === topicForm.categoryId)?.name || ""
+      const newLocalTopic = {
+        ...createRes.topic,
+        category: {
+          name: categoryName,
+          slug: categories.find(c => c.id === topicForm.categoryId)?.slug || ""
+        },
+        _count: { flashcards: 0 }
+      }
+
+      // Prepend topic
+      setTopics(prev => [newLocalTopic, ...prev])
+
+      if (isGenerating) {
+        const vocabRes = await generateFlashcardVocabularyList(categoryName, topicForm.name, parsedSampleCount)
+        
+        if (!vocabRes.success || !vocabRes.vocabularies) {
+          toast.error("Tạo chủ đề thành công nhưng lỗi sinh thẻ mẫu: " + vocabRes.error)
+          setIsGeneratingSamples(false)
+          setShowTopicModal(false)
+          return
+        }
+
+        const words = vocabRes.vocabularies
+        let successCount = 0
+        const newLocalCards = []
+
+        for (let i = 0; i < words.length; i++) {
+          setGeneratingStatus(`Đang tìm ảnh và tạo thẻ ${i + 1}/${words.length}: ${words[i].word}...`)
+          const cardRes = await generateSingleFlashcardWithImage(createRes.topic.id, words[i])
+          if (cardRes.success && cardRes.card) {
+            successCount++
+            newLocalCards.push({
+              ...cardRes.card,
+              topic: {
+                id: createRes.topic.id,
+                name: topicForm.name,
+                category: {
+                  id: topicForm.categoryId,
+                  name: categoryName
+                }
+              }
+            })
+          }
+        }
+        
+        if (newLocalCards.length > 0) {
+          setFlashcards(prev => [...newLocalCards, ...prev])
+          setTopics(prev => prev.map(t => t.id === createRes.topic.id ? { ...t, _count: { flashcards: newLocalCards.length } } : t))
+        }
+
+        toast.success(`Đã tạo thành công chủ đề và ${successCount} thẻ mẫu bằng AI!`)
+      } else {
+        toast.success("Tạo chủ đề thành công!")
+      }
+
+      setShowTopicModal(false)
+    } catch (error: any) {
+      toast.error("Lỗi không xác định: " + error.message)
+    } finally {
+      setIsGeneratingSamples(false)
+    }
   }
 
   // -------------------------------------------------------------
@@ -1038,7 +1108,7 @@ export function AdminFlashcardsClient({
                     onChange={(e) => setCardForm(prev => ({ ...prev, topicId: e.target.value }))}
                     className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
                   >
-                    {categories.find(c => c.id === cardForm.categoryId)?.topics.map(t => (
+                    {topics.filter(t => t.categoryId === cardForm.categoryId).map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
@@ -1369,27 +1439,52 @@ export function AdminFlashcardsClient({
                 />
               </div>
 
+              {!editingTopic && (
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-purple-400 uppercase tracking-widest pl-1 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Số lượng thẻ mẫu tự tạo (AI)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={topicForm.sampleCount}
+                    onChange={(e) => setTopicForm(prev => ({ ...prev, sampleCount: e.target.value }))}
+                    placeholder="Bỏ trống hoặc nhập 0 nếu không tạo thẻ AI"
+                    className="w-full px-4 py-3 bg-neutral-800 border border-purple-500/30 rounded-xl outline-none text-white focus:border-purple-500 text-sm font-semibold"
+                  />
+                  <p className="text-[11px] text-neutral-500 pl-1 mt-1">
+                    Hệ thống sẽ dùng AI để sinh từ vựng, tự động dịch, tạo câu ví dụ và tìm ảnh. Quá trình có thể mất vài phút.
+                  </p>
+                </div>
+              )}
+
               {/* Info slug standardizer description */}
               <div className="bg-neutral-800/40 p-3.5 rounded-xl border border-neutral-800 text-xs font-semibold text-neutral-500 flex gap-2 items-center">
                 <AlertCircle className="w-5 h-5 shrink-0 text-blue-500" />
-                <span>Hệ thống tự động đồng bộ đường dẫn URL Slug dạng: <code className="text-blue-400 bg-neutral-900 px-1 rounded">nature</code></span>
+                <span>Hệ thống tự động đồng bộ đường dẫn URL Slug dạng: <code className="text-blue-400 bg-neutral-900 px-1 rounded">{topicForm.name ? topicForm.name.toLowerCase().replace(/\s+/g, '-') : 'nature'}</code></span>
               </div>
 
               <div className="flex items-center gap-3 justify-end border-t border-neutral-800/80 pt-6">
                 <button 
                   type="button"
-                  disabled={isPending}
+                  disabled={isPending || isGeneratingSamples}
                   onClick={() => setShowTopicModal(false)}
-                  className="px-5 py-2.5 font-bold text-neutral-400 hover:text-white transition-colors text-sm"
+                  className="px-5 py-2.5 font-bold text-neutral-400 hover:text-white transition-colors text-sm disabled:opacity-50"
                 >
                   Hủy
                 </button>
                 <button 
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || isGeneratingSamples}
                   className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-2xl flex items-center gap-2 text-sm shadow-md transition-all disabled:opacity-50"
                 >
-                  {isPending ? (
+                  {isGeneratingSamples ? (
+                    <div className="flex items-center gap-2">
+                      <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs">{generatingStatus || "Đang xử lý..."}</span>
+                    </div>
+                  ) : isPending ? (
                     <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : 'Lưu dữ liệu'}
                 </button>

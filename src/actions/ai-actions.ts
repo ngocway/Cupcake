@@ -9,10 +9,9 @@ export async function generateVocabularyDetails(word: string) {
 
   try {
     const prompt = `Provide detailed vocabulary information for the English word or phrase: "${word}". 
-    The definitions should be professional, accurate, and easy to understand for Grade 10-12 students. 
-    The meaningVi should be the most common and accurate translation in Vietnamese. 
-    The meaningTh should be the most common and accurate translation in Thai. 
-    The meaningId should be the most common and accurate translation in Indonesian. 
+    The meaningVi should be a SHORT, direct translation in Vietnamese (1-3 words max, e.g. "Quả chuối", NOT a definition). 
+    The meaningTh should be a SHORT, direct translation in Thai (1-3 words max). 
+    The meaningId should be a SHORT, direct translation in Indonesian (1-3 words max). 
     The explanationEn should be a clear, simple English definition (CEFR B1-B2 level). 
     Provide exactly 2-3 illustrative, high-quality example sentences. 
     Provide 2-3 very descriptive English keywords for an image search that perfectly represents the word's meaning (e.g. for "dilemma", use "confused person at crossroads").
