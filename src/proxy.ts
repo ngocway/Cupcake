@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 
 // TEMPORARY: Disabled next-intl middleware to fix root 404
 // TODO: Re-enable with proper [locale] folder structure
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 

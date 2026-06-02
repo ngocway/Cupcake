@@ -12,7 +12,7 @@ export async function searchImagesAction(query: string) {
       return [];
     }
 
-    return images.slice(0, 15).map((img: any, i: number) => ({
+    return images.slice(0, 50).map((img: any, i: number) => ({
       id: img.id || `google-img-${i}`,
       url: img.url,
       thumb: img.preview?.url || img.url,

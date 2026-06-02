@@ -77,20 +77,32 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   useEffect(() => {
     // Imperatively update the styling of the currently playing marker
     // since they are rendered via dangerouslySetInnerHTML
-    const markers = document.querySelectorAll('.inline-audio-marker');
+    const markers = document.querySelectorAll('.inline-audio-marker, .inline-audio-wrapper');
     markers.forEach(marker => {
-      if (marker.getAttribute('data-audio-url') === playingAudioUrl) {
-        marker.classList.add('bg-primary', 'text-white', 'shadow-md', 'scale-105');
-        marker.classList.remove('bg-primary/10', 'text-primary');
-        const icon = marker.querySelector('.material-symbols-outlined');
+      const isWrapper = marker.classList.contains('inline-audio-wrapper');
+      const isPlaying = marker.getAttribute('data-audio-url') === playingAudioUrl;
+      const icon = marker.querySelector('.material-symbols-outlined');
+
+      if (isPlaying) {
+        if (isWrapper) {
+          marker.classList.add('bg-blue-100', 'dark:bg-blue-900/40', 'scale-[1.02]');
+          marker.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
+        } else {
+          marker.classList.add('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+          marker.classList.remove('bg-primary/10', 'text-primary');
+        }
         if (icon) {
           icon.textContent = 'graphic_eq';
           icon.classList.add('animate-pulse');
         }
       } else {
-        marker.classList.remove('bg-primary', 'text-white', 'shadow-md', 'scale-105');
-        marker.classList.add('bg-primary/10', 'text-primary');
-        const icon = marker.querySelector('.material-symbols-outlined');
+        if (isWrapper) {
+          marker.classList.remove('bg-blue-100', 'dark:bg-blue-900/40', 'scale-[1.02]');
+          marker.classList.add('bg-blue-50', 'dark:bg-blue-900/20');
+        } else {
+          marker.classList.remove('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+          marker.classList.add('bg-primary/10', 'text-primary');
+        }
         if (icon) {
           icon.textContent = 'volume_up';
           icon.classList.remove('animate-pulse');
@@ -109,7 +121,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
     const target = e.target as HTMLElement;
     
     // 1. Handle Inline Audio Click
-    const audioMarker = target.closest('.inline-audio-marker');
+    const audioMarker = target.closest('.inline-audio-marker, .inline-audio-wrapper');
     if (audioMarker) {
       e.preventDefault();
       const url = audioMarker.getAttribute('data-audio-url');

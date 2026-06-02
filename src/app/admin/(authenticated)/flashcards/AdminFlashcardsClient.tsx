@@ -10,7 +10,7 @@ import {
   adminUpdateTopic,
   adminDeleteTopic
 } from "@/actions/admin-flashcards"
-import { generateVocabularyDetails } from "@/actions/ai-actions"
+import { generateVocabularyDetails, generateExampleSentence } from "@/actions/ai-actions"
 import { searchImagesAction } from "@/actions/image-search-actions"
 import { toast } from "sonner"
 import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy } from "lucide-react"
@@ -128,12 +128,77 @@ export function AdminFlashcardsClient({
   // AI & Image Search states
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [isSearchingImage, setIsSearchingImage] = useState(false)
+  const [imageSearchStyle, setImageSearchStyle] = useState<"REALISTIC" | "CARTOON">("REALISTIC")
   const [isUploadingVocabImage, setIsUploadingVocabImage] = useState(false)
   const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false)
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
+  const [visibleImagesCount, setVisibleImagesCount] = useState(12)
   const [showAIPromptModal, setShowAIPromptModal] = useState(false)
   const [isUploadingAudio, setIsUploadingAudio] = useState(false)
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false)
+  const [isGeneratingExample, setIsGeneratingExample] = useState(false)
   const audioInputRef = useRef<HTMLInputElement>(null)
+
+  const handleGenerateExampleSentence = async () => {
+    if (!cardForm.word || !cardForm.word.trim()) {
+      toast.error("Vui lòng nhập từ vựng trước khi tạo câu ví dụ.")
+      return
+    }
+
+    setIsGeneratingExample(true)
+    toast.info("Đang tạo câu ví dụ bằng AI...")
+
+    try {
+      const selectedCategory = categories.find(c => c.id === cardForm.categoryId)
+      const isKid = selectedCategory?.name.toLowerCase().includes("kid") || false
+
+      const res = await generateExampleSentence(cardForm.word, isKid, cardForm.exampleSentence)
+      
+      if (res.error) {
+        toast.error(res.error)
+      } else if (res.sentence) {
+        setCardForm(prev => ({ ...prev, exampleSentence: res.sentence }))
+        toast.success("Tạo câu ví dụ thành công!")
+      }
+    } catch (err: any) {
+      console.error(err)
+      toast.error("Lỗi khi tạo câu ví dụ: " + err.message)
+    } finally {
+      setIsGeneratingExample(false)
+    }
+  }
+
+  const handleGenerateAIAudio = async (word: string, exampleSentence: string) => {
+    if (!word || !word.trim()) {
+      toast.error("Vui lòng nhập từ vựng trước khi tạo audio.")
+      return
+    }
+    
+    setIsGeneratingAudio(true)
+    toast.info("Đang tạo audio bằng AI...")
+
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: word, exampleSentence: exampleSentence })
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.url) {
+        setCardForm(prev => ({ ...prev, audioUrl: data.url }))
+        toast.success("Tạo audio AI và lưu lên R2 thành công!")
+      } else {
+        toast.error("Tạo audio thất bại: " + (data.error || "Unknown error"))
+      }
+    } catch (err: any) {
+      console.error(err)
+      toast.error("Lỗi gọi API tạo audio: " + err.message)
+    } finally {
+      setIsGeneratingAudio(false)
+    }
+  }
 
   // -------------------------------------------------------------
   // FLASHCARD FILTERING LOGIC
@@ -273,7 +338,7 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   // GOOGLE IMAGE SEARCH HANDLER
   // -------------------------------------------------------------
-  const handleGoogleImageSearch = async (searchTerm: string) => {
+  const handleGoogleImageSearch = async (searchTerm: string, forceStyle?: "REALISTIC" | "CARTOON") => {
     if (!searchTerm || !searchTerm.trim()) {
       toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh.")
       return
@@ -282,9 +347,15 @@ export function AdminFlashcardsClient({
     setIsSearchingImage(true)
     setShowImageSearchDrawer(true)
 
+    const styleToUse = forceStyle || imageSearchStyle
+    const finalSearchTerm = styleToUse === "CARTOON" 
+      ? `${searchTerm} cartoon illustration` 
+      : searchTerm
+
     try {
-      const results = await searchImagesAction(searchTerm)
+      const results = await searchImagesAction(finalSearchTerm)
       setImageSearchResults(results || [])
+      setVisibleImagesCount(12)
     } catch (err: any) {
       console.error(err)
       toast.error("Lỗi tìm ảnh: " + (err.message || "Không thể tải ảnh từ Google Images."))
@@ -582,6 +653,27 @@ export function AdminFlashcardsClient({
     })
   }
 
+  // Audio preview handler
+  const handlePlayAudio = (e: React.MouseEvent, card: any) => {
+    e.stopPropagation()
+    if (typeof window !== "undefined") {
+      if (card.audioUrl && card.audioUrl.trim()) {
+        new Audio(card.audioUrl).play().catch(() => playSpeechSynthesis(card.word))
+      } else {
+        playSpeechSynthesis(card.word)
+      }
+    }
+  }
+
+  const playSpeechSynthesis = (text: string) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = "en-US"
+      window.speechSynthesis.speak(utterance)
+    }
+  }
+
   // Help calculate translations done status
   const getLangsDoneCount = (card: any) => {
     let count = 1 // English default
@@ -733,6 +825,13 @@ export function AdminFlashcardsClient({
                           {card.phonetic && (
                             <span className="text-blue-400 font-mono text-xs font-bold">{card.phonetic}</span>
                           )}
+                          <button 
+                            onClick={(e) => handlePlayAudio(e, card)}
+                            className="p-1 rounded-full bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-white transition-colors"
+                            title="Nghe phát âm"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                          </button>
                         </div>
 
                         <p className="text-xs font-semibold text-neutral-400 truncate max-w-xs">{card.definition || "No definition set"}</p>
@@ -1076,25 +1175,19 @@ export function AdminFlashcardsClient({
                     </div>
                   </div>
 
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    ref={audioInputRef}
-                    onChange={handleAudioUpload}
-                    className="hidden"
-                  />
                   <button
                     type="button"
-                    disabled={isUploadingAudio}
-                    onClick={() => audioInputRef.current?.click()}
-                    className="px-5 py-3 bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 active:scale-95 text-purple-400 font-bold rounded-2xl transition-all whitespace-nowrap text-sm flex items-center gap-1.5 disabled:opacity-50"
+                    disabled={isGeneratingAudio}
+                    onClick={() => handleGenerateAIAudio(cardForm.word, cardForm.exampleSentence)}
+                    className="px-4 py-3 bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 active:scale-95 text-blue-400 font-bold rounded-2xl transition-all whitespace-nowrap text-sm flex items-center gap-1.5 disabled:opacity-50"
+                    title="Tạo Audio bằng AI"
                   >
-                    {isUploadingAudio ? (
-                      <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                    {isGeneratingAudio ? (
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Volume2 className="w-4.5 h-4.5" />
+                      <Sparkles className="w-4.5 h-4.5" />
                     )}
-                    <span>Tải audio lên R2</span>
+                    <span>Tạo Audio AI</span>
                   </button>
 
                   {cardForm.audioUrl && (
@@ -1185,7 +1278,22 @@ export function AdminFlashcardsClient({
 
               {/* Example Sentence */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Câu ví dụ (Example Sentence)</label>
+                <div className="flex items-center justify-between pl-1">
+                  <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">Câu ví dụ (Example Sentence)</label>
+                  <button
+                    type="button"
+                    disabled={isGeneratingExample}
+                    onClick={handleGenerateExampleSentence}
+                    className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 active:scale-95 rounded transition-all disabled:opacity-50"
+                  >
+                    {isGeneratingExample ? (
+                      <div className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Wand2 className="w-3 h-3" />
+                    )}
+                    AI TẠO LẠI
+                  </button>
+                </div>
                 <textarea
                   rows={2}
                   value={cardForm.exampleSentence}
@@ -1355,20 +1463,50 @@ export function AdminFlashcardsClient({
       {showImageSearchDrawer && (
         <div className="fixed top-0 right-0 h-full w-[360px] bg-neutral-900 border-l border-neutral-800 p-6 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
           
-          <div className="flex justify-between items-center mb-6">
-            <div>
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
               <h4 className="text-base font-bold text-white flex items-center gap-2">
                 <Globe className="text-blue-500 w-5 h-5" />
                 Tìm ảnh Internet
               </h4>
-              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1">
+              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1 mb-3">
                 Từ khoá: <span className="text-blue-500">{cardForm?.word}</span>
               </p>
+              
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-neutral-800 rounded-lg p-1">
+                    <button
+                      type="button"
+                      onClick={() => setImageSearchStyle("REALISTIC")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "REALISTIC" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                    >
+                      📷 Ảnh thực tế
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageSearchStyle("CARTOON")}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                    >
+                      🎨 Ảnh hoạt hình
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSearchingImage}
+                    onClick={() => handleGoogleImageSearch(cardForm?.word, imageSearchStyle)}
+                    className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-neutral-700 h-full"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    Tìm
+                  </button>
+                </div>
+              </div>
             </div>
             <button 
               type="button" 
               onClick={() => setShowImageSearchDrawer(false)} 
-              className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+              className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors ml-2 shrink-0"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
@@ -1381,27 +1519,38 @@ export function AdminFlashcardsClient({
                 <span className="text-xs font-black uppercase tracking-widest">Đang tìm kiếm...</span>
               </div>
             ) : imageSearchResults.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 pb-8">
-                {imageSearchResults.map((img) => (
-                  <div 
-                    key={img.id} 
-                    className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-neutral-850 hover:border-blue-500 hover:shadow-lg transition-all" 
-                    onClick={() => handleImageSelect(img.url)}
+              <div className="pb-8 flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  {imageSearchResults.slice(0, visibleImagesCount).map((img) => (
+                    <div 
+                      key={img.id} 
+                      className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-neutral-850 hover:border-blue-500 hover:shadow-lg transition-all" 
+                      onClick={() => handleImageSelect(img.url)}
+                    >
+                      <img 
+                        src={img.thumb} 
+                        alt="Google result" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        loading="lazy" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                        <span className="text-[9px] text-white/80 font-medium truncate">by {img.author}</span>
+                      </div>
+                      <div className="absolute top-2 right-2 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {visibleImagesCount < imageSearchResults.length && (
+                  <button
+                    type="button"
+                    onClick={() => setVisibleImagesCount(prev => prev + 12)}
+                    className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-md border border-neutral-700"
                   >
-                    <img 
-                      src={img.thumb} 
-                      alt="Google result" 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      loading="lazy" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
-                      <span className="text-[9px] text-white/80 font-medium truncate">by {img.author}</span>
-                    </div>
-                    <div className="absolute top-2 right-2 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                      <span className="material-symbols-outlined text-[14px]">check</span>
-                    </div>
-                  </div>
-                ))}
+                    🔄 Tải thêm ảnh
+                  </button>
+                )}
               </div>
             ) : (
               <div className="text-center text-neutral-500 text-xs mt-10">Không tìm thấy ảnh nào phù hợp.</div>

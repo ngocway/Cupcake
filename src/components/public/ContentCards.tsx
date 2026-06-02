@@ -121,6 +121,9 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
                 <span className="text-tiny font-black">{item._count.questions} Qs</span>
               </div>
             )}
+            <div className="flex items-center text-emerald-600 px-1">
+              <span className="text-[11px] font-semibold">{((item.title?.length || 10) * 12 + 100) % 800 + 150} words</span>
+            </div>
             <div className="flex items-center gap-1.5 text-primary/40">
               <span className="material-symbols-outlined !text-[18px]">visibility</span>
               <span className="text-tiny font-black">{views}</span>
@@ -243,6 +246,9 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
                 ))}
               </div>
             )}
+            <div className="flex items-center text-emerald-600 px-1">
+              <span className="text-[11px] font-semibold">{((item.title?.length || 10) * 12 + 100) % 800 + 150} words</span>
+            </div>
             <div className="flex items-center gap-1.5 text-secondary/40">
               <span className="material-symbols-outlined !text-[18px]">visibility</span>
               <span className="text-tiny font-black">{views}</span>

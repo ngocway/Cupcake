@@ -201,6 +201,8 @@ export function ReadingExerciseBuilder({
         title,
         videoUrl: videoUrl,
         audioUrl: audioUrl,
+        ttsVoice: ttsVoice,
+        ttsSpeed: ttsSpeed,
         subject,
         gradeLevel,
         shortDescription,
@@ -286,6 +288,8 @@ export function ReadingExerciseBuilder({
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [materialType, setMaterialType] = useState<string>('READING');
+  const [ttsVoice, setTtsVoice] = useState<string>('Aoede');
+  const [ttsSpeed, setTtsSpeed] = useState<number>(1.0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleThumbnailChange = async (newValue: string | null) => {
@@ -327,11 +331,87 @@ export function ReadingExerciseBuilder({
 
   const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false);
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([]);
+  const [visibleImagesCount, setVisibleImagesCount] = useState(12);
+  const [imageSearchStyle, setImageSearchStyle] = useState<"REALISTIC" | "CARTOON">("REALISTIC");
   const [isSearchingImage, setIsSearchingImage] = useState(false);
+
+  const handleGoogleImageSearch = async (searchTerm: string, forceStyle?: "REALISTIC" | "CARTOON") => {
+    if (!searchTerm || !searchTerm.trim()) {
+      toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh.");
+      return;
+    }
+    setIsSearchingImage(true);
+    setShowImageSearchDrawer(true);
+    const styleToUse = forceStyle || imageSearchStyle;
+    const finalSearchTerm = styleToUse === "CARTOON" ? `${searchTerm} cartoon illustration` : searchTerm;
+    try {
+      const results = await searchImagesAction(finalSearchTerm);
+      setImageSearchResults(results || []);
+      setVisibleImagesCount(12);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Lỗi tìm ảnh: " + (err.message || "Không thể tải ảnh từ Google Images."));
+    } finally {
+      setIsSearchingImage(false);
+    }
+  };
   const [showAIPromptModal, setShowAIPromptModal] = useState(false);
   const [isUploadingVocabImage, setIsUploadingVocabImage] = useState(false);
 
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isGeneratingInlineAudio, setIsGeneratingInlineAudio] = useState(false);
+  const [isGeneratingGlobalAudio, setIsGeneratingGlobalAudio] = useState(false);
+
+  const handleCreateInlineAudio = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+    
+    const range = selection.getRangeAt(0);
+    
+    setIsGeneratingInlineAudio(true);
+    const toastId = toast.loading('Đang tạo âm thanh AI...');
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: selectedText,
+          voice: ttsVoice,
+          speed: ttsSpeed,
+          mode: 'inline'
+        })
+      });
+      
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Lỗi tạo Audio');
+      }
+      
+      const audioUrl = data.audioUrl || data.url;
+      
+      const escapeAttr = (str: string) => str ? str.replace(/"/g, '&quot;').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+      const html = `<span class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" data-audio-url="${escapeAttr(audioUrl)}" contenteditable="false" draggable="true" title="Nghe Audio"><span class="material-symbols-outlined text-[16px]">volume_up</span></span>&nbsp;`;
+      
+      range.collapse(false); // Collapse range to end of selection to insert immediately after the text
+      insertNodeAtCursor(html, range);
+      
+      selection.removeAllRanges();
+      setTextToolbarPos({ top: 0, left: 0, show: false });
+      toast.success('Đã tạo âm thanh AI!', { id: toastId });
+      
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Lỗi: ' + err.message, { id: toastId });
+    } finally {
+      setIsGeneratingInlineAudio(false);
+    }
+  };
   const [activeTab, setActiveTab] = useState<'passage' | 'questions' | 'vocabulary'>('passage');
   const [vocabEnabled, setVocabEnabled] = useState(false);
   const [showVocabDisableWarning, setShowVocabDisableWarning] = useState(false);
@@ -543,6 +623,8 @@ export function ReadingExerciseBuilder({
           }
           setThumbnail(data.assignment.thumbnail || null);
           setMaterialType(data.assignment.materialType || 'READING');
+          setTtsVoice(data.assignment.ttsVoice || 'Aoede');
+          setTtsSpeed(data.assignment.ttsSpeed || 1.0);
           
           if (data.assignment.questions) {
             setLastSavedQuestionsHash(JSON.stringify(data.assignment.questions));
@@ -714,35 +796,64 @@ export function ReadingExerciseBuilder({
     }
   };
 
-  const handleGlobalAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('File audio quá lớn (>20MB)');
+  const extractCleanTextFromHtml = (html: string): string => {
+    if (typeof document === 'undefined') return '';
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // Remove all inline audio markers (volume_up icons)
+    const audioMarkers = temp.querySelectorAll('.inline-audio-marker');
+    audioMarkers.forEach(m => m.remove());
+    
+    // Get clean text content and replace special characters (like speaker symbol 🔊)
+    const text = temp.textContent || '';
+    return text.replace(/🔊/g, '').replace(/\s+/g, ' ').trim();
+  };
+
+  const handleGenerateGlobalAudio = async () => {
+    const editor = document.getElementById('rich-text-editor');
+    const contentHtml = editor?.innerHTML || '';
+    const cleanText = extractCleanTextFromHtml(contentHtml);
+    
+    if (!cleanText) {
+      toast.error('Vui lòng nhập nội dung bài đọc trước khi tạo audio toàn bài!');
       return;
     }
     
-    e.target.value = '';
-    setAudioUploadProgress(0);
+    setIsGeneratingGlobalAudio(true);
+    const toastId = toast.loading('Đang sử dụng AI tạo audio toàn bài đọc...');
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: cleanText,
+          voice: ttsVoice,
+          speed: ttsSpeed,
+          mode: 'global'
+        })
+      });
       
-      const { uploadMedia } = await import('@/actions/upload-actions');
-      const result = await uploadMedia(formData);
-      
-      if (result.success && result.url) {
-        setAudioUrl(result.url);
-        toast.success('Đã tải lên audio bài học');
-      } else {
-        toast.error('Lỗi tải file audio');
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Lỗi tạo Audio toàn bài');
       }
-    } catch (err) {
+      
+      const generatedAudioUrl = data.audioUrl || data.url;
+      setAudioUrl(generatedAudioUrl);
+      toast.success('Tạo audio toàn bài bằng AI thành công!', { id: toastId });
+      
+      // Kích hoạt lưu lại thay đổi
+      setTimeout(() => {
+        handleSave(title, videoUrl, generatedAudioUrl);
+      }, 500);
+      
+    } catch (err: any) {
       console.error(err);
-      toast.error('Lỗi hệ thống');
+      toast.error('Lỗi tạo audio toàn bài: ' + err.message, { id: toastId });
     } finally {
-      setAudioUploadProgress(null);
+      setIsGeneratingGlobalAudio(false);
     }
   };
 
@@ -843,20 +954,32 @@ export function ReadingExerciseBuilder({
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const markers = document.querySelectorAll('#rich-text-editor .inline-audio-marker');
+    const markers = document.querySelectorAll('#rich-text-editor .inline-audio-marker, #rich-text-editor .inline-audio-wrapper');
     markers.forEach(marker => {
-      if (marker.getAttribute('data-audio-url') === playingAudioUrl) {
-        marker.classList.add('bg-primary', 'text-white', 'shadow-md', 'scale-105');
-        marker.classList.remove('bg-primary/10', 'text-primary');
-        const icon = marker.querySelector('.material-symbols-outlined');
+      const isWrapper = marker.classList.contains('inline-audio-wrapper');
+      const isPlaying = marker.getAttribute('data-audio-url') === playingAudioUrl;
+      const icon = marker.querySelector('.material-symbols-outlined');
+
+      if (isPlaying) {
+        if (isWrapper) {
+          marker.classList.add('bg-blue-100', 'dark:bg-blue-900/40', 'scale-[1.02]');
+          marker.classList.remove('bg-blue-50', 'dark:bg-blue-900/20');
+        } else {
+          marker.classList.add('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+          marker.classList.remove('bg-primary/10', 'text-primary');
+        }
         if (icon) {
           icon.textContent = 'graphic_eq';
           icon.classList.add('animate-pulse');
         }
       } else {
-        marker.classList.remove('bg-primary', 'text-white', 'shadow-md', 'scale-105');
-        marker.classList.add('bg-primary/10', 'text-primary');
-        const icon = marker.querySelector('.material-symbols-outlined');
+        if (isWrapper) {
+          marker.classList.remove('bg-blue-100', 'dark:bg-blue-900/40', 'scale-[1.02]');
+          marker.classList.add('bg-blue-50', 'dark:bg-blue-900/20');
+        } else {
+          marker.classList.remove('bg-primary', 'text-white', 'shadow-md', 'scale-105');
+          marker.classList.add('bg-primary/10', 'text-primary');
+        }
         if (icon) {
           icon.textContent = 'volume_up';
           icon.classList.remove('animate-pulse');
@@ -1204,7 +1327,7 @@ export function ReadingExerciseBuilder({
   const handleEditorClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     
-    const audioMarker = target.closest('.inline-audio-marker');
+    const audioMarker = target.closest('.inline-audio-marker, .inline-audio-wrapper');
     if (audioMarker) {
       e.preventDefault();
       e.stopPropagation();
@@ -1351,6 +1474,17 @@ export function ReadingExerciseBuilder({
           >
             <span className="material-symbols-outlined text-[18px]">menu_book</span> Hướng dẫn làm bài
           </button>
+          
+          <button 
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
+              isSettingsOpen 
+                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
+                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">settings</span> Thiết lập học liệu
+          </button>
           {/* Multimedia Attachments */}
           <div className="mt-8 space-y-6">
             <div className="flex flex-col gap-3">
@@ -1443,27 +1577,28 @@ export function ReadingExerciseBuilder({
                  
                  {/* Audio Toàn Bài Học */}
                  <div className="w-full flex flex-col gap-2 relative">
-                   <div className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-900/10 hover:border-emerald-400 transition-all cursor-pointer h-24 w-full">
-                     <input type="file" accept="audio/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={handleGlobalAudioUpload} />
-                     <span className="material-symbols-outlined text-emerald-400 group-hover:text-emerald-500 transition-colors text-[24px]">library_music</span>
+                   <div 
+                     onClick={handleGenerateGlobalAudio}
+                     className="group relative flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-emerald-200 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-900/10 hover:border-emerald-400 transition-all cursor-pointer h-24 w-full"
+                   >
+                     {isGeneratingGlobalAudio ? (
+                       <span className="material-symbols-outlined text-emerald-500 animate-spin text-[24px]">progress_activity</span>
+                     ) : (
+                       <span className="material-symbols-outlined text-emerald-400 group-hover:text-emerald-500 transition-colors text-[24px]">smart_toy</span>
+                     )}
                      <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-1.5 text-center group-hover:text-emerald-700 transition-colors">
-                       Audio Bài Học
+                       Tạo Audio AI Toàn Bài
                      </span>
                      {audioUrl && (
                        <div className="absolute top-1 right-1 text-emerald-600 flex items-center gap-0.5 bg-emerald-100 px-1.5 py-0.5 rounded-full">
                          <span className="material-symbols-outlined text-[12px]">check_circle</span>
                        </div>
                      )}
-                     {audioUploadProgress !== null && (
-                       <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex flex-col items-center justify-center rounded-2xl">
-                         <span className="material-symbols-outlined text-[20px] text-emerald-500 animate-spin">progress_activity</span>
-                       </div>
-                     )}
                    </div>
                    {audioUrl && (
                      <div className="flex justify-between items-center px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate flex-1">{audioUrl.split('/').pop()}</span>
-                       <button onClick={(e) => { e.preventDefault(); setAudioUrl(''); }} className="text-red-500 hover:text-red-700 p-1 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 ml-1">
+                       <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAudioUrl(''); }} className="text-red-500 hover:text-red-700 p-1 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 ml-1">
                          <span className="material-symbols-outlined text-[14px]">delete</span>
                        </button>
                      </div>
@@ -1619,9 +1754,17 @@ export function ReadingExerciseBuilder({
                 
                 {vocabEnabled && textToolbarPos.show && (
                   <div className="absolute -translate-x-1/2 glass-panel bg-white/95 dark:bg-gray-800/95 px-2 py-1.5 rounded-xl transition-all duration-200 z-40 border border-primary/20 shadow-lg animate-in fade-in" style={{ top: textToolbarPos.top + 'px', left: textToolbarPos.left + 'px' }}>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                       <span onMouseDown={handleOpenVocabForm} className="flex items-center gap-1.5 text-[12px] font-bold text-primary uppercase tracking-widest cursor-pointer hover:bg-primary/20 px-3 py-1.5 bg-primary/10 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-[16px]">translate</span> Tạo Từ Vựng
+                      </span>
+                      <span onMouseDown={handleCreateInlineAudio} className="flex items-center gap-1.5 text-[12px] font-bold text-blue-600 uppercase tracking-widest cursor-pointer hover:bg-blue-100 px-3 py-1.5 bg-blue-50 rounded-lg transition-colors">
+                        {isGeneratingInlineAudio ? (
+                          <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[16px]">volume_up</span>
+                        )}
+                        Tạo Audio
                       </span>
                     </div>
                   </div>
@@ -1846,21 +1989,7 @@ export function ReadingExerciseBuilder({
                       {isUploadingVocabImage ? <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-slate-50 dark:bg-gray-800"><span className="animate-spin material-symbols-outlined text-[24px]">progress_activity</span><span className="text-[9px] font-bold uppercase tracking-widest text-center">Đang lưu<br/>vào DB...</span></div> : vocabForm.image ? <img src={vocabForm.image} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="material-symbols-outlined text-[24px]">image</span><span className="text-[9px] font-bold mt-1 uppercase">Upload</span></div>}
                     </div>
                     <div className="flex gap-2 w-full mt-1">
-                      <button type="button" onClick={async () => {
-                        setIsSearchingImage(true);
-                        setShowImageSearchDrawer(true);
-                        try {
-                          const results = await searchImagesAction(vocabForm.word);
-                          setImageSearchResults(results);
-                        } catch (err: any) {
-                          console.error(err);
-                          toast.error("Lỗi tìm kiếm", {
-                            description: err.message || "Có lỗi xảy ra khi tìm ảnh từ Google, vui lòng thử lại sau.",
-                          });
-                        } finally {
-                          setIsSearchingImage(false);
-                        }
-                      }} className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-600 dark:text-slate-300 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tìm ảnh Internet">
+                      <button type="button" onClick={() => handleGoogleImageSearch(vocabForm.word)} className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-600 dark:text-slate-300 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tìm ảnh Internet">
                         <span className="material-symbols-outlined text-[18px]">travel_explore</span>
                       </button>
                       <button type="button" onClick={() => setShowAIPromptModal(true)} className="flex-1 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-400 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tạo prompt AI">
@@ -1901,17 +2030,46 @@ export function ReadingExerciseBuilder({
         {/* Image Search Drawer */}
         {showImageSearchDrawer && (
           <div className="fixed top-0 right-0 h-full w-[350px] bg-white dark:bg-gray-900 border-l border-slate-200 dark:border-gray-800 p-6 shadow-2xl flex flex-col z-[150] animate-in slide-in-from-right duration-300">
-            <div className="flex justify-between items-center mb-6">
-              <div>
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex-1">
                 <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">travel_explore</span>
                   Tìm ảnh Internet
                 </h4>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3">
                   Từ khoá: <span className="text-primary">{vocabForm?.word}</span>
                 </p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-slate-100 dark:bg-gray-800 rounded-lg p-1">
+                      <button
+                        type="button"
+                        onClick={() => setImageSearchStyle("REALISTIC")}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "REALISTIC" ? "bg-blue-600 text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"}`}
+                      >
+                        📷 Ảnh thực tế
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setImageSearchStyle("CARTOON")}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"}`}
+                      >
+                        🎨 Ảnh hoạt hình
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSearchingImage}
+                      onClick={() => handleGoogleImageSearch(vocabForm?.word || '', imageSearchStyle)}
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 active:scale-95 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-slate-200 dark:border-gray-700 h-full"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">search</span>
+                      Tìm
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button type="button" onClick={() => setShowImageSearchDrawer(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+              <button type="button" onClick={() => setShowImageSearchDrawer(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors ml-2 shrink-0">
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
@@ -1923,36 +2081,47 @@ export function ReadingExerciseBuilder({
                   <span className="text-xs font-bold uppercase tracking-widest">Đang tìm kiếm...</span>
                 </div>
               ) : imageSearchResults.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 pb-8">
-                  {imageSearchResults.map((img) => (
-                    <div key={img.id} className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-slate-200 dark:border-gray-700 hover:border-primary hover:shadow-lg transition-all" onClick={async () => {
-                      if (vocabForm) {
-                        setIsUploadingVocabImage(true);
-                        setShowImageSearchDrawer(false);
-                        try {
-                          const result = await uploadUrlMedia(img.url);
-                          if (result.success && result.url) {
-                            setVocabForm(prev => prev ? {...prev, image: result.url} : null);
-                            toast.success('Lưu ảnh thành công');
-                          } else {
-                            toast.error('Lỗi lưu ảnh', { description: result.error });
+                <div className="pb-8 flex flex-col gap-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    {imageSearchResults.slice(0, visibleImagesCount).map((img) => (
+                      <div key={img.id} className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-slate-200 dark:border-gray-700 hover:border-primary hover:shadow-lg transition-all" onClick={async () => {
+                        if (vocabForm) {
+                          setIsUploadingVocabImage(true);
+                          setShowImageSearchDrawer(false);
+                          try {
+                            const result = await uploadUrlMedia(img.url);
+                            if (result.success && result.url) {
+                              setVocabForm(prev => prev ? {...prev, image: result.url} : null);
+                              toast.success('Lưu ảnh thành công');
+                            } else {
+                              toast.error('Lỗi lưu ảnh', { description: result.error });
+                            }
+                          } catch (err: any) {
+                             toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) });
+                          } finally {
+                             setIsUploadingVocabImage(false);
                           }
-                        } catch (err: any) {
-                           toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) });
-                        } finally {
-                           setIsUploadingVocabImage(false);
                         }
-                      }
-                    }}>
-                      <img src={img.thumb} alt="Search result" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
-                        <span className="text-[9px] text-white/80 font-medium truncate">by {img.author}</span>
+                      }}>
+                        <img src={img.thumb} alt="Search result" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                          <span className="text-[9px] text-white/80 font-medium truncate">by {img.author}</span>
+                        </div>
+                        <div className="absolute top-2 right-2 size-6 bg-primary text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                          <span className="material-symbols-outlined text-[14px]">check</span>
+                        </div>
                       </div>
-                      <div className="absolute top-2 right-2 size-6 bg-primary text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
-                        <span className="material-symbols-outlined text-[14px]">check</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  {visibleImagesCount < imageSearchResults.length && (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleImagesCount(prev => prev + 12)}
+                      className="w-full py-3 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 active:scale-95 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm border border-slate-200 dark:border-gray-700"
+                    >
+                      🔄 Tải thêm ảnh
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="text-center text-slate-400 text-xs mt-10">Không tìm thấy ảnh nào phù hợp.</div>
@@ -2082,87 +2251,136 @@ export function ReadingExerciseBuilder({
           </div>
         )}
 
-        {/* Settings Modal */}
+        {/* Settings Drawer */}
         {isSettingsOpen && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-gray-900 rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-white/10 flex flex-col max-h-[90vh]">
-               {/* Modal Header */}
-               <div className="p-8 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-4">
-                     <div className="size-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
-                        <span className="material-symbols-outlined">settings</span>
+          <>
+            <div className="absolute inset-0 bg-black/20 backdrop-blur-sm z-40 animate-in fade-in" onClick={() => setIsSettingsOpen(false)}></div>
+            <div className="absolute top-0 left-0 bottom-0 w-[750px] max-w-[calc(100vw-256px)] bg-white dark:bg-gray-900 z-50 border-r border-slate-200 dark:border-gray-800 shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+               {/* Drawer Header */}
+               <div className="p-6 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                     <div className="size-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[20px]">settings</span>
                      </div>
                      <div>
-                        <h2 className="text-2xl font-black text-slate-900 dark:text-white font-headline">Thiết lập học liệu</h2>
-                        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Cấu hình thông tin hiển thị công khai</p>
+                        <h2 className="text-lg font-black text-slate-900 dark:text-white font-headline">Thiết lập học liệu</h2>
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">Hiển thị công khai</p>
                      </div>
                   </div>
-                  <button onClick={() => { setIsSettingsOpen(false); }} className="size-10 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 flex items-center justify-center transition-all group">
-                     <span className="material-symbols-outlined text-slate-400 group-hover:rotate-90 transition-transform">close</span>
+                  <button onClick={() => { setIsSettingsOpen(false); }} className="size-8 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 flex items-center justify-center transition-all group">
+                     <span className="material-symbols-outlined text-[20px] text-slate-400 group-hover:rotate-90 transition-transform">close</span>
                   </button>
                </div>
 
-               {/* Modal Content */}
-               <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar flex-1">
-                    <ThumbnailUploader 
-                      value={thumbnail}
-                      onChange={handleThumbnailChange}
-                      isUploading={isUploadingThumbnail}
-                      label="Ảnh đại diện (16:9)"
-                    />
+               {/* Drawer Content */}
+               <div className="p-6 overflow-y-auto custom-scrollbar flex-1 pb-24">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+                    {/* Left Column */}
+                    <div className="space-y-6">
+                      <ThumbnailUploader 
+                        value={thumbnail}
+                        onChange={handleThumbnailChange}
+                        isUploading={isUploadingThumbnail}
+                        label="Ảnh đại diện (16:9)"
+                      />
 
-                    <div className="space-y-2">
-                     <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
-                     <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
-                  </div>
-
-                  <div className="space-y-4">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Đối tượng (Target Audiences)</label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { id: 'kids', label: '🧸 Trẻ em (Kids)' },
-                        { id: 'teens', label: '🎒 Thiếu niên (Teens)' },
-                        { id: 'adults', label: '🎓 Người lớn (Adults)' },
-                        { id: 'business', label: '💼 Doanh nhân (Business)' }
-                      ].map(type => (
-                        <button
-                          key={type.id}
-                          onClick={() => {
-                            if (targetAudiences.includes(type.id)) {
-                              setTargetAudiences(targetAudiences.filter(t => t !== type.id));
-                            } else {
-                              setTargetAudiences([...targetAudiences, type.id]);
-                            }
-                          }}
-                          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
-                            targetAudiences.includes(type.id) 
-                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105' 
-                            : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
-                          }`}
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[16px]">record_voice_over</span>
+                          Giọng đọc AI (TTS Voice)
+                        </label>
+                        <select
+                          value={ttsVoice}
+                          onChange={(e) => setTtsVoice(e.target.value)}
+                          className="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm text-slate-700 dark:text-slate-200 appearance-none"
                         >
-                          {type.label}
-                        </button>
-                      ))}
+                          <option value="Aoede">Aoede (Nữ tự nhiên - Mặc định)</option>
+                          <option value="Puck">Puck (Nam trầm)</option>
+                          <option value="Kore">Kore (Nữ trẻ trung)</option>
+                          <option value="Charon">Charon (Nam truyền cảm)</option>
+                          <option value="Fenrir">Fenrir (Nam ấm áp)</option>
+                        </select>
+                        <p className="text-[10px] text-slate-400 px-1 italic">
+                          * Cấu hình này áp dụng khi bạn bôi đen tạo Audio tự động.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[16px]">speed</span>
+                          Tốc độ đọc AI (TTS Speed)
+                        </label>
+                        <select
+                          value={ttsSpeed}
+                          onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
+                          className="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm text-slate-700 dark:text-slate-200 appearance-none"
+                        >
+                          <option value="0.8">0.8x (Chậm)</option>
+                          <option value="0.9">0.9x (Hơi chậm)</option>
+                          <option value="1.0">1.0x (Bình thường - Mặc định)</option>
+                          <option value="1.1">1.1x (Hơi nhanh)</option>
+                          <option value="1.2">1.2x (Nhanh)</option>
+                        </select>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-400 px-1 italic">
-                      * Bỏ trống (không chọn) đồng nghĩa với việc hiển thị cho tất cả mọi người.
-                    </p>
+
+                    {/* Right Column */}
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                         <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
+                         <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Đối tượng (Target Audiences)</label>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { id: 'kids', label: '🧸 Trẻ em' },
+                            { id: 'teens', label: '🎒 Thiếu niên' },
+                            { id: 'adults', label: '🎓 Người lớn' },
+                            { id: 'business', label: '💼 Doanh nhân' }
+                          ].map(type => (
+                            <button
+                              key={type.id}
+                              onClick={() => {
+                                if (targetAudiences.includes(type.id)) {
+                                  setTargetAudiences(targetAudiences.filter(t => t !== type.id));
+                                } else {
+                                  setTargetAudiences([...targetAudiences, type.id]);
+                                }
+                              }}
+                              className={`px-3 py-2 rounded-lg text-[11px] font-bold transition-all border ${
+                                targetAudiences.includes(type.id) 
+                                ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-105' 
+                                : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
+                              }`}
+                            >
+                              {type.label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-slate-400 px-1 italic">
+                          * Bỏ trống (không chọn) đồng nghĩa với việc hiển thị cho tất cả mọi người.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                         <div className="flex justify-between items-center px-1">
+                            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">Mô tả ngắn</label>
+                            <span className={`text-[10px] font-bold ${shortDescription.length > 180 ? 'text-red-500' : 'text-slate-400'}`}>{shortDescription.length}/200</span>
+                         </div>
+                         <textarea 
+                            value={shortDescription}
+                            onChange={(e) => setShortDescription(e.target.value.slice(0, 200))}
+                            placeholder="Mô tả ngắn gọn giúp học sinh hiểu nội dung bài học..."
+                            className="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-medium text-sm min-h-[100px] resize-none"
+                         />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                     <div className="flex justify-between items-center px-1">
-                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">Mô tả ngắn</label>
-                        <span className={`text-[10px] font-bold ${shortDescription.length > 180 ? 'text-red-500' : 'text-slate-400'}`}>{shortDescription.length}/200</span>
-                     </div>
-                     <textarea 
-                        value={shortDescription}
-                        onChange={(e) => setShortDescription(e.target.value.slice(0, 200))}
-                        placeholder="Một mô tả ngắn gọn giúp học sinh hiểu nội dung bài học này (khoảng 2 câu)..."
-                        className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-medium text-sm min-h-[100px] resize-none"
-                     />
-                  </div>
-
-                  <div className="space-y-4">
+                  {/* Tags (Full Width below grid) */}
+                  <div className="mt-8 pt-6 border-t border-slate-100 dark:border-gray-800 space-y-4">
                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Gắn thẻ (Tags)</label>
                      <div className="flex flex-wrap gap-2">
                         {popularTagsList.map(tag => (
@@ -2176,9 +2394,9 @@ export function ReadingExerciseBuilder({
                                 setTags([...tags, tag]);
                               }
                             }}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all border ${
                               tags.includes(tag) 
-                              ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105' 
+                              ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-105' 
                               : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
                             }`}
                           >
@@ -2196,11 +2414,10 @@ export function ReadingExerciseBuilder({
                         placeholder="Nhập thẻ tự chọn và nhấn Enter..."
                      />
                      
-                     {/* Sortable tags preview list containing ALL active tags */}
                      <div className="mt-2">
                         {tags.length > 0 ? (
                           <div className="space-y-2">
-                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Danh sách thẻ đã chọn (Kéo thả để sắp xếp thứ tự)</label>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Danh sách thẻ đã chọn (Kéo thả để sắp xếp)</label>
                             <DndContext
                               sensors={sensors}
                               collisionDetection={closestCenter}
@@ -2210,7 +2427,7 @@ export function ReadingExerciseBuilder({
                                 items={tags}
                                 strategy={rectSortingStrategy}
                               >
-                                <div className="flex flex-wrap gap-3 p-1">
+                                <div className="flex flex-wrap gap-2 p-1">
                                   {tags.map(t => (
                                     <SortableTagItem
                                       key={t}
@@ -2223,14 +2440,14 @@ export function ReadingExerciseBuilder({
                             </DndContext>
                           </div>
                         ) : (
-                          <p className="text-xs text-slate-400 italic px-1">Chưa có thẻ nào được gắn.</p>
+                          <p className="text-[11px] text-slate-400 italic px-1">Chưa có thẻ nào được gắn.</p>
                         )}
                      </div>
                   </div>
                </div>
 
-               {/* Modal Footer */}
-               <div className="p-8 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-800 shrink-0">
+               {/* Drawer Footer */}
+               <div className="p-6 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-800 shrink-0 mt-auto">
                   <button 
                     onClick={() => { setIsSettingsOpen(false); handleSave(); }}
                     className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-900/20"
@@ -2239,7 +2456,7 @@ export function ReadingExerciseBuilder({
                   </button>
                </div>
             </div>
-          </div>
+          </>
         )}
 
       </main>

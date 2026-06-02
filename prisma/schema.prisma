@@ -170,6 +170,8 @@ model Assignment {
   thumbnail             String?
   videoUrl              String?
   audioUrl              String?
+  ttsVoice              String?              @default("Aoede")
+  ttsSpeed              Float?               @default(1.0)
   viewCount             Int                  @default(0)
   publicSubmissionCount Int                  @default(0)
   isBlocked             Boolean              @default(false)

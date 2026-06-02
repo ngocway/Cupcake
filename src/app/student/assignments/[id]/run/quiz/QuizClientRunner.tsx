@@ -1338,7 +1338,7 @@ export default function QuizClientRunner({
       <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 z-[110] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <button 
           onClick={() => setIsSidebarOpen(false)} 
-          className="absolute top-6 right-6 z-50 p-2.5 text-slate-400 hover:text-slate-800 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-all hover:scale-110 active:scale-95"
+          className={`absolute top-6 right-6 md:right-full md:mr-0 z-50 p-2.5 text-white bg-primary hover:bg-primary/90 rounded-full shadow-lg shadow-primary/30 transition-all duration-500 hover:scale-110 active:scale-95 ${isSidebarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}`}
         >
           <X className="w-5 h-5" />
         </button>

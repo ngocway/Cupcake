@@ -168,3 +168,35 @@ export async function generateDalleImage(prompt: string) {
   return { error: `Không thể vẽ ảnh bằng AI: ${lastError}` };
 }
 
+export async function generateExampleSentence(word: string, isKid: boolean, currentSentence?: string) {
+  try {
+    const levelInstruction = isKid 
+      ? "Use ONLY A1 level English vocabulary. Keep the sentence extremely simple, short, and easy for young children (2-5 years old) to understand. Do not use complex grammar."
+      : "Use A1 or A2 level English vocabulary. Keep the sentence simple, clear, and easy to understand for beginners.";
+
+    const avoidInstruction = currentSentence 
+      ? `\nIMPORTANT: The user already has this sentence: "${currentSentence}". You MUST generate a completely DIFFERENT sentence with a different meaning or context.` 
+      : "";
+
+    const prompt = `Generate a single English example sentence for the word "${word}".
+${levelInstruction}${avoidInstruction}
+Return ONLY the sentence itself without quotes, without any explanation, and no markdown formatting.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.9,
+      max_tokens: 50,
+    });
+
+    const sentence = response.choices[0]?.message?.content?.trim() || "";
+    if (!sentence) {
+      return { error: "AI trả về kết quả rỗng." };
+    }
+
+    return { sentence };
+  } catch (error: any) {
+    console.error("Error generating example sentence:", error);
+    return { error: error.message || "Lỗi khi gọi AI." };
+  }
+}

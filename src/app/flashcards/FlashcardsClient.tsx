@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { getFlashcardsByTopic } from "@/actions/flashcards-actions"
 import { getUserVocabLanguage, updateUserVocabLanguage } from "@/actions/vocab-settings"
 import { 
@@ -72,6 +72,19 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
   const [currentLang, setCurrentLang] = useState<string>('EN')
 
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const stopCurrentAudio = () => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause()
+      currentAudioRef.current.currentTime = 0
+      currentAudioRef.current = null
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel()
+    }
+  }
+
   // Tải tùy chọn ngôn ngữ khi hiển thị
   useEffect(() => {
     async function loadLangPref() {
@@ -80,7 +93,20 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
         if (dbPref) {
           setCurrentLang(dbPref)
         } else {
-          setCurrentLang(localStorage.getItem('vocabLang') || 'EN')
+          const localPref = localStorage.getItem('vocabLang')
+          if (localPref) {
+            setCurrentLang(localPref)
+          } else {
+            // Tự nhận diện ngôn ngữ thiết bị lần đầu tiên
+            const browserLang = navigator.language.toLowerCase()
+            let defaultLang = 'EN'
+            if (browserLang.includes('vi')) defaultLang = 'VI'
+            else if (browserLang.includes('th')) defaultLang = 'TH'
+            else if (browserLang.includes('id')) defaultLang = 'ID'
+            
+            setCurrentLang(defaultLang)
+            localStorage.setItem('vocabLang', defaultLang)
+          }
         }
       }
     }
@@ -139,8 +165,10 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   // Hàm phát âm từ vựng (Ưu tiên dùng audio lồng tiếng tải lên nếu có, nếu không thì dùng Web Speech API)
   const handlePlayAudio = (card: any) => {
     if (!card) return
+    stopCurrentAudio()
     if (card.audioUrl && card.audioUrl.trim()) {
       const audio = new Audio(card.audioUrl)
+      currentAudioRef.current = audio
       audio.play().catch(err => {
         console.error("Lỗi phát audio tùy chỉnh:", err)
         // Fallback to speech synthesis
@@ -195,6 +223,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   // Điều hướng thẻ
   const handleNext = (e?: React.MouseEvent) => {
     e?.stopPropagation()
+    stopCurrentAudio()
     setIsFlipped(false)
     // Chờ hiệu ứng lật thẻ về mặt trước hoàn tất trước khi đổi nội dung
     setTimeout(() => {
@@ -204,6 +233,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
   const handlePrev = (e?: React.MouseEvent) => {
     e?.stopPropagation()
+    stopCurrentAudio()
     setIsFlipped(false)
     setTimeout(() => {
       setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
@@ -212,6 +242,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
   // Quay lại màn hình chọn
   const handleBackToSelection = () => {
+    stopCurrentAudio()
     setFocusMode(false)
     setSelectedTopic(null)
     setFlashcards([])
@@ -242,6 +273,26 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
   const activeCard = flashcards[currentIndex]
   const progressPercent = flashcards.length > 0 ? ((currentIndex + 1) / flashcards.length) * 100 : 0
+
+  // Tải trước ảnh của thẻ tiếp theo và thẻ trước đó để tránh bóng ma/độ trễ
+  useEffect(() => {
+    if (flashcards.length > 0) {
+      const nextIndex = (currentIndex + 1) % flashcards.length
+      const prevIndex = (currentIndex - 1 + flashcards.length) % flashcards.length
+      
+      const nextCard = flashcards[nextIndex]
+      const prevCard = flashcards[prevIndex]
+      
+      if (nextCard?.imageUrl) {
+        const img = new Image()
+        img.src = nextCard.imageUrl
+      }
+      if (prevCard?.imageUrl) {
+        const img = new Image()
+        img.src = prevCard.imageUrl
+      }
+    }
+  }, [currentIndex, flashcards])
 
   // -------------------------------------------------------------
   // VIEW 1: SELECTION SCREEN
@@ -347,11 +398,8 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       {catIcon}
                     </div>
 
-                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 block">
-                      {ageRange}
-                    </span>
                     <span className="font-black text-xl text-slate-800 dark:text-slate-200 leading-tight group-hover:text-primary transition-colors">
-                      {cat.name.replace(/\(.*?\)/g, '')}
+                      {cat.name}
                     </span>
                     
                     {/* Active indicator bar */}
@@ -411,9 +459,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       </span>
 
                       <div className="flex justify-between items-start">
-                        <span className={`inline-flex px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-gradient-to-r ${topicColorClass} border shadow-sm`}>
-                          Active Topic
-                        </span>
+                        <div></div>
                         
                         {/* Little cute 3D emoji bubble */}
                         <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm">
@@ -586,6 +632,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 // KIDS & KID: Bubbly preschool cartoon style image container
                 <div className="w-full h-full rounded-[32px] overflow-hidden relative border-4 border-amber-100 bg-amber-50/20">
                   <img 
+                    key={activeCard?.id}
                     src={activeCard?.imageUrl || ""} 
                     alt="Flashcard illustration"
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
@@ -596,6 +643,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 <div className="w-full h-full flex flex-col justify-between">
                   <div className="w-full h-[68%] rounded-2xl overflow-hidden relative border border-slate-100 bg-slate-50 shrink-0">
                     <img 
+                      key={activeCard?.id}
                       src={activeCard?.imageUrl || ""} 
                       alt="Flashcard illustration"
                       className="w-full h-full object-cover"

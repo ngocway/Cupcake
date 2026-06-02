@@ -119,6 +119,8 @@ export async function autoSaveMaterial(payload: {
   categoryIds?: string[];
   targetAudiences?: string[];
   thumbnail?: string | null;
+  ttsVoice?: string;
+  ttsSpeed?: number;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -159,7 +161,7 @@ export async function autoSaveMaterial(payload: {
     };
 
     if (existing) {
-      const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'subject', 'gradeLevel', 'shortDescription', 'tags', 'instructions'];
+      const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'shortDescription', 'tags', 'instructions'];
       for (const field of fields) {
         if (payload[field as keyof typeof payload] !== undefined && payload[field as keyof typeof payload] !== existing[field as keyof typeof existing]) {
           updatePayload[field] = payload[field as keyof typeof payload] || null;
@@ -172,6 +174,8 @@ export async function autoSaveMaterial(payload: {
       updatePayload.readingText = payload.readingText || null;
       updatePayload.videoUrl = payload.videoUrl || null;
       updatePayload.audioUrl = payload.audioUrl || null;
+      updatePayload.ttsVoice = payload.ttsVoice || null;
+      updatePayload.ttsSpeed = payload.ttsSpeed || null;
       updatePayload.subject = payload.subject || null;
       updatePayload.gradeLevel = payload.gradeLevel || null;
       updatePayload.shortDescription = payload.shortDescription || null;
@@ -189,6 +193,8 @@ export async function autoSaveMaterial(payload: {
         readingText: payload.readingText || null,
         videoUrl: payload.videoUrl || null,
         audioUrl: payload.audioUrl || null,
+        ttsVoice: payload.ttsVoice || null,
+        ttsSpeed: payload.ttsSpeed || null,
         subject: payload.subject || null,
         gradeLevel: payload.gradeLevel || null,
         shortDescription: payload.shortDescription || null,
