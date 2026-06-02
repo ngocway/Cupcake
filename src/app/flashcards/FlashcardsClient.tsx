@@ -529,16 +529,16 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       nextBg: "bg-white border-4 border-teal-400 text-teal-600 shadow-teal-100/60 hover:bg-teal-50/40 hover:border-teal-500",
     },
     "teen": {
-      revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-transparent",
-      nextBg: "bg-white border-2 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
+      revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-white",
+      nextBg: "bg-white border-4 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
     },
     "readers": {
-      revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-transparent",
-      nextBg: "bg-white border-2 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
+      revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-white",
+      nextBg: "bg-white border-4 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
     }
   }[selectedCategory.slug] || {
-    revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-transparent",
-    nextBg: "bg-white border-2 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
+    revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-white",
+    nextBg: "bg-white border-4 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
   }
 
   // Dynamic visual configurations
