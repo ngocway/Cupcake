@@ -375,261 +375,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const ageGroup = urlParams.get('age') || '2-5';
 
-        // Data Structure for multiple categories based on age group
+                // Data from API
         let topicsData = {};
         let defaultTopic = '';
+        let currentTopic = '';
 
-        if (ageGroup === '6-12') {
-            topicsData = {
-                space: {
-                    title: 'Space & Universe! 🚀',
-                    icon: '🚀 Space',
-                    items: [
-                        { id: 'astronaut', emoji: '👨‍🚀', word: 'Astronaut', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'planet', emoji: '🪐', word: 'Planet', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'telescope', emoji: '🔭', word: 'Telescope', color: '#feca57', border: '#ff9f43' },
-                        { id: 'satellite', emoji: '🛰️', word: 'Satellite', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'comet', emoji: '☄️', word: 'Comet', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'galaxy', emoji: '🌌', word: 'Galaxy', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                hobbies: {
-                    title: 'Hobbies & Activities! 🎨',
-                    icon: '🎨 Hobbies',
-                    items: [
-                        { id: 'painting', emoji: '🎨', word: 'Painting', color: '#ff4757', border: '#ff6b81' },
-                        { id: 'photography', emoji: '📷', word: 'Photography', color: '#eccc68', border: '#ffa502' },
-                        { id: 'gardening', emoji: '🏡', word: 'Gardening', color: '#ff7f50', border: '#ff6348' },
-                        { id: 'cycling', emoji: '🚲', word: 'Cycling', color: '#9b59b6', border: '#8e44ad' },
-                        { id: 'skateboarding', emoji: '🛹', word: 'Skateboarding', color: '#ff6b81', border: '#ff4757' },
-                        { id: 'camping', emoji: '⛺', word: 'Camping', color: '#2ed573', border: '#1e90ff' }
-                    ]
-                },
-                nature: {
-                    title: 'Nature & Science! 🌋',
-                    icon: '🌋 Nature',
-                    items: [
-                        { id: 'volcano', emoji: '🌋', word: 'Volcano', color: '#1e90ff', border: '#5352ed' },
-                        { id: 'rainbow', emoji: '🌈', word: 'Rainbow', color: '#f1c40f', border: '#f39c12' },
-                        { id: 'microscope', emoji: '🔬', word: 'Microscope', color: '#1abc9c', border: '#16a085' },
-                        { id: 'compass', emoji: '🧭', word: 'Compass', color: '#e84393', border: '#d63031' },
-                        { id: 'waterfall', emoji: '🏞️', word: 'Waterfall', color: '#a4b0be', border: '#747d8c', image: 'waterfall.jpg' },
-                        { id: 'glacier', emoji: '🏔️', word: 'Glacier', color: '#ff9ff3', border: '#f368e0', image: 'glacier.png' }
-                    ]
-                },
-                weather: {
-                    title: 'Weather & Climate! ⛈️',
-                    icon: '⛈️ Weather',
-                    items: [
-                        { id: 'tornado', emoji: '🌪️', word: 'Tornado', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'lightning', emoji: '⚡', word: 'Lightning', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'blizzard', emoji: '❄️', word: 'Blizzard', color: '#feca57', border: '#ff9f43' },
-                        { id: 'hurricane', emoji: '🌀', word: 'Hurricane', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'drought', emoji: '🏜️', word: 'Drought', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'foggy', emoji: '🌫️', word: 'Foggy', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                sports: {
-                    title: 'Sports & Athletics! ⚽',
-                    icon: '⚽ Sports',
-                    items: [
-                        { id: 'basketball', emoji: '🏀', word: 'Basketball', color: '#ff4757', border: '#ff6b81' },
-                        { id: 'gymnastics', emoji: '🤸', word: 'Gymnastics', color: '#eccc68', border: '#ffa502' },
-                        { id: 'swimming', emoji: '🏊', word: 'Swimming', color: '#ff7f50', border: '#ff6348' },
-                        { id: 'badminton', emoji: '🏸', word: 'Badminton', color: '#9b59b6', border: '#8e44ad' },
-                        { id: 'volleyball', emoji: '🏐', word: 'Volleyball', color: '#ff6b81', border: '#ff4757' },
-                        { id: 'marathon', emoji: '🏃', word: 'Marathon', color: '#2ed573', border: '#1e90ff' }
-                    ]
-                },
-                careers: {
-                    title: 'Jobs & Careers! 🧑‍⚕️',
-                    icon: '🧑‍⚕️ Careers',
-                    items: [
-                        { id: 'scientist', emoji: '🧑‍🔬', word: 'Scientist', color: '#1e90ff', border: '#5352ed' },
-                        { id: 'detective', emoji: '🕵️', word: 'Detective', color: '#f1c40f', border: '#f39c12' },
-                        { id: 'engineer', emoji: '🧑‍💻', word: 'Engineer', color: '#1abc9c', border: '#16a085', image: 'engineer.png' },
-                        { id: 'musician', emoji: '🧑‍🎤', word: 'Musician', color: '#e84393', border: '#d63031', image: 'musician.png' },
-                        { id: 'archaeologist', emoji: '🤠', word: 'Archaeologist', color: '#a4b0be', border: '#747d8c', image: 'archaeologist.jpg' },
-                        { id: 'journalist', emoji: '🎤', word: 'Journalist', color: '#ff9ff3', border: '#f368e0', image: 'journalist.png' }
-                    ]
-                },
-                ocean: {
-                    title: 'Deep Ocean Life! 🐋',
-                    icon: '🐋 Ocean Life',
-                    items: [
-                        { id: 'whale', emoji: '🐳', word: 'Whale', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'octopus', emoji: '🐙', word: 'Octopus', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'shark', emoji: '🦈', word: 'Shark', color: '#feca57', border: '#ff9f43' },
-                        { id: 'jellyfish', emoji: '🪼', word: 'Jellyfish', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'dolphin', emoji: '🐬', word: 'Dolphin', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'crab', emoji: '🦀', word: 'Crab', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                music: {
-                    title: 'Musical Instruments! 🎻',
-                    icon: '🎻 Music',
-                    items: [
-                        { id: 'violin', emoji: '🎻', word: 'Violin', color: '#ff4757', border: '#ff6b81' },
-                        { id: 'trumpet', emoji: '🎺', word: 'Trumpet', color: '#eccc68', border: '#ffa502' },
-                        { id: 'guitar', emoji: '🎸', word: 'Guitar', color: '#ff7f50', border: '#ff6348' },
-                        { id: 'keyboard', emoji: '🎹', word: 'Keyboard', color: '#9b59b6', border: '#8e44ad' },
-                        { id: 'drums', emoji: '🥁', word: 'Drums', color: '#ff6b81', border: '#ff4757' },
-                        { id: 'flute', emoji: '🪈', word: 'Flute', color: '#2ed573', border: '#1e90ff' }
-                    ]
-                }
-            };
-            defaultTopic = 'space';
-        } else {
-            topicsData = {
-                animals: {
-                    title: 'Match the Animals! 🐾',
-                    icon: '🐶 Animals',
-                    items: [
-                        { id: 'dog', emoji: '🐶', word: 'Dog', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'cat', emoji: '🐱', word: 'Cat', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'lion', emoji: '🦁', word: 'Lion', color: '#feca57', border: '#ff9f43' },
-                        { id: 'elephant', emoji: '🐘', word: 'Elephant', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'monkey', emoji: '🐵', word: 'Monkey', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'pig', emoji: '🐷', word: 'Pig', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                fruits: {
-                    title: 'Match the Fruits! 🍎',
-                    icon: '🍎 Fruits',
-                    items: [
-                        { id: 'apple', emoji: '🍎', word: 'Apple', color: '#ff4757', border: '#ff6b81' },
-                        { id: 'banana', emoji: '🍌', word: 'Banana', color: '#eccc68', border: '#ffa502' },
-                        { id: 'orange', emoji: '🍊', word: 'Orange', color: '#ff7f50', border: '#ff6348' },
-                        { id: 'grape', emoji: '🍇', word: 'Grape', color: '#9b59b6', border: '#8e44ad' },
-                        { id: 'strawberry', emoji: '🍓', word: 'Strawberry', color: '#ff6b81', border: '#ff4757' },
-                        { id: 'watermelon', emoji: '🍉', word: 'Watermelon', color: '#2ed573', border: '#1e90ff' }
-                    ]
-                },
-                school: {
-                    title: 'School Supplies! 🎒',
-                    icon: '🎒 School',
-                    items: [
-                        { id: 'book', emoji: '📖', word: 'Book', color: '#1e90ff', border: '#5352ed' },
-                        { id: 'pencil', emoji: '✏️', word: 'Pencil', color: '#f1c40f', border: '#f39c12' },
-                        { id: 'ruler', emoji: '📏', word: 'Ruler', color: '#1abc9c', border: '#16a085' },
-                        { id: 'bag', emoji: '🎒', word: 'Bag', color: '#e84393', border: '#d63031' },
-                        { id: 'scissors', emoji: '✂️', word: 'Scissors', color: '#a4b0be', border: '#747d8c' },
-                        { id: 'eraser', emoji: '🧽', word: 'Eraser', color: '#ff9ff3', border: '#f368e0' }
-                    ]
-                },
-                colors: {
-                    title: 'Match the Colors! 🎨',
-                    icon: '🎨 Colors',
-                    items: [
-                        { id: 'red', emoji: '🔴', word: 'Red', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'blue', emoji: '🔵', word: 'Blue', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'green', emoji: '🟢', word: 'Green', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'yellow', emoji: '🟡', word: 'Yellow', color: '#feca57', border: '#ff9f43' },
-                        { id: 'pink', emoji: '🌸', word: 'Pink', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'orange', emoji: '🍊', word: 'Orange', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                shapes: {
-                    title: 'Fun Shapes! 🔺',
-                    icon: '🔺 Shapes',
-                    items: [
-                        { id: 'circle', emoji: '🔴', word: 'Circle', color: '#ff4757', border: '#ff6b81' },
-                        { id: 'triangle', emoji: '🔺', word: 'Triangle', color: '#eccc68', border: '#ffa502' },
-                        { id: 'star', emoji: '⭐', word: 'Star', color: '#ff7f50', border: '#ff6348' },
-                        { id: 'heart', emoji: '❤️', word: 'Heart', color: '#9b59b6', border: '#8e44ad' },
-                        { id: 'square', emoji: '⬜', word: 'Square', color: '#ff6b81', border: '#ff4757' },
-                        { id: 'oval', emoji: '🥚', word: 'Oval', color: '#2ed573', border: '#1e90ff' }
-                    ]
-                },
-                vehicles: {
-                    title: 'Things That Go! 🚗',
-                    icon: '🚗 Vehicles',
-                    items: [
-                        { id: 'car', emoji: '🚗', word: 'Car', color: '#1e90ff', border: '#5352ed' },
-                        { id: 'bus', emoji: '🚌', word: 'Bus', color: '#f1c40f', border: '#f39c12' },
-                        { id: 'plane', emoji: '✈️', word: 'Plane', color: '#1abc9c', border: '#16a085' },
-                        { id: 'train', emoji: '🚂', word: 'Train', color: '#e84393', border: '#d63031' },
-                        { id: 'bike', emoji: '🚲', word: 'Bike', color: '#a4b0be', border: '#747d8c' },
-                        { id: 'boat', emoji: '⛵', word: 'Boat', color: '#ff9ff3', border: '#f368e0' }
-                    ]
-                },
-                toys: {
-                    title: 'My Fun Toys! 🧸',
-                    icon: '🧸 Toys',
-                    items: [
-                        { id: 'doll', emoji: '🪆', word: 'Doll', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'ball', emoji: '⚽', word: 'Ball', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'blocks', emoji: '🧱', word: 'Blocks', color: '#feca57', border: '#ff9f43' },
-                        { id: 'teddy', emoji: '🧸', word: 'Teddy', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'kite', emoji: '🪁', word: 'Kite', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'balloon', emoji: '🎈', word: 'Balloon', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                body: {
-                    title: 'Body Parts! 👃',
-                    icon: '👃 Body Parts',
-                    items: [
-                        { id: 'eye', emoji: '👁️', word: 'Eye', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'nose', emoji: '👃', word: 'Nose', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'ear', emoji: '👂', word: 'Ear', color: '#feca57', border: '#ff9f43' },
-                        { id: 'mouth', emoji: '👄', word: 'Mouth', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'hand', emoji: '✋', word: 'Hand', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'foot', emoji: '🦶', word: 'Foot', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                vegetables: {
-                    title: 'Yummy Vegetables! 🥕',
-                    icon: '🥕 Vegetables',
-                    items: [
-                        { id: 'carrot', emoji: '🥕', word: 'Carrot', color: '#ff7f50', border: '#e15f41' },
-                        { id: 'potato', emoji: '🥔', word: 'Potato', color: '#feca57', border: '#ff9f43' },
-                        { id: 'tomato', emoji: '🍅', word: 'Tomato', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'corn', emoji: '🌽', word: 'Corn', color: '#eccc68', border: '#ffa502' },
-                        { id: 'broccoli', emoji: '🥦', word: 'Broccoli', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'onion', emoji: '🧅', word: 'Onion', color: '#ff9ff3', border: '#f368e0' }
-                    ]
-                },
-                clothes: {
-                    title: 'My Clothes! 👕',
-                    icon: '👕 Clothes',
-                    items: [
-                        { id: 'hat', emoji: '🧢', word: 'Hat', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'sock', emoji: '🧦', word: 'Sock', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'shoe', emoji: '👟', word: 'Shoe', color: '#feca57', border: '#ff9f43' },
-                        { id: 'shirt', emoji: '👕', word: 'Shirt', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'pants', emoji: '👖', word: 'Pants', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'dress', emoji: '👗', word: 'Dress', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                },
-                food: {
-                    title: 'Tasty Food! 🍕',
-                    icon: '🍕 Food',
-                    items: [
-                        { id: 'milk', emoji: '🥛', word: 'Milk', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'bread', emoji: '🍞', word: 'Bread', color: '#feca57', border: '#ff9f43' },
-                        { id: 'cake', emoji: '🍰', word: 'Cake', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'pizza', emoji: '🍕', word: 'Pizza', color: '#ff6b6b', border: '#ee5253' },
-                        { id: 'cookie', emoji: '🍪', word: 'Cookie', color: '#ff7f50', border: '#e15f41' },
-                        { id: 'cheese', emoji: '🧀', word: 'Cheese', color: '#eccc68', border: '#ffa502' }
-                    ]
-                },
-                nature: {
-                    title: 'Simple Nature! ☀️',
-                    icon: '☀️ Nature',
-                    items: [
-                        { id: 'sun', emoji: '☀️', word: 'Sun', color: '#feca57', border: '#ff9f43' },
-                        { id: 'moon', emoji: '🌙', word: 'Moon', color: '#9b59b6', border: '#8e44ad' },
-                        { id: 'tree', emoji: '🌳', word: 'Tree', color: '#1dd1a1', border: '#10ac84' },
-                        { id: 'flower', emoji: '🌸', word: 'Flower', color: '#ff9ff3', border: '#f368e0' },
-                        { id: 'cloud', emoji: '☁️', word: 'Cloud', color: '#0abde3', border: '#01a3a4' },
-                        { id: 'star', emoji: '⭐', word: 'Star', color: '#ff7f50', border: '#e15f41' }
-                    ]
-                }
-            };
-            defaultTopic = 'animals';
-        }
-
-        let currentTopic = defaultTopic;
         let matchedCount = 0;
         let elements = []; // Stores state for all elements
         let animationId; // Keep track of animation loop
@@ -1121,7 +871,22 @@
         });
 
         // Initialize game on load
-        window.addEventListener('DOMContentLoaded', init);
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch(`/api/games/match-words?age=${ageGroup}`);
+                const data = await res.json();
+                if (data && data.topicsData && Object.keys(data.topicsData).length > 0) {
+                    topicsData = data.topicsData;
+                    defaultTopic = data.defaultTopic;
+                    currentTopic = defaultTopic;
+                } else {
+                    document.getElementById('titleText').textContent = 'No Topics Found';
+                }
+            } catch(e) {
+                console.error(e);
+            }
+            init();
+        });
     </script>
 </body>
 </html>

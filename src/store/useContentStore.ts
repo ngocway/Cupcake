@@ -24,6 +24,9 @@ interface ContentState {
   userType: string
   setUserType: (val: string) => void
 
+  nativeLanguage: string
+  setNativeLanguage: (val: string) => void
+
   setExercises: (items: any[]) => void
   setLessons: (items: any[]) => void
   addExercises: (items: any[]) => void
@@ -64,6 +67,9 @@ export const useContentStore = create<ContentState>((set) => ({
 
   userType: "adults",
   setUserType: (val) => set({ userType: val }),
+
+  nativeLanguage: "vi",
+  setNativeLanguage: (val) => set({ nativeLanguage: val }),
 
   setExercises: (items) => set({ exercises: items }),
   setLessons: (items) => set({ lessons: items }),

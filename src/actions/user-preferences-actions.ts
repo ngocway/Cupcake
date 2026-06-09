@@ -31,3 +31,29 @@ export async function setUserTypePreference(userType: string) {
   revalidatePath("/")
   return { success: true }
 }
+
+export async function setNativeLanguagePreference(nativeLanguage: string) {
+  // 1. Set cookie for immediate access by server components
+  const cookieStore = await cookies()
+  cookieStore.set("native_language", nativeLanguage, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365, // 1 year
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  })
+
+  // 2. If logged in as student, update profile
+  const session = await auth()
+  if (session?.user?.id) {
+    try {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { nativeLanguage }
+      })
+    } catch (e) {
+      console.error("Failed to update nativeLanguage in DB", e)
+    }
+  }
+
+  return { success: true }
+}

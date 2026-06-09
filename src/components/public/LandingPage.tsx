@@ -9,8 +9,15 @@ import { LoadingBar } from "@/components/public/TopProgressBar"
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations, useLocale } from "next-intl"
 import { TypingText } from "@/components/public/TypingText"
-import { setUserTypePreference } from "@/actions/user-preferences-actions"
+import { setUserTypePreference, setNativeLanguagePreference } from "@/actions/user-preferences-actions"
 import { X, SlidersHorizontal } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +29,7 @@ interface Props {
   }
   searchParams: any
   initialUserType?: string
+  hasUserPreference?: boolean
 }
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -121,7 +129,7 @@ function LessonList({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function LandingPage({ promises, searchParams, initialUserType = "adults" }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "adults", hasUserPreference = false }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
@@ -140,6 +148,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   // Store states and actions
   const userType            = useContentStore(s => s.userType)
   const setUserType         = useContentStore(s => s.setUserType)
+  const nativeLanguage      = useContentStore(s => s.nativeLanguage)
+  const setNativeLanguage   = useContentStore(s => s.setNativeLanguage)
   const selectedCategoryId  = useContentStore(s => s.selectedCategoryId)
   const setSelectedCategoryId = useContentStore(s => s.setSelectedCategoryId)
   const selectedSubCategoryId = useContentStore(s => s.selectedSubCategoryId)
@@ -153,10 +163,27 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     if (initialUserType) {
       setUserType(initialUserType);
     }
-  }, [initialUserType, setUserType]);
+    const savedLang = localStorage.getItem("cupcakes_native_language");
+    if (savedLang) {
+      setNativeLanguage(savedLang);
+    }
+  }, [initialUserType, setUserType, setNativeLanguage]);
 
   // Sync URL categoryId → store selectedCategoryId / selectedSubCategoryId
   const urlCategoryId = currentParams.get("categoryId") || "";
+
+  // Restore preferred category from localStorage if visiting root without category
+  useEffect(() => {
+    const rawUrlCategoryId = currentParams.get("categoryId");
+    if (rawUrlCategoryId === null) {
+      const savedCatId = localStorage.getItem("cupcakes_preferred_category_id");
+      if (savedCatId) {
+        const qs = new URLSearchParams(window.location.search);
+        qs.set("categoryId", savedCatId);
+        router.replace(`/?${qs.toString()}`, { scroll: false });
+      }
+    }
+  }, [currentParams, router]);
   const getActiveCategories = useMemo(() => {
     if (!urlCategoryId) return { categoryId: "", subCategoryId: "" };
     
@@ -214,21 +241,46 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
   const [hasAutoOpened, setHasAutoOpened] = useState(false)
   const [tempUserType, setTempUserType] = useState(userType)
+  const [tempNativeLanguage, setTempNativeLanguage] = useState(nativeLanguage)
   const [tempCategoryId, setTempCategoryId] = useState(selectedCategoryId)
   const [tempSubCategoryId, setTempSubCategoryId] = useState(selectedSubCategoryId)
 
   const isReadyEnabled = !!tempUserType && !!tempCategoryId && !!tempSubCategoryId;
 
-  // Auto-open modal if user has no filter selections
+  // Auto-detect native language if not set
   useEffect(() => {
-    if (!urlCategoryId && !hasAutoOpened) {
+    if (!hasUserPreference) {
+      const localPref = localStorage.getItem("cupcakes_native_language")
+      if (localPref) {
+        setNativeLanguage(localPref)
+        setTempNativeLanguage(localPref)
+      } else {
+        if (typeof navigator !== "undefined") {
+          const browserLang = navigator.language.toLowerCase()
+          let defaultLang = 'vi'
+          if (browserLang.includes('th')) defaultLang = 'th'
+          else if (browserLang.includes('id')) defaultLang = 'id'
+          else if (browserLang.includes('vi')) defaultLang = 'vi'
+          
+          setNativeLanguage(defaultLang)
+          setTempNativeLanguage(defaultLang)
+          localStorage.setItem("cupcakes_native_language", defaultLang)
+        }
+      }
+    }
+  }, [hasUserPreference, setNativeLanguage])
+
+  // Auto-open modal if user has no filter selections AND hasn't explicitly set a preference
+  useEffect(() => {
+    if (!hasUserPreference && !urlCategoryId && !hasAutoOpened) {
       setIsFilterModalOpen(true)
       setHasAutoOpened(true)
     }
-  }, [urlCategoryId, hasAutoOpened])
+  }, [urlCategoryId, hasAutoOpened, hasUserPreference])
 
   const handleOpenModal = () => {
     setTempUserType(userType)
+    setTempNativeLanguage(nativeLanguage)
     setTempCategoryId(selectedCategoryId)
     setTempSubCategoryId(selectedSubCategoryId)
     setIsFilterModalOpen(true)
@@ -248,6 +300,14 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       })
     }
 
+    if (nativeLanguage !== tempNativeLanguage) {
+      setNativeLanguage(tempNativeLanguage)
+      localStorage.setItem("cupcakes_native_language", tempNativeLanguage)
+      startTransition(() => {
+        setNativeLanguagePreference(tempNativeLanguage)
+      })
+    }
+
     // 2. Commit category and sub-category
     setSelectedCategoryId(tempCategoryId)
     setSelectedSubCategoryId(tempSubCategoryId)
@@ -256,10 +316,13 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     const qs = new URLSearchParams(window.location.search)
     if (tempSubCategoryId) {
       qs.set("categoryId", tempSubCategoryId)
+      localStorage.setItem("cupcakes_preferred_category_id", tempSubCategoryId)
     } else if (tempCategoryId) {
       qs.set("categoryId", tempCategoryId)
+      localStorage.setItem("cupcakes_preferred_category_id", tempCategoryId)
     } else {
       qs.delete("categoryId")
+      localStorage.removeItem("cupcakes_preferred_category_id")
     }
 
     setFiltering(true)
@@ -480,6 +543,32 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            <hr className="border-primary/10" />
+
+            {/* Native Language Section */}
+            <div className="flex flex-wrap items-center gap-4">
+              <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0">
+                {locale === "vi" ? "My native language is" : "My native language is"}
+              </h2>
+              <div className="shrink-0">
+                <Select
+                  value={tempNativeLanguage}
+                  onValueChange={setTempNativeLanguage}
+                >
+                  <SelectTrigger 
+                    className="bg-white border-2 border-primary/20 text-primary font-black rounded-[1.75rem] px-5 py-5 md:px-6 md:py-6 h-auto text-base md:text-lg focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm min-w-[140px] flex gap-2"
+                  >
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.25rem] border-2 border-primary/10 shadow-xl overflow-hidden font-bold text-primary p-1">
+                    <SelectItem value="vi" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Tiếng Việt</SelectItem>
+                    <SelectItem value="th" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Thailand</SelectItem>
+                    <SelectItem value="id" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Indonesia</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -21,6 +21,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
         { href: "/admin/tags", icon: "sell", label: "Quản lý Thẻ" },
         { href: "/admin/materials", icon: "auto_stories", label: "Học liệu" },
         { href: "/admin/flashcards", icon: "quiz", label: "Quản lý Flashcards" },
+        { href: "/admin/games/match-words", icon: "sports_esports", label: "Game Match Words" },
         { href: "/admin/classes", icon: "school", label: "Lớp học" },
       ]
     },

@@ -12,7 +12,8 @@ import {
   Layers, 
   Award, 
   HelpCircle,
-  Play
+  Play,
+  Loader2
 } from "lucide-react"
 
 // Định nghĩa kiểu dữ liệu
@@ -71,6 +72,9 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
   const [currentLang, setCurrentLang] = useState<string>('EN')
+
+  // Trạng thái load ảnh để hiển thị spinner
+  const [isImageLoading, setIsImageLoading] = useState(true)
 
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -204,6 +208,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
         setFlashcards(shuffledCards)
         setCurrentIndex(0)
         setIsFlipped(false)
+        setIsImageLoading(true)
         setFocusMode(true)
       } else {
         alert("This topic does not have any flashcards yet. Please choose another topic!")
@@ -217,13 +222,13 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     }
   }
 
-  // Điều hướng thẻ
   const handleNext = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     stopCurrentAudio()
     setIsFlipped(false)
     // Chờ hiệu ứng lật thẻ về mặt trước hoàn tất trước khi đổi nội dung
     setTimeout(() => {
+      setIsImageLoading(true)
       setCurrentIndex((prev) => (prev + 1) % flashcards.length)
     }, 200)
   }
@@ -233,6 +238,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     stopCurrentAudio()
     setIsFlipped(false)
     setTimeout(() => {
+      setIsImageLoading(true)
       setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
     }, 200)
   }
@@ -632,12 +638,20 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 // KIDS & KID: Bubbly preschool cartoon style image container
                 <div className="w-full h-full rounded-[32px] overflow-hidden relative border-4 border-amber-100 bg-amber-50/20">
                   {activeCard?.imageUrl ? (
-                    <img 
-                      key={activeCard?.id}
-                      src={activeCard.imageUrl} 
-                      alt="Flashcard illustration"
-                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                    />
+                    <>
+                      {isImageLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-amber-50/50 backdrop-blur-sm z-10">
+                          <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
+                        </div>
+                      )}
+                      <img 
+                        key={activeCard?.id}
+                        src={activeCard.imageUrl} 
+                        alt="Flashcard illustration"
+                        className={`w-full h-full object-cover transition-all duration-700 hover:scale-105 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => setIsImageLoading(false)}
+                      />
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <span className="text-6xl opacity-30">✨</span>
@@ -649,12 +663,20 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 <div className="w-full h-full flex flex-col justify-between">
                   <div className="w-full h-[68%] rounded-2xl overflow-hidden relative border border-slate-100 bg-slate-50 shrink-0">
                     {activeCard?.imageUrl ? (
-                      <img 
-                        key={activeCard?.id}
-                        src={activeCard.imageUrl} 
-                        alt="Flashcard illustration"
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        {isImageLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 backdrop-blur-sm z-10">
+                            <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
+                          </div>
+                        )}
+                        <img 
+                          key={activeCard?.id}
+                          src={activeCard.imageUrl} 
+                          alt="Flashcard illustration"
+                          className={`w-full h-full object-cover transition-opacity duration-500 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                          onLoad={() => setIsImageLoading(false)}
+                        />
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span className="text-4xl opacity-30">🖼️</span>
@@ -684,7 +706,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
               <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none" />
 
               {/* 1. Header Badge */}
-              <div className="w-full text-center shrink-0">
+              <div className="w-full text-center shrink-0 mb-3 md:mb-4">
                 {isKidMode ? (
                   <span className="inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 border border-amber-200 text-amber-700 shadow-sm">
                     ⭐ Fun Vocabulary ⭐
@@ -697,37 +719,39 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
               </div>
 
               {/* 2. Central Area */}
-              <div className="flex-1 flex flex-col justify-center gap-4 px-2 overflow-y-auto max-h-[calc(100%-60px)] no-scrollbar">
-                {/* Word, Phonetic & Audio */}
-                <div className="flex flex-col items-center text-center space-y-2 shrink-0">
-                  <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-slate-800"}`}>
-                    {activeCard?.word}
-                  </h2>
+              <div className="flex-1 flex flex-col justify-start px-2 overflow-y-auto max-h-full no-scrollbar pb-4">
+                <div className="w-full my-auto flex flex-col gap-3 md:gap-4">
                   
-                  <div className="flex items-center justify-center gap-3">
-                    {activeCard?.phonetic && (
-                      <span className={`${isKidMode ? "text-amber-600" : "text-primary"} font-mono text-xs md:text-sm tracking-wide font-extrabold`}>
-                        {activeCard.phonetic}
-                      </span>
-                    )}
+                  {/* Word, Phonetic & Audio */}
+                  <div className="flex flex-col items-center text-center space-y-1.5 md:space-y-2 shrink-0">
+                    <h2 className={`text-3xl md:text-4xl font-black tracking-tight leading-none ${isKidMode ? "text-amber-900" : "text-slate-800"}`}>
+                      {activeCard?.word}
+                    </h2>
                     
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handlePlayAudio(activeCard)
-                      }}
-                      className={`p-2.5 rounded-full bg-gradient-to-r ${focusThemeColor} text-white flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 shadow-orange-300/30`}
-                      title="Listen to pronunciation"
-                    >
-                      <Volume2 className="w-4.5 h-4.5" />
-                    </button>
+                    <div className="flex items-center justify-center gap-3 mt-1">
+                      {activeCard?.phonetic && (
+                        <span className={`${isKidMode ? "text-amber-600" : "text-primary"} font-mono text-xs md:text-sm tracking-wide font-extrabold`}>
+                          {activeCard.phonetic}
+                        </span>
+                      )}
+                      
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handlePlayAudio(activeCard)
+                        }}
+                        className={`p-2 md:p-2.5 rounded-full bg-gradient-to-r ${focusThemeColor} text-white flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 shadow-orange-300/30`}
+                        title="Listen to pronunciation"
+                      >
+                        <Volume2 className="w-4 md:w-4.5 h-4 md:h-4.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <hr className={`${isKidMode ? "border-amber-100" : "border-slate-100"} shrink-0`} />
+                  <hr className={`${isKidMode ? "border-amber-100" : "border-slate-100"} shrink-0 w-full`} />
 
-                {/* Multilingual Definition */}
-                <div className="space-y-2 shrink-0">
+                  {/* Multilingual Definition */}
+                  <div className="space-y-2 shrink-0">
                   <div className="flex items-center justify-between px-2">
                     <span className={`text-[10px] font-black uppercase tracking-widest block ${isKidMode ? "text-amber-500" : "text-slate-400"}`}>
                       Definition
@@ -813,6 +837,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     </p>
                   </div>
                 )}
+                </div>
               </div>
 
             </div>

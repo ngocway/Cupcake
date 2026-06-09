@@ -14,7 +14,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const params = await searchParams;
 
   const cookieStore = await cookies()
-  let initialUserType = cookieStore.get("user_type")?.value || "adults"
+  const userTypeCookie = cookieStore.get("user_type")?.value
+  let initialUserType = userTypeCookie || "adults"
+  let hasUserPreference = !!userTypeCookie
 
   const session = await auth()
   if (session?.user?.id) {
@@ -24,6 +26,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     })
     if (user?.userType) {
       initialUserType = user.userType
+      hasUserPreference = true
     }
   }
 
@@ -61,6 +64,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               }}
               searchParams={params}
               initialUserType={initialUserType}
+              hasUserPreference={hasUserPreference}
             />
           </Suspense>
         </main>
