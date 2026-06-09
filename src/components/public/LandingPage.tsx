@@ -1,15 +1,16 @@
 
 "use client"
-import { use, useState, Suspense, useEffect, useTransition } from "react"
+import { use, useState, Suspense, useEffect, useTransition, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
 import { VisualCategoryMenu } from "@/components/public/VisualCategoryMenu"
 import { LoadingBar } from "@/components/public/TopProgressBar"
 import { useContentStore } from "@/store/useContentStore"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { TypingText } from "@/components/public/TypingText"
 import { setUserTypePreference } from "@/actions/user-preferences-actions"
+import { X, SlidersHorizontal } from "lucide-react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,63 +136,153 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const isLoggedIn = !!session
   const t = useTranslations("home")
   const nt = useTranslations("nav")
+  const locale = useLocale()
 
-  // Local states — switching never triggers server roundtrip
+  // Resolve categoryTree early to get actual categories
+  const categoryTree = use(promises.categoryTree)
+
+  // Local states — switching tab never triggers server roundtrip
   const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "lessons")
 
-  // User type selection (Kids, Teens, Adults, Business)
+  // Store states and actions
   const userType            = useContentStore(s => s.userType)
   const setUserType         = useContentStore(s => s.setUserType)
+  const selectedCategoryId  = useContentStore(s => s.selectedCategoryId)
+  const setSelectedCategoryId = useContentStore(s => s.setSelectedCategoryId)
+  const selectedSubCategoryId = useContentStore(s => s.selectedSubCategoryId)
+  const setSelectedSubCategoryId = useContentStore(s => s.setSelectedSubCategoryId)
 
   const isFiltering         = useContentStore(s => s.isFiltering)
   const setFiltering        = useContentStore(s => s.setFiltering)
 
+  // Sync initial userType preference
   useEffect(() => {
     if (initialUserType) {
       setUserType(initialUserType);
     }
   }, [initialUserType, setUserType]);
 
-  const handleUserTypeChange = (typeId: string) => {
-    if (userType === typeId) return; // Không làm gì nếu click lại cái đang chọn
+  // Sync URL categoryId → store selectedCategoryId / selectedSubCategoryId
+  const urlCategoryId = currentParams.get("categoryId") || "";
+  const getActiveCategories = useMemo(() => {
+    if (!urlCategoryId) return { categoryId: "", subCategoryId: "" };
     
-    setFiltering(true)
-    setUserType(typeId)
-    // Save preference to Cookie and Database in the background
-    startTransition(() => {
-      setUserTypePreference(typeId).finally(() => setFiltering(false))
-    })
-    
-    // Tăng delay lên 300ms để đợi hiệu ứng phóng to Avatar (500ms) diễn ra được một nửa,
-    // tránh việc mắt người dùng phải theo dõi 2 chuyển động cùng lúc gây cảm giác giật.
-    setTimeout(() => {
-      const target = document.getElementById('learn-section');
-      if (!target) return;
-      
-      const targetPosition = target.getBoundingClientRect().top - 80; // Trừ hao header
-      const startPosition = window.scrollY;
-      const duration = 700; // Cuộn siêu mượt trong 0.7s
-      let startTime: number | null = null;
-
-      const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-      const animation = (currentTime: number) => {
-        if (startTime === null) startTime = currentTime;
-        const timeElapsed = currentTime - startTime;
-        const progress = Math.min(timeElapsed / duration, 1);
-        
-        window.scrollTo(0, startPosition + targetPosition * easeInOutCubic(progress));
-
-        if (timeElapsed < duration) {
-          requestAnimationFrame(animation);
+    for (const cat of categoryTree) {
+      if (cat.id === urlCategoryId) {
+        return { categoryId: cat.id, subCategoryId: "" };
+      }
+      if (cat.children) {
+        for (const sub of cat.children) {
+          if (sub.id === urlCategoryId) {
+            return { categoryId: cat.id, subCategoryId: sub.id };
+          }
         }
-      };
+      }
+    }
+    return { categoryId: "", subCategoryId: "" };
+  }, [categoryTree, urlCategoryId]);
 
-      requestAnimationFrame(animation);
-    }, 300);
+  useEffect(() => {
+    setSelectedCategoryId(getActiveCategories.categoryId);
+    setSelectedSubCategoryId(getActiveCategories.subCategoryId);
+  }, [getActiveCategories, setSelectedCategoryId, setSelectedSubCategoryId]);
+
+  // Extract display names of category and sub-category for the homepage sentence summary
+  const activeNames = useMemo(() => {
+    let categoryName = "";
+    let subCategoryName = "";
+    
+    const { categoryId, subCategoryId } = getActiveCategories;
+    if (categoryId) {
+      const cat = categoryTree.find((c: any) => c.id === categoryId);
+      if (cat) {
+        categoryName = cat.nameEn || cat.nameVi || "";
+        if (subCategoryId && cat.children) {
+          const sub = cat.children.find((s: any) => s.id === subCategoryId);
+          if (sub) {
+            subCategoryName = sub.nameEn || sub.nameVi || "";
+          }
+        }
+      }
+    }
+    return { categoryName, subCategoryName };
+  }, [categoryTree, getActiveCategories]);
+
+  // Avatar lookup map for landing page summary
+  const avatarMap: Record<string, { label: string; src: string }> = {
+    kids: { label: "KID", src: "/images/avatars/kid.png" },
+    teens: { label: "TEEN", src: "/images/avatars/teen.png" },
+    adults: { label: "ADULT", src: "/images/avatars/adult.png" },
+    business: { label: "BUSINESS", src: "/images/avatars/Business man.png" },
+  };
+  const activeAvatar = avatarMap[userType] || avatarMap.adults;
+
+  // Modal local staging states
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [hasAutoOpened, setHasAutoOpened] = useState(false)
+  const [tempUserType, setTempUserType] = useState(userType)
+  const [tempCategoryId, setTempCategoryId] = useState(selectedCategoryId)
+  const [tempSubCategoryId, setTempSubCategoryId] = useState(selectedSubCategoryId)
+
+  // Auto-open modal if user has no filter selections
+  useEffect(() => {
+    if (!urlCategoryId && !hasAutoOpened) {
+      setIsFilterModalOpen(true)
+      setHasAutoOpened(true)
+    }
+  }, [urlCategoryId, hasAutoOpened])
+
+  const handleOpenModal = () => {
+    setTempUserType(userType)
+    setTempCategoryId(selectedCategoryId)
+    setTempSubCategoryId(selectedSubCategoryId)
+    setIsFilterModalOpen(true)
   }
 
+  const handleCloseModalDiscard = () => {
+    setIsFilterModalOpen(false)
+  }
 
+  const handleApplyFilters = () => {
+    // 1. Commit user type if changed
+    if (userType !== tempUserType) {
+      setFiltering(true)
+      setUserType(tempUserType)
+      startTransition(() => {
+        setUserTypePreference(tempUserType).finally(() => setFiltering(false))
+      })
+    }
+
+    // 2. Commit category and sub-category
+    setSelectedCategoryId(tempCategoryId)
+    setSelectedSubCategoryId(tempSubCategoryId)
+
+    // 3. Update URL categoryId
+    const qs = new URLSearchParams(window.location.search)
+    if (tempSubCategoryId) {
+      qs.set("categoryId", tempSubCategoryId)
+    } else if (tempCategoryId) {
+      qs.set("categoryId", tempCategoryId)
+    } else {
+      qs.delete("categoryId")
+    }
+
+    setFiltering(true)
+    startTransition(() => {
+      router.push(`/?${qs.toString()}`, { scroll: false })
+    })
+
+    // 4. Close the modal
+    setIsFilterModalOpen(false)
+
+    // 5. Scroll to content tabs
+    setTimeout(() => {
+      document.getElementById("content-tabs")?.scrollIntoView({ 
+        behavior: "smooth", 
+        block: "start" 
+      })
+    }, 150)
+  }
 
   // ── Sync URL → state (e.g. browser Back button) ───────────────────────────
   useEffect(() => {
@@ -214,37 +305,171 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     router.push(`?${p.toString()}`, { scroll: false })
   }
 
+  // Listen for escape key press to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFilterModalOpen) {
+        handleCloseModalDiscard()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isFilterModalOpen])
+
   return (
     <div className="space-y-6 relative">
+      {/* Dynamic height styles for modal viewport compression */}
+      <style>{`
+        @media (max-height: 850px) {
+          .modal-card {
+            padding: 1.25rem !important;
+            gap: 0.8rem !important;
+          }
+          .modal-card h2 {
+            font-size: 1.15rem !important;
+            margin-bottom: 0.25rem !important;
+          }
+          .modal-card hr {
+            margin-top: 0.25rem !important;
+            margin-bottom: 0.25rem !important;
+          }
+          .avatar-container {
+            width: 68px !important;
+            height: 68px !important;
+            border-width: 4px !important;
+          }
+          .avatar-btn {
+            gap: 0.4rem !important;
+          }
+          .avatar-btn span {
+            font-size: 0.75rem !important;
+          }
+          .typing-text-container {
+            font-size: 1rem !important;
+            height: 1.5rem !important;
+          }
+          .modal-footer {
+            margin-top: 0.25rem !important;
+            padding-top: 0.5rem !important;
+            gap: 0.8rem !important;
+          }
+          .modal-footer button {
+            padding: 0.5rem 1.5rem !important;
+            font-size: 0.75rem !important;
+          }
+        }
+
+        @media (max-height: 720px) {
+          .modal-card {
+            padding: 1rem !important;
+            gap: 0.6rem !important;
+          }
+          .avatar-container {
+            width: 54px !important;
+            height: 54px !important;
+            border-width: 3px !important;
+          }
+          .avatar-btn {
+            gap: 0.25rem !important;
+          }
+          .avatar-btn span {
+            font-size: 0.7rem !important;
+          }
+          .typing-text-container {
+            font-size: 0.9rem !important;
+            height: 1.25rem !important;
+          }
+        }
+      `}</style>
+
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
 
       {/* Solarpunk Hero Section */}
-      <section className="relative pt-8 pb-2 md:pt-12 md:pb-4 grid grid-cols-1 lg:grid-cols-5 gap-12 items-center overflow-hidden transition-all duration-1000 ease-in-out">
-        <div className="lg:col-span-3 space-y-12 animate-fade-in-up h-full flex flex-col justify-center min-h-[480px] transition-all duration-1000 ease-in-out">
-          <div className="flex flex-col gap-12">
-            <div className="flex flex-col gap-8">
+      <section className="relative pt-8 pb-1 md:pt-12 md:pb-2 overflow-hidden transition-all duration-1000 ease-in-out">
+        <div className="w-full space-y-8 animate-fade-in-up flex flex-col justify-center min-h-[160px] transition-all duration-1000 ease-in-out">
+          <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-left duration-1000">
+            {/* Merged sentence on a single row (flex-wrap for responsiveness) */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-3 text-lg md:text-xl lg:text-2xl font-headline font-black text-primary leading-relaxed max-w-4xl">
+              <span>I am</span>
+              <div className="flex flex-col items-center gap-0.5 shrink-0 px-1">
+                <div className="relative w-[40px] h-[40px] md:w-[48px] md:h-[48px] rounded-full overflow-hidden border-3 border-primary shadow-md">
+                  <img 
+                    src={activeAvatar.src} 
+                    alt={activeAvatar.label} 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.1em] text-primary/70 leading-none mt-0.5">
+                  {activeAvatar.label}
+                </span>
+              </div>
+              <span>, I want to learn</span>
+              <div className="inline-block border-2 border-emerald-300 px-4 py-1.5 bg-emerald-100/60 text-emerald-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
+                {activeNames.categoryName || "Anything"}
+              </div>
+              <span>and I want to practice</span>
+              <div className="inline-block border-2 border-sky-300 px-4 py-1.5 bg-sky-100/60 text-sky-900 rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] shadow-sm transform -rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
+                {activeNames.subCategoryName || "All Topics"}
+              </div>
+            </div>
+
+            {/* Change link below */}
+            <div className="pt-2">
+              <button
+                onClick={handleOpenModal}
+                className="text-sm md:text-base font-black text-secondary hover:text-secondary-dim underline underline-offset-4 cursor-pointer focus:outline-none transition-colors"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Center Overlay Modal Popup for Filters */}
+      {isFilterModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/55 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          onClick={handleCloseModalDiscard}
+        >
+          <div 
+            className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            
+            {/* Close button (X) */}
+            <button
+              onClick={handleCloseModalDiscard}
+              className="absolute top-6 right-6 text-primary/60 hover:text-primary dark:text-slate-400 dark:hover:text-white p-2 hover:bg-primary/5 rounded-full transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Who are you Section */}
+            <div className="space-y-4">
               <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
                 {t("whoAreYou")}
               </h2>
-              <div className="flex flex-wrap gap-8 items-center pl-12 md:pl-20 py-4">
+              <div className="flex flex-wrap gap-8 items-center pl-4 md:pl-10 py-2">
                 {[
                   { id: 'kids', label: 'Kid', src: '/images/avatars/kid.png' },
                   { id: 'teens', label: 'Teen', src: '/images/avatars/teen.png' },
                   { id: 'adults', label: 'Adult', src: '/images/avatars/adult.png' },
                   { id: 'business', label: 'Business', src: '/images/avatars/Business man.png' },
                 ].map((type) => {
-                  const isActive = userType === type.id;
+                  const isActive = tempUserType === type.id;
                   return (
                     <button
                       key={type.id}
-                      onClick={() => handleUserTypeChange(type.id)}
-                      className={`shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none`}
+                      onClick={() => setTempUserType(type.id)}
+                      className="shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none cursor-pointer avatar-btn"
                     >
-                      <div className={`relative w-[100px] h-[100px] rounded-full overflow-hidden transition-all duration-500 border-[6px] ${
+                      <div className={`relative w-[90px] h-[90px] rounded-full overflow-hidden transition-all duration-500 border-[5px] avatar-container ${
                         isActive 
-                          ? "border-primary shadow-2xl shadow-primary/40 scale-110 rotate-3" 
-                          : "border-transparent shadow-md opacity-60 group-hover:opacity-100 group-hover:border-primary/30 group-hover:scale-105 group-hover:-translate-y-2 group-hover:rotate-[-3deg]"
+                          ? "border-primary shadow-xl shadow-primary/30 scale-110 rotate-3" 
+                          : "border-transparent shadow-md opacity-60 group-hover:opacity-100 group-hover:border-primary/30 group-hover:scale-105 group-hover:-translate-y-1.5 group-hover:rotate-[-3deg]"
                       }`}>
                         <img 
                           src={type.src} 
@@ -263,61 +488,49 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
               </div>
             </div>
 
-            <div id="learn-section" className="text-lg md:text-xl text-primary/80 max-w-xl leading-relaxed font-black h-12 flex items-center scroll-mt-32">
-              <TypingText text={t("whatToLearn")} speed={150} />
-            </div>
-          </div>
+            <hr className="border-primary/10" />
 
-          <div className="pt-2">
-            <Suspense fallback={
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 animate-pulse">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-24 bg-slate-100 rounded-2xl" />
-                ))}
+            {/* What to learn & Categories Section */}
+            <div className="space-y-4">
+              <div className="text-lg md:text-xl text-primary/80 leading-relaxed font-black h-8 flex items-center typing-text-container">
+                <TypingText text={t("whatToLearn")} speed={150} />
               </div>
-            }>
-              <CategoryMenuSection promise={promises.categoryTree} />
-            </Suspense>
+              <div className="pt-2">
+                <VisualCategoryMenu
+                  categoryTree={categoryTree}
+                  activeCategoryId={tempCategoryId}
+                  activeSubCategoryId={tempSubCategoryId}
+                  onSelectCategory={(id) => {
+                    setTempCategoryId(id);
+                    setTempSubCategoryId(""); // Clear sub-category when parent category changes
+                  }}
+                  onSelectSubCategory={setTempSubCategoryId}
+                />
+              </div>
+            </div>
+
+            {/* Ready / Cancel footer */}
+            <div className="flex justify-end items-center gap-4 mt-4 pt-4 border-t border-primary/10 modal-footer">
+              <button
+                onClick={handleCloseModalDiscard}
+                className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
+              >
+                {locale === "vi" ? "HỦY BỎ" : "CANCEL"}
+              </button>
+              <button
+                onClick={handleApplyFilters}
+                className="px-10 py-3.5 bg-primary border-2 border-primary text-on-primary rounded-full text-xs font-black transition-all shadow-lg hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 uppercase tracking-[0.1em] cursor-pointer"
+              >
+                {locale === "vi" ? "SẴN SÀNG" : "READY"}
+              </button>
+            </div>
+
           </div>
         </div>
-
-        <div className="hidden lg:block lg:col-span-2 relative animate-in zoom-in fade-in duration-1000 delay-300 transition-all duration-700 ease-in-out">
-          {/* H1 moved here to the right column */}
-          <h1 className="text-2xl md:text-4xl font-headline font-black text-primary leading-[1.1] tracking-tight mb-6">
-            The Future of <br />
-            <span className="relative inline-block px-3 py-1 mr-2">
-              <span className="relative z-10 text-secondary-dim">Learning</span>
-              <div className="absolute inset-0 bg-white shadow-xl shadow-primary/5 rounded-2xl -rotate-1 -z-0 border border-primary/5" />
-            </span>
-            is Bright.
-          </h1>
-
-          {/* Main Hero Image in Solarpunk Frame */}
-          <div className="relative z-10 aspect-[4/3] rounded-[2.5rem] overflow-hidden border-[12px] border-white shadow-2xl rotate-2 hover:rotate-0 transition-all duration-700">
-            <img 
-              src="https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&q=80&w=1200" 
-              alt="Solar Learning" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          {/* Floating Eco Elements */}
-
-          <div className="absolute -top-12 -left-8 z-0 w-24 h-24 bg-secondary/20 blur-3xl rounded-full" />
-          
-          {/* Small Bird Mascot */}
-          <div className="absolute -top-12 right-6 z-20 animate-float">
-            <img 
-              src="/images/bird.png" 
-              alt="Mascot" 
-              className="w-20 h-20 md:w-24 md:h-24 object-contain drop-shadow-xl hover:scale-110 transition-transform duration-300 cursor-pointer"
-            />
-          </div>
-        </div>
-      </section>
+      )}
 
       {/* Tab + Sort controls */}
-      <div id="content-tabs" className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-10">
+      <div id="content-tabs" className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-2">
         <div className="inline-flex items-center gap-4">
           <button
             onClick={() => handleTabChange("lessons")}

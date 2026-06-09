@@ -1,6 +1,5 @@
 "use client"
 import React, { useMemo } from "react";
-import { useContentStore } from "@/store/useContentStore";
 import { useLocale } from "next-intl";
 import { 
   BookOpen, 
@@ -20,27 +19,24 @@ interface Category {
 
 interface Props {
   categoryTree: Category[];
+  activeCategoryId: string;
+  activeSubCategoryId: string;
+  onSelectCategory: (id: string) => void;
+  onSelectSubCategory: (id: string) => void;
 }
 
-export function VisualCategoryMenu({ categoryTree }: Props) {
-  const router = require("next/navigation").useRouter();
-  const searchParams = require("next/navigation").useSearchParams();
-  const [isPending, startTransition] = React.useTransition();
+export function VisualCategoryMenu({ 
+  categoryTree, 
+  activeCategoryId, 
+  activeSubCategoryId, 
+  onSelectCategory, 
+  onSelectSubCategory 
+}: Props) {
   const locale = useLocale();
 
-  const { 
-    selectedCategoryId, setSelectedCategoryId,
-    selectedSubCategoryId, setSelectedSubCategoryId,
-    setFiltering
-  } = useContentStore();
-
-  React.useEffect(() => {
-    setFiltering(isPending);
-  }, [isPending, setFiltering]);
-
   const activeCategory = useMemo(() => {
-    return categoryTree.find(cat => cat.id === selectedCategoryId);
-  }, [categoryTree, selectedCategoryId]);
+    return categoryTree.find(cat => cat.id === activeCategoryId);
+  }, [categoryTree, activeCategoryId]);
 
   const solarpunkStyles = [
     { icon: "/images/english.png", color: "text-emerald-900", bg: "bg-emerald-100", border: "border-emerald-300", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10" },
@@ -72,9 +68,9 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
   return (
     <div className="w-full animate-in fade-in slide-in-from-top-4 duration-1000 ease-out">
       {/* Level 1: Main Category Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-6 category-grid">
         {categoryTree.map((cat, idx) => {
-          const isActive = selectedCategoryId === cat.id;
+          const isActive = activeCategoryId === cat.id;
           const displayName = (locale === "vi" ? (cat.nameVi || cat.nameEn) : (cat.nameEn || cat.nameVi)) || "";
           const style = getStyleByName(displayName, idx);
           const blobShape = blobShapes[idx % blobShapes.length];
@@ -85,28 +81,11 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
               key={cat.id}
               onClick={() => {
                 const updateState = () => {
-                  let newCatId = "";
                   if (isActive) {
-                    setSelectedCategoryId("");
-                    setSelectedSubCategoryId("");
+                    onSelectCategory("");
                   } else {
-                    setSelectedCategoryId(cat.id);
-                    setSelectedSubCategoryId(""); 
-                    newCatId = cat.id;
+                    onSelectCategory(cat.id);
                   }
-                  
-                  // Construct URL
-                  const qs = new URLSearchParams(searchParams.toString());
-                  if (newCatId) {
-                    qs.set("categoryId", newCatId);
-                  } else {
-                    qs.delete("categoryId");
-                  }
-                  
-                  setFiltering(true);
-                  startTransition(() => {
-                    router.push(`/?${qs.toString()}`, { scroll: false });
-                  });
                 };
 
                 if (typeof document !== "undefined" && (document as any).startViewTransition) {
@@ -115,14 +94,14 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
                   updateState();
                 }
               }}
-              className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl ${
+              className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl category-btn ${
                 isActive 
                   ? `${style.bg} ${style.border} scale-[1.08] shadow-2xl z-20 animate-solar-pulse` 
                   : `${style.bg} ${style.border} hover:scale-[1.05] ${style.shadow}`
               }`}
             >
               {/* Category Icon 'Nổi' on the edge */}
-              <div className={`absolute -top-5 -left-4 rounded-2xl shadow-lg transition-all duration-700 flex items-center justify-center w-14 h-14 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
+              <div className={`absolute -top-5 -left-4 rounded-2xl shadow-lg transition-all duration-700 flex items-center justify-center w-14 h-14 category-btn-icon ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
                 {typeof Icon === "string" ? (
                   <img src={Icon} alt={displayName} className="w-10 h-10 object-contain drop-shadow-sm" />
                 ) : (
@@ -130,7 +109,7 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
                 )}
               </div>
 
-              <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 ${isActive ? style.color + " scale-105" : "text-foreground/80"}`}>
+              <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 category-btn-text ${isActive ? style.color + " scale-105" : "text-foreground/80"}`}>
                 {displayName}
               </div>
               
@@ -152,10 +131,10 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
       >
         <div className="overflow-hidden">
           <div 
-            className="flex flex-wrap items-center justify-start gap-4 py-4 px-4 transition-all duration-1000"
+            className="flex flex-wrap items-center justify-start gap-4 py-4 px-4 transition-all duration-1000 sub-category-pills"
           >
             {activeCategory?.children?.map((sub, idx) => {
-              const isSubActive = selectedSubCategoryId === sub.id;
+              const isSubActive = activeSubCategoryId === sub.id;
               const subDisplayName = (locale === "vi" ? (sub.nameVi || sub.nameEn) : (sub.nameEn || sub.nameVi)) || "";
               const blobShape = blobShapes[(idx + 2) % blobShapes.length]; // Offset to vary shapes
               
@@ -164,33 +143,9 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
                   key={sub.id}
                   onClick={() => {
                     const newSubId = isSubActive ? "" : sub.id;
-                    setSelectedSubCategoryId(newSubId);
-                    
-                    // Update URL: If sub is active, clear it and fall back to parent category.
-                    // Otherwise, set categoryId to the sub-category's id.
-                    const qs = new URLSearchParams(searchParams.toString());
-                    if (newSubId) {
-                      qs.set("categoryId", newSubId);
-                    } else if (activeCategory) {
-                      qs.set("categoryId", activeCategory.id);
-                    } else {
-                      qs.delete("categoryId");
-                    }
-
-                    setFiltering(true);
-                    startTransition(() => {
-                      router.push(`/?${qs.toString()}`, { scroll: false });
-                    });
-
-                    // Scroll to content tabs
-                    setTimeout(() => {
-                      document.getElementById("content-tabs")?.scrollIntoView({ 
-                        behavior: "smooth", 
-                        block: "start" 
-                      });
-                    }, 100);
+                    onSelectSubCategory(newSubId);
                   }}
-                  className={`px-8 py-3 ${blobShape} text-xs font-black transition-all duration-500 border-2 uppercase tracking-[0.1em] shadow-sm hover:scale-110 active:scale-95 ${
+                  className={`px-8 py-3 ${blobShape} text-xs font-black transition-all duration-500 border-2 uppercase tracking-[0.1em] shadow-sm hover:scale-110 active:scale-95 sub-category-btn ${
                     isSubActive
                       ? "bg-primary border-primary text-on-primary shadow-xl shadow-primary/30 scale-105"
                       : "bg-white border-primary/10 text-primary/60 hover:border-primary/40 hover:text-primary"
@@ -203,6 +158,7 @@ export function VisualCategoryMenu({ categoryTree }: Props) {
           </div>
         </div>
       </div>
+
     </div>
   );
 }
