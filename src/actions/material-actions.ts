@@ -7,6 +7,7 @@ import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
 import crypto from 'crypto';
 import { MaterialStatus } from '@/generated/client';
 import { after } from 'next/server';
+import { generateUniqueSlug } from '@/lib/slugify';
 
 export async function generateMaterialThumbnail(assignment: { title: string; subject: string | null }, questions: any[]) {
   // Analyze content to create a stable seed
@@ -51,9 +52,11 @@ export async function createDraftMaterial(type: any = 'READING') {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
 
+  const slug = await generateUniqueSlug('Bài học mới', 'assignment');
   const newAss = await prisma.assignment.create({
     data: {
       title: 'Bài học mới',
+      slug,
       materialType: type,
       teacherId: session.user.id,
       status: 'DRAFT'
@@ -68,18 +71,22 @@ export async function createDraftLesson() {
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   // Create Assignment first because Lesson depends on it
+  const assignmentSlug = await generateUniqueSlug('Bài học mới', 'assignment');
   const newAssignment = await prisma.assignment.create({
     data: {
       title: 'Bài học mới',
+      slug: assignmentSlug,
       materialType: 'READING',
       status: 'DRAFT',
       teacherId: session.user.id,
     }
   });
 
+  const lessonSlug = await generateUniqueSlug('Bài học mới', 'lesson');
   await prisma.lesson.create({
     data: {
       title: 'Bài học mới',
+      slug: lessonSlug,
       teacherId: session.user.id,
       assignmentId: newAssignment.id,
       thumbnail: newAssignment.thumbnail,
@@ -183,12 +190,15 @@ export async function autoSaveMaterial(payload: {
       updatePayload.instructions = payload.instructions || null;
     }
 
+    const newSlug = !existing ? await generateUniqueSlug(payload.title, 'assignment') : undefined;
+
     const updatedAssignment = await prisma.assignment.upsert({
       where: { id: payload.id },
       update: updatePayload,
       create: {
         id: payload.id,
         title: payload.title,
+        slug: newSlug,
         thumbnail,
         readingText: payload.readingText || null,
         videoUrl: payload.videoUrl || null,
@@ -217,20 +227,35 @@ export async function autoSaveMaterial(payload: {
 
     // Sync to Lesson if exists
     if (updatedAssignment.lesson) {
+      const lessonUpdateData: any = {
+        title: payload.title,
+        materialType: updatedAssignment.materialType,
+      };
+
+      if (payload.shortDescription !== undefined) {
+        lessonUpdateData.description = payload.shortDescription || null;
+      }
+      if (payload.videoUrl !== undefined) {
+        lessonUpdateData.videoUrl = payload.videoUrl || null;
+      }
+      if (payload.audioUrl !== undefined) {
+        lessonUpdateData.audioUrl = payload.audioUrl || null;
+      }
+      if (thumbnail !== undefined) {
+        lessonUpdateData.thumbnail = thumbnail || null;
+      }
+      if (payload.targetAudiences !== undefined) {
+        lessonUpdateData.targetAudiences = { set: payload.targetAudiences };
+      }
+      if (payload.categoryIds !== undefined) {
+        lessonUpdateData.categories = {
+          set: payload.categoryIds.map(id => ({ id }))
+        };
+      }
+
       await prisma.lesson.update({
         where: { id: updatedAssignment.lesson.id },
-        data: {
-          title: payload.title,
-          description: payload.shortDescription || null,
-          videoUrl: payload.videoUrl || null,
-          audioUrl: payload.audioUrl || null,
-          thumbnail: thumbnail || null,
-          materialType: updatedAssignment.materialType,
-          targetAudiences: payload.targetAudiences !== undefined ? { set: payload.targetAudiences } : undefined,
-          categories: {
-            set: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
-          }
-        }
+        data: lessonUpdateData
       });
       console.log(`[AutoSave] Synced metadata to linked lesson: ${updatedAssignment.lesson.id}`);
     }
@@ -628,9 +653,12 @@ export async function duplicateMaterial(id: string) {
     throw new Error('Forbidden');
   }
 
+  const copyTitle = `${source.title} (Bản sao)`;
+  const slug = await generateUniqueSlug(copyTitle, 'assignment');
   const newAss = await prisma.assignment.create({
     data: {
-      title: `${source.title} (Bản sao)`,
+      title: copyTitle,
+      slug,
       status: 'DRAFT',
       materialType: source.materialType,
       teacherId: session.user.id,

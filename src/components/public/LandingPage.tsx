@@ -53,13 +53,6 @@ function SectionSkeleton() {
   )
 }
 
-// ─── Category section ─────────────────────────────────────────────────────────
-
-function CategoryMenuSection({ promise }: { promise: Promise<any[]> }) {
-  const categoryTree = use(promise)
-  return <VisualCategoryMenu categoryTree={categoryTree} />
-}
-
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
 function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () => void }) {
