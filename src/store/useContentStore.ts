@@ -68,8 +68,13 @@ export const useContentStore = create<ContentState>((set) => ({
   userType: "adults",
   setUserType: (val) => set({ userType: val }),
 
-  nativeLanguage: "vi",
-  setNativeLanguage: (val) => set({ nativeLanguage: val }),
+  nativeLanguage: typeof window !== "undefined" ? (localStorage.getItem("cupcakes_native_language") || "vi") : "vi",
+  setNativeLanguage: (val) => set((state) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("cupcakes_native_language", val)
+    }
+    return { nativeLanguage: val }
+  }),
 
   setExercises: (items) => set({ exercises: items }),
   setLessons: (items) => set({ lessons: items }),

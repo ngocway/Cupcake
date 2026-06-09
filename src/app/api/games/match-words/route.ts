@@ -58,16 +58,18 @@ export async function GET(request: Request) {
       if (idx === 0) defaultTopic = topic.slug
 
       const items = topic.items.map(item => {
-        // Randomly pick a color
-        const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)]
+        const randomImgColor = COLORS[Math.floor(Math.random() * COLORS.length)]
+        const randomTxtColor = COLORS[Math.floor(Math.random() * COLORS.length)]
         
         return {
           id: item.id,
           word: item.word,
           emoji: item.emoji || "✨",
           image: item.imageUrl,
-          color: randomColor.color,
-          border: randomColor.border
+          imgColor: randomImgColor.color,
+          imgBorder: randomImgColor.border,
+          txtColor: randomTxtColor.color,
+          txtBorder: randomTxtColor.border
         }
       })
 

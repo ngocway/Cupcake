@@ -462,6 +462,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                   {activeAvatar.label}
                 </span>
               </div>
+              <span>. My native language is</span>
+              <div className="inline-block border-2 border-amber-300 px-4 py-1.5 bg-amber-100/60 text-amber-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
+                {nativeLanguage === 'vi' ? 'Tiếng Việt' : nativeLanguage === 'th' ? 'ภาษาไทย' : nativeLanguage === 'id' ? 'Bahasa Indonesia' : 'English'}
+              </div>
               <span>, I want to learn</span>
               <div className="inline-block border-2 border-emerald-300 px-4 py-1.5 bg-emerald-100/60 text-emerald-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
                 {activeNames.categoryName || "Anything"}

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Globe, X, Volume2, Loader2, Check } from 'lucide-react';
 import { translateSelection } from '@/actions/translate-actions';
+import { setNativeLanguagePreference } from '@/actions/user-preferences-actions';
+import { useContentStore } from '@/store/useContentStore';
 
 const LANGUAGES = [
   { code: 'vi', name: 'Tiếng Việt', flag: '/flags/flag-vi.png' },
@@ -18,7 +20,8 @@ export function SelectionTranslator() {
   const [showPopup, setShowPopup] = useState(false);
   
   // State for the translation flow
-  const [targetLang, setTargetLang] = useState<string | null>(null);
+  const nativeLanguage = useContentStore(s => s.nativeLanguage);
+  const setNativeLanguage = useContentStore(s => s.setNativeLanguage);
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationResult, setTranslationResult] = useState<string | null>(null);
   const [showLanguageSelect, setShowLanguageSelect] = useState(false);
@@ -27,10 +30,6 @@ export function SelectionTranslator() {
 
   useEffect(() => {
     setMounted(true);
-    const savedLang = localStorage.getItem('targetLanguage');
-    if (savedLang) {
-      setTargetLang(savedLang);
-    }
   }, []);
 
   useEffect(() => {
@@ -98,12 +97,12 @@ export function SelectionTranslator() {
   const handleTranslateClick = async () => {
     if (!selection) return;
     
-    if (!targetLang) {
+    if (!nativeLanguage) {
       setShowLanguageSelect(true);
       return;
     }
 
-    await performTranslation(selection.text, targetLang);
+    await performTranslation(selection.text, nativeLanguage);
   };
 
   const performTranslation = async (text: string, lang: string) => {
@@ -121,9 +120,9 @@ export function SelectionTranslator() {
     setIsTranslating(false);
   };
 
-  const handleSaveLanguage = (langCode: string) => {
-    setTargetLang(langCode);
-    localStorage.setItem('targetLanguage', langCode);
+  const handleSaveLanguage = async (langCode: string) => {
+    setNativeLanguage(langCode);
+    await setNativeLanguagePreference(langCode);
     if (selection) {
       performTranslation(selection.text, langCode);
     }
@@ -244,7 +243,6 @@ export function SelectionTranslator() {
             <div className="mt-3 flex justify-end">
                <button 
                   onClick={() => {
-                    setTargetLang(null);
                     setShowLanguageSelect(true);
                     setTranslationResult(null);
                   }}

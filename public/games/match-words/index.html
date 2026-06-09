@@ -324,9 +324,19 @@
             }
         }
 
+        const preloadedAudio = {};
+
         async function speakWord(wordText) {
             let spoken = false;
             try {
+                // Check if audio is already preloaded
+                if (preloadedAudio[wordText]) {
+                    const audio = new Audio(preloadedAudio[wordText]);
+                    audio.volume = 1.0;
+                    await audio.play();
+                    return;
+                }
+
                 // Try using Google AI Studio Gemini API (via local proxy endpoint)
                 const response = await fetch('/api/tts', {
                     method: 'POST',
@@ -374,6 +384,7 @@
         // Parse Query Parameter for Age Group
         const urlParams = new URLSearchParams(window.location.search);
         const ageGroup = urlParams.get('age') || '2-5';
+        const gameId = urlParams.get('gameId');
 
                 // Data from API
         let topicsData = {};
@@ -482,6 +493,24 @@
             titleEl.offsetHeight; // trigger reflow
             titleEl.style.animation = 'bounceIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
 
+            // Preload audio for all items in the current topic asynchronously
+            topic.items.forEach(item => {
+                if (!preloadedAudio[item.word]) {
+                    fetch('/api/tts', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: item.word, voice: 'Aoede', speed: 0.85, mode: 'inline' })
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success && data.url) {
+                            preloadedAudio[item.word] = data.url;
+                        }
+                    })
+                    .catch(e => console.error("Preload TTS failed for", item.word, e));
+                }
+            });
+
             // Prepare shuffled indices for word placement
             const items = topic.items;
             const indices = Array.from({ length: items.length }, (_, i) => i);
@@ -507,16 +536,16 @@
                 } else {
                     imgEl.textContent = item.emoji;
                 }
-                imgEl.style.borderColor = item.color;
-                imgEl.style.backgroundColor = item.color + '22'; // 13% opacity for a nice pastel background tint
+                imgEl.style.borderColor = item.imgColor || item.color;
+                imgEl.style.backgroundColor = (item.imgColor || item.color) + '22'; // 13% opacity for a nice pastel background tint
                 gameArea.appendChild(imgEl);
                 
                 // 2. Create Draggable Text
                 const txtEl = document.createElement('div');
                 txtEl.classList.add('game-item-text');
                 txtEl.textContent = item.word;
-                txtEl.style.backgroundColor = item.color;
-                txtEl.style.border = `4px solid ${item.border}`;
+                txtEl.style.backgroundColor = item.txtColor || item.color;
+                txtEl.style.border = `4px solid ${item.txtBorder || item.border}`;
                 gameArea.appendChild(txtEl);
 
                 const shuffledIndex = shuffledIndices[index];
@@ -873,7 +902,10 @@
         // Initialize game on load
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                const res = await fetch(`/api/games/match-words?age=${ageGroup}`);
+                const fetchUrl = gameId 
+                    ? `/api/games/match-words?age=${ageGroup}&gameId=${gameId}`
+                    : `/api/games/match-words?age=${ageGroup}`;
+                const res = await fetch(fetchUrl);
                 const data = await res.json();
                 if (data && data.topicsData && Object.keys(data.topicsData).length > 0) {
                     topicsData = data.topicsData;

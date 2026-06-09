@@ -10,10 +10,10 @@ export async function getUserVocabLanguage() {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { vocabLanguage: true }
+      select: { nativeLanguage: true }
     })
 
-    return user?.vocabLanguage || null
+    return user?.nativeLanguage || null
   } catch (error) {
     console.error("Error getting vocab language:", error)
     return null
@@ -27,7 +27,7 @@ export async function updateUserVocabLanguage(lang: string) {
 
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { vocabLanguage: lang }
+      data: { nativeLanguage: lang }
     })
     
     return { success: true }

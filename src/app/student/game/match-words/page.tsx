@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 function MatchWordsGameContent() {
   const searchParams = useSearchParams();
   const age = searchParams.get("age") || "2-5";
+  const gameId = searchParams.get("gameId");
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col">
@@ -28,7 +29,7 @@ function MatchWordsGameContent() {
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#a1c4fd] overflow-hidden relative">
         <iframe 
-          src={`/games/match-words/index.html?age=${age}`} 
+          src={`/games/match-words/index.html?age=${age}${gameId ? `&gameId=${gameId}` : ''}`} 
           className="w-full h-full border-none"
           title="Match the Words Game"
           sandbox="allow-scripts allow-same-origin"

@@ -27,7 +27,7 @@ const GAMES_DATA: Record<string, Game[]> = {
     {
       id: "word-match",
       title: "Word Match",
-      href: "/student/game/match-words?age=2-5",
+      href: "/student/game/match-words/select?age=2-5",
       gradient: "from-blue-200 to-sky-400",
       emoji: "🐾",
       tag: "Vocabulary",
@@ -49,7 +49,7 @@ const GAMES_DATA: Record<string, Game[]> = {
     {
       id: "word-match",
       title: "Word Match",
-      href: "/student/game/match-words?age=6-12",
+      href: "/student/game/match-words/select?age=6-12",
       gradient: "from-blue-200 to-sky-400",
       emoji: "🐾",
       tag: "Vocabulary",

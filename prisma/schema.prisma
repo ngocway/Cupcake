@@ -42,7 +42,6 @@ model User {
   adminRoleId          String?
   isBlocked            Boolean              @default(false)
   locale               String?              @default("en")
-  vocabLanguage        String?              @default("VI")
   nativeLanguage       String?              @default("vi")
   accounts             Account[]
   assignments          Assignment[]

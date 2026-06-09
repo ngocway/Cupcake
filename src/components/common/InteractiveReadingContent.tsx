@@ -4,8 +4,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Volume2, PlusCircle, BookOpen, LogIn, X } from 'lucide-react';
 import { LoginModal } from '@/components/LoginButton';
-import { getUserVocabLanguage, updateUserVocabLanguage } from '@/actions/vocab-settings';
+import { setNativeLanguagePreference } from '@/actions/user-preferences-actions';
 import { SelectionTranslator } from './SelectionTranslator';
+import { useContentStore } from '@/store/useContentStore';
 
 interface VocabularyInfo {
   word: string;
@@ -21,7 +22,8 @@ interface VocabularyInfo {
 export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: string; isLoggedIn?: boolean }) {
   const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
   const [mounted, setMounted] = useState(false);
-  const [currentLang, setCurrentLang] = useState('VI');
+  const currentLang = useContentStore(s => s.nativeLanguage);
+  const setNativeLanguage = useContentStore(s => s.setNativeLanguage);
   const [activeVocab, setActiveVocab] = useState<VocabularyInfo | null>(null);
   const [imageError, setImageError] = useState(false);
   const [position, setPosition] = useState({ 
@@ -39,15 +41,17 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   useEffect(() => {
     setMounted(true);
     
-    async function loadLanguagePref() {
-      const dbPref = await getUserVocabLanguage();
-      if (dbPref) {
-        setCurrentLang(dbPref);
-      } else {
-        setCurrentLang(localStorage.getItem('vocabLang') || 'VI');
+    // Tự nhận diện ngôn ngữ thiết bị lần đầu tiên nếu chưa có
+    if (typeof window !== "undefined") {
+      const localPref = localStorage.getItem('cupcakes_native_language')
+      if (!localPref) {
+        const browserLang = navigator.language.toLowerCase()
+        let defaultLang = 'vi'
+        if (browserLang.includes('th')) defaultLang = 'th'
+        else if (browserLang.includes('id')) defaultLang = 'id'
+        setNativeLanguage(defaultLang)
       }
     }
-    loadLanguagePref();
 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -56,7 +60,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
         playingAudioRef.current = null;
       }
     };
-  }, []);
+  }, [setNativeLanguage]);
 
   useEffect(() => {
     const handleGlobalPause = (e: CustomEvent) => {
@@ -136,9 +140,8 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   }, [playingAudioUrl]);
 
   const handleLangChange = async (lang: string) => {
-    setCurrentLang(lang);
-    localStorage.setItem('vocabLang', lang);
-    await updateUserVocabLanguage(lang);
+    setNativeLanguage(lang);
+    await setNativeLanguagePreference(lang);
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -295,10 +298,10 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">TRANSLATION</p>
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => handleLangChange('VI')}
+                      onClick={() => handleLangChange('vi')}
                       title="Vietnamese"
                       className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        currentLang === 'VI'
+                        currentLang === 'vi'
                           ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
                           : 'opacity-40 hover:opacity-80'
                       }`}
@@ -306,10 +309,10 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                       <img src="/flags/flag-vi.png" alt="Vietnamese" className="w-full h-full object-cover" />
                     </button>
                     <button
-                      onClick={() => handleLangChange('TH')}
+                      onClick={() => handleLangChange('th')}
                       title="Thai"
                       className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        currentLang === 'TH'
+                        currentLang === 'th'
                           ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
                           : 'opacity-40 hover:opacity-80'
                       }`}
@@ -317,10 +320,10 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                       <img src="/flags/flag-th.png" alt="Thai" className="w-full h-full object-cover" />
                     </button>
                     <button
-                      onClick={() => handleLangChange('ID')}
+                      onClick={() => handleLangChange('id')}
                       title="Indonesian"
                       className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        currentLang === 'ID'
+                        currentLang === 'id'
                           ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
                           : 'opacity-40 hover:opacity-80'
                       }`}
@@ -330,8 +333,8 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                   </div>
                 </div>
                 <p className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-tight">
-                  {currentLang === 'VI' ? capitalize(activeVocab.meaningVi)
-                   : currentLang === 'TH' ? capitalize(activeVocab.meaningTh)
+                  {currentLang === 'vi' ? capitalize(activeVocab.meaningVi)
+                   : currentLang === 'th' ? capitalize(activeVocab.meaningTh)
                    : capitalize(activeVocab.meaningId)}
                 </p>
               </div>

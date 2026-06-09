@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { getFlashcardsByTopic } from "@/actions/flashcards-actions"
-import { getUserVocabLanguage, updateUserVocabLanguage } from "@/actions/vocab-settings"
+import { setNativeLanguagePreference } from "@/actions/user-preferences-actions"
+import { useContentStore } from "@/store/useContentStore"
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -71,7 +72,8 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   const [voicesLoaded, setVoicesLoaded] = useState<boolean>(false)
   
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
-  const [currentLang, setCurrentLang] = useState<string>('EN')
+  const currentLang = useContentStore(s => s.nativeLanguage)
+  const setNativeLanguage = useContentStore(s => s.setNativeLanguage)
 
   // Trạng thái load ảnh để hiển thị spinner
   const [isImageLoading, setIsImageLoading] = useState(true)
@@ -89,42 +91,25 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     }
   }
 
-  // Tải tùy chọn ngôn ngữ khi hiển thị
+  // Tự nhận diện ngôn ngữ thiết bị lần đầu tiên nếu chưa có
   useEffect(() => {
-    async function loadLangPref() {
-      if (typeof window !== "undefined") {
-        const dbPref = await getUserVocabLanguage()
-        if (dbPref) {
-          setCurrentLang(dbPref)
-        } else {
-          const localPref = localStorage.getItem('vocabLang')
-          if (localPref) {
-            setCurrentLang(localPref)
-          } else {
-            // Tự nhận diện ngôn ngữ thiết bị lần đầu tiên
-            const browserLang = navigator.language.toLowerCase()
-            let defaultLang = 'EN'
-            if (browserLang.includes('vi')) defaultLang = 'VI'
-            else if (browserLang.includes('th')) defaultLang = 'TH'
-            else if (browserLang.includes('id')) defaultLang = 'ID'
-            
-            setCurrentLang(defaultLang)
-            localStorage.setItem('vocabLang', defaultLang)
-          }
-        }
+    if (typeof window !== "undefined") {
+      const localPref = localStorage.getItem('cupcakes_native_language')
+      if (!localPref) {
+        const browserLang = navigator.language.toLowerCase()
+        let defaultLang = 'vi'
+        if (browserLang.includes('th')) defaultLang = 'th'
+        else if (browserLang.includes('id')) defaultLang = 'id'
+        setNativeLanguage(defaultLang)
       }
     }
-    loadLangPref()
-  }, [])
+  }, [setNativeLanguage])
 
   // Xử lý thay đổi ngôn ngữ dịch nghĩa
   const handleLangChange = async (lang: string) => {
-    setCurrentLang(lang)
-    if (typeof window !== "undefined") {
-      localStorage.setItem('vocabLang', lang)
-    }
+    setNativeLanguage(lang)
     try {
-      await updateUserVocabLanguage(lang)
+      await setNativeLanguagePreference(lang)
     } catch (e) {
       console.error("Failed to update language preference in database:", e)
     }
@@ -705,19 +690,6 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
               {/* Soft interior background gradient */}
               <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none" />
 
-              {/* 1. Header Badge */}
-              <div className="w-full text-center shrink-0 mb-3 md:mb-4">
-                {isKidMode ? (
-                  <span className="inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-50 border border-amber-200 text-amber-700 shadow-sm">
-                    ⭐ Fun Vocabulary ⭐
-                  </span>
-                ) : (
-                  <span className="inline-flex px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-50 border border-slate-200 text-slate-500">
-                    Word Details
-                  </span>
-                )}
-              </div>
-
               {/* 2. Central Area */}
               <div className="flex-1 flex flex-col justify-start px-2 overflow-y-auto max-h-full no-scrollbar pb-4">
                 <div className="w-full my-auto flex flex-col gap-3 md:gap-4">
@@ -761,10 +733,10 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full border ${isKidMode ? "bg-amber-50 border-amber-200/60" : "bg-slate-50 border-slate-200"}`}>
                       {/* US - English */}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('EN'); }}
+                        onClick={(e) => { e.stopPropagation(); handleLangChange('en'); }}
                         title="English"
                         className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'EN'
+                          currentLang === 'en'
                             ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
                             : 'opacity-40'
                         }`}
@@ -773,10 +745,10 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       </button>
                       {/* Vietnam - VI */}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('VI'); }}
+                        onClick={(e) => { e.stopPropagation(); handleLangChange('vi'); }}
                         title="Vietnamese"
                         className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'VI'
+                          currentLang === 'vi'
                             ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
                             : 'opacity-40'
                         }`}
@@ -785,10 +757,10 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       </button>
                       {/* Thai - TH */}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('TH'); }}
+                        onClick={(e) => { e.stopPropagation(); handleLangChange('th'); }}
                         title="Thai"
                         className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'TH'
+                          currentLang === 'th'
                             ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
                             : 'opacity-40'
                         }`}
@@ -797,28 +769,29 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       </button>
                       {/* Indonesian - ID */}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('ID'); }}
+                        onClick={(e) => { e.stopPropagation(); handleLangChange('id'); }}
                         title="Indonesian"
                         className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'ID'
+                          currentLang === 'id'
                             ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
                             : 'opacity-40'
                         }`}
                       >
                         <img src="/flags/flag-id.png" alt="Indonesian" className="w-full h-full object-cover" />
                       </button>
+                      </div>
                     </div>
                   </div>
-
-                  <p className={`text-center min-h-[40px] flex items-center justify-center px-4 font-black ${
-                    isKidMode ? "text-amber-950 text-base md:text-lg" : "text-slate-700 text-sm md:text-base"
-                  }`}>
-                    {currentLang === 'VI' ? (activeCard?.definitionVi || activeCard?.definition)
-                     : currentLang === 'TH' ? (activeCard?.definitionTh || activeCard?.definition)
-                     : currentLang === 'ID' ? (activeCard?.definitionId || activeCard?.definition)
-                     : activeCard?.definition}
-                  </p>
-                </div>
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    <p className={`text-center min-h-[40px] flex items-center justify-center px-4 font-black ${
+                      isKidMode ? "text-amber-950 text-base md:text-lg" : "text-slate-700 text-sm md:text-base"
+                    }`}>
+                      {currentLang === 'vi' ? (activeCard?.definitionVi || activeCard?.definition)
+                       : currentLang === 'th' ? (activeCard?.definitionTh || activeCard?.definition)
+                       : currentLang === 'id' ? (activeCard?.definitionId || activeCard?.definition)
+                       : activeCard?.definition}
+                    </p>
+                  </div>
 
                 {/* Example Sentence */}
                 {activeCard?.exampleSentence && (
