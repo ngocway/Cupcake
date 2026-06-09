@@ -78,7 +78,7 @@ export const generateQuizQuestions = async ({
       "title": "A catchy, relevant title for this assignment",
       "instructions": "General instructions for the students on how to do this assignment",
       "shortDescription": "A short, engaging description for the library (max 200 chars)",
-      "targetAudiences": ["Kids", "Teens", "Adults", "Business"], // Pick 1 or more suitable target audiences from this list
+      "targetAudiences": ["kids", "teens", "adults", "business"], // Pick 1 or more suitable target audiences from this list
     ` : '';
 
     const prompt = `Generate ${count} ${difficulty} difficulty quiz questions about "${topic}" in ${langStr}. 

@@ -36,6 +36,16 @@ export default function AssignmentLobbyLoading() {
           <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
         </div>
       </div>
+
+      {/* Centered Loading Spinner Overlay */}
+      <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 border border-slate-200/50 dark:border-slate-800/50 pointer-events-auto">
+          <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest animate-pulse">
+            Đang chuẩn bị phòng thi...
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -75,6 +75,30 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   }, []);
 
   useEffect(() => {
+    const handleTimeUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ currentTime: number }>;
+      const { currentTime } = customEvent.detail;
+      
+      const words = document.querySelectorAll('.interactive-reading-content .reading-word');
+      words.forEach(word => {
+        const start = parseFloat(word.getAttribute('data-start') || '0');
+        const end = parseFloat(word.getAttribute('data-end') || '0');
+        
+        if (currentTime !== -1 && currentTime >= start && currentTime <= end) {
+          word.classList.add('highlighted');
+        } else {
+          word.classList.remove('highlighted');
+        }
+      });
+    };
+
+    window.addEventListener('readingAudioTimeUpdate', handleTimeUpdate as EventListener);
+    return () => {
+      window.removeEventListener('readingAudioTimeUpdate', handleTimeUpdate as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     // Imperatively update the styling of the currently playing marker
     // since they are rendered via dangerouslySetInnerHTML
     const markers = document.querySelectorAll('.inline-audio-marker, .inline-audio-wrapper');
@@ -436,6 +460,23 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
         .custom-vocab-marker:hover,
         .custom-vocab-marker:hover * {
           color: #eab308 !important;
+        }
+
+        .reading-word {
+          transition: background-color 0.15s ease, color 0.15s ease;
+          border-radius: 0.25rem;
+          padding: 0 0.125rem;
+          margin: 0 -0.125rem;
+        }
+
+        .reading-word.highlighted {
+          background-color: #fef08a !important; /* bg-yellow-200 */
+          color: #1e293b !important; /* text-slate-800 */
+        }
+
+        :global(.dark) .reading-word.highlighted {
+          background-color: rgba(234, 179, 8, 0.4) !important; /* yellow-500 with opacity */
+          color: #ffffff !important;
         }
       `}</style>
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />

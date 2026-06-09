@@ -217,6 +217,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const [tempCategoryId, setTempCategoryId] = useState(selectedCategoryId)
   const [tempSubCategoryId, setTempSubCategoryId] = useState(selectedSubCategoryId)
 
+  const isReadyEnabled = !!tempUserType && !!tempCategoryId && !!tempSubCategoryId;
+
   // Auto-open modal if user has no filter selections
   useEffect(() => {
     if (!urlCategoryId && !hasAutoOpened) {
@@ -512,7 +514,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
               </button>
               <button
                 onClick={handleApplyFilters}
-                className="px-10 py-3.5 bg-primary border-2 border-primary text-on-primary rounded-full text-xs font-black transition-all shadow-lg hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 uppercase tracking-[0.1em] cursor-pointer"
+                disabled={!isReadyEnabled}
+                className={`px-10 py-3.5 rounded-full text-xs font-black transition-all uppercase tracking-[0.1em] ${
+                  isReadyEnabled
+                    ? "bg-primary border-2 border-primary text-on-primary shadow-lg hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 cursor-pointer"
+                    : "bg-slate-200 border-2 border-slate-200 dark:bg-slate-800 dark:border-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
+                }`}
               >
                 {locale === "vi" ? "SẴN SÀNG" : "READY"}
               </button>

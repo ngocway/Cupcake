@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match the Words Game! 🌟</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            touch-action: none; /* Prevent scroll on touch devices */
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(15px);
+            box-shadow: 5px 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 200;
+            border-right: 2px solid rgba(255, 255, 255, 0.6);
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        /* Styling scrollbar for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 107, 107, 0.4);
+            border-radius: 10px;
+        }
+
+        .sidebar h2 {
+            color: #ff6b6b;
+            font-size: 2rem;
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 0 #fff;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .topic-btn {
+            background: #fff;
+            border: 4px solid #ff9f43;
+            border-radius: 20px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            width: 80%;
+            font-size: 1.5rem;
+            font-family: 'Fredoka One', cursive;
+            color: #ff9f43;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #ff9f43;
+            transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .topic-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 0 #ff9f43;
+        }
+
+        .topic-btn:active, .topic-btn.active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #feca57;
+            background: #ff9f43;
+            color: #fff;
+            border-color: #feca57;
+        }
+
+        /* Game Area Styles */
+        .game-area {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
+            color: #ff6b6b;
+            text-align: center;
+            width: 100%;
+            text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 6px 6px 15px rgba(0,0,0,0.2);
+            z-index: 100;
+            pointer-events: none;
+            animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: translate(-50%, -100px) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+
+        .game-item-image {
+            position: absolute;
+            font-size: 5rem;
+            width: 130px;
+            height: 130px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.7);
+            border: 5px dashed #ff9ff3;
+            border-radius: 50%;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: border-color 0.3s, background 0.3s;
+            overflow: hidden;
+        }
+
+        .game-item-image.matched {
+            border: 5px solid #1dd1a1 !important;
+            background: rgba(29, 209, 161, 0.3) !important;
+            animation: happyDance 0.5s ease;
+        }
+
+        @keyframes happyDance {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.2) rotate(-15deg); }
+            50% { transform: scale(1.2) rotate(15deg); }
+            75% { transform: scale(1.2) rotate(-15deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .game-item-text {
+            position: absolute;
+            font-size: 1.8rem;
+            padding: 12px 28px;
+            color: #fff;
+            border-radius: 50px;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 15px 20px rgba(0,0,0,0.2);
+            cursor: grab;
+            transition: transform 0.1s;
+            z-index: 50;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
+        }
+
+        .game-item-text:active, .game-item-text.dragging {
+            cursor: grabbing;
+            transform: scale(1.15) translateY(-10px) rotate(-3deg);
+            box-shadow: 0 0 0 rgba(0,0,0,0.2), 0 20px 25px rgba(0,0,0,0.3);
+            z-index: 1000 !important;
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            font-size: 2.5rem;
+            animation: pop 1s ease-out forwards;
+            z-index: 999;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.5) translate(0, 0); opacity: 1; }
+            100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            pointer-events: none;
+            animation: fall linear forwards;
+            z-index: 9999;
+            border-radius: 3px;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.6;
+            animation: floatCloud linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        @keyframes floatCloud {
+            from { transform: translateX(-200px); }
+            to { transform: translateX(100vw); }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                padding: 10px 0; 
+                flex-direction: row; 
+                flex-wrap: wrap; 
+                justify-content: center; 
+                border-right: none;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+            }
+            .sidebar h2 { display: none; }
+            .topic-btn { 
+                width: auto; 
+                margin: 5px; 
+                padding: 10px 15px; 
+                font-size: 1.2rem; 
+                gap: 5px;
+            }
+            .title { font-size: 2rem; top: 10px; }
+            .game-item-image { width: 90px; height: 90px; font-size: 3.5rem; }
+            .game-item-text { font-size: 1.5rem; padding: 10px 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar with Categories -->
+    <div class="sidebar">
+        <h2>📚 Topics</h2>
+    </div>
+
+    <!-- Game Area -->
+    <div class="game-area" id="gameArea">
+        <div class="title" id="titleText">Match the Words! 🌟</div>
+
+        <!-- Background clouds -->
+        <div class="cloud" style="width: 150px; height: 50px; top: 10%; animation-duration: 40s;"></div>
+        <div class="cloud" style="width: 100px; height: 35px; top: 30%; animation-duration: 25s; animation-delay: 5s;"></div>
+        <div class="cloud" style="width: 200px; height: 70px; top: 70%; animation-duration: 50s; animation-delay: 10s;"></div>
+    </div>
+
+    <script>
+        // Web Audio API Synthesizer Sound Effects
+        function playSuccessSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // First note (C5)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+                gain1.gain.setValueAtTime(1.0, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start();
+                osc1.stop(ctx.currentTime + 0.25);
+
+                // Second note (E5) with a slight delay
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+                gain2.gain.setValueAtTime(1.0, ctx.currentTime + 0.08);
+                gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(ctx.currentTime + 0.08);
+                osc2.stop(ctx.currentTime + 0.35);
+            } catch (e) {
+                console.log("Web Audio error", e);
+            }
+        }
+
+        function playErrorSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(160, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.22); // slide pitch down (boing)
+                gain.gain.setValueAtTime(1.0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.22);
+            } catch (e) {
+                console.log("Web Audio error", e);
+            }
+        }
+
+        function playWinSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 arpeggio
+                notes.forEach((freq, index) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + index * 0.08);
+                    gain.gain.setValueAtTime(0.8, ctx.currentTime + index * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + index * 0.08 + 0.35);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + index * 0.08);
+                    osc.stop(ctx.currentTime + index * 0.08 + 0.35);
+                });
+            } catch (e) {
+                console.log("Web Audio error", e);
+            }
+        }
+
+        async function speakWord(wordText) {
+            let spoken = false;
+            try {
+                // Try using Google AI Studio Gemini API (via local proxy endpoint)
+                const response = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: wordText,
+                        voice: 'Aoede', // Default clear voice
+                        speed: 0.85,
+                        mode: 'inline'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.url) {
+                        const audio = new Audio(data.url);
+                        audio.volume = 1.0;
+                        await audio.play();
+                        spoken = true;
+                    }
+                }
+            } catch (err) {
+                console.error("Gemini TTS API failed, falling back to Web Speech API", err);
+            }
+
+            // Fallback to Web Speech API
+            if (!spoken) {
+                try {
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(wordText);
+                        utterance.lang = 'en-US';
+                        utterance.rate = 0.85;
+                        utterance.pitch = 1.15;
+                        utterance.volume = 1.0;
+                        window.speechSynthesis.speak(utterance);
+                    }
+                } catch (e) {
+                    console.log("SpeechSynthesis error", e);
+                }
+            }
+        }
+        // Parse Query Parameter for Age Group
+        const urlParams = new URLSearchParams(window.location.search);
+        const ageGroup = urlParams.get('age') || '2-5';
+
+        // Data Structure for multiple categories based on age group
+        let topicsData = {};
+        let defaultTopic = '';
+
+        if (ageGroup === '6-12') {
+            topicsData = {
+                space: {
+                    title: 'Space & Universe! 🚀',
+                    icon: '🚀 Space',
+                    items: [
+                        { id: 'astronaut', emoji: '👨‍🚀', word: 'Astronaut', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'planet', emoji: '🪐', word: 'Planet', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'telescope', emoji: '🔭', word: 'Telescope', color: '#feca57', border: '#ff9f43' },
+                        { id: 'satellite', emoji: '🛰️', word: 'Satellite', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'comet', emoji: '☄️', word: 'Comet', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'galaxy', emoji: '🌌', word: 'Galaxy', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                hobbies: {
+                    title: 'Hobbies & Activities! 🎨',
+                    icon: '🎨 Hobbies',
+                    items: [
+                        { id: 'painting', emoji: '🎨', word: 'Painting', color: '#ff4757', border: '#ff6b81' },
+                        { id: 'photography', emoji: '📷', word: 'Photography', color: '#eccc68', border: '#ffa502' },
+                        { id: 'gardening', emoji: '🏡', word: 'Gardening', color: '#ff7f50', border: '#ff6348' },
+                        { id: 'cycling', emoji: '🚲', word: 'Cycling', color: '#9b59b6', border: '#8e44ad' },
+                        { id: 'skateboarding', emoji: '🛹', word: 'Skateboarding', color: '#ff6b81', border: '#ff4757' },
+                        { id: 'camping', emoji: '⛺', word: 'Camping', color: '#2ed573', border: '#1e90ff' }
+                    ]
+                },
+                nature: {
+                    title: 'Nature & Science! 🌋',
+                    icon: '🌋 Nature',
+                    items: [
+                        { id: 'volcano', emoji: '🌋', word: 'Volcano', color: '#1e90ff', border: '#5352ed' },
+                        { id: 'rainbow', emoji: '🌈', word: 'Rainbow', color: '#f1c40f', border: '#f39c12' },
+                        { id: 'microscope', emoji: '🔬', word: 'Microscope', color: '#1abc9c', border: '#16a085' },
+                        { id: 'compass', emoji: '🧭', word: 'Compass', color: '#e84393', border: '#d63031' },
+                        { id: 'waterfall', emoji: '🏞️', word: 'Waterfall', color: '#a4b0be', border: '#747d8c', image: 'waterfall.jpg' },
+                        { id: 'glacier', emoji: '🏔️', word: 'Glacier', color: '#ff9ff3', border: '#f368e0', image: 'glacier.png' }
+                    ]
+                },
+                weather: {
+                    title: 'Weather & Climate! ⛈️',
+                    icon: '⛈️ Weather',
+                    items: [
+                        { id: 'tornado', emoji: '🌪️', word: 'Tornado', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'lightning', emoji: '⚡', word: 'Lightning', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'blizzard', emoji: '❄️', word: 'Blizzard', color: '#feca57', border: '#ff9f43' },
+                        { id: 'hurricane', emoji: '🌀', word: 'Hurricane', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'drought', emoji: '🏜️', word: 'Drought', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'foggy', emoji: '🌫️', word: 'Foggy', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                sports: {
+                    title: 'Sports & Athletics! ⚽',
+                    icon: '⚽ Sports',
+                    items: [
+                        { id: 'basketball', emoji: '🏀', word: 'Basketball', color: '#ff4757', border: '#ff6b81' },
+                        { id: 'gymnastics', emoji: '🤸', word: 'Gymnastics', color: '#eccc68', border: '#ffa502' },
+                        { id: 'swimming', emoji: '🏊', word: 'Swimming', color: '#ff7f50', border: '#ff6348' },
+                        { id: 'badminton', emoji: '🏸', word: 'Badminton', color: '#9b59b6', border: '#8e44ad' },
+                        { id: 'volleyball', emoji: '🏐', word: 'Volleyball', color: '#ff6b81', border: '#ff4757' },
+                        { id: 'marathon', emoji: '🏃', word: 'Marathon', color: '#2ed573', border: '#1e90ff' }
+                    ]
+                },
+                careers: {
+                    title: 'Jobs & Careers! 🧑‍⚕️',
+                    icon: '🧑‍⚕️ Careers',
+                    items: [
+                        { id: 'scientist', emoji: '🧑‍🔬', word: 'Scientist', color: '#1e90ff', border: '#5352ed' },
+                        { id: 'detective', emoji: '🕵️', word: 'Detective', color: '#f1c40f', border: '#f39c12' },
+                        { id: 'engineer', emoji: '🧑‍💻', word: 'Engineer', color: '#1abc9c', border: '#16a085', image: 'engineer.png' },
+                        { id: 'musician', emoji: '🧑‍🎤', word: 'Musician', color: '#e84393', border: '#d63031', image: 'musician.png' },
+                        { id: 'archaeologist', emoji: '🤠', word: 'Archaeologist', color: '#a4b0be', border: '#747d8c', image: 'archaeologist.jpg' },
+                        { id: 'journalist', emoji: '🎤', word: 'Journalist', color: '#ff9ff3', border: '#f368e0', image: 'journalist.png' }
+                    ]
+                },
+                ocean: {
+                    title: 'Deep Ocean Life! 🐋',
+                    icon: '🐋 Ocean Life',
+                    items: [
+                        { id: 'whale', emoji: '🐳', word: 'Whale', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'octopus', emoji: '🐙', word: 'Octopus', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'shark', emoji: '🦈', word: 'Shark', color: '#feca57', border: '#ff9f43' },
+                        { id: 'jellyfish', emoji: '🪼', word: 'Jellyfish', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'dolphin', emoji: '🐬', word: 'Dolphin', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'crab', emoji: '🦀', word: 'Crab', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                music: {
+                    title: 'Musical Instruments! 🎻',
+                    icon: '🎻 Music',
+                    items: [
+                        { id: 'violin', emoji: '🎻', word: 'Violin', color: '#ff4757', border: '#ff6b81' },
+                        { id: 'trumpet', emoji: '🎺', word: 'Trumpet', color: '#eccc68', border: '#ffa502' },
+                        { id: 'guitar', emoji: '🎸', word: 'Guitar', color: '#ff7f50', border: '#ff6348' },
+                        { id: 'keyboard', emoji: '🎹', word: 'Keyboard', color: '#9b59b6', border: '#8e44ad' },
+                        { id: 'drums', emoji: '🥁', word: 'Drums', color: '#ff6b81', border: '#ff4757' },
+                        { id: 'flute', emoji: '🪈', word: 'Flute', color: '#2ed573', border: '#1e90ff' }
+                    ]
+                }
+            };
+            defaultTopic = 'space';
+        } else {
+            topicsData = {
+                animals: {
+                    title: 'Match the Animals! 🐾',
+                    icon: '🐶 Animals',
+                    items: [
+                        { id: 'dog', emoji: '🐶', word: 'Dog', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'cat', emoji: '🐱', word: 'Cat', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'lion', emoji: '🦁', word: 'Lion', color: '#feca57', border: '#ff9f43' },
+                        { id: 'elephant', emoji: '🐘', word: 'Elephant', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'monkey', emoji: '🐵', word: 'Monkey', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'pig', emoji: '🐷', word: 'Pig', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                fruits: {
+                    title: 'Match the Fruits! 🍎',
+                    icon: '🍎 Fruits',
+                    items: [
+                        { id: 'apple', emoji: '🍎', word: 'Apple', color: '#ff4757', border: '#ff6b81' },
+                        { id: 'banana', emoji: '🍌', word: 'Banana', color: '#eccc68', border: '#ffa502' },
+                        { id: 'orange', emoji: '🍊', word: 'Orange', color: '#ff7f50', border: '#ff6348' },
+                        { id: 'grape', emoji: '🍇', word: 'Grape', color: '#9b59b6', border: '#8e44ad' },
+                        { id: 'strawberry', emoji: '🍓', word: 'Strawberry', color: '#ff6b81', border: '#ff4757' },
+                        { id: 'watermelon', emoji: '🍉', word: 'Watermelon', color: '#2ed573', border: '#1e90ff' }
+                    ]
+                },
+                school: {
+                    title: 'School Supplies! 🎒',
+                    icon: '🎒 School',
+                    items: [
+                        { id: 'book', emoji: '📖', word: 'Book', color: '#1e90ff', border: '#5352ed' },
+                        { id: 'pencil', emoji: '✏️', word: 'Pencil', color: '#f1c40f', border: '#f39c12' },
+                        { id: 'ruler', emoji: '📏', word: 'Ruler', color: '#1abc9c', border: '#16a085' },
+                        { id: 'bag', emoji: '🎒', word: 'Bag', color: '#e84393', border: '#d63031' },
+                        { id: 'scissors', emoji: '✂️', word: 'Scissors', color: '#a4b0be', border: '#747d8c' },
+                        { id: 'eraser', emoji: '🧽', word: 'Eraser', color: '#ff9ff3', border: '#f368e0' }
+                    ]
+                },
+                colors: {
+                    title: 'Match the Colors! 🎨',
+                    icon: '🎨 Colors',
+                    items: [
+                        { id: 'red', emoji: '🔴', word: 'Red', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'blue', emoji: '🔵', word: 'Blue', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'green', emoji: '🟢', word: 'Green', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'yellow', emoji: '🟡', word: 'Yellow', color: '#feca57', border: '#ff9f43' },
+                        { id: 'pink', emoji: '🌸', word: 'Pink', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'orange', emoji: '🍊', word: 'Orange', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                shapes: {
+                    title: 'Fun Shapes! 🔺',
+                    icon: '🔺 Shapes',
+                    items: [
+                        { id: 'circle', emoji: '🔴', word: 'Circle', color: '#ff4757', border: '#ff6b81' },
+                        { id: 'triangle', emoji: '🔺', word: 'Triangle', color: '#eccc68', border: '#ffa502' },
+                        { id: 'star', emoji: '⭐', word: 'Star', color: '#ff7f50', border: '#ff6348' },
+                        { id: 'heart', emoji: '❤️', word: 'Heart', color: '#9b59b6', border: '#8e44ad' },
+                        { id: 'square', emoji: '⬜', word: 'Square', color: '#ff6b81', border: '#ff4757' },
+                        { id: 'oval', emoji: '🥚', word: 'Oval', color: '#2ed573', border: '#1e90ff' }
+                    ]
+                },
+                vehicles: {
+                    title: 'Things That Go! 🚗',
+                    icon: '🚗 Vehicles',
+                    items: [
+                        { id: 'car', emoji: '🚗', word: 'Car', color: '#1e90ff', border: '#5352ed' },
+                        { id: 'bus', emoji: '🚌', word: 'Bus', color: '#f1c40f', border: '#f39c12' },
+                        { id: 'plane', emoji: '✈️', word: 'Plane', color: '#1abc9c', border: '#16a085' },
+                        { id: 'train', emoji: '🚂', word: 'Train', color: '#e84393', border: '#d63031' },
+                        { id: 'bike', emoji: '🚲', word: 'Bike', color: '#a4b0be', border: '#747d8c' },
+                        { id: 'boat', emoji: '⛵', word: 'Boat', color: '#ff9ff3', border: '#f368e0' }
+                    ]
+                },
+                toys: {
+                    title: 'My Fun Toys! 🧸',
+                    icon: '🧸 Toys',
+                    items: [
+                        { id: 'doll', emoji: '🪆', word: 'Doll', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'ball', emoji: '⚽', word: 'Ball', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'blocks', emoji: '🧱', word: 'Blocks', color: '#feca57', border: '#ff9f43' },
+                        { id: 'teddy', emoji: '🧸', word: 'Teddy', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'kite', emoji: '🪁', word: 'Kite', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'balloon', emoji: '🎈', word: 'Balloon', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                body: {
+                    title: 'Body Parts! 👃',
+                    icon: '👃 Body Parts',
+                    items: [
+                        { id: 'eye', emoji: '👁️', word: 'Eye', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'nose', emoji: '👃', word: 'Nose', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'ear', emoji: '👂', word: 'Ear', color: '#feca57', border: '#ff9f43' },
+                        { id: 'mouth', emoji: '👄', word: 'Mouth', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'hand', emoji: '✋', word: 'Hand', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'foot', emoji: '🦶', word: 'Foot', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                vegetables: {
+                    title: 'Yummy Vegetables! 🥕',
+                    icon: '🥕 Vegetables',
+                    items: [
+                        { id: 'carrot', emoji: '🥕', word: 'Carrot', color: '#ff7f50', border: '#e15f41' },
+                        { id: 'potato', emoji: '🥔', word: 'Potato', color: '#feca57', border: '#ff9f43' },
+                        { id: 'tomato', emoji: '🍅', word: 'Tomato', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'corn', emoji: '🌽', word: 'Corn', color: '#eccc68', border: '#ffa502' },
+                        { id: 'broccoli', emoji: '🥦', word: 'Broccoli', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'onion', emoji: '🧅', word: 'Onion', color: '#ff9ff3', border: '#f368e0' }
+                    ]
+                },
+                clothes: {
+                    title: 'My Clothes! 👕',
+                    icon: '👕 Clothes',
+                    items: [
+                        { id: 'hat', emoji: '🧢', word: 'Hat', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'sock', emoji: '🧦', word: 'Sock', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'shoe', emoji: '👟', word: 'Shoe', color: '#feca57', border: '#ff9f43' },
+                        { id: 'shirt', emoji: '👕', word: 'Shirt', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'pants', emoji: '👖', word: 'Pants', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'dress', emoji: '👗', word: 'Dress', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                },
+                food: {
+                    title: 'Tasty Food! 🍕',
+                    icon: '🍕 Food',
+                    items: [
+                        { id: 'milk', emoji: '🥛', word: 'Milk', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'bread', emoji: '🍞', word: 'Bread', color: '#feca57', border: '#ff9f43' },
+                        { id: 'cake', emoji: '🍰', word: 'Cake', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'pizza', emoji: '🍕', word: 'Pizza', color: '#ff6b6b', border: '#ee5253' },
+                        { id: 'cookie', emoji: '🍪', word: 'Cookie', color: '#ff7f50', border: '#e15f41' },
+                        { id: 'cheese', emoji: '🧀', word: 'Cheese', color: '#eccc68', border: '#ffa502' }
+                    ]
+                },
+                nature: {
+                    title: 'Simple Nature! ☀️',
+                    icon: '☀️ Nature',
+                    items: [
+                        { id: 'sun', emoji: '☀️', word: 'Sun', color: '#feca57', border: '#ff9f43' },
+                        { id: 'moon', emoji: '🌙', word: 'Moon', color: '#9b59b6', border: '#8e44ad' },
+                        { id: 'tree', emoji: '🌳', word: 'Tree', color: '#1dd1a1', border: '#10ac84' },
+                        { id: 'flower', emoji: '🌸', word: 'Flower', color: '#ff9ff3', border: '#f368e0' },
+                        { id: 'cloud', emoji: '☁️', word: 'Cloud', color: '#0abde3', border: '#01a3a4' },
+                        { id: 'star', emoji: '⭐', word: 'Star', color: '#ff7f50', border: '#e15f41' }
+                    ]
+                }
+            };
+            defaultTopic = 'animals';
+        }
+
+        let currentTopic = defaultTopic;
+        let matchedCount = 0;
+        let elements = []; // Stores state for all elements
+        let animationId; // Keep track of animation loop
+        const gameArea = document.getElementById('gameArea');
+
+        // Dynamically Render Sidebar Buttons
+        function renderSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.innerHTML = '<h2>📚 Topics</h2>';
+            
+            Object.keys(topicsData).forEach((key) => {
+                const btn = document.createElement('button');
+                btn.className = 'topic-btn' + (key === currentTopic ? ' active' : '');
+                btn.innerHTML = topicsData[key].icon;
+                btn.onclick = () => loadTopic(key, btn);
+                sidebar.appendChild(btn);
+            });
+        }
+
+        // Function to switch topic
+        function loadTopic(topicKey, btnElement) {
+            document.querySelectorAll('.topic-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            currentTopic = topicKey;
+            init();
+        }
+
+        // Calculate layout coordinates (used for starting positions and resizing)
+        function calculateLayout() {
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            const W = gameAreaRect.width;
+            const H = gameAreaRect.height;
+            const isMobile = W <= 768;
+
+            const itemsCount = topicsData[currentTopic].items.length;
+
+            elements.forEach(obj => {
+                const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
+                const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
+
+                if (isMobile) {
+                    // Mobile grid layout: 3 columns x 2 rows
+                    const colWidth = W / 3;
+                    if (obj.type === 'img') {
+                        const col = obj.index % 3;
+                        const row = Math.floor(obj.index / 3);
+                        obj.startX = colWidth * col + (colWidth - elemWidth) / 2;
+                        obj.startY = 75 + row * 110;
+                    } else {
+                        const col = obj.shuffledIndex % 3;
+                        const row = Math.floor(obj.shuffledIndex / 3);
+                        obj.startX = colWidth * col + (colWidth - elemWidth) / 2;
+                        obj.startY = H - 180 + row * 75;
+                    }
+                } else {
+                    // Desktop horizontal row layout
+                    const colWidth = W / itemsCount;
+                    if (obj.type === 'img') {
+                        obj.startX = colWidth * obj.index + (colWidth - elemWidth) / 2;
+                        obj.startY = H * 0.22;
+                    } else {
+                        obj.startX = colWidth * obj.shuffledIndex + (colWidth - elemWidth) / 2;
+                        obj.startY = H * 0.62;
+                    }
+                }
+            });
+        }
+
+        function updatePosition(obj) {
+            const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
+            const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
+            obj.el.style.left = (obj.x - elemWidth / 2) + 'px';
+            obj.el.style.top = (obj.y - elemHeight / 2) + 'px';
+        }
+
+        // Initialize or Restart Game
+        function init() {
+            // Render sidebar if not done yet
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar.children.length <= 1) {
+                renderSidebar();
+            }
+            
+            // Clear old game elements (keep title and clouds)
+            const dynamicElements = gameArea.querySelectorAll('.game-item-image, .game-item-text, .confetti, .particle');
+            dynamicElements.forEach(el => el.remove());
+
+            // Reset game state
+            matchedCount = 0;
+            elements = [];
+            
+            const topic = topicsData[currentTopic];
+            
+            // Update Title and animate it
+            const titleEl = document.getElementById('titleText');
+            titleEl.textContent = topic.title;
+            titleEl.style.color = '#ff6b6b';
+            titleEl.style.animation = 'none';
+            titleEl.offsetHeight; // trigger reflow
+            titleEl.style.animation = 'bounceIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+
+            // Prepare shuffled indices for word placement
+            const items = topic.items;
+            const indices = Array.from({ length: items.length }, (_, i) => i);
+            const shuffledIndices = [...indices];
+            // Fisher-Yates shuffle
+            for (let i = shuffledIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledIndices[i], shuffledIndices[j]] = [shuffledIndices[j], shuffledIndices[i]];
+            }
+
+            // Create new items for the selected topic
+            items.forEach((item, index) => {
+                // 1. Create Drop Zone (Emoji or Image)
+                const imgEl = document.createElement('div');
+                imgEl.classList.add('game-item-image');
+                if (item.image) {
+                    const imgNode = document.createElement('img');
+                    imgNode.src = item.image;
+                    imgNode.style.width = '100%';
+                    imgNode.style.height = '100%';
+                    imgNode.style.objectFit = 'cover';
+                    imgEl.appendChild(imgNode);
+                } else {
+                    imgEl.textContent = item.emoji;
+                }
+                imgEl.style.borderColor = item.color;
+                imgEl.style.backgroundColor = item.color + '22'; // 13% opacity for a nice pastel background tint
+                gameArea.appendChild(imgEl);
+                
+                // 2. Create Draggable Text
+                const txtEl = document.createElement('div');
+                txtEl.classList.add('game-item-text');
+                txtEl.textContent = item.word;
+                txtEl.style.backgroundColor = item.color;
+                txtEl.style.border = `4px solid ${item.border}`;
+                gameArea.appendChild(txtEl);
+
+                const shuffledIndex = shuffledIndices[index];
+
+                // Initial state setup
+                const imgObj = { 
+                    id: item.id, 
+                    el: imgEl, 
+                    type: 'img', 
+                    matched: false, 
+                    index: index, 
+                    shuffledIndex: shuffledIndex,
+                    x: 0, 
+                    y: 0,
+                    vx: 0,
+                    vy: 0,
+                    radius: 65
+                };
+                const txtObj = { 
+                    id: item.id, 
+                    el: txtEl, 
+                    type: 'txt', 
+                    matched: false, 
+                    index: index, 
+                    shuffledIndex: shuffledIndex,
+                    x: 0, 
+                    y: 0, 
+                    vx: 0,
+                    vy: 0,
+                    radius: 80,
+                    dragging: false 
+                };
+
+                // Initialize random slow velocities
+                const speedImg = Math.random() * 0.4 + 0.4;
+                const angleImg = Math.random() * Math.PI * 2;
+                imgObj.vx = Math.cos(angleImg) * speedImg;
+                imgObj.vy = Math.sin(angleImg) * speedImg;
+
+                const speedTxt = Math.random() * 0.4 + 0.4;
+                const angleTxt = Math.random() * Math.PI * 2;
+                txtObj.vx = Math.cos(angleTxt) * speedTxt;
+                txtObj.vy = Math.sin(angleTxt) * speedTxt;
+
+                elements.push(imgObj, txtObj);
+
+                // Setup Custom Dragging
+                setupDrag(txtObj, imgEl, item.word);
+            });
+
+            // Set positions based on initial layout coordinates
+            calculateLayout();
+            elements.forEach(obj => {
+                const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
+                const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
+                obj.x = obj.startX + elemWidth / 2;
+                obj.y = obj.startY + elemHeight / 2;
+                obj.radius = Math.max(elemWidth, elemHeight) / 2 + 5;
+                updatePosition(obj);
+            });
+
+            // Start animation loop if not running
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Bouncing and movement logic
+        function animate() {
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            const W = gameAreaRect.width;
+            const H = gameAreaRect.height;
+            const isMobile = W <= 768;
+            const topMargin = isMobile ? 80 : 130;
+            const padding = 15;
+
+            // 1. Update velocities and check boundary bounces
+            elements.forEach(obj => {
+                if (obj.matched) return; // locked items do not float
+                if (obj.dragging) return; // dragged item position is set by cursor
+
+                const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
+                const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
+                obj.radius = Math.max(elemWidth, elemHeight) / 2 + 5;
+
+                // Move element
+                obj.x += obj.vx;
+                obj.y += obj.vy;
+
+                // Bounce off left/right edges
+                if (obj.x - obj.radius < padding) {
+                    obj.x = padding + obj.radius;
+                    obj.vx = Math.abs(obj.vx);
+                } else if (obj.x + obj.radius > W - padding) {
+                    obj.x = W - padding - obj.radius;
+                    obj.vx = -Math.abs(obj.vx);
+                }
+
+                // Bounce off top/bottom edges
+                if (obj.y - obj.radius < topMargin) {
+                    obj.y = topMargin + obj.radius;
+                    obj.vy = Math.abs(obj.vy);
+                } else if (obj.y + obj.radius > H - padding) {
+                    obj.y = H - padding - obj.radius;
+                    obj.vy = -Math.abs(obj.vy);
+                }
+            });
+
+            // 2. Resolve element-to-element collisions (bouncing off each other)
+            for (let i = 0; i < elements.length; i++) {
+                const obj1 = elements[i];
+                if (obj1.matched) continue;
+
+                for (let j = i + 1; j < elements.length; j++) {
+                    const obj2 = elements[j];
+                    if (obj2.matched) continue;
+
+                    const dx = obj2.x - obj1.x;
+                    const dy = obj2.y - obj1.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = obj1.radius + obj2.radius;
+
+                    if (dist < minDist) {
+                        const overlap = minDist - dist;
+                        const nx = dx / (dist || 1);
+                        const ny = dy / (dist || 1);
+
+                        if (!obj1.dragging && !obj2.dragging) {
+                            // Both are floating: push apart equally
+                            obj1.x -= nx * overlap * 0.5;
+                            obj1.y -= ny * overlap * 0.5;
+                            obj2.x += nx * overlap * 0.5;
+                            obj2.y += ny * overlap * 0.5;
+
+                            // Elastic bounce velocities
+                            const kx = obj1.vx - obj2.vx;
+                            const ky = obj1.vy - obj2.vy;
+                            const p = kx * nx + ky * ny;
+
+                            if (p > 0) {
+                                obj1.vx -= p * nx;
+                                obj1.vy -= p * ny;
+                                obj2.vx += p * nx;
+                                obj2.vy += p * ny;
+                            }
+                        } else if (obj1.dragging) {
+                            // obj1 is dragged. If obj1 is text and obj2 is image, allow overlap.
+                            if (obj1.type === 'txt' && obj2.type === 'img') {
+                                // Allow overlap
+                            } else {
+                                // Push obj2 away
+                                obj2.x += nx * overlap;
+                                obj2.y += ny * overlap;
+                                obj2.vx = nx * Math.abs(obj2.vx);
+                                obj2.vy = ny * Math.abs(obj2.vy);
+                            }
+                        } else if (obj2.dragging) {
+                            // obj2 is dragged. If obj2 is text and obj1 is image, allow overlap.
+                            if (obj2.type === 'txt' && obj1.type === 'img') {
+                                // Allow overlap
+                            } else {
+                                // Push obj1 away
+                                obj1.x -= nx * overlap;
+                                obj1.y -= ny * overlap;
+                                obj1.vx = -nx * Math.abs(obj1.vx);
+                                obj1.vy = -ny * Math.abs(obj1.vy);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Render position updates
+            elements.forEach(obj => {
+                if (!obj.dragging) {
+                    updatePosition(obj);
+                }
+            });
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Custom drag logic
+        function setupDrag(txtObj, imgEl, wordText) {
+            let startX, startY, initialX, initialY;
+
+            txtObj.el.addEventListener('pointerdown', (e) => {
+                if (txtObj.matched) return;
+                
+                txtObj.dragging = true;
+                txtObj.el.classList.add('dragging');
+                txtObj.el.style.transition = '';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                initialX = txtObj.x;
+                initialY = txtObj.y;
+            });
+
+            document.addEventListener('pointermove', (e) => {
+                if (!txtObj.dragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                txtObj.x = initialX + dx;
+                txtObj.y = initialY + dy;
+                updatePosition(txtObj);
+            });
+
+            document.addEventListener('pointerup', (e) => {
+                if (!txtObj.dragging) return;
+                
+                txtObj.dragging = false;
+                txtObj.el.classList.remove('dragging');
+
+                // Check collision based on bounding boxes
+                const txtRect = txtObj.el.getBoundingClientRect();
+                const imgRect = imgEl.getBoundingClientRect();
+
+                const isOverlap = !(
+                    txtRect.right < imgRect.left || 
+                    txtRect.left > imgRect.right || 
+                    txtRect.bottom < imgRect.top || 
+                    txtRect.top > imgRect.bottom
+                );
+
+                if (isOverlap) {
+                    // 🎉 Matched Successfully!
+                    txtObj.matched = true;
+                    
+                    const imgObj = elements.find(o => o.el === imgEl);
+                    imgObj.matched = true;
+
+                    // Stop velocities
+                    imgObj.vx = 0; imgObj.vy = 0;
+                    txtObj.vx = 0; txtObj.vy = 0;
+
+                    // Snap the text elegantly below the image inside the game area
+                    txtObj.x = imgObj.x;
+                    txtObj.y = imgObj.y + 65 + 35 - 15; // snapped offset
+                    
+                    txtObj.el.style.transition = 'left 0.2s ease-out, top 0.2s ease-out';
+                    updatePosition(txtObj);
+                    setTimeout(() => {
+                        txtObj.el.style.transition = '';
+                    }, 200);
+                    
+                    imgEl.classList.add('matched');
+                    playSuccessSound();
+                    speakWord(wordText);
+                    
+                    createParticles(e.clientX, e.clientY);
+                    
+                    matchedCount++;
+                    const totalItems = topicsData[currentTopic].items.length;
+                    if (matchedCount === totalItems) {
+                        setTimeout(winGame, 800);
+                    }
+                } else {
+                    // ❌ Missed! Play funny mismatch sound if overlapping wrong target
+                    const anyWrongOverlap = elements.some(otherObj => {
+                        if (otherObj.type === 'img' && otherObj.el !== imgEl && !otherObj.matched) {
+                            const otherRect = otherObj.el.getBoundingClientRect();
+                            return !(txtRect.right < otherRect.left || txtRect.left > otherRect.right || txtRect.bottom < otherRect.top || txtRect.top > otherRect.bottom);
+                        }
+                        return false;
+                    });
+
+                    if (anyWrongOverlap) {
+                        playErrorSound();
+                    }
+                }
+            });
+        }
+
+        // Fun star explosion effect on correct match
+        function createParticles(x, y) {
+            const emojis = ['⭐', '✨', '💖', '🌟'];
+            for(let i = 0; i < 12; i++) {
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                
+                const gameAreaRect = gameArea.getBoundingClientRect();
+                p.style.left = (x - gameAreaRect.left) + 'px';
+                p.style.top = (y - gameAreaRect.top) + 'px';
+                
+                const tx = (Math.random() - 0.5) * 250 + 'px';
+                const ty = (Math.random() - 0.5) * 250 + 'px';
+                p.style.setProperty('--tx', tx);
+                p.style.setProperty('--ty', ty);
+                
+                gameArea.appendChild(p);
+                setTimeout(() => p.remove(), 1000);
+            }
+        }
+
+        // Winning animation
+        function winGame() {
+            playWinSound();
+            
+            const title = document.getElementById('titleText');
+            title.textContent = 'YOU WIN! 🎉🎉🎉';
+            title.style.transform = 'translate(-50%, 0) scale(1.3)';
+            title.style.transition = 'transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+            title.style.color = '#1dd1a1';
+            
+            // Shower confetti
+            for(let i = 0; i < 120; i++) {
+                const c = document.createElement('div');
+                c.classList.add('confetti');
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = -20 + 'px';
+                const colors = ['#ff6b6b', '#0abde3', '#feca57', '#1dd1a1', '#ff9ff3'];
+                c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Randomize shape (some circles, some rectangles)
+                if (Math.random() > 0.5) c.style.borderRadius = '50%';
+                
+                c.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+                c.style.animationDelay = (Math.random() * 2) + 's';
+                gameArea.appendChild(c);
+            }
+        }
+
+        // Prevent screen resizing from breaking positions
+        window.addEventListener('resize', () => {
+            calculateLayout();
+            elements.forEach(obj => {
+                if (obj.matched) {
+                    if (obj.type === 'img') {
+                        obj.x = obj.startX + (obj.el.offsetWidth || 130) / 2;
+                        obj.y = obj.startY + (obj.el.offsetHeight || 130) / 2;
+                    } else {
+                        const imgObj = elements.find(o => o.type === 'img' && o.id === obj.id);
+                        if (imgObj) {
+                            obj.x = imgObj.x;
+                            obj.y = imgObj.y + 65 + 35 - 15;
+                        }
+                    }
+                    updatePosition(obj);
+                } else {
+                    // Keep unmatched elements inside boundaries
+                    const gameAreaRect = gameArea.getBoundingClientRect();
+                    const W = gameAreaRect.width;
+                    const H = gameAreaRect.height;
+                    const padding = 20;
+                    if (obj.x > W - padding) obj.x = W - padding;
+                    if (obj.y > H - padding) obj.y = H - padding;
+                }
+            });
+        });
+
+        // Initialize game on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

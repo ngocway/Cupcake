@@ -89,7 +89,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           </Link>
           <Link 
             className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-foreground/40 hover:text-primary hover:scale-105'}`} 
-            href="#"
+            href="/student/game"
           >
             {t("game")}
           </Link>

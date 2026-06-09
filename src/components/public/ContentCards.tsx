@@ -95,7 +95,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
           <div className="flex items-center flex-wrap gap-2">
             {item.targetAudiences && item.targetAudiences.length > 0 && (
               <div className="flex items-center gap-1">
-                {Array.from(new Set(item.targetAudiences as string[])).slice(0, 3).map((aud: string) => (
+                {Array.from(new Set((item.targetAudiences as string[]).map(a => String(a).toLowerCase()))).slice(0, 3).map((aud: string) => (
                   <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
                     {aud === 'kids' ? 'Kids' : aud === 'teens' ? 'Teens' : aud === 'adults' ? 'Adults' : aud === 'business' ? 'Business' : aud}
                   </span>
@@ -226,7 +226,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
           <div className="flex items-center flex-wrap gap-2">
             {item.targetAudiences && item.targetAudiences.length > 0 && (
               <div className="flex items-center gap-1">
-                {Array.from(new Set(item.targetAudiences as string[])).slice(0, 3).map((aud: string) => (
+                {Array.from(new Set((item.targetAudiences as string[]).map(a => String(a).toLowerCase()))).slice(0, 3).map((aud: string) => (
                   <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
                     {aud === 'kids' ? 'Kids' : aud === 'teens' ? 'Teens' : aud === 'adults' ? 'Adults' : aud === 'business' ? 'Business' : aud}
                   </span>

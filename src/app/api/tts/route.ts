@@ -161,7 +161,30 @@ export async function POST(req: Request) {
     await s3Client.send(command);
 
     const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
-    return NextResponse.json({ success: true, url: publicUrl, audioUrl: publicUrl });
+
+    let words = null;
+    if (mode === "global") {
+      try {
+        const { toFile } = await import("openai");
+        const file = await toFile(buffer, "speech.wav", { type: "audio/wav" });
+        const transcription = await openai.audio.transcriptions.create({
+          file,
+          model: "whisper-1",
+          response_format: "verbose_json",
+          timestamp_granularities: ["word"],
+        });
+        words = transcription.words;
+      } catch (err) {
+        console.error("OpenAI Whisper alignment failed:", err);
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      url: publicUrl, 
+      audioUrl: publicUrl,
+      words
+    });
   } catch (error: any) {
     console.error("TTS API Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

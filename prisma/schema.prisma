@@ -170,6 +170,7 @@ model Assignment {
   thumbnail             String?
   videoUrl              String?
   audioUrl              String?
+  audioMetadata         Json?
   ttsVoice              String?              @default("Aoede")
   ttsSpeed              Float?               @default(1.0)
   viewCount             Int                  @default(0)
@@ -303,6 +304,7 @@ model Lesson {
   description     String?
   videoUrl        String?
   audioUrl        String?
+  audioMetadata   Json?
   isPremium       Boolean          @default(false)
   price           Float            @default(0)
   viewsCount      Int              @default(0)

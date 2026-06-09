@@ -43,6 +43,84 @@ import { CSS } from '@dnd-kit/utilities';
 
 const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
 
+function alignAndWrapHtml(htmlContent: string, whisperWords: Array<{word: string, start: number, end: number}>) {
+  if (typeof document === 'undefined') return htmlContent;
+  if (!whisperWords || whisperWords.length === 0) return htmlContent;
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+  
+  const textNodes: Node[] = [];
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (node.textContent?.trim()) {
+        textNodes.push(node);
+      }
+    } else {
+      if (node instanceof HTMLElement) {
+        if (node.classList.contains('inline-audio-marker') || node.classList.contains('inline-audio-wrapper')) {
+          return;
+        }
+      }
+      for (let child = node.firstChild; child; child = child.nextSibling) {
+        walk(child);
+      }
+    }
+  };
+  
+  walk(doc.body);
+  
+  let whisperIdx = 0;
+  
+  for (const textNode of textNodes) {
+    const parent = textNode.parentNode;
+    if (!parent) continue;
+    
+    const text = textNode.textContent || '';
+    const tokens = text.split(/(\s+|[.,!?;:"()\[\]{}–—\-#\/*+]+)/);
+    const fragment = doc.createDocumentFragment();
+    
+    for (const token of tokens) {
+      if (!token) continue;
+      
+      if (/\w+/.test(token)) {
+        const cleanToken = token.replace(/[^\w]/g, '').toLowerCase();
+        let matchedWord = null;
+        
+        for (let i = 0; i < 6; i++) {
+          const wWord = whisperWords[whisperIdx + i];
+          if (!wWord) break;
+          const cleanWWord = wWord.word.replace(/[^\w]/g, '').toLowerCase();
+          
+          if (cleanToken === cleanWWord || cleanToken.includes(cleanWWord) || cleanWWord.includes(cleanToken)) {
+            matchedWord = wWord;
+            whisperIdx += i + 1;
+            break;
+          }
+        }
+        
+        if (matchedWord) {
+          const span = doc.createElement('span');
+          span.className = 'reading-word';
+          span.setAttribute('data-start', matchedWord.start.toString());
+          span.setAttribute('data-end', matchedWord.end.toString());
+          span.textContent = token;
+          fragment.appendChild(span);
+        } else {
+          fragment.appendChild(doc.createTextNode(token));
+          if (whisperWords[whisperIdx]) whisperIdx++;
+        }
+      } else {
+        fragment.appendChild(doc.createTextNode(token));
+      }
+    }
+    
+    parent.replaceChild(fragment, textNode);
+  }
+  
+  return doc.body.innerHTML;
+}
+
 function SortableQuestionItem({ 
   q, 
   idx, 
@@ -195,6 +273,7 @@ export function ReadingExerciseBuilder({
       const contentHtml = editor?.innerHTML || '';
       
       const currentQuestionsHash = JSON.stringify(questions);
+      const currentAudioMetadataHash = JSON.stringify(audioMetadata);
       
       const payload: any = {
         id: assignmentId || initialId || 'clp_reading_001',
@@ -227,6 +306,10 @@ export function ReadingExerciseBuilder({
             isTrue: q.type === 'TRUE_FALSE' ? q.correctAnswer === 'true' : undefined
           }
         }));
+      }
+
+      if (currentAudioMetadataHash !== lastSavedAudioMetadataHash) {
+        payload.audioMetadata = audioMetadata;
       }
 
       await autoSaveMaterial(payload);
@@ -291,6 +374,8 @@ export function ReadingExerciseBuilder({
   const [ttsVoice, setTtsVoice] = useState<string>('Aoede');
   const [ttsSpeed, setTtsSpeed] = useState<number>(1.0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [audioMetadata, setAudioMetadata] = useState<any>(null);
+  const [lastSavedAudioMetadataHash, setLastSavedAudioMetadataHash] = useState<string | null>(null);
 
   const handleThumbnailChange = async (newValue: string | null) => {
     setIsUploadingThumbnail(true);
@@ -616,7 +701,7 @@ export function ReadingExerciseBuilder({
             setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
           }
           if (data.assignment.targetAudiences) {
-            setTargetAudiences(data.assignment.targetAudiences || []);
+            setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
           }
           if (data.assignment.lesson || data.assignment.lessonId) {
             setBelongsToLesson(true);
@@ -625,6 +710,13 @@ export function ReadingExerciseBuilder({
           setMaterialType(data.assignment.materialType || 'READING');
           setTtsVoice(data.assignment.ttsVoice || 'Aoede');
           setTtsSpeed(data.assignment.ttsSpeed || 1.0);
+          
+          if (data.assignment.audioMetadata) {
+            setAudioMetadata(data.assignment.audioMetadata);
+            setLastSavedAudioMetadataHash(JSON.stringify(data.assignment.audioMetadata));
+          } else {
+            setLastSavedAudioMetadataHash(JSON.stringify(null));
+          }
           
           if (data.assignment.questions) {
             setLastSavedQuestionsHash(JSON.stringify(data.assignment.questions));
@@ -841,12 +933,23 @@ export function ReadingExerciseBuilder({
       }
       
       const generatedAudioUrl = data.audioUrl || data.url;
+      const whisperWords = data.words;
+      
+      let finalHtml = contentHtml;
+      if (whisperWords && whisperWords.length > 0) {
+        finalHtml = alignAndWrapHtml(contentHtml, whisperWords);
+        if (editor) {
+          editor.innerHTML = finalHtml;
+        }
+        setAudioMetadata(whisperWords);
+      }
+      
       setAudioUrl(generatedAudioUrl);
       toast.success('Tạo audio toàn bài bằng AI thành công!', { id: toastId });
       
       // Kích hoạt lưu lại thay đổi
       setTimeout(() => {
-        handleSave(title, videoUrl, generatedAudioUrl);
+        handleSave(title, videoUrl, generatedAudioUrl, finalHtml, whisperWords);
       }, 500);
       
     } catch (err: any) {
@@ -858,16 +961,24 @@ export function ReadingExerciseBuilder({
   };
 
 
-  const handleSave = async (customTitle?: string, customVideoUrl?: string, customAudioUrl?: string) => {
+  const handleSave = async (
+    customTitle?: string, 
+    customVideoUrl?: string, 
+    customAudioUrl?: string,
+    customReadingText?: string,
+    customAudioMetadata?: any
+  ) => {
     const idToSave = assignmentId || initialId || 'clp_reading_001';
     if (!idToSave) return;
     
     setSavingStatus('saving');
     try {
       const editor = document.getElementById('rich-text-editor');
-      const contentHtml = editor?.innerHTML || '';
+      const contentHtml = customReadingText !== undefined ? customReadingText : (editor?.innerHTML || '');
       
       const currentQuestionsHash = JSON.stringify(questions);
+      const targetMetadata = customAudioMetadata !== undefined ? customAudioMetadata : audioMetadata;
+      const currentAudioMetadataHash = JSON.stringify(targetMetadata);
       
       const payload: any = {
         id: idToSave,
@@ -899,12 +1010,17 @@ export function ReadingExerciseBuilder({
         }));
       }
 
+      if (currentAudioMetadataHash !== lastSavedAudioMetadataHash) {
+        payload.audioMetadata = targetMetadata;
+      }
+
       await autoSaveMaterial(payload);
       
       setSavingStatus('saved');
       setLastSaved(new Date());
       setLastSavedContentHtml(contentHtml);
       setLastSavedQuestionsHash(currentQuestionsHash);
+      setLastSavedAudioMetadataHash(currentAudioMetadataHash);
       setTimeout(() => setSavingStatus('idle'), 2000);
     } catch (error) {
       console.error('Save failed:', error);

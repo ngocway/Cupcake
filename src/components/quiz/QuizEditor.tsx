@@ -279,7 +279,7 @@ export function QuizEditor() {
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
           if (data.assignment.targetAudiences) {
-            setTargetAudiences(data.assignment.targetAudiences || []);
+            setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
           }
           if (data.assignment.lesson || data.assignment.lessonId) {
             setBelongsToLesson(true);

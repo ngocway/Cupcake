@@ -103,6 +103,8 @@ export default async function StudentQuizPage({
           title: true,
           slug: true,
           tags: true,
+          targetAudiences: true,
+          lesson: { select: { id: true } },
           questions: { orderBy: { orderIndex: 'asc' } }
         }
       }

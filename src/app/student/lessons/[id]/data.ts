@@ -15,6 +15,7 @@ export const getLessonBasic = cache(async (id: string) => {
       description: true,
       videoUrl: true,
       audioUrl: true,
+      audioMetadata: true,
       teacherId: true,
       assignment: {
         select: {
@@ -22,7 +23,8 @@ export const getLessonBasic = cache(async (id: string) => {
           slug: true,
           thumbnail: true,
           readingText: true,
-          audioUrl: true
+          audioUrl: true,
+          audioMetadata: true
         }
       }
     }

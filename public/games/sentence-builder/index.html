@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentence Builder Game! 🧩</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            touch-action: manipulation;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(15px);
+            box-shadow: 5px 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 200;
+            border-right: 2px solid rgba(255, 255, 255, 0.6);
+            flex-shrink: 0;
+        }
+
+        .sidebar h2 {
+            color: #6c5ce7;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            text-align: center;
+            letter-spacing: 1px;
+            font-weight: 900;
+        }
+
+        .level-btn {
+            background: #fff;
+            border: 4px solid #a29bfe;
+            border-radius: 20px;
+            padding: 15px 20px;
+            margin: 10px 0;
+            width: 80%;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #a29bfe;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #a29bfe;
+            transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 0 #a29bfe;
+        }
+
+        .level-btn:active, .level-btn.active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #6c5ce7;
+            background: #6c5ce7;
+            color: #fff;
+            border-color: #6c5ce7;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        /* Header */
+        .header {
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .title {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #ff7675;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Game Area */
+        .game-area {
+            flex-grow: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            gap: 20px;
+        }
+
+        /* Image Area */
+        .image-area {
+            width: 100%;
+            max-width: 400px;
+            height: 250px;
+            background-color: #fff;
+            border: 6px solid #ffeaa7;
+            border-radius: 24px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .image-area img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .progress-text {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 900;
+            color: #2d3436;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        /* Dropzone / Answer Area */
+        .dropzone-container {
+            width: 100%;
+            min-height: 80px;
+            background: rgba(255, 255, 255, 0.6);
+            border: 4px dashed #74b9ff;
+            border-radius: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.02);
+            transition: all 0.3s;
+        }
+        
+        .dropzone-container.success {
+            border: 4px solid #00b894;
+            background: rgba(0, 184, 148, 0.1);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 184, 148, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
+        }
+
+        /* Word Pool */
+        .word-pool {
+            width: 100%;
+            min-height: 150px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 15px;
+            background: rgba(108, 92, 231, 0.1);
+            border-radius: 20px;
+        }
+
+        /* Word Blocks */
+        .word-block {
+            font-size: 1.4rem;
+            font-weight: 900;
+            padding: 10px 20px;
+            background: #fff;
+            color: #2d3436;
+            border: 3px solid #b2bec3;
+            border-radius: 12px;
+            box-shadow: 0 4px 0 #b2bec3;
+            cursor: grab;
+            transition: transform 0.1s;
+            display: inline-block;
+            touch-action: none;
+        }
+        
+        .word-block:active {
+            cursor: grabbing;
+        }
+
+        /* Status Colors inside Dropzone */
+        .dropzone-container .word-block.correct {
+            background: #55efc4;
+            color: #00b894;
+            border-color: #00b894;
+            box-shadow: 0 4px 0 #00b894;
+        }
+
+        .dropzone-container .word-block.incorrect {
+            background: #ff7675;
+            color: #fff;
+            border-color: #d63031;
+            box-shadow: 0 4px 0 #d63031;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        /* Placeholder for Sortable */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #dfe6e9 !important;
+            border-color: #b2bec3 !important;
+            box-shadow: none !important;
+            color: transparent !important;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            pointer-events: none;
+            animation: fall linear forwards;
+            z-index: 9999;
+            border-radius: 3px;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                padding: 10px 0; 
+                flex-direction: row; 
+                flex-wrap: wrap; 
+                justify-content: center; 
+                border-right: none;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+            }
+            .sidebar h2 { display: none; }
+            .level-btn { 
+                width: auto; 
+                margin: 5px; 
+                padding: 8px 15px; 
+                font-size: 1rem; 
+            }
+            .title { font-size: 1.2rem; }
+            .image-area { height: 180px; }
+            .word-block { font-size: 1.1rem; padding: 8px 15px; }
+            .dropzone-container { min-height: 60px; padding: 10px; }
+        }
+    </style>
+    <!-- Include SortableJS for Mobile-friendly Drag and Drop -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+</head>
+<body>
+
+    <!-- Sidebar with Categories -->
+    <div class="sidebar">
+        <h2>📚 Levels</h2>
+        <button class="level-btn active" onclick="loadLevel('level1', this)">🌟 Level 1</button>
+        <button class="level-btn" onclick="loadLevel('level2', this)">🚀 Level 2</button>
+        <button class="level-btn" onclick="loadLevel('level3', this)">👑 Level 3</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="game-area">
+            <!-- Image Area -->
+            <div class="image-area" style="position: relative;">
+                <div class="progress-text" id="progressText">1/5</div>
+                <img id="mainImage" src="" alt="Task Image">
+                <div id="levelCompleteOverlay" style="display: none; position: absolute; inset: 0; background: #fff; justify-content: center; align-items: center; font-size: 2.2rem; color: #00b894; font-weight: 900; text-align: center; animation: pulse 2s infinite; z-index: 20; padding: 10px; box-sizing: border-box;">LEVEL COMPLETE! 🎉</div>
+            </div>
+
+            <!-- Dropzone Area -->
+            <div class="dropzone-container" id="dropzone"></div>
+
+            <!-- Word Pool Area -->
+            <div class="word-pool" id="wordPool"></div>
+        </div>
+    </div>
+
+    <!-- Free sound effects from mixkit -->
+    <audio id="success-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-ethereal-fairy-win-sound-2019.mp3"></audio>
+    <audio id="error-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-funny-squishy-sound-2838.mp3"></audio>
+    <audio id="drop-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-modern-click-box-check-1120.mp3"></audio>
+    <audio id="win-level-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-cheering-crowd-loud-whistle-610.mp3"></audio>
+
+    <script>
+        const gameData = {
+            level1: [
+                { image: "/games/sentence-builder/images/monkey.jpg", expected: ["The", "monkey", "eats", "a", "banana"], pool: ["The", "monkey", "eats", "a", "banana", "apple", "an", "dog", "is"], audio: "/games/sentence-builder/audio/l1_q1.wav" },
+                { image: "/games/sentence-builder/images/cat.jpg", expected: ["The", "cat", "likes", "fish"], pool: ["A", "cat", "likes", "fish", "dog", "bone", "eats", "The", "an"], audio: "/games/sentence-builder/audio/l1_q2.wav" },
+                { image: "/games/sentence-builder/images/boy_school.jpg", expected: ["He", "goes", "to", "school"], pool: ["He", "goes", "to", "school", "She", "plays", "at", "home", "a"], audio: "/games/sentence-builder/audio/l1_q3.wav" },
+                { image: "/games/sentence-builder/images/dog.jpg", expected: ["The", "dog", "is", "happy"], pool: ["The", "dog", "is", "happy", "sad", "cat", "are", "A"], audio: "/games/sentence-builder/audio/l1_q4.wav" },
+                { image: "/games/sentence-builder/images/girl_bird.jpg", expected: ["I", "see", "a", "bird"], pool: ["I", "see", "a", "bird", "He", "looks", "the", "cat"], audio: "/games/sentence-builder/audio/l1_q5.wav" },
+                { image: "/games/sentence-builder/images/apple_red.png", expected: ["The", "apple", "is", "red"], pool: ["The", "apple", "is", "red", "banana", "are", "green", "A"], audio: "/games/sentence-builder/audio/l1_q6.wav" },
+                { image: "/games/sentence-builder/images/girl_doll.png", expected: ["She", "has", "a", "doll"], pool: ["She", "has", "a", "doll", "He", "have", "toy", "the"], audio: "/games/sentence-builder/audio/l1_q7.wav" },
+                { image: "/games/sentence-builder/images/child_play.png", expected: ["I", "like", "to", "play"], pool: ["I", "like", "to", "play", "run", "eat", "the", "He"], audio: "/games/sentence-builder/audio/l1_q8.wav" },
+                { image: "/games/sentence-builder/images/l1_q9.jpg", expected: ["A", "green", "frog", "jumps"], pool: ["A", "green", "frog", "jumps", "toad", "red", "swims", "The"], audio: "/games/sentence-builder/audio/l1_q9.wav" },
+                { image: "/games/sentence-builder/images/l1_q10.jpg", expected: ["The", "sun", "is", "hot"], pool: ["The", "sun", "is", "hot", "cold", "moon", "are", "star"], audio: "/games/sentence-builder/audio/l1_q10.wav" },
+                { image: "/games/sentence-builder/images/l1_q11.jpg", expected: ["I", "have", "two", "eyes"], pool: ["I", "have", "two", "eyes", "has", "one", "ears", "nose"], audio: "/games/sentence-builder/audio/l1_q11.wav" },
+                { image: "/games/sentence-builder/images/l1_q12.jpg", expected: ["A", "cow", "eats", "grass"], pool: ["A", "cow", "eats", "grass", "meat", "pig", "drinks", "The"], audio: "/games/sentence-builder/audio/l1_q12.wav" },
+                { image: "/games/sentence-builder/images/l1_q13.jpg", expected: ["The", "pig", "is", "pink"], pool: ["The", "pig", "is", "pink", "blue", "sheep", "are", "cow"], audio: "/games/sentence-builder/audio/l1_q13.wav" },
+                { image: "/games/sentence-builder/images/l1_q14.jpg", expected: ["She", "plays", "the", "piano"], pool: ["She", "plays", "the", "piano", "guitar", "He", "sings", "a"], audio: "/games/sentence-builder/audio/l1_q14.wav" },
+                { image: "/games/sentence-builder/images/l1_q15.jpg", expected: ["A", "bird", "can", "fly"], pool: ["A", "bird", "can", "fly", "swim", "fish", "cannot", "The"], audio: "/games/sentence-builder/audio/l1_q15.wav" },
+                { image: "/games/sentence-builder/images/l1_q16.jpg", expected: ["The", "fish", "can", "swim"], pool: ["The", "fish", "can", "swim", "fly", "bird", "cannot", "A"], audio: "/games/sentence-builder/audio/l1_q16.wav" },
+                { image: "/games/sentence-builder/images/l1_q17.jpg", expected: ["He", "rides", "a", "bike"], pool: ["He", "rides", "a", "bike", "car", "She", "drives", "the"], audio: "/games/sentence-builder/audio/l1_q17.wav" },
+                { image: "/games/sentence-builder/images/l1_q18.jpg", expected: ["My", "dad", "has", "a", "car"], pool: ["My", "dad", "has", "a", "car", "mom", "have", "bike", "the"], audio: "/games/sentence-builder/audio/l1_q18.wav" },
+                { image: "/games/sentence-builder/images/l1_q19.jpg", expected: ["The", "flower", "is", "yellow"], pool: ["The", "flower", "is", "yellow", "red", "leaf", "are", "tree"], audio: "/games/sentence-builder/audio/l1_q19.wav" },
+                { image: "/games/sentence-builder/images/l1_q20.jpg", expected: ["We", "love", "our", "school"], pool: ["We", "love", "our", "school", "hate", "they", "my", "home"], audio: "/games/sentence-builder/audio/l1_q20.wav" }
+            ],
+            level2: [
+                { image: "/games/sentence-builder/images/girl_reading.png", expected: ["She", "is", "reading", "a", "book"], pool: ["She", "is", "reading", "a", "book", "He", "writing", "the", "paper"], audio: "/games/sentence-builder/audio/l2_q1.wav" },
+                { image: "/games/sentence-builder/images/play_football.jpg", expected: ["They", "are", "playing", "football"], pool: ["They", "are", "playing", "football", "He", "is", "basketball", "we"], audio: "/games/sentence-builder/audio/l2_q2.wav" },
+                { image: "/games/sentence-builder/images/sun_shining.png", expected: ["The", "sun", "is", "shining"], pool: ["The", "sun", "is", "shining", "moon", "are", "bright", "A"], audio: "/games/sentence-builder/audio/l2_q3.wav" },
+                { image: "/games/sentence-builder/images/mom_cooking.jpg", expected: ["My", "mom", "cooks", "dinner"], pool: ["My", "mom", "cooks", "dinner", "dad", "eats", "breakfast", "I"], audio: "/games/sentence-builder/audio/l2_q4.wav" },
+                { image: "/games/sentence-builder/images/go_park.jpg", expected: ["We", "go", "to", "the", "park"], pool: ["We", "go", "to", "the", "park", "They", "goes", "a", "school"], audio: "/games/sentence-builder/audio/l2_q5.wav" },
+                { image: "/games/sentence-builder/images/l2_q6.jpg", expected: ["The", "brown", "bear", "climbs", "a", "tree"], pool: ["The", "brown", "bear", "climbs", "a", "tree", "black", "monkey", "on"], audio: "/games/sentence-builder/audio/l2_q6.wav" },
+                { image: "/games/sentence-builder/images/l2_q7.jpg", expected: ["A", "butterfly", "has", "beautiful", "wings"], pool: ["A", "butterfly", "has", "beautiful", "wings", "bird", "ugly", "have"], audio: "/games/sentence-builder/audio/l2_q7.wav" },
+                { image: "/games/sentence-builder/images/l2_q8.jpg", expected: ["We", "eat", "pizza", "for", "lunch"], pool: ["We", "eat", "pizza", "for", "lunch", "dinner", "burger", "they"], audio: "/games/sentence-builder/audio/l2_q8.wav" },
+                { image: "/games/sentence-builder/images/l2_q9.jpg", expected: ["The", "rabbit", "hops", "in", "the", "yard"], pool: ["The", "rabbit", "hops", "in", "the", "yard", "forest", "runs", "A"], audio: "/games/sentence-builder/audio/l2_q9.wav" },
+                { image: "/games/sentence-builder/images/l2_q10.jpg", expected: ["He", "is", "painting", "a", "picture"], pool: ["He", "is", "painting", "a", "picture", "drawing", "She", "the"], audio: "/games/sentence-builder/audio/l2_q10.wav" },
+                { image: "/games/sentence-builder/images/l2_q11.jpg", expected: ["They", "build", "a", "big", "sandcastle"], pool: ["They", "build", "a", "big", "sandcastle", "small", "made", "we"], audio: "/games/sentence-builder/audio/l2_q11.wav" },
+                { image: "/games/sentence-builder/images/l2_q12.jpg", expected: ["My", "sister", "plays", "with", "a", "kitten"], pool: ["My", "sister", "plays", "with", "a", "kitten", "puppy", "brother"], audio: "/games/sentence-builder/audio/l2_q12.wav" },
+                { image: "/games/sentence-builder/images/l2_q13.jpg", expected: ["The", "elephant", "has", "a", "long", "trunk"], pool: ["The", "elephant", "has", "a", "long", "trunk", "nose", "short", "tail"], audio: "/games/sentence-builder/audio/l2_q13.wav" },
+                { image: "/games/sentence-builder/images/l2_q14.jpg", expected: ["We", "watch", "a", "movie", "together"], pool: ["We", "watch", "a", "movie", "together", "alone", "listen", "song"], audio: "/games/sentence-builder/audio/l2_q14.wav" },
+                { image: "/games/sentence-builder/images/l2_q15.jpg", expected: ["She", "wears", "a", "pretty", "red", "dress"], pool: ["She", "wears", "a", "pretty", "red", "dress", "blue", "ugly", "skirt"], audio: "/games/sentence-builder/audio/l2_q15.wav" },
+                { image: "/games/sentence-builder/images/l2_q16.jpg", expected: ["The", "train", "travels", "on", "the", "tracks"], pool: ["The", "train", "travels", "on", "the", "tracks", "road", "car", "runs"], audio: "/games/sentence-builder/audio/l2_q16.wav" },
+                { image: "/games/sentence-builder/images/l2_q17.jpg", expected: ["A", "monkey", "swings", "on", "the", "vine"], pool: ["A", "monkey", "swings", "on", "the", "vine", "branch", "jumps", "The"], audio: "/games/sentence-builder/audio/l2_q17.wav" },
+                { image: "/games/sentence-builder/images/l2_q18.jpg", expected: ["My", "teacher", "helps", "me", "learn"], pool: ["My", "teacher", "helps", "me", "learn", "parent", "teaches", "him"], audio: "/games/sentence-builder/audio/l2_q18.wav" },
+                { image: "/games/sentence-builder/images/l2_q19.jpg", expected: ["The", "dolphin", "swims", "in", "the", "ocean"], pool: ["The", "dolphin", "swims", "in", "the", "ocean", "river", "jumps", "A"], audio: "/games/sentence-builder/audio/l2_q19.wav" },
+                { image: "/games/sentence-builder/images/l2_q20.jpg", expected: ["He", "sleeps", "in", "a", "comfortable", "bed"], pool: ["He", "sleeps", "in", "a", "comfortable", "bed", "sofa", "hard", "She"], audio: "/games/sentence-builder/audio/l2_q20.wav" }
+            ],
+            level3: [
+                { image: "/games/sentence-builder/images/fox_jump.png", expected: ["The", "fox", "jumps", "high"], pool: ["The", "fox", "jumps", "high", "runs", "slow", "dog", "cat", "A"], audio: "/games/sentence-builder/audio/l3_q1.wav" },
+                { image: "/games/sentence-builder/images/lions_jungle.png", expected: ["Lions", "live", "in", "the", "jungle"], pool: ["Lions", "live", "in", "the", "jungle", "Tiger", "lives", "a", "forest"], audio: "/games/sentence-builder/audio/l3_q2.wav" },
+                { image: "/games/sentence-builder/images/visit_beach.png", expected: ["I", "want", "to", "visit", "the", "beach"], pool: ["I", "want", "to", "visit", "the", "beach", "He", "wants", "a", "mountain"], audio: "/games/sentence-builder/audio/l3_q3.wav" },
+                { image: "/games/sentence-builder/images/eat_vegetables.png", expected: ["Eating", "vegetables", "is", "good", "for", "you"], pool: ["Eating", "vegetables", "is", "good", "for", "you", "bad", "fruits", "me", "are"], audio: "/games/sentence-builder/audio/l3_q4.wav" },
+                { image: "/games/sentence-builder/images/travel_airplane.png", expected: ["We", "will", "travel", "by", "airplane"], pool: ["We", "will", "travel", "by", "airplane", "They", "travels", "in", "car"], audio: "/games/sentence-builder/audio/l3_q5.wav" },
+                { image: "/games/sentence-builder/images/l3_q6.jpg", expected: ["The", "majestic", "lion", "roars", "in", "the", "wild"], pool: ["The", "majestic", "lion", "roars", "in", "the", "wild", "forest", "tiger"], audio: "/games/sentence-builder/audio/l3_q6.wav" },
+                { image: "/games/sentence-builder/images/l3_q7.jpg", expected: ["Astronauts", "travel", "to", "outer", "space", "in", "rockets"], pool: ["Astronauts", "travel", "to", "outer", "space", "in", "rockets", "cars", "plane"], audio: "/games/sentence-builder/audio/l3_q7.wav" },
+                { image: "/games/sentence-builder/images/l3_q8.jpg", expected: ["We", "should", "protect", "the", "environment", "from", "pollution"], pool: ["We", "should", "protect", "the", "environment", "from", "pollution", "trash", "air"], audio: "/games/sentence-builder/audio/l3_q8.wav" },
+                { image: "/games/sentence-builder/images/l3_q9.jpg", expected: ["The", "ancient", "castle", "stands", "on", "the", "mountain"], pool: ["The", "ancient", "castle", "stands", "on", "the", "mountain", "hill", "palace"], audio: "/games/sentence-builder/audio/l3_q9.wav" },
+                { image: "/games/sentence-builder/images/l3_q10.jpg", expected: ["She", "plays", "the", "violin", "beautifully", "in", "concert"], pool: ["She", "plays", "the", "violin", "beautifully", "in", "concert", "piano", "stage"], audio: "/games/sentence-builder/audio/l3_q10.wav" },
+                { image: "/games/sentence-builder/images/l3_q11.jpg", expected: ["A", "clever", "detective", "solves", "the", "mystery", "case"], pool: ["A", "clever", "detective", "solves", "the", "mystery", "case", "cop", "crime"], audio: "/games/sentence-builder/audio/l3_q11.wav" },
+                { image: "/games/sentence-builder/images/l3_q12.jpg", expected: ["The", "colorful", "rainbow", "appears", "after", "the", "rain"], pool: ["The", "colorful", "rainbow", "appears", "after", "the", "rain", "storm", "sun"], audio: "/games/sentence-builder/audio/l3_q12.wav" },
+                { image: "/games/sentence-builder/images/l3_q13.jpg", expected: ["We", "learn", "about", "history", "in", "the", "museum"], pool: ["We", "learn", "about", "history", "in", "the", "museum", "school", "science"], audio: "/games/sentence-builder/audio/l3_q13.wav" },
+                { image: "/games/sentence-builder/images/l3_q14.jpg", expected: ["The", "submarine", "dives", "deep", "under", "the", "sea"], pool: ["The", "submarine", "dives", "deep", "under", "the", "sea", "ocean", "ship"], audio: "/games/sentence-builder/audio/l3_q14.wav" },
+                { image: "/games/sentence-builder/images/l3_q15.jpg", expected: ["He", "conducts", "a", "scientific", "experiment", "in", "lab"], pool: ["He", "conducts", "a", "scientific", "experiment", "in", "lab", "test", "class"], audio: "/games/sentence-builder/audio/l3_q15.wav" },
+                { image: "/games/sentence-builder/images/l3_q16.jpg", expected: ["A", "wise", "owl", "perches", "on", "the", "branch"], pool: ["A", "wise", "owl", "perches", "on", "the", "branch", "tree", "bird"], audio: "/games/sentence-builder/audio/l3_q16.wav" },
+                { image: "/games/sentence-builder/images/l3_q17.jpg", expected: ["The", "volcanic", "eruption", "produces", "hot", "red", "lava"], pool: ["The", "volcanic", "eruption", "produces", "hot", "red", "lava", "ash", "mountain"], audio: "/games/sentence-builder/audio/l3_q17.wav" },
+                { image: "/games/sentence-builder/images/l3_q18.jpg", expected: ["We", "explore", "the", "mysterious", "cave", "with", "flashlights"], pool: ["We", "explore", "the", "mysterious", "cave", "with", "flashlights", "lamps", "dark"], audio: "/games/sentence-builder/audio/l3_q18.wav" },
+                { image: "/games/sentence-builder/images/l3_q19.jpg", expected: ["The", "majestic", "eagle", "flies", "high", "in", "sky"], pool: ["The", "majestic", "eagle", "flies", "high", "in", "sky", "cloud", "hawk"], audio: "/games/sentence-builder/audio/l3_q19.wav" },
+                { image: "/games/sentence-builder/images/l3_q20.jpg", expected: ["She", "bakes", "delicious", "chocolate", "cupcakes", "for", "party"], pool: ["She", "bakes", "delicious", "chocolate", "cupcakes", "for", "party", "cake", "cooks"], audio: "/games/sentence-builder/audio/l3_q20.wav" }
+            ]
+        };
+
+        let currentLevelKey = 'level1';
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let gameFinished = false;
+
+        const dropzone = document.getElementById('dropzone');
+        const wordPool = document.getElementById('wordPool');
+        const mainImage = document.getElementById('mainImage');
+        const progressText = document.getElementById('progressText');
+        const levelCompleteOverlay = document.getElementById('levelCompleteOverlay');
+
+        function playSound(id) {
+            const sound = document.getElementById(id);
+            sound.currentTime = 0;
+            sound.play().catch(e => console.log(e));
+        }
+
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // Initialize SortableJS
+        const sortableDropzone = new Sortable(dropzone, {
+            group: 'shared',
+            animation: 150,
+            onAdd: function (evt) {
+                playSound('drop-sound');
+                checkAnswer();
+            },
+            onUpdate: function (evt) {
+                playSound('drop-sound');
+                checkAnswer();
+            },
+            onRemove: function (evt) {
+                playSound('drop-sound');
+                evt.item.className = 'word-block';
+                checkAnswer();
+            }
+        });
+
+        const sortablePool = new Sortable(wordPool, {
+            group: 'shared',
+            animation: 150
+        });
+
+        // Switch Level from Sidebar
+        function loadLevel(levelKey, btnElement) {
+            document.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('active'));
+            if(btnElement) btnElement.classList.add('active');
+
+            currentLevelKey = levelKey;
+            currentQuestions = shuffle(gameData[levelKey]); // Shuffle copy of level questions
+            currentQuestionIndex = 0;
+            initQuestion();
+        }
+
+        function initQuestion() {
+            gameFinished = false;
+            dropzone.className = 'dropzone-container';
+            dropzone.innerHTML = '';
+            wordPool.innerHTML = '';
+
+            // Reset Level Complete screen if visible
+            levelCompleteOverlay.style.display = 'none';
+            mainImage.style.display = 'block';
+            progressText.style.display = 'block';
+
+            if (currentQuestions.length === 0) {
+                currentQuestions = shuffle(gameData[currentLevelKey]);
+            }
+
+            const qData = currentQuestions[currentQuestionIndex];
+            
+            mainImage.src = qData.image;
+            progressText.textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
+
+            // Restore sorting capabilities
+            sortableDropzone.option("disabled", false);
+            sortablePool.option("disabled", false);
+
+            const shuffledPool = shuffle(qData.pool);
+            shuffledPool.forEach((word) => {
+                const btn = document.createElement('div');
+                btn.className = 'word-block';
+                btn.textContent = word;
+                btn.dataset.word = word;
+                wordPool.appendChild(btn);
+            });
+        }
+
+        function checkAnswer() {
+            if (gameFinished) return;
+
+            const qData = currentQuestions[currentQuestionIndex];
+            const currentWords = Array.from(dropzone.children);
+            
+            let allCorrect = true;
+            let hasError = false;
+
+            currentWords.forEach((el, index) => {
+                const wordText = el.dataset.word;
+                const expectedWord = qData.expected[index];
+
+                el.classList.remove('correct', 'incorrect');
+
+                if (expectedWord === undefined) {
+                    el.classList.add('incorrect');
+                    allCorrect = false;
+                    hasError = true;
+                } else if (wordText === expectedWord) {
+                    el.classList.add('correct');
+                } else {
+                    el.classList.add('incorrect');
+                    allCorrect = false;
+                    hasError = true;
+                }
+            });
+
+            if (allCorrect && currentWords.length === qData.expected.length) {
+                winQuestion();
+            }
+        }
+
+        function winQuestion() {
+            gameFinished = true;
+            dropzone.className = 'dropzone-container success';
+            playSound('success-sound');
+            createConfetti(40);
+
+            // Play correct sentence audio after a short delay
+            const qData = currentQuestions[currentQuestionIndex];
+            setTimeout(() => {
+                const sentenceAudio = new Audio(qData.audio);
+                sentenceAudio.play().catch(e => console.log(e));
+            }, 600);
+
+            sortableDropzone.option("disabled", true);
+            sortablePool.option("disabled", true);
+
+            setTimeout(() => {
+                if (currentQuestionIndex + 1 < currentQuestions.length) {
+                    // Next question in the same level
+                    currentQuestionIndex++;
+                    initQuestion();
+                } else {
+                    // Finished entire level
+                    showLevelComplete();
+                }
+            }, 3500);
+        }
+
+        function showLevelComplete() {
+            playSound('win-level-sound');
+            
+            // Hide standard image area elements
+            mainImage.style.display = 'none';
+            progressText.style.display = 'none';
+            
+            // Show level complete overlay
+            levelCompleteOverlay.style.display = 'flex';
+            
+            dropzone.innerHTML = '';
+            wordPool.innerHTML = '';
+
+            createConfetti(150);
+        }
+
+        function createConfetti(amount) {
+            for(let i = 0; i < amount; i++) {
+                const c = document.createElement('div');
+                c.classList.add('confetti');
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = -20 + 'px';
+                const colors = ['#ff7675', '#0984e3', '#fdcb6e', '#00b894', '#a29bfe'];
+                c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                if (Math.random() > 0.5) c.style.borderRadius = '50%';
+                c.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+                c.style.animationDelay = (Math.random() * 0.5) + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 4000);
+            }
+        }
+
+        // Start game
+        window.addEventListener('DOMContentLoaded', initQuestion);
+    </script>
+</body>
+</html>

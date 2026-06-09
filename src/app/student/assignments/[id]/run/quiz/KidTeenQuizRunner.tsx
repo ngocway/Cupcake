@@ -460,6 +460,12 @@ interface Props {
   isGuest?: boolean;
 }
 
+function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
+  const extraData = React.use(promise) as any;
+  if (!extraData || !extraData.teacher) return null;
+  return <FloatingTeacherInfo teacher={extraData.teacher} onNavigate={handleSafeNavigate} />;
+}
+
 function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<any>, isGuest: boolean, t: any }) {
   const extraData = React.use(promise);
   if (!extraData) return null;
@@ -827,7 +833,9 @@ export default function KidTeenQuizRunner({
             </BackButton>
           </div>
           <div className="absolute left-6 top-3 z-40 hidden md:block">
-            <FloatingTeacherInfo teacher={assignment.teacher} onNavigate={handleSafeNavigate} />
+            <React.Suspense fallback={<div className="w-[72px] h-[72px] rounded-full bg-slate-200 animate-pulse border-4 border-white shadow-lg" />}>
+              <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
+            </React.Suspense>
           </div>
           <h2 className="flex-1 text-sm font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight pr-2">
             {assignment.title || "FUN WITH SCHOOL TOOLS: QUIZ FOR LITTLE LEARNERS"}
@@ -916,7 +924,7 @@ export default function KidTeenQuizRunner({
 
       {/* ── MAIN CONTENT (Image Background) ── */}
       <div 
-        className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        className="flex-1 flex flex-col items-center justify-start sm:justify-center p-2 pt-4 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
       {questions.length > 0 && (
@@ -1030,7 +1038,7 @@ export default function KidTeenQuizRunner({
 
               {/* ── MULTIPLE CHOICE / SELECT ── */}
               {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-x-8 gap-y-[clamp(1rem,4dvh,2rem)] pt-[clamp(0.5rem,1.5dvh,1rem)]">
+                <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-8 gap-y-[clamp(1rem,4dvh,2rem)] pt-[clamp(0.5rem,1.5dvh,1rem)] w-full">
                   {(currentQuestionData.options || []).map((option: any, i: number) => {
                     const isSelected = isMultiSelect
                       ? Array.isArray(userAnswer) && userAnswer.includes(i)
@@ -1100,7 +1108,7 @@ export default function KidTeenQuizRunner({
                         key={i}
                         disabled={isChecked}
                         onClick={() => handleAnswerChange(currentQuestion, i)}
-                        className={`group relative min-h-[clamp(4.5rem,9dvh,6rem)] w-full ${blobShape} py-[clamp(0.75rem,2dvh,1.25rem)] px-[clamp(1rem,3vw,1.5rem)] transition-all duration-700 flex flex-col items-center justify-center border-[3px] shadow-lg ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.03]" : ""}`}
+                        className={`group relative min-h-[clamp(4.5rem,9dvh,6rem)] w-auto flex-auto min-w-[140px] max-w-full ${blobShape} py-[clamp(0.75rem,2dvh,1.25rem)] px-[clamp(1rem,3vw,1.5rem)] transition-all duration-700 flex flex-col items-center justify-center border-[3px] shadow-lg ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.03]" : ""}`}
                         style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
                       >
                         {/* Floating Badge (A, B, C, D) */}

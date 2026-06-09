@@ -29,12 +29,14 @@ export function GlobalAudioPlayer({ audioUrl }: GlobalAudioPlayerProps) {
 
     const setAudioTime = () => {
       setProgress((audio.currentTime / audio.duration) * 100);
+      window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: audio.currentTime } }));
     };
 
     const handleAudioEnd = () => {
       setIsPlaying(false);
       setProgress(0);
       audio.currentTime = 0;
+      window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
     };
 
     const handlePauseEvent = () => {
@@ -57,6 +59,7 @@ export function GlobalAudioPlayer({ audioUrl }: GlobalAudioPlayerProps) {
       audio.removeEventListener('ended', handleAudioEnd);
       audio.removeEventListener('pause', handlePauseEvent);
       audio.removeEventListener('play', handlePlayEvent);
+      window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
     };
   }, []);
 

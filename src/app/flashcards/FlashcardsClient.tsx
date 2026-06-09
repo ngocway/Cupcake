@@ -631,23 +631,35 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
               {isKidMode ? (
                 // KIDS & KID: Bubbly preschool cartoon style image container
                 <div className="w-full h-full rounded-[32px] overflow-hidden relative border-4 border-amber-100 bg-amber-50/20">
-                  <img 
-                    key={activeCard?.id}
-                    src={activeCard?.imageUrl || ""} 
-                    alt="Flashcard illustration"
-                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                  />
+                  {activeCard?.imageUrl ? (
+                    <img 
+                      key={activeCard?.id}
+                      src={activeCard.imageUrl} 
+                      alt="Flashcard illustration"
+                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-6xl opacity-30">✨</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 // TEEN & READERS: Clean modern image and word on front
                 <div className="w-full h-full flex flex-col justify-between">
                   <div className="w-full h-[68%] rounded-2xl overflow-hidden relative border border-slate-100 bg-slate-50 shrink-0">
-                    <img 
-                      key={activeCard?.id}
-                      src={activeCard?.imageUrl || ""} 
-                      alt="Flashcard illustration"
-                      className="w-full h-full object-cover"
-                    />
+                    {activeCard?.imageUrl ? (
+                      <img 
+                        key={activeCard?.id}
+                        src={activeCard.imageUrl} 
+                        alt="Flashcard illustration"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-4xl opacity-30">🖼️</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 flex flex-col justify-center items-center pt-4">
                     <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none text-center">

@@ -592,7 +592,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         materialType: "READING",
         status: "DRAFT",
         teacherId: session.user.id,
-        targetAudiences: data.targetAudience ? [data.targetAudience] : [],
+        targetAudiences: data.targetAudience ? [data.targetAudience.toLowerCase()] : [],
         tags: finalTags,
         categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
       }
@@ -605,7 +605,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         description: data.shortDescription,
         teacherId: session.user.id,
         assignmentId: assignmentId,
-        targetAudiences: data.targetAudience ? [data.targetAudience] : [],
+        targetAudiences: data.targetAudience ? [data.targetAudience.toLowerCase()] : [],
         categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
       }
     });

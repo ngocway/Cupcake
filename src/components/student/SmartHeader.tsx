@@ -81,7 +81,7 @@ export function SmartHeader({ session }: SmartHeaderProps) {
                 </Link>
                 <Link 
                   className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
-                  href="#"
+                  href="/student/game"
                 >
                   {t("game")}
                 </Link>

@@ -44,6 +44,7 @@ export function CustomAudioPlayer({
     audio.currentTime = 0;
     setIsPlaying(false);
     setCurrentTime(0);
+    window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
   };
 
   const changeSpeed = (speed: number) => {
@@ -74,7 +75,10 @@ export function CustomAudioPlayer({
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: audio.currentTime } }));
+    };
 
     const handleLoadedMetadata = () => {
       // duration is reliable here
@@ -93,6 +97,7 @@ export function CustomAudioPlayer({
     const handleEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
+      window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -113,6 +118,7 @@ export function CustomAudioPlayer({
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('ended', handleEnded);
+      window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);

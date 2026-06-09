@@ -128,6 +128,7 @@ export async function autoSaveMaterial(payload: {
   thumbnail?: string | null;
   ttsVoice?: string;
   ttsSpeed?: number;
+  audioMetadata?: any;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -168,7 +169,7 @@ export async function autoSaveMaterial(payload: {
     };
 
     if (existing) {
-      const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'shortDescription', 'tags', 'instructions'];
+      const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'shortDescription', 'tags', 'instructions', 'audioMetadata'];
       for (const field of fields) {
         if (payload[field as keyof typeof payload] !== undefined && payload[field as keyof typeof payload] !== existing[field as keyof typeof existing]) {
           updatePayload[field] = payload[field as keyof typeof payload] || null;
@@ -188,6 +189,7 @@ export async function autoSaveMaterial(payload: {
       updatePayload.shortDescription = payload.shortDescription || null;
       updatePayload.tags = payload.tags || "";
       updatePayload.instructions = payload.instructions || null;
+      updatePayload.audioMetadata = payload.audioMetadata || null;
     }
 
     const newSlug = !existing ? await generateUniqueSlug(payload.title, 'assignment') : undefined;
@@ -205,6 +207,7 @@ export async function autoSaveMaterial(payload: {
         audioUrl: payload.audioUrl || null,
         ttsVoice: payload.ttsVoice || null,
         ttsSpeed: payload.ttsSpeed || null,
+        audioMetadata: payload.audioMetadata || null,
         subject: payload.subject || null,
         gradeLevel: payload.gradeLevel || null,
         shortDescription: payload.shortDescription || null,
@@ -240,6 +243,9 @@ export async function autoSaveMaterial(payload: {
       }
       if (payload.audioUrl !== undefined) {
         lessonUpdateData.audioUrl = payload.audioUrl || null;
+      }
+      if (payload.audioMetadata !== undefined) {
+        lessonUpdateData.audioMetadata = payload.audioMetadata || null;
       }
       if (thumbnail !== undefined) {
         lessonUpdateData.thumbnail = thumbnail || null;
