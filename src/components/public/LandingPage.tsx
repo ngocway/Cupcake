@@ -378,6 +378,14 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     <div className="space-y-6 relative">
       {/* Dynamic height styles for modal viewport compression */}
       <style>{`
+        .modal-card::-webkit-scrollbar {
+          display: none;
+        }
+        .modal-card {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
         @media (max-height: 850px) {
           .modal-card {
             padding: 1.25rem !important;
@@ -474,13 +482,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
               <div className="inline-block border-2 border-sky-300 px-4 py-1.5 bg-sky-100/60 text-sky-900 rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] shadow-sm transform -rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
                 {activeNames.subCategoryName || "All Topics"}
               </div>
-            </div>
-
-            {/* Change link below */}
-            <div className="pt-2">
               <button
                 onClick={handleOpenModal}
-                className="text-sm md:text-base font-black text-secondary hover:text-secondary-dim underline underline-offset-4 cursor-pointer focus:outline-none transition-colors"
+                className="text-sm md:text-base font-black text-secondary hover:text-secondary-dim underline underline-offset-4 cursor-pointer focus:outline-none transition-colors ml-2"
               >
                 Change
               </button>

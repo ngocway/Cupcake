@@ -6,13 +6,17 @@ export const metadata = {
 }
 
 export default async function AdminMatchWordsPage() {
-  const [games2to5Res, games6to12Res] = await Promise.all([
+  const [games2to5Res, games6to12Res, gamesTeenRes, gamesReadersRes] = await Promise.all([
     getMatchWordGames("2-5"),
-    getMatchWordGames("6-12")
+    getMatchWordGames("6-12"),
+    getMatchWordGames("teen"),
+    getMatchWordGames("readers")
   ])
 
   const games2to5 = games2to5Res.success ? games2to5Res.games : []
   const games6to12 = games6to12Res.success ? games6to12Res.games : []
+  const gamesTeen = gamesTeenRes.success ? gamesTeenRes.games : []
+  const gamesReaders = gamesReadersRes.success ? gamesReadersRes.games : []
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -27,6 +31,8 @@ export default async function AdminMatchWordsPage() {
       <AdminMatchWordsClient 
         initialGames2to5={games2to5 as any} 
         initialGames6to12={games6to12 as any} 
+        initialGamesTeen={gamesTeen as any}
+        initialGamesReaders={gamesReaders as any}
       />
     </div>
   )

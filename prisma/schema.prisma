@@ -649,13 +649,14 @@ model GlobalFlashcard {
 }
 
 model MatchWordGame {
-  id        String           @id @default(cuid())
-  name      String
-  ageGroup  String // "2-5" or "6-12"
-  order     Int              @default(0)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  topics    MatchWordTopic[]
+  id           String           @id @default(cuid())
+  name         String
+  ageGroup     String // "2-5" or "6-12"
+  order        Int              @default(0)
+  thumbnailUrl String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  topics       MatchWordTopic[]
 }
 
 model MatchWordTopic {
@@ -682,4 +683,28 @@ model MatchWordItem {
   topic     MatchWordTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+}
+
+model SentenceBuilderGame {
+  id           String                    @id @default(cuid())
+  name         String
+  ageGroup     String?
+  order        Int                       @default(0)
+  thumbnailUrl String?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  questions    SentenceBuilderQuestion[]
+}
+
+model SentenceBuilderQuestion {
+  id         String              @id @default(cuid())
+  gameId     String
+  game       SentenceBuilderGame @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  image      String
+  expected   String[]
+  pool       String[]
+  audio      String?
+  orderIndex Int                 @default(0)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 }

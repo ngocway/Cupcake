@@ -293,8 +293,8 @@
 </head>
 <body>
 
-    <!-- Sidebar with Categories -->
-    <div class="sidebar">
+    <!-- Sidebar with Categories (Hidden for Dynamic Mode) -->
+    <div class="sidebar" id="sidebar" style="display: none;">
         <h2>📚 Levels</h2>
         <button class="level-btn active" onclick="loadLevel('level1', this)">🌟 Level 1</button>
         <button class="level-btn" onclick="loadLevel('level2', this)">🚀 Level 2</button>
@@ -326,76 +326,6 @@
     <audio id="win-level-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-cheering-crowd-loud-whistle-610.mp3"></audio>
 
     <script>
-        const gameData = {
-            level1: [
-                { image: "/games/sentence-builder/images/monkey.jpg", expected: ["The", "monkey", "eats", "a", "banana"], pool: ["The", "monkey", "eats", "a", "banana", "apple", "an", "dog", "is"], audio: "/games/sentence-builder/audio/l1_q1.wav" },
-                { image: "/games/sentence-builder/images/cat.jpg", expected: ["The", "cat", "likes", "fish"], pool: ["A", "cat", "likes", "fish", "dog", "bone", "eats", "The", "an"], audio: "/games/sentence-builder/audio/l1_q2.wav" },
-                { image: "/games/sentence-builder/images/boy_school.jpg", expected: ["He", "goes", "to", "school"], pool: ["He", "goes", "to", "school", "She", "plays", "at", "home", "a"], audio: "/games/sentence-builder/audio/l1_q3.wav" },
-                { image: "/games/sentence-builder/images/dog.jpg", expected: ["The", "dog", "is", "happy"], pool: ["The", "dog", "is", "happy", "sad", "cat", "are", "A"], audio: "/games/sentence-builder/audio/l1_q4.wav" },
-                { image: "/games/sentence-builder/images/girl_bird.jpg", expected: ["I", "see", "a", "bird"], pool: ["I", "see", "a", "bird", "He", "looks", "the", "cat"], audio: "/games/sentence-builder/audio/l1_q5.wav" },
-                { image: "/games/sentence-builder/images/apple_red.png", expected: ["The", "apple", "is", "red"], pool: ["The", "apple", "is", "red", "banana", "are", "green", "A"], audio: "/games/sentence-builder/audio/l1_q6.wav" },
-                { image: "/games/sentence-builder/images/girl_doll.png", expected: ["She", "has", "a", "doll"], pool: ["She", "has", "a", "doll", "He", "have", "toy", "the"], audio: "/games/sentence-builder/audio/l1_q7.wav" },
-                { image: "/games/sentence-builder/images/child_play.png", expected: ["I", "like", "to", "play"], pool: ["I", "like", "to", "play", "run", "eat", "the", "He"], audio: "/games/sentence-builder/audio/l1_q8.wav" },
-                { image: "/games/sentence-builder/images/l1_q9.jpg", expected: ["A", "green", "frog", "jumps"], pool: ["A", "green", "frog", "jumps", "toad", "red", "swims", "The"], audio: "/games/sentence-builder/audio/l1_q9.wav" },
-                { image: "/games/sentence-builder/images/l1_q10.jpg", expected: ["The", "sun", "is", "hot"], pool: ["The", "sun", "is", "hot", "cold", "moon", "are", "star"], audio: "/games/sentence-builder/audio/l1_q10.wav" },
-                { image: "/games/sentence-builder/images/l1_q11.jpg", expected: ["I", "have", "two", "eyes"], pool: ["I", "have", "two", "eyes", "has", "one", "ears", "nose"], audio: "/games/sentence-builder/audio/l1_q11.wav" },
-                { image: "/games/sentence-builder/images/l1_q12.jpg", expected: ["A", "cow", "eats", "grass"], pool: ["A", "cow", "eats", "grass", "meat", "pig", "drinks", "The"], audio: "/games/sentence-builder/audio/l1_q12.wav" },
-                { image: "/games/sentence-builder/images/l1_q13.jpg", expected: ["The", "pig", "is", "pink"], pool: ["The", "pig", "is", "pink", "blue", "sheep", "are", "cow"], audio: "/games/sentence-builder/audio/l1_q13.wav" },
-                { image: "/games/sentence-builder/images/l1_q14.jpg", expected: ["She", "plays", "the", "piano"], pool: ["She", "plays", "the", "piano", "guitar", "He", "sings", "a"], audio: "/games/sentence-builder/audio/l1_q14.wav" },
-                { image: "/games/sentence-builder/images/l1_q15.jpg", expected: ["A", "bird", "can", "fly"], pool: ["A", "bird", "can", "fly", "swim", "fish", "cannot", "The"], audio: "/games/sentence-builder/audio/l1_q15.wav" },
-                { image: "/games/sentence-builder/images/l1_q16.jpg", expected: ["The", "fish", "can", "swim"], pool: ["The", "fish", "can", "swim", "fly", "bird", "cannot", "A"], audio: "/games/sentence-builder/audio/l1_q16.wav" },
-                { image: "/games/sentence-builder/images/l1_q17.jpg", expected: ["He", "rides", "a", "bike"], pool: ["He", "rides", "a", "bike", "car", "She", "drives", "the"], audio: "/games/sentence-builder/audio/l1_q17.wav" },
-                { image: "/games/sentence-builder/images/l1_q18.jpg", expected: ["My", "dad", "has", "a", "car"], pool: ["My", "dad", "has", "a", "car", "mom", "have", "bike", "the"], audio: "/games/sentence-builder/audio/l1_q18.wav" },
-                { image: "/games/sentence-builder/images/l1_q19.jpg", expected: ["The", "flower", "is", "yellow"], pool: ["The", "flower", "is", "yellow", "red", "leaf", "are", "tree"], audio: "/games/sentence-builder/audio/l1_q19.wav" },
-                { image: "/games/sentence-builder/images/l1_q20.jpg", expected: ["We", "love", "our", "school"], pool: ["We", "love", "our", "school", "hate", "they", "my", "home"], audio: "/games/sentence-builder/audio/l1_q20.wav" }
-            ],
-            level2: [
-                { image: "/games/sentence-builder/images/girl_reading.png", expected: ["She", "is", "reading", "a", "book"], pool: ["She", "is", "reading", "a", "book", "He", "writing", "the", "paper"], audio: "/games/sentence-builder/audio/l2_q1.wav" },
-                { image: "/games/sentence-builder/images/play_football.jpg", expected: ["They", "are", "playing", "football"], pool: ["They", "are", "playing", "football", "He", "is", "basketball", "we"], audio: "/games/sentence-builder/audio/l2_q2.wav" },
-                { image: "/games/sentence-builder/images/sun_shining.png", expected: ["The", "sun", "is", "shining"], pool: ["The", "sun", "is", "shining", "moon", "are", "bright", "A"], audio: "/games/sentence-builder/audio/l2_q3.wav" },
-                { image: "/games/sentence-builder/images/mom_cooking.jpg", expected: ["My", "mom", "cooks", "dinner"], pool: ["My", "mom", "cooks", "dinner", "dad", "eats", "breakfast", "I"], audio: "/games/sentence-builder/audio/l2_q4.wav" },
-                { image: "/games/sentence-builder/images/go_park.jpg", expected: ["We", "go", "to", "the", "park"], pool: ["We", "go", "to", "the", "park", "They", "goes", "a", "school"], audio: "/games/sentence-builder/audio/l2_q5.wav" },
-                { image: "/games/sentence-builder/images/l2_q6.jpg", expected: ["The", "brown", "bear", "climbs", "a", "tree"], pool: ["The", "brown", "bear", "climbs", "a", "tree", "black", "monkey", "on"], audio: "/games/sentence-builder/audio/l2_q6.wav" },
-                { image: "/games/sentence-builder/images/l2_q7.jpg", expected: ["A", "butterfly", "has", "beautiful", "wings"], pool: ["A", "butterfly", "has", "beautiful", "wings", "bird", "ugly", "have"], audio: "/games/sentence-builder/audio/l2_q7.wav" },
-                { image: "/games/sentence-builder/images/l2_q8.jpg", expected: ["We", "eat", "pizza", "for", "lunch"], pool: ["We", "eat", "pizza", "for", "lunch", "dinner", "burger", "they"], audio: "/games/sentence-builder/audio/l2_q8.wav" },
-                { image: "/games/sentence-builder/images/l2_q9.jpg", expected: ["The", "rabbit", "hops", "in", "the", "yard"], pool: ["The", "rabbit", "hops", "in", "the", "yard", "forest", "runs", "A"], audio: "/games/sentence-builder/audio/l2_q9.wav" },
-                { image: "/games/sentence-builder/images/l2_q10.jpg", expected: ["He", "is", "painting", "a", "picture"], pool: ["He", "is", "painting", "a", "picture", "drawing", "She", "the"], audio: "/games/sentence-builder/audio/l2_q10.wav" },
-                { image: "/games/sentence-builder/images/l2_q11.jpg", expected: ["They", "build", "a", "big", "sandcastle"], pool: ["They", "build", "a", "big", "sandcastle", "small", "made", "we"], audio: "/games/sentence-builder/audio/l2_q11.wav" },
-                { image: "/games/sentence-builder/images/l2_q12.jpg", expected: ["My", "sister", "plays", "with", "a", "kitten"], pool: ["My", "sister", "plays", "with", "a", "kitten", "puppy", "brother"], audio: "/games/sentence-builder/audio/l2_q12.wav" },
-                { image: "/games/sentence-builder/images/l2_q13.jpg", expected: ["The", "elephant", "has", "a", "long", "trunk"], pool: ["The", "elephant", "has", "a", "long", "trunk", "nose", "short", "tail"], audio: "/games/sentence-builder/audio/l2_q13.wav" },
-                { image: "/games/sentence-builder/images/l2_q14.jpg", expected: ["We", "watch", "a", "movie", "together"], pool: ["We", "watch", "a", "movie", "together", "alone", "listen", "song"], audio: "/games/sentence-builder/audio/l2_q14.wav" },
-                { image: "/games/sentence-builder/images/l2_q15.jpg", expected: ["She", "wears", "a", "pretty", "red", "dress"], pool: ["She", "wears", "a", "pretty", "red", "dress", "blue", "ugly", "skirt"], audio: "/games/sentence-builder/audio/l2_q15.wav" },
-                { image: "/games/sentence-builder/images/l2_q16.jpg", expected: ["The", "train", "travels", "on", "the", "tracks"], pool: ["The", "train", "travels", "on", "the", "tracks", "road", "car", "runs"], audio: "/games/sentence-builder/audio/l2_q16.wav" },
-                { image: "/games/sentence-builder/images/l2_q17.jpg", expected: ["A", "monkey", "swings", "on", "the", "vine"], pool: ["A", "monkey", "swings", "on", "the", "vine", "branch", "jumps", "The"], audio: "/games/sentence-builder/audio/l2_q17.wav" },
-                { image: "/games/sentence-builder/images/l2_q18.jpg", expected: ["My", "teacher", "helps", "me", "learn"], pool: ["My", "teacher", "helps", "me", "learn", "parent", "teaches", "him"], audio: "/games/sentence-builder/audio/l2_q18.wav" },
-                { image: "/games/sentence-builder/images/l2_q19.jpg", expected: ["The", "dolphin", "swims", "in", "the", "ocean"], pool: ["The", "dolphin", "swims", "in", "the", "ocean", "river", "jumps", "A"], audio: "/games/sentence-builder/audio/l2_q19.wav" },
-                { image: "/games/sentence-builder/images/l2_q20.jpg", expected: ["He", "sleeps", "in", "a", "comfortable", "bed"], pool: ["He", "sleeps", "in", "a", "comfortable", "bed", "sofa", "hard", "She"], audio: "/games/sentence-builder/audio/l2_q20.wav" }
-            ],
-            level3: [
-                { image: "/games/sentence-builder/images/fox_jump.png", expected: ["The", "fox", "jumps", "high"], pool: ["The", "fox", "jumps", "high", "runs", "slow", "dog", "cat", "A"], audio: "/games/sentence-builder/audio/l3_q1.wav" },
-                { image: "/games/sentence-builder/images/lions_jungle.png", expected: ["Lions", "live", "in", "the", "jungle"], pool: ["Lions", "live", "in", "the", "jungle", "Tiger", "lives", "a", "forest"], audio: "/games/sentence-builder/audio/l3_q2.wav" },
-                { image: "/games/sentence-builder/images/visit_beach.png", expected: ["I", "want", "to", "visit", "the", "beach"], pool: ["I", "want", "to", "visit", "the", "beach", "He", "wants", "a", "mountain"], audio: "/games/sentence-builder/audio/l3_q3.wav" },
-                { image: "/games/sentence-builder/images/eat_vegetables.png", expected: ["Eating", "vegetables", "is", "good", "for", "you"], pool: ["Eating", "vegetables", "is", "good", "for", "you", "bad", "fruits", "me", "are"], audio: "/games/sentence-builder/audio/l3_q4.wav" },
-                { image: "/games/sentence-builder/images/travel_airplane.png", expected: ["We", "will", "travel", "by", "airplane"], pool: ["We", "will", "travel", "by", "airplane", "They", "travels", "in", "car"], audio: "/games/sentence-builder/audio/l3_q5.wav" },
-                { image: "/games/sentence-builder/images/l3_q6.jpg", expected: ["The", "majestic", "lion", "roars", "in", "the", "wild"], pool: ["The", "majestic", "lion", "roars", "in", "the", "wild", "forest", "tiger"], audio: "/games/sentence-builder/audio/l3_q6.wav" },
-                { image: "/games/sentence-builder/images/l3_q7.jpg", expected: ["Astronauts", "travel", "to", "outer", "space", "in", "rockets"], pool: ["Astronauts", "travel", "to", "outer", "space", "in", "rockets", "cars", "plane"], audio: "/games/sentence-builder/audio/l3_q7.wav" },
-                { image: "/games/sentence-builder/images/l3_q8.jpg", expected: ["We", "should", "protect", "the", "environment", "from", "pollution"], pool: ["We", "should", "protect", "the", "environment", "from", "pollution", "trash", "air"], audio: "/games/sentence-builder/audio/l3_q8.wav" },
-                { image: "/games/sentence-builder/images/l3_q9.jpg", expected: ["The", "ancient", "castle", "stands", "on", "the", "mountain"], pool: ["The", "ancient", "castle", "stands", "on", "the", "mountain", "hill", "palace"], audio: "/games/sentence-builder/audio/l3_q9.wav" },
-                { image: "/games/sentence-builder/images/l3_q10.jpg", expected: ["She", "plays", "the", "violin", "beautifully", "in", "concert"], pool: ["She", "plays", "the", "violin", "beautifully", "in", "concert", "piano", "stage"], audio: "/games/sentence-builder/audio/l3_q10.wav" },
-                { image: "/games/sentence-builder/images/l3_q11.jpg", expected: ["A", "clever", "detective", "solves", "the", "mystery", "case"], pool: ["A", "clever", "detective", "solves", "the", "mystery", "case", "cop", "crime"], audio: "/games/sentence-builder/audio/l3_q11.wav" },
-                { image: "/games/sentence-builder/images/l3_q12.jpg", expected: ["The", "colorful", "rainbow", "appears", "after", "the", "rain"], pool: ["The", "colorful", "rainbow", "appears", "after", "the", "rain", "storm", "sun"], audio: "/games/sentence-builder/audio/l3_q12.wav" },
-                { image: "/games/sentence-builder/images/l3_q13.jpg", expected: ["We", "learn", "about", "history", "in", "the", "museum"], pool: ["We", "learn", "about", "history", "in", "the", "museum", "school", "science"], audio: "/games/sentence-builder/audio/l3_q13.wav" },
-                { image: "/games/sentence-builder/images/l3_q14.jpg", expected: ["The", "submarine", "dives", "deep", "under", "the", "sea"], pool: ["The", "submarine", "dives", "deep", "under", "the", "sea", "ocean", "ship"], audio: "/games/sentence-builder/audio/l3_q14.wav" },
-                { image: "/games/sentence-builder/images/l3_q15.jpg", expected: ["He", "conducts", "a", "scientific", "experiment", "in", "lab"], pool: ["He", "conducts", "a", "scientific", "experiment", "in", "lab", "test", "class"], audio: "/games/sentence-builder/audio/l3_q15.wav" },
-                { image: "/games/sentence-builder/images/l3_q16.jpg", expected: ["A", "wise", "owl", "perches", "on", "the", "branch"], pool: ["A", "wise", "owl", "perches", "on", "the", "branch", "tree", "bird"], audio: "/games/sentence-builder/audio/l3_q16.wav" },
-                { image: "/games/sentence-builder/images/l3_q17.jpg", expected: ["The", "volcanic", "eruption", "produces", "hot", "red", "lava"], pool: ["The", "volcanic", "eruption", "produces", "hot", "red", "lava", "ash", "mountain"], audio: "/games/sentence-builder/audio/l3_q17.wav" },
-                { image: "/games/sentence-builder/images/l3_q18.jpg", expected: ["We", "explore", "the", "mysterious", "cave", "with", "flashlights"], pool: ["We", "explore", "the", "mysterious", "cave", "with", "flashlights", "lamps", "dark"], audio: "/games/sentence-builder/audio/l3_q18.wav" },
-                { image: "/games/sentence-builder/images/l3_q19.jpg", expected: ["The", "majestic", "eagle", "flies", "high", "in", "sky"], pool: ["The", "majestic", "eagle", "flies", "high", "in", "sky", "cloud", "hawk"], audio: "/games/sentence-builder/audio/l3_q19.wav" },
-                { image: "/games/sentence-builder/images/l3_q20.jpg", expected: ["She", "bakes", "delicious", "chocolate", "cupcakes", "for", "party"], pool: ["She", "bakes", "delicious", "chocolate", "cupcakes", "for", "party", "cake", "cooks"], audio: "/games/sentence-builder/audio/l3_q20.wav" }
-            ]
-        };
-
-        let currentLevelKey = 'level1';
         let currentQuestions = [];
         let currentQuestionIndex = 0;
         let gameFinished = false;
@@ -425,6 +355,9 @@
         const sortableDropzone = new Sortable(dropzone, {
             group: 'shared',
             animation: 150,
+            delay: 150,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 5,
             onAdd: function (evt) {
                 playSound('drop-sound');
                 checkAnswer();
@@ -442,7 +375,10 @@
 
         const sortablePool = new Sortable(wordPool, {
             group: 'shared',
-            animation: 150
+            animation: 150,
+            delay: 150,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 5
         });
 
         // Switch Level from Sidebar
@@ -468,7 +404,8 @@
             progressText.style.display = 'block';
 
             if (currentQuestions.length === 0) {
-                currentQuestions = shuffle(gameData[currentLevelKey]);
+                progressText.textContent = "No questions available.";
+                return;
             }
 
             const qData = currentQuestions[currentQuestionIndex];
@@ -583,8 +520,34 @@
             }
         }
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('gameId');
+
+        async function initDynamicGame() {
+            if (gameId) {
+                document.getElementById('sidebar').style.display = 'none';
+                try {
+                    progressText.textContent = "Loading...";
+                    const res = await fetch(`/api/games/sentence-builder/${gameId}`);
+                    const data = await res.json();
+                    if (data.success && data.game) {
+                        currentQuestions = data.game.questions;
+                        currentQuestionIndex = 0;
+                        initQuestion();
+                    } else {
+                        progressText.textContent = "Error loading game.";
+                    }
+                } catch (e) {
+                    console.error("Error fetching game data:", e);
+                    progressText.textContent = "Network Error.";
+                }
+            } else {
+                progressText.textContent = "No game selected.";
+            }
+        }
+
         // Start game
-        window.addEventListener('DOMContentLoaded', initQuestion);
+        window.addEventListener('DOMContentLoaded', initDynamicGame);
     </script>
 </body>
 </html>

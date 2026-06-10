@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Gamepad2, Play, Sparkles, Layers, Lock } from "lucide-react";
+import { Gamepad2, Play, Sparkles, Layers, Lock, ArrowLeft } from "lucide-react";
 
 interface Game {
   id: string;
@@ -37,7 +37,7 @@ const GAMES_DATA: Record<string, Game[]> = {
     {
       id: "sentence-builder",
       title: "Sentence Builder",
-      href: "/student/game/sentence-builder",
+      href: "/student/game/sentence-builder?age=2-5",
       gradient: "from-purple-200 to-fuchsia-400",
       emoji: "🧩",
       tag: "Grammar",
@@ -57,6 +57,16 @@ const GAMES_DATA: Record<string, Game[]> = {
       comingSoon: false,
     },
     {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=6-12",
+      gradient: "from-purple-200 to-fuchsia-400",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
       id: "spell-quest",
       title: "Spell Quest",
       href: "#",
@@ -69,6 +79,26 @@ const GAMES_DATA: Record<string, Game[]> = {
   ],
   "teen": [
     {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=teen",
+      gradient: "from-blue-200 to-sky-400",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=teen",
+      gradient: "from-purple-200 to-fuchsia-400",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
       id: "grammar-escape",
       title: "Grammar Escape",
       href: "#",
@@ -80,6 +110,26 @@ const GAMES_DATA: Record<string, Game[]> = {
     }
   ],
   "readers": [
+    {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=readers",
+      gradient: "from-blue-200 to-sky-400",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=readers",
+      gradient: "from-purple-200 to-fuchsia-400",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
     {
       id: "vocab-master",
       title: "Vocabulary Master",
@@ -102,6 +152,16 @@ export default function GameHubPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-12 font-body">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
+        <div className="flex justify-start mb-[-2rem]">
+          <Link 
+            href="/student"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold shadow-sm relative z-10"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="text-center space-y-5 relative py-6">
           <div className="absolute top-0 left-1/4 w-16 h-16 bg-yellow-400/20 rounded-full blur-xl animate-pulse" />

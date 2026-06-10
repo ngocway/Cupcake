@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, Folders, ArrowRightLeft } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, Folders, ArrowRightLeft, Pencil, Check } from "lucide-react"
 import { searchImagesAction } from "@/actions/image-search-actions"
 import { uploadUrlMedia } from "@/actions/upload-actions"
 import { useRouter } from "next/navigation"
@@ -14,22 +14,34 @@ import {
   moveMatchWordTopic,
   addMatchWordItem, 
   updateMatchWordItem,
-  deleteMatchWordItem 
+  deleteMatchWordItem,
+  updateMatchWordGame
 } from "@/actions/admin-match-words"
 
 export function AdminMatchWordsClient({ 
   initialGames2to5, 
-  initialGames6to12 
+  initialGames6to12,
+  initialGamesTeen,
+  initialGamesReaders
 }: { 
   initialGames2to5: any[], 
-  initialGames6to12: any[] 
+  initialGames6to12: any[],
+  initialGamesTeen: any[],
+  initialGamesReaders: any[]
 }) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<"2-5" | "6-12">("2-5")
+  const [activeTab, setActiveTab] = useState<"2-5" | "6-12" | "teen" | "readers">("2-5")
   const [isPending, startTransition] = useTransition()
   
-  const currentGames = activeTab === "2-5" ? initialGames2to5 : initialGames6to12
+  const currentGames = activeTab === "2-5" ? initialGames2to5 
+                     : activeTab === "6-12" ? initialGames6to12 
+                     : activeTab === "teen" ? initialGamesTeen 
+                     : initialGamesReaders
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
+  
+  // Rename state
+  const [editingGameId, setEditingGameId] = useState<string | null>(null)
+  const [editingGameName, setEditingGameName] = useState("")
 
   // Auto-select first game when tab changes
   useEffect(() => {
@@ -87,11 +99,26 @@ export function AdminMatchWordsClient({
 
   const handleDeleteGame = (id: string, e: any) => {
     e.stopPropagation()
-    if (!confirm("Bạn có chắc chắn muốn xóa bộ game này và TOÀN BỘ chủ đề bên trong?")) return
+    if (!confirm("Bạn có chắc chắn muốn xóa bộ game này? (Sẽ xóa toàn bộ dữ liệu bên trong)")) return
     startTransition(async () => {
       const res = await deleteMatchWordGame(id)
       if (res.success) {
         toast.success("Đã xóa bộ Game")
+        router.refresh()
+      } else {
+        toast.error("Lỗi: " + res.error)
+      }
+    })
+  }
+
+  const handleRenameGame = (id: string, e: any) => {
+    e.stopPropagation()
+    if (!editingGameName.trim()) return toast.error("Tên game không được để trống")
+    startTransition(async () => {
+      const res = await updateMatchWordGame(id, { name: editingGameName.trim() })
+      if (res.success) {
+        toast.success("Đổi tên Game thành công")
+        setEditingGameId(null)
         router.refresh()
       } else {
         toast.error("Lỗi: " + res.error)
@@ -281,6 +308,18 @@ export function AdminMatchWordsClient({
         >
           Tuổi 6-12
         </button>
+        <button 
+          onClick={() => setActiveTab("teen")}
+          className={`px-6 py-2 rounded-xl font-bold transition-all ${activeTab === "teen" ? "bg-blue-600 text-white shadow-lg" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"}`}
+        >
+          Teenagers
+        </button>
+        <button 
+          onClick={() => setActiveTab("readers")}
+          className={`px-6 py-2 rounded-xl font-bold transition-all ${activeTab === "readers" ? "bg-blue-600 text-white shadow-lg" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"}`}
+        >
+          Advanced Readers
+        </button>
       </div>
 
       {/* TWO COLUMNS */}
@@ -312,15 +351,53 @@ export function AdminMatchWordsClient({
                   className={`group flex justify-between items-center p-3 rounded-xl cursor-pointer transition-colors ${selectedGameId === game.id ? 'bg-blue-600/20 border border-blue-500/50 text-blue-100' : 'hover:bg-neutral-800 text-neutral-300 border border-transparent'}`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <Gamepad2 className={`w-4 h-4 ${selectedGameId === game.id ? 'text-blue-400' : 'text-neutral-500'}`} />
-                    <span className="font-medium truncate">{game.name}</span>
+                    <Gamepad2 className={`w-4 h-4 shrink-0 ${selectedGameId === game.id ? 'text-blue-400' : 'text-neutral-500'}`} />
+                    {editingGameId === game.id ? (
+                      <input
+                        value={editingGameName}
+                        onChange={e => setEditingGameName(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleRenameGame(game.id, e)
+                          if (e.key === 'Escape') setEditingGameId(null)
+                        }}
+                        autoFocus
+                        className="bg-neutral-950 border border-blue-500 rounded px-2 py-0.5 text-sm w-full outline-none"
+                      />
+                    ) : (
+                      <span className="font-medium truncate">{game.name}</span>
+                    )}
                   </div>
-                  <button 
-                    onClick={(e) => handleDeleteGame(game.id, e)}
-                    className={`p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20 text-red-400`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className={`flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                    {editingGameId === game.id ? (
+                      <button 
+                        onClick={(e) => handleRenameGame(game.id, e)}
+                        className={`p-1.5 rounded-lg hover:bg-green-500/20 text-green-400`}
+                        title="Lưu"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingGameId(game.id)
+                          setEditingGameName(game.name)
+                        }}
+                        className={`p-1.5 rounded-lg hover:bg-blue-500/20 text-blue-400`}
+                        title="Đổi tên"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button 
+                      onClick={(e) => handleDeleteGame(game.id, e)}
+                      className={`p-1.5 rounded-lg hover:bg-red-500/20 text-red-400`}
+                      title="Xóa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
