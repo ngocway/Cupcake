@@ -1,3 +1,4 @@
+import React, { Suspense } from "react"
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -68,34 +69,36 @@ export default async function StudentLayout({ children }: { children: React.Reac
  
       {/* SideNavBar - Controlled by Wrapper */}
       <SideNavWrapper isTeacher={isTeacher}>
-        <nav className="flex-1 px-4 pb-6 pt-0 space-y-8">
-          <div>
-            <div className="space-y-1 mb-6">
-              <SideNavItem href="/student/dashboard" icon="dashboard" label={t("dashboard")} />
+        <Suspense fallback={<div className="flex-1 px-4 pb-6 pt-0 space-y-8" />}>
+          <nav className="flex-1 px-4 pb-6 pt-0 space-y-8">
+            <div>
+              <div className="space-y-1 mb-6">
+                <SideNavItem href="/student/dashboard" icon="dashboard" label={t("dashboard")} />
+              </div>
+              
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t("exploreKnowledge")}</p>
+              <div className="space-y-1">
+                <SideNavItem href="/student/lessons?source=public" icon="explore" label={t("lessons")} />
+                <SideNavItem href="/student/assignments?source=public" icon="language" label={t("assignments")} />
+              </div>
+            </div>
+  
+            <div>
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t("classContent")}</p>
+              <div className="space-y-1">
+                <SideNavItem href="/student/lessons?source=class" icon="menu_book" label={t("lessons")} comingSoon />
+                <SideNavItem href="/student/assignments?source=class" icon="assignment" label={t("assignments")} comingSoon />
+              </div>
             </div>
             
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t("exploreKnowledge")}</p>
-            <div className="space-y-1">
-              <SideNavItem href="/student/lessons?source=public" icon="explore" label={t("lessons")} />
-              <SideNavItem href="/student/assignments?source=public" icon="language" label={t("assignments")} />
+            <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-1">
+              <SideNavItem href="/student/bookmarks" icon="bookmark" label={t("bookmarks")} />
+              <SideNavItem href="/student/classes" icon="group" label={t("classes")} comingSoon />
+              <SideNavItem href="/student/my-reviews" icon="star" label={t("myReviews")} />
+              <SideNavItem href="/student/growth" icon="trending_up" label={t("growth")} comingSoon />
             </div>
-          </div>
- 
-          <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t("classContent")}</p>
-            <div className="space-y-1">
-              <SideNavItem href="/student/lessons?source=class" icon="menu_book" label={t("lessons")} comingSoon />
-              <SideNavItem href="/student/assignments?source=class" icon="assignment" label={t("assignments")} comingSoon />
-            </div>
-          </div>
-          
-          <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-1">
-            <SideNavItem href="/student/bookmarks" icon="bookmark" label={t("bookmarks")} />
-            <SideNavItem href="/student/classes" icon="group" label={t("classes")} comingSoon />
-            <SideNavItem href="/student/my-reviews" icon="star" label={t("myReviews")} />
-            <SideNavItem href="/student/growth" icon="trending_up" label={t("growth")} comingSoon />
-          </div>
-        </nav>
+          </nav>
+        </Suspense>
         
         <div className="p-4">
           <button className="w-full bg-gradient-to-br from-primary to-primary-container text-white py-3 rounded-full font-label text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
