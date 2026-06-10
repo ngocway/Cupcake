@@ -152,7 +152,10 @@ export function AdminSentenceBuilderClient({
           audio: questionForm.audioUrl
         })
       } else {
-        if (!selectedGameId) return toast.error("Lỗi: Không tìm thấy Game");
+        if (!selectedGameId) {
+          toast.error("Lỗi: Không tìm thấy Game");
+          return;
+        }
         res = await createSentenceBuilderQuestion({
           gameId: selectedGameId,
           expected: expectedArray,
