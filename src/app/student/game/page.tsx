@@ -143,23 +143,25 @@ const GAMES_DATA: Record<string, Game[]> = {
   ]
 };
 
+import { useRouter } from "next/navigation";
+
 export default function GameHubPage() {
+  const router = useRouter();
   const [selectedCategoryId, setSelectedCategoryId] = useState(GAME_CATEGORIES[0].id);
-  const [loadingGameId, setLoadingGameId] = useState<string | null>(null);
 
   const selectedCategory = GAME_CATEGORIES.find((cat) => cat.id === selectedCategoryId) || GAME_CATEGORIES[0];
   const games = GAMES_DATA[selectedCategoryId] || [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-12 font-body">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-8 pb-12 font-body">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
         <div className="flex justify-start mb-[-2rem]">
           <Link 
-            href="/student"
+            href="/"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold shadow-sm relative z-10"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Dashboard</span>
+            <span>Back to home</span>
           </Link>
         </div>
 
@@ -176,9 +178,6 @@ export default function GameHubPage() {
           <h1 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none">
             Game <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-primary bg-clip-text text-transparent">Hub</span>
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-base md:text-lg font-medium leading-relaxed">
-            Learn while playing, play while learning! Strengthen your vocabulary and grammar through exciting games.
-          </p>
         </div>
 
         {/* Selection Area (Category & Game Cards) */}
@@ -283,11 +282,13 @@ export default function GameHubPage() {
                 }
 
                 return (
-                  <Link 
+                  <div 
                     key={game.id} 
-                    href={game.href} 
-                    className="group"
-                    onClick={() => setLoadingGameId(game.id)}
+                    onClick={() => {
+                       window.dispatchEvent(new Event("show-global-loader"));
+                       router.push(game.href);
+                    }}
+                    className="group cursor-pointer"
                   >
                     <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
                       <div className={`aspect-video bg-gradient-to-br ${game.gradient} relative overflow-hidden flex items-center justify-center p-6`}>
@@ -321,21 +322,12 @@ export default function GameHubPage() {
                         </div>
                         
                         <div className="mt-6 flex items-center text-primary font-black text-sm uppercase tracking-widest gap-2 group-hover:translate-x-2 transition-transform">
-                          {loadingGameId === game.id ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              Loading...
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-5 h-5 fill-primary" />
-                              Play Now
-                            </>
-                          )}
+                          <Play className="w-5 h-5 fill-primary" />
+                          Play Now
                         </div>
                       </div>
                     </div>
-                  </Link>
+                  </div>
                 );
               })}
             </div>

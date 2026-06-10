@@ -232,4 +232,74 @@
 .custom-vocab-marker:hover,
 .custom-vocab-marker:hover * {
   color: #eab308 !important;
+}
+
+/* Modal responsive styles from LandingPage */
+.modal-card::-webkit-scrollbar {
+  display: none;
+}
+.modal-card {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@media (max-height: 850px) {
+  .modal-card {
+    padding: 1.25rem !important;
+    gap: 0.8rem !important;
+  }
+  .modal-card h2 {
+    font-size: 1.15rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .modal-card hr {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  .avatar-container {
+    width: 68px !important;
+    height: 68px !important;
+    border-width: 4px !important;
+  }
+  .avatar-btn {
+    gap: 0.4rem !important;
+  }
+  .avatar-btn span {
+    font-size: 0.75rem !important;
+  }
+  .typing-text-container {
+    font-size: 1rem !important;
+    height: 1.5rem !important;
+  }
+  .modal-footer {
+    margin-top: 0.25rem !important;
+    padding-top: 0.5rem !important;
+    gap: 0.8rem !important;
+  }
+  .modal-footer button {
+    padding: 0.5rem 1.5rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+@media (max-height: 720px) {
+  .modal-card {
+    padding: 1rem !important;
+    gap: 0.6rem !important;
+  }
+  .avatar-container {
+    width: 54px !important;
+    height: 54px !important;
+    border-width: 3px !important;
+  }
+  .avatar-btn {
+    gap: 0.25rem !important;
+  }
+  .avatar-btn span {
+    font-size: 0.7rem !important;
+  }
+  .typing-text-container {
+    font-size: 0.9rem !important;
+    height: 1.25rem !important;
+  }
 }

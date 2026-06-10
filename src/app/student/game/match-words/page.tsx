@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import BackButton from "@/components/ui/BackButton";
 
 function MatchWordsGameContent() {
   const searchParams = useSearchParams();
@@ -14,13 +15,12 @@ function MatchWordsGameContent() {
     <div className="fixed inset-0 z-[100] bg-black flex flex-col">
       {/* Top Bar Navigation */}
       <div className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 flex-shrink-0 z-10 shadow-sm relative">
-        <Link 
-          href="/student/game"
+        <BackButton 
           className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary transition-colors font-bold text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Games</span>
-        </Link>
+        </BackButton>
         <div className="absolute left-1/2 -translate-x-1/2 font-black text-primary uppercase tracking-widest hidden sm:block">
           Match the Words ({age === "6-12" ? "Kids 6-12" : "Kids 2-5"})
         </div>

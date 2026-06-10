@@ -37,10 +37,12 @@ interface ClassesClientProps {
   };
 }
 
+import { useRouter } from "next/navigation";
+
 export default function ClassesClient({ activeClasses, pendingRequests, translations }: ClassesClientProps) {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [cancelingId, setCancelingId] = useState<string | null>(null);
-  const [loadingClassId, setLoadingClassId] = useState<string | null>(null);
 
   const matchedActive = activeClasses.filter(c => 
     c.class.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -143,13 +145,14 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
               const bgGradient = gradients[i % gradients.length];
 
               return (
-                <Link href={`/student/classes/${item.id}`} key={item.id} onClick={() => setLoadingClassId(item.id)} className={`group relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 ${loadingClassId === item.id ? 'opacity-70 grayscale cursor-wait' : 'hover:-translate-y-1 block'}`}>
-                  {loadingClassId === item.id && (
-                     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-sm">
-                        <Loader2 className="w-10 h-10 animate-spin text-white shadow-lg mb-2" />
-                        <span className="text-white font-bold text-sm tracking-widest uppercase">Loading...</span>
-                     </div>
-                  )}
+                <div 
+                  key={item.id} 
+                  onClick={() => {
+                     window.dispatchEvent(new Event("show-global-loader"));
+                     router.push(`/student/classes/${item.id}`);
+                  }} 
+                  className="group relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 block cursor-pointer"
+                >
                   {/* Decorative Banner */}
                   <div className={`h-24 w-full bg-gradient-to-r ${bgGradient} p-6 relative overflow-hidden`}>
                     <div className="absolute right-0 bottom-0 opacity-20 translate-x-1/4 translate-y-1/4">
@@ -188,7 +191,7 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
                       </div>
                     </div>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

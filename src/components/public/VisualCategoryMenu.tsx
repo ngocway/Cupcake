@@ -88,11 +88,7 @@ export function VisualCategoryMenu({
                   }
                 };
 
-                if (typeof document !== "undefined" && (document as any).startViewTransition) {
-                  (document as any).startViewTransition(updateState);
-                } else {
-                  updateState();
-                }
+                updateState();
               }}
               className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl category-btn ${
                 isActive 

@@ -75,6 +75,7 @@ const LessonCard = memo(function LessonCard({
     startTransition(async () => {
        await incrementLessonViews(lesson.id);
        const identifier = lesson.slug || lesson.id;
+       window.dispatchEvent(new Event("show-global-loader"));
        router.push(`/student/lessons/${identifier}`);
     });
   };
@@ -83,14 +84,8 @@ const LessonCard = memo(function LessonCard({
     <div
       onClick={handleLessonAccess}
       style={style}
-      className={`group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[8px] border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer relative ${isPending ? 'opacity-70 grayscale' : ''}`}
+      className={`group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[8px] border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-2xl hover:shadow-black/5 hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer ${isPending ? 'opacity-70 grayscale' : ''}`}
     >
-      {isPending && (
-         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-sm rounded-[8px]">
-            <Loader2 className="w-10 h-10 animate-spin text-white mb-2 shadow-lg" />
-            <span className="text-white font-bold text-sm tracking-widest uppercase">Loading...</span>
-         </div>
-      )}
       {/* Video Thumbnail Placeholder */}
       <div className="relative aspect-video w-full overflow-hidden rounded-[8px] bg-slate-900 shadow-xl group">
         <div className="absolute inset-0 flex items-center justify-center">

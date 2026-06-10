@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowLeft, Gamepad2, Play } from "lucide-react";
 import { getMatchWordGames } from "@/actions/admin-match-words";
 
+import BackButton from "@/components/ui/BackButton";
 export const metadata = {
   title: "Match Words Games",
 }
@@ -81,27 +82,14 @@ export default async function MatchWordsSelectPage({
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-sky-400/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
-        <Link 
-          href="/student/game"
+        <BackButton 
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold mb-10 shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Game Hub</span>
-        </Link>
+        </BackButton>
         
-        <div className="mb-12 text-center md:text-left flex flex-col md:flex-row items-center gap-6">
-          <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-sky-500 rounded-[28px] flex items-center justify-center shadow-xl shadow-blue-500/30 rotate-3 hover:rotate-0 transition-transform">
-            <span className="material-symbols-outlined text-white text-5xl">pets</span>
-          </div>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">
-              Match <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-sky-500">Words</span>
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-3 text-lg max-w-xl">
-              Drag and drop English words to match the correct illustrations. Choose a game level below!
-            </p>
-          </div>
-        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {games.length === 0 ? (

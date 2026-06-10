@@ -2,8 +2,8 @@
 
 import { SessionProvider } from "next-auth/react"
 import { Toaster } from "sonner"
-import { AppProgressBar as ProgressBar } from 'next-nprogress-bar';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { useState, useEffect } from "react";
@@ -13,7 +13,7 @@ const customStyles = `
   pointer-events: none;
 }
 #nprogress .bar {
-  background: #3B82F6;
+  background: #10B981;
   position: fixed;
   z-index: 99999;
   top: 0;
@@ -27,26 +27,31 @@ const customStyles = `
   right: 0px;
   width: 100px;
   height: 100%;
-  box-shadow: 0 0 10px #3B82F6, 0 0 5px #3B82F6;
+  box-shadow: 0 0 10px #10B981, 0 0 5px #10B981;
   opacity: 1.0;
   transform: rotate(3deg) translate(0px, -4px);
 }
 #nprogress .spinner {
   display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
   position: fixed !important;
   z-index: 999999 !important;
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(8px) !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
   padding: 24px !important;
   border-radius: 24px !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(226, 232, 240, 0.5) !important;
 }
 .dark #nprogress .spinner {
-  background-color: rgba(15, 23, 42, 0.9) !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important;
+  background-color: rgba(15, 23, 42, 0.7) !important;
+  border-color: rgba(30, 41, 59, 0.5) !important;
 }
 #nprogress .spinner::before {
   content: "" !important;
@@ -55,25 +60,37 @@ const customStyles = `
   left: -50vw !important;
   width: 200vw !important;
   height: 200vh !important;
-  background: rgba(0, 0, 0, 0.1) !important;
+  background: transparent !important;
   z-index: -1 !important;
   pointer-events: auto !important;
 }
 #nprogress .spinner-icon {
-  width: 48px !important;
-  height: 48px !important;
-  border: 4px solid #e2e8f0 !important;
-  border-top-color: #3b82f6 !important;
+  width: 40px !important;
+  height: 40px !important;
+  border: 4px solid #10B981 !important;
+  border-top-color: transparent !important;
   border-radius: 50% !important;
-  animation: nprogress-spinner 800ms linear infinite !important;
+  animation: nprogress-spinner 1s linear infinite !important;
 }
-.dark #nprogress .spinner-icon {
-  border-color: #334155 !important;
-  border-top-color: #3b82f6 !important;
+#nprogress .spinner::after {
+  content: "ĐANG TẢI DỮ LIỆU..." !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  animation: nprogress-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+}
+.dark #nprogress .spinner::after {
+  color: #94a3b8 !important;
 }
 @keyframes nprogress-spinner {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+@keyframes nprogress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
 }
 `;
 
@@ -113,14 +130,8 @@ export function Providers({ children, locale = "en", messages }: {
           messages={messages}
           timeZone="Asia/Ho_Chi_Minh"
         >
-          <Toaster position="top-center" richColors />
-          <ProgressBar
-            height="3px"
-            color="#3B82F6"
-            options={{ showSpinner: true }}
-            shallowRouting
-            style={customStyles}
-          />
+          <Toaster position="bottom-right" richColors />
+          <GlobalLoader />
           {children}
         </NextIntlClientProvider>
       </QueryClientProvider>

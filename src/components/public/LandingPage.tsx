@@ -1,6 +1,6 @@
 
 "use client"
-import { use, useState, Suspense, useEffect, useTransition, useMemo } from "react"
+import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
@@ -79,7 +79,7 @@ function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () =
 
 // ─── Content lists (rendered via use() — fast, no extra round-trips) ──
 
-function ExerciseList({
+const ExerciseList = memo(function ExerciseList({
   promise,
   isLoggedIn,
   searchKeyword,
@@ -101,9 +101,9 @@ function ExerciseList({
       ))}
     </div>
   )
-}
+});
 
-function LessonList({
+const LessonList = memo(function LessonList({
   promise,
   isLoggedIn,
   searchKeyword,
@@ -125,7 +125,7 @@ function LessonList({
       ))}
     </div>
   )
-}
+});
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -357,11 +357,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     window.history.pushState(null, "", `?${p.toString()}`)
   }
 
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     const p = new URLSearchParams(window.location.search)
     p.delete("search")
     router.push(`?${p.toString()}`, { scroll: false })
-  }
+  }, [router])
 
   // Listen for escape key press to close modal
   useEffect(() => {
@@ -376,77 +376,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
 
   return (
     <div className="space-y-6 relative">
-      {/* Dynamic height styles for modal viewport compression */}
-      <style>{`
-        .modal-card::-webkit-scrollbar {
-          display: none;
-        }
-        .modal-card {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
-        @media (max-height: 850px) {
-          .modal-card {
-            padding: 1.25rem !important;
-            gap: 0.8rem !important;
-          }
-          .modal-card h2 {
-            font-size: 1.15rem !important;
-            margin-bottom: 0.25rem !important;
-          }
-          .modal-card hr {
-            margin-top: 0.25rem !important;
-            margin-bottom: 0.25rem !important;
-          }
-          .avatar-container {
-            width: 68px !important;
-            height: 68px !important;
-            border-width: 4px !important;
-          }
-          .avatar-btn {
-            gap: 0.4rem !important;
-          }
-          .avatar-btn span {
-            font-size: 0.75rem !important;
-          }
-          .typing-text-container {
-            font-size: 1rem !important;
-            height: 1.5rem !important;
-          }
-          .modal-footer {
-            margin-top: 0.25rem !important;
-            padding-top: 0.5rem !important;
-            gap: 0.8rem !important;
-          }
-          .modal-footer button {
-            padding: 0.5rem 1.5rem !important;
-            font-size: 0.75rem !important;
-          }
-        }
 
-        @media (max-height: 720px) {
-          .modal-card {
-            padding: 1rem !important;
-            gap: 0.6rem !important;
-          }
-          .avatar-container {
-            width: 54px !important;
-            height: 54px !important;
-            border-width: 3px !important;
-          }
-          .avatar-btn {
-            gap: 0.25rem !important;
-          }
-          .avatar-btn span {
-            font-size: 0.7rem !important;
-          }
-          .typing-text-container {
-            font-size: 0.9rem !important;
-            height: 1.25rem !important;
-          }
-        }
-      `}</style>
 
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
@@ -496,11 +426,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       {/* Center Overlay Modal Popup for Filters */}
       {isFilterModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/55 backdrop-blur-md z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300"
+          className="fixed inset-0 bg-black/80 z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300"
           onClick={handleCloseModalDiscard}
         >
           <div 
-            className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
+            className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
             onClick={(e) => e.stopPropagation()}
           >
             
