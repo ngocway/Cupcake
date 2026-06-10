@@ -6,7 +6,7 @@ import { setUserTypePreference } from "@/actions/user-preferences-actions";
 import { useTranslations } from "next-intl";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
-export function SidebarUserTypeList({ initialUserType }: { initialUserType?: string }) {
+function SidebarUserTypeListContent({ initialUserType }: { initialUserType?: string }) {
   const t = useTranslations("home");
   const userType = useContentStore(s => s.userType);
   const setUserType = useContentStore(s => s.setUserType);
@@ -74,5 +74,13 @@ export function SidebarUserTypeList({ initialUserType }: { initialUserType?: str
         );
       })}
     </div>
+  );
+}
+
+export function SidebarUserTypeList({ initialUserType }: { initialUserType?: string }) {
+  return (
+    <React.Suspense fallback={<div className="h-20 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}>
+      <SidebarUserTypeListContent initialUserType={initialUserType} />
+    </React.Suspense>
   );
 }

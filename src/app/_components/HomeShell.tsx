@@ -6,7 +6,7 @@ import { PublicHeader } from '@/components/public/PublicHeader';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 
-export function HomeShell({ children }: { children?: React.ReactNode }) {
+function HomeShellContent({ children }: { children?: React.ReactNode }) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -56,6 +56,16 @@ export function HomeShell({ children }: { children?: React.ReactNode }) {
         {children}
       </div>
     </div>
+  );
+}
+
+export function HomeShell({ children }: { children?: React.ReactNode }) {
+  return (
+    <React.Suspense fallback={<HomeLoadingSkeleton />}>
+      <HomeShellContent>
+        {children}
+      </HomeShellContent>
+    </React.Suspense>
   );
 }
 

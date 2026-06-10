@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-export function GlobalLoader() {
+function GlobalLoaderContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -81,5 +81,13 @@ export function GlobalLoader() {
         <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
+  );
+}
+
+export function GlobalLoader() {
+  return (
+    <Suspense fallback={null}>
+      <GlobalLoaderContent />
+    </Suspense>
   );
 }

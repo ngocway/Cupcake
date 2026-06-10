@@ -1,12 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { QuizEditor } from '@/components/quiz/QuizEditor';
 import { FlashcardEditor } from '@/components/quiz/FlashcardEditor';
 import { ReadingExerciseBuilder } from '@/components/quiz/ReadingExerciseBuilder';
 
-export default function MaterialEditPage() {
+function MaterialEditContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   
@@ -22,4 +22,12 @@ export default function MaterialEditPage() {
   }
   
   return <QuizEditor />;
+}
+
+export default function MaterialEditPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center animate-pulse">Loading editor...</div>}>
+      <MaterialEditContent />
+    </Suspense>
+  );
 }
