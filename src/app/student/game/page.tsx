@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Gamepad2, Play, Sparkles, Layers, Lock, ArrowLeft } from "lucide-react";
+import { Gamepad2, Play, Sparkles, Layers, Lock, ArrowLeft, Loader2 } from "lucide-react";
 
 interface Game {
   id: string;
@@ -145,6 +145,7 @@ const GAMES_DATA: Record<string, Game[]> = {
 
 export default function GameHubPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState(GAME_CATEGORIES[0].id);
+  const [loadingGameId, setLoadingGameId] = useState<string | null>(null);
 
   const selectedCategory = GAME_CATEGORIES.find((cat) => cat.id === selectedCategoryId) || GAME_CATEGORIES[0];
   const games = GAMES_DATA[selectedCategoryId] || [];
@@ -282,7 +283,12 @@ export default function GameHubPage() {
                 }
 
                 return (
-                  <Link key={game.id} href={game.href} className="group">
+                  <Link 
+                    key={game.id} 
+                    href={game.href} 
+                    className="group"
+                    onClick={() => setLoadingGameId(game.id)}
+                  >
                     <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
                       <div className={`aspect-video bg-gradient-to-br ${game.gradient} relative overflow-hidden flex items-center justify-center p-6`}>
                         <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
@@ -315,8 +321,17 @@ export default function GameHubPage() {
                         </div>
                         
                         <div className="mt-6 flex items-center text-primary font-black text-sm uppercase tracking-widest gap-2 group-hover:translate-x-2 transition-transform">
-                          <Play className="w-5 h-5 fill-primary" />
-                          Play Now
+                          {loadingGameId === game.id ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-5 h-5 fill-primary" />
+                              Play Now
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -232,4 +232,50 @@
 .custom-vocab-marker:hover,
 .custom-vocab-marker:hover * {
   color: #eab308 !important;
+}
+
+/* Custom Global Spinner Override for next-nprogress-bar */
+#nprogress .spinner {
+  display: flex !important;
+  position: fixed !important;
+  z-index: 999999 !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  padding: 24px !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark #nprogress .spinner {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Invisible overlay to prevent clicking while loading */
+#nprogress .spinner::before {
+  content: "" !important;
+  position: fixed !important;
+  top: -50vh !important;
+  left: -50vw !important;
+  width: 200vw !important;
+  height: 200vh !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+  z-index: -1 !important;
+}
+
+#nprogress .spinner-icon {
+  width: 48px !important;
+  height: 48px !important;
+  border: 4px solid #e2e8f0 !important;
+  border-top-color: #3b82f6 !important;
+  border-radius: 50% !important;
+  animation: nprogress-spinner 800ms linear infinite !important;
+}
+
+.dark #nprogress .spinner-icon {
+  border-color: #334155 !important;
+  border-top-color: #3b82f6 !important;
 }

@@ -48,7 +48,7 @@ export function Providers({ children, locale = "en", messages }: {
           <ProgressBar
             height="3px"
             color="#3B82F6"
-            options={{ showSpinner: false }}
+            options={{ showSpinner: true }}
             shallowRouting
           />
           {children}
