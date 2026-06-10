@@ -195,7 +195,10 @@ export function AdminMatchWordsClient({
         })
       } else {
         // Add mode
-        if (!selectedTopicId) return toast.error("Lỗi: Không tìm thấy Chủ đề");
+        if (!selectedTopicId) {
+          toast.error("Lỗi: Không tìm thấy Chủ đề");
+          return;
+        }
         res = await addMatchWordItem({
           topicId: selectedTopicId,
           word: itemForm.word,
