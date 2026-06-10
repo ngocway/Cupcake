@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 
@@ -9,6 +9,7 @@ export default function PlaySentenceBuilderGamePage() {
   const params = useParams()
   const gameId = params.gameId as string
   const [mounted, setMounted] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     setMounted(true)
@@ -34,11 +35,18 @@ export default function PlaySentenceBuilderGamePage() {
 
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#fbc2eb] overflow-hidden relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#fbc2eb]">
+            <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
+            <span className="text-white font-bold tracking-widest uppercase animate-pulse">Loading Game...</span>
+          </div>
+        )}
         <iframe 
           src={`/games/sentence-builder/index.html?gameId=${gameId}`}
-          className="w-full h-full border-none"
+          className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Sentence Builder Game"
           sandbox="allow-scripts allow-same-origin"
+          onLoad={() => setIsLoading(false)}
         />
       </div>
     </div>

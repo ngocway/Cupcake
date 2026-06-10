@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import BackButton from "@/components/ui/BackButton";
@@ -10,6 +10,7 @@ function MatchWordsGameContent() {
   const searchParams = useSearchParams();
   const age = searchParams.get("age") || "2-5";
   const gameId = searchParams.get("gameId");
+  const [isLoading, setIsLoading] = useState(true);
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col">
@@ -28,11 +29,18 @@ function MatchWordsGameContent() {
 
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#a1c4fd] overflow-hidden relative">
+        {isLoading && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#a1c4fd]">
+            <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
+            <span className="text-white font-bold tracking-widest uppercase animate-pulse">Loading Game...</span>
+          </div>
+        )}
         <iframe 
           src={`/games/match-words/index.html?age=${age}${gameId ? `&gameId=${gameId}` : ''}`} 
-          className="w-full h-full border-none"
+          className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Match the Words Game"
           sandbox="allow-scripts allow-same-origin"
+          onLoad={() => setIsLoading(false)}
         />
       </div>
     </div>

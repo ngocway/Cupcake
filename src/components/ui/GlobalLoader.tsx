@@ -53,10 +53,6 @@ function GlobalLoaderContent() {
     // Use capture phase to ensure we catch it before any stopPropagation
     document.addEventListener("click", handleClick, true);
 
-    // Also listen to window history changes just in case (optional)
-    const handlePopState = () => setIsNavigating(true);
-    window.addEventListener("popstate", handlePopState);
-
     // Custom event to trigger it programmatically
     const handleCustomTrigger = () => setIsNavigating(true);
     window.addEventListener("show-global-loader", handleCustomTrigger);
@@ -66,7 +62,6 @@ function GlobalLoaderContent() {
 
     return () => {
       document.removeEventListener("click", handleClick, true);
-      window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("show-global-loader", handleCustomTrigger);
       window.removeEventListener("hide-global-loader", handleCustomDismiss);
     };
