@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useEffect } from "react";
+import { useTransition, useEffect, Suspense } from "react";
 import { useContentStore } from "@/store/useContentStore";
 import { setUserTypePreference } from "@/actions/user-preferences-actions";
 import { useTranslations } from "next-intl";
@@ -79,8 +79,8 @@ function SidebarUserTypeListContent({ initialUserType }: { initialUserType?: str
 
 export function SidebarUserTypeList({ initialUserType }: { initialUserType?: string }) {
   return (
-    <React.Suspense fallback={<div className="h-20 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}>
+    <Suspense fallback={<div className="h-20 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}>
       <SidebarUserTypeListContent initialUserType={initialUserType} />
-    </React.Suspense>
+    </Suspense>
   );
 }
