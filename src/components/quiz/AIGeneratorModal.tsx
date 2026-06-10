@@ -18,7 +18,7 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
     MATCHING: 0,
     REORDER: 0
   });
-  const [difficulty, setDifficulty] = useState('Dễ (Cơ bản)');
+  const [difficulty, setDifficulty] = useState('A1');
   const [language, setLanguage] = useState('VI');
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -76,11 +76,26 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
       }));
       
       const firstData = results[0]?.data || {};
+      
+      let thumbnailUrl = undefined;
+      if (firstData.title) {
+         try {
+            const { generateThumbnailFromTitle } = await import('@/actions/ai-image-generator');
+            const thumbResult = await generateThumbnailFromTitle(firstData.title);
+            if (thumbResult.success) {
+               thumbnailUrl = thumbResult.url;
+            }
+         } catch (e) {
+            console.error("Failed to generate thumbnail:", e);
+         }
+      }
+
       const metadata = {
         title: firstData.title,
         instructions: firstData.instructions,
         shortDescription: firstData.shortDescription,
-        targetAudiences: firstData.targetAudiences
+        targetAudiences: firstData.targetAudiences,
+        thumbnail: thumbnailUrl
       };
       
       onQuestionsGenerated(validResults, metadata);
@@ -200,9 +215,11 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
                 onChange={(e) => setDifficulty(e.target.value)}
                 className="w-full p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 outline-none text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 appearance-none"
               >
-                <option value="Dễ (Cơ bản)">Dễ (Cơ bản)</option>
-                <option value="Trung bình (Vận dụng)">Trung bình (Vận dụng)</option>
-                <option value="Khó (Vận dụng cao)">Khó (Vận dụng cao)</option>
+                <option value="A1">A1 (Beginner)</option>
+                <option value="A2">A2 (Elementary)</option>
+                <option value="B1">B1 (Intermediate)</option>
+                <option value="B2">B2 (Upper Intermediate)</option>
+                <option value="C1">C1 (Advanced)</option>
               </select>
             </div>
 

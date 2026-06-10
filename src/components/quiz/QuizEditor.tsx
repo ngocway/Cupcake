@@ -88,7 +88,7 @@ function SortableQuestionItem({
       {...attributes}
       {...listeners}
       onClick={() => setActiveId(q.id)}
-      className={`flex items-start gap-3 p-3 rounded-xl border transition-all group cursor-grab active:cursor-grabbing ${
+      className={`flex shrink-0 items-start gap-3 p-3 rounded-xl border transition-all group cursor-grab active:cursor-grabbing ${
         activeId === q.id 
           ? 'bg-primary/5 border-2 border-primary shadow-md' 
           : 'bg-white border-slate-200 shadow-sm hover:border-primary/30'
@@ -485,6 +485,7 @@ export function QuizEditor() {
       if (metadata.targetAudiences && Array.isArray(metadata.targetAudiences)) {
         setTargetAudiences(metadata.targetAudiences);
       }
+      if (metadata.thumbnail) setThumbnail(metadata.thumbnail);
     }
 
     const aiQuestions = generatedData.flatMap(({ type, questions }) => {

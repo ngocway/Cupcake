@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 
-export async function GET(request: Request, { params }: { params: { gameId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ gameId: string }> }) {
   try {
-    const gameId = params.gameId
+    const gameId = (await params).gameId
 
     const game = await prisma.sentenceBuilderGame.findUnique({
       where: { id: gameId },
