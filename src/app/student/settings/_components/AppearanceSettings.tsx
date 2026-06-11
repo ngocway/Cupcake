@@ -16,8 +16,8 @@ export function AppearanceSettings() {
                         <Languages className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Ngôn ngữ giao diện</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Chọn ngôn ngữ để bạn cảm thấy thoải mái nhất</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Interface Language</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Choose the language you are most comfortable with</p>
                     </div>
                 </div>
 
@@ -32,7 +32,7 @@ export function AppearanceSettings() {
                     >
                         <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm text-xl">🇻🇳</div>
                         <div className="flex-1">
-                            <span className="block text-sm font-bold text-slate-900 dark:text-white">Tiếng Việt</span>
+                            <span className="block text-sm font-bold text-slate-900 dark:text-white">Vietnamese</span>
                             <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-0.5">Vietnamese (Primary)</span>
                         </div>
                         {lang === "vi" && <div className="p-1 bg-primary text-white rounded-full"><Check className="w-3 h-3" /></div>}
@@ -59,13 +59,13 @@ export function AppearanceSettings() {
             <section className="space-y-4 pt-6">
                 <div className="flex items-center gap-3 text-slate-400">
                     <Globe className="w-4 h-4" />
-                    <span className="text-xs font-medium">Lưu ý: Ngôn ngữ chính của bài tập sẽ luôn là ngôn ngữ do giáo viên thiết lập.</span>
+                    <span className="text-xs font-medium">Note: The main language of assignments will always be the language set by the teacher.</span>
                 </div>
             </section>
 
             <div className="flex justify-end pt-4">
-                <Button className="bg-primary text-white rounded-full px-10" onClick={() => alert(`Đã chuyển sang: ${lang === "vi" ? "Tiếng Việt" : "English"}`)}>
-                    Lưu cấu hình
+                <Button className="bg-primary text-white rounded-full px-10" onClick={() => alert(`Switched to: ${lang === "vi" ? "Vietnamese" : "English"}`)}>
+                    Save Configuration
                 </Button>
             </div>
         </div>

@@ -154,7 +154,7 @@ export default async function StudentQuizPage({
   const relatedAssignmentsPromise = getRelatedAssignments(assignmentCore);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen w-full max-w-none bg-slate-50 dark:bg-slate-950">
        <QuizClientRunner 
           assignment={assignmentCore as any}
           submissionId={submissionId}

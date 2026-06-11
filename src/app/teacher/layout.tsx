@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from "react"
 import { signOut, useSession, SessionProvider } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Bell, BellOff, ClipboardList, UserPlus, Star, FileText, Eye, Settings, HelpCircle, LogOut, ShieldAlert, ArrowLeft, BookOpen, Search, LayoutGrid, GraduationCap, Archive, Clock, Share2, Trash2, Book } from "lucide-react"
+import { useScrollDirection } from "@/hooks/useScrollDirection"
 
 const lexend = Lexend({
   variable: "--font-lexend",
@@ -214,8 +215,9 @@ function TeacherProfile() {
 
 function AdminModeBanner({ mode }: { mode: 'TEACHER' | 'STUDENT' }) {
   const router = useRouter()
+  const { isHidden } = useScrollDirection()
   return (
-    <div className="sticky top-0 z-[100] w-full bg-amber-500/90 backdrop-blur-md text-amber-950 flex items-center justify-between px-6 py-2.5 shadow-sm border-b border-amber-600/20">
+    <div className={`sticky top-0 z-[100] w-full bg-amber-500/90 backdrop-blur-md text-amber-950 flex items-center justify-between px-6 py-2.5 shadow-sm border-b border-amber-600/20 transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'}`}>
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-4 h-4 stroke-[2.5px]" />
         <span className="text-xs font-black uppercase tracking-widest">
@@ -261,12 +263,13 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
   ];
 
   const isEditMode = pathname.endsWith('/edit') || pathname.includes('/edit/');
+  const { isHidden } = useScrollDirection();
 
   return (
     <div className={`teacher-theme ${lexend.variable} font-display bg-[#eef8fa] dark:bg-slate-900 text-slate-900 dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
       {session?.user?.role === 'ADMIN' && <AdminModeBanner mode="TEACHER" />}
       {!isEditMode && (
-        <header id="teacher-header" className="sticky top-0 z-50 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-3 shadow-sm">
+        <header id="teacher-header" className={`sticky top-0 z-50 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-3 shadow-sm transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
             <div className="flex items-center gap-8 flex-1">
               <div className="flex items-center gap-3 shrink-0">

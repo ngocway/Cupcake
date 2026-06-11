@@ -19,8 +19,14 @@ export function MainContentWrapper({
     setMounted(true)
   }, [])
   
-  const isLearningRoute = pathname?.includes('/lessons/') || 
-                         pathname?.includes('/assignments/') && pathname?.includes('/run')
+  const isLearningRoute = Boolean(
+    pathname && (
+      pathname.includes('/lessons/') || 
+      pathname.match(/\/(run|quiz|game)/)
+    )
+  )
+
+  console.log('MainContentWrapper', { pathname, isLearningRoute, isTeacher });
 
   const noSidebar = isLearningRoute || isTeacher
 
@@ -28,7 +34,7 @@ export function MainContentWrapper({
   const topPadding = mounted ? (isHidden ? 'pt-0' : 'pt-8') : 'pt-8'
 
   return (
-    <main className={`${!noSidebar ? (isAtTop ? `md:ml-64 ${topPadding} px-6` : `md:ml-64 pt-0 px-6`) : 'max-w-full mx-auto pt-0 px-0'} pb-24 md:pb-0 transition-all duration-500 min-h-screen`}>
+    <main className={`${!noSidebar ? (isAtTop ? `md:ml-64 ${topPadding} px-6` : `md:ml-64 pt-0 px-6`) : 'w-full max-w-none pt-0 px-0'} pb-24 md:pb-0 transition-all duration-500 min-h-screen flex flex-col`}>
       {children}
     </main>
   )

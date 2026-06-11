@@ -17,9 +17,12 @@ export function SmartHeader({ session }: SmartHeaderProps) {
   const isDetailOrRunPage = (pathname?.includes('/lessons/') && pathname !== '/student/lessons') || 
                             (pathname?.includes('/assignments/') && pathname !== '/student/assignments')
   
-  const { isHidden } = useScrollDirection()
+  const { isHidden, isAtTop } = useScrollDirection()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const isGameRoute = pathname?.includes('/student/game')
+  const shouldHide = isGameRoute ? !isAtTop : isHidden
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -49,14 +52,14 @@ export function SmartHeader({ session }: SmartHeaderProps) {
       {/* Spacer - maintains space when header is hidden */}
       <div 
         className="h-[96px] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        style={{ display: isHidden ? 'none' : 'block' }}
+        style={{ display: shouldHide ? 'none' : 'block' }}
       />
       
       {/* Header */}
       <header 
         className={`fixed top-0 left-0 right-0 z-50 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-          isHidden 
-            ? '-translate-y-full opacity-0' 
+          shouldHide 
+            ? '-translate-y-full opacity-0 pointer-events-none' 
             : 'translate-y-0 opacity-100'
         }`}
       >
@@ -74,13 +77,13 @@ export function SmartHeader({ session }: SmartHeaderProps) {
               </Link>
               <div className="hidden lg:flex gap-8 items-center">
                 <Link 
-                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/flashcards') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
+                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/flashcards') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
                   href="/flashcards"
                 >
                   {t("flashcards")}
                 </Link>
                 <Link 
-                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-on-surface-variant hover:text-primary'}`} 
+                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
                   href="/student/game"
                 >
                   {t("game")}

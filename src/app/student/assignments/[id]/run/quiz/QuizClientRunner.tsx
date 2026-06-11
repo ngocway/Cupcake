@@ -39,6 +39,7 @@ import Link from "next/link";
 import { LoginModal } from "@/components/LoginButton";
 import { completeSubmission } from "@/actions/submission-actions";
 import { useTranslations } from "next-intl";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 // Helper to determine question correctness
 const getQuestionStatus = (q: any, answer: any) => {
@@ -263,7 +264,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
                   x: e.clientX, 
                   y: e.clientY, 
                   isCorrect, 
-                  content: isCorrect ? t('correct') : t('yourIncorrectMatch', { defaultMessage: 'Lựa chọn sai của bạn' }) 
+                  content: isCorrect ? t('correct') : t('yourIncorrectMatch', { defaultMessage: 'Your choice (Incorrect)' }) 
                 })} 
                 onMouseLeave={() => setHoveredLine(null)}
               >
@@ -286,7 +287,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
                         x: e.clientX, 
                         y: e.clientY, 
                         isCorrect: true, 
-                        content: t('correctAnswer', { defaultMessage: 'Đáp án đúng' }) 
+                        content: t('correctAnswer', { defaultMessage: 'Correct answer' }) 
                       })}
                       onMouseLeave={() => setHoveredLine(null)}
                       className="cursor-help pointer-events-auto"
@@ -424,15 +425,15 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
         <div className="mt-6 flex flex-wrap items-center justify-center gap-6 px-4 py-3 bg-slate-50/80 dark:bg-slate-900/80 rounded-xl border border-slate-200 dark:border-slate-800 w-fit mx-auto">
           <div className="flex items-center gap-2">
             <div className="w-5 h-1 bg-emerald-500 rounded-full"></div>
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t("yourCorrectMatch", { defaultMessage: "Lựa chọn đúng" })}</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t("yourCorrectMatch", { defaultMessage: "Correct choice" })}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-5 h-1 bg-rose-500 rounded-full"></div>
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t("yourIncorrectMatch", { defaultMessage: "Lựa chọn sai" })}</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t("yourIncorrectMatch", { defaultMessage: "Incorrect choice" })}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-6 border-t-[3px] border-dashed border-emerald-500"></div>
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t("correctAnswer", { defaultMessage: "Đáp án đúng" })}</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t("correctAnswer", { defaultMessage: "Correct answer" })}</span>
           </div>
         </div>
       )}
@@ -579,6 +580,7 @@ export default function QuizClientRunner({
   isGuest = false
 }: Props) {
   const t = useTranslations("student.quiz");
+  const { isHidden } = useScrollDirection();
 
   // ── Kid/Teen mode detection ──────────────────────────────
   // Applies ONLY to assignments not linked to any lesson (assignment.lesson === null)
@@ -925,7 +927,7 @@ export default function QuizClientRunner({
         {/* Main Column: Questions (Full width now since right column is a drawer) */}
         <div className="w-full shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-outline-variant/20 relative">
            {/* Progress Navigation Header (Sticky) */}
-           <div className="sticky top-0 z-50 min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6">
+           <div className={`sticky top-0 z-50 transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'} min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6`}>
               <div className="shrink-0 w-full md:w-auto flex justify-start">
                 <BackButton className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />

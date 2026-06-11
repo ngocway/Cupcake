@@ -19,10 +19,10 @@ export default async function RoleSelectPage() {
     <div className="flex items-center justify-center min-h-screen bg-neutral-100">
       <div className="w-full max-w-lg p-8 space-y-8 bg-white rounded-2xl shadow-lg border border-neutral-200">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-neutral-900">Bạn là ai?</h1>
+          <h1 className="text-3xl font-bold text-neutral-900">Who are you?</h1>
           <p className="mt-2 text-sm text-neutral-500">
-            Xin chào {session.user.name || session.user.email}! Lần đầu đăng nhập, bạn vui lòng chọn vai trò của mình. <br/>
-            <strong>Lưu ý: Bạn không thể tự thay đổi vai trò sau khi đã chọn.</strong>
+            Hello {session.user.name || session.user.email}! For your first login, please select your role. <br/>
+            <strong>Note: You cannot change your role later.</strong>
           </p>
         </div>
         
@@ -34,8 +34,8 @@ export default async function RoleSelectPage() {
             className="flex flex-col items-center justify-center p-6 border-2 border-neutral-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition group"
           >
             <span className="text-4xl mb-3">👨‍🏫</span>
-            <span className="font-semibold text-neutral-800 group-hover:text-blue-700">Giáo Viên</span>
-            <span className="text-xs text-neutral-500 mt-1 text-center">Tạo bài tập và quản lý lớp học</span>
+            <span className="font-semibold text-neutral-800 group-hover:text-blue-700">Teacher</span>
+            <span className="text-xs text-neutral-500 mt-1 text-center">Create assignments and manage classes</span>
           </button>
 
           <button 
@@ -45,8 +45,8 @@ export default async function RoleSelectPage() {
             className="flex flex-col items-center justify-center p-6 border-2 border-neutral-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition group"
           >
             <span className="text-4xl mb-3">👨‍🎓</span>
-            <span className="font-semibold text-neutral-800 group-hover:text-green-700">Học Sinh</span>
-            <span className="text-xs text-neutral-500 mt-1 text-center">Tham gia lớp và làm bài tập</span>
+            <span className="font-semibold text-neutral-800 group-hover:text-green-700">Student</span>
+            <span className="text-xs text-neutral-500 mt-1 text-center">Join classes and do assignments</span>
           </button>
         </form>
       </div>

@@ -13,7 +13,7 @@ export function LogoutButton({ className, variant = "header" }: LogoutButtonProp
       className={className}
     >
       <span className="material-symbols-outlined text-sm">logout</span>
-      <span className="font-label text-sm font-bold">Đăng xuất</span>
+      <span className="font-label text-sm font-bold">Sign Out</span>
     </button>
   );
 }

@@ -16,9 +16,9 @@ export function ProfileSettings({ user }: { user: any }) {
         const res = await updateStudentProfile({ name })
         setLoading(false)
         if (res.success) {
-            alert("Thông tin hồ sơ đã được cập nhật thành công!")
+            alert("Profile information updated successfully!")
         } else {
-            alert(res.error || "Có lỗi xảy ra")
+            alert(res.error || "An error occurred")
         }
     }
 
@@ -37,12 +37,12 @@ export function ProfileSettings({ user }: { user: any }) {
                         <Camera className="w-4 h-4" />
                     </button>
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-full transition-opacity flex items-center justify-center cursor-pointer">
-                        <span className="text-white text-xs font-bold uppercase tracking-wider">Thay đổi</span>
+                        <span className="text-white text-xs font-bold uppercase tracking-wider">Change</span>
                     </div>
                 </div>
                 
                 <div className="flex-1 space-y-2">
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">{user.name || "Học sinh"}</h3>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">{user.name || "Student"}</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
                         <Mail className="w-4 h-4" /> {user.email}
                     </p>
@@ -59,22 +59,22 @@ export function ProfileSettings({ user }: { user: any }) {
 
             <div className="grid gap-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-700">
                 <div className="grid gap-2">
-                    <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest text-slate-500">Họ và Tên</Label>
+                    <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest text-slate-500">Full Name</Label>
                     <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <Input 
                             id="name" 
                             value={name} 
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="Nhập họ tên của bạn"
+                            placeholder="Enter your full name"
                             className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm pl-12 h-12 rounded-xl border-slate-200 dark:border-slate-600 focus:ring-primary/20"
                         />
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1 italic">* Tên này sẽ hiển thị trong bảng điểm của giáo viên.</p>
+                    <p className="text-[10px] text-slate-400 mt-1 italic">* This name will appear in the teacher's gradebook.</p>
                 </div>
 
                 <div className="grid gap-2 opacity-60">
-                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-slate-500">Email (Không thể chỉnh sửa)</Label>
+                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-slate-500">Email (Cannot be edited)</Label>
                     <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <Input 
@@ -93,7 +93,7 @@ export function ProfileSettings({ user }: { user: any }) {
                     disabled={loading}
                     className="bg-primary hover:bg-primary/90 text-white px-8 h-12 rounded-full font-bold uppercase tracking-widest text-xs transition-all hover:shadow-lg hover:shadow-primary/20 active:scale-95"
                 >
-                    {loading ? "Đang lưu..." : "Lưu thay đổi"}
+                    {loading ? "Saving..." : "Save Changes"}
                 </Button>
             </div>
         </div>

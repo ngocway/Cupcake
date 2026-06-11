@@ -81,20 +81,21 @@ export default async function SentenceBuilderGameListPage(props: { searchParams:
   })
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-8 pb-12 font-body relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-16 md:pt-8 pb-12 font-body relative overflow-hidden">
       {/* Decorative background blobs */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-fuchsia-400/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
 
+      {/* Back Button (Moved to top left) */}
+      <Link 
+        href="/student/game"
+        className="absolute top-6 left-4 md:top-8 md:left-8 xl:left-12 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold shadow-sm z-40"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Back to Game Hub</span>
+      </Link>
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
-        <Link 
-          href="/student/game"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold mb-10 shadow-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Game Hub</span>
-        </Link>
-        
         <div className="mb-12 text-center md:text-left flex flex-col md:flex-row items-center gap-6">
           <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-fuchsia-500 rounded-[28px] flex items-center justify-center shadow-xl shadow-purple-500/30 rotate-3 hover:rotate-0 transition-transform">
             <span className="material-symbols-outlined text-white text-5xl">extension</span>
@@ -122,7 +123,7 @@ export default async function SentenceBuilderGameListPage(props: { searchParams:
               return (
                 <Link 
                   key={game.id} 
-                  href={`/student/game/sentence-builder?age=${age}&gameId=${game.id}`}
+                  href={`/student/game/sentence-builder/${game.id}?age=${age}`}
                   className={`group ${theme.bg} border ${theme.border} ${theme.hoverBorder} ${theme.hoverShadow} rounded-[32px] transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 relative overflow-hidden flex flex-col h-full p-0`}
                 >
                   {/* Number Badge */}

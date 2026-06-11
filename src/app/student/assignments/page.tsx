@@ -116,7 +116,7 @@ export default async function StudentAssignmentsPage({
         slug: a.slug,
         title: a.title,
         thumbnail: a.thumbnail,
-        className: "Kho tự học",
+        className: "Self-study library",
         classId: "free",
         assignedAt: a.createdAt,
         dueDate: null, 

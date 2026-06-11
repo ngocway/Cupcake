@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useScrollDirection } from '@/hooks/useScrollDirection';
 
 export default function StudyClient({ assignment }: { assignment: any }) {
   const router = useRouter();
@@ -51,6 +52,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { isHidden } = useScrollDirection();
 
   const enterFullscreen = useCallback(async () => {
     const el = containerRef.current;
@@ -151,7 +153,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
   return (
     <div ref={containerRef} className="min-h-screen bg-transparent flex flex-col relative">
       {/* Header */}
-      <header className="h-16 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm">
+      <header className={`h-16 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 sticky top-0 z-20 shadow-sm transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'}`}>
         <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 

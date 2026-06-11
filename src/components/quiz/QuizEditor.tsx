@@ -19,6 +19,7 @@ import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
 import CategorySelect from '@/components/shared/CategorySelect';
 import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
 import { TagAutocompleteInput } from './TagAutocompleteInput';
+import { useScrollDirection } from '@/hooks/useScrollDirection';
 
 import {
   DndContext,
@@ -166,7 +167,9 @@ export function QuizEditor() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const id = params.id as string;
+  const { isHidden } = useScrollDirection();
+  
+  const id = params?.id as string;
   const assignToClassId = searchParams.get('assignToClass');
 
   const [questions, setQuestions] = useState<BaseQuestionProps[]>([
@@ -789,25 +792,25 @@ export function QuizEditor() {
         />
       )}
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-gray-800 px-6 py-3">
+      <header className={`sticky top-0 z-50 w-full bg-white dark:bg-background-dark border-b border-slate-200 dark:border-gray-800 px-6 py-3 transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'}`}>
         <div className="max-w-full mx-auto flex items-center justify-between gap-8">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-1 min-w-0 max-w-5xl mr-4">
             <button 
               onClick={handleBack}
-              className="flex items-center justify-center size-10 rounded-xl hover:bg-slate-100 transition-colors"
+              className="flex items-center justify-center size-10 rounded-xl hover:bg-slate-100 transition-colors shrink-0"
             >
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <div className="flex items-center gap-3">
-              <div className="size-10 bg-primary rounded-xl flex items-center justify-center text-white">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="size-10 bg-primary rounded-xl flex items-center justify-center text-white shrink-0">
                 <span className="material-symbols-outlined">quiz</span>
               </div>
-              <div>
-                <h1 className="text-sm font-medium text-slate-500">Soạn thảo bài tập</h1>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-sm font-medium text-slate-500 truncate">Soạn thảo bài tập</h1>
                 <input 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="text-[#111418] dark:text-white text-lg font-bold leading-tight bg-transparent border-none p-0 focus:ring-0 w-full"
+                  className="text-[#111418] dark:text-white text-lg font-bold leading-tight bg-transparent border-none p-0 focus:ring-0 w-full truncate"
                   placeholder="Nhập tiêu đề bài tập..."
                 />
               </div>

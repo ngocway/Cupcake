@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import { uploadMedia, uploadUrlMedia } from '@/actions/upload-actions';
 import { sliceAudioFile } from '@/utils/audioSlicer';
 
+import { CustomRichTextEditor } from '@/components/ui/CustomRichTextEditor';
+
 type MediaAttachment = {
   id: string;
   url: string;
@@ -1914,8 +1916,15 @@ export function ReadingExerciseBuilder({
                     <div className="h-6 w-0.5 bg-primary animate-pulse mt-1"></div>
                   </div>
                 )}
-                <article id="rich-text-editor" onClick={handleEditorClick} onDragOver={handleEditorDragOver} onDragLeave={handleEditorDragLeave} onDrop={handleEditorDrop} className="prose prose-slate dark:prose-invert max-w-none outline-none focus:outline-none min-h-[500px] mt-12" contentEditable suppressContentEditableWarning>
-                </article>
+                <CustomRichTextEditor 
+                  editorId="rich-text-editor" 
+                  onEditorClick={handleEditorClick} 
+                  onEditorDragOver={handleEditorDragOver} 
+                  onEditorDragLeave={handleEditorDragLeave} 
+                  onEditorDrop={handleEditorDrop} 
+                  editorClassName="mt-12 mb-4" 
+                  minHeight="500px" 
+                />
                 <input type="file" accept="audio/*" ref={audioInputRef} onChange={handleInlineAudioUpload} className="hidden" />
               </div>
             </div>

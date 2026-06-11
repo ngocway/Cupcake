@@ -22,7 +22,7 @@ export function BookmarkButton({
     e.stopPropagation()
 
     if (!isLoggedIn) {
-      alert("Vui lòng đăng nhập để lưu bài tập!")
+      alert("Please log in to save this assignment!")
       return
     }
 

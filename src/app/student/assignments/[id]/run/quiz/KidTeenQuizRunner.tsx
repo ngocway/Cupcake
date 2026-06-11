@@ -1300,26 +1300,24 @@ export default function KidTeenQuizRunner({
     {/* ── SIDE PANEL TOGGLE BUTTON ── */}
       <button
         onClick={() => setIsSidePanelOpen(true)}
-        className={`fixed top-1/2 right-0 z-30 w-9 h-16 bg-primary text-white flex items-center justify-center rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
+        className={`fixed top-1/2 right-0 z-30 w-auto py-3 pl-2 pr-4 bg-primary text-white flex items-center justify-center gap-1 rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
         style={{ transform: 'translateY(-50%)' }}
         title="Open panel"
       >
-        <ChevronLeft className="w-5 h-5" />
+        <ChevronLeft className="w-5 h-5 shrink-0" />
+        <span className="font-bold text-sm whitespace-nowrap">Instructions</span>
       </button>
 
       {/* ── RIGHT SLIDE PANEL ── */}
       <div
-        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden w-[100vw] max-w-[400px]"
+        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden w-[80vw] max-w-none"
         style={{ transform: isSidePanelOpen ? "translateX(0)" : "translateX(100%)" }}
       >
         {/* Panel header */}
-        <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-center justify-between shrink-0">
-          <h3 className="font-black text-slate-700 uppercase tracking-wider text-sm">Results & Info</h3>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setIsSidePanelOpen(false)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-rose-500 rounded-full transition-colors ml-1">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-center justify-start shrink-0">
+          <button onClick={() => setIsSidePanelOpen(false)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-rose-500 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Panel body */}

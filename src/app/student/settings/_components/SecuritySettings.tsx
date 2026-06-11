@@ -21,12 +21,12 @@ export function SecuritySettings({ user }: { user: any }) {
         setSuccess(false)
 
         if (newPassword !== confirmPassword) {
-            setError("Mật khẩu xác nhận không khớp")
+            setError("Passwords do not match")
             return
         }
 
         if (newPassword.length < 6) {
-            setError("Mật khẩu mới phải có ít nhất 6 ký tự")
+            setError("New password must be at least 6 characters long")
             return
         }
 
@@ -40,7 +40,7 @@ export function SecuritySettings({ user }: { user: any }) {
             setNewPassword("")
             setConfirmPassword("")
         } else {
-            setError(res.error || "Có lỗi xảy ra")
+            setError(res.error || "An error occurred")
         }
     }
 
@@ -52,14 +52,14 @@ export function SecuritySettings({ user }: { user: any }) {
                         <Lock className="w-6 h-6" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Thay đổi mật khẩu</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Đảm bảo mật khẩu của bạn mạnh để bảo vệ tài khoản</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Change Password</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Ensure your password is strong to protect your account</p>
                     </div>
                 </div>
 
                 <form onSubmit={handlePasswordChange} className="grid gap-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-3xl border border-slate-200 dark:border-slate-700">
                     <div className="grid gap-2">
-                        <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Mật khẩu hiện tại</Label>
+                        <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Current Password</Label>
                         <div className="relative">
                             <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <Input 
@@ -74,7 +74,7 @@ export function SecuritySettings({ user }: { user: any }) {
 
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="grid gap-2">
-                            <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Mật khẩu mới</Label>
+                            <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">New Password</Label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input 
@@ -87,7 +87,7 @@ export function SecuritySettings({ user }: { user: any }) {
                             </div>
                         </div>
                         <div className="grid gap-2">
-                            <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Xác nhận mật khẩu</Label>
+                            <Label className="text-xs font-bold uppercase tracking-widest text-slate-500">Confirm Password</Label>
                             <div className="relative">
                                 <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input 
@@ -109,7 +109,7 @@ export function SecuritySettings({ user }: { user: any }) {
 
                     {success && (
                         <div className="flex items-center gap-2 p-4 bg-green-50 text-green-600 rounded-xl text-xs font-medium border border-green-100 italic">
-                            <CheckCircle2 className="w-4 h-4" /> Cập nhật mật khẩu thành công!
+                            <CheckCircle2 className="w-4 h-4" /> Password updated successfully!
                         </div>
                     )}
 
@@ -119,7 +119,7 @@ export function SecuritySettings({ user }: { user: any }) {
                             disabled={loading}
                             className="bg-red-500 hover:bg-red-600 text-white px-8 h-12 rounded-full font-bold uppercase tracking-widest text-xs transition-all active:scale-95"
                         >
-                            {loading ? "Đang xử lý..." : "Cập nhật mật khẩu"}
+                            {loading ? "Processing..." : "Update Password"}
                         </Button>
                     </div>
                 </form>
@@ -133,11 +133,11 @@ export function SecuritySettings({ user }: { user: any }) {
                         </svg>
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Liên kết tài khoản</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Quản lý cách bạn đăng nhập vào hệ thống</p>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Linked Accounts</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Manage how you log in to the system</p>
                     </div>
                     <Button variant="outline" className="rounded-full px-6 border-slate-200 dark:border-slate-600">
-                        {user.accounts?.length > 0 ? "Đã liên kết" : "Liên kết ngay"}
+                        {user.accounts?.length > 0 ? "Linked" : "Link now"}
                     </Button>
                 </div>
             </section>

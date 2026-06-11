@@ -69,9 +69,9 @@ function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () =
       <div className="relative w-48 h-48 mb-8">
         <img src="/images/bird.png" alt="No results" className="w-full h-full object-contain drop-shadow-xl opacity-60 grayscale" />
       </div>
-      <h3 className="text-2xl font-headline font-black text-primary mb-3">Oops! Không tìm thấy kết quả.</h3>
+      <h3 className="text-2xl font-headline font-black text-primary mb-3">Oops! No results found.</h3>
       <p className="text-on-surface-variant max-w-md mx-auto mb-8">
-        Chúng mình không tìm thấy nội dung nào phù hợp với từ khóa <strong className="text-primary">"{keyword}"</strong>. Bạn thử kiểm tra lại chính tả hoặc dùng từ khóa khác xem sao nhé.
+        We couldn't find any content matching <strong className="text-primary">"{keyword}"</strong>. Please check your spelling or try different keywords.
       </p>
     </div>
   )
@@ -92,7 +92,7 @@ const ExerciseList = memo(function ExerciseList({
 }) {
   const { items } = use(promise)
   if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
-  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
+  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
@@ -116,7 +116,7 @@ const LessonList = memo(function LessonList({
 }) {
   const { items } = use(promise)
   if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
-  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">Chưa có nội dung nào.</div>
+  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
@@ -537,7 +537,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                 onClick={handleCloseModalDiscard}
                 className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
               >
-                {locale === "vi" ? "HỦY BỎ" : "CANCEL"}
+                {locale === "vi" ? "CANCEL" : "CANCEL"}
               </button>
               <button
                 onClick={handleApplyFilters}
@@ -548,7 +548,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                     : "bg-slate-200 border-2 border-slate-200 dark:bg-slate-800 dark:border-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
                 }`}
               >
-                {locale === "vi" ? "SẴN SÀNG" : "READY"}
+                {locale === "vi" ? "READY" : "READY"}
               </button>
             </div>
 

@@ -50,7 +50,7 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
         {isPending && (
           <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-2xl border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-             <span className="font-bold text-primary text-sm uppercase tracking-wider">Đang tìm kiếm...</span>
+             <span className="font-bold text-primary text-sm uppercase tracking-wider">Searching...</span>
           </div>
         )}
         {children}

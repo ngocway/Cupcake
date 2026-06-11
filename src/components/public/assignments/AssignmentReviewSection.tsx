@@ -40,10 +40,10 @@ export default function AssignmentReviewSection({ reviews, assignmentId, isLogge
 
       <div className="flex items-center justify-between border-b border-surface-container pb-6">
          <div className="space-y-1">
-            <h2 className="text-2xl font-black text-on-surface">Đánh giá & Nhận xét</h2>
+            <h2 className="text-2xl font-black text-on-surface">Reviews & Ratings</h2>
             <p className="text-on-surface-variant/40 text-sm font-bold uppercase tracking-widest flex items-center gap-2">
                <MessageSquare className="w-4 h-4" />
-               {reviews.length} Phản hồi từ cộng đồng
+               {reviews.length} Community Feedbacks
             </p>
          </div>
          {reviews.length > 0 && (
@@ -52,7 +52,7 @@ export default function AssignmentReviewSection({ reviews, assignmentId, isLogge
                  <Star className="w-6 h-6 text-amber-400 fill-amber-400" />
                  <span className="text-3xl font-black text-on-surface">{averageRating}</span>
               </div>
-              <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest mt-1">Điểm trung bình</p>
+              <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest mt-1">Average Rating</p>
            </div>
          )}
       </div>
@@ -62,7 +62,7 @@ export default function AssignmentReviewSection({ reviews, assignmentId, isLogge
            <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mx-auto">
               <Star className="w-8 h-8 text-on-surface-variant/20" />
            </div>
-           <p className="text-on-surface-variant/40 font-bold italic">Chưa có đánh giá nào cho bài tập này.</p>
+           <p className="text-on-surface-variant/40 font-bold italic">No reviews yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
@@ -78,7 +78,7 @@ export default function AssignmentReviewSection({ reviews, assignmentId, isLogge
                        )}
                     </div>
                     <div>
-                       <h4 className="font-black text-on-surface">{review.student.name || "Học viên ẩn danh"}</h4>
+                       <h4 className="font-black text-on-surface">{review.student.name || "Anonymous Student"}</h4>
                        <p className="text-[10px] font-bold text-on-surface-variant/40 uppercase tracking-widest">
                           {format(review.createdAt, "dd/MM/yyyy", { locale: vi })}
                        </p>

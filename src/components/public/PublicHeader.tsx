@@ -82,13 +82,13 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         </Link>
         <div className="hidden lg:flex gap-8 items-center">
           <Link 
-            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-foreground/40 hover:text-primary hover:scale-105'}`} 
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
             href="/flashcards"
           >
             {t("flashcards")}
           </Link>
           <Link 
-            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-foreground/40 hover:text-primary hover:scale-105'}`} 
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
             href="/student/game"
           >
             {t("game")}

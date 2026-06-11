@@ -22,8 +22,12 @@ export function SideNavWrapper({
   }, [])
   
   // Routes where sidebar should be hidden
-  const isLearningRoute = pathname?.includes('/lessons/') || 
-                         pathname?.includes('/assignments/') && pathname?.includes('/run')
+  const isLearningRoute = Boolean(
+    pathname && (
+      pathname.includes('/lessons/') || 
+      pathname.match(/\/(run|quiz|game)/)
+    )
+  )
   
   if (isLearningRoute || isTeacher) return null
 

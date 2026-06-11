@@ -22,7 +22,7 @@ export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }
   if (!isLoggedIn) {
     return (
       <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 text-center space-y-4">
-        <p className="text-slate-500 font-bold">Vui lòng đăng nhập để đánh giá bài học này.</p>
+        <p className="text-slate-500 font-bold">Please log in to review this lesson.</p>
       </div>
     );
   }
@@ -31,7 +31,7 @@ export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-[2rem] p-8 text-center space-y-4 flex flex-col items-center">
         <AlertCircle className="w-8 h-8 text-amber-500" />
-        <p className="text-amber-700 font-bold">Chỉ có thể đánh giá các bài học công khai (Public).</p>
+        <p className="text-amber-700 font-bold">Only public lessons can be reviewed.</p>
       </div>
     );
   }
@@ -39,7 +39,7 @@ export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (rating === 0) {
-      toast.error("Vui lòng chọn số sao đánh giá!");
+      toast.error("Please select a star rating!");
       return;
     }
 
@@ -55,7 +55,7 @@ export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }
         toast.error(result.message);
       }
     } catch (error) {
-      toast.error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+      toast.error("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -81,7 +81,7 @@ export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Chia sẻ suy nghĩ hoặc đặt câu hỏi của bạn về bài học này..."
+              placeholder="Share your thoughts or ask questions about this lesson..."
               rows={4}
               className="w-full bg-surface-container-highest rounded-xl p-6 text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 focus:bg-surface-container-lowest transition-all border border-transparent focus:border-primary/20 resize-none placeholder-on-surface-variant/50 font-body text-lg shadow-inner"
             />
@@ -117,14 +117,14 @@ export default function ReviewForm({ lessonId, isLoggedIn, isPublic, onSuccess }
                 disabled={isSubmitting}
                 className="bg-secondary text-on-secondary px-8 py-2.5 rounded-full font-label text-sm font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-secondary/20 disabled:opacity-50"
               >
-                {isSubmitting ? "..." : "GỬI"}
+                {isSubmitting ? "..." : "SUBMIT"}
               </button>
             </div>
           </div>
 
           <div className="flex items-center gap-2 text-[10px] font-black text-on-surface-variant/40 uppercase tracking-widest px-2">
              <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
-             Đánh giá sẽ được kiểm duyệt để đảm bảo môi trường học tập tích cực
+             Reviews are moderated to ensure a positive learning environment.
           </div>
         </div>
       </div>

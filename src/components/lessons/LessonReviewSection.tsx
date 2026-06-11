@@ -43,10 +43,10 @@ export default function LessonReviewSection({ reviews, lessonId, isLoggedIn, isP
         <div className="flex items-center justify-between border-b border-surface-container pb-6 px-2">
            <div className="space-y-1">
               <h3 className="text-xl font-headline font-black text-on-background uppercase tracking-tighter italic">
-                 Cộng đồng học tập
+                 Learning Community
               </h3>
               <p className="text-on-surface-variant/50 text-[10px] font-black uppercase tracking-[0.2em]">
-                 {reviews.length} Ý kiến & Thảo luận
+                 {reviews.length} Comments & Discussions
               </p>
            </div>
            
@@ -63,7 +63,7 @@ export default function LessonReviewSection({ reviews, lessonId, isLoggedIn, isP
              <div className="w-16 h-16 bg-white/50 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/40 shadow-inner">
                 <Star className="w-8 h-8 text-primary/10" />
              </div>
-             <p className="text-on-surface-variant/40 font-bold italic text-sm">Chưa có thảo luận nào. Hãy là người đầu tiên chia sẻ!</p>
+             <p className="text-on-surface-variant/40 font-bold italic text-sm">No discussions yet. Be the first to share!</p>
           </div>
         ) : (
           <div className="space-y-12">
@@ -87,7 +87,7 @@ export default function LessonReviewSection({ reviews, lessonId, isLoggedIn, isP
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-baseline gap-3">
                       <h4 className="font-headline font-extrabold text-on-background tracking-tight">
-                        {review.student.name || "Học viên ẩn danh"}
+                        {review.student.name || "Anonymous Student"}
                       </h4>
                       <span className="text-[10px] font-black text-on-surface-variant/30 uppercase tracking-widest">
                         {format(review.createdAt, "dd MMM, yyyy", { locale: vi })}
@@ -111,11 +111,11 @@ export default function LessonReviewSection({ reviews, lessonId, isLoggedIn, isP
                   <div className="flex items-center gap-6 pt-2">
                     <button className="flex items-center gap-2 text-[10px] font-black text-on-surface-variant/40 hover:text-primary uppercase tracking-widest transition-colors">
                       <span className="material-symbols-outlined text-[18px]">thumb_up</span>
-                      Hữu ích
+                      Helpful
                     </button>
                     <button className="flex items-center gap-2 text-[10px] font-black text-on-surface-variant/40 hover:text-primary uppercase tracking-widest transition-colors">
                       <span className="material-symbols-outlined text-[18px]">reply</span>
-                      Phản hồi
+                      Reply
                     </button>
                   </div>
                 </div>

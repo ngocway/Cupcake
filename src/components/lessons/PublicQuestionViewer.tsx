@@ -105,7 +105,7 @@ export default function PublicQuestionViewer({
   if (!questionData) {
     return (
        <div className="p-10 bg-slate-50 rounded-xl text-center text-slate-400 font-bold border-2 border-dashed border-slate-200">
-          Dữ liệu câu hỏi bị lỗi
+          Question data error
        </div>
     );
   }
@@ -118,10 +118,10 @@ export default function PublicQuestionViewer({
             <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-black text-sm">
                {currentIndex + 1}
             </div>
-            <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Câu hỏi</span>
+            <span className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Question</span>
          </div>
          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-200">
-            {currentQuestion.type.replace('_', ' ')} • {currentQuestion.points} Điểm
+            {currentQuestion.type.replace('_', ' ')} • {currentQuestion.points} Points
          </div>
       </div>
 
@@ -176,8 +176,8 @@ export default function PublicQuestionViewer({
                {currentQuestion.type === 'TRUE_FALSE' && (
                  <div className="grid grid-cols-2 gap-4">
                     {[
-                      { id: 'true', text: 'Đúng', val: true },
-                      { id: 'false', text: 'Sai', val: false }
+                      { id: 'true', text: 'True', val: true },
+                      { id: 'false', text: 'False', val: false }
                     ].map((opt) => {
                       const isSelected = answers[currentQuestion.id]?.value === opt.id;
                       const isCorrect = opt.val === questionData.isTrue;
@@ -247,7 +247,7 @@ export default function PublicQuestionViewer({
                               key={`student-${leftId}`}
                               onMouseEnter={(e) => {
                                 if (isChecked) {
-                                  setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? 'Đúng' : 'Sai' });
+                                  setHoveredLine({ x: e.clientX, y: e.clientY, content: isCorrect ? 'True' : 'False' });
                                 }
                               }}
                               onMouseMove={(e) => {
@@ -306,7 +306,7 @@ export default function PublicQuestionViewer({
                           style={{ left: hoveredLine.x, top: hoveredLine.y }}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full ${hoveredLine.content === 'Đúng' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                            <span className={`w-2 h-2 rounded-full ${hoveredLine.content === 'True' ? 'bg-emerald-400' : 'bg-rose-400'}`} />
                             {hoveredLine.content}
                           </div>
                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
@@ -411,7 +411,7 @@ export default function PublicQuestionViewer({
                 {currentQuestion.type !== 'MULTIPLE_CHOICE' && currentQuestion.type !== 'TRUE_FALSE' && currentQuestion.type !== 'MATCHING' && (
                  <div className="p-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-center">
                     <p className="text-slate-400 font-bold italic">
-                       Loại câu hỏi {currentQuestion.type} đang được cập nhật...
+                       Question type {currentQuestion.type} is being updated...
                     </p>
                  </div>
                )}
@@ -423,10 +423,10 @@ export default function PublicQuestionViewer({
            <div className="animate-in fade-in slide-in-from-top-2 duration-500 bg-blue-50/50 rounded-xl p-8 border border-blue-100 space-y-3">
               <div className="flex items-center gap-2 text-blue-600 font-black text-xs uppercase tracking-widest">
                  <HelpCircle className="w-4 h-4" />
-                 Giải thích đáp án
+                 Explanation
               </div>
               <p className="text-slate-600 leading-relaxed font-medium">
-                 {currentQuestion.explanation || "Không có giải thích chi tiết cho câu hỏi này."}
+                 {currentQuestion.explanation || "No detailed explanation provided for this question."}
               </p>
            </div>
          )}
@@ -440,7 +440,7 @@ export default function PublicQuestionViewer({
            className="flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm text-slate-500 hover:bg-white disabled:opacity-30 transition-all"
          >
             <ChevronLeft className="w-5 h-5" />
-            Câu trước
+            Previous Question
          </button>
 
          <div className="flex items-center gap-1.5">
@@ -457,7 +457,7 @@ export default function PublicQuestionViewer({
          {currentIndex === questions.length - 1 ? (
             showSubmitButton && (
                <button
-                 onClick={() => alert('Chức năng nộp bài đang được nâng cấp, vui lòng quay lại sau!')}
+                 onClick={() => alert('Submission feature is being upgraded, please come back later!')}
                  className="flex items-center gap-2 px-8 py-3 bg-slate-400 text-white cursor-not-allowed rounded-lg font-black text-sm tracking-widest transition-all"
               >
                  COMING SOON
@@ -468,7 +468,7 @@ export default function PublicQuestionViewer({
               onClick={handleNext}
               className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-lg font-black text-sm tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
             >
-               CÂU TIẾP THEO
+               NEXT QUESTION
                <ChevronRight className="w-5 h-5" />
             </button>
          )}

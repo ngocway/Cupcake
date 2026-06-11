@@ -153,32 +153,17 @@ export default function GameHubPage() {
   const games = GAMES_DATA[selectedCategoryId] || [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-8 pb-12 font-body">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-16 md:pt-8 pb-12 font-body relative">
+      {/* Back Button (Moved to top left) */}
+      <Link 
+        href="/"
+        className="absolute top-6 left-4 md:top-8 md:left-8 xl:left-12 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold shadow-sm z-40"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span className="hidden sm:inline">Back to home</span>
+      </Link>
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
-        <div className="flex justify-start mb-[-2rem]">
-          <Link 
-            href="/"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold shadow-sm relative z-10"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to home</span>
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div className="text-center space-y-5 relative py-6">
-          <div className="absolute top-0 left-1/4 w-16 h-16 bg-yellow-400/20 rounded-full blur-xl animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-20 h-20 bg-pink-400/20 rounded-full blur-xl animate-pulse" />
-
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-400/10 to-teal-500/10 border border-emerald-200/50 text-emerald-700 dark:text-emerald-400 font-black text-xs uppercase tracking-widest shadow-sm">
-            <Sparkles className="w-4.5 h-4.5 text-emerald-500 animate-pulse" />
-            <span>✨ Interactive Game Playground ✨</span>
-          </div>
-
-          <h1 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none">
-            Game <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-primary bg-clip-text text-transparent">Hub</span>
-          </h1>
-        </div>
 
         {/* Selection Area (Category & Game Cards) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-[40px] p-6 md:p-8 shadow-xl shadow-slate-100/50 dark:shadow-none space-y-10">

@@ -49,11 +49,11 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
         {view === 'role' && (
           <>
             <div className="px-8 pt-8 pb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-black text-[#111418] dark:text-white">Chào mừng bạn 👋</h2>
+              <h2 className="text-2xl font-black text-[#111418] dark:text-white">Welcome 👋</h2>
               <button 
                 onClick={handleClose}
                 className="size-10 flex items-center justify-center rounded-full hover:bg-[#f0f2f4] dark:hover:bg-gray-800 text-[#617589] transition-colors"
-                aria-label="Đóng"
+                aria-label="Close"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -61,7 +61,7 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
             
             <div className="px-8 py-4">
               <p className="text-sm text-neutral-500 dark:text-gray-400 mb-6 font-medium">
-                Vui lòng chọn vai trò để tiếp tục đăng nhập vào hệ thống
+                Please select your role to continue logging in
               </p>
               
               <div className="flex flex-col gap-4">
@@ -75,8 +75,8 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
                     👨‍🏫
                   </div>
                   <div className="pr-16">
-                    <h3 className="font-bold text-lg text-neutral-600 dark:text-gray-400">Giáo viên</h3>
-                    <p className="text-sm text-neutral-400 dark:text-gray-500 mt-1 line-clamp-2 leading-relaxed">Truy cập bảng điều khiển, tạo bài tập, theo dõi lớp học và đánh giá quá trình.</p>
+                    <h3 className="font-bold text-lg text-neutral-600 dark:text-gray-400">Teacher</h3>
+                    <p className="text-sm text-neutral-400 dark:text-gray-500 mt-1 line-clamp-2 leading-relaxed">Access dashboard, create assignments, track classes, and evaluate progress.</p>
                   </div>
                 </div>
 
@@ -88,8 +88,8 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
                     👨‍🎓
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-neutral-800 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">Học sinh</h3>
-                    <p className="text-sm text-neutral-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">Sử dụng mã lớp học hoặc quét mã QR để tham gia và bắt đầu làm bài tập ngay.</p>
+                    <h3 className="font-bold text-lg text-neutral-800 dark:text-gray-100 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors">Student</h3>
+                    <p className="text-sm text-neutral-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">Use class code or scan QR code to join and start practicing immediately.</p>
                   </div>
                 </button>
               </div>
@@ -104,7 +104,7 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
             <button 
               onClick={handleClose}
               className="absolute top-6 right-6 z-50 size-10 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 transition-colors"
-              aria-label="Đóng"
+              aria-label="Close"
             >
               <span className="material-symbols-outlined">close</span>
             </button>
@@ -114,7 +114,7 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
               className="absolute top-6 left-6 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 text-sm font-medium transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Trở lại
+              Back
             </button>
 
             <div className="pt-8">

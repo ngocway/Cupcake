@@ -285,7 +285,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                 <div 
                   className="flex items-center gap-1.5 text-primary/60 font-bold text-xs cursor-pointer hover:text-primary transition-colors w-fit"
                   onClick={handlePlayAudio}
-                  title="Nghe phát âm"
+                  title="Listen to pronunciation"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                   <span className="font-mono tracking-wider">{activeVocab.pronunciation.replace(/^\/+/, '/').replace(/\/+$/, '/')}</span>
@@ -356,7 +356,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
               {showLoginPrompt && !isLoggedIn && (
                 <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
                   <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-2">
-                    Bạn cần đăng nhập để lưu từ vựng
+                    You need to log in to save vocabulary
                   </p>
                   <button 
                     onClick={() => {
@@ -366,7 +366,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                     className="flex items-center justify-center gap-2 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
                   >
                     <LogIn className="w-3.5 h-3.5" />
-                    Đăng nhập ngay
+                    Log in now
                   </button>
                 </div>
               )}
@@ -418,11 +418,21 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   };
 
   let fixedHtml = html;
-  if (fixedHtml && fixedHtml.includes('Nghe Audio')) {
-    // Replace old "Nghe Audio" text and update classes for legacy markers
-    fixedHtml = fixedHtml
-      .replace(/<span class="material-symbols-outlined[^>]*>volume_up<\/span>\s*Nghe Audio/g, '<span class="material-symbols-outlined text-[16px]">volume_up</span>')
-      .replace(/class="inline-audio-marker[^"]+"/g, 'class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center select-none hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" title="Nghe Audio"');
+  if (fixedHtml) {
+    // 1. Thay thế chữ "Nghe Audio" cũ
+    if (fixedHtml.includes('Nghe Audio')) {
+      fixedHtml = fixedHtml
+        .replace(/<span class="material-symbols-outlined[^>]*>volume_up<\/span>\s*Nghe Audio/g, '<span class="material-symbols-outlined text-[16px]">volume_up</span>')
+        .replace(/class="inline-audio-marker[^"]+"/g, 'class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center select-none hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" title="Nghe Audio"');
+    }
+
+    // 2. Bảo vệ Layout của hệ thống: Biến đổi thẻ `body` bên trong `<style>` thành class `.interactive-reading-content`
+    // Điều này giúp CSS của giáo viên (ví dụ: body { max-width: 1000px }) chỉ áp dụng cho khung hướng dẫn, không bóp nhỏ toàn bộ web.
+    fixedHtml = fixedHtml.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (match, cssContent) => {
+      let scopedCss = cssContent.replace(/\bbody\s*\{/gi, '.interactive-reading-content {');
+      scopedCss = scopedCss.replace(/\bbody\s+/gi, '.interactive-reading-content ');
+      return `<style>${scopedCss}</style>`;
+    });
   }
 
   return (
