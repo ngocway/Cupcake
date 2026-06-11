@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { MultipleChoiceContent } from './types';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export interface MultipleChoiceBuilderProps {
   initialData?: MultipleChoiceContent;
@@ -92,13 +92,24 @@ export function MultipleChoiceBuilder({ initialData, onChange }: MultipleChoiceB
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Phương án trả lời</h4>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-600">Nhiều đáp án đúng</span>
-            <Switch 
-              checked={!!data.allowMultipleAnswers}
-              onCheckedChange={(checked) => handleChange({ allowMultipleAnswers: checked })}
-            />
-          </div>
+          <RadioGroup 
+            value={data.allowMultipleAnswers ? "multiple" : "single"}
+            onValueChange={(val) => handleChange({ allowMultipleAnswers: val === "multiple" })}
+            className="flex items-center gap-6"
+          >
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="single" id="single-choice" />
+              <label htmlFor="single-choice" className="text-sm font-bold text-slate-600 cursor-pointer">
+                Chỉ 1 đáp án đúng
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="multiple" id="multiple-choice" />
+              <label htmlFor="multiple-choice" className="text-sm font-bold text-slate-600 cursor-pointer">
+                Nhiều đáp án đúng
+              </label>
+            </div>
+          </RadioGroup>
         </div>
 
         <div className="space-y-1">
@@ -112,8 +123,12 @@ export function MultipleChoiceBuilder({ initialData, onChange }: MultipleChoiceB
                   checked={!!option.isCorrect}
                   onChange={() => toggleCorrect(option.id)}
                 />
-                <div className="size-9 rounded-lg border-2 border-primary/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center text-white transition-all">
-                  <span className="material-symbols-outlined text-[22px] scale-0 peer-checked:scale-100 transition-transform">check</span>
+                <div className={`size-9 border-2 border-primary/30 peer-checked:border-primary peer-checked:bg-primary flex items-center justify-center text-white transition-all ${data.allowMultipleAnswers ? 'rounded-lg' : 'rounded-full'}`}>
+                  {data.allowMultipleAnswers ? (
+                    <span className="material-symbols-outlined text-[22px] scale-0 peer-checked:scale-100 transition-transform">check</span>
+                  ) : (
+                    <div className="size-3.5 bg-white rounded-full scale-0 peer-checked:scale-100 transition-transform"></div>
+                  )}
                 </div>
               </label>
               

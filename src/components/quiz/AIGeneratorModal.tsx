@@ -51,7 +51,6 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
       const promises = [];
       const types = Object.keys(distribution) as QuestionType[];
       
-      let isFirstType = true;
       for (const type of types) {
         if (distribution[type] > 0) {
           promises.push(
@@ -61,10 +60,9 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
               type,
               difficulty,
               language,
-              includeMetadata: isFirstType
+              includeMetadata: false // Do not generate or overwrite title, descriptions, etc.
             }).then(data => ({ type, data }))
           );
-          isFirstType = false;
         }
       }
       
@@ -75,30 +73,8 @@ export function AIGeneratorModal({ onClose, onQuestionsGenerated }: AIGeneratorM
         questions: r.data.questions || []
       }));
       
-      const firstData = results[0]?.data || {};
-      
-      let thumbnailUrl = undefined;
-      if (firstData.title) {
-         try {
-            const { generateThumbnailFromTitle } = await import('@/actions/ai-image-generator');
-            const thumbResult = await generateThumbnailFromTitle(firstData.title);
-            if (thumbResult.success) {
-               thumbnailUrl = thumbResult.url;
-            }
-         } catch (e) {
-            console.error("Failed to generate thumbnail:", e);
-         }
-      }
-
-      const metadata = {
-        title: firstData.title,
-        instructions: firstData.instructions,
-        shortDescription: firstData.shortDescription,
-        targetAudiences: firstData.targetAudiences,
-        thumbnail: thumbnailUrl
-      };
-      
-      onQuestionsGenerated(validResults, metadata);
+      // Pass validResults and undefined for metadata so it doesn't overwrite anything
+      onQuestionsGenerated(validResults, undefined);
     } catch (err: any) {
       setError(err.message || 'Có lỗi xảy ra khi tạo câu hỏi.');
     } finally {

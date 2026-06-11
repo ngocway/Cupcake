@@ -1,6 +1,6 @@
 
 "use client"
-import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback } from "react"
+import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
@@ -84,22 +84,89 @@ const ExerciseList = memo(function ExerciseList({
   isLoggedIn,
   searchKeyword,
   onClear,
+  searchParams
 }: {
-  promise: Promise<{ items: any[] }>
+  promise: Promise<{ items: any[], hasMore?: boolean }>
   isLoggedIn: boolean
   searchKeyword?: string
   onClear: () => void
+  searchParams: any
 }) {
-  const { items } = use(promise)
-  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
-  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
+  const { items: serverItems, hasMore: serverHasMore } = use(promise)
+  
+  const exercises = useContentStore(s => s.exercises)
+  const setExercises = useContentStore(s => s.setExercises)
+  const addExercises = useContentStore(s => s.addExercises)
+  const hasMoreEx = useContentStore(s => s.hasMoreEx)
+  const setHasMoreEx = useContentStore(s => s.setHasMoreEx)
+  const exPage = useContentStore(s => s.exPage)
+  const setExPage = useContentStore(s => s.setExPage)
+  const userType = useContentStore(s => s.userType)
+  
+  const initializedKey = useRef('')
+  const currentKey = `ex-${searchParams.categoryId || ''}-${userType}-${searchKeyword || ''}`
+
+  useEffect(() => {
+    if (initializedKey.current !== currentKey) {
+      setExercises(serverItems)
+      setHasMoreEx(serverHasMore ?? serverItems.length >= 12)
+      setExPage(1)
+      initializedKey.current = currentKey
+    }
+  }, [currentKey, serverItems, serverHasMore, setExercises, setHasMoreEx, setExPage])
+
+  const displayItems = initializedKey.current === currentKey ? exercises : serverItems
+
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreEx && !isFetchingMore && initializedKey.current === currentKey) {
+        setIsFetchingMore(true)
+        const nextPage = exPage + 1
+        
+        const qs = new URLSearchParams()
+        qs.set('type', 'exercises')
+        qs.set('page', nextPage.toString())
+        if (searchParams.categoryId) qs.set('categoryId', searchParams.categoryId)
+        if (searchKeyword) qs.set('search', searchKeyword)
+        if (userType) qs.set('userType', userType)
+
+        fetch(`/api/feed?${qs.toString()}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.items) {
+              addExercises(data.items)
+              setHasMoreEx(data.hasMore ?? data.items.length >= 12)
+              setExPage(nextPage)
+            }
+          })
+          .catch(e => console.error(e))
+          .finally(() => setIsFetchingMore(false))
+      }
+    }, { threshold: 0.1, rootMargin: "400px" })
+
+    if (bottomRef.current) observer.observe(bottomRef.current)
+    return () => observer.disconnect()
+  }, [hasMoreEx, isFetchingMore, exPage, searchParams, userType, searchKeyword, currentKey, addExercises, setHasMoreEx, setExPage])
+
+  if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+  if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-      {items.map((ex: any) => (
-        <ExerciseCard key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+        {displayItems.map((ex: any) => (
+          <ExerciseCard key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
+        ))}
+      </div>
+      {hasMoreEx && (
+        <div ref={bottomRef} className="w-full flex justify-center py-10">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      )}
+    </>
   )
 });
 
@@ -108,22 +175,89 @@ const LessonList = memo(function LessonList({
   isLoggedIn,
   searchKeyword,
   onClear,
+  searchParams
 }: {
-  promise: Promise<{ items: any[] }>
+  promise: Promise<{ items: any[], hasMore?: boolean }>
   isLoggedIn: boolean
   searchKeyword?: string
   onClear: () => void
+  searchParams: any
 }) {
-  const { items } = use(promise)
-  if (items.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
-  if (items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
+  const { items: serverItems, hasMore: serverHasMore } = use(promise)
+  
+  const lessons = useContentStore(s => s.lessons)
+  const setLessons = useContentStore(s => s.setLessons)
+  const addLessons = useContentStore(s => s.addLessons)
+  const hasMoreLe = useContentStore(s => s.hasMoreLe)
+  const setHasMoreLe = useContentStore(s => s.setHasMoreLe)
+  const lePage = useContentStore(s => s.lePage)
+  const setLePage = useContentStore(s => s.setLePage)
+  const userType = useContentStore(s => s.userType)
+  
+  const initializedKey = useRef('')
+  const currentKey = `le-${searchParams.categoryId || ''}-${userType}-${searchKeyword || ''}`
+
+  useEffect(() => {
+    if (initializedKey.current !== currentKey) {
+      setLessons(serverItems)
+      setHasMoreLe(serverHasMore ?? serverItems.length >= 12)
+      setLePage(1)
+      initializedKey.current = currentKey
+    }
+  }, [currentKey, serverItems, serverHasMore, setLessons, setHasMoreLe, setLePage])
+
+  const displayItems = initializedKey.current === currentKey ? lessons : serverItems
+
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreLe && !isFetchingMore && initializedKey.current === currentKey) {
+        setIsFetchingMore(true)
+        const nextPage = lePage + 1
+        
+        const qs = new URLSearchParams()
+        qs.set('type', 'lessons')
+        qs.set('page', nextPage.toString())
+        if (searchParams.categoryId) qs.set('categoryId', searchParams.categoryId)
+        if (searchKeyword) qs.set('search', searchKeyword)
+        if (userType) qs.set('userType', userType)
+
+        fetch(`/api/feed?${qs.toString()}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.items) {
+              addLessons(data.items)
+              setHasMoreLe(data.hasMore ?? data.items.length >= 12)
+              setLePage(nextPage)
+            }
+          })
+          .catch(e => console.error(e))
+          .finally(() => setIsFetchingMore(false))
+      }
+    }, { threshold: 0.1, rootMargin: "400px" })
+
+    if (bottomRef.current) observer.observe(bottomRef.current)
+    return () => observer.disconnect()
+  }, [hasMoreLe, isFetchingMore, lePage, searchParams, userType, searchKeyword, currentKey, addLessons, setHasMoreLe, setLePage])
+
+  if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+  if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-      {items.map((le: any) => (
-        <LessonCard key={le.id} item={le} isLoggedIn={isLoggedIn} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+        {displayItems.map((le: any) => (
+          <LessonCard key={le.id} item={le} isLoggedIn={isLoggedIn} />
+        ))}
+      </div>
+      {hasMoreLe && (
+        <div ref={bottomRef} className="w-full flex justify-center py-10">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      )}
+    </>
   )
 });
 
@@ -238,7 +372,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const activeAvatar = avatarMap[userType] || avatarMap.adults;
 
   // Modal local staging states
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const isFilterModalOpen = useContentStore(s => (s as any).isFilterModalOpen)
+  const setIsFilterModalOpen = useContentStore(s => (s as any).setFilterModalOpen)
   const [hasAutoOpened, setHasAutoOpened] = useState(false)
   const [tempUserType, setTempUserType] = useState(userType)
   const [tempNativeLanguage, setTempNativeLanguage] = useState(nativeLanguage)
@@ -290,22 +425,19 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
     setIsFilterModalOpen(false)
   }
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = async () => {
+    setFiltering(true)
+
     // 1. Commit user type if changed
     if (userType !== tempUserType) {
-      setFiltering(true)
       setUserType(tempUserType)
-      startTransition(() => {
-        setUserTypePreference(tempUserType).finally(() => setFiltering(false))
-      })
+      await setUserTypePreference(tempUserType)
     }
 
     if (nativeLanguage !== tempNativeLanguage) {
       setNativeLanguage(tempNativeLanguage)
       localStorage.setItem("cupcakes_native_language", tempNativeLanguage)
-      startTransition(() => {
-        setNativeLanguagePreference(tempNativeLanguage)
-      })
+      await setNativeLanguagePreference(tempNativeLanguage)
     }
 
     // 2. Commit category and sub-category
@@ -325,9 +457,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       localStorage.removeItem("cupcakes_preferred_category_id")
     }
 
-    setFiltering(true)
+    // Clear isFiltering after a short delay since startTransition handles it gracefully
     startTransition(() => {
       router.push(`/?${qs.toString()}`, { scroll: false })
+      setTimeout(() => setFiltering(false), 500)
     })
 
     // 4. Close the modal
@@ -380,48 +513,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
 
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
-
-      {/* Solarpunk Hero Section */}
-      <section className="relative pt-8 pb-1 md:pt-12 md:pb-2 overflow-hidden transition-all duration-1000 ease-in-out">
-        <div className="w-full space-y-8 animate-fade-in-up flex flex-col justify-center min-h-[160px] transition-all duration-1000 ease-in-out">
-          <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-left duration-1000">
-            {/* Merged sentence on a single row (flex-wrap for responsiveness) */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-3 text-lg md:text-xl lg:text-2xl font-headline font-black text-primary leading-relaxed max-w-4xl">
-              <span>I am</span>
-              <div className="flex flex-col items-center gap-0.5 shrink-0 px-1">
-                <div className="relative w-[40px] h-[40px] md:w-[48px] md:h-[48px] rounded-full overflow-hidden border-3 border-primary shadow-md">
-                  <img 
-                    src={activeAvatar.src} 
-                    alt={activeAvatar.label} 
-                    className="w-full h-full object-cover" 
-                  />
-                </div>
-                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.1em] text-primary/70 leading-none mt-0.5">
-                  {activeAvatar.label}
-                </span>
-              </div>
-              <span>. My native language is</span>
-              <div className="inline-block border-2 border-amber-300 px-4 py-1.5 bg-amber-100/60 text-amber-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
-                {nativeLanguage === 'vi' ? 'Tiếng Việt' : nativeLanguage === 'th' ? 'ภาษาไทย' : nativeLanguage === 'id' ? 'Bahasa Indonesia' : 'English'}
-              </div>
-              <span>, I want to learn</span>
-              <div className="inline-block border-2 border-emerald-300 px-4 py-1.5 bg-emerald-100/60 text-emerald-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
-                {activeNames.categoryName || "Anything"}
-              </div>
-              <span>and I want to practice</span>
-              <div className="inline-block border-2 border-sky-300 px-4 py-1.5 bg-sky-100/60 text-sky-900 rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] shadow-sm transform -rotate-1 hover:rotate-0 transition-transform duration-300 text-base md:text-lg lg:text-xl">
-                {activeNames.subCategoryName || "All Topics"}
-              </div>
-              <button
-                onClick={handleOpenModal}
-                className="text-sm md:text-base font-black text-secondary hover:text-secondary-dim underline underline-offset-4 cursor-pointer focus:outline-none transition-colors ml-2"
-              >
-                Change
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Center Overlay Modal Popup for Filters */}
       {isFilterModalOpen && (
@@ -557,8 +648,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       )}
 
       {/* Tab + Sort controls */}
-      <div id="content-tabs" className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-2">
-        <div className="inline-flex items-center gap-4">
+      <div 
+        id="content-tabs" 
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-8 pb-4 sticky top-0 z-40 bg-[#FFF8E7] dark:bg-slate-900"
+      >
+        <div className="inline-flex items-center gap-4 relative z-10">
           <button
             onClick={() => handleTabChange("lessons")}
             className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
@@ -580,24 +674,34 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
             {nt("assignments").toUpperCase()}
           </button>
         </div>
+        
+        {/* Gradient fade-out at the bottom edge */}
+        <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-[#FFF8E7] to-transparent dark:from-slate-900 pointer-events-none" />
       </div>
 
       {/* ── Content grids ───────────────────────────────────────────────────── */}
-      <div className="min-h-[600px] relative transition-opacity duration-300">
+      <div className={`min-h-[600px] relative transition-opacity duration-300 ${isPending || isFiltering ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+        
+        {/* Loading Spinner Overlay */}
+        {(isPending || isFiltering) && (
+          <div className="absolute inset-0 z-50 flex items-start justify-center pt-32">
+            <div className="flex flex-col items-center gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-6 py-4 rounded-2xl shadow-xl border-2 border-primary/20">
+              <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
+              <span className="text-primary font-black animate-pulse text-sm tracking-widest uppercase">Loading</span>
+            </div>
+          </div>
+        )}
+
         <div className={activeTab === "exercises" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
-          {isFiltering ? <SectionSkeleton /> : (
-            <Suspense key={`ex-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
-              <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
-            </Suspense>
-          )}
+          <Suspense fallback={<SectionSkeleton />}>
+            <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
+          </Suspense>
         </div>
 
         <div className={activeTab === "lessons" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
-          {isFiltering ? <SectionSkeleton /> : (
-            <Suspense key={`le-${searchParams.search || ''}-${searchParams.categoryId || ''}-${userType}`} fallback={<SectionSkeleton />}>
-              <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} />
-            </Suspense>
-          )}
+          <Suspense fallback={<SectionSkeleton />}>
+            <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
+          </Suspense>
         </div>
       </div>
     </div>

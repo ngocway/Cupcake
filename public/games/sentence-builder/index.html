@@ -206,14 +206,15 @@
             border: 3px solid #b2bec3;
             border-radius: 12px;
             box-shadow: 0 4px 0 #b2bec3;
-            cursor: grab;
-            transition: transform 0.1s;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
             display: inline-block;
-            touch-action: none;
+            touch-action: manipulation;
         }
         
         .word-block:active {
-            cursor: grabbing;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #b2bec3;
         }
 
         /* Status Colors inside Dropzone */
@@ -288,8 +289,7 @@
             .dropzone-container { min-height: 60px; padding: 10px; }
         }
     </style>
-    <!-- Include SortableJS for Mobile-friendly Drag and Drop -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
 </head>
 <body>
 
@@ -345,8 +345,16 @@
 
         function playSound(id) {
             const sound = document.getElementById(id);
-            sound.currentTime = 0;
-            sound.play().catch(e => console.log(e));
+            const clone = sound.cloneNode();
+            clone.volume = 1.0;
+            clone.play().catch(e => console.log(e));
+            
+            if(id === 'drop-sound') {
+                // Double the sound to make it louder and punchier
+                const clone2 = sound.cloneNode();
+                clone2.volume = 1.0;
+                clone2.play().catch(e => console.log(e));
+            }
         }
 
         function shuffle(array) {
@@ -358,35 +366,24 @@
             return arr;
         }
 
-        // Initialize SortableJS
-        const sortableDropzone = new Sortable(dropzone, {
-            group: 'shared',
-            animation: 150,
-            delay: 150,
-            delayOnTouchOnly: true,
-            touchStartThreshold: 5,
-            onAdd: function (evt) {
-                playSound('drop-sound');
-                checkAnswer();
-            },
-            onUpdate: function (evt) {
-                playSound('drop-sound');
-                checkAnswer();
-            },
-            onRemove: function (evt) {
-                playSound('drop-sound');
-                evt.item.className = 'word-block';
-                checkAnswer();
+        // Handle Word Click (Move between pool and dropzone)
+        function handleWordClick(btn) {
+            if (gameFinished) return;
+            
+            playSound('drop-sound');
+            
+            // Move to dropzone
+            if (btn.parentElement === wordPool) {
+                dropzone.appendChild(btn);
+            } 
+            // Move back to word pool
+            else if (btn.parentElement === dropzone) {
+                wordPool.appendChild(btn);
+                btn.className = 'word-block'; // reset classes like correct/incorrect
             }
-        });
-
-        const sortablePool = new Sortable(wordPool, {
-            group: 'shared',
-            animation: 150,
-            delay: 150,
-            delayOnTouchOnly: true,
-            touchStartThreshold: 5
-        });
+            
+            checkAnswer();
+        }
 
         // Switch Level from Sidebar
         function loadLevel(levelKey, btnElement) {
@@ -427,16 +424,13 @@
             mainImage.src = qData.image;
             progressText.textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
 
-            // Restore sorting capabilities
-            sortableDropzone.option("disabled", false);
-            sortablePool.option("disabled", false);
-
             const shuffledPool = shuffle(qData.pool);
             shuffledPool.forEach((word) => {
                 const btn = document.createElement('div');
                 btn.className = 'word-block';
                 btn.textContent = word;
                 btn.dataset.word = word;
+                btn.onclick = () => handleWordClick(btn);
                 wordPool.appendChild(btn);
             });
         }
@@ -486,9 +480,6 @@
                 const sentenceAudio = new Audio(qData.audio);
                 sentenceAudio.play().catch(e => console.log(e));
             }, 600);
-
-            sortableDropzone.option("disabled", true);
-            sortablePool.option("disabled", true);
 
             setTimeout(() => {
                 if (currentQuestionIndex + 1 < currentQuestions.length) {

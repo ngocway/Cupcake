@@ -1,56 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getCategoryAndDescendantIds } from '@/lib/cached-queries'
+import { getShuffledIds } from '@/lib/cached-queries'
 
 /**
  * GET /api/feed?type=exercises|lessons[&categoryId=...][&search=...]
  *
- * Returns popular content from HomepageFeed (sorted by viewCount).
- * Called client-side in the background after the page has already rendered
- * with newest data — enabling instant sort switching without a full page reload.
+ * Returns random paginated content from HomepageFeed (using getShuffledIds).
+ * Called client-side in the background for infinite scroll.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type       = searchParams.get('type')        // 'exercises' | 'lessons'
-  const categoryId = searchParams.get('categoryId')
-  const search     = searchParams.get('search')
-  const userType   = searchParams.get('userType')
+  const categoryId = searchParams.get('categoryId') || ''
+  const search     = searchParams.get('search') || ''
+  const userType   = searchParams.get('userType') || ''
+
+  const pageStr    = searchParams.get('page') || '1'
+  const limitStr   = searchParams.get('limit') || '12'
+  const page       = parseInt(pageStr, 10)
+  const limit      = parseInt(limitStr, 10)
+  const skip       = (page - 1) * limit
 
   const contentType = type === 'lessons' ? 'LESSON' : 'EXERCISE'
 
-  const where: any = { status: 'PUBLIC', contentType }
-  
-  if (categoryId) {
-    const categoryIds = await getCategoryAndDescendantIds(categoryId)
-    where.OR = categoryIds.map(id => ({
-      categoryId: { contains: id }
-    }))
-  }
-  
-  if (search)     where.title = { contains: search, mode: 'insensitive' }
-  if (userType) {
-    const defaultOR = [
-      { targetAudiences: { has: userType } },
-      { targetAudiences: { equals: [] } }
-    ]
-    if (where.OR) {
-      where.AND = [
-        { OR: where.OR },
-        { OR: defaultOR }
-      ]
-      delete where.OR
-    } else {
-      where.OR = defaultOR
-    }
-  }
+  const randomIds = await getShuffledIds(contentType, categoryId, search, userType)
+  const slicedIds = randomIds.slice(skip, skip + limit)
+  const hasMore = skip + limit < randomIds.length
 
-  const items = await prisma.homepageFeed.findMany({
-    where,
-    orderBy: { viewCount: 'desc' },
-    take: 12
-  })
+  const results = slicedIds.length > 0
+    ? await prisma.homepageFeed.findMany({ where: { id: { in: slicedIds } } })
+    : []
 
-  const mapped = items.map(item => ({
+  // Restore random order
+  results.sort((a, b) => slicedIds.indexOf(a.id) - slicedIds.indexOf(b.id))
+
+  const mapped = results.map(item => ({
     ...item,
     id: item.sourceId,
     teacher: {
@@ -63,7 +47,7 @@ export async function GET(req: NextRequest) {
   }))
 
   return NextResponse.json(
-    { items: mapped },
+    { items: mapped, hasMore },
     {
       headers: {
         // Cache at the edge for 5 minutes — matches unstable_cache TTL

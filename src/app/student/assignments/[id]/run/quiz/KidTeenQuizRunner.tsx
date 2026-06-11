@@ -135,7 +135,7 @@ function ClozeTestBlock({ q, questionData, userAnswer, isChecked, handleAnswerCh
                 placeholder="..."
               />
               {isChecked && !isCorrect && (
-                <span className="absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-200 shadow-md whitespace-nowrap z-30">
+                <span className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-200 shadow-md whitespace-nowrap z-30">
                   {expectedWord}
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-emerald-100 rotate-45 border-r border-b border-emerald-200" />
                 </span>

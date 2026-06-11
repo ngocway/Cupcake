@@ -346,7 +346,7 @@ export async function autoSaveMaterial(payload: {
 
   console.log(`[AutoSave] Upserted questions: ${toCreateCount} created, ${toUpdateCount} updated for ${payload.id}`);
 
-  // Sync to Homepage Feed
+  // Sync to Homepage Feed and Tags
   after(() => {
     syncToHomepageFeed(payload.id, "EXERCISE").catch(err => {
       console.error("[AutoSave] Background sync feed failed:", err);
@@ -356,6 +356,26 @@ export async function autoSaveMaterial(payload: {
       syncToHomepageFeed(existing.lesson.id, "LESSON").catch(err => {
         console.error("[AutoSave] Background sync feed failed for lesson:", err);
       });
+    }
+
+    // Sync new tags to the Tag model so they appear in autocomplete
+    if (payload.tags) {
+      const tagArray = payload.tags.split(',').map(t => t.trim()).filter(Boolean);
+      if (tagArray.length > 0) {
+        prisma.tag.findMany({
+          where: { name: { in: tagArray, mode: 'insensitive' } },
+          select: { name: true }
+        }).then(existingTags => {
+          const existingLower = new Set(existingTags.map(t => t.name.toLowerCase()));
+          const toCreate = tagArray.filter(t => !existingLower.has(t.toLowerCase()));
+          if (toCreate.length > 0) {
+            prisma.tag.createMany({
+              data: toCreate.map(t => ({ name: t, isPopular: false })),
+              skipDuplicates: true
+            }).catch(e => console.error("[AutoSave] Failed to create tags:", e));
+          }
+        }).catch(e => console.error("[AutoSave] Failed to fetch tags:", e));
+      }
     }
   });
 

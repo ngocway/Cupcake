@@ -18,6 +18,9 @@ interface ContentState {
   isFiltering: boolean
   setFiltering: (val: boolean) => void
 
+  isFilterModalOpen: boolean
+  setFilterModalOpen: (val: boolean) => void
+
   selectedCategoryId: string
   selectedSubCategoryId: string
 
@@ -61,6 +64,9 @@ export const useContentStore = create<ContentState>((set) => ({
 
   isFiltering: false,
   setFiltering: (val) => set({ isFiltering: val }),
+
+  isFilterModalOpen: false,
+  setFilterModalOpen: (val) => set({ isFilterModalOpen: val }),
 
   selectedCategoryId: "",
   selectedSubCategoryId: "",

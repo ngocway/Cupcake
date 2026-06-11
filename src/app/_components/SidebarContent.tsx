@@ -1,7 +1,7 @@
 import { getCachedCategoryTree, getCachedTags } from "@/lib/cached-queries";
 import { SidebarCategoryList } from "./SidebarCategoryList";
 import { SidebarTagList } from "./SidebarTagList";
-import { SidebarUserTypeList } from "./SidebarUserTypeList";
+import { SidebarHeroSentence } from "./SidebarHeroSentence";
 import { getTranslations } from "next-intl/server";
 
 export async function SidebarContent({ searchParams, initialUserType }: { searchParams: any, initialUserType: string }) {
@@ -14,8 +14,7 @@ export async function SidebarContent({ searchParams, initialUserType }: { search
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">{t("whoAreYou")}</h2>
-        <SidebarUserTypeList initialUserType={initialUserType} />
+        <SidebarHeroSentence categoryTree={categories} />
       </div>
 
       <div className="pt-8 border-t border-primary/5">

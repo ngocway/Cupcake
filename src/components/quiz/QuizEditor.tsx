@@ -58,13 +58,15 @@ function SortableQuestionItem({
   idx, 
   activeId, 
   setActiveId, 
-  getQuestionPreviewText 
+  getQuestionPreviewText,
+  onDelete
 }: { 
   q: BaseQuestionProps, 
   idx: number, 
   activeId: string, 
   setActiveId: (id: string) => void,
-  getQuestionPreviewText: (q: BaseQuestionProps, idx: number) => string
+  getQuestionPreviewText: (q: BaseQuestionProps, idx: number) => string,
+  onDelete: (id: string) => void
 }) {
   const {
     attributes,
@@ -86,28 +88,34 @@ function SortableQuestionItem({
     <div 
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => setActiveId(q.id)}
-      className={`flex shrink-0 items-start gap-3 p-3 rounded-xl border transition-all group cursor-grab active:cursor-grabbing ${
+      className={`flex shrink-0 items-start gap-3 p-3 rounded-xl border transition-all group ${
         activeId === q.id 
           ? 'bg-primary/5 border-2 border-primary shadow-md' 
           : 'bg-white border-slate-200 shadow-sm hover:border-primary/30'
       } text-left relative overflow-hidden`}
     >
-      <div className="flex-1 flex gap-3 min-w-0">
-        <span className={`flex-shrink-0 size-6 rounded-md flex items-center justify-center text-xs font-bold ${
+      <div className="flex-1 flex gap-3 min-w-0" onClick={() => setActiveId(q.id)}>
+        <span className={`flex-shrink-0 size-6 rounded-md flex items-center justify-center text-xs font-bold cursor-pointer ${
           activeId === q.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'
         }`}>
           {idx + 1}
         </span>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 cursor-pointer">
           <p className={`text-sm ${activeId === q.id ? 'font-bold text-primary' : 'font-medium'} line-clamp-2`}>
             {getQuestionPreviewText(q, idx)}
           </p>
         </div>
-        <div className="flex flex-col gap-1 opacity-40 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center">
-           <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
+      </div>
+      <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 items-center">
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDelete(q.id); }}
+          className="text-slate-400 hover:text-red-500 p-1 rounded-full hover:bg-red-50 transition-colors"
+          title="Xóa câu hỏi"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+        <div {...attributes} {...listeners} className="text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing p-1">
+          <span className="material-symbols-outlined text-[20px]">drag_indicator</span>
         </div>
       </div>
     </div>
@@ -902,6 +910,7 @@ export function QuizEditor() {
                     activeId={activeId}
                     setActiveId={setActiveId}
                     getQuestionPreviewText={getQuestionPreviewText}
+                    onDelete={handleRemoveQuestion}
                   />
                 ))}
               </SortableContext>

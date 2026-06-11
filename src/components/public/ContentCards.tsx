@@ -36,7 +36,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-primary/5">
+      <Link href={href} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-primary/5 cursor-pointer">
         <Image 
           src={thumbnailSrc} 
           alt={item.title} 
@@ -63,7 +63,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent opacity-60"></div>
-      </div>
+      </Link>
 
       {/* Overlapping Content Box */}
       <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-primary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-primary/10 group-hover:bg-white/90">
@@ -121,9 +121,6 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
                 <span className="text-tiny font-black">{item._count.questions} Qs</span>
               </div>
             )}
-            <div className="flex items-center text-emerald-600 px-1">
-              <span className="text-[11px] font-semibold">{((item.title?.length || 10) * 12 + 100) % 800 + 150} words</span>
-            </div>
             <div className="flex items-center gap-1.5 text-primary/40">
               <span className="material-symbols-outlined !text-[18px]">visibility</span>
               <span className="text-tiny font-black">{views}</span>
@@ -167,7 +164,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5">
+      <Link href={href} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5 cursor-pointer">
         <Image 
           src={thumb} 
           alt={item.title} 
@@ -194,7 +191,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
         
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-secondary/40 via-transparent to-transparent opacity-60"></div>
-      </div>
+      </Link>
 
       {/* Overlapping Content Box */}
       <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10 transition-all duration-500 group-hover:-translate-y-2 group-hover:shadow-secondary/10 group-hover:bg-white/90">
