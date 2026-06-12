@@ -30,10 +30,10 @@ export function SelectMaterialModal({ isOpen, onClose, onSelect }: { isOpen: boo
           </div>
           <Select defaultValue="all">
             <SelectTrigger className="w-[180px] h-11 rounded-full border-slate-200 font-semibold text-slate-700 bg-white shadow-sm">
-              <SelectValue placeholder="Tất cả danh mục" />
+              <SelectValue placeholder="Tất cả học liệu" />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-slate-100 shadow-lg font-medium p-1">
-              <SelectItem value="all" className="rounded-lg hover:bg-slate-50 mb-1">Tất cả danh mục</SelectItem>
+              <SelectItem value="all" className="rounded-lg hover:bg-slate-50 mb-1">Tất cả học liệu</SelectItem>
               <SelectItem value="reading" className="rounded-lg hover:bg-slate-50 mb-1">Reading Comprehension</SelectItem>
               <SelectItem value="vocab" className="rounded-lg hover:bg-slate-50 mb-1">Vocabulary</SelectItem>
               <SelectItem value="grammar" className="rounded-lg hover:bg-slate-50">Grammar & Revision</SelectItem>

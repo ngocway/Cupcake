@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { HomeShell } from "../_components/HomeShell"
-import { getFlashcardCategories } from "@/actions/flashcards-actions"
+import { getFlashcardTopics } from "@/actions/flashcards-actions"
+import { getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { FlashcardsClient } from "./FlashcardsClient"
 
 export const metadata = {
@@ -9,8 +10,23 @@ export const metadata = {
 }
 
 export default async function FlashcardsPage() {
-  // Nạp danh sách danh mục & chủ đề trên server
-  const categories = await getFlashcardCategories()
+  const config = await getOnboardingConfig()
+  const englishSubject = config?.subjects?.find((s: any) => s.id === 'english');
+  const targetAudiences = englishSubject?.ageGroups || [];
+  
+  const topics = await getFlashcardTopics()
+  
+  const categories = targetAudiences.map((ta: any) => ({
+    id: ta.id,
+    name: ta.label,
+    slug: ta.id,
+    topics: topics.filter(t => t.targetAudience === ta.id).map(t => ({
+      id: t.id,
+      categoryId: t.targetAudience,
+      name: t.name,
+      slug: t.slug
+    }))
+  }))
 
   return (
     <HomeShell>
@@ -28,7 +44,7 @@ export default async function FlashcardsPage() {
             </div>
           </div>
         }>
-          <FlashcardsClient initialCategories={categories} />
+          <FlashcardsClient initialCategories={categories as any} />
         </Suspense>
       </main>
     </HomeShell>

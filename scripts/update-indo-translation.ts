@@ -32,8 +32,8 @@ async function main() {
     // Find the topic first to ensure we only update cards for this topic
     const topic = await prisma.flashcardTopic.findUnique({
       where: {
-        categoryId_slug: {
-          categoryId: (await prisma.flashcardCategory.findUnique({ where: { slug: "kids-2-5" } }))!.id,
+        targetAudience_slug: {
+          targetAudience: (await prisma.flashcardTopic.findUnique({ where: { slug: "kids-2-5" } }))!.id,
           slug: "do-dung-trong-nha"
         }
       }

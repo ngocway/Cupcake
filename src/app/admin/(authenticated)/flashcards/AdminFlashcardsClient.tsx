@@ -20,28 +20,13 @@ import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckC
 // TypeScript interfaces
 interface Topic {
   id: string
-  categoryId: string
+  targetAudience: string
   name: string
   slug: string
   createdAt: Date
-  category: {
-    name: string
-    slug: string
-  }
   _count?: {
     flashcards: number
   }
-}
-
-interface Category {
-  id: string
-  name: string
-  slug: string
-  topics: {
-    id: string
-    name: string
-    slug: string
-  }[]
 }
 
 interface Flashcard {
@@ -60,27 +45,24 @@ interface Flashcard {
   topic: {
     id: string
     name: string
-    category: {
-      id: string
-      name: string
-    }
+    targetAudience: string
   }
 }
 
 interface AdminFlashcardsClientProps {
-  initialCategories: Category[]
+  targetAudiences: any[]
   initialTopics: Topic[]
   initialFlashcards: any[]
 }
 
 export function AdminFlashcardsClient({ 
-  initialCategories, 
+  targetAudiences, 
   initialTopics, 
   initialFlashcards 
 }: AdminFlashcardsClientProps) {
   // Navigation & Core Lists
   const [activeTab, setActiveTab] = useState<"cards" | "topics">("cards")
-  const [categories] = useState<Category[]>(initialCategories)
+  const [targetAudiencesList] = useState<any[]>(targetAudiences)
   const [topics, setTopics] = useState<Topic[]>(initialTopics)
   const [flashcards, setFlashcards] = useState<any[]>(initialFlashcards)
 
@@ -96,7 +78,7 @@ export function AdminFlashcardsClient({
   const [showCardModal, setShowCardModal] = useState(false)
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null)
   const [cardForm, setCardForm] = useState({
-    categoryId: "",
+    targetAudience: "KIDS",
     topicId: "",
     word: "",
     phonetic: "",
@@ -112,7 +94,7 @@ export function AdminFlashcardsClient({
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [topicForm, setTopicForm] = useState({
-    categoryId: "",
+    targetAudience: "KIDS",
     name: "",
     sampleCount: ""
   })
@@ -154,7 +136,7 @@ export function AdminFlashcardsClient({
     toast.info("Đang tạo câu ví dụ bằng AI...")
 
     try {
-      const selectedCategory = categories.find(c => c.id === cardForm.categoryId)
+      const selectedCategory = targetAudiencesList.find(c => c.id === cardForm.targetAudience)
       const isKid = selectedCategory?.name.toLowerCase().includes("kid") || false
 
       const res = await generateExampleSentence(cardForm.word, isKid, cardForm.exampleSentence)
@@ -210,7 +192,7 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const filteredFlashcards = flashcards.filter(card => {
     const matchWord = card.word.toLowerCase().includes(searchWord.toLowerCase())
-    const matchCat = selectedCatFilter === "ALL" || card.topic?.category?.id === selectedCatFilter
+    const matchCat = selectedCatFilter === "ALL" || card.topic?.targetAudience === selectedCatFilter
     const matchTopic = selectedTopicFilter === "ALL" || card.topic?.id === selectedTopicFilter
     return matchWord && matchCat && matchTopic
   })
@@ -218,14 +200,14 @@ export function AdminFlashcardsClient({
   // Dynamic topics under selected Category inside Filters dropdown
   const filteredTopicsForFilter = selectedCatFilter === "ALL" 
     ? topics 
-    : topics.filter(t => t.categoryId === selectedCatFilter)
+    : topics.filter(t => t.targetAudience === selectedCatFilter)
 
   // -------------------------------------------------------------
   // TOPIC FILTERING LOGIC
   // -------------------------------------------------------------
   const filteredTopics = topics.filter(topic => {
     const matchName = topic.name.toLowerCase().includes(searchTopicName.toLowerCase())
-    const matchCat = selectedCatTopicFilter === "ALL" || topic.categoryId === selectedCatTopicFilter
+    const matchCat = selectedCatTopicFilter === "ALL" || topic.targetAudience === selectedCatTopicFilter
     return matchName && matchCat
   })
 
@@ -427,7 +409,7 @@ export function AdminFlashcardsClient({
     if (card) {
       setEditingCard(card)
       setCardForm({
-        categoryId: card.topic?.category?.id || "",
+        targetAudience: card.topic?.targetAudience || "",
         topicId: card.topicId,
         word: card.word,
         phonetic: card.phonetic || "",
@@ -442,10 +424,10 @@ export function AdminFlashcardsClient({
     } else {
       setEditingCard(null)
       // Pick first category and its first topic as default
-      const defaultCat = categories[0]
-      const defaultTopic = topics.find(t => t.categoryId === defaultCat?.id)
+      const defaultCat = targetAudiencesList[0]
+      const defaultTopic = topics.find(t => t.targetAudience === defaultCat?.id)
       setCardForm({
-        categoryId: defaultCat?.id || "",
+        targetAudience: defaultCat?.id || "",
         topicId: defaultTopic?.id || "",
         word: "",
         phonetic: "",
@@ -463,10 +445,10 @@ export function AdminFlashcardsClient({
 
   // Handle dynamic category change inside Card modal to update topics dropdown
   const handleModalCategoryChange = (catId: string) => {
-    const targetTopic = topics.find(t => t.categoryId === catId)
+    const targetTopic = topics.find(t => t.targetAudience === catId)
     setCardForm(prev => ({
       ...prev,
-      categoryId: catId,
+      targetAudience: catId,
       topicId: targetTopic?.id || ""
     }))
   }
@@ -505,10 +487,7 @@ export function AdminFlashcardsClient({
             topic: {
               id: cardForm.topicId,
               name: topics.find(t => t.id === cardForm.topicId)?.name || "",
-              category: {
-                id: cardForm.categoryId,
-                name: categories.find(c => c.id === cardForm.categoryId)?.name || ""
-              }
+              targetAudience: cardForm.targetAudience
             }
           } : c))
           setShowCardModal(false)
@@ -537,10 +516,7 @@ export function AdminFlashcardsClient({
             topic: {
               id: cardForm.topicId,
               name: topics.find(t => t.id === cardForm.topicId)?.name || "",
-              category: {
-                id: cardForm.categoryId,
-                name: categories.find(c => c.id === cardForm.categoryId)?.name || ""
-              }
+              targetAudience: cardForm.targetAudience
             }
           }
           setFlashcards(prev => [newLocalCard, ...prev])
@@ -559,14 +535,14 @@ export function AdminFlashcardsClient({
     if (topic) {
       setEditingTopic(topic)
       setTopicForm({
-        categoryId: topic.categoryId,
+        targetAudience: topic.targetAudience,
         name: topic.name,
         sampleCount: ""
       })
     } else {
       setEditingTopic(null)
       setTopicForm({
-        categoryId: categories[0]?.id || "",
+        targetAudience: targetAudiencesList[0]?.id || "",
         name: "",
         sampleCount: ""
       })
@@ -579,7 +555,7 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const handleSaveTopic = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!topicForm.name || !topicForm.categoryId) {
+    if (!topicForm.name || !topicForm.targetAudience) {
       alert("Vui lòng nhập tên chủ đề.")
       return
     }
@@ -587,15 +563,12 @@ export function AdminFlashcardsClient({
     if (editingTopic) {
       startTransition(async () => {
         // UPDATE
-        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.categoryId)
+        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.targetAudience)
         if (res.success && res.topic) {
           const updatedLocalTopic = {
             ...editingTopic,
             ...res.topic,
-            category: {
-              name: categories.find(c => c.id === topicForm.categoryId)?.name || "",
-              slug: categories.find(c => c.id === topicForm.categoryId)?.slug || ""
-            }
+            targetAudience: topicForm.targetAudience
           }
           setTopics(prev => prev.map(t => t.id === editingTopic.id ? updatedLocalTopic : t))
           setShowTopicModal(false)
@@ -618,20 +591,17 @@ export function AdminFlashcardsClient({
     }
 
     try {
-      const createRes = await adminCreateTopic(topicForm.categoryId, topicForm.name)
+      const createRes = await adminCreateTopic(topicForm.targetAudience, topicForm.name)
       if (!createRes.success || !createRes.topic) {
         alert("Lỗi tạo chủ đề: " + createRes.error)
         setIsGeneratingSamples(false)
         return
       }
 
-      const categoryName = categories.find(c => c.id === topicForm.categoryId)?.name || ""
+      const categoryName = targetAudiencesList.find(c => c.id === topicForm.targetAudience)?.name || ""
       const newLocalTopic = {
         ...createRes.topic,
-        category: {
-          name: categoryName,
-          slug: categories.find(c => c.id === topicForm.categoryId)?.slug || ""
-        },
+        targetAudience: topicForm.targetAudience,
         _count: { flashcards: 0 }
       }
 
@@ -662,10 +632,7 @@ export function AdminFlashcardsClient({
               topic: {
                 id: createRes.topic.id,
                 name: topicForm.name,
-                category: {
-                  id: topicForm.categoryId,
-                  name: categoryName
-                }
+                targetAudience: cardForm.targetAudience
               }
             })
           }
@@ -808,7 +775,7 @@ export function AdminFlashcardsClient({
                   className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
                 >
                   <option value="ALL">Tất cả nhóm tuổi</option>
-                  {categories.map(c => (
+                  {targetAudiencesList.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -829,7 +796,7 @@ export function AdminFlashcardsClient({
                 >
                   <option value="ALL">Tất cả chủ đề</option>
                   {filteredTopicsForFilter.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({categories.find(c => c.id === t.categoryId)?.name})</option>
+                    <option key={t.id} value={t.id}>{t.name} ({targetAudiencesList.find(c => c.id === t.targetAudience)?.name})</option>
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
@@ -968,7 +935,7 @@ export function AdminFlashcardsClient({
                   className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
                 >
                   <option value="ALL">Tất cả nhóm tuổi</option>
-                  {categories.map(c => (
+                  {targetAudiencesList.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
@@ -1013,7 +980,7 @@ export function AdminFlashcardsClient({
                   
                   <div className="space-y-3">
                     <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-500 border border-blue-600/15">
-                      {topic.category?.name}
+                      {topic.targetAudience?.name}
                     </span>
                     
                     <h3 className="text-xl font-black text-white leading-tight">{topic.name}</h3>
@@ -1091,11 +1058,11 @@ export function AdminFlashcardsClient({
                 <div className="space-y-1.5">
                   <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Nhóm tuổi (Category) <span className="text-red-500">*</span></label>
                   <select
-                    value={cardForm.categoryId}
+                    value={cardForm.targetAudience}
                     onChange={(e) => handleModalCategoryChange(e.target.value)}
                     className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
                   >
-                    {categories.map(c => (
+                    {targetAudiencesList.map(c => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </select>
@@ -1108,7 +1075,7 @@ export function AdminFlashcardsClient({
                     onChange={(e) => setCardForm(prev => ({ ...prev, topicId: e.target.value }))}
                     className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
                   >
-                    {topics.filter(t => t.categoryId === cardForm.categoryId).map(t => (
+                    {topics.filter(t => t.targetAudience === cardForm.targetAudience).map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
@@ -1418,11 +1385,11 @@ export function AdminFlashcardsClient({
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Chọn nhóm tuổi (Category) <span className="text-red-500">*</span></label>
                 <select
-                  value={topicForm.categoryId}
-                  onChange={(e) => setTopicForm(prev => ({ ...prev, categoryId: e.target.value }))}
+                  value={topicForm.targetAudience}
+                  onChange={(e) => setTopicForm(prev => ({ ...prev, targetAudience: e.target.value }))}
                   className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
                 >
-                  {categories.map(c => (
+                  {targetAudiencesList.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>

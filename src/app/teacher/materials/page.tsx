@@ -22,6 +22,8 @@ type Assignment = {
   publicSubmissionCount: number;
   tags: string[];
   targetAudiences?: string[];
+  level?: string | null;
+  learningGoals?: string[];
   createdAt: string;
   classes?: any[];
 };
@@ -39,6 +41,20 @@ export default function MaterialLibraryPage() {
   const [showTrash, setShowTrash] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
+  // Advanced Filters
+  const [subjectFilter, setSubjectFilter] = useState<string>('ALL');
+  const [ageGroupFilter, setAgeGroupFilter] = useState<string>('ALL');
+  const [levelFilter, setLevelFilter] = useState<string>('ALL');
+  const [learningGoalFilter, setLearningGoalFilter] = useState<string>('ALL');
+  const [tagFilter, setTagFilter] = useState<string>('ALL');
+  const [config, setConfig] = useState<any>(null);
+  const [popularTags, setPopularTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    import('@/actions/user-preferences-actions').then(m => m.getOnboardingConfig().then(setConfig));
+    import('@/actions/tag-actions').then(m => m.getPopularTags().then(setPopularTags));
+  }, []);
   
   // Custom Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -157,7 +173,13 @@ export default function MaterialLibraryPage() {
              (a.classes && a.classes.length > 0 && a.classes.every((c: any) => c.dueDate && new Date(c.dueDate).getTime() < now)));
     }
 
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesSubject = subjectFilter === 'ALL' || a.subject === subjectFilter;
+    const matchesAge = ageGroupFilter === 'ALL' || (a.targetAudiences && a.targetAudiences.includes(ageGroupFilter));
+    const matchesLevel = levelFilter === 'ALL' || a.level === levelFilter;
+    const matchesGoal = learningGoalFilter === 'ALL' || (a.learningGoals && a.learningGoals.includes(learningGoalFilter));
+    const matchesTag = tagFilter === 'ALL' || (a.tags && a.tags.some(t => t.trim() === tagFilter));
+
+    return matchesSearch && matchesType && matchesStatus && matchesSubject && matchesAge && matchesLevel && matchesGoal && matchesTag;
   });
 
   return (
@@ -210,6 +232,83 @@ export default function MaterialLibraryPage() {
               {showTrash ? <ArrowLeft className="w-5 h-5 stroke-[2px]" /> : <Trash2 className="w-5 h-5 stroke-[2px]" />} {showTrash ? 'Quay lại' : 'Thùng rác'}
             </button>
           </div>
+        </div>
+
+        {/* Advanced Filters Bar */}
+        <div className="flex flex-wrap items-center gap-4 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 rounded-2xl border border-slate-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-slate-400 text-[20px]">filter_alt</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Bộ lọc:</span>
+          </div>
+          
+          <select 
+            value={subjectFilter}
+            onChange={(e) => { setSubjectFilter(e.target.value); setAgeGroupFilter('ALL'); }}
+            className="px-4 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="ALL">Tất cả môn học</option>
+            {config?.subjects?.filter((s:any) => !s.isHidden).map((s:any) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+
+          <select 
+            value={ageGroupFilter}
+            onChange={(e) => { setAgeGroupFilter(e.target.value); setLearningGoalFilter('ALL'); }}
+            className="px-4 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="ALL">Tất cả độ tuổi</option>
+            {subjectFilter !== 'ALL' 
+              ? config?.subjects?.find((s:any) => s.id === subjectFilter)?.ageGroups?.filter((a:any) => a.id !== 'kindergarten').map((a:any) => (
+                  <option key={a.id} value={a.id}>{a.label}</option>
+                ))
+              : [
+                  { id: 'kids', label: '🧸 Trẻ em (Kids)' },
+                  { id: 'teens', label: '🎒 Thiếu niên (Teens)' },
+                  { id: 'adults', label: '🎓 Người lớn (Adults)' },
+                  { id: 'business', label: '💼 Doanh nhân (Business)' }
+                ].map(a => (
+                  <option key={a.id} value={a.id}>{a.label}</option>
+                ))
+            }
+          </select>
+
+          {subjectFilter !== 'ALL' && ageGroupFilter !== 'ALL' && (
+            <>
+              <select 
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value)}
+                className="px-4 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="ALL">Tất cả cấp độ</option>
+                {config?.subjects?.find((s:any) => s.id === subjectFilter)?.ageGroups?.find((a:any) => a.id === ageGroupFilter)?.levels?.map((lvl:any) => (
+                  <option key={lvl.id} value={lvl.id}>{lvl.label}</option>
+                ))}
+              </select>
+
+              <select 
+                value={learningGoalFilter}
+                onChange={(e) => setLearningGoalFilter(e.target.value)}
+                className="px-4 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="ALL">Tất cả mục tiêu học tập</option>
+                {config?.subjects?.find((s:any) => s.id === subjectFilter)?.ageGroups?.find((a:any) => a.id === ageGroupFilter)?.goals?.map((goal:any) => (
+                  <option key={goal.id} value={goal.id}>{goal.label}</option>
+                ))}
+              </select>
+            </>
+          )}
+
+          <select 
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            className="px-4 py-2 bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-700 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="ALL">Tất cả thẻ kỹ năng</option>
+            {popularTags.map(tag => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
         </div>
 
         {/* List Content */}

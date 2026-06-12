@@ -148,7 +148,7 @@ export async function adminDeleteFlashcard(id: string) {
 // PHÂN HỆ 2: CRUD TOPICS (CHỦ ĐỀ)
 // ============================================================================
 
-export async function adminCreateTopic(categoryId: string, name: string) {
+export async function adminCreateTopic(targetAudience: string, name: string) {
   await checkAdminAuth()
 
   try {
@@ -159,11 +159,11 @@ export async function adminCreateTopic(categoryId: string, name: string) {
       return { success: false, error: "Tên chủ đề không hợp lệ." }
     }
 
-    // Kiểm tra trùng lặp slug trong cùng một danh mục (Category)
+    // Kiểm tra trùng lặp slug trong cùng một đối tượng (Target Audience)
     const existing = await prisma.flashcardTopic.findUnique({
       where: {
-        categoryId_slug: {
-          categoryId,
+        targetAudience_slug: {
+          targetAudience,
           slug
         }
       }
@@ -175,7 +175,7 @@ export async function adminCreateTopic(categoryId: string, name: string) {
 
     const newTopic = await prisma.flashcardTopic.create({
       data: {
-        categoryId,
+        targetAudience,
         name: trimmedName,
         slug
       }
@@ -190,7 +190,7 @@ export async function adminCreateTopic(categoryId: string, name: string) {
   }
 }
 
-export async function adminUpdateTopic(id: string, name: string, categoryId: string) {
+export async function adminUpdateTopic(id: string, name: string, targetAudience: string) {
   await checkAdminAuth()
 
   try {
@@ -201,10 +201,10 @@ export async function adminUpdateTopic(id: string, name: string, categoryId: str
       return { success: false, error: "Tên chủ đề không hợp lệ." }
     }
 
-    // Kiểm tra xem có bị trùng slug với chủ đề khác trong cùng category không
+    // Kiểm tra xem có bị trùng slug với chủ đề khác trong cùng targetAudience không
     const existing = await prisma.flashcardTopic.findFirst({
       where: {
-        categoryId,
+        targetAudience,
         slug,
         id: { not: id }
       }
@@ -218,7 +218,7 @@ export async function adminUpdateTopic(id: string, name: string, categoryId: str
       where: { id },
       data: {
         name: trimmedName,
-        categoryId,
+        targetAudience,
         slug
       }
     })

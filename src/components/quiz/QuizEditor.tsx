@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { ChevronLeft, ChevronRight, CheckCircle2, Circle, MoreVertical, X, Upload, Plus, Type, Image as ImageIcon, Video, Trash2, GripVertical, Settings } from 'lucide-react';
+import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
 import type { MaterialType } from './types';
 import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveMaterialThumbnail } from '@/actions/material-actions';
@@ -16,7 +18,6 @@ import { QuestionBankModal } from './QuestionBankModal';
 import { AIGeneratorModal } from './AIGeneratorModal';
 import { InstructionsModal } from './InstructionsModal';
 import { CustomAudioPlayer } from "@/components/common/CustomAudioPlayer";
-import CategorySelect from '@/components/shared/CategorySelect';
 import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
 import { TagAutocompleteInput } from './TagAutocompleteInput';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
@@ -203,13 +204,22 @@ export function QuizEditor() {
   const [tags, setTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState('');
   const [popularTagsList, setPopularTagsList] = useState<string[]>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
+  const [level, setLevel] = useState<string>('');
+  const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
   const [materialType, setMaterialType] = useState<MaterialType>('EXERCISE');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    import('@/actions/user-preferences-actions').then(m => {
+      m.getOnboardingConfig().then(setConfig);
+    });
+  }, []);
+
 
   const handleThumbnailChange = async (newValue: string | null) => {
     setIsUploadingThumbnail(true);
@@ -288,9 +298,14 @@ export function QuizEditor() {
           setShortDescription(data.assignment.shortDescription || '');
           setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
-          setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
           if (data.assignment.targetAudiences) {
             setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
+          }
+          if (data.assignment.level) {
+            setLevel(data.assignment.level);
+          }
+          if (data.assignment.learningGoals) {
+            setLearningGoals(data.assignment.learningGoals || []);
           }
           if (data.assignment.lesson || data.assignment.lessonId) {
             setBelongsToLesson(true);
@@ -340,8 +355,9 @@ export function QuizEditor() {
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds,
         targetAudiences: targetAudiences,
+        level,
+        learningGoals,
         thumbnail
       });
       setSaveStatus('SAVED');
@@ -386,8 +402,9 @@ export function QuizEditor() {
           shortDescription,
           instructions,
           tags: tags.join(','),
-          categoryIds,
           targetAudiences: targetAudiences,
+          level,
+          learningGoals,
           thumbnail
         });
         
@@ -438,8 +455,9 @@ export function QuizEditor() {
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds,
-        targetAudiences: targetAudiences,
+                targetAudiences: targetAudiences,
+        level,
+        learningGoals,
         thumbnail
       });
       setSaveStatus('SAVED');
@@ -1353,44 +1371,17 @@ export function QuizEditor() {
               />
 
 
-              {/* Categories */}
-              <div className="space-y-2">
-                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
-                 <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Đối tượng (Target Audiences)</label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: 'kids', label: '🧸 Trẻ em (Kids)' },
-                    { id: 'teens', label: '🎒 Thiếu niên (Teens)' },
-                    { id: 'adults', label: '🎓 Người lớn (Adults)' },
-                    { id: 'business', label: '💼 Doanh nhân (Business)' }
-                  ].map(type => (
-                    <button
-                      key={type.id}
-                      onClick={() => {
-                        if (targetAudiences.includes(type.id)) {
-                          setTargetAudiences(targetAudiences.filter(t => t !== type.id));
-                        } else {
-                          setTargetAudiences([...targetAudiences, type.id]);
-                        }
-                      }}
-                      className={`px-5 py-2 rounded-lg text-[11px] font-bold transition-all ${
-                        targetAudiences.includes(type.id) 
-                        ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105' 
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                      }`}
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-slate-400 px-1 italic">
-                  * Bỏ trống (không chọn) đồng nghĩa với việc hiển thị cho tất cả mọi người.
-                </p>
-              </div>
+              <TaxonomySelector
+                config={config}
+                subject={subject}
+                setSubject={setSubject}
+                targetAudiences={targetAudiences}
+                setTargetAudiences={setTargetAudiences}
+                level={level}
+                setLevel={setLevel}
+                learningGoals={learningGoals}
+                setLearningGoals={setLearningGoals}
+              />
 
               {/* Short Description */}
               <div className="space-y-2">

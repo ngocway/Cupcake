@@ -8,7 +8,7 @@ async function main() {
   // Clear previous flashcard data to prevent duplication
   await prisma.globalFlashcard.deleteMany({});
   await prisma.flashcardTopic.deleteMany({});
-  await prisma.flashcardCategory.deleteMany({});
+  await prisma.flashcardTopic.deleteMany({});
   console.log('✓ Cleaned up old Flashcard data.');
 
   // 1. CREATE AGE CATEGORIES
@@ -22,7 +22,7 @@ async function main() {
   const categoriesMap: Record<string, any> = {};
 
   for (const cat of categoriesData) {
-    const category = await prisma.flashcardCategory.create({
+    const category = await prisma.flashcardTopic.create({
       data: cat
     });
     categoriesMap[cat.slug] = category;
@@ -36,7 +36,7 @@ async function main() {
   // Topic 1: Animals - 15 Cards
   const topicAnimals = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['kids-2-5'].id,
+      targetAudience: categoriesMap['kids-2-5'].id,
       name: 'Animals',
       slug: 'animals'
     }
@@ -81,7 +81,7 @@ async function main() {
   // Topic 2: Fruits - 15 Cards
   const topicFruits = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['kids-2-5'].id,
+      targetAudience: categoriesMap['kids-2-5'].id,
       name: 'Fruits',
       slug: 'fruits'
     }
@@ -130,7 +130,7 @@ async function main() {
   // Topic 1: School - 15 Cards
   const topicSchool = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['kid-6-12'].id,
+      targetAudience: categoriesMap['kid-6-12'].id,
       name: 'School',
       slug: 'school'
     }
@@ -175,7 +175,7 @@ async function main() {
   // Topic 2: Nature - 15 Cards
   const topicNature = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['kid-6-12'].id,
+      targetAudience: categoriesMap['kid-6-12'].id,
       name: 'Nature',
       slug: 'nature'
     }
@@ -224,7 +224,7 @@ async function main() {
   // Topic 1: Space Exploration - 15 Cards
   const topicSpace = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['teen'].id,
+      targetAudience: categoriesMap['teen'].id,
       name: 'Space Exploration',
       slug: 'space'
     }
@@ -404,7 +404,7 @@ async function main() {
   // Topic 2: Hobbies & Sports - 15 Cards
   const topicHobbies = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['teen'].id,
+      targetAudience: categoriesMap['teen'].id,
       name: 'Hobbies & Sports',
       slug: 'hobbies'
     }
@@ -588,7 +588,7 @@ async function main() {
   // Topic 1: Business & Technology - 15 Cards
   const topicTech = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['readers'].id,
+      targetAudience: categoriesMap['readers'].id,
       name: 'Business & Technology',
       slug: 'tech'
     }
@@ -768,7 +768,7 @@ async function main() {
   // Topic 2: Literature & Art - 15 Cards
   const topicArt = await prisma.flashcardTopic.create({
     data: {
-      categoryId: categoriesMap['readers'].id,
+      targetAudience: categoriesMap['readers'].id,
       name: 'Literature & Art',
       slug: 'art'
     }

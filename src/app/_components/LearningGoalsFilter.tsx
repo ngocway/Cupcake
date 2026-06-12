@@ -10,7 +10,7 @@ export function LearningGoalsFilter({ categories, activeId }: { categories: any[
   const locale = useLocale();
 
   if (studySubject !== "english") return null;
-  if (studyAgeGroup === "kindergarden") return null;
+  if (studyAgeGroup === "kindergarten" || studyAgeGroup === "kindergarden") return null;
 
   const englishCat = categories.find(c => c.slug === "english");
   if (!englishCat || !englishCat.children) return null;

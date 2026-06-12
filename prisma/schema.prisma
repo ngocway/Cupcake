@@ -165,11 +165,13 @@ model Assignment {
   updatedAt             DateTime             @updatedAt
   readingText           String?
   gradeLevel            String?
+  level                 String?
   subject               String?
   instructions          String?
   shortDescription      String?
   tags                  String?              @default("")
   targetAudiences       String[]             @default([])
+  learningGoals         String[]             @default([])
   thumbnail             String?
   videoUrl              String?
   audioUrl              String?
@@ -317,6 +319,8 @@ model Lesson {
   assignmentId    String?          @unique
   thumbnail       String?
   targetAudiences String[]         @default([])
+  learningGoals   String[]         @default([])
+  level           String?
   materialType    String?          @default("READING")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -554,6 +558,8 @@ model HomepageFeed {
   questionCount   Int      @default(0)
   categoryId      String?
   targetAudiences String[] @default([])
+  learningGoals   String[] @default([])
+  level           String?
   tags            String[] @default([])
   status          String   @default("PUBLIC")
   createdAt       DateTime @default(now())
@@ -611,26 +617,16 @@ model MediaAttachment {
   @@index([assignmentId])
 }
 
-model FlashcardCategory {
-  id        String           @id @default(cuid())
-  name      String // e.g. "Kids (2-5 years old)"
-  slug      String           @unique
-  topics    FlashcardTopic[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-}
-
 model FlashcardTopic {
-  id         String            @id @default(cuid())
-  categoryId String
-  name       String // e.g. "Animals"
-  slug       String
-  category   FlashcardCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  flashcards GlobalFlashcard[]
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  targetAudience String            @default("KIDS")
+  name           String // e.g. "Animals"
+  slug           String
+  flashcards     GlobalFlashcard[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  @@unique([categoryId, slug])
+  @@unique([targetAudience, slug])
 }
 
 model GlobalFlashcard {

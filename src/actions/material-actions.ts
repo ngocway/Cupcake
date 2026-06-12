@@ -125,6 +125,8 @@ export async function autoSaveMaterial(payload: {
   instructions?: string;
   categoryIds?: string[];
   targetAudiences?: string[];
+  level?: string;
+  learningGoals?: string[];
   thumbnail?: string | null;
   ttsVoice?: string;
   ttsSpeed?: number;
@@ -164,11 +166,12 @@ export async function autoSaveMaterial(payload: {
   const updatePayload: any = { 
     updatedAt: new Date(),
     ...(payload.targetAudiences !== undefined && { targetAudiences: { set: payload.targetAudiences } }),
+    ...(payload.learningGoals !== undefined && { learningGoals: { set: payload.learningGoals } }),
     ...(payload.categoryIds !== undefined && { categories: { set: payload.categoryIds.map((id: string) => ({ id })) } })
   };
 
   if (existing) {
-    const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'shortDescription', 'tags', 'instructions', 'audioMetadata'];
+    const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'level', 'shortDescription', 'tags', 'instructions', 'audioMetadata'];
     for (const field of fields) {
       if (payload[field as keyof typeof payload] !== undefined && payload[field as keyof typeof payload] !== existing[field as keyof typeof existing]) {
         updatePayload[field] = payload[field as keyof typeof payload] || null;
@@ -185,6 +188,7 @@ export async function autoSaveMaterial(payload: {
     updatePayload.ttsSpeed = payload.ttsSpeed || null;
     updatePayload.subject = payload.subject || null;
     updatePayload.gradeLevel = payload.gradeLevel || null;
+    updatePayload.level = payload.level || null;
     updatePayload.shortDescription = payload.shortDescription || null;
     updatePayload.tags = payload.tags || "";
     updatePayload.instructions = payload.instructions || null;
@@ -213,6 +217,7 @@ export async function autoSaveMaterial(payload: {
         audioMetadata: payload.audioMetadata || null,
         subject: payload.subject || null,
         gradeLevel: payload.gradeLevel || null,
+        level: payload.level || null,
         shortDescription: payload.shortDescription || null,
         tags: payload.tags || "",
         instructions: payload.instructions || null,
@@ -220,6 +225,7 @@ export async function autoSaveMaterial(payload: {
         materialType: 'READING', 
         status: 'DRAFT',
         targetAudiences: payload.targetAudiences !== undefined ? payload.targetAudiences : [],
+        learningGoals: payload.learningGoals !== undefined ? payload.learningGoals : [],
         categories: {
           connect: payload.categoryIds ? payload.categoryIds.map(id => ({ id })) : []
         }
@@ -238,6 +244,8 @@ export async function autoSaveMaterial(payload: {
     if (payload.audioMetadata !== undefined) lessonUpdateData.audioMetadata = payload.audioMetadata || null;
     if (thumbnail !== undefined) lessonUpdateData.thumbnail = thumbnail || null;
     if (payload.targetAudiences !== undefined) lessonUpdateData.targetAudiences = { set: payload.targetAudiences };
+    if (payload.level !== undefined) lessonUpdateData.level = payload.level || null;
+    if (payload.learningGoals !== undefined) lessonUpdateData.learningGoals = { set: payload.learningGoals };
     if (payload.categoryIds !== undefined) lessonUpdateData.categories = { set: payload.categoryIds.map(id => ({ id })) };
 
     transactions.push(

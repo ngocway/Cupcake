@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Image as ImageIcon, Sparkles, Settings, X } from 'lucide-react';
+import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 
 export interface FlashcardItem {
   id: string;
@@ -18,6 +19,18 @@ export function FlashcardEditor() {
     { id: '3', frontText: 'Significant', backText: 'Quan trọng, đáng kể' }
   ]);
   const [title, setTitle] = useState('Từ vựng Tiếng Anh - Unit 4');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Taxonomy State
+  const [subject, setSubject] = useState('Khác');
+  const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
+  const [level, setLevel] = useState<string>('');
+  const [learningGoals, setLearningGoals] = useState<string[]>([]);
+  const [config, setConfig] = useState<any>(null);
+
+  React.useEffect(() => {
+    import('@/actions/user-preferences-actions').then(m => m.getOnboardingConfig().then(setConfig));
+  }, []);
 
   const addCard = () => {
     setCards([...cards, { id: Date.now().toString(), frontText: '', backText: '' }]);
@@ -48,12 +61,68 @@ export function FlashcardEditor() {
             />
           </div>
           <div className="flex-shrink-0 flex items-center space-x-3">
+            <Button 
+              variant="outline" 
+              className="border-slate-200 text-slate-500 hover:bg-slate-100 rounded-xl h-12 px-5"
+              onClick={() => setIsSettingsOpen(true)}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Thiết lập học liệu
+            </Button>
             <Button variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 rounded-xl h-12 px-5">
               <Sparkles className="w-4 h-4 mr-2" />
               Tạo bằng AI
             </Button>
           </div>
         </div>
+
+        {/* Settings Modal */}
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl p-10 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 text-primary rounded-2xl">
+                    <Settings className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-950 font-headline italic">Thiết lập học liệu</h3>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Phân loại bộ thẻ Flashcard</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                <TaxonomySelector
+                  config={config}
+                  subject={subject}
+                  setSubject={setSubject}
+                  targetAudiences={targetAudiences}
+                  setTargetAudiences={setTargetAudiences}
+                  level={level}
+                  setLevel={setLevel}
+                  learningGoals={learningGoals}
+                  setLearningGoals={setLearningGoals}
+                />
+              </div>
+
+              <div className="mt-10 flex justify-end">
+                <Button 
+                  className="bg-slate-900 text-white hover:bg-slate-800 rounded-xl px-8"
+                  onClick={() => setIsSettingsOpen(false)}
+                >
+                  Đóng
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-10 bg-slate-50/50">

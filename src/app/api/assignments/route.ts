@@ -60,6 +60,8 @@ export async function GET(req: NextRequest) {
         publicSubmissionCount: a.publicSubmissionCount,
         tags: a.tags ? a.tags.split(',') : [],
         targetAudiences: a.targetAudiences || [],
+        level: a.level || null,
+        learningGoals: a.learningGoals || [],
         classes: a.targetClasses.map(tc => ({
           id: tc.class.id,
           name: tc.class.name,

@@ -21,7 +21,7 @@ type MediaAttachment = {
   progress: number;
 };
 
-import CategorySelect from '@/components/shared/CategorySelect';
+import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { ThumbnailUploader } from '@/components/shared/ThumbnailUploader';
 import { TagAutocompleteInput } from './TagAutocompleteInput';
 import {
@@ -280,18 +280,20 @@ export function ReadingExerciseBuilder({
       const payload: any = {
         id: assignmentId || initialId || 'clp_reading_001',
         title,
+        content: contentHtml,
+        shortDescription,
+        tags: tags.join(','),
+        targetAudiences,
+        subject,
+        level,
+        learningGoals,
+        materialType,
+        ttsVoice,
+        ttsSpeed,
+        audioMetadata,
         videoUrl: videoUrl,
         audioUrl: audioUrl,
-        ttsVoice: ttsVoice,
-        ttsSpeed: ttsSpeed,
-        subject,
-        gradeLevel,
-        shortDescription,
-        instructions,
-        tags: tags.join(','),
-        categoryIds,
-        targetAudiences: targetAudiences,
-        thumbnail
+        gradeLevel
       };
 
       if (contentHtml !== lastSavedContentHtml) {
@@ -340,6 +342,11 @@ export function ReadingExerciseBuilder({
   const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
   const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
   const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([]);
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    import('@/actions/user-preferences-actions').then(m => m.getOnboardingConfig().then(setConfig));
+  }, []);
 
   useEffect(() => {
     if (assignmentId && isInitialLoadDone) {
@@ -369,8 +376,9 @@ export function ReadingExerciseBuilder({
   const [tags, setTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState('');
   const [popularTagsList, setPopularTagsList] = useState<string[]>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
-  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
+  const [level, setLevel] = useState<string>('');
+  const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [materialType, setMaterialType] = useState<string>('READING');
   const [ttsVoice, setTtsVoice] = useState<string>('Aoede');
@@ -692,24 +700,20 @@ export function ReadingExerciseBuilder({
             if (editor) editor.innerHTML = '';
             setLastSavedContentHtml('');
           }
-          if (data.assignment.subject) setSubject(data.assignment.subject);
-          if (data.assignment.gradeLevel) setGradeLevel(data.assignment.gradeLevel);
-          if (data.assignment.shortDescription) setShortDescription(data.assignment.shortDescription);
-          if (data.assignment.instructions) setInstructions(data.assignment.instructions);
           if (data.assignment.tags) {
-             setTags(data.assignment.tags.split(',').filter(Boolean));
+            setTags(typeof data.assignment.tags === 'string' ? data.assignment.tags.split(',').filter(Boolean) : (Array.isArray(data.assignment.tags) ? data.assignment.tags : []));
+          } else {
+            setTags([]);
           }
-          if (data.assignment.categories) {
-            setCategoryIds(data.assignment.categories?.map((c: any) => c.id) || []);
-          }
-          if (data.assignment.targetAudiences) {
-            setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
-          }
+          setTargetAudiences(data.assignment.targetAudiences || []);
+          setSubject(data.assignment.subject || 'Khác');
+          setLevel(data.assignment.level || '');
+          setLearningGoals(data.assignment.learningGoals || []);
+          setMaterialType(data.assignment.materialType || 'READING');
           if (data.assignment.lesson || data.assignment.lessonId) {
             setBelongsToLesson(true);
           }
           setThumbnail(data.assignment.thumbnail || null);
-          setMaterialType(data.assignment.materialType || 'READING');
           setTtsVoice(data.assignment.ttsVoice || 'Aoede');
           setTtsSpeed(data.assignment.ttsSpeed || 1.0);
           
@@ -992,8 +996,7 @@ export function ReadingExerciseBuilder({
         shortDescription,
         instructions,
         tags: tags.join(','),
-        categoryIds,
-        targetAudiences: targetAudiences
+                targetAudiences: targetAudiences
       };
 
       if (contentHtml !== lastSavedContentHtml) {
@@ -2451,43 +2454,17 @@ export function ReadingExerciseBuilder({
 
                     {/* Right Column */}
                     <div className="space-y-6">
-                      <div className="space-y-2">
-                         <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Danh mục (Categories)</label>
-                         <CategorySelect selectedIds={categoryIds} onChange={setCategoryIds} />
-                      </div>
-
-                      <div className="space-y-3">
-                        <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest px-1">Đối tượng (Target Audiences)</label>
-                        <div className="flex flex-wrap gap-2">
-                          {[
-                            { id: 'kids', label: '🧸 Trẻ em' },
-                            { id: 'teens', label: '🎒 Thiếu niên' },
-                            { id: 'adults', label: '🎓 Người lớn' },
-                            { id: 'business', label: '💼 Doanh nhân' }
-                          ].map(type => (
-                            <button
-                              key={type.id}
-                              onClick={() => {
-                                if (targetAudiences.includes(type.id)) {
-                                  setTargetAudiences(targetAudiences.filter(t => t !== type.id));
-                                } else {
-                                  setTargetAudiences([...targetAudiences, type.id]);
-                                }
-                              }}
-                              className={`px-3 py-2 rounded-lg text-[11px] font-bold transition-all border ${
-                                targetAudiences.includes(type.id) 
-                                ? 'bg-primary text-white border-primary shadow-md shadow-primary/20 scale-105' 
-                                : 'bg-white dark:bg-gray-800 text-slate-500 border-slate-200 dark:border-gray-700 hover:border-primary/50'
-                              }`}
-                            >
-                              {type.label}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[10px] text-slate-400 px-1 italic">
-                          * Bỏ trống (không chọn) đồng nghĩa với việc hiển thị cho tất cả mọi người.
-                        </p>
-                      </div>
+                      <TaxonomySelector
+                        config={config}
+                        subject={subject}
+                        setSubject={setSubject}
+                        targetAudiences={targetAudiences}
+                        setTargetAudiences={setTargetAudiences}
+                        level={level}
+                        setLevel={setLevel}
+                        learningGoals={learningGoals}
+                        setLearningGoals={setLearningGoals}
+                      />
 
                       <div className="space-y-2">
                          <div className="flex justify-between items-center px-1">

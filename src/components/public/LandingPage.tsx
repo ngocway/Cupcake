@@ -822,7 +822,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-8 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
+        className="flex flex-col md:flex-row md:items-center justify-start gap-6 pt-8 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
       >
         <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
           <button
@@ -845,35 +845,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
           >
             {locale === "vi" ? "BÀI TẬP" : "EXERCISES"}
           </button>
-        </div>
-
-        <div className="flex-1 max-w-sm relative z-10 pointer-events-auto">
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault()
-              const fd = new FormData(e.currentTarget)
-              const search = fd.get("search") as string
-              const p = new URLSearchParams(window.location.search)
-              if (search.trim()) p.set("search", search.trim())
-              else p.delete("search")
-              router.push(`?${p.toString()}`, { scroll: false })
-            }}
-            className="relative flex items-center group"
-          >
-            <input 
-              type="text"
-              name="search"
-              defaultValue={searchParams.search || ""}
-              placeholder={locale === "vi" ? "Tìm kiếm bài học..." : "Search lessons..."}
-              className="w-full bg-white dark:bg-slate-900 border-2 border-primary/10 text-primary font-bold rounded-[1.75rem] pl-6 pr-12 py-3.5 focus:outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all duration-300 placeholder:text-primary/30 shadow-sm group-hover:border-primary/20"
-            />
-            <button 
-              type="submit"
-              className="absolute right-2 p-2.5 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-full transition-colors cursor-pointer"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-            </button>
-          </form>
         </div>
       </div>
 

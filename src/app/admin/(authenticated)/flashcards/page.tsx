@@ -1,27 +1,18 @@
 import prisma from "@/lib/prisma"
 import { AdminFlashcardsClient } from "./AdminFlashcardsClient"
+import { getOnboardingConfig } from "@/actions/user-preferences-actions"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminFlashcardsPage() {
-  // 1. Lấy danh sách toàn bộ các danh mục tuổi (Kids 2-5, Kids 6-12, Teen, Readers)
-  const categories = await prisma.flashcardCategory.findMany({
-    include: {
-      topics: {
-        orderBy: {
-          name: 'asc'
-        }
-      }
-    },
-    orderBy: {
-      slug: 'asc'
-    }
-  });
+  const config = (await getOnboardingConfig()) as any;
+  const englishSubject = config?.subjects?.find((s: any) => s.id === 'english');
+  const targetAudiencesRaw = englishSubject?.ageGroups || [];
+  const targetAudiences = targetAudiencesRaw.map((a: any) => ({ ...a, name: a.label }));
 
   // 2. Lấy toàn bộ các chủ đề (Topics) - Sắp xếp theo ngày tạo mới nhất lên đầu như yêu cầu!
   const topics = await prisma.flashcardTopic.findMany({
     include: {
-      category: true,
       _count: {
         select: { flashcards: true }
       }
@@ -34,11 +25,7 @@ export default async function AdminFlashcardsPage() {
   // 3. Lấy toàn bộ các thẻ flashcard - Sắp xếp theo ngày tạo mới nhất lên đầu để dễ theo dõi
   const flashcards = await prisma.globalFlashcard.findMany({
     include: {
-      topic: {
-        include: {
-          category: true
-        }
-      }
+      topic: true
     },
     orderBy: {
       createdAt: 'desc'
@@ -53,7 +40,7 @@ export default async function AdminFlashcardsPage() {
       </div>
 
       <AdminFlashcardsClient 
-        initialCategories={categories}
+        targetAudiences={targetAudiences}
         initialTopics={topics}
         initialFlashcards={flashcards}
       />

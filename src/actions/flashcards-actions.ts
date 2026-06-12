@@ -3,35 +3,27 @@
 import prisma from "@/lib/prisma"
 import { unstable_cache } from "next/cache"
 
-// 1. Caching categories query
-const fetchCategories = async () => {
-  return prisma.flashcardCategory.findMany({
-    include: {
-      topics: {
-        orderBy: {
-          name: 'asc'
-        }
-      }
-    },
+// 1. Caching topics query
+const fetchTopics = async () => {
+  return prisma.flashcardTopic.findMany({
     orderBy: {
-      slug: 'asc' // Sắp xếp theo slug để giữ thứ tự Kids, Kid, Teen, Readers
+      name: 'asc'
     }
   });
 };
 
-export const getCachedFlashcardCategories = unstable_cache(
-  fetchCategories,
-  ["flashcard-categories-cache-v1"],
-  { revalidate: 43200, tags: ["flashcard-categories"] } // Cache for 12 hours
+export const getCachedFlashcardTopics = unstable_cache(
+  fetchTopics,
+  ["flashcard-topics-cache-v1"],
+  { revalidate: 43200, tags: ["flashcard-categories"] } // Reusing old tag for now
 );
 
 /**
- * Lấy danh sách toàn bộ các danh mục tuổi (FlashcardCategory)
- * kèm theo danh sách các chủ đề (FlashcardTopic) của danh mục đó.
+ * Lấy danh sách toàn bộ các chủ đề (FlashcardTopic)
  */
-export async function getFlashcardCategories() {
+export async function getFlashcardTopics() {
   try {
-    return await getCachedFlashcardCategories();
+    return await getCachedFlashcardTopics();
   } catch (error) {
     console.error("Lỗi khi lấy danh mục flashcard:", error);
     return [];
