@@ -66,6 +66,7 @@ export function MaterialListItem({
   assignment, 
   onDelete, 
   onEdit,
+  onUpdate,
   onRefresh,
   isTrash,
   selected,
@@ -74,6 +75,7 @@ export function MaterialListItem({
   assignment: Assignment, 
   onDelete: () => void,
   onEdit?: (id: string) => void,
+  onUpdate?: (assignment: Assignment) => void,
   onRefresh?: () => void,
   isTrash?: boolean;
   selected?: boolean;
@@ -260,6 +262,9 @@ export function MaterialListItem({
     try {
       await updateMaterialStatus(assignment.id, newStatus);
       setIsMenuOpen(false);
+      if (onUpdate) {
+        onUpdate({ ...assignment, status: newStatus });
+      }
       if (onRefresh) onRefresh();
       else router.refresh();
     } catch (err: any) {

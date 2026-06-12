@@ -2,9 +2,10 @@ import { getCachedCategoryTree, getCachedTags } from "@/lib/cached-queries";
 import { SidebarCategoryList } from "./SidebarCategoryList";
 import { SidebarTagList } from "./SidebarTagList";
 import { SidebarHeroSentence } from "./SidebarHeroSentence";
+import { LearningGoalsFilter } from "./LearningGoalsFilter";
 import { getTranslations } from "next-intl/server";
 
-export async function SidebarContent({ searchParams, initialUserType }: { searchParams: any, initialUserType: string }) {
+export async function SidebarContent({ searchParams, initialUserType, studySubject, studyAgeGroup }: { searchParams: any, initialUserType: string, studySubject?: string, studyAgeGroup?: string }) {
   const t = await getTranslations("home");
   const [categories, tags] = await Promise.all([
     getCachedCategoryTree(),
@@ -17,15 +18,7 @@ export async function SidebarContent({ searchParams, initialUserType }: { search
         <SidebarHeroSentence categoryTree={categories} />
       </div>
 
-      <div className="pt-8 border-t border-primary/5">
-        <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-6">{t("categories")}</h2>
-        <SidebarCategoryList categories={categories} activeId={searchParams.categoryId} />
-      </div>
-
-      <div className="pt-10 border-t border-primary/5">
-        <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-6">{t("popularTags")}</h2>
-        <SidebarTagList tags={tags} searchParams={searchParams} />
-      </div>
+      <LearningGoalsFilter categories={categories} activeId={searchParams.categoryId} />
     </div>
   );
 }

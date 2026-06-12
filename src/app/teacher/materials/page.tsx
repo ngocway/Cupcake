@@ -75,8 +75,8 @@ export default function MaterialLibraryPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchAssignments = async () => {
-    setLoading(true);
+  const fetchAssignments = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const url = new URL('/api/assignments', window.location.origin);
       url.searchParams.set('sort', sortOrder);
@@ -94,7 +94,7 @@ export default function MaterialLibraryPage() {
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -132,7 +132,7 @@ export default function MaterialLibraryPage() {
       // Optimistic UI
       setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
       setSelectedIds([]);
-      fetchAssignments();
+      fetchAssignments(false);
     } catch (err) {
       console.error('Bulk action failed:', err);
       alert('Thao tác hàng loạt thất bại.');
@@ -223,9 +223,11 @@ export default function MaterialLibraryPage() {
                 assignment={a} 
                 onDelete={() => {
                   setAssignments(prev => prev.filter(x => x.id !== a.id));
-                  fetchAssignments();
                 }}
-                onRefresh={fetchAssignments}
+                onUpdate={(updated) => {
+                  setAssignments(prev => prev.map(x => x.id === updated.id ? updated : x));
+                }}
+                onRefresh={() => fetchAssignments(false)}
                 isTrash={showTrash}
                 selected={selectedIds.includes(a.id)}
                 onSelect={(id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}

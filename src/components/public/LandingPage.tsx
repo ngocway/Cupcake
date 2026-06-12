@@ -1,4 +1,3 @@
-
 "use client"
 import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
@@ -9,7 +8,7 @@ import { LoadingBar } from "@/components/public/TopProgressBar"
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations, useLocale } from "next-intl"
 import { TypingText } from "@/components/public/TypingText"
-import { setUserTypePreference, setNativeLanguagePreference } from "@/actions/user-preferences-actions"
+import { updateAllPreferences, getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { X, SlidersHorizontal } from "lucide-react"
 import {
   Select,
@@ -30,6 +29,9 @@ interface Props {
   searchParams: any
   initialUserType?: string
   hasUserPreference?: boolean
+  initialStudySubject?: string
+  initialStudyAgeGroup?: string
+  initialStudyLevel?: string
 }
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -263,7 +265,7 @@ const LessonList = memo(function LessonList({
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function LandingPage({ promises, searchParams, initialUserType = "adults", hasUserPreference = false }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "adults", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
@@ -279,10 +281,20 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   // Local states — switching tab never triggers server roundtrip
   const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "lessons")
 
+
   // Store states and actions
   const userType            = useContentStore(s => s.userType)
   const setUserType         = useContentStore(s => s.setUserType)
+  
+  const studySubject        = useContentStore(s => (s as any).studySubject)
+  const setStudySubject     = useContentStore(s => (s as any).setStudySubject)
+  const studyAgeGroup       = useContentStore(s => (s as any).studyAgeGroup)
+  const setStudyAgeGroup    = useContentStore(s => (s as any).setStudyAgeGroup)
+  const studyLevel          = useContentStore(s => (s as any).studyLevel)
+  const setStudyLevel       = useContentStore(s => (s as any).setStudyLevel)
+
   const nativeLanguage      = useContentStore(s => s.nativeLanguage)
+
   const setNativeLanguage   = useContentStore(s => s.setNativeLanguage)
   const selectedCategoryId  = useContentStore(s => s.selectedCategoryId)
   const setSelectedCategoryId = useContentStore(s => s.setSelectedCategoryId)
@@ -292,16 +304,25 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const isFiltering         = useContentStore(s => s.isFiltering)
   const setFiltering        = useContentStore(s => s.setFiltering)
 
-  // Sync initial userType preference
+  // Sync initial userType and study preferences
   useEffect(() => {
     if (initialUserType) {
       setUserType(initialUserType);
+    }
+    if (initialStudySubject) {
+      setStudySubject(initialStudySubject);
+    }
+    if (initialStudyAgeGroup) {
+      setStudyAgeGroup(initialStudyAgeGroup);
+    }
+    if (initialStudyLevel) {
+      setStudyLevel(initialStudyLevel);
     }
     const savedLang = localStorage.getItem("cupcakes_native_language");
     if (savedLang) {
       setNativeLanguage(savedLang);
     }
-  }, [initialUserType, setUserType, setNativeLanguage]);
+  }, [initialUserType, initialStudySubject, initialStudyAgeGroup, initialStudyLevel, setUserType, setStudySubject, setStudyAgeGroup, setStudyLevel, setNativeLanguage]);
 
   // Sync URL categoryId → store selectedCategoryId / selectedSubCategoryId
   const urlCategoryId = currentParams.get("categoryId") || "";
@@ -371,6 +392,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   };
   const activeAvatar = avatarMap[userType] || avatarMap.adults;
 
+
   // Modal local staging states
   const isFilterModalOpen = useContentStore(s => (s as any).isFilterModalOpen)
   const setIsFilterModalOpen = useContentStore(s => (s as any).setFilterModalOpen)
@@ -380,7 +402,44 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const [tempCategoryId, setTempCategoryId] = useState(selectedCategoryId)
   const [tempSubCategoryId, setTempSubCategoryId] = useState(selectedSubCategoryId)
 
-  const isReadyEnabled = !!tempUserType && !!tempCategoryId && !!tempSubCategoryId;
+  const [tempStudySubject, setTempStudySubject] = useState(studySubject)
+  const [tempStudyAgeGroup, setTempStudyAgeGroup] = useState(studyAgeGroup)
+  const [tempStudyLevel, setTempStudyLevel] = useState(studyLevel)
+  const [onboardingConfig, setOnboardingConfig] = useState<any>(null)
+
+  // Sync temp states from store whenever the modal is opened
+  useEffect(() => {
+    if (isFilterModalOpen) {
+      setTempUserType(userType)
+      setTempNativeLanguage(nativeLanguage)
+      setTempCategoryId(selectedCategoryId)
+      setTempSubCategoryId(selectedSubCategoryId)
+      setTempStudySubject(studySubject)
+      setTempStudyAgeGroup(studyAgeGroup)
+      setTempStudyLevel(studyLevel)
+    }
+  }, [
+    isFilterModalOpen, 
+    userType, 
+    nativeLanguage, 
+    selectedCategoryId, 
+    selectedSubCategoryId, 
+    studySubject, 
+    studyAgeGroup, 
+    studyLevel
+  ])
+
+  useEffect(() => {
+    getOnboardingConfig().then(config => {
+      if (config) setOnboardingConfig(config)
+    })
+  }, [])
+
+  const currentLevels = onboardingConfig?.subjects?.find((s: any) => s.id === tempStudySubject)?.ageGroups?.find((a: any) => a.id === tempStudyAgeGroup)?.levels || [];
+  const isAllStepsCompleted = !!tempStudySubject && !!tempStudyAgeGroup && (currentLevels.length === 0 || !!tempStudyLevel);
+  const isReadyEnabled = isAllStepsCompleted && !!tempNativeLanguage;
+  const isFirstTimeSetup = !initialStudySubject;
+
 
   // Auto-detect native language if not set
   useEffect(() => {
@@ -407,44 +466,63 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
 
   // Auto-open modal if user has no filter selections AND hasn't explicitly set a preference
   useEffect(() => {
-    if (!hasUserPreference && !urlCategoryId && !hasAutoOpened) {
+    // Use initialStudySubject to prevent race condition during hydration
+    const effectiveSubject = studySubject || initialStudySubject;
+    if (!effectiveSubject && !urlCategoryId && !hasAutoOpened) {
       setIsFilterModalOpen(true)
       setHasAutoOpened(true)
     }
-  }, [urlCategoryId, hasAutoOpened, hasUserPreference])
+  }, [urlCategoryId, hasAutoOpened, studySubject, initialStudySubject])
 
   const handleOpenModal = () => {
     setTempUserType(userType)
     setTempNativeLanguage(nativeLanguage)
     setTempCategoryId(selectedCategoryId)
     setTempSubCategoryId(selectedSubCategoryId)
+    setTempStudySubject(studySubject)
+    setTempStudyAgeGroup(studyAgeGroup)
+    setTempStudyLevel(studyLevel)
     setIsFilterModalOpen(true)
   }
 
   const handleCloseModalDiscard = () => {
+    if (isFirstTimeSetup) return // Force setup if no subject
     setIsFilterModalOpen(false)
   }
 
   const handleApplyFilters = async () => {
-    setFiltering(true)
+    setIsFilterModalOpen(false) // Close modal instantly
 
-    // 1. Commit user type if changed
+    // 1. Update all client state instantly (optimistic UI)
     if (userType !== tempUserType) {
       setUserType(tempUserType)
-      await setUserTypePreference(tempUserType)
     }
 
     if (nativeLanguage !== tempNativeLanguage) {
       setNativeLanguage(tempNativeLanguage)
       localStorage.setItem("cupcakes_native_language", tempNativeLanguage)
-      await setNativeLanguagePreference(tempNativeLanguage)
+    }
+
+    if (studySubject !== tempStudySubject || studyAgeGroup !== tempStudyAgeGroup || studyLevel !== tempStudyLevel) {
+      setStudySubject(tempStudySubject || "")
+      setStudyAgeGroup(tempStudyAgeGroup || "")
+      setStudyLevel(tempStudyLevel || "")
     }
 
     // 2. Commit category and sub-category
     setSelectedCategoryId(tempCategoryId)
     setSelectedSubCategoryId(tempSubCategoryId)
 
-    // 3. Update URL categoryId
+    // 3. Trigger background update to server
+    await updateAllPreferences({
+      userType: tempUserType,
+      nativeLanguage: tempNativeLanguage,
+      studySubject: tempStudySubject,
+      studyAgeGroup: tempStudyAgeGroup,
+      studyLevel: tempStudyLevel
+    }).catch(console.error);
+
+    // 4. Update URL categoryId
     const qs = new URLSearchParams(window.location.search)
     if (tempSubCategoryId) {
       qs.set("categoryId", tempSubCategoryId)
@@ -457,10 +535,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       localStorage.removeItem("cupcakes_preferred_category_id")
     }
 
-    // Clear isFiltering after a short delay since startTransition handles it gracefully
+    // Transition instantly, no artificial delay
     startTransition(() => {
       router.push(`/?${qs.toString()}`, { scroll: false })
-      setTimeout(() => setFiltering(false), 500)
     })
 
     // 4. Close the modal
@@ -510,7 +587,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   return (
     <div className="space-y-6 relative">
 
-
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
 
@@ -518,7 +594,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       {isFilterModalOpen && (
         <div 
           className="fixed inset-0 bg-black/80 z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300"
-          onClick={handleCloseModalDiscard}
+          onClick={!isFirstTimeSetup ? handleCloseModalDiscard : undefined}
         >
           <div 
             className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
@@ -526,110 +602,206 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
           >
             
             {/* Close button (X) */}
-            <button
-              onClick={handleCloseModalDiscard}
-              className="absolute top-6 right-6 text-primary/60 hover:text-primary dark:text-slate-400 dark:hover:text-white p-2 hover:bg-primary/5 rounded-full transition-colors cursor-pointer"
-              aria-label="Close modal"
-            >
-              <X className="w-6 h-6" />
-            </button>
-
-            {/* Who are you Section */}
-            <div className="space-y-4">
-              <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
-                {t("whoAreYou")}
-              </h2>
-              <div className="flex flex-wrap gap-8 items-center pl-4 md:pl-10 py-2">
-                {[
-                  { id: 'kids', label: 'Kid', src: '/images/avatars/kid.png' },
-                  { id: 'teens', label: 'Teen', src: '/images/avatars/teen.png' },
-                  { id: 'adults', label: 'Adult', src: '/images/avatars/adult.png' },
-                  { id: 'business', label: 'Business', src: '/images/avatars/Business man.png' },
-                ].map((type) => {
-                  const isActive = tempUserType === type.id;
-                  return (
-                    <button
-                      key={type.id}
-                      onClick={() => setTempUserType(type.id)}
-                      className="shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 focus:outline-none cursor-pointer avatar-btn"
-                    >
-                      <div className={`relative w-[90px] h-[90px] rounded-full overflow-hidden transition-all duration-500 border-[5px] avatar-container ${
-                        isActive 
-                          ? "border-primary shadow-xl shadow-primary/30 scale-110 rotate-3" 
-                          : "border-transparent shadow-md opacity-60 group-hover:opacity-100 group-hover:border-primary/30 group-hover:scale-105 group-hover:-translate-y-1.5 group-hover:rotate-[-3deg]"
-                      }`}>
-                        <img 
-                          src={type.src} 
-                          alt={type.label} 
-                          className="shake-target w-full h-full object-cover" 
-                        />
-                      </div>
-                      <span className={`text-sm font-black uppercase tracking-[0.1em] transition-all duration-300 ${
-                        isActive ? "text-primary scale-110" : "text-primary/50 group-hover:text-primary"
-                      }`}>
-                        {type.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <hr className="border-primary/10" />
-
-            {/* Native Language Section */}
-            <div className="flex flex-wrap items-center gap-4">
-              <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0">
-                {locale === "vi" ? "My native language is" : "My native language is"}
-              </h2>
-              <div className="shrink-0">
-                <Select
-                  value={tempNativeLanguage}
-                  onValueChange={setTempNativeLanguage}
-                >
-                  <SelectTrigger 
-                    className="bg-white border-2 border-primary/20 text-primary font-black rounded-[1.75rem] px-5 py-5 md:px-6 md:py-6 h-auto text-base md:text-lg focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm min-w-[140px] flex gap-2"
-                  >
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.25rem] border-2 border-primary/10 shadow-xl overflow-hidden font-bold text-primary p-1">
-                    <SelectItem value="vi" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Tiếng Việt</SelectItem>
-                    <SelectItem value="th" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Thailand</SelectItem>
-                    <SelectItem value="id" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Indonesia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <hr className="border-primary/10" />
-
-            {/* What to learn & Categories Section */}
-            <div className="space-y-4">
-              <div className="text-lg md:text-xl text-primary/80 leading-relaxed font-black h-8 flex items-center typing-text-container">
-                <TypingText text={t("whatToLearn")} speed={150} />
-              </div>
-              <div className="pt-2">
-                <VisualCategoryMenu
-                  categoryTree={categoryTree}
-                  activeCategoryId={tempCategoryId}
-                  activeSubCategoryId={tempSubCategoryId}
-                  onSelectCategory={(id) => {
-                    setTempCategoryId(id);
-                    setTempSubCategoryId(""); // Clear sub-category when parent category changes
-                  }}
-                  onSelectSubCategory={setTempSubCategoryId}
-                />
-              </div>
-            </div>
-
-            {/* Ready / Cancel footer */}
-            <div className="flex justify-end items-center gap-4 mt-4 pt-4 border-t border-primary/10 modal-footer">
+            {!isFirstTimeSetup && (
               <button
                 onClick={handleCloseModalDiscard}
-                className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
+                className="absolute top-6 right-6 text-primary/60 hover:text-primary dark:text-slate-400 dark:hover:text-white p-2 hover:bg-primary/5 rounded-full transition-colors cursor-pointer"
+                aria-label="Close modal"
               >
-                {locale === "vi" ? "CANCEL" : "CANCEL"}
+                <X className="w-6 h-6" />
               </button>
+            )}
+            
+            {/* Subject Selection (Step 1) */}
+            {onboardingConfig && (
+              <div className="space-y-4">
+                <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
+                  What do you want to learn?
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-6 category-grid">
+                  {onboardingConfig.subjects.map((subject: any, idx: number) => {
+                    const isActive = tempStudySubject === subject.id;
+                    const blobShapes = [
+                      "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
+                      "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
+                      "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
+                      "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
+                      "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
+                    ];
+                    const solarpunkStyles = [
+                      { icon: "/images/english.png", color: "text-emerald-900", bg: "bg-emerald-50", activeBg: "bg-emerald-200", border: "border-emerald-400", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10" },
+                      { icon: "/images/math.png", color: "text-orange-900", bg: "bg-orange-50", activeBg: "bg-orange-200", border: "border-orange-400", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10" },
+                      { icon: "/images/global.png", color: "text-sky-900", bg: "bg-sky-50", activeBg: "bg-sky-200", border: "border-sky-400", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10" },
+                      { icon: "/images/english.png", color: "text-purple-900", bg: "bg-purple-50", activeBg: "bg-purple-200", border: "border-purple-400", iconBg: "bg-purple-200", shadow: "shadow-purple-900/10" },
+                    ];
+                    const n = (subject.label || "").toLowerCase();
+                    let style = solarpunkStyles[idx % solarpunkStyles.length];
+                    if (n.includes("anh") || n.includes("english")) style = solarpunkStyles[0];
+                    else if (n.includes("toán") || n.includes("math")) style = solarpunkStyles[1];
+                    else if (n.includes("global") || n.includes("xã hội") || n.includes("science")) style = solarpunkStyles[2];
+                    
+                    const blobShape = blobShapes[idx % blobShapes.length];
+                    const Icon = style.icon;
+
+                    return (
+                      <button
+                        key={subject.id}
+                        onClick={() => {
+                          setTempStudySubject(subject.id);
+                          setTempStudyAgeGroup("");
+                          setTempStudyLevel("");
+                        }}
+                        className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl cursor-pointer ${
+                          isActive 
+                            ? `${style.activeBg} ${style.border} scale-[1.08] shadow-2xl z-20 animate-solar-pulse border-4` 
+                            : `${style.bg} ${style.border} hover:scale-[1.05] ${style.shadow} opacity-80 hover:opacity-100`
+                        }`}
+                      >
+                         <div className={`absolute -top-5 -left-4 rounded-2xl shadow-lg transition-all duration-700 flex items-center justify-center w-14 h-14 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
+                           <img src={Icon} alt={subject.label} className="w-10 h-10 object-contain drop-shadow-sm" />
+                         </div>
+                         <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 ${isActive ? style.color + " scale-105" : "text-slate-700/80"}`}>
+                           {subject.label}
+                         </div>
+                         {isActive && (
+                           <div className={`relative z-10 w-8 h-1.5 bg-current opacity-20 rounded-full blur-[1px] ${style.color}`} />
+                         )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Age Group Selection (Step 2) */}
+            {onboardingConfig && tempStudySubject && (
+              <>
+                <hr className="border-primary/10" />
+                <div className="space-y-4">
+                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
+                    {t("whoAreYou")}
+                  </h2>
+                  <div className="flex flex-wrap gap-8 items-center pl-4 md:pl-10 py-2">
+                    {onboardingConfig.subjects.find((s: any) => s.id === tempStudySubject)?.ageGroups.map((age: any) => {
+                      const isActive = tempStudyAgeGroup === age.id;
+                      return (
+                         <button
+                          key={age.id}
+                          onClick={() => {
+                            setTempStudyAgeGroup(age.id);
+                            setTempStudyLevel("");
+                            // Map age back to "kids/teens/adults" for old logic
+                            if (age.id === "kindergarden" || age.id === "kid" || age.id === "grade1" || age.id === "grade2" || age.id === "grade3" || age.id === "kids") setTempUserType("kids");
+                            else if (age.id === "teen" || age.id === "primary" || age.id === "teens") setTempUserType("teens");
+                            else setTempUserType("adults");
+                          }}
+                          className="shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 cursor-pointer avatar-btn"
+                         >
+                            <div className={`relative w-[90px] h-[90px] rounded-full overflow-hidden transition-all duration-500 border-[5px] avatar-container ${
+                              isActive 
+                                ? "border-primary shadow-xl shadow-primary/30 scale-110 rotate-3" 
+                                : "border-transparent shadow-md opacity-60 group-hover:opacity-100 group-hover:border-primary/30 group-hover:scale-105 group-hover:-translate-y-1.5 group-hover:rotate-[-3deg]"
+                            }`}>
+                              <img src={age.avatar || "/images/avatars/kid.png"} alt={age.label} className="shake-target w-full h-full object-cover" />
+                            </div>
+                            <span className={`text-sm font-black uppercase tracking-[0.1em] transition-all duration-300 ${
+                              isActive ? "text-primary scale-110" : "text-primary/50 group-hover:text-primary"
+                            }`}>{age.label}</span>
+                         </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Level Selection (Step 3) */}
+            {onboardingConfig && tempStudySubject && tempStudyAgeGroup && onboardingConfig.subjects.find((s: any) => s.id === tempStudySubject)?.ageGroups.find((a: any) => a.id === tempStudyAgeGroup)?.levels?.length > 0 && (
+              <>
+                <hr className="border-primary/10" />
+                <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
+                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
+                    Your Level
+                  </h2>
+                  <div className="flex flex-wrap gap-4 items-center pl-4 md:pl-10 py-2">
+                    {onboardingConfig.subjects.find((s: any) => s.id === tempStudySubject)?.ageGroups.find((a: any) => a.id === tempStudyAgeGroup)?.levels.map((level: any, idx: number) => {
+                      const isActive = tempStudyLevel === level.id;
+                      const blobShapes = [
+                        "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
+                        "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
+                        "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
+                        "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
+                        "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
+                      ];
+                      const levelStyles = [
+                        { bg: "bg-emerald-100", border: "border-emerald-300", activeBg: "bg-emerald-500", text: "text-emerald-900", activeText: "text-white", shadow: "shadow-emerald-900/30" },
+                        { bg: "bg-sky-100", border: "border-sky-300", activeBg: "bg-sky-500", text: "text-sky-900", activeText: "text-white", shadow: "shadow-sky-900/30" },
+                        { bg: "bg-purple-100", border: "border-purple-300", activeBg: "bg-purple-500", text: "text-purple-900", activeText: "text-white", shadow: "shadow-purple-900/30" },
+                        { bg: "bg-orange-100", border: "border-orange-300", activeBg: "bg-orange-500", text: "text-orange-900", activeText: "text-white", shadow: "shadow-orange-900/30" },
+                        { bg: "bg-rose-100", border: "border-rose-300", activeBg: "bg-rose-500", text: "text-rose-900", activeText: "text-white", shadow: "shadow-rose-900/30" },
+                      ];
+                      const blobShape = blobShapes[(idx + 2) % blobShapes.length];
+                      const style = levelStyles[idx % levelStyles.length];
+
+                      return (
+                         <button
+                          key={level.id}
+                          onClick={() => setTempStudyLevel(level.id)}
+                          className={`px-8 py-3 ${blobShape} text-xs font-black transition-all duration-500 border-2 uppercase tracking-[0.1em] shadow-sm hover:scale-110 active:scale-95 cursor-pointer ${
+                            isActive
+                              ? `${style.activeBg} ${style.border} ${style.activeText} shadow-xl ${style.shadow} scale-105`
+                              : `${style.bg} ${style.border} ${style.text} hover:opacity-90`
+                          }`}
+                         >
+                            {level.label}
+                         </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Native Language Section */}
+            {isAllStepsCompleted && (
+              <>
+                <hr className="border-primary/10" />
+                <div className="flex flex-wrap items-center gap-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
+                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0">
+                    {locale === "vi" ? "My native language is" : "My native language is"}
+                  </h2>
+                  <div className="shrink-0">
+                    <Select
+                      value={tempNativeLanguage}
+                      onValueChange={setTempNativeLanguage}
+                    >
+                      <SelectTrigger 
+                        className="bg-white border-2 border-primary/20 text-primary font-black rounded-[1.75rem] px-5 py-5 md:px-6 md:py-6 h-auto text-base md:text-lg focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm min-w-[140px] flex gap-2"
+                      >
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.25rem] border-2 border-primary/10 shadow-xl overflow-hidden font-bold text-primary p-1">
+                        <SelectItem value="vi" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Tiếng Việt</SelectItem>
+                        <SelectItem value="th" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Thailand</SelectItem>
+                        <SelectItem value="id" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Indonesia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Ready / Cancel footer */}
+
+            <div className="flex justify-end items-center gap-4 mt-4 pt-4 border-t border-primary/10 modal-footer">
+              {!isFirstTimeSetup && (
+                <button
+                  onClick={handleCloseModalDiscard}
+                  className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
+                >
+                  {locale === "vi" ? "CANCEL" : "CANCEL"}
+                </button>
+              )}
               <button
                 onClick={handleApplyFilters}
                 disabled={!isReadyEnabled}
@@ -650,9 +822,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-8 pb-4 sticky top-0 z-40 bg-[#FFF8E7] dark:bg-slate-900"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6 pt-8 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
       >
-        <div className="inline-flex items-center gap-4 relative z-10">
+        <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
           <button
             onClick={() => handleTabChange("lessons")}
             className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
@@ -667,43 +839,88 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
             onClick={() => handleTabChange("exercises")}
             className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
               activeTab === "exercises"
-                ? "bg-secondary border-secondary text-on-secondary shadow-lg shadow-secondary/20 scale-[1.03] translate-y-[-2px]"
+                ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
                 : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
             }`}
           >
-            {nt("assignments").toUpperCase()}
+            {locale === "vi" ? "BÀI TẬP" : "EXERCISES"}
           </button>
         </div>
-        
-        {/* Gradient fade-out at the bottom edge */}
-        <div className="absolute top-full left-0 right-0 h-8 bg-gradient-to-b from-[#FFF8E7] to-transparent dark:from-slate-900 pointer-events-none" />
+
+        <div className="flex-1 max-w-sm relative z-10 pointer-events-auto">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault()
+              const fd = new FormData(e.currentTarget)
+              const search = fd.get("search") as string
+              const p = new URLSearchParams(window.location.search)
+              if (search.trim()) p.set("search", search.trim())
+              else p.delete("search")
+              router.push(`?${p.toString()}`, { scroll: false })
+            }}
+            className="relative flex items-center group"
+          >
+            <input 
+              type="text"
+              name="search"
+              defaultValue={searchParams.search || ""}
+              placeholder={locale === "vi" ? "Tìm kiếm bài học..." : "Search lessons..."}
+              className="w-full bg-white dark:bg-slate-900 border-2 border-primary/10 text-primary font-bold rounded-[1.75rem] pl-6 pr-12 py-3.5 focus:outline-none focus:border-primary/30 focus:ring-4 focus:ring-primary/5 transition-all duration-300 placeholder:text-primary/30 shadow-sm group-hover:border-primary/20"
+            />
+            <button 
+              type="submit"
+              className="absolute right-2 p-2.5 text-primary/40 hover:text-primary hover:bg-primary/5 rounded-full transition-colors cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </button>
+          </form>
+        </div>
       </div>
 
-      {/* ── Content grids ───────────────────────────────────────────────────── */}
-      <div className={`min-h-[600px] relative transition-opacity duration-300 ${isPending || isFiltering ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
-        
-        {/* Loading Spinner Overlay */}
-        {(isPending || isFiltering) && (
-          <div className="absolute inset-0 z-50 flex items-start justify-center pt-32">
-            <div className="flex flex-col items-center gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-6 py-4 rounded-2xl shadow-xl border-2 border-primary/20">
-              <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full" />
-              <span className="text-primary font-black animate-pulse text-sm tracking-widest uppercase">Loading</span>
-            </div>
+      {/* Active filters display */}
+      {(activeNames.categoryName || searchParams.search) && (
+        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
+          <div className="flex flex-wrap items-center gap-2">
+            {activeNames.categoryName && (
+              <>
+                <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-bold flex items-center gap-2">
+                  <span>{activeNames.categoryName}</span>
+                  <button onClick={() => {
+                    const p = new URLSearchParams(window.location.search)
+                    p.delete("categoryId")
+                    router.push(`?${p.toString()}`, { scroll: false })
+                  }} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                </div>
+                {activeNames.subCategoryName && (
+                  <div className="px-4 py-1.5 bg-primary/5 border border-primary/10 text-primary/80 rounded-full text-sm font-bold flex items-center gap-2">
+                    <span>{activeNames.subCategoryName}</span>
+                  </div>
+                )}
+              </>
+            )}
+            {searchParams.search && (
+              <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-bold flex items-center gap-2">
+                <span>Search: {searchParams.search}</span>
+                <button onClick={handleClearSearch} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className={activeTab === "exercises" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
+      {/* Lists */}
+      <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
+        {activeTab === "exercises" ? (
           <Suspense fallback={<SectionSkeleton />}>
             <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
           </Suspense>
-        </div>
-
-        <div className={activeTab === "lessons" ? "block animate-in fade-in slide-in-from-bottom-2 duration-300" : "hidden"}>
+        ) : (
           <Suspense fallback={<SectionSkeleton />}>
             <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
           </Suspense>
-        </div>
+        )}
       </div>
+
     </div>
   )
 }

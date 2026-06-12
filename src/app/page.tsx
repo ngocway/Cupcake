@@ -14,19 +14,30 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const params = await searchParams;
 
   const cookieStore = await cookies()
+  console.log("=== INCOMING COOKIES ===", cookieStore.getAll());
   const userTypeCookie = cookieStore.get("user_type")?.value
   let initialUserType = userTypeCookie || "adults"
   let hasUserPreference = !!userTypeCookie
+
+  const studySubjectCookie = cookieStore.get("study_subject")?.value
+  const studyLevelCookie = cookieStore.get("study_level")?.value
+  const studyAgeGroupCookie = cookieStore.get("study_age_group")?.value
+  let studySubject = studySubjectCookie || ""
+  let studyAgeGroup = studyAgeGroupCookie || ""
+  let studyLevel = studyLevelCookie || ""
 
   const session = await auth()
   if (session?.user?.id) {
     const user = await prisma.user.findUnique({ 
       where: { id: session.user.id },
-      select: { userType: true }
+      select: { userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
     })
-    if (user?.userType) {
-      initialUserType = user.userType
-      hasUserPreference = true
+    if (user) {
+      if (user.userType) initialUserType = user.userType
+      if (user.studySubject) studySubject = user.studySubject
+      if (user.studyAgeGroup) studyAgeGroup = user.studyAgeGroup
+      if (user.studyLevel) studyLevel = user.studyLevel
+      hasUserPreference = !!user.userType || !!user.studySubject
     }
   }
 
@@ -42,7 +53,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <HomeShell>
       <div className="w-full pt-36 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
-        <HomeSidebar searchParams={params} initialUserType={initialUserType} />
+        <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
 
         <main className="flex-1 space-y-12">
           <Suspense fallback={
@@ -65,6 +76,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               searchParams={params}
               initialUserType={initialUserType}
               hasUserPreference={hasUserPreference}
+              initialStudySubject={studySubject}
+              initialStudyAgeGroup={studyAgeGroup}
+              initialStudyLevel={studyLevel}
             />
           </Suspense>
         </main>

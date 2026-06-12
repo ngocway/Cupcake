@@ -5,7 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { FilterLink } from "@/components/public/FilterLink";
 import { useLocale } from "next-intl";
 
-export function SidebarCategoryList({ categories, activeId }: { categories: any[], activeId?: string }) {
+export function SidebarCategoryList({ categories, activeId, studySubject, studyAgeGroup }: { categories: any[], activeId?: string, studySubject?: string, studyAgeGroup?: string }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const locale = useLocale();
 

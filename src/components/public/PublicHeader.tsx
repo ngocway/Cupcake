@@ -40,15 +40,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   }
 
   useEffect(() => {
-    const handleScroll = (e: Event) => {
-      let scrollY = window.scrollY
-      if (e.target && e.target !== document) {
-        const target = e.target as HTMLElement
-        if (target.scrollTop !== undefined) {
-          scrollY = target.scrollTop
-        }
-      }
-      setIsAtTop(scrollY < 20)
+    const handleScroll = () => {
+      setIsAtTop(window.scrollY < 20)
     }
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -56,10 +49,14 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
       }
     }
 
-    document.addEventListener("scroll", handleScroll, { passive: true, capture: true })
+    window.addEventListener("scroll", handleScroll, { passive: true })
     window.addEventListener("mousedown", handleClickOutside)
+    
+    // Also run once on mount to set initial state correctly
+    handleScroll()
+    
     return () => {
-      document.removeEventListener("scroll", handleScroll, { capture: true })
+      window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])

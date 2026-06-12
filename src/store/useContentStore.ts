@@ -27,6 +27,15 @@ interface ContentState {
   userType: string
   setUserType: (val: string) => void
 
+  studySubject: string
+  setStudySubject: (val: string) => void
+
+  studyAgeGroup: string
+  setStudyAgeGroup: (val: string) => void
+
+  studyLevel: string
+  setStudyLevel: (val: string) => void
+
   nativeLanguage: string
   setNativeLanguage: (val: string) => void
 
@@ -73,6 +82,15 @@ export const useContentStore = create<ContentState>((set) => ({
 
   userType: "adults",
   setUserType: (val) => set({ userType: val }),
+
+  studySubject: "",
+  setStudySubject: (val) => set({ studySubject: val }),
+
+  studyAgeGroup: "",
+  setStudyAgeGroup: (val) => set({ studyAgeGroup: val }),
+
+  studyLevel: "",
+  setStudyLevel: (val) => set({ studyLevel: val }),
 
   nativeLanguage: typeof window !== "undefined" ? (localStorage.getItem("cupcakes_native_language") || "vi") : "vi",
   setNativeLanguage: (val) => set((state) => {
@@ -122,6 +140,9 @@ export const useContentStore = create<ContentState>((set) => ({
     isFiltering: false,
     selectedCategoryId: "",
     selectedSubCategoryId: "",
-    userType: "adults"
+    userType: "adults",
+    studySubject: "",
+    studyAgeGroup: "",
+    studyLevel: ""
   })
 }))
