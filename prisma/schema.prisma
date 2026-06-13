@@ -622,6 +622,7 @@ model FlashcardTopic {
   targetAudience String            @default("KIDS")
   name           String // e.g. "Animals"
   slug           String
+  iconUrl        String?
   flashcards     GlobalFlashcard[]
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt

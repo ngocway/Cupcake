@@ -22,6 +22,7 @@ async function triggerCacheRevalidation() {
   try {
     revalidateTag("flashcards", "max")
     revalidateTag("flashcard-categories", "max")
+    revalidateTag("flashcard-categories-v2", "max")
     revalidatePath("/flashcards")
   } catch (error) {
     console.error("Lỗi khi revalidate cache:", error)
@@ -148,7 +149,7 @@ export async function adminDeleteFlashcard(id: string) {
 // PHÂN HỆ 2: CRUD TOPICS (CHỦ ĐỀ)
 // ============================================================================
 
-export async function adminCreateTopic(targetAudience: string, name: string) {
+export async function adminCreateTopic(targetAudience: string, name: string, iconUrl?: string) {
   await checkAdminAuth()
 
   try {
@@ -177,7 +178,8 @@ export async function adminCreateTopic(targetAudience: string, name: string) {
       data: {
         targetAudience,
         name: trimmedName,
-        slug
+        slug,
+        iconUrl: iconUrl?.trim() || null
       }
     })
 
@@ -190,7 +192,7 @@ export async function adminCreateTopic(targetAudience: string, name: string) {
   }
 }
 
-export async function adminUpdateTopic(id: string, name: string, targetAudience: string) {
+export async function adminUpdateTopic(id: string, name: string, targetAudience: string, iconUrl?: string) {
   await checkAdminAuth()
 
   try {
@@ -219,7 +221,8 @@ export async function adminUpdateTopic(id: string, name: string, targetAudience:
       data: {
         name: trimmedName,
         targetAudience,
-        slug
+        slug,
+        iconUrl: iconUrl !== undefined ? (iconUrl?.trim() || null) : undefined
       }
     })
 

@@ -23,6 +23,7 @@ interface Topic {
   targetAudience: string
   name: string
   slug: string
+  iconUrl?: string | null
   createdAt: Date
   _count?: {
     flashcards: number
@@ -46,6 +47,7 @@ interface Flashcard {
     id: string
     name: string
     targetAudience: string
+    iconUrl?: string | null
   }
 }
 
@@ -96,8 +98,11 @@ export function AdminFlashcardsClient({
   const [topicForm, setTopicForm] = useState({
     targetAudience: "KIDS",
     name: "",
-    sampleCount: ""
+    sampleCount: "",
+    iconUrl: ""
   })
+  const [isUploadingTopicIcon, setIsUploadingTopicIcon] = useState(false)
+  const topicIconInputRef = useRef<HTMLInputElement>(null)
 
   // Delete confirms
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -234,6 +239,30 @@ export function AdminFlashcardsClient({
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  const handleTopicIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingTopicIcon(true)
+    const formData = new FormData()
+    formData.append("file", file)
+
+    try {
+      const res = await uploadMedia(formData)
+      if (res.success && res.url) {
+        setTopicForm(prev => ({ ...prev, iconUrl: res.url }))
+        toast.success("Tải icon lên R2 thành công!")
+      } else {
+        toast.error("Upload thất bại: " + res.error)
+      }
+    } catch (err: any) {
+      toast.error("Lỗi tải icon lên R2: " + err.message)
+    } finally {
+      setIsUploadingTopicIcon(false)
+      if (topicIconInputRef.current) topicIconInputRef.current.value = ""
     }
   }
 
@@ -543,14 +572,16 @@ export function AdminFlashcardsClient({
       setTopicForm({
         targetAudience: defaultAudience,
         name: topic.name,
-        sampleCount: ""
+        sampleCount: "",
+        iconUrl: topic.iconUrl || ""
       })
     } else {
       setEditingTopic(null)
       setTopicForm({
         targetAudience: targetAudiencesList[0]?.id || "",
         name: "",
-        sampleCount: ""
+        sampleCount: "",
+        iconUrl: ""
       })
     }
     setShowTopicModal(true)
@@ -569,12 +600,13 @@ export function AdminFlashcardsClient({
     if (editingTopic) {
       startTransition(async () => {
         // UPDATE
-        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.targetAudience)
+        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.targetAudience, topicForm.iconUrl)
         if (res.success && res.topic) {
           const updatedLocalTopic = {
             ...editingTopic,
             ...res.topic,
-            targetAudience: topicForm.targetAudience
+            targetAudience: topicForm.targetAudience,
+            iconUrl: topicForm.iconUrl
           }
           setTopics(prev => prev.map(t => t.id === editingTopic.id ? updatedLocalTopic : t))
           setShowTopicModal(false)
@@ -597,7 +629,7 @@ export function AdminFlashcardsClient({
     }
 
     try {
-      const createRes = await adminCreateTopic(topicForm.targetAudience, topicForm.name)
+      const createRes = await adminCreateTopic(topicForm.targetAudience, topicForm.name, topicForm.iconUrl)
       if (!createRes.success || !createRes.topic) {
         alert("Lỗi tạo chủ đề: " + createRes.error)
         setIsGeneratingSamples(false)
@@ -608,6 +640,7 @@ export function AdminFlashcardsClient({
       const newLocalTopic = {
         ...createRes.topic,
         targetAudience: topicForm.targetAudience,
+        iconUrl: topicForm.iconUrl,
         _count: { flashcards: 0 }
       }
 
@@ -985,9 +1018,25 @@ export function AdminFlashcardsClient({
                 <div key={topic.id} className="bg-neutral-900 border border-neutral-800 p-6 rounded-[28px] flex flex-col justify-between gap-6 shadow-lg hover:border-neutral-700 transition-all duration-300">
                   
                   <div className="space-y-3">
-                    <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-500 border border-blue-600/15">
-                      {targetAudiencesList.find(c => c.id === topic.targetAudience)?.name || topic.targetAudience}
-                    </span>
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-500 border border-blue-600/15">
+                        {targetAudiencesList.find(c => c.id === topic.targetAudience)?.name || topic.targetAudience}
+                      </span>
+                      
+                      {topic.iconUrl ? (
+                        <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-xl overflow-hidden shrink-0">
+                          {topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                            <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+                          ) : (
+                            topic.iconUrl
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-xl text-neutral-500 shrink-0">
+                          🧸
+                        </div>
+                      )}
+                    </div>
                     
                     <h3 className="text-xl font-black text-white leading-tight">{topic.name}</h3>
                     
@@ -1410,6 +1459,63 @@ export function AdminFlashcardsClient({
                   placeholder="Ví dụ: Nature"
                   className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl outline-none text-white focus:border-blue-500 text-sm font-semibold"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Biểu tượng (Icon / Emoji hoặc URL ảnh)</label>
+                <div className="flex gap-3">
+                  <div className="relative flex-grow">
+                    <input
+                      type="text"
+                      value={topicForm.iconUrl}
+                      onChange={(e) => setTopicForm(prev => ({ ...prev, iconUrl: e.target.value }))}
+                      placeholder="Nhập 1 emoji (e.g. 🦁) hoặc dán link ảnh..."
+                      className="w-full pl-4 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold"
+                    />
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={topicIconInputRef}
+                    onChange={handleTopicIconUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    disabled={isUploadingTopicIcon}
+                    onClick={() => topicIconInputRef.current?.click()}
+                    className="px-4 py-3 bg-neutral-800 border border-neutral-700 hover:bg-neutral-700 active:scale-95 text-blue-400 font-bold rounded-2xl transition-all whitespace-nowrap text-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {isUploadingTopicIcon ? (
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <ImageIcon className="w-4.5 h-4.5" />
+                    )}
+                    <span>Tải ảnh</span>
+                  </button>
+                </div>
+
+                {/* Preview chosen icon */}
+                {topicForm.iconUrl && (
+                  <div className="flex items-center gap-3 bg-neutral-800/20 border border-neutral-850 p-3 rounded-2xl mt-1">
+                    <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Xem trước:</span>
+                    <div className="w-12 h-12 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-2xl overflow-hidden">
+                      {topicForm.iconUrl.startsWith("http") || topicForm.iconUrl.startsWith("/") ? (
+                        <img src={topicForm.iconUrl} alt="Topic Icon" className="w-full h-full object-cover" />
+                      ) : (
+                        topicForm.iconUrl.substring(0, 2)
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTopicForm(prev => ({ ...prev, iconUrl: "" }))}
+                      className="text-xs font-bold text-rose-500 hover:text-rose-400 ml-auto mr-2"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                )}
               </div>
 
               {!editingTopic && (

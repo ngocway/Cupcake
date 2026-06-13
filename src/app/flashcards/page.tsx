@@ -31,6 +31,7 @@ export default async function FlashcardsPage() {
       categoryId: t.targetAudience,
       name: t.name,
       slug: t.slug,
+      iconUrl: t.iconUrl,
       flashcardCount: t._count?.flashcards ?? 0
     }))
   }))

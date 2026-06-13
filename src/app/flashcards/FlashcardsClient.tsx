@@ -23,6 +23,7 @@ interface Topic {
   categoryId: string
   name: string
   slug: string
+  iconUrl?: string | null
   flashcardCount?: number
 }
 
@@ -442,16 +443,38 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                       className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${topicCardHover} flex flex-col justify-between h-48 relative overflow-hidden`}
                     >
                       {/* Huge background floating topic emoji for fun depth */}
-                      <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
-                        {topicEmoji}
-                      </span>
+                      {topic.iconUrl ? (
+                        topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                          <img 
+                            src={topic.iconUrl} 
+                            alt="" 
+                            className="absolute -bottom-4 -right-4 w-28 h-28 object-cover opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none" 
+                          />
+                        ) : (
+                          <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
+                            {topic.iconUrl}
+                          </span>
+                        )
+                      ) : (
+                        <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
+                          {topicEmoji}
+                        </span>
+                      )}
 
                       <div className="flex justify-between items-start">
                         <div></div>
                         
                         {/* Little cute 3D emoji bubble */}
-                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm">
-                          {topicEmoji}
+                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden">
+                          {topic.iconUrl ? (
+                            topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                              <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+                            ) : (
+                              topic.iconUrl
+                            )
+                          ) : (
+                            topicEmoji
+                          )}
                         </div>
                       </div>
                       
