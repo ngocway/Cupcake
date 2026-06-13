@@ -11,7 +11,7 @@ export const metadata = {
 
 export default async function FlashcardsPage() {
   const config = await getOnboardingConfig()
-  const englishSubject = config?.subjects?.find((s: any) => s.id === 'english');
+  const englishSubject = (config as any)?.subjects?.find((s: any) => s.id === 'english');
   const targetAudiences = (englishSubject?.ageGroups || []).filter((ta: any) => 
     ta.id !== 'kindergarten' && 
     ta.id !== 'kindergarden' && 
