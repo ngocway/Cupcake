@@ -33,7 +33,7 @@ async function main() {
     const topic = await prisma.flashcardTopic.findUnique({
       where: {
         targetAudience_slug: {
-          targetAudience: (await prisma.flashcardTopic.findUnique({ where: { slug: "kids-2-5" } }))!.id,
+          targetAudience: "kids-2-5",
           slug: "do-dung-trong-nha"
         }
       }
