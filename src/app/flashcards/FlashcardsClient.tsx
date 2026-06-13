@@ -570,14 +570,11 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                         </div>
                       </div>
 
-                      {/* Bottom row: Card count & Play button */}
-                      <div className="flex justify-between items-center w-full relative z-10 mt-auto">
+                      {/* Bottom row: Card count */}
+                      <div className="w-full relative z-10 mt-auto">
                         <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
                           {topic.flashcardCount ?? 0} Cards
                         </span>
-                        <button className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg ${topicButtonBg}`}>
-                          <Play className="w-5 h-5 fill-current ml-0.5" />
-                        </button>
                       </div>
                     </div>
                   )
