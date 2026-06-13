@@ -50,49 +50,49 @@ interface Flashcard {
 
 const cardBackgroundStyles = [
   {
-    bg: "bg-amber-50/30 dark:bg-amber-950/5",
+    bg: "bg-amber-100/75 dark:bg-amber-950/20",
     circles: [
-      { className: "absolute -top-12 -right-12 w-28 h-28 bg-amber-200/40 dark:bg-amber-500/10 rounded-full blur-xl animate-pulse" },
-      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-100/50 dark:bg-orange-600/10 rounded-full blur-xl" }
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-amber-300/60 dark:bg-amber-500/20 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-200/60 dark:bg-orange-600/20 rounded-full blur-xl" }
     ],
-    borderHover: "hover:border-amber-300",
-    bgHover: "hover:bg-amber-50/50"
+    borderHover: "hover:border-amber-400",
+    bgHover: "hover:bg-amber-100/90"
   },
   {
-    bg: "bg-pink-50/30 dark:bg-pink-950/5",
+    bg: "bg-pink-100/75 dark:bg-pink-950/20",
     circles: [
-      { className: "absolute -top-12 -right-12 w-28 h-28 bg-pink-200/40 dark:bg-pink-500/10 rounded-full blur-xl animate-pulse" },
-      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-purple-100/50 dark:bg-purple-600/10 rounded-full blur-xl" }
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-pink-300/60 dark:bg-pink-500/20 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-purple-200/60 dark:bg-purple-600/20 rounded-full blur-xl" }
     ],
-    borderHover: "hover:border-pink-300",
-    bgHover: "hover:bg-pink-50/50"
+    borderHover: "hover:border-pink-400",
+    bgHover: "hover:bg-pink-100/90"
   },
   {
-    bg: "bg-sky-50/30 dark:bg-sky-950/5",
+    bg: "bg-sky-100/75 dark:bg-sky-950/20",
     circles: [
-      { className: "absolute -top-12 -right-12 w-28 h-28 bg-sky-200/40 dark:bg-sky-500/10 rounded-full blur-xl animate-pulse" },
-      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-teal-100/50 dark:bg-teal-600/10 rounded-full blur-xl" }
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-sky-300/60 dark:bg-sky-500/20 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-teal-200/60 dark:bg-teal-600/20 rounded-full blur-xl" }
     ],
-    borderHover: "hover:border-sky-300",
-    bgHover: "hover:bg-sky-50/50"
+    borderHover: "hover:border-sky-400",
+    bgHover: "hover:bg-sky-100/90"
   },
   {
-    bg: "bg-emerald-50/30 dark:bg-emerald-950/5",
+    bg: "bg-emerald-100/75 dark:bg-emerald-950/20",
     circles: [
-      { className: "absolute -top-12 -right-12 w-28 h-28 bg-emerald-200/40 dark:bg-emerald-500/10 rounded-full blur-xl animate-pulse" },
-      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-green-100/50 dark:bg-green-600/10 rounded-full blur-xl" }
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-emerald-300/60 dark:bg-emerald-500/20 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-green-200/60 dark:bg-green-600/20 rounded-full blur-xl" }
     ],
-    borderHover: "hover:border-emerald-300",
-    bgHover: "hover:bg-emerald-50/50"
+    borderHover: "hover:border-emerald-400",
+    bgHover: "hover:bg-emerald-100/90"
   },
   {
-    bg: "bg-rose-50/30 dark:bg-rose-950/5",
+    bg: "bg-rose-100/75 dark:bg-rose-950/20",
     circles: [
-      { className: "absolute -top-12 -right-12 w-28 h-28 bg-rose-200/40 dark:bg-rose-500/10 rounded-full blur-xl animate-pulse" },
-      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-100/40 dark:bg-orange-500/10 rounded-full blur-xl" }
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-rose-300/60 dark:bg-rose-500/20 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-200/50 dark:bg-orange-500/20 rounded-full blur-xl" }
     ],
-    borderHover: "hover:border-rose-300",
-    bgHover: "hover:bg-rose-50/50"
+    borderHover: "hover:border-rose-400",
+    bgHover: "hover:bg-rose-100/90"
   }
 ];
 
