@@ -723,7 +723,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   }, [isFilterModalOpen])
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative z-0">
       {/* Soft Bubbly Blurs in Background */}
       {isKindergarten && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 animate-in fade-in duration-1000">
