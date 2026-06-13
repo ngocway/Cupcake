@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
+import { useContentStore } from '@/store/useContentStore';
 
 function HomeShellContent({ children }: { children?: React.ReactNode }) {
   const { data: session } = useSession();
@@ -14,6 +15,13 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
 
   const [isPending, startTransition] = useTransition();
   const [headerVisible, setHeaderVisible] = useState(true);
+
+  const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
+  const isKindergarten = 
+    studyAgeGroup?.toLowerCase().includes("kindergarten") || 
+    studyAgeGroup?.toLowerCase().includes("kindergarden") || 
+    studyAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
+    studyAgeGroup === "kids-2-5";
 
   useEffect(() => {
     const onScroll = () => setHeaderVisible(window.scrollY < 20);
@@ -41,7 +49,15 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
   };
 
   return (
-    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-background">
+    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-background z-0">
+      {/* Soft Bubbly Blurs in Background */}
+      {isKindergarten && (
+        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 animate-in fade-in duration-1000">
+          <div className="absolute top-10 left-[-10%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tr from-amber-300/30 to-orange-200/20 blur-[80px] md:blur-[140px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-pink-300/30 to-purple-200/20 blur-[90px] md:blur-[150px] animate-pulse" style={{ animationDuration: '10s' }} />
+          <div className="absolute top-[40%] right-[10%] w-[35vw] h-[35vw] rounded-full bg-gradient-to-tr from-sky-200/35 to-blue-200/20 blur-[80px] md:blur-[120px] animate-pulse" style={{ animationDuration: '12s' }} />
+        </div>
+      )}
       <PublicHeader 
         session={session ? {
           id: session.user.id!,

@@ -723,15 +723,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   }, [isFilterModalOpen])
 
   return (
-    <div className="space-y-6 relative z-0">
-      {/* Soft Bubbly Blurs in Background */}
-      {isKindergarten && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 animate-in fade-in duration-1000">
-          <div className="absolute top-10 left-[-15%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tr from-amber-300/30 to-orange-200/20 blur-[80px] md:blur-[140px] animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute bottom-[20%] right-[-15%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-pink-300/30 to-purple-200/20 blur-[90px] md:blur-[150px] animate-pulse" style={{ animationDuration: '10s' }} />
-          <div className="absolute top-[40%] right-[10%] w-[35vw] h-[35vw] rounded-full bg-gradient-to-tr from-sky-200/35 to-blue-200/20 blur-[80px] md:blur-[120px] animate-pulse" style={{ animationDuration: '12s' }} />
-        </div>
-      )}
+    <div className="space-y-6 relative">
 
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
