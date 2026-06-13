@@ -48,6 +48,54 @@ interface Flashcard {
   orderIndex: number
 }
 
+const cardBackgroundStyles = [
+  {
+    bg: "bg-amber-50/30 dark:bg-amber-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-amber-200/40 dark:bg-amber-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-100/50 dark:bg-orange-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-amber-300",
+    bgHover: "hover:bg-amber-50/50"
+  },
+  {
+    bg: "bg-pink-50/30 dark:bg-pink-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-pink-200/40 dark:bg-pink-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-purple-100/50 dark:bg-purple-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-pink-300",
+    bgHover: "hover:bg-pink-50/50"
+  },
+  {
+    bg: "bg-sky-50/30 dark:bg-sky-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-sky-200/40 dark:bg-sky-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-teal-100/50 dark:bg-teal-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-sky-300",
+    bgHover: "hover:bg-sky-50/50"
+  },
+  {
+    bg: "bg-emerald-50/30 dark:bg-emerald-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-emerald-200/40 dark:bg-emerald-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-green-100/50 dark:bg-green-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-emerald-300",
+    bgHover: "hover:bg-emerald-50/50"
+  },
+  {
+    bg: "bg-rose-50/30 dark:bg-rose-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-rose-200/40 dark:bg-rose-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-100/40 dark:bg-orange-500/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-rose-300",
+    bgHover: "hover:bg-rose-50/50"
+  }
+];
+
 interface FlashcardsClientProps {
   initialCategories: Category[]
 }
@@ -411,37 +459,38 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
               <Award className="w-4.5 h-4.5 text-emerald-500" />
               <span>Step 2: Select Vocabulary Topic</span>
             </h2>
-
             {selectedCategory ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {selectedCategory.topics.map((topic) => {
+                {selectedCategory.topics.map((topic, idx) => {
                   const topicEmoji = getTopicEmoji(topic.slug, topic.name)
+                  const style = cardBackgroundStyles[idx % cardBackgroundStyles.length];
                   
                   // Vibrant theme configs for each topic based on category
                   let topicColorClass = "from-amber-400/10 to-orange-500/10 border-orange-200/50 text-orange-700 shadow-orange-100"
                   let topicButtonBg = "bg-orange-500 text-white shadow-orange-500/30 shadow-lg"
-                  let topicCardHover = "hover:border-orange-300 hover:bg-gradient-to-b hover:from-white hover:to-orange-50/20"
                   
                   if (selectedCategory.slug === "kid-6-12") {
                     topicColorClass = "from-emerald-400/10 to-teal-500/10 border-emerald-200/50 text-emerald-700 shadow-emerald-100"
                     topicButtonBg = "bg-emerald-500 text-white shadow-emerald-500/30 shadow-lg"
-                    topicCardHover = "hover:border-emerald-300 hover:bg-gradient-to-b hover:from-white hover:to-emerald-50/20"
                   } else if (selectedCategory.slug === "teen") {
                     topicColorClass = "from-indigo-400/10 to-violet-500/10 border-indigo-200/50 text-indigo-700 shadow-indigo-100"
                     topicButtonBg = "bg-indigo-500 text-white shadow-indigo-500/30 shadow-lg"
-                    topicCardHover = "hover:border-indigo-300 hover:bg-gradient-to-b hover:from-white hover:to-indigo-50/20"
                   } else if (selectedCategory.slug === "readers") {
                     topicColorClass = "from-pink-400/10 to-rose-500/10 border-pink-200/50 text-pink-700 shadow-pink-100"
                     topicButtonBg = "bg-pink-500 text-white shadow-pink-500/30 shadow-lg"
-                    topicCardHover = "hover:border-pink-300 hover:bg-gradient-to-b hover:from-white hover:to-pink-50/20"
                   }
 
                   return (
                     <div
                       key={topic.id}
                       onClick={() => handleSelectTopic(topic)}
-                      className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${topicCardHover} flex flex-col justify-between h-48 relative overflow-hidden`}
+                      className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 ${style.bg} cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${style.borderHover} ${style.bgHover} flex flex-col justify-between h-48 relative overflow-hidden`}
                     >
+                      {/* Ambient Bubbly Blurs inside card */}
+                      {style.circles.map((c, cIdx) => (
+                        <div key={cIdx} className={c.className} />
+                      ))}
+
                       {/* Huge background floating topic emoji for fun depth */}
                       {topic.iconUrl ? (
                         topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
@@ -465,7 +514,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                         <div></div>
                         
                         {/* Little cute 3D emoji bubble */}
-                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden">
+                        <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden relative z-10">
                           {topic.iconUrl ? (
                             topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
                               <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
@@ -478,7 +527,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                         </div>
                       </div>
                       
-                      <div className="space-y-4">
+                      <div className="space-y-4 relative z-10">
                         <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight">
                           {topic.name}
                         </h3>

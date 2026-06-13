@@ -272,6 +272,54 @@ const LessonList = memo(function LessonList({
   )
 });
 
+const cardBackgroundStyles = [
+  {
+    bg: "bg-amber-50/30 dark:bg-amber-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-amber-200/40 dark:bg-amber-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-100/50 dark:bg-orange-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-amber-300",
+    bgHover: "hover:bg-amber-50/50"
+  },
+  {
+    bg: "bg-pink-50/30 dark:bg-pink-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-pink-200/40 dark:bg-pink-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-purple-100/50 dark:bg-purple-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-pink-300",
+    bgHover: "hover:bg-pink-50/50"
+  },
+  {
+    bg: "bg-sky-50/30 dark:bg-sky-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-sky-200/40 dark:bg-sky-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-teal-100/50 dark:bg-teal-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-sky-300",
+    bgHover: "hover:bg-sky-50/50"
+  },
+  {
+    bg: "bg-emerald-50/30 dark:bg-emerald-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-emerald-200/40 dark:bg-emerald-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-green-100/50 dark:bg-green-600/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-emerald-300",
+    bgHover: "hover:bg-emerald-50/50"
+  },
+  {
+    bg: "bg-rose-50/30 dark:bg-rose-950/5",
+    circles: [
+      { className: "absolute -top-12 -right-12 w-28 h-28 bg-rose-200/40 dark:bg-rose-500/10 rounded-full blur-xl animate-pulse" },
+      { className: "absolute -bottom-8 -left-8 w-24 h-24 bg-orange-100/40 dark:bg-orange-500/10 rounded-full blur-xl" }
+    ],
+    borderHover: "hover:border-rose-300",
+    bgHover: "hover:bg-rose-50/50"
+  }
+];
+
 const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promise?: Promise<any[]> }) {
   if (!promise) return null;
   const items = use(promise);
@@ -279,58 +327,66 @@ const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promi
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {items.map((topic) => (
-        <div
-          key={topic.id}
-          onClick={() => window.location.href = `/flashcards?topic=${topic.id}`}
-          className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] hover:border-amber-300 hover:bg-gradient-to-b hover:from-white hover:to-amber-50/20 flex flex-col justify-between h-48 relative overflow-hidden`}
-        >
-          {topic.iconUrl ? (
-            topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-              <img 
-                src={topic.iconUrl} 
-                alt="" 
-                className="absolute -bottom-4 -right-4 w-28 h-28 object-cover opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none" 
-              />
+      {items.map((topic, idx) => {
+        const style = cardBackgroundStyles[idx % cardBackgroundStyles.length];
+        return (
+          <div
+            key={topic.id}
+            onClick={() => window.location.href = `/flashcards?topic=${topic.id}`}
+            className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 ${style.bg} cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${style.borderHover} ${style.bgHover} flex flex-col justify-between h-48 relative overflow-hidden`}
+          >
+            {/* Ambient Bubbly Blurs inside card */}
+            {style.circles.map((c, cIdx) => (
+              <div key={cIdx} className={c.className} />
+            ))}
+
+            {topic.iconUrl ? (
+              topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                <img 
+                  src={topic.iconUrl} 
+                  alt="" 
+                  className="absolute -bottom-4 -right-4 w-28 h-28 object-cover opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none" 
+                />
+              ) : (
+                <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
+                  {topic.iconUrl}
+                </span>
+              )
             ) : (
               <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
-                {topic.iconUrl}
+                🧸
               </span>
-            )
-          ) : (
-            <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
-              🧸
-            </span>
-          )}
-          <div className="flex justify-between items-start">
-            <div></div>
-            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden">
-              {topic.iconUrl ? (
-                topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-                  <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+            )}
+            <div className="flex justify-between items-start">
+              <div></div>
+              <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden relative z-10">
+                {topic.iconUrl ? (
+                  topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                    <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+                  ) : (
+                    topic.iconUrl
+                  )
                 ) : (
-                  topic.iconUrl
-                )
-              ) : (
-                "🧸"
-              )}
+                  "🧸"
+                )}
+              </div>
+            </div>
+            <div className="space-y-4 relative z-10">
+              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight">
+                {topic.name}
+              </h3>
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                  {topic._count?.flashcards ?? 0} Cards
+                </span>
+                <button className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg bg-amber-500 text-white shadow-amber-500/30`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-current ml-0.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                </button>
+              </div>
             </div>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight">
-              {topic.name}
-            </h3>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                {topic._count?.flashcards ?? 0} Cards
-              </span>
-              <button className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg bg-amber-500 text-white shadow-amber-500/30`}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-current ml-0.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 });
