@@ -359,7 +359,7 @@ const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promi
             )}
             <div className="flex justify-between items-start">
               <div></div>
-              <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden relative z-10">
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-4xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden relative z-10">
                 {topic.iconUrl ? (
                   topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
                     <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
