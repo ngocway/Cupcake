@@ -486,6 +486,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
        if (activeTab === "lessons" || activeTab === "exercises") {
          setActiveTab("flashcards");
        }
+    } else {
+       if (activeTab === "flashcards" || activeTab === "games") {
+         setActiveTab("lessons");
+       }
     }
   }, [isKindergarten, activeTab]);
 
