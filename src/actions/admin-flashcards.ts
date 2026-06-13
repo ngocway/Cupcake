@@ -24,6 +24,7 @@ async function triggerCacheRevalidation() {
     revalidateTag("flashcard-categories", "max")
     revalidateTag("flashcard-categories-v2", "max")
     revalidatePath("/flashcards")
+    revalidatePath("/")
   } catch (error) {
     console.error("Lỗi khi revalidate cache:", error)
   }
