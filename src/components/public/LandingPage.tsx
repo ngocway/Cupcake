@@ -1022,7 +1022,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       </div>
 
       {/* Active filters display */}
-      {(activeNames.categoryName || searchParams.search) && (
+      {!isKindergarten && (activeNames.categoryName || searchParams.search) && (
         <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
           <div className="flex flex-wrap items-center gap-2">
             {activeNames.categoryName && (
