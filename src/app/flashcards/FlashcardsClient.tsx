@@ -484,7 +484,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     <div
                       key={topic.id}
                       onClick={() => handleSelectTopic(topic)}
-                      className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 ${style.bg} cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${style.borderHover} ${style.bgHover} flex flex-col justify-between h-48 relative overflow-hidden`}
+                      className={`group p-6 rounded-[36px] border-4 border-slate-200 dark:border-slate-700 ${style.bg} cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${style.borderHover} ${style.bgHover} flex flex-col justify-between h-48 relative overflow-hidden`}
                     >
                       {/* Ambient Bubbly Blurs inside card */}
                       {style.circles.map((c, cIdx) => (
