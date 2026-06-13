@@ -50,12 +50,11 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-background z-0">
-      {/* Soft Bubbly Blurs in Background */}
       {isKindergarten && (
         <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 animate-in fade-in duration-1000">
-          <div className="absolute top-10 left-[-10%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-tr from-amber-300/30 to-orange-200/20 blur-[80px] md:blur-[140px] animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute bottom-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-pink-300/30 to-purple-200/20 blur-[90px] md:blur-[150px] animate-pulse" style={{ animationDuration: '10s' }} />
-          <div className="absolute top-[40%] right-[10%] w-[35vw] h-[35vw] rounded-full bg-gradient-to-tr from-sky-200/35 to-blue-200/20 blur-[80px] md:blur-[120px] animate-pulse" style={{ animationDuration: '12s' }} />
+          <div className="absolute top-10 left-[-15%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-amber-300/12 to-transparent blur-[150px] md:blur-[220px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[10%] right-[-15%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-br from-pink-300/10 to-transparent blur-[160px] md:blur-[240px] animate-pulse" style={{ animationDuration: '10s' }} />
+          <div className="absolute top-[30%] right-[5%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-tr from-sky-200/12 to-transparent blur-[150px] md:blur-[200px] animate-pulse" style={{ animationDuration: '12s' }} />
         </div>
       )}
       <PublicHeader 
