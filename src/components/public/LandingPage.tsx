@@ -25,6 +25,8 @@ interface Props {
     assignments: Promise<{ items: any[], total: number }>
     lessons:     Promise<{ items: any[], total: number }>
     categoryTree: Promise<any[]>
+    flashcards?: Promise<any[]>
+    kindergartenGames?: Promise<any[]>
   }
   searchParams: any
   initialUserType?: string
@@ -38,27 +40,34 @@ interface Props {
 
 function SectionSkeleton() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12 animate-pulse">
-      {[1, 2, 3, 4, 5, 6].map(i => (
-        <div key={i} className="group flex flex-col h-full rounded-2xl relative">
-          <div className="w-full aspect-video rounded-3xl overflow-hidden relative shadow-lg bg-secondary/10" />
-          <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-secondary/20" />
-              <div className="h-3 w-20 bg-secondary/20 rounded" />
-            </div>
-            <div className="h-6 w-full bg-secondary/20 rounded mb-2" />
-            <div className="h-6 w-2/3 bg-secondary/20 rounded mb-6" />
-            <div className="flex items-center justify-between pt-5 border-t border-secondary/5">
-              <div className="flex gap-2">
-                <div className="h-4 w-12 bg-secondary/20 rounded" />
-                <div className="h-4 w-12 bg-secondary/20 rounded" />
+    <div className="relative min-h-[400px] w-full">
+      {/* Centered spinner loading */}
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-transparent">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-md" />
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12 animate-pulse opacity-50">
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} className="group flex flex-col h-full rounded-2xl relative">
+            <div className="w-full aspect-video rounded-3xl overflow-hidden relative shadow-lg bg-secondary/10" />
+            <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-secondary/20" />
+                <div className="h-3 w-20 bg-secondary/20 rounded" />
               </div>
-              <div className="h-6 w-16 bg-secondary/20 rounded-full" />
+              <div className="h-6 w-full bg-secondary/20 rounded mb-2" />
+              <div className="h-6 w-2/3 bg-secondary/20 rounded mb-6" />
+              <div className="flex items-center justify-between pt-5 border-t border-secondary/5">
+                <div className="flex gap-2">
+                  <div className="h-4 w-12 bg-secondary/20 rounded" />
+                  <div className="h-4 w-12 bg-secondary/20 rounded" />
+                </div>
+                <div className="h-6 w-16 bg-secondary/20 rounded-full" />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
@@ -263,6 +272,99 @@ const LessonList = memo(function LessonList({
   )
 });
 
+const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promise?: Promise<any[]> }) {
+  if (!promise) return null;
+  const items = use(promise);
+  if (!items || items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No flashcards available.</div>;
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {items.map((topic) => (
+        <div
+          key={topic.id}
+          onClick={() => window.location.href = `/flashcards?topic=${topic.id}`}
+          className={`group p-6 rounded-[36px] border-4 border-slate-100/80 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] hover:border-amber-300 hover:bg-gradient-to-b hover:from-white hover:to-amber-50/20 flex flex-col justify-between h-48 relative overflow-hidden`}
+        >
+          <span className="absolute -bottom-4 -right-4 text-7xl opacity-[0.06] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
+            🧸
+          </span>
+          <div className="flex justify-between items-start">
+            <div></div>
+            <div className="w-11 h-11 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm">
+              🧸
+            </div>
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight">
+              {topic.name}
+            </h3>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                {topic._count?.flashcards ?? 0} Cards
+              </span>
+              <button className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg bg-amber-500 text-white shadow-amber-500/30`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-current ml-0.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+});
+
+const KindergartenGameList = memo(function KindergartenGameList({ promise }: { promise?: Promise<any[]> }) {
+  if (!promise) return null;
+  const items = use(promise);
+  if (!items || items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No games available.</div>;
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {items.map((game) => (
+        <div 
+          key={game.id} 
+          onClick={() => window.location.href = game.href}
+          className="group cursor-pointer"
+        >
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
+            <div className={`aspect-video bg-gradient-to-br ${game.gradient} relative overflow-hidden flex items-center justify-center p-6`}>
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+              <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
+                 <div className="text-6xl animate-bounce">{game.emoji}</div>
+                 <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
+              </div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
+            </div>
+            <div className="p-6 flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full text-xs font-black uppercase tracking-wider">
+                    {game.tag}
+                  </span>
+                  <span className="px-3 py-1 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 rounded-full text-xs font-black uppercase tracking-wider">
+                    Kids
+                  </span>
+                </div>
+                <h2 className="text-xl font-black text-slate-800 dark:text-white mb-2 group-hover:text-primary transition-colors">
+                  {game.title}
+                </h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                  {game.desc}
+                </p>
+              </div>
+              <div className="mt-6 flex items-center text-primary font-black text-sm uppercase tracking-widest gap-2 group-hover:translate-x-2 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-primary"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                Play Now
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+});
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function LandingPage({ promises, searchParams, initialUserType = "adults", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
@@ -294,6 +396,20 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
   const setStudyLevel       = useContentStore(s => (s as any).setStudyLevel)
 
   const nativeLanguage      = useContentStore(s => s.nativeLanguage)
+
+  const currentAgeGroup = studyAgeGroup || initialStudyAgeGroup || "";
+  const isKindergarten = 
+    currentAgeGroup.toLowerCase().includes("kindergarten") || 
+    currentAgeGroup.toLowerCase().includes("kindergarden") || 
+    currentAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
+    currentAgeGroup === "kids-2-5";
+  useEffect(() => {
+    if (isKindergarten) {
+       if (activeTab === "lessons" || activeTab === "exercises") {
+         setActiveTab("flashcards");
+       }
+    }
+  }, [isKindergarten, activeTab]);
 
   const setNativeLanguage   = useContentStore(s => s.setNativeLanguage)
   const selectedCategoryId  = useContentStore(s => s.selectedCategoryId)
@@ -766,24 +882,24 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
             {isAllStepsCompleted && (
               <>
                 <hr className="border-primary/10" />
-                <div className="flex flex-wrap items-center gap-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
-                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0">
+                <div className="flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-4 fade-in duration-500 py-2">
+                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0 flex items-center h-full pt-1">
                     {locale === "vi" ? "My native language is" : "My native language is"}
                   </h2>
-                  <div className="shrink-0">
+                  <div className="shrink-0 inline-flex items-center">
                     <Select
                       value={tempNativeLanguage}
                       onValueChange={setTempNativeLanguage}
                     >
                       <SelectTrigger 
-                        className="bg-white border-2 border-primary/20 text-primary font-black rounded-[1.75rem] px-5 py-5 md:px-6 md:py-6 h-auto text-base md:text-lg focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 ease-out cursor-pointer shadow-sm min-w-[140px] flex gap-2"
+                        className="bg-emerald-50 border-[3px] border-emerald-400 text-emerald-900 font-headline font-black rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] px-6 py-3 h-auto text-lg md:text-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.03] transition-all duration-300 ease-out cursor-pointer shadow-[0_4px_0_0_rgba(52,211,153,0.4)] hover:shadow-[0_6px_0_0_rgba(52,211,153,0.4)] active:translate-y-1 active:shadow-none active:scale-[0.98] min-w-[180px] flex gap-2 items-center"
                       >
                         <SelectValue placeholder="Select language" />
                       </SelectTrigger>
-                      <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.25rem] border-2 border-primary/10 shadow-xl overflow-hidden font-bold text-primary p-1">
-                        <SelectItem value="vi" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Tiếng Việt</SelectItem>
-                        <SelectItem value="th" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Thailand</SelectItem>
-                        <SelectItem value="id" className="focus:bg-primary/10 focus:text-primary cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors">Indonesia</SelectItem>
+                      <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.5rem] border-[3px] border-emerald-200 shadow-xl overflow-hidden font-bold text-emerald-900 p-2">
+                        <SelectItem value="vi" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇻🇳</span> Tiếng Việt</SelectItem>
+                        <SelectItem value="th" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇹🇭</span> Thailand</SelectItem>
+                        <SelectItem value="id" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇮🇩</span> Indonesia</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -825,26 +941,53 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
         className="flex flex-col md:flex-row md:items-center justify-start gap-6 pt-8 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
       >
         <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
-          <button
-            onClick={() => handleTabChange("lessons")}
-            className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-              activeTab === "lessons"
-                ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
-                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
-            }`}
-          >
-            {nt("lessons").toUpperCase()}
-          </button>
-          <button
-            onClick={() => handleTabChange("exercises")}
-            className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-              activeTab === "exercises"
-                ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
-                : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
-            }`}
-          >
-            {locale === "vi" ? "BÀI TẬP" : "EXERCISES"}
-          </button>
+          {isKindergarten ? (
+            <>
+              <button
+                onClick={() => handleTabChange("flashcards")}
+                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
+                  activeTab === "flashcards"
+                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
+                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                }`}
+              >
+                {locale === "vi" ? "THẺ TỪ VỰNG" : "FLASHCARDS"}
+              </button>
+              <button
+                onClick={() => handleTabChange("games")}
+                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
+                  activeTab === "games"
+                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
+                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                }`}
+              >
+                {locale === "vi" ? "TRÒ CHƠI" : "GAMES"}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => handleTabChange("lessons")}
+                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
+                  activeTab === "lessons"
+                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
+                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                }`}
+              >
+                {nt("lessons").toUpperCase()}
+              </button>
+              <button
+                onClick={() => handleTabChange("exercises")}
+                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
+                  activeTab === "exercises"
+                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
+                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                }`}
+              >
+                {locale === "vi" ? "BÀI TẬP" : "EXERCISES"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -880,16 +1023,31 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
       )}
 
       {/* Lists */}
-      <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
-        {activeTab === "exercises" ? (
-          <Suspense fallback={<SectionSkeleton />}>
-            <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
-          </Suspense>
-        ) : (
-          <Suspense fallback={<SectionSkeleton />}>
-            <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
-          </Suspense>
+      <div className="relative">
+        {(isPending || isFiltering) && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-transparent">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-md" />
+          </div>
         )}
+        <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
+          {activeTab === "flashcards" ? (
+            <Suspense fallback={<SectionSkeleton />}>
+              <FlashcardTopicList promise={promises.flashcards} />
+            </Suspense>
+          ) : activeTab === "games" ? (
+            <Suspense fallback={<SectionSkeleton />}>
+              <KindergartenGameList promise={promises.kindergartenGames} />
+            </Suspense>
+          ) : activeTab === "exercises" ? (
+            <Suspense fallback={<SectionSkeleton />}>
+              <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<SectionSkeleton />}>
+              <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
+            </Suspense>
+          )}
+        </div>
       </div>
 
     </div>

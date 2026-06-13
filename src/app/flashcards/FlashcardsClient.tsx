@@ -23,6 +23,7 @@ interface Topic {
   categoryId: string
   name: string
   slug: string
+  flashcardCount?: number
 }
 
 interface Category {
@@ -51,12 +52,19 @@ interface FlashcardsClientProps {
 }
 
 export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
-  // Sắp xếp các danh mục theo thứ tự độ tuổi: 2-5 -> 6-12 -> Teenagers -> Advanced Readers
-  const CATEGORY_ORDER = ["kids-2-5", "kid-6-12", "teen", "readers"]
+  // Sắp xếp các danh mục theo thứ tự độ tuổi
+  const CATEGORY_ORDER = [
+    "kids-2-5", "kindergarten", "kindergarden", 
+    "kid-6-12", "kids", "kid", 
+    "teen", "teens", 
+    "readers", "adults", "adult"
+  ]
   const categories = [...initialCategories].sort((a, b) => {
     const indexA = CATEGORY_ORDER.indexOf(a.slug);
     const indexB = CATEGORY_ORDER.indexOf(b.slug);
-    return indexA - indexB;
+    const rankA = indexA === -1 ? 999 : indexA;
+    const rankB = indexB === -1 ? 999 : indexB;
+    return rankA - rankB;
   });
 
   // Trạng thái chọn Danh mục & Chủ đề
@@ -310,17 +318,9 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
           <div className="absolute top-0 left-1/4 w-16 h-16 bg-yellow-400/20 rounded-full blur-xl animate-pulse" />
           <div className="absolute bottom-0 right-1/4 w-20 h-20 bg-pink-400/20 rounded-full blur-xl animate-pulse" />
           
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-emerald-400/10 to-teal-500/10 border border-emerald-200/50 text-emerald-700 dark:text-emerald-400 font-black text-xs uppercase tracking-widest shadow-sm">
-            <Sparkles className="w-4.5 h-4.5 text-emerald-500 animate-pulse" />
-            <span>✨ Interactive Learning Playground ✨</span>
-          </div>
-          
           <h1 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none">
             English <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-primary bg-clip-text text-transparent">Flashcards</span> Hub
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-base md:text-lg font-medium leading-relaxed">
-            Learn vocabulary naturally through interactive 3D cards, professional Text-To-Speech pronunciation, and beautiful visual associations!
-          </p>
         </div>
 
         {/* Selection Area (Category & Topic on the same page) */}
@@ -343,19 +343,19 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 let ageRange = "2-5 Years"
                 let glowShadow = "shadow-amber-100/60"
 
-                if (cat.slug === "kid-6-12") {
+                if (cat.slug === "kid-6-12" || cat.slug === "kids" || cat.slug === "kid") {
                   catIcon = "🎒"
                   catBg = "bg-emerald-100/80 border-emerald-200 text-emerald-600"
                   bgGradient = "from-emerald-400 to-teal-500"
                   ageRange = "6-12 Years"
                   glowShadow = "shadow-emerald-100/60"
-                } else if (cat.slug === "teen") {
+                } else if (cat.slug === "teen" || cat.slug === "teens") {
                   catIcon = "🎧"
                   catBg = "bg-indigo-100/80 border-indigo-200 text-indigo-600"
-                  bgGradient = "from-indigo-400 to-violet-500"
+                  bgGradient = "from-indigo-450 to-violet-500"
                   ageRange = "Teenagers"
                   glowShadow = "shadow-indigo-100/60"
-                } else if (cat.slug === "readers") {
+                } else if (cat.slug === "readers" || cat.slug === "adults" || cat.slug === "adult") {
                   catIcon = "🚀"
                   catBg = "bg-pink-100/80 border-pink-200 text-pink-600"
                   bgGradient = "from-pink-400 to-rose-500"
@@ -462,7 +462,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                         
                         <div className="flex justify-between items-center">
                           <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                            Ready to explore
+                            {topic.flashcardCount ?? 0} Cards
                           </span>
                           <button className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg ${topicButtonBg}`}>
                             <Play className="w-5 h-5 fill-current ml-0.5" />

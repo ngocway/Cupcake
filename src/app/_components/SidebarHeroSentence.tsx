@@ -25,7 +25,10 @@ export function SidebarHeroSentence({ categoryTree }: { categoryTree: any[] }) {
   const levelData = ageGroupData?.levels?.find((l: any) => l.id === studyLevel);
 
   const subjectLabel = subjectData?.label || "Anything";
-  const ageGroupLabel = ageGroupData?.label || "Learner";
+  const rawAgeGroupLabel = ageGroupData?.label || "Learner";
+  const ageGroupLabel = (rawAgeGroupLabel?.toUpperCase() === "KINDERGARTEN (< 6 YEARS)" || rawAgeGroupLabel?.toLowerCase() === "kindergarten")
+    ? "Kindergarten"
+    : rawAgeGroupLabel;
   const levelLabel = levelData?.label;
   const avatarSrc = ageGroupData?.avatar || "/images/avatars/adult.png";
 

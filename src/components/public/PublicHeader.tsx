@@ -7,9 +7,10 @@ import { signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
 
 import { useTranslations } from "next-intl"
+import { useContentStore } from "@/store/useContentStore"
 
 interface PublicHeaderProps {
-  session: { id: string; name: string | null; image: string | null; role: string | null } | null
+  session: { id: string; name: string | null; image: string | null; role: string | null; studyAgeGroup?: string | null } | null
   search?: string
   setSearch?: (val: string) => void
   isPendingSearch?: boolean
@@ -22,6 +23,14 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const isDetailOrRunPage = (pathname?.includes('/lessons/') && pathname !== '/student/lessons') || 
                             (pathname?.includes('/assignments/') && pathname !== '/student/assignments')
   
+  const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
+  const effectiveAgeGroup = session?.studyAgeGroup || studyAgeGroup || "";
+  const isKindergarten = 
+    effectiveAgeGroup.toLowerCase().includes("kindergarten") || 
+    effectiveAgeGroup.toLowerCase().includes("kindergarden") || 
+    effectiveAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
+    effectiveAgeGroup === "kids-2-5";
+
   if (isDetailOrRunPage) return null;
 
   const [isAtTop, setIsAtTop] = useState(true)
@@ -78,18 +87,22 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           </div>
         </Link>
         <div className="hidden lg:flex gap-8 items-center">
-          <Link 
-            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
-            href="/flashcards"
-          >
-            {t("flashcards")}
-          </Link>
-          <Link 
-            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
-            href="/student/game"
-          >
-            {t("game")}
-          </Link>
+          {!isKindergarten && (
+            <>
+              <Link 
+                className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
+                href="/flashcards"
+              >
+                {t("flashcards")}
+              </Link>
+              <Link 
+                className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
+                href="/student/game"
+              >
+                {t("game")}
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

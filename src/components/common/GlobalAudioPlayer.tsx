@@ -5,9 +5,10 @@ import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 interface GlobalAudioPlayerProps {
   audioUrl: string;
+  autoPlay?: boolean;
 }
 
-export function GlobalAudioPlayer({ audioUrl }: GlobalAudioPlayerProps) {
+export function GlobalAudioPlayer({ audioUrl, autoPlay = false }: GlobalAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -41,10 +42,12 @@ export function GlobalAudioPlayer({ audioUrl }: GlobalAudioPlayerProps) {
 
     const handlePauseEvent = () => {
       setIsPlaying(false);
+      window.dispatchEvent(new CustomEvent('materialAudioPause'));
     };
 
     const handlePlayEvent = () => {
       setIsPlaying(true);
+      window.dispatchEvent(new CustomEvent('materialAudioPlay'));
     };
 
     audio.addEventListener('loadedmetadata', setAudioData);
@@ -62,6 +65,31 @@ export function GlobalAudioPlayer({ audioUrl }: GlobalAudioPlayerProps) {
       window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
     };
   }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (autoPlay && audio && audioUrl) {
+      const attemptPlay = () => {
+        audio.play().catch(e => {
+          console.log("Autoplay blocked for material audio, waiting for interaction", e);
+          const playOnInteraction = () => {
+            audio.play().catch(() => {});
+            window.removeEventListener('click', playOnInteraction);
+            window.removeEventListener('touchstart', playOnInteraction);
+            window.removeEventListener('keydown', playOnInteraction);
+            window.removeEventListener('mousedown', playOnInteraction);
+          };
+          window.addEventListener('click', playOnInteraction);
+          window.addEventListener('touchstart', playOnInteraction);
+          window.addEventListener('keydown', playOnInteraction);
+          window.addEventListener('mousedown', playOnInteraction);
+        });
+      };
+      
+      const timer = setTimeout(attemptPlay, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [audioUrl, autoPlay]);
 
   useEffect(() => {
     const handleGlobalPause = (e: CustomEvent) => {

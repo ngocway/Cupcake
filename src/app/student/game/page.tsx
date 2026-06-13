@@ -16,10 +16,9 @@ interface Game {
 }
 
 const GAME_CATEGORIES = [
-  { id: "kids-2-5", name: "Kids (2-5 Years)", slug: "kids-2-5", icon: "🧸", bg: "bg-amber-100/80 border-amber-200 text-amber-600", bgGradient: "from-amber-400 to-orange-500", glowShadow: "shadow-amber-100/60" },
-  { id: "kid-6-12", name: "Kids (6-12 Years)", slug: "kid-6-12", icon: "🎒", bg: "bg-emerald-100/80 border-emerald-200 text-emerald-600", bgGradient: "from-emerald-400 to-teal-500", glowShadow: "shadow-emerald-100/60" },
-  { id: "teen", name: "Teenagers", slug: "teen", icon: "🎧", bg: "bg-indigo-100/80 border-indigo-200 text-indigo-600", bgGradient: "from-indigo-400 to-violet-500", glowShadow: "shadow-indigo-100/60" },
-  { id: "readers", name: "Advanced Readers", slug: "readers", icon: "🚀", bg: "bg-pink-100/80 border-pink-200 text-pink-600", bgGradient: "from-pink-400 to-rose-500", glowShadow: "shadow-pink-100/60" },
+  { id: "kid-6-12", name: "Kid (6-10 years)", slug: "kid-6-12", icon: "🎒", bg: "bg-emerald-100/80 border-emerald-200 text-emerald-600", bgGradient: "from-emerald-400 to-teal-500", glowShadow: "shadow-emerald-100/60" },
+  { id: "teen", name: "Teen (11-16 years)", slug: "teen", icon: "🎧", bg: "bg-indigo-100/80 border-indigo-200 text-indigo-600", bgGradient: "from-indigo-400 to-violet-500", glowShadow: "shadow-indigo-100/60" },
+  { id: "readers", name: "Learner (16+)", slug: "readers", icon: "🚀", bg: "bg-pink-100/80 border-pink-200 text-pink-600", bgGradient: "from-pink-400 to-rose-500", glowShadow: "shadow-pink-100/60" },
 ];
 
 const GAMES_DATA: Record<string, Game[]> = {

@@ -13,6 +13,7 @@ import {
   RotateCcw,
   CheckCircle,
   Volume2,
+  VolumeX,
   Info,
   BookOpen,
   Star,
@@ -20,6 +21,9 @@ import {
   HelpCircle,
   ChevronDown,
   Bookmark,
+  Play,
+  Clock,
+  User,
 } from "lucide-react";
 import BackButton from "@/components/ui/BackButton";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
@@ -466,6 +470,25 @@ function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
   return <FloatingTeacherInfo teacher={extraData.teacher} onNavigate={handleSafeNavigate} />;
 }
 
+function StartScreenTeacherAvatar({ promise }: { promise: Promise<any> }) {
+  const extraData = React.use(promise) as any;
+  if (!extraData || !extraData.teacher) return null;
+  const teacher = extraData.teacher;
+  if (!teacher.isPortfolioPublished) return null;
+
+  return (
+    <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-800 shadow-md overflow-hidden bg-white shrink-0">
+      {teacher.image ? (
+        <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+          <User className="w-8 h-8" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<any>, isGuest: boolean, t: any }) {
   const extraData = React.use(promise);
   if (!extraData) return null;
@@ -496,7 +519,7 @@ function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<an
               </div>
             )}
             {audioUrl && (
-              <GlobalAudioPlayer audioUrl={audioUrl} />
+              <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={true} />
             )}
             <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
               <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} />
@@ -542,6 +565,38 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
   );
 }
 
+function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }: { promise: Promise<any>, isSidePanelOpen: boolean, setIsSidePanelOpen: (open: boolean) => void }) {
+  const extraData = React.use(promise);
+  if (!extraData) return null;
+
+  const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
+  const audioUrl = extraData.lesson?.audioUrl || extraData.audioUrl;
+  const hasMaterialSection = videoUrl || audioUrl || (extraData.readingText && String(extraData.readingText).replace(/<[^>]*>/g, "").trim().length > 0);
+  
+  const hasInstructionText = extraData.instructions && (
+    String(extraData.instructions).replace(/<[^>]*>/g, "").trim().length > 0 || 
+    /<(img|video|audio|iframe|embed)\b/i.test(String(extraData.instructions))
+  );
+
+  const hasTags = !!extraData.tags;
+
+  if (!hasMaterialSection && !hasInstructionText && !hasTags) {
+    return null;
+  }
+
+  return (
+    <button
+      onClick={() => setIsSidePanelOpen(true)}
+      className={`fixed top-1/2 right-0 z-30 w-auto py-3 pl-2 pr-4 bg-primary text-white flex items-center justify-center gap-1 rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
+      style={{ transform: 'translateY(-50%)' }}
+      title="Open panel"
+    >
+      <ChevronLeft className="w-5 h-5 shrink-0" />
+      <span className="font-bold text-sm whitespace-nowrap">Instructions</span>
+    </button>
+  );
+}
+
 // ============================================================
 // MAIN COMPONENT
 // ============================================================
@@ -557,6 +612,83 @@ export default function KidTeenQuizRunner({
   const t = useTranslations("student.quiz");
   const router = useRouter();
   const [, startTransition] = useTransition();
+
+  // ── Music references ─────────────────────────────────────
+  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
+
+  const handleStartQuiz = () => {
+    setHasStarted(true);
+    if (bgMusicRef.current && !isMuted) {
+      bgMusicRef.current.play().catch((e) => console.error("Error playing background music on start click", e));
+    }
+  };
+
+  // ── Background Music ─────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const bgMusic = new Audio("/sounds/bg-music.mp3");
+    bgMusic.loop = true;
+    bgMusic.volume = isMuted ? 0 : 0.6;
+    bgMusicRef.current = bgMusic;
+
+    const playMusic = () => {
+      bgMusic.play().catch(() => {});
+      window.removeEventListener("click", playMusic);
+      window.removeEventListener("touchstart", playMusic);
+      window.removeEventListener("mousedown", playMusic);
+      window.removeEventListener("keydown", playMusic);
+    };
+
+    bgMusic.play().catch(() => {
+      window.addEventListener("click", playMusic);
+      window.addEventListener("touchstart", playMusic);
+      window.addEventListener("mousedown", playMusic);
+      window.addEventListener("keydown", playMusic);
+    });
+
+    return () => {
+      bgMusic.pause();
+      bgMusic.src = "";
+      bgMusicRef.current = null;
+      window.removeEventListener("click", playMusic);
+      window.removeEventListener("touchstart", playMusic);
+      window.removeEventListener("mousedown", playMusic);
+      window.removeEventListener("keydown", playMusic);
+    };
+  }, []);
+
+  // Update volume when mute state changes
+  useEffect(() => {
+    if (bgMusicRef.current) {
+      bgMusicRef.current.volume = isMuted ? 0 : 0.6;
+    }
+  }, [isMuted]);
+
+  // Update background music playback based on material audio
+  useEffect(() => {
+    const handleMaterialPlay = () => {
+      if (bgMusicRef.current) {
+        bgMusicRef.current.pause();
+      }
+    };
+
+    const handleMaterialPause = () => {
+      if (bgMusicRef.current && !isMuted) {
+        bgMusicRef.current.play().catch(() => {});
+      }
+    };
+
+    window.addEventListener('materialAudioPlay', handleMaterialPlay);
+    window.addEventListener('materialAudioPause', handleMaterialPause);
+
+    return () => {
+      window.removeEventListener('materialAudioPlay', handleMaterialPlay);
+      window.removeEventListener('materialAudioPause', handleMaterialPause);
+    };
+  }, [isMuted]);
 
   // ── Core quiz state ──────────────────────────────────────
   const [answers, setAnswers] = useState(initialAnswers);
@@ -657,6 +789,13 @@ export default function KidTeenQuizRunner({
   // ── Answer change ────────────────────────────────────────
   const handleAnswerChange = (q: any, value: any) => {
     if (checkedQuestions[q.id]) return;
+
+    if (typeof window !== "undefined") {
+      const snd = new Audio("/sounds/click.wav");
+      snd.volume = isMuted ? 0 : 1.0;
+      snd.play().catch(() => {});
+    }
+
     let questionData: any;
     try { questionData = JSON.parse(q.content); } catch { questionData = {}; }
     const qType = questionData.type || q.type;
@@ -817,6 +956,68 @@ export default function KidTeenQuizRunner({
     return 1;
   };
 
+  if (!hasStarted) {
+    return (
+      <div 
+        className="min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative bg-cover bg-center bg-[#8cd2f6]"
+        style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+      >
+        {/* Transparent header just for the BACK button */}
+        <div className="absolute top-4 left-4 z-50">
+          <BackButton className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 font-black text-sm tracking-wider rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm">
+            <ChevronLeft className="w-5 h-5 text-purple-500" />
+            BACK
+          </BackButton>
+        </div>
+
+        {/* Start Card */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-2xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center">
+          {/* Top colored strip */}
+          <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500"></div>
+
+          {/* Teacher avatar if available */}
+          <div className="mb-6 flex justify-center">
+            <React.Suspense fallback={<div className="w-20 h-20 rounded-full bg-purple-100 animate-pulse border-4 border-white shadow-md shrink-0" />}>
+              <StartScreenTeacherAvatar promise={extraDataPromise} />
+            </React.Suspense>
+          </div>
+
+          <h4 className="text-purple-600 dark:text-purple-400 font-black text-xs uppercase tracking-[0.2em] mb-3">
+            ARE YOU READY?
+          </h4>
+          
+          <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight uppercase italic mb-6">
+            {assignment.title || "QUIZ FOR LITTLE LEARNERS"}
+          </h1>
+
+          <div className="flex flex-wrap items-center justify-center gap-6 mb-8 text-slate-600 dark:text-slate-300 font-bold text-sm">
+            <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
+              <HelpCircle className="w-5 h-5 text-purple-500" />
+              {questions.length} QUESTIONS
+            </div>
+            {assignment.timeLimit && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
+                <Clock className="w-5 h-5 text-purple-500" />
+                {assignment.timeLimit} MINUTES
+              </div>
+            )}
+          </div>
+
+          {/* PLAY Button */}
+          <button
+            onClick={handleStartQuiz}
+            className="group relative px-12 py-6 rounded-full bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-2xl tracking-widest uppercase italic shadow-xl shadow-orange-500/40 hover:scale-105 active:scale-95 transition-all duration-300"
+          >
+            <span className="flex items-center gap-3">
+              <Play className="w-7 h-7 fill-current text-white animate-pulse" />
+              LET'S GO!
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!currentQuestion) return null;
 
   // ── Render ───────────────────────────────────────────────
@@ -826,11 +1027,22 @@ export default function KidTeenQuizRunner({
       <div className="relative z-30 bg-white/70 backdrop-blur-md px-4 py-3 shadow-sm border-b border-white/20">
         {/* Row 1: Back button + Title */}
         <div className="flex items-center gap-3">
-          <div className="shrink-0">
+          <div className="shrink-0 flex items-center gap-2">
             <BackButton className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 font-black text-sm tracking-wider rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm">
               <ChevronLeft className="w-5 h-5 text-purple-500" />
               BACK
             </BackButton>
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="flex items-center justify-center p-2 bg-white text-purple-600 rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm"
+              title={isMuted ? "Unmute music" : "Mute music"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5 text-rose-500" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
+              )}
+            </button>
           </div>
           <div className="absolute left-6 top-3 z-40 hidden md:block">
             <React.Suspense fallback={<div className="w-[72px] h-[72px] rounded-full bg-slate-200 animate-pulse border-4 border-white shadow-lg" />}>
@@ -1298,15 +1510,9 @@ export default function KidTeenQuizRunner({
       )}
 
     {/* ── SIDE PANEL TOGGLE BUTTON ── */}
-      <button
-        onClick={() => setIsSidePanelOpen(true)}
-        className={`fixed top-1/2 right-0 z-30 w-auto py-3 pl-2 pr-4 bg-primary text-white flex items-center justify-center gap-1 rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
-        style={{ transform: 'translateY(-50%)' }}
-        title="Open panel"
-      >
-        <ChevronLeft className="w-5 h-5 shrink-0" />
-        <span className="font-bold text-sm whitespace-nowrap">Instructions</span>
-      </button>
+      <React.Suspense fallback={null}>
+        <SidePanelToggleButton promise={extraDataPromise} isSidePanelOpen={isSidePanelOpen} setIsSidePanelOpen={setIsSidePanelOpen} />
+      </React.Suspense>
 
       {/* ── RIGHT SLIDE PANEL ── */}
       <div

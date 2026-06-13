@@ -92,7 +92,7 @@ export default async function TagPage({
 
   return (
     <HomeShell>
-      <div className="w-full pt-40 pb-20 px-6 md:px-10 max-w-[1600px] mx-auto min-h-screen">
+      <div className="w-full pb-20 px-6 md:px-10 max-w-[1600px] mx-auto min-h-screen">
         {/* Tab contents (Client Component for interactive switcher) */}
         <TagTabsClient 
           initialLessons={mappedLessons} 

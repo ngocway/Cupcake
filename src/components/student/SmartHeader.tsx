@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl"
 import { useScrollDirection } from "@/hooks/useScrollDirection"
 
 interface SmartHeaderProps {
-  session: { id: string; name: string | null; image: string | null; role: string | null } | null
+  session: { id: string; name: string | null; image: string | null; role: string | null; studyAgeGroup?: string | null } | null
 }
 
 export function SmartHeader({ session }: SmartHeaderProps) {
@@ -76,18 +76,27 @@ export function SmartHeader({ session }: SmartHeaderProps) {
                 </div>
               </Link>
               <div className="hidden lg:flex gap-8 items-center">
-                <Link 
-                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/flashcards') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
-                  href="/flashcards"
-                >
-                  {t("flashcards")}
-                </Link>
-                <Link 
-                  className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
-                  href="/student/game"
-                >
-                  {t("game")}
-                </Link>
+                {!(session?.studyAgeGroup && (
+                  session.studyAgeGroup.toLowerCase().includes("kindergarten") || 
+                  session.studyAgeGroup.toLowerCase().includes("kindergarden") || 
+                  session.studyAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
+                  session.studyAgeGroup === "kids-2-5"
+                )) && (
+                  <>
+                    <Link 
+                      className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/flashcards') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
+                      href="/flashcards"
+                    >
+                      {t("flashcards")}
+                    </Link>
+                    <Link 
+                      className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
+                      href="/student/game"
+                    >
+                      {t("game")}
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 

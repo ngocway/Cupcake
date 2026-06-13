@@ -50,9 +50,41 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const lessonsPromise      = getCachedLessons(queryParams);
   const categoryTreePromise = getCachedCategoryTree();
 
+  // Kindergarten specific data
+  let flashcardsPromise = Promise.resolve([] as any[]);
+  if (initialUserType === 'kids' || studyAgeGroup?.toLowerCase().includes('kindergarten') || studyAgeGroup === 'KINDERGARTEN (< 6 YEARS)') {
+    const { getFlashcardTopics } = await import('@/actions/flashcards-actions');
+    flashcardsPromise = getFlashcardTopics().then(topics => 
+      topics.filter(t => t.targetAudience === 'kindergarten' || t.targetAudience === 'kids-2-5' || t.targetAudience === 'KINDERGARTEN (< 6 YEARS)')
+    );
+  }
+
+  const kindergartenGamesPromise = Promise.resolve([
+    {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=2-5",
+      gradient: "from-blue-200 to-sky-400",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=2-5",
+      gradient: "from-purple-200 to-fuchsia-400",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    }
+  ]);
+
   return (
     <HomeShell>
-      <div className="w-full pt-36 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
+      <div className="w-full pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
         <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
 
         <main className="flex-1 space-y-12">
@@ -72,6 +104,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 assignments: assignmentsPromise,
                 lessons: lessonsPromise,
                 categoryTree: categoryTreePromise,
+                flashcards: flashcardsPromise,
+                kindergartenGames: kindergartenGamesPromise,
               }}
               searchParams={params}
               initialUserType={initialUserType}

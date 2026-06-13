@@ -408,8 +408,11 @@ export function AdminFlashcardsClient({
   const openCardModal = (card: Flashcard | null = null) => {
     if (card) {
       setEditingCard(card)
+      const defaultAudience = targetAudiencesList.some(c => c.id === card.topic?.targetAudience) 
+        ? card.topic?.targetAudience 
+        : (targetAudiencesList[0]?.id || "");
       setCardForm({
-        targetAudience: card.topic?.targetAudience || "",
+        targetAudience: defaultAudience,
         topicId: card.topicId,
         word: card.word,
         phonetic: card.phonetic || "",
@@ -534,8 +537,11 @@ export function AdminFlashcardsClient({
   const openTopicModal = (topic: Topic | null = null) => {
     if (topic) {
       setEditingTopic(topic)
+      const defaultAudience = targetAudiencesList.some(c => c.id === topic.targetAudience) 
+        ? topic.targetAudience 
+        : (targetAudiencesList[0]?.id || "");
       setTopicForm({
-        targetAudience: topic.targetAudience,
+        targetAudience: defaultAudience,
         name: topic.name,
         sampleCount: ""
       })
@@ -980,7 +986,7 @@ export function AdminFlashcardsClient({
                   
                   <div className="space-y-3">
                     <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-500 border border-blue-600/15">
-                      {topic.targetAudience?.name}
+                      {targetAudiencesList.find(c => c.id === topic.targetAudience)?.name || topic.targetAudience}
                     </span>
                     
                     <h3 className="text-xl font-black text-white leading-tight">{topic.name}</h3>

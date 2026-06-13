@@ -509,7 +509,7 @@ function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }
 
               {/* Audio Player */}
               {audioUrl && (
-                <GlobalAudioPlayer audioUrl={audioUrl} />
+                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={true} />
               )}
 
               <div className="prose prose-slate prose-lg dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-xl text-lg leading-loose">
@@ -567,6 +567,35 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
       isGuest={isGuest}
       onNavigate={onNavigate}
     />
+  );
+}
+
+function SidePanelToggleButton({ promise, isSidebarOpen, setIsSidebarOpen }: { promise: Promise<any>, isSidebarOpen: boolean, setIsSidebarOpen: (open: boolean) => void }) {
+  const extraData = React.use(promise);
+  if (!extraData) return null;
+
+  const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
+  const audioUrl = extraData.lesson?.audioUrl || extraData.audioUrl;
+  const hasMaterialSection = videoUrl || audioUrl || (extraData.readingText && String(extraData.readingText).replace(/<[^>]*>/g, "").trim().length > 0);
+  
+  const hasInstructionText = extraData.instructions && (
+    String(extraData.instructions).replace(/<[^>]*>/g, "").trim().length > 0 || 
+    /<(img|video|audio|iframe|embed)\b/i.test(String(extraData.instructions))
+  );
+
+  const hasTags = !!extraData.tags;
+
+  if (!hasMaterialSection && !hasInstructionText && !hasTags) {
+    return null;
+  }
+
+  return (
+    <button
+      onClick={() => setIsSidebarOpen(true)}
+      className={`fixed top-1/2 right-0 -translate-y-1/2 z-[90] px-4 py-3 bg-primary text-white rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.15)] flex items-center justify-center hover:pr-6 active:scale-95 transition-all duration-300 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100 translate-x-0'}`}
+    >
+      <span className="font-black text-xs uppercase tracking-widest">Hint</span>
+    </button>
   );
 }
 
@@ -1321,12 +1350,9 @@ export default function QuizClientRunner({
       </div>
 
       {/* Floating Toggle Button */}
-      <button
-        onClick={() => setIsSidebarOpen(true)}
-        className={`fixed top-1/2 right-0 -translate-y-1/2 z-[90] px-4 py-3 bg-primary text-white rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.15)] flex items-center justify-center hover:pr-6 active:scale-95 transition-all duration-300 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100 translate-x-0'}`}
-      >
-        <span className="font-black text-xs uppercase tracking-widest">Hint</span>
-      </button>
+      <React.Suspense fallback={null}>
+        <SidePanelToggleButton promise={extraDataPromise} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      </React.Suspense>
 
       {/* Backdrop */}
       {isSidebarOpen && (

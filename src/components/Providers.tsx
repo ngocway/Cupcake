@@ -72,25 +72,9 @@ const customStyles = `
   border-radius: 50% !important;
   animation: nprogress-spinner 1s linear infinite !important;
 }
-#nprogress .spinner::after {
-  content: "ĐANG TẢI DỮ LIỆU..." !important;
-  font-size: 10px !important;
-  font-weight: 900 !important;
-  color: #64748b !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.1em !important;
-  animation: nprogress-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
-}
-.dark #nprogress .spinner::after {
-  color: #94a3b8 !important;
-}
 @keyframes nprogress-spinner {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-@keyframes nprogress-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: .5; }
 }
 `;
 

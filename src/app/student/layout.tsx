@@ -9,6 +9,7 @@ import { SideNavItem } from "@/app/student/_components/SideNavItem"
 import { SmartHeader } from "@/components/student/SmartHeader"
 import { getTranslations } from "next-intl/server"
 import { LayoutDashboard, BookOpen, ClipboardList, Users, TrendingUp } from "lucide-react"
+import prisma from "@/lib/prisma"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -27,11 +28,21 @@ export default async function StudentLayout({ children }: { children: React.Reac
     redirect("/teacher/dashboard")
   }
 
+  let studyAgeGroup = null;
+  if (session.user.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { studyAgeGroup: true }
+    });
+    studyAgeGroup = dbUser?.studyAgeGroup;
+  }
+
   const publicSession = {
     id: session.user.id!,
     name: session.user.name ?? null,
     image: session.user.image ?? null,
-    role: (session.user as any).role ?? null
+    role: (session.user as any).role ?? null,
+    studyAgeGroup
   };
 
   return (

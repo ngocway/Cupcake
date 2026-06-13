@@ -8,14 +8,21 @@ const fetchTopics = async () => {
   return prisma.flashcardTopic.findMany({
     orderBy: {
       name: 'asc'
+    },
+    include: {
+      _count: {
+        select: {
+          flashcards: true
+        }
+      }
     }
   });
 };
 
 export const getCachedFlashcardTopics = unstable_cache(
   fetchTopics,
-  ["flashcard-topics-cache-v1"],
-  { revalidate: 43200, tags: ["flashcard-categories"] } // Reusing old tag for now
+  ["flashcard-topics-cache-v2"],
+  { revalidate: 43200, tags: ["flashcard-categories-v2"] } // Updated tags/cache-key to v2
 );
 
 /**
