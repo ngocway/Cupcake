@@ -333,7 +333,7 @@ const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promi
           <div
             key={topic.id}
             onClick={() => window.location.href = `/flashcards?topic=${topic.id}`}
-            className={`group p-6 rounded-[36px] border-4 border-slate-200 dark:border-slate-700 ${style.bg} cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${style.borderHover} ${style.bgHover} flex flex-col justify-start gap-3 h-auto relative overflow-hidden`}
+            className={`group p-5 rounded-[36px] border-4 border-slate-200 dark:border-slate-700 ${style.bg} cursor-pointer transition-all duration-500 shadow-sm hover:shadow-2xl hover:scale-[1.02] ${style.borderHover} ${style.bgHover} flex flex-col justify-between h-40 relative overflow-hidden`}
           >
             {/* Ambient Bubbly Blurs inside card */}
             {style.circles.map((c, cIdx) => (
@@ -357,9 +357,13 @@ const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promi
                 🧸
               </span>
             )}
-            <div className="flex justify-between items-start">
-              <div></div>
-              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-4xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden relative z-10">
+
+            {/* Top row: Title (left) & Icon (right) */}
+            <div className="flex justify-between items-center gap-4 w-full relative z-10">
+              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight break-words flex-1">
+                {topic.name}
+              </h3>
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-4xl transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 shadow-sm overflow-hidden relative z-10 shrink-0">
                 {topic.iconUrl ? (
                   topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
                     <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
@@ -371,18 +375,15 @@ const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promi
                 )}
               </div>
             </div>
-            <div className="space-y-4 relative z-10">
-              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight">
-                {topic.name}
-              </h3>
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                  {topic._count?.flashcards ?? 0} Cards
-                </span>
-                <button className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg bg-amber-500 text-white shadow-amber-500/30`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-current ml-0.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                </button>
-              </div>
+
+            {/* Bottom row: Card count & Play button */}
+            <div className="flex justify-between items-center w-full relative z-10 mt-auto">
+              <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                {topic._count?.flashcards ?? 0} Cards
+              </span>
+              <button className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110 shadow-lg bg-amber-500 text-white shadow-amber-500/30">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-current ml-0.5"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              </button>
             </div>
           </div>
         )
