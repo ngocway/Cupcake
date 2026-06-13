@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { getFlashcardsByTopic } from "@/actions/flashcards-actions"
 import { setNativeLanguagePreference } from "@/actions/user-preferences-actions"
 import { useContentStore } from "@/store/useContentStore"
@@ -101,6 +102,10 @@ interface FlashcardsClientProps {
 }
 
 export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
+
   // Sắp xếp các danh mục theo thứ tự độ tuổi
   const CATEGORY_ORDER = [
     "kids-2-5", "kindergarten", "kindergarden", 
@@ -117,7 +122,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   });
 
   // Trạng thái chọn Danh mục & Chủ đề
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(categories[0] || null)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
   
   // Trạng thái học Flashcards
@@ -237,7 +242,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   }, [isFlipped, currentIndex, selectedCategory, flashcards])
 
   // Xử lý nạp Flashcards khi chọn xong Topic
-  const handleSelectTopic = async (topic: Topic) => {
+  const handleSelectTopic = useCallback(async (topic: Topic) => {
     setLoading(true)
     setSelectedTopic(topic)
     
@@ -255,14 +260,16 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       } else {
         alert("This topic does not have any flashcards yet. Please choose another topic!")
         setSelectedTopic(null)
+        router.push("/flashcards", { scroll: false })
       }
     } catch (error) {
       console.error("Error loading flashcards:", error)
       alert("An error occurred while loading flashcards. Please try again later.")
+      router.push("/flashcards", { scroll: false })
     } finally {
       setLoading(false)
     }
-  }
+  }, [router])
 
   const handleNext = (e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -286,14 +293,49 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   }
 
   // Quay lại màn hình chọn
-  const handleBackToSelection = () => {
+  const handleBackToSelection = useCallback(() => {
     stopCurrentAudio()
     setFocusMode(false)
     setSelectedTopic(null)
     setFlashcards([])
     setCurrentIndex(0)
     setIsFlipped(false)
-  }
+    router.push("/flashcards", { scroll: false })
+  }, [router])
+
+  // Initialize selectedCategory based on studyAgeGroup or URL topic
+  useEffect(() => {
+    const topicId = searchParams.get("topic")
+    if (topicId && !selectedTopic) {
+      for (const cat of categories) {
+        const foundTopic = cat.topics.find(t => t.id === topicId)
+        if (foundTopic) {
+          setSelectedCategory(cat)
+          handleSelectTopic(foundTopic)
+          return
+        }
+      }
+    }
+
+    // Fallback: match category with studyAgeGroup if no selectedCategory set yet
+    if (!selectedCategory) {
+      if (studyAgeGroup) {
+        const cleanAge = studyAgeGroup.toLowerCase()
+        const found = categories.find(c => {
+          const slug = c.slug.toLowerCase()
+          if (cleanAge.includes("kindergarten") || cleanAge.includes("kindergarden") || cleanAge === "kids-2-5") {
+            return slug.includes("kindergarten") || slug.includes("kindergarden") || slug === "kids-2-5"
+          }
+          return slug === cleanAge || cleanAge.includes(slug) || slug.includes(cleanAge)
+        })
+        if (found) {
+          setSelectedCategory(found)
+          return
+        }
+      }
+      setSelectedCategory(categories[0] || null)
+    }
+  }, [categories, studyAgeGroup, searchParams, selectedCategory, selectedTopic, handleSelectTopic])
 
   // Hỗ trợ bấm phím mũi tên & Space để lật/chuyển thẻ
   useEffect(() => {
