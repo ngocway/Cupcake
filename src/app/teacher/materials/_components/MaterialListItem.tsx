@@ -56,10 +56,10 @@ const SUBJECT_CONFIG: Record<string, string> = {
 };
 
 const AUDIENCE_CONFIG: Record<string, { label: string; className: string }> = {
-  kids:     { label: 'Kid',      className: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
-  teens:    { label: 'Teen',     className: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' },
-  adults:   { label: 'Adult',    className: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
-  business: { label: 'Business', className: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  kindergarten: { label: 'Kindergarten', className: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400' },
+  kid:          { label: 'Kid',          className: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
+  teen:         { label: 'Teen',         className: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' },
+  learner:      { label: 'Learner',      className: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
 };
 
 export function MaterialListItem({ 

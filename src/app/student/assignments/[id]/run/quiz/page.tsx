@@ -104,7 +104,7 @@ export default async function StudentQuizPage({
           slug: true,
           tags: true,
           targetAudiences: true,
-          lesson: { select: { id: true } },
+          lesson: { select: { id: true, targetAudiences: true } },
           questions: { orderBy: { orderIndex: 'asc' } }
         }
       }

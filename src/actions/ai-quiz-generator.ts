@@ -78,7 +78,7 @@ export const generateQuizQuestions = async ({
       "title": "A catchy, relevant title for this assignment",
       "instructions": "General instructions for the students on how to do this assignment",
       "shortDescription": "A short, engaging description for the library (max 200 chars)",
-      "targetAudiences": ["kids", "teens", "adults", "business"], // Pick 1 or more suitable target audiences from this list based on the CEFR difficulty level
+      "targetAudiences": ["kindergarten", "kid", "teen", "learner"], // Pick 1 or more suitable target audiences from this list based on the CEFR difficulty level
     ` : '';
 
     const prompt = `Generate ${count} quiz questions about "${topic}" at CEFR level ${difficulty} in ${langStr}. 

@@ -42,10 +42,10 @@ function SidebarUserTypeListContent({ initialUserType }: { initialUserType?: str
   };
 
   const types = [
-    { id: 'kids', label: 'Kid', src: '/images/avatars/kid.png' },
-    { id: 'teens', label: 'Teen', src: '/images/avatars/teen.png' },
-    { id: 'adults', label: 'Adult', src: '/images/avatars/adult.png' },
-    { id: 'business', label: 'Business', src: '/images/avatars/Business man.png' },
+    { id: 'kindergarten', label: 'Kindergarten', src: '/images/avatars/kid.png' },
+    { id: 'kid', label: 'Kid', src: '/images/avatars/kid.png' },
+    { id: 'teen', label: 'Teen', src: '/images/avatars/teen.png' },
+    { id: 'learner', label: 'Learner', src: '/images/avatars/adult.png' },
   ];
 
   return (

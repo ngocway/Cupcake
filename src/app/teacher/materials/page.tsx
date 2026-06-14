@@ -263,10 +263,10 @@ export default function MaterialLibraryPage() {
                   <option key={a.id} value={a.id}>{a.label}</option>
                 ))
               : [
-                  { id: 'kids', label: '🧸 Trẻ em (Kids)' },
-                  { id: 'teens', label: '🎒 Thiếu niên (Teens)' },
-                  { id: 'adults', label: '🎓 Người lớn (Adults)' },
-                  { id: 'business', label: '💼 Doanh nhân (Business)' }
+                  { id: 'kindergarten', label: '🧸 Mầm non (Kindergarten)' },
+                  { id: 'kid', label: '🧸 Trẻ em (Kid)' },
+                  { id: 'teen', label: '🎒 Thiếu niên (Teen)' },
+                  { id: 'learner', label: '🎓 Người học (Learner)' }
                 ].map(a => (
                   <option key={a.id} value={a.id}>{a.label}</option>
                 ))

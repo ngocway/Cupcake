@@ -29,6 +29,7 @@ import BackButton from "@/components/ui/BackButton";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
+import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
@@ -509,7 +510,7 @@ function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }
 
               {/* Audio Player */}
               {audioUrl && (
-                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={true} />
+                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} />
               )}
 
               <div className="prose prose-slate prose-lg dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-xl text-lg leading-loose">
@@ -594,7 +595,7 @@ function SidePanelToggleButton({ promise, isSidebarOpen, setIsSidebarOpen }: { p
       onClick={() => setIsSidebarOpen(true)}
       className={`fixed top-1/2 right-0 -translate-y-1/2 z-[90] px-4 py-3 bg-primary text-white rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.15)] flex items-center justify-center hover:pr-6 active:scale-95 transition-all duration-300 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100 translate-x-0'}`}
     >
-      <span className="font-black text-xs uppercase tracking-widest">Hint</span>
+      <span className="font-black text-xs uppercase tracking-widest">View lesson</span>
     </button>
   );
 }
@@ -611,16 +612,16 @@ export default function QuizClientRunner({
   const t = useTranslations("student.quiz");
   const { isHidden } = useScrollDirection();
 
-  // ── Kid/Teen mode detection ──────────────────────────────
-  // Applies ONLY to assignments not linked to any lesson (assignment.lesson === null)
-  // AND targeting KID or TEEN audiences.
   const isKidTeenMode = useMemo(() => {
     const audiences: string[] = assignment.targetAudiences || [];
-    const isKidOrTeen = audiences.includes("kids") || audiences.includes("teens");
-    // assignment.lesson is null when no Lesson links to this assignment (Lesson.assignmentId relation)
-    const hasNoLesson = assignment.lesson == null;
-    return isKidOrTeen && hasNoLesson;
-  }, [assignment.targetAudiences, assignment.lesson]);
+    const lessonAudiences: string[] = assignment.lesson?.targetAudiences || [];
+    const combined = [...audiences, ...lessonAudiences];
+    const isKidOrTeen = combined.some(aud => {
+      const lower = String(aud).toLowerCase();
+      return lower === "kindergarten" || lower === "kid" || lower === "teen";
+    });
+    return isKidOrTeen;
+  }, [assignment.targetAudiences, assignment.lesson?.targetAudiences]);
 
   // ────────────────────────────────────────────────────────
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
@@ -795,6 +796,10 @@ export default function QuizClientRunner({
     return questions.length > 0 && questions.every(q => checkedQuestions[q.id]);
   }, [questions, checkedQuestions]);
 
+  const hasAnyChecked = useMemo(() => {
+    return Object.keys(checkedQuestions).length > 0;
+  }, [checkedQuestions]);
+
   const scrollToQuestion = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -885,9 +890,9 @@ export default function QuizClientRunner({
     // Start sequential reveal
     setCheckedQuestions({}); // Reset first
     
-    // Scroll to top on mobile so student can watch the progress circles change color
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Scroll to top instantly so student can watch the progress circles change color
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
     
     for (const q of questions) {
@@ -956,7 +961,7 @@ export default function QuizClientRunner({
         {/* Main Column: Questions (Full width now since right column is a drawer) */}
         <div className="w-full shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-outline-variant/20 relative">
            {/* Progress Navigation Header (Sticky) */}
-           <div className={`sticky top-0 z-50 transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'} min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6`}>
+           <div className={`sticky top-0 z-50 transition-transform duration-500 ease-in-out ${(isHidden && !hasAnyChecked) ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'} min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6`}>
               <div className="shrink-0 w-full md:w-auto flex justify-start">
                 <BackButton className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
@@ -1062,9 +1067,14 @@ export default function QuizClientRunner({
                         }
                      </div>
                       {questionText && questionText !== "{}" && (
-                        <h3 className="text-2xl md:text-3xl font-black text-on-surface leading-tight text-center">
-                          {questionText}
-                        </h3>
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                          <h3 className="text-2xl md:text-3xl font-black text-on-surface leading-tight text-center">
+                            {questionText}
+                          </h3>
+                          {q.audioUrl && (
+                             <QuestionAudioPlayButton src={q.audioUrl} />
+                          )}
+                        </div>
                       )}
                   </div>
 
@@ -1363,7 +1373,7 @@ export default function QuizClientRunner({
       )}
 
       {/* Sliding Right Column / Drawer */}
-      <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 z-[110] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-full w-full md:w-2/3 z-[110] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <button 
           onClick={() => setIsSidebarOpen(false)} 
           className={`absolute top-6 right-6 md:right-full md:mr-0 z-50 p-2.5 text-white bg-primary hover:bg-primary/90 rounded-full shadow-lg shadow-primary/30 transition-all duration-500 hover:scale-110 active:scale-95 ${isSidebarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}`}

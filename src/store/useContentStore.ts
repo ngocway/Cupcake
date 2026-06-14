@@ -80,7 +80,7 @@ export const useContentStore = create<ContentState>((set) => ({
   selectedCategoryId: "",
   selectedSubCategoryId: "",
 
-  userType: "adults",
+  userType: "learner",
   setUserType: (val) => set({ userType: val }),
 
   studySubject: "",
@@ -140,7 +140,7 @@ export const useContentStore = create<ContentState>((set) => ({
     isFiltering: false,
     selectedCategoryId: "",
     selectedSubCategoryId: "",
-    userType: "adults",
+    userType: "learner",
     studySubject: "",
     studyAgeGroup: "",
     studyLevel: ""

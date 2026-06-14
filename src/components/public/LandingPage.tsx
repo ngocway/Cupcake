@@ -443,7 +443,7 @@ const KindergartenGameList = memo(function KindergartenGameList({ promise }: { p
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function LandingPage({ promises, searchParams, initialUserType = "adults", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
@@ -581,12 +581,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
 
   // Avatar lookup map for landing page summary
   const avatarMap: Record<string, { label: string; src: string }> = {
-    kids: { label: "KID", src: "/images/avatars/kid.png" },
-    teens: { label: "TEEN", src: "/images/avatars/teen.png" },
-    adults: { label: "ADULT", src: "/images/avatars/adult.png" },
-    business: { label: "BUSINESS", src: "/images/avatars/Business man.png" },
+    kindergarten: { label: "KINDERGARTEN", src: "/images/avatars/kid.png" },
+    kid: { label: "KID", src: "/images/avatars/kid.png" },
+    teen: { label: "TEEN", src: "/images/avatars/teen.png" },
+    learner: { label: "LEARNER", src: "/images/avatars/adult.png" },
   };
-  const activeAvatar = avatarMap[userType] || avatarMap.adults;
+  const activeAvatar = avatarMap[userType] || avatarMap.learner;
 
 
   // Modal local staging states
@@ -886,10 +886,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "adults"
                           onClick={() => {
                             setTempStudyAgeGroup(age.id);
                             setTempStudyLevel("");
-                            // Map age back to "kids/teens/adults" for old logic
-                            if (age.id === "kindergarden" || age.id === "kid" || age.id === "grade1" || age.id === "grade2" || age.id === "grade3" || age.id === "kids") setTempUserType("kids");
-                            else if (age.id === "teen" || age.id === "primary" || age.id === "teens") setTempUserType("teens");
-                            else setTempUserType("adults");
+                            // Map age back to "kindergarten/kid/teen/learner" for target filtering
+                            if (age.id === "kindergarten" || age.id === "kindergarden" || age.id === "kids-2-5" || age.id.toLowerCase().includes("kindergarten")) setTempUserType("kindergarten");
+                            else if (age.id === "kid" || age.id === "kids" || age.id.startsWith("grade")) setTempUserType("kid");
+                            else if (age.id === "teen" || age.id === "teens" || age.id === "primary") setTempUserType("teen");
+                            else setTempUserType("learner");
                           }}
                           className="shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 cursor-pointer avatar-btn"
                          >

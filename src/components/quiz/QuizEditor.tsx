@@ -293,13 +293,25 @@ export function QuizEditor() {
         const data = await res.json();
         if (data.assignment) {
           setTitle(data.assignment.title);
-          setSubject(data.assignment.subject || 'Khác');
+          
+          let normalizedSubject = 'Khác';
+          if (data.assignment.subject) {
+            const s = data.assignment.subject.trim().toLowerCase();
+            if (s === 'english' || s === 'tiếng anh' || s === 'tieng anh') normalizedSubject = 'english';
+            else if (s === 'math' || s === 'toán' || s === 'toán học' || s === 'toan') normalizedSubject = 'math';
+            else if (s === 'science' || s === 'global' || s === 'global & science' || s === 'khoa học' || s === 'khoa hoc') normalizedSubject = 'global';
+            else normalizedSubject = data.assignment.subject;
+          }
+          setSubject(normalizedSubject);
+
           setGradeLevel(data.assignment.gradeLevel || 'Khác');
           setShortDescription(data.assignment.shortDescription || '');
           setInstructions(data.assignment.instructions || '');
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           if (data.assignment.targetAudiences) {
             setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
+          } else {
+            setTargetAudiences([]);
           }
           if (data.assignment.level) {
             setLevel(data.assignment.level);

@@ -108,10 +108,10 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
   // Sắp xếp các danh mục theo thứ tự độ tuổi
   const CATEGORY_ORDER = [
-    "kids-2-5", "kindergarten", "kindergarden", 
-    "kid-6-12", "kids", "kid", 
+    "kindergarten", "kindergarden", "kids-2-5", 
+    "kid", "kid-6-12", "kids", 
     "teen", "teens", 
-    "readers", "adults", "adult"
+    "learner", "readers", "adults", "adult"
   ]
   const categories = [...initialCategories].sort((a, b) => {
     const indexA = CATEGORY_ORDER.indexOf(a.slug);
@@ -434,7 +434,13 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                 let ageRange = "2-5 Years"
                 let glowShadow = "shadow-amber-100/60"
 
-                if (cat.slug === "kid-6-12" || cat.slug === "kids" || cat.slug === "kid") {
+                if (cat.slug === "kindergarten" || cat.slug === "kindergarden" || cat.slug === "kids-2-5") {
+                  catIcon = "🧸"
+                  catBg = "bg-amber-100/80 border-amber-200 text-amber-600"
+                  bgGradient = "from-amber-400 to-orange-500"
+                  ageRange = "2-5 Years"
+                  glowShadow = "shadow-amber-100/60"
+                } else if (cat.slug === "kid-6-12" || cat.slug === "kids" || cat.slug === "kid") {
                   catIcon = "🎒"
                   catBg = "bg-emerald-100/80 border-emerald-200 text-emerald-600"
                   bgGradient = "from-emerald-400 to-teal-500"
@@ -446,7 +452,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                   bgGradient = "from-indigo-450 to-violet-500"
                   ageRange = "Teenagers"
                   glowShadow = "shadow-indigo-100/60"
-                } else if (cat.slug === "readers" || cat.slug === "adults" || cat.slug === "adult") {
+                } else if (cat.slug === "readers" || cat.slug === "adults" || cat.slug === "adult" || cat.slug === "learner") {
                   catIcon = "🚀"
                   catBg = "bg-pink-100/80 border-pink-200 text-pink-600"
                   bgGradient = "from-pink-400 to-rose-500"
@@ -511,13 +517,13 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                   let topicColorClass = "from-amber-400/10 to-orange-500/10 border-orange-200/50 text-orange-700 shadow-orange-100"
                   let topicButtonBg = "bg-orange-500 text-white shadow-orange-500/30 shadow-lg"
                   
-                  if (selectedCategory.slug === "kid-6-12") {
+                  if (selectedCategory.slug === "kid-6-12" || selectedCategory.slug === "kid" || selectedCategory.slug === "kids") {
                     topicColorClass = "from-emerald-400/10 to-teal-500/10 border-emerald-200/50 text-emerald-700 shadow-emerald-100"
                     topicButtonBg = "bg-emerald-500 text-white shadow-emerald-500/30 shadow-lg"
-                  } else if (selectedCategory.slug === "teen") {
+                  } else if (selectedCategory.slug === "teen" || selectedCategory.slug === "teens") {
                     topicColorClass = "from-indigo-400/10 to-violet-500/10 border-indigo-200/50 text-indigo-700 shadow-indigo-100"
                     topicButtonBg = "bg-indigo-500 text-white shadow-indigo-500/30 shadow-lg"
-                  } else if (selectedCategory.slug === "readers") {
+                  } else if (selectedCategory.slug === "readers" || selectedCategory.slug === "learner" || selectedCategory.slug === "adults" || selectedCategory.slug === "adult") {
                     topicColorClass = "from-pink-400/10 to-rose-500/10 border-pink-200/50 text-pink-700 shadow-pink-100"
                     topicButtonBg = "bg-pink-500 text-white shadow-pink-500/30 shadow-lg"
                   }
@@ -612,9 +618,9 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   const isKidMode = true;
   // Theme colors for Focus Mode
   let focusThemeColor = "from-amber-400 to-orange-500 text-orange-500"
-  if (selectedCategory.slug === "kid-6-12") focusThemeColor = "from-emerald-400 to-teal-500 text-emerald-500"
-  else if (selectedCategory.slug === "teen") focusThemeColor = "from-indigo-400 to-violet-500 text-indigo-500"
-  else if (selectedCategory.slug === "readers") focusThemeColor = "from-pink-400 to-rose-500 text-pink-500"
+  if (selectedCategory.slug === "kid-6-12" || selectedCategory.slug === "kid" || selectedCategory.slug === "kids") focusThemeColor = "from-emerald-400 to-teal-500 text-emerald-500"
+  else if (selectedCategory.slug === "teen" || selectedCategory.slug === "teens") focusThemeColor = "from-indigo-400 to-violet-500 text-indigo-500"
+  else if (selectedCategory.slug === "readers" || selectedCategory.slug === "learner" || selectedCategory.slug === "adults" || selectedCategory.slug === "adult") focusThemeColor = "from-pink-400 to-rose-500 text-pink-500"
 
   // Dynamic rich style configurations for both buttons to prevent interaction confusion
   const themeConfig = {
@@ -622,7 +628,23 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       revealBg: "from-amber-400 to-orange-500 text-white shadow-orange-300/40 border-white",
       nextBg: "bg-white border-4 border-orange-400 text-orange-600 shadow-orange-100/60 hover:bg-orange-50/40 hover:border-orange-500",
     },
+    "kindergarten": {
+      revealBg: "from-amber-400 to-orange-500 text-white shadow-orange-300/40 border-white",
+      nextBg: "bg-white border-4 border-orange-400 text-orange-600 shadow-orange-100/60 hover:bg-orange-50/40 hover:border-orange-500",
+    },
+    "kindergarden": {
+      revealBg: "from-amber-400 to-orange-500 text-white shadow-orange-300/40 border-white",
+      nextBg: "bg-white border-4 border-orange-400 text-orange-600 shadow-orange-100/60 hover:bg-orange-50/40 hover:border-orange-500",
+    },
     "kid-6-12": {
+      revealBg: "from-emerald-400 to-teal-500 text-white shadow-teal-300/40 border-white",
+      nextBg: "bg-white border-4 border-teal-400 text-teal-600 shadow-teal-100/60 hover:bg-teal-50/40 hover:border-teal-500",
+    },
+    "kids": {
+      revealBg: "from-emerald-400 to-teal-500 text-white shadow-teal-300/40 border-white",
+      nextBg: "bg-white border-4 border-teal-400 text-teal-600 shadow-teal-100/60 hover:bg-teal-50/40 hover:border-teal-500",
+    },
+    "kid": {
       revealBg: "from-emerald-400 to-teal-500 text-white shadow-teal-300/40 border-white",
       nextBg: "bg-white border-4 border-teal-400 text-teal-600 shadow-teal-100/60 hover:bg-teal-50/40 hover:border-teal-500",
     },
@@ -630,11 +652,27 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-white",
       nextBg: "bg-white border-4 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
     },
+    "teens": {
+      revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-white",
+      nextBg: "bg-white border-4 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
+    },
     "readers": {
       revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-white",
       nextBg: "bg-white border-4 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
+    },
+    "learner": {
+      revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-white",
+      nextBg: "bg-white border-4 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
+    },
+    "adults": {
+      revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-white",
+      nextBg: "bg-white border-4 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
+    },
+    "adult": {
+      revealBg: "from-pink-400 to-rose-500 text-white shadow-rose-300/30 border-white",
+      nextBg: "bg-white border-4 border-rose-400 text-rose-600 shadow-rose-50/80 hover:bg-rose-50/30 hover:border-rose-500",
     }
-  }[selectedCategory.slug] || {
+  }[selectedCategory.slug as string] || {
     revealBg: "from-indigo-400 to-violet-500 text-white shadow-indigo-300/30 border-white",
     nextBg: "bg-white border-4 border-indigo-400 text-indigo-600 shadow-indigo-50/80 hover:bg-indigo-50/30 hover:border-indigo-500",
   }
@@ -665,9 +703,9 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     : "font-extrabold text-base md:text-lg text-slate-800"
 
   let cardBorderColor = "border-amber-300 shadow-amber-200/80"
-  if (selectedCategory.slug === "kid-6-12") cardBorderColor = "border-emerald-300 shadow-emerald-200/80"
-  else if (selectedCategory.slug === "teen") cardBorderColor = "border-indigo-300 shadow-indigo-200/80"
-  else if (selectedCategory.slug === "readers") cardBorderColor = "border-rose-300 shadow-rose-200/80"
+  if (selectedCategory.slug === "kid-6-12" || selectedCategory.slug === "kid" || selectedCategory.slug === "kids") cardBorderColor = "border-emerald-300 shadow-emerald-200/80"
+  else if (selectedCategory.slug === "teen" || selectedCategory.slug === "teens") cardBorderColor = "border-indigo-300 shadow-indigo-200/80"
+  else if (selectedCategory.slug === "readers" || selectedCategory.slug === "learner" || selectedCategory.slug === "adults" || selectedCategory.slug === "adult") cardBorderColor = "border-rose-300 shadow-rose-200/80"
 
   const cardContainerClass = isKidMode
     ? `absolute inset-0 w-full h-full rounded-[48px] bg-white border-8 ${cardBorderColor} flex flex-col justify-between overflow-hidden shadow-[0_24px_50px_rgba(251,191,36,0.12)]`

@@ -16,7 +16,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const cookieStore = await cookies()
   console.log("=== INCOMING COOKIES ===", cookieStore.getAll());
   const userTypeCookie = cookieStore.get("user_type")?.value
-  let initialUserType = userTypeCookie || "adults"
+  let initialUserType = userTypeCookie || "learner"
   let hasUserPreference = !!userTypeCookie
 
   const studySubjectCookie = cookieStore.get("study_subject")?.value
@@ -52,7 +52,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // Kindergarten specific data
   let flashcardsPromise = Promise.resolve([] as any[]);
-  if (initialUserType === 'kids' || studyAgeGroup?.toLowerCase().includes('kindergarten') || studyAgeGroup === 'KINDERGARTEN (< 6 YEARS)') {
+  if (initialUserType === 'kindergarten' || initialUserType === 'kid' || studyAgeGroup?.toLowerCase().includes('kindergarten') || studyAgeGroup === 'KINDERGARTEN (< 6 YEARS)') {
     const { getFlashcardTopics } = await import('@/actions/flashcards-actions');
     flashcardsPromise = getFlashcardTopics().then(topics => 
       topics.filter(t => t.targetAudience === 'kindergarten' || t.targetAudience === 'kids-2-5' || t.targetAudience === 'KINDERGARTEN (< 6 YEARS)')

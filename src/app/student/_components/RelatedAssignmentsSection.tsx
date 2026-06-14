@@ -5,12 +5,19 @@ import { Play } from "lucide-react";
 import Link from "next/link";
 import { DirectStartLink } from "./DirectStartLink";
 import { useTranslations } from "next-intl";
+import { ExerciseCard } from "@/components/public/ContentCards";
 
 interface RelatedItem {
   id: string;
   slug?: string | null;
   title: string;
   thumbnail: string | null;
+  teacher?: {
+    id?: string | null;
+    name?: string | null;
+    image?: string | null;
+  } | null;
+  viewCount?: number | null;
 }
 
 function RelatedItemContent({ item }: { item: RelatedItem }) {
@@ -50,7 +57,7 @@ export function RelatedAssignmentsSection({
     <div className="glass rounded-3xl p-5 md:p-8 space-y-6 shadow-xl w-full">
       <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{t("relatedContent")}</h4>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-8 md:gap-y-12">
         {items.map((item) => {
           const href = isGuest 
             ? `/public/assignments/${item.slug || item.id}?direct=true`
@@ -58,24 +65,36 @@ export function RelatedAssignmentsSection({
 
           if (isGuest) {
             return (
-              <Link 
-                key={item.id}
-                href={href}
-                className="flex items-center gap-4 group bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50"
-              >
-                <RelatedItemContent item={item} />
-              </Link>
+              <React.Fragment key={item.id}>
+                {/* Mobile version: compact row layout */}
+                <Link 
+                  href={href}
+                  className="flex md:hidden items-center gap-4 group bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full"
+                >
+                  <RelatedItemContent item={item} />
+                </Link>
+                {/* Desktop/Tablet version: Premium ExerciseCard */}
+                <div className="hidden md:block w-full">
+                  <ExerciseCard item={item as any} isLoggedIn={false} />
+                </div>
+              </React.Fragment>
             );
           }
 
           return (
-            <DirectStartLink
-              key={item.id}
-              id={item.slug || item.id}
-              className="flex items-center gap-4 group relative bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50"
-            >
-              <RelatedItemContent item={item} />
-            </DirectStartLink>
+            <React.Fragment key={item.id}>
+              {/* Mobile version: compact row layout */}
+              <DirectStartLink
+                id={item.slug || item.id}
+                className="flex md:hidden items-center gap-4 group relative bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full"
+              >
+                <RelatedItemContent item={item} />
+              </DirectStartLink>
+              {/* Desktop/Tablet version: Premium ExerciseCard */}
+              <div className="hidden md:block w-full text-left">
+                <ExerciseCard item={item as any} isLoggedIn={true} />
+              </div>
+            </React.Fragment>
           );
         })}
 

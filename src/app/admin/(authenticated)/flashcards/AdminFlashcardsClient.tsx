@@ -80,7 +80,7 @@ export function AdminFlashcardsClient({
   const [showCardModal, setShowCardModal] = useState(false)
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null)
   const [cardForm, setCardForm] = useState({
-    targetAudience: "KIDS",
+    targetAudience: "kid",
     topicId: "",
     word: "",
     phonetic: "",
@@ -96,7 +96,7 @@ export function AdminFlashcardsClient({
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [topicForm, setTopicForm] = useState({
-    targetAudience: "KIDS",
+    targetAudience: "kid",
     name: "",
     sampleCount: "",
     iconUrl: ""
@@ -123,6 +123,7 @@ export function AdminFlashcardsClient({
   const [imageSearchStyle, setImageSearchStyle] = useState<"REALISTIC" | "CARTOON">("REALISTIC")
   const [isUploadingVocabImage, setIsUploadingVocabImage] = useState(false)
   const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false)
+  const [activeOuterCardForImage, setActiveOuterCardForImage] = useState<Flashcard | null>(null)
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
   const [visibleImagesCount, setVisibleImagesCount] = useState(12)
   const [showAIPromptModal, setShowAIPromptModal] = useState(false)
@@ -391,8 +392,34 @@ export function AdminFlashcardsClient({
     try {
       const result = await uploadUrlMedia(imageUrl)
       if (result.success && result.url) {
-        setCardForm(prev => ({ ...prev, imageUrl: result.url }))
-        toast.success("Lưu ảnh lên Cloudflare R2 thành công!")
+        if (activeOuterCardForImage) {
+          const res = await adminUpdateFlashcard(activeOuterCardForImage.id, {
+            topicId: activeOuterCardForImage.topicId,
+            word: activeOuterCardForImage.word,
+            phonetic: activeOuterCardForImage.phonetic,
+            imageUrl: result.url,
+            audioUrl: activeOuterCardForImage.audioUrl,
+            definition: activeOuterCardForImage.definition,
+            definitionVi: activeOuterCardForImage.definitionVi,
+            definitionTh: activeOuterCardForImage.definitionTh,
+            definitionId: activeOuterCardForImage.definitionId,
+            exampleSentence: activeOuterCardForImage.exampleSentence
+          })
+
+          if (res.success && res.card) {
+            setFlashcards(prev => prev.map(c => c.id === activeOuterCardForImage.id ? {
+              ...c,
+              imageUrl: result.url
+            } : c))
+            toast.success("Cập nhật ảnh cho thẻ học thành công!")
+          } else {
+            toast.error("Lỗi cập nhật CSDL: " + res.error)
+          }
+          setActiveOuterCardForImage(null)
+        } else {
+          setCardForm(prev => ({ ...prev, imageUrl: result.url }))
+          toast.success("Lưu ảnh lên Cloudflare R2 thành công!")
+        }
       } else {
         toast.error("Lưu ảnh thất bại: " + result.error)
       }
@@ -910,7 +937,7 @@ export function AdminFlashcardsClient({
                           </button>
                         </div>
 
-                        <p className="text-xs font-semibold text-neutral-400 truncate max-w-xs">{card.definition || "No definition set"}</p>
+                        <p className="text-xs font-semibold text-neutral-400 truncate max-w-xs" title={card.exampleSentence || "No example sentence set"}>{card.exampleSentence || "No example sentence set"}</p>
                         
                         {/* Translations Badge Row */}
                         <div className="flex items-center gap-1.5 pt-0.5">
@@ -929,6 +956,16 @@ export function AdminFlashcardsClient({
                       </span>
 
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setActiveOuterCardForImage(card)
+                            handleGoogleImageSearch(card.word)
+                          }}
+                          className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                          title="Tìm ảnh trên Web"
+                        >
+                          <Globe className="w-4.5 h-4.5" />
+                        </button>
                         <button
                           onClick={() => openCardModal(card)}
                           className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
@@ -1644,7 +1681,7 @@ export function AdminFlashcardsClient({
                 Tìm ảnh Internet
               </h4>
               <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1 mb-3">
-                Từ khoá: <span className="text-blue-500">{cardForm?.word}</span>
+                Từ khoá: <span className="text-blue-500">{activeOuterCardForImage ? activeOuterCardForImage.word : cardForm?.word}</span>
               </p>
               
               <div className="flex flex-col gap-2">
@@ -1668,7 +1705,7 @@ export function AdminFlashcardsClient({
                   <button
                     type="button"
                     disabled={isSearchingImage}
-                    onClick={() => handleGoogleImageSearch(cardForm?.word, imageSearchStyle)}
+                    onClick={() => handleGoogleImageSearch(activeOuterCardForImage ? activeOuterCardForImage.word : cardForm?.word, imageSearchStyle)}
                     className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-neutral-700 h-full"
                   >
                     <Search className="w-3.5 h-3.5" />
@@ -1679,7 +1716,10 @@ export function AdminFlashcardsClient({
             </div>
             <button 
               type="button" 
-              onClick={() => setShowImageSearchDrawer(false)} 
+              onClick={() => {
+                setShowImageSearchDrawer(false)
+                setActiveOuterCardForImage(null)
+              }} 
               className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors ml-2 shrink-0"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>

@@ -53,7 +53,7 @@ export default async function PublicAssignmentPage({
           take: 10
         },
         lesson: {
-          select: { id: true }
+          select: { id: true, targetAudiences: true }
         }
       }
     }),

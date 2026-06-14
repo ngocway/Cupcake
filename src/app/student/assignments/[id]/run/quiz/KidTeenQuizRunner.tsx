@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
 import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
+import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 import Link from "next/link";
@@ -519,7 +520,7 @@ function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<an
               </div>
             )}
             {audioUrl && (
-              <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={true} />
+              <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} />
             )}
             <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
               <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} />
@@ -592,7 +593,7 @@ function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }:
       title="Open panel"
     >
       <ChevronLeft className="w-5 h-5 shrink-0" />
-      <span className="font-bold text-sm whitespace-nowrap">Instructions</span>
+      <span className="font-bold text-sm whitespace-nowrap">View lesson</span>
     </button>
   );
 }
@@ -617,6 +618,7 @@ export default function KidTeenQuizRunner({
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isHintPlaying, setIsHintPlaying] = useState(false);
 
   const handleStartQuiz = () => {
     setHasStarted(true);
@@ -631,7 +633,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.6;
+    bgMusic.volume = isMuted ? 0 : 0.4;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -660,12 +662,31 @@ export default function KidTeenQuizRunner({
     };
   }, []);
 
-  // Update volume when mute state changes
+  // Listen to Hint audio play/pause events to track if hint is playing
+  useEffect(() => {
+    const handleHintPlay = () => {
+      setIsHintPlaying(true);
+    };
+
+    const handleHintPause = () => {
+      setIsHintPlaying(false);
+    };
+
+    window.addEventListener('hintAudioPlay', handleHintPlay);
+    window.addEventListener('hintAudioPause', handleHintPause);
+
+    return () => {
+      window.removeEventListener('hintAudioPlay', handleHintPlay);
+      window.removeEventListener('hintAudioPause', handleHintPause);
+    };
+  }, []);
+
+  // Update volume when mute state changes or hint audio state changes
   useEffect(() => {
     if (bgMusicRef.current) {
-      bgMusicRef.current.volume = isMuted ? 0 : 0.6;
+      bgMusicRef.current.volume = isMuted ? 0 : (isHintPlaying ? 0.08 : 0.4);
     }
-  }, [isMuted]);
+  }, [isMuted, isHintPlaying]);
 
   // Update background music playback based on material audio
   useEffect(() => {
@@ -845,6 +866,11 @@ export default function KidTeenQuizRunner({
     }
 
     setIsAutoRevealing(true);
+
+    // Scroll to top so the student can watch the progress map circles change status/color
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     
     const newChecked: Record<string, boolean> = {};
     const newExpanded: Record<string, boolean> = {};
@@ -1241,10 +1267,13 @@ export default function KidTeenQuizRunner({
             <div className="px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)] flex-1 overflow-y-auto min-h-0 relative">
               {/* Question text */}
               {questionText && questionText !== "{}" && (
-                <div className="text-center relative w-full">
+                <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
                   <h3 className="text-[clamp(1.25rem,3.5dvh,2rem)] font-[800] text-[#2D366D] leading-tight" style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
                     {questionText}
                   </h3>
+                  {currentQuestion?.audioUrl && (
+                    <QuestionAudioPlayButton src={currentQuestion.audioUrl} />
+                  )}
                 </div>
               )}
 

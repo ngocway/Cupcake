@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { toast } from "sonner";
+import { QuestionAudioPlayButton } from '@/components/common/QuestionAudioPlayButton';
 
 interface Props {
   assignment: any;
@@ -294,9 +295,14 @@ export default function InteractiveLessonSidebar({ assignment, isGuest = false }
              qType === "MATCHING" ? 'Match pairs' : 
              'Select one option'}
           </span>
-          <h4 className="text-xl font-headline font-bold text-on-background leading-tight italic">
-            {questionText === "{}" ? "Match the correct pairs:" : questionText}
-          </h4>
+          <div className="flex items-center gap-3">
+            <h4 className="text-xl font-headline font-bold text-on-background leading-tight italic flex-1">
+              {questionText === "{}" ? "Match the correct pairs:" : questionText}
+            </h4>
+            {currentQuestion?.audioUrl && (
+              <QuestionAudioPlayButton src={currentQuestion.audioUrl} className="shrink-0" />
+            )}
+          </div>
         </div>
 
         {/* Options Grid */}

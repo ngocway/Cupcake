@@ -6,10 +6,10 @@ import { useTranslations } from "next-intl"
 
 const getAudienceColor = (aud: string) => {
   switch (aud.toLowerCase()) {
-    case "kids": return "bg-blue-500 text-white"
-    case "teens": return "bg-rose-500 text-white"
-    case "adults": return "bg-purple-500 text-white"
-    case "business": return "bg-slate-700 text-white"
+    case "kindergarten": return "bg-teal-500 text-white"
+    case "kid": return "bg-blue-500 text-white"
+    case "teen": return "bg-rose-500 text-white"
+    case "learner": return "bg-purple-500 text-white"
     default: return "bg-primary text-white"
   }
 }
@@ -97,7 +97,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
               <div className="flex items-center gap-1">
                 {Array.from(new Set((item.targetAudiences as string[]).map(a => String(a).toLowerCase()))).slice(0, 3).map((aud: string) => (
                   <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
-                    {aud === 'kids' ? 'Kids' : aud === 'teens' ? 'Teens' : aud === 'adults' ? 'Adults' : aud === 'business' ? 'Business' : aud}
+                    {aud === 'kindergarten' ? 'Kindergarten' : aud === 'kid' ? 'Kid' : aud === 'teen' ? 'Teen' : aud === 'learner' ? 'Learner' : aud}
                   </span>
                 ))}
               </div>
@@ -225,7 +225,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
               <div className="flex items-center gap-1">
                 {Array.from(new Set((item.targetAudiences as string[]).map(a => String(a).toLowerCase()))).slice(0, 3).map((aud: string) => (
                   <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
-                    {aud === 'kids' ? 'Kids' : aud === 'teens' ? 'Teens' : aud === 'adults' ? 'Adults' : aud === 'business' ? 'Business' : aud}
+                    {aud === 'kindergarten' ? 'Kindergarten' : aud === 'kid' ? 'Kid' : aud === 'teen' ? 'Teen' : aud === 'learner' ? 'Learner' : aud}
                   </span>
                 ))}
               </div>

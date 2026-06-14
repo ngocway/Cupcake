@@ -126,11 +126,15 @@ function alignAndWrapHtml(htmlContent: string, whisperWords: Array<{word: string
 function SortableQuestionItem({ 
   q, 
   idx, 
+  playingAudioUrl,
+  onTogglePlayAudio,
   onEdit, 
   onDelete 
 }: { 
   q: any, 
   idx: number, 
+  playingAudioUrl: string | null,
+  onTogglePlayAudio: (url: string) => void,
   onEdit: () => void, 
   onDelete: () => void 
 }) {
@@ -166,9 +170,24 @@ function SortableQuestionItem({
             {idx + 1}
           </div>
           <div className="space-y-2">
-            <p className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed">
-              {q.questionText}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed">
+                {q.questionText}
+              </p>
+              {q.audioUrl && (
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePlayAudio(q.audioUrl); }}
+                  className="size-7 flex items-center justify-center rounded-full border border-slate-200 hover:border-amber-300 text-slate-500 hover:text-amber-500 transition-all bg-slate-50 hover:bg-amber-50 shrink-0 cursor-pointer"
+                  title="Nghe thử audio câu hỏi"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {playingAudioUrl === q.audioUrl ? "pause" : "volume_up"}
+                  </span>
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded text-[10px] font-bold text-slate-500 uppercase">
                 {q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Trắc nghiệm'}
@@ -176,6 +195,11 @@ function SortableQuestionItem({
               <span className="px-2 py-1 bg-primary/5 rounded text-[10px] font-bold text-primary uppercase">
                 {q.points} Điểm
               </span>
+              {q.audioUrl && (
+                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-950/20 rounded text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase flex items-center gap-1 border border-amber-100 dark:border-amber-900/30">
+                  <span className="material-symbols-outlined text-[10px]">volume_up</span> Có Audio
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -343,6 +367,39 @@ export function ReadingExerciseBuilder({
   const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
   const [mediaAttachments, setMediaAttachments] = useState<MediaAttachment[]>([]);
   const [config, setConfig] = useState<any>(null);
+  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const togglePlayAudio = (url: string) => {
+    if (playingAudioUrl === url) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setPlayingAudioUrl(null);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setPlayingAudioUrl(url);
+      audio.play().catch(err => {
+        console.error("Failed to play audio:", err);
+        setPlayingAudioUrl(null);
+      });
+      audio.onended = () => {
+        setPlayingAudioUrl(null);
+      };
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     import('@/actions/user-preferences-actions').then(m => m.getOnboardingConfig().then(setConfig));
@@ -705,8 +762,22 @@ export function ReadingExerciseBuilder({
           } else {
             setTags([]);
           }
-          setTargetAudiences(data.assignment.targetAudiences || []);
-          setSubject(data.assignment.subject || 'Khác');
+          if (data.assignment.targetAudiences) {
+            setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
+          } else {
+            setTargetAudiences([]);
+          }
+
+          let normalizedSubject = 'Khác';
+          if (data.assignment.subject) {
+            const s = data.assignment.subject.trim().toLowerCase();
+            if (s === 'english' || s === 'tiếng anh' || s === 'tieng anh') normalizedSubject = 'english';
+            else if (s === 'math' || s === 'toán' || s === 'toán học' || s === 'toan') normalizedSubject = 'math';
+            else if (s === 'science' || s === 'global' || s === 'global & science' || s === 'khoa học' || s === 'khoa hoc') normalizedSubject = 'global';
+            else normalizedSubject = data.assignment.subject;
+          }
+          setSubject(normalizedSubject);
+
           setLevel(data.assignment.level || '');
           setLearningGoals(data.assignment.learningGoals || []);
           setMaterialType(data.assignment.materialType || 'READING');
@@ -1071,8 +1142,6 @@ export function ReadingExerciseBuilder({
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [savedAudioRange, setSavedAudioRange] = useState<Range | null>(null);
   const [dragOverPos, setDragOverPos] = useState({ show: false, x: 0, y: 0 });
-  const playingAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const markers = document.querySelectorAll('#rich-text-editor .inline-audio-marker, #rich-text-editor .inline-audio-wrapper');
@@ -1121,13 +1190,7 @@ export function ReadingExerciseBuilder({
     }
   }, [isInitialLoadDone]);
 
-  useEffect(() => {
-    return () => {
-      if (playingAudioRef.current) {
-        playingAudioRef.current.pause();
-      }
-    };
-  }, []);
+
   
   /**
    * Insert an HTML string at an exact Range position using the DOM Range API.
@@ -1454,9 +1517,9 @@ export function ReadingExerciseBuilder({
       e.stopPropagation();
       const url = audioMarker.getAttribute('data-audio-url');
       if (url) {
-        if (playingAudioRef.current) {
-          playingAudioRef.current.pause();
-          playingAudioRef.current.currentTime = 0;
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
         }
         
         if (playingAudioUrl === url) {
@@ -1465,7 +1528,7 @@ export function ReadingExerciseBuilder({
         }
         
         const audio = new Audio(url);
-        playingAudioRef.current = audio;
+        audioRef.current = audio;
         setPlayingAudioUrl(url);
         audio.play().catch(e => console.error("Audio playback failed", e));
         
@@ -1710,20 +1773,24 @@ export function ReadingExerciseBuilder({
                      <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-1.5 text-center group-hover:text-emerald-700 transition-colors">
                        Tạo Audio AI Toàn Bài
                      </span>
-                     {audioUrl && (
-                       <div className="absolute top-1 right-1 text-emerald-600 flex items-center gap-0.5 bg-emerald-100 px-1.5 py-0.5 rounded-full">
-                         <span className="material-symbols-outlined text-[12px]">check_circle</span>
-                       </div>
-                     )}
                    </div>
                    {audioUrl && (
-                     <div className="flex justify-between items-center px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800">
-                       <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate flex-1">{audioUrl.split('/').pop()}</span>
-                       <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAudioUrl(''); }} className="text-red-500 hover:text-red-700 p-1 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 ml-1">
-                         <span className="material-symbols-outlined text-[14px]">delete</span>
-                       </button>
-                     </div>
-                   )}
+                      <div className="flex justify-between items-center px-2 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800 gap-1.5">
+                        <button
+                          title={playingAudioUrl === audioUrl ? "Tạm dừng" : "Nghe thử"}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePlayAudio(audioUrl); }}
+                          className="size-5 flex items-center justify-center rounded-md text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all shrink-0"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">
+                            {playingAudioUrl === audioUrl ? "pause" : "play_arrow"}
+                          </span>
+                        </button>
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate flex-1" title={audioUrl.split('/').pop()}>{audioUrl.split('/').pop()}</span>
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAudioUrl(''); }} className="text-red-400 hover:text-red-600 p-1 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0">
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                        </button>
+                      </div>
+                    )}
                  </div>
 
                  {/* Audio Upload / AI Generator (Paragraphs) */}
@@ -1748,6 +1815,15 @@ export function ReadingExerciseBuilder({
                           <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 truncate flex-1" title={attachment.name}>{attachment.name}</span>
                           {attachment.status === 'success' && (
                             <>
+                              <button
+                                title={playingAudioUrl === attachment.url ? "Tạm dừng" : "Nghe thử"}
+                                onClick={() => togglePlayAudio(attachment.url!)}
+                                className="size-5 flex items-center justify-center rounded-md text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-all shrink-0"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">
+                                  {playingAudioUrl === attachment.url ? "pause" : "play_arrow"}
+                                </span>
+                              </button>
                               <button
                                 title="Chèn vào bài học"
                                 onClick={() => handleInsertAudioFromLibrary(attachment.url!)}
@@ -1987,6 +2063,8 @@ export function ReadingExerciseBuilder({
                           key={q.id || `q-${idx}`}
                           q={q}
                           idx={idx}
+                          playingAudioUrl={playingAudioUrl}
+                          onTogglePlayAudio={togglePlayAudio}
                           onEdit={() => setQuestionModal({ isOpen: true, type: q.type, isMultiple: q.isMultiple, editingIndex: idx })}
                           onDelete={() => {
                             if (confirm('Bạn có chắc chắn muốn xóa câu hỏi này?')) {
@@ -2736,6 +2814,26 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
             </div>
           )}
           
+          {formData.audioUrl && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">Audio câu hỏi (Trích xuất từ đoạn liên quan)</label>
+              <div className="flex items-center gap-3 p-4 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl">
+                <span className="material-symbols-outlined text-amber-500 text-[18px]">volume_up</span>
+                <span className="text-xs text-slate-600 dark:text-slate-300 truncate flex-1">{formData.audioUrl}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const audio = new Audio(formData.audioUrl);
+                    audio.play().catch(e => console.error("Preview play failed:", e));
+                  }}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+                >
+                  Nghe thử
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">Giải thích đáp án (Tuỳ chọn)</label>
             <textarea 

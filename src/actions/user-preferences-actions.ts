@@ -133,7 +133,7 @@ const DEFAULT_CONFIG = {
       icon: "/images/english.png",
       ageGroups: [
         {
-          id: "kids",
+          id: "kid",
           label: "Kid (6-10 years)",
           avatar: "/images/avatars/kid.png",
           levels: [
@@ -143,8 +143,8 @@ const DEFAULT_CONFIG = {
           ]
         },
         {
-          id: "teens",
-          label: "Teen (11-15 years)",
+          id: "teen",
+          label: "Teen (11-16 years)",
           avatar: "/images/avatars/teen.png",
           levels: [
             { id: "beginner", label: "Beginner (Pre-A1, A1)" },
@@ -153,8 +153,8 @@ const DEFAULT_CONFIG = {
           ]
         },
         {
-          id: "adults",
-          label: "Adult (16+ years)",
+          id: "learner",
+          label: "Learner (16+)",
           avatar: "/images/avatars/adult.png",
           levels: [
             { id: "beginner", label: "Beginner (Pre-A1, A1)" },
@@ -171,7 +171,7 @@ const DEFAULT_CONFIG = {
       icon: "/images/math.png",
       ageGroups: [
         {
-          id: "kids",
+          id: "kid",
           label: "Kid (6-10 years)",
           avatar: "/images/avatars/kid.png",
           levels: []
@@ -184,7 +184,7 @@ const DEFAULT_CONFIG = {
       icon: "/images/global.png",
       ageGroups: [
         {
-          id: "kids",
+          id: "kid",
           label: "Kid (6-10 years)",
           avatar: "/images/avatars/kid.png",
           levels: []

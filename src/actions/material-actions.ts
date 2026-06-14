@@ -1125,12 +1125,20 @@ export async function getSystemMetadata() {
   }
 
   const gradesSet = new Set<string>(['Mầm non', 'Lớp 1', 'Lớp 2', 'Lớp 3', 'Lớp 4', 'Lớp 5', 'Lớp 6', 'Lớp 7', 'Lớp 8', 'Lớp 9', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Đại học', 'Khác']);
-  const audienceSet = new Set<string>(['Kids', 'Teens', 'Adults', 'Business']);
+  const audienceSet = new Set<string>(['kindergarten', 'kid', 'teen', 'learner']);
 
   assignments.forEach(a => {
     if (a.gradeLevel) gradesSet.add(a.gradeLevel.trim());
     if (a.targetAudiences && Array.isArray(a.targetAudiences)) {
-      a.targetAudiences.forEach((aud: string) => audienceSet.add(aud.trim()));
+      a.targetAudiences.forEach((aud: string) => {
+        const cleaned = aud.trim().toLowerCase();
+        if (cleaned === 'kids') audienceSet.add('kid');
+        else if (cleaned === 'teens') audienceSet.add('teen');
+        else if (cleaned === 'adults' || cleaned === 'business') audienceSet.add('learner');
+        else if (cleaned === 'kindergarten' || cleaned === 'kid' || cleaned === 'teen' || cleaned === 'learner') {
+          audienceSet.add(cleaned);
+        }
+      });
     }
   });
 

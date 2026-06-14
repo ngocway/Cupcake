@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { generateUniqueSlug } from '@/lib/slugify';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export interface AILessonResponse {
   title: string;
@@ -62,7 +63,7 @@ export async function generateAILesson({
   additionalInstructions?: string;
   generateVocab?: boolean;
 }): Promise<AILessonResponse | { error: string }> {
-  logProgress(`Starting OpenAI Generation (gpt-4o) for topic: ${topic}, Language: ${language}, ProvidedPassage: ${!!providedPassage}, ExtraInstructions: ${!!additionalInstructions}, GenerateVocab: ${generateVocab}`);
+  logProgress(`Starting OpenAI Generation (gpt-4o-mini) for topic: ${topic}, Language: ${language}, ProvidedPassage: ${!!providedPassage}, ExtraInstructions: ${!!additionalInstructions}, GenerateVocab: ${generateVocab}`);
   
   if (!process.env.OPENAI_API_KEY) {
     logProgress(`ERROR: OPENAI_API_KEY is missing`);
@@ -163,9 +164,9 @@ export async function generateAILesson({
       ]
     }`;
 
-    logProgress(`Calling OpenAI API (gpt-4o)...`);
+    logProgress(`Calling OpenAI API (gpt-4o-mini)...`);
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: "You are a helpful educational content creator." },
         { role: "user", content: prompt }
@@ -330,6 +331,19 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
 
     const assignmentId = randomUUID();
 
+    // Normalize subject to match taxonomy config subject id ("english", "math", "global")
+    let dbSubject = data.subject || "Khác";
+    const s = dbSubject.trim().toLowerCase();
+    if (s === 'english' || s === 'tiếng anh' || s === 'tieng anh') dbSubject = 'english';
+    else if (s === 'math' || s === 'toán' || s === 'toán học' || s === 'toan') dbSubject = 'math';
+    else if (s === 'science' || s === 'global' || s === 'global & science' || s === 'khoa học' || s === 'khoa hoc') dbSubject = 'global';
+
+    // Fallback thumbnail if DALL-E failed
+    let finalThumbnail = data.thumbnail;
+    if (!finalThumbnail) {
+      finalThumbnail = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentTitle)}`;
+    }
+
     await prisma.assignment.create({
       data: {
         id: assignmentId,
@@ -338,13 +352,15 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         shortDescription: data.shortDescription,
         readingText: passageHtml,
         gradeLevel: data.gradeLevel,
-        subject: data.subject,
+        subject: dbSubject,
         materialType: "READING",
         status: "DRAFT",
         teacherId: session.user.id,
         isAiGenerated: true,
         instructions: vocabHtml,
-        thumbnail: data.thumbnail || null,
+        thumbnail: finalThumbnail,
+        targetAudiences: [],
+        learningGoals: []
       }
     });
 
@@ -355,6 +371,9 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
         description: data.shortDescription,
         teacherId: session.user.id,
         assignmentId: assignmentId,
+        thumbnail: finalThumbnail,
+        targetAudiences: [],
+        learningGoals: []
       }
     });
 
@@ -629,6 +648,904 @@ export async function saveParsedLesson(data: ParsedLessonData) {
   } catch (err: any) {
     console.error("Save Parsed Lesson Error:", err);
     return { error: err.message };
+  }
+}
+
+const getR2Client = () => {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error('Cloudflare R2 environment variables are missing');
+  }
+
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+    },
+    forcePathStyle: true,
+  });
+};
+
+function getWavHeader(dataSize: number, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const fileSize = 36 + dataSize;
+  const header = Buffer.alloc(44);
+
+  header.write("RIFF", 0);
+  header.writeUInt32LE(fileSize, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16); // Subchunk1Size (16 for PCM)
+  header.writeUInt16LE(1, 20); // AudioFormat (1 for PCM)
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(dataSize, 40);
+
+  return header;
+}
+
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
+    }
+  });
+}
+
+function splitIntoSentences(text: string): string[] {
+  const regex = /[^.!?]+[.!?]+(?:\s|$)/g;
+  const matches = text.match(regex);
+  if (!matches) {
+    return [text];
+  }
+  return matches.map(s => s.trim()).filter(Boolean);
+}
+
+function chunkSentences(sentences: string[]): string[][] {
+  const chunks: string[][] = [];
+  let i = 0;
+  while (i < sentences.length) {
+    const remaining = sentences.length - i;
+    if (remaining >= 5) {
+      chunks.push(sentences.slice(i, i + 3));
+      i += 3;
+    } else if (remaining === 4) {
+      chunks.push(sentences.slice(i, i + 2));
+      chunks.push(sentences.slice(i + 2, i + 4));
+      i += 4;
+    } else {
+      chunks.push(sentences.slice(i));
+      break;
+    }
+  }
+  return chunks;
+}
+
+async function generateTTSHelper(text: string, voice = "Aoede", speed = 1.0, userId: string, mode = "inline") {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
+
+  if (!bucketName || !publicUrlBase) {
+    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
+  }
+
+  let buffer: Buffer;
+  let lastError: any = null;
+
+  if (!apiKey) {
+    throw new Error("Missing GEMINI_API_KEY or GOOGLE_API_KEY. Cannot generate audio using Google TTS.");
+  }
+
+  const modelsToTry = [
+    "gemini-3.1-flash-tts-preview",
+    "gemini-2.5-flash-tts",
+    "gemini-2.5-pro-tts",
+    "gemini-2.5-flash-lite-tts-preview"
+  ];
+  let success = false;
+
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`Trying Gemini TTS with model: ${modelName}`);
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+      let rateStr = "100%";
+      if (speed !== undefined && speed !== null) {
+        rateStr = `${Math.round(speed * 100)}%`;
+      } else if (mode !== "inline" && mode !== "global") {
+        rateStr = "slow";
+      }
+
+      const escapedText = escapeXml(text);
+      const ssmlText = `<speak><prosody rate="${rateStr}">${escapedText}</prosody></speak>`;
+
+      const geminiReqBody = {
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: ssmlText }]
+          }
+        ],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: {
+                voiceName: voice || "Aoede"
+              }
+            }
+          }
+        }
+      };
+
+      let response = null;
+      const retries = 3;
+
+      for (let i = 0; i < retries; i++) {
+        try {
+          response = await fetch(geminiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(geminiReqBody)
+          });
+          if (response.ok) {
+            break;
+          }
+          const errText = await response.text();
+          lastError = new Error(`Status ${response.status}: ${errText}`);
+          console.warn(`${modelName} attempt ${i + 1} failed: ${lastError.message}. Retrying...`);
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`${modelName} attempt ${i + 1} failed with fetch error: ${err.message}. Retrying...`);
+        }
+
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 800 * (i + 1)));
+        }
+      }
+
+      if (!response || !response.ok) {
+        throw new Error(`Failed to generate TTS with ${modelName} after ${retries} attempts. Last error: ${lastError?.message}`);
+      }
+
+      const data = await response.json();
+      const candidate = data.candidates?.[0];
+      const parts = candidate?.content?.parts || [];
+      const inlineData = parts.find((p: any) => p.inlineData)?.inlineData;
+
+      if (!inlineData || !inlineData.data) {
+        throw new Error(`No audio data returned from ${modelName}`);
+      }
+
+      const pcmBuffer = Buffer.from(inlineData.data, "base64");
+      const wavHeader = getWavHeader(pcmBuffer.length, 24000, 1, 16);
+      buffer = Buffer.concat([wavHeader, pcmBuffer]);
+      
+      success = true;
+      break;
+
+    } catch (err: any) {
+      console.warn(`TTS generation with model ${modelName} failed:`, err.message);
+      lastError = err;
+    }
+  }
+
+  if (!success) {
+    console.error("All Gemini TTS models failed.");
+    throw lastError || new Error("Failed to generate audio using Google TTS API");
+  }
+
+  const s3Client = getR2Client();
+  const ext = "wav";
+  const contentType = "audio/wav";
+  const fileName = `tts-gemini-${userId}-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+  const filePath = `uploads/${fileName}`;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: filePath,
+    Body: buffer!,
+    ContentType: contentType,
+  });
+
+  await s3Client.send(command);
+
+  const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
+
+  let words = null;
+  if (mode === "global") {
+    try {
+      const { toFile } = await import("openai");
+      const file = await toFile(buffer!, "speech.wav", { type: contentType });
+      const transcription = await openai.audio.transcriptions.create({
+        file,
+        model: "whisper-1",
+        response_format: "verbose_json",
+        timestamp_granularities: ["word"],
+      });
+      words = transcription.words;
+    } catch (err) {
+      console.error("OpenAI Whisper alignment failed in helper:", err);
+    }
+  }
+
+  return { url: publicUrl, words };
+}
+
+async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dall-e-2" = "dall-e-2", size: string = "1024x1024", userId: string) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("Missing OPENAI_API_KEY environment variable");
+  }
+
+  // Try gpt-image-2 first since dall-e-2 / dall-e-3 do not exist on this endpoint
+  const modelsToTry = ["gpt-image-2", "chatgpt-image-latest", "gpt-image-1.5", "gpt-image-1", "dall-e-3", "dall-e-2"];
+  let response = null;
+  let lastError = null;
+
+  for (const m of modelsToTry) {
+    try {
+      console.log(`Generating image using model: ${m}`);
+      const quality = m.startsWith("dall-e") ? "standard" : "auto";
+      response = await openai.images.generate({
+        model: m as any,
+        prompt,
+        n: 1,
+        size: size as any,
+        quality: quality as any
+      });
+      if (response?.data?.[0]) {
+        console.log(`Successfully generated image using model: ${m}`);
+        break;
+      }
+    } catch (err: any) {
+      console.error(`Failed to generate image with model ${m}:`, err.message);
+      lastError = err;
+    }
+  }
+
+  if (!response?.data?.[0]) {
+    throw new Error(`Failed to generate image from OpenAI: ${lastError?.message || "No working model found"}`);
+  }
+
+  const imgData = response.data[0];
+  let buffer: Buffer;
+  let mimeType = "image/png";
+  let ext = "png";
+
+  if (imgData.b64_json) {
+    buffer = Buffer.from(imgData.b64_json, "base64");
+  } else if (imgData.url) {
+    const imageUrl = imgData.url;
+    const imgResponse = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+    });
+
+    if (!imgResponse.ok) {
+      throw new Error(`Failed to fetch generated image from OpenAI (Status: ${imgResponse.status})`);
+    }
+
+    const arrayBuffer = await imgResponse.arrayBuffer();
+    buffer = Buffer.from(arrayBuffer);
+    mimeType = imgResponse.headers.get('content-type') || 'image/png';
+    ext = mimeType.split('/')[1] || 'png';
+    if (ext === 'jpeg') ext = 'jpg';
+  } else {
+    throw new Error("No image URL or b64_json data returned from OpenAI");
+  }
+
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
+
+  if (!bucketName || !publicUrlBase) {
+    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
+  }
+
+  const s3Client = getR2Client();
+  const fileName = `img-${userId}-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+  const filePath = `uploads/${fileName}`;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: filePath,
+    Body: buffer,
+    ContentType: mimeType,
+  });
+
+  await s3Client.send(command);
+
+  return `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
+}
+
+const progressCache = new Map<string, { status: string; percent: number }>();
+
+function setGenProgress(userId: string, status: string, percent: number) {
+  progressCache.set(userId, { status, percent });
+  try {
+    const logDir = path.join(process.cwd(), 'scratch');
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
+    const progressFile = path.join(logDir, `progress-${userId}.json`);
+    fs.writeFileSync(progressFile, JSON.stringify({ status, percent }));
+  } catch (err) {
+    console.error("Failed to write progress file:", err);
+  }
+}
+
+export async function getGenProgress() {
+  const session = await auth();
+  if (!session?.user?.id) return { status: "", percent: 0 };
+  
+  const userId = session.user.id;
+  if (progressCache.has(userId)) {
+    return progressCache.get(userId);
+  }
+  
+  try {
+    const progressFile = path.join(process.cwd(), 'scratch', `progress-${userId}.json`);
+    if (fs.existsSync(progressFile)) {
+      const content = fs.readFileSync(progressFile, 'utf-8');
+      return JSON.parse(content);
+    }
+  } catch (err) {
+    console.error("Failed to read progress file:", err);
+  }
+  
+  return { status: "", percent: 0 };
+}
+
+export async function generateAILessonFully(params: {
+  topic: string;
+  learningGoals: string[];
+  audience: string;
+  language: string;
+  length: string;
+  vocabCount: number;
+  mcqCount: number;
+  mcqMultiCount: number;
+  tfCount: number;
+  clozeCount: number;
+  reference?: string;
+  ttsVoice?: string;
+  ttsSpeed?: number;
+}) {
+  const session = await auth();
+  if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
+    return { error: "Unauthorized: Access denied." };
+  }
+
+  setGenProgress(session.user.id, "Đang khởi tạo cấu trúc và phân tích tham số...", 5);
+
+  const {
+    topic, learningGoals, audience, language, length,
+    vocabCount, mcqCount, mcqMultiCount, tfCount, clozeCount,
+    reference, ttsVoice = "Aoede", ttsSpeed = 1.0
+  } = params;
+
+  try {
+    // Parse length parameter to calculate target word count
+    let targetWordCount = 400;
+    const lenLower = length ? length.toLowerCase() : "";
+    if (lenLower.includes("200") || lenLower.includes("ngắn") || lenLower.includes("short")) {
+      targetWordCount = 200;
+    } else if (lenLower.includes("600") || lenLower.includes("dài") || lenLower.includes("long")) {
+      targetWordCount = 600;
+    } else if (lenLower.includes("800") || lenLower.includes("very long") || lenLower.includes("rất dài")) {
+      targetWordCount = 800;
+    }
+
+    // 1. GENERATE LESSON JSON
+    setGenProgress(session.user.id, "Đang soạn thảo nội dung bài học bằng AI (gpt-4o-mini)...", 10);
+    const gptPrompt = `Create a complete educational lesson for students in JSON format.
+    Topic: "${topic}"
+    Subject/Category: "English"
+    Audience: "${audience}"
+    Language: "${language}"
+    Target Reading Text Length: EXACTLY ${targetWordCount} words. The final text MUST contain at least ${targetWordCount - 30} words. This is a strict constraint!
+    Vocabulary count: ${vocabCount}
+    MCQ count: ${mcqCount}
+    MCQ Multi count: ${mcqMultiCount}
+    True/False count: ${tfCount}
+    Cloze count: ${clozeCount}
+    Selected Learning Goals of this lesson: ${learningGoals.join(", ")}
+    ${reference ? `Reference material / instructions: "${reference}"` : ""}
+
+    CRITICAL REQUIREMENTS FOR THE READING PASSAGE:
+    - The reading passage MUST contain at least ${targetWordCount - 30} words and be around ${targetWordCount} words in total.
+    - Write a detailed, fully-developed text with multiple sentences per paragraph.
+    - The passage MUST be structured logically and divided into 3-5 distinct paragraphs.
+    - Tailor the reading passage content, vocabulary selection, and question design to align closely with the selected learning goals: ${learningGoals.join(", ")}.
+
+    IMPORTANT: Tailor the reading passage content, vocabulary selection, and question design to align closely with the selected learning goals: ${learningGoals.join(", ")}.
+
+    Respond STRICTLY with a JSON object matching the following structure:
+    {
+      "title": "An engaging title for the lesson in ${language}",
+      "shortDescription": "A 1-2 sentence description in ${language}",
+      "gradeLevel": "A suitable grade level (e.g. Lớp 10, Lớp 1, Khác)",
+      "level": "A CEFR difficulty level (e.g. A1, A2, B1, B2)",
+      "tags": "A list of relevant skill tags separated by commas",
+      "passage": [
+         "Paragraph 1 text",
+         "Paragraph 2 text",
+         ...
+      ],
+      "vocabulary": [
+        {
+          "word": "word",
+          "pronunciation": "/IPA/",
+          "meaningVi": "Vietnamese meaning (SHORT direct translation)",
+          "meaningTh": "Thai meaning (SHORT)",
+          "meaningId": "Indonesian meaning (SHORT)",
+          "explanationEn": "English definition",
+          "exampleSentence": "Simple English example sentence using the word"
+        }
+      ],
+      "questions": [
+        {
+          "type": "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CLOZE_TEST",
+          "isMultiple": boolean,
+          "questionText": "Question text",
+          "points": 1.0,
+          "correctAnswers": ["Correct answer 1", ...],
+          "wrongAnswers": ["Wrong answer 1", ...],
+          "relevantSentences": "2-3 consecutive sentences extracted verbatim from the passage that support the correct answer of the question. MUST be identical to the sentences in the passage."
+        }
+      ]
+    }
+
+    CRITICAL:
+    - All text in title, passage, questions MUST be in ${language}.
+    - DO NOT return any markdown wrapping, only the raw JSON.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are an expert educational curriculum designer." },
+        { role: "user", content: gptPrompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const gptText = completion.choices[0].message.content;
+    if (!gptText) throw new Error("Empty response from OpenAI");
+    const parsedData = JSON.parse(gptText);
+
+    // 2. PREPARE PASSAGE CHUNKS
+    const paragraphs = parsedData.passage || [];
+    const thumbPrompt = `Simple, vivid cartoon style illustration for an educational lesson thumbnail themed around: "${topic}". Clean vector art style, isolated background, no text, no letters.`;
+    const inLessonPrompt = `Simple, vivid cartoon style illustration of: "${topic}". Clean vector art style, isolated white background, no text, no labels, engaging for students.`;
+
+    const assignmentId = randomUUID();
+    const placeholderThumbUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-thumb")}`;
+    const placeholderContentImgUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-content")}`;
+
+    const thumbnailImgUrl = placeholderThumbUrl;
+    const inLessonImageUrl = placeholderContentImgUrl;
+
+    const paragraphChunksList: { pIdx: number; chunkText: string }[] = [];
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const paraText = paragraphs[pIdx];
+      const sentences = splitIntoSentences(paraText);
+      const groups = chunkSentences(sentences);
+      for (const group of groups) {
+        paragraphChunksList.push({
+          pIdx,
+          chunkText: group.join(" ")
+        });
+      }
+    }
+
+    setGenProgress(session.user.id, "Đang tạo âm thanh giọng đọc bằng AI...", 30);
+
+    // 3. RUN TTS GENERATION IN PARALLEL (Backgrounding DALL-E)
+    const [
+      globalTtsRes,
+      chunksTtsRes
+    ] = await Promise.all([
+      // A. Global audio generation
+      (async () => {
+        const fullReadingText = paragraphs.join("\n\n");
+        const cleanFullText = fullReadingText.replace(/🔊/g, '').replace(/\s+/g, ' ').trim();
+        if (cleanFullText) {
+          try {
+            console.log(`Generating global TTS with voice ${ttsVoice} and speed ${ttsSpeed}`);
+            return await generateTTSHelper(cleanFullText, ttsVoice, ttsSpeed, session.user.id, "global");
+          } catch (err) {
+            console.error("Failed to generate global TTS audio:", err);
+          }
+        }
+        return { url: "", words: null };
+      })(),
+      // B. Chunk audios generation
+      Promise.all(paragraphChunksList.map(async (item, index) => {
+        try {
+          // Stagger calls by (index + 1) * 300ms to avoid Gemini concurrent rate limits and RPM limits
+          await new Promise(resolve => setTimeout(resolve, (index + 1) * 300));
+          console.log(`Generating passage chunk TTS staggered (index ${index}): "${item.chunkText}"`);
+          const ttsRes = await generateTTSHelper(item.chunkText, ttsVoice, ttsSpeed, session.user.id, "inline");
+          return {
+            pIdx: item.pIdx,
+            chunkText: item.chunkText,
+            audioUrl: ttsRes.url
+          };
+        } catch (err) {
+          console.error(`Failed to generate TTS for chunk "${item.chunkText}":`, err);
+          return {
+            pIdx: item.pIdx,
+            chunkText: item.chunkText,
+            audioUrl: ""
+          };
+        }
+      }))
+    ]);
+
+    const wholeAudioUrl = globalTtsRes.url;
+    const audioMetadata = globalTtsRes.words;
+
+    // 4. FORMAT LESSON READING TEXT HTML & INSERT CHUNK AUDIO MARKERS
+    setGenProgress(session.user.id, "Đang định dạng văn bản bài học...", 75);
+    const processedParagraphs: string[] = [];
+    const allChunksData: { text: string; audioUrl: string }[] = [];
+    const escapeAttr = (str: string) => str ? str.replace(/"/g, '&quot;').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const pChunks = chunksTtsRes.filter(c => c.pIdx === pIdx);
+      let paraHtml = "";
+      for (const chunk of pChunks) {
+        allChunksData.push({ text: chunk.chunkText, audioUrl: chunk.audioUrl });
+        if (chunk.audioUrl) {
+          const markerHtml = `<span class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" data-audio-url="${escapeAttr(chunk.audioUrl)}" contenteditable="false" draggable="true" title="Nghe Audio"><span class="material-symbols-outlined text-[16px]">volume_up</span></span>`;
+          paraHtml += chunk.chunkText + markerHtml + " ";
+        } else {
+          paraHtml += chunk.chunkText + " ";
+        }
+      }
+      processedParagraphs.push(`<p>${paraHtml.trim()}</p>`);
+    }
+
+    // Insert DALL-E-2 content image in the middle of readingTextHtml
+    if (inLessonImageUrl && processedParagraphs.length > 0) {
+      const middleIndex = Math.floor(processedParagraphs.length / 2);
+      const imgHtml = `<div class="my-6 text-center"><img src="${inLessonImageUrl}" alt="Lesson illustration" style="max-width: 100%; width: 50%; display: inline-block; border-radius: 0.75rem; margin: 0.5rem;" class="custom-editable-image" /></div>`;
+      processedParagraphs.splice(middleIndex, 0, imgHtml);
+    }
+
+    let readingTextHtml = processedParagraphs.join("");
+
+    // 5. FORMAT QUESTIONS & LINK TO PASSAGE CHUNKS
+    const questionsList = parsedData.questions || [];
+    setGenProgress(session.user.id, "Đang xử lý và liên kết câu hỏi...", 80);
+
+    const cleanStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/\s+/g, '').trim();
+
+    const questionsData = await Promise.all(questionsList.map(async (q: any, idx: number) => {
+      let contentObj: any = {};
+      const qType = q.type || "MULTIPLE_CHOICE";
+
+      if (qType === "MULTIPLE_CHOICE") {
+        const correctAnswers = q.correctAnswers || [];
+        const wrongAnswers = q.wrongAnswers || [];
+        const isMultipleSelect = q.isMultiple || correctAnswers.length > 1;
+
+        contentObj = {
+          questionText: q.questionText,
+          isMultiple: isMultipleSelect,
+          options: [
+            ...correctAnswers.map((t: string) => ({ id: Math.random().toString(36).substring(2), text: t, isCorrect: true })),
+            ...wrongAnswers.map((t: string) => ({ id: Math.random().toString(36).substring(2), text: t, isCorrect: false }))
+          ]
+        };
+      } else if (qType === "TRUE_FALSE") {
+        const correctStr = q.correctAnswers?.[0] || "Đúng";
+        const isTrue = correctStr.toLowerCase() === "đúng" || correctStr.toLowerCase() === "dung" || correctStr.toLowerCase() === "true";
+        contentObj = {
+          statement: q.questionText,
+          isTrue: isTrue
+        };
+      } else if (qType === "CLOZE_TEST") {
+        contentObj = {
+          textWithBlanks: q.questionText
+        };
+      }
+
+      // Match question's relevantSentences with the best paragraph chunk
+      let questionAudioUrl: string | null = null;
+      let questionExplanation = q.relevantSentences || "";
+
+      const cleanedRelevant = cleanStr(q.relevantSentences || "");
+      if (cleanedRelevant) {
+        let bestChunk = null;
+        let highestScore = 0;
+
+        for (const chunk of allChunksData) {
+          const cleanedChunk = cleanStr(chunk.text);
+          if (cleanedChunk.includes(cleanedRelevant) || cleanedRelevant.includes(cleanedChunk)) {
+            bestChunk = chunk;
+            break;
+          }
+
+          // Fallback word overlap match
+          const chunkWords = new Set(chunk.text.toLowerCase().split(/\s+/));
+          const relevantWords = (q.relevantSentences || "").toLowerCase().split(/\s+/);
+          const overlap = relevantWords.filter((w: string) => chunkWords.has(w)).length;
+          const score = overlap / Math.max(chunkWords.size, relevantWords.length);
+          if (score > highestScore) {
+            highestScore = score;
+            bestChunk = chunk;
+          }
+        }
+
+        // If direct match was found or word overlap score is reasonable, link it
+        if (bestChunk && (highestScore > 0.3 || cleanStr(bestChunk.text).includes(cleanedRelevant) || cleanedRelevant.includes(cleanStr(bestChunk.text)))) {
+          questionAudioUrl = bestChunk.audioUrl;
+          questionExplanation = bestChunk.text;
+        }
+      }
+
+      return {
+        type: (qType === "MULTIPLE_SELECT" ? "MULTIPLE_CHOICE" : qType) as any,
+        orderIndex: idx,
+        points: q.points || 1.0,
+        explanation: questionExplanation,
+        audioUrl: questionAudioUrl,
+        content: JSON.stringify(contentObj),
+        isAiGenerated: true,
+        isBanked: false,
+      };
+    }));
+
+    // 6. VOCABULARY LIST & HIGHLIGHTS
+    const vocabularies = parsedData.vocabulary || [];
+    const uniqueRunId = Date.now();
+    const vocabMap = new Map();
+
+    vocabularies.forEach((v: any, index: number) => {
+      const vocabId = `vocab-${uniqueRunId}-${index}`;
+      vocabMap.set(v.word.toLowerCase(), { ...v, vocabId });
+    });
+
+    // Replace first occurrence of vocabulary words in reading text (tokenized to avoid matching inside HTML tags/attributes)
+    const tagRegex = /(<[^>]+>)/g;
+    const tokens = readingTextHtml.split(tagRegex);
+
+    vocabMap.forEach((v, wordKey) => {
+      const escapedWord = v.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b(${escapedWord})\\b`, 'i');
+
+      for (let i = 0; i < tokens.length; i += 2) {
+        const token = tokens[i];
+        if (!token) continue;
+
+        const match = token.match(regex);
+        if (match) {
+          const actualWord = match[1];
+          const escapeHtml = (str: string) => (str || '').replace(/"/g, '&quot;');
+          const html = `<span class="relative inline-block custom-vocab-marker group/marker" data-vocab-id="${v.vocabId}" data-word="${escapeHtml(v.word)}" data-pronunciation="${escapeHtml(v.pronunciation)}" data-meaning-vi="${escapeHtml(v.meaningVi)}" data-meaning-th="${escapeHtml(v.meaningTh || '')}" data-meaning-id="${escapeHtml(v.meaningId || '')}" data-explanation-en="${escapeHtml(v.explanationEn)}" data-examples="${escapeHtml(v.exampleSentence)}" data-image="" contenteditable="false"><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">${actualWord}</span></span>`;
+          
+          tokens[i] = token.replace(regex, html);
+          
+          // Re-split the modified token to ensure any newly inserted HTML tags go to odd indices
+          const subTokens = tokens[i].split(tagRegex);
+          tokens.splice(i, 1, ...subTokens);
+          break;
+        }
+      }
+    });
+
+    readingTextHtml = tokens.join("");
+
+    const vocabHtml = `
+      <h3>Vocabulary List</h3>
+      <ul style="list-style-type: none; padding: 0;">
+        ${vocabularies.map((v: any) => `
+          <li style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+            <strong style="font-size: 1.1em; color: #2563eb;">${v.word}</strong> 
+            <span style="color: #64748b; font-style: italic;">[${v.pronunciation}]</span>
+            <div style="margin-top: 5px;">
+              <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">VI</span>
+              <span>${v.meaningVi}</span>
+            </div>
+            <div style="margin-top: 5px;">
+              <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">TH</span>
+              <span>${v.meaningTh || 'N/A'}</span>
+            </div>
+            <div style="margin-top: 5px;">
+              <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">ID</span>
+              <span>${v.meaningId || 'N/A'}</span>
+            </div>
+            <div style="margin-top: 3px; color: #475569;">
+              <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; color: #0369a1;">EN</span>
+              <span>${v.explanationEn}</span>
+            </div>
+            <div style="margin-top: 5px; font-size: 0.9em; color: #64748b;">
+              <strong>Example:</strong> ${v.exampleSentence}
+            </div>
+          </li>
+        `).join('')}
+      </ul>
+    `;
+
+    // 7. SAVE TO DATABASE
+    setGenProgress(session.user.id, "Đang lưu thông tin bài học và câu hỏi vào cơ sở dữ liệu...", 90);
+    const assignmentTitle = parsedData.title || "Untitled AI Lesson";
+    const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
+    const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
+
+    // Resolve matched category (defaulting to "Tiếng Anh")
+    const matchedCategory = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { nameVi: { equals: "Tiếng Anh", mode: 'insensitive' } },
+          { nameEn: { equals: "English", mode: 'insensitive' } }
+        ]
+      },
+      select: { id: true }
+    });
+
+    // Resolve audience IDs to match onboarding config keys (lowercase "kid", "teen", "learner")
+    let dbAudiences: string[] = [];
+    const lowerAud = audience ? audience.toLowerCase() : "";
+    if (lowerAud === "all") {
+      dbAudiences = ["kid", "teen", "learner"];
+    } else if (lowerAud === "kindergarten") {
+      dbAudiences = ["kid"]; // maps to Kid in onboarding config
+    } else if (lowerAud === "kid") {
+      dbAudiences = ["kid"];
+    } else if (lowerAud === "teen") {
+      dbAudiences = ["teen"];
+    } else if (lowerAud === "learner") {
+      dbAudiences = ["learner"];
+    } else if (lowerAud) {
+      dbAudiences = [lowerAud];
+    }
+
+    // Fallback thumbnail if DALL-E failed
+    let finalThumbnail = thumbnailImgUrl;
+    if (!finalThumbnail) {
+      finalThumbnail = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentTitle)}`;
+    }
+
+    await prisma.assignment.create({
+      data: {
+        id: assignmentId,
+        title: assignmentTitle,
+        slug: assignmentSlug,
+        shortDescription: parsedData.shortDescription || "",
+        readingText: readingTextHtml,
+        gradeLevel: parsedData.gradeLevel || "Khác",
+        subject: "english", // Save as "english" to match taxonomy config subject id
+        materialType: "READING",
+        status: "DRAFT",
+        teacherId: session.user.id,
+        isAiGenerated: true,
+        instructions: vocabHtml,
+        thumbnail: finalThumbnail,
+        audioUrl: wholeAudioUrl || null,
+        audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
+        targetAudiences: dbAudiences,
+        learningGoals: learningGoals,
+        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+      }
+    });
+
+    await prisma.lesson.create({
+      data: {
+        title: assignmentTitle,
+        slug: lessonSlug,
+        description: parsedData.shortDescription || "",
+        teacherId: session.user.id,
+        assignmentId: assignmentId,
+        thumbnail: finalThumbnail,
+        audioUrl: wholeAudioUrl || null,
+        audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
+        targetAudiences: dbAudiences,
+        learningGoals: learningGoals,
+        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+      }
+    });
+
+    if (questionsData.length > 0) {
+      const finalQuestionsData = questionsData.map((q: any) => ({
+        ...q,
+        assignmentId: assignmentId,
+      }));
+
+      await prisma.question.createMany({
+        data: finalQuestionsData
+      });
+    }
+
+    revalidatePath("/teacher/lessons");
+    revalidatePath("/teacher/materials");
+    revalidatePath("/admin/materials");
+
+    // Trigger background image generation and database updates
+    (async () => {
+      try {
+        console.log(`[Background] Starting DALL-E image generation for assignment ${assignmentId}`);
+        
+        // Generate actual images in parallel
+        const [actualThumbUrl, actualInLessonUrl] = await Promise.all([
+          generateDalleImageHelper(thumbPrompt, "dall-e-2", "1024x1024", session.user.id)
+            .catch(err => {
+              console.error("[Background] Failed to generate thumbnail image:", err);
+              return "";
+            }),
+          generateDalleImageHelper(inLessonPrompt, "dall-e-2", "1024x1024", session.user.id)
+            .catch(err => {
+              console.error("[Background] Failed to generate content image:", err);
+              return "";
+            })
+        ]);
+
+        console.log(`[Background] DALL-E completed. Thumb: ${actualThumbUrl}, Content: ${actualInLessonUrl}`);
+
+        const updateData: any = {};
+
+        if (actualThumbUrl) {
+          updateData.thumbnail = actualThumbUrl;
+        }
+
+        if (actualInLessonUrl) {
+          // Retrieve current assignment readingText to replace placeholder with actual URL
+          const currentAssignment = await prisma.assignment.findUnique({
+            where: { id: assignmentId },
+            select: { readingText: true }
+          });
+
+          if (currentAssignment && currentAssignment.readingText) {
+            const updatedReadingText = currentAssignment.readingText.replace(placeholderContentImgUrl, actualInLessonUrl);
+            updateData.readingText = updatedReadingText;
+          }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.assignment.update({
+            where: { id: assignmentId },
+            data: updateData
+          });
+
+          if (actualThumbUrl) {
+            await prisma.lesson.updateMany({
+              where: { assignmentId: assignmentId },
+              data: { thumbnail: actualThumbUrl }
+            });
+          }
+
+          console.log(`[Background] Successfully updated assignment and lesson with DALL-E images for ${assignmentId}`);
+        }
+      } catch (backgroundError) {
+        console.error("[Background] Error in background image generator:", backgroundError);
+      }
+    })();
+
+    setGenProgress(session.user.id, "Hoàn thành!", 100);
+    return { success: true, id: assignmentId };
+  } catch (error: any) {
+    console.error("Full automated lesson gen failed:", error);
+    if (session?.user?.id) {
+      setGenProgress(session.user.id, `Gặp lỗi khi tạo bài học: ${error.message || "Failed"}`, 0);
+    }
+    return { error: error.message || "Failed to fully generate lesson." };
   }
 }
 
