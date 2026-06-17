@@ -1,6 +1,7 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
+import { SyncCacheButton } from "@/components/admin/SyncCacheButton"
 
 export default async function AdminDashboardPage() {
   const session = await auth()
@@ -115,6 +116,7 @@ export default async function AdminDashboardPage() {
                  </div>
                  <span className="material-symbols-outlined text-neutral-600 group-hover:translate-x-1 transition-transform">chevron_right</span>
               </button>
+              <SyncCacheButton />
            </div>
         </div>
       </div>

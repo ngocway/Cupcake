@@ -24,7 +24,7 @@ interface Props {
   promises: {
     assignments: Promise<{ items: any[], total: number }>
     lessons:     Promise<{ items: any[], total: number }>
-    categoryTree: Promise<any[]>
+    categoryTree?: Promise<any[]>
     flashcards?: Promise<any[]>
     kindergartenGames?: Promise<any[]>
   }
@@ -50,7 +50,7 @@ function SectionSkeleton() {
         {[1, 2, 3, 4, 5, 6].map(i => (
           <div key={i} className="group flex flex-col h-full rounded-2xl relative">
             <div className="w-full aspect-video rounded-3xl overflow-hidden relative shadow-lg bg-secondary/10" />
-            <div className="relative -mt-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10">
+            <div className="relative -mt-5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg rounded-lg p-6 shadow-2xl z-20 border border-secondary/10">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-secondary/20" />
                 <div className="h-3 w-20 bg-secondary/20 rounded" />
@@ -113,9 +113,12 @@ const ExerciseList = memo(function ExerciseList({
   const exPage = useContentStore(s => s.exPage)
   const setExPage = useContentStore(s => s.setExPage)
   const userType = useContentStore(s => s.userType)
+  const studySubject = useContentStore(s => (s as any).studySubject)
+  const studyLevel = useContentStore(s => (s as any).studyLevel)
   
   const initializedKey = useRef('')
-  const currentKey = `ex-${searchParams.categoryId || ''}-${userType}-${searchKeyword || ''}`
+  const goalParam = searchParams.goal || searchParams.categoryId || ''
+  const currentKey = `ex-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
 
   useEffect(() => {
     if (initializedKey.current !== currentKey) {
@@ -140,9 +143,12 @@ const ExerciseList = memo(function ExerciseList({
         const qs = new URLSearchParams()
         qs.set('type', 'exercises')
         qs.set('page', nextPage.toString())
-        if (searchParams.categoryId) qs.set('categoryId', searchParams.categoryId)
+        if (searchParams.goal) qs.set('goal', searchParams.goal)
+        else if (searchParams.categoryId) qs.set('goal', searchParams.categoryId)
         if (searchKeyword) qs.set('search', searchKeyword)
         if (userType) qs.set('userType', userType)
+        if (studySubject) qs.set('subject', studySubject)
+        if (studyLevel) qs.set('level', studyLevel)
 
         fetch(`/api/feed?${qs.toString()}`)
           .then(r => r.json())
@@ -160,7 +166,7 @@ const ExerciseList = memo(function ExerciseList({
 
     if (bottomRef.current) observer.observe(bottomRef.current)
     return () => observer.disconnect()
-  }, [hasMoreEx, isFetchingMore, exPage, searchParams, userType, searchKeyword, currentKey, addExercises, setHasMoreEx, setExPage])
+  }, [hasMoreEx, isFetchingMore, exPage, searchParams, userType, studySubject, studyLevel, searchKeyword, currentKey, addExercises, setHasMoreEx, setExPage])
 
   if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
   if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
@@ -204,9 +210,12 @@ const LessonList = memo(function LessonList({
   const lePage = useContentStore(s => s.lePage)
   const setLePage = useContentStore(s => s.setLePage)
   const userType = useContentStore(s => s.userType)
+  const studySubject = useContentStore(s => (s as any).studySubject)
+  const studyLevel = useContentStore(s => (s as any).studyLevel)
   
   const initializedKey = useRef('')
-  const currentKey = `le-${searchParams.categoryId || ''}-${userType}-${searchKeyword || ''}`
+  const goalParam = searchParams.goal || searchParams.categoryId || ''
+  const currentKey = `le-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
 
   useEffect(() => {
     if (initializedKey.current !== currentKey) {
@@ -231,9 +240,12 @@ const LessonList = memo(function LessonList({
         const qs = new URLSearchParams()
         qs.set('type', 'lessons')
         qs.set('page', nextPage.toString())
-        if (searchParams.categoryId) qs.set('categoryId', searchParams.categoryId)
+        if (searchParams.goal) qs.set('goal', searchParams.goal)
+        else if (searchParams.categoryId) qs.set('goal', searchParams.categoryId)
         if (searchKeyword) qs.set('search', searchKeyword)
         if (userType) qs.set('userType', userType)
+        if (studySubject) qs.set('subject', studySubject)
+        if (studyLevel) qs.set('level', studyLevel)
 
         fetch(`/api/feed?${qs.toString()}`)
           .then(r => r.json())
@@ -251,7 +263,7 @@ const LessonList = memo(function LessonList({
 
     if (bottomRef.current) observer.observe(bottomRef.current)
     return () => observer.disconnect()
-  }, [hasMoreLe, isFetchingMore, lePage, searchParams, userType, searchKeyword, currentKey, addLessons, setHasMoreLe, setLePage])
+  }, [hasMoreLe, isFetchingMore, lePage, searchParams, userType, studySubject, studyLevel, searchKeyword, currentKey, addLessons, setHasMoreLe, setLePage])
 
   if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
   if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
@@ -441,8 +453,6 @@ const KindergartenGameList = memo(function KindergartenGameList({ promise }: { p
   )
 });
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
@@ -452,9 +462,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const t = useTranslations("home")
   const nt = useTranslations("nav")
   const locale = useLocale()
-
-  // Resolve categoryTree early to get actual categories
-  const categoryTree = use(promises.categoryTree)
 
   // Local states — switching tab never triggers server roundtrip
   const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "lessons")
@@ -484,11 +491,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
        if (activeTab === "lessons" || activeTab === "exercises") {
          setActiveTab("flashcards");
        }
-    } else {
+     } else {
        if (activeTab === "flashcards" || activeTab === "games") {
          setActiveTab("lessons");
        }
-    }
+     }
   }, [isKindergarten, activeTab]);
 
   const setNativeLanguage   = useContentStore(s => s.setNativeLanguage)
@@ -520,64 +527,61 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
   }, [initialUserType, initialStudySubject, initialStudyAgeGroup, initialStudyLevel, setUserType, setStudySubject, setStudyAgeGroup, setStudyLevel, setNativeLanguage]);
 
-  // Sync URL categoryId → store selectedCategoryId / selectedSubCategoryId
-  const urlCategoryId = currentParams.get("categoryId") || "";
+  // Sync URL goal → store selectedCategoryId / selectedSubCategoryId (used as goal compatibility bridge)
+  const urlGoal = currentParams.get("goal") || currentParams.get("categoryId") || "";
 
-  // Restore preferred category from localStorage if visiting root without category
+  // Restore preferred goal from localStorage if visiting root without category/goal
   useEffect(() => {
-    const rawUrlCategoryId = currentParams.get("categoryId");
-    if (rawUrlCategoryId === null) {
-      const savedCatId = localStorage.getItem("cupcakes_preferred_category_id");
-      if (savedCatId) {
+    const rawUrlGoal = currentParams.get("goal") || currentParams.get("categoryId");
+    if (rawUrlGoal === null) {
+      const savedGoalId = localStorage.getItem("cupcakes_preferred_goal_id") || localStorage.getItem("cupcakes_preferred_category_id");
+      if (savedGoalId) {
         const qs = new URLSearchParams(window.location.search);
-        qs.set("categoryId", savedCatId);
+        qs.set("goal", savedGoalId);
         router.replace(`/?${qs.toString()}`, { scroll: false });
       }
     }
   }, [currentParams, router]);
-  const getActiveCategories = useMemo(() => {
-    if (!urlCategoryId) return { categoryId: "", subCategoryId: "" };
-    
-    for (const cat of categoryTree) {
-      if (cat.id === urlCategoryId) {
-        return { categoryId: cat.id, subCategoryId: "" };
-      }
-      if (cat.children) {
-        for (const sub of cat.children) {
-          if (sub.id === urlCategoryId) {
-            return { categoryId: cat.id, subCategoryId: sub.id };
-          }
-        }
-      }
-    }
-    return { categoryId: "", subCategoryId: "" };
-  }, [categoryTree, urlCategoryId]);
+
+  // Local config state populated in useEffect
+  const [onboardingConfig, setOnboardingConfig] = useState<any>(null)
 
   useEffect(() => {
-    setSelectedCategoryId(getActiveCategories.categoryId);
-    setSelectedSubCategoryId(getActiveCategories.subCategoryId);
-  }, [getActiveCategories, setSelectedCategoryId, setSelectedSubCategoryId]);
+    getOnboardingConfig().then(config => {
+      if (config) setOnboardingConfig(config)
+    })
+  }, [])
+
+  useEffect(() => {
+    setSelectedCategoryId(urlGoal);
+    setSelectedSubCategoryId("");
+  }, [urlGoal, setSelectedCategoryId, setSelectedSubCategoryId]);
+
+  const activeGoalName = useMemo(() => {
+    if (!urlGoal || !onboardingConfig) return "";
+    const subjectData = onboardingConfig.subjects?.find((s: any) => s.id === studySubject);
+    const ageGroupData = subjectData?.ageGroups?.find((a: any) => a.id === studyAgeGroup);
+    const goalData = ageGroupData?.goals?.find((g: any) => g.id === urlGoal);
+    return goalData ? goalData.label : "";
+  }, [onboardingConfig, studySubject, studyAgeGroup, urlGoal]);
+
+  // Cleanup obsolete/invalid goals (e.g. leftovers from previous Category model)
+  useEffect(() => {
+    if (onboardingConfig && urlGoal && urlGoal !== "all" && !activeGoalName) {
+      console.warn(`Obsolete/invalid goal detected: ${urlGoal}. Resetting to all.`);
+      localStorage.removeItem("cupcakes_preferred_goal_id");
+      localStorage.removeItem("cupcakes_preferred_category_id");
+      const qs = new URLSearchParams(window.location.search);
+      qs.delete("goal");
+      qs.delete("categoryId");
+      router.replace(`/?${qs.toString()}`, { scroll: false });
+    }
+  }, [onboardingConfig, urlGoal, activeGoalName, router]);
 
   // Extract display names of category and sub-category for the homepage sentence summary
   const activeNames = useMemo(() => {
-    let categoryName = "";
-    let subCategoryName = "";
-    
-    const { categoryId, subCategoryId } = getActiveCategories;
-    if (categoryId) {
-      const cat = categoryTree.find((c: any) => c.id === categoryId);
-      if (cat) {
-        categoryName = cat.nameEn || cat.nameVi || "";
-        if (subCategoryId && cat.children) {
-          const sub = cat.children.find((s: any) => s.id === subCategoryId);
-          if (sub) {
-            subCategoryName = sub.nameEn || sub.nameVi || "";
-          }
-        }
-      }
-    }
-    return { categoryName, subCategoryName };
-  }, [categoryTree, getActiveCategories]);
+    return { categoryName: activeGoalName, subCategoryName: "" };
+  }, [activeGoalName]);
 
   // Avatar lookup map for landing page summary
   const avatarMap: Record<string, { label: string; src: string }> = {
@@ -601,7 +605,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const [tempStudySubject, setTempStudySubject] = useState(studySubject)
   const [tempStudyAgeGroup, setTempStudyAgeGroup] = useState(studyAgeGroup)
   const [tempStudyLevel, setTempStudyLevel] = useState(studyLevel)
-  const [onboardingConfig, setOnboardingConfig] = useState<any>(null)
 
   // Sync temp states from store whenever the modal is opened
   useEffect(() => {
@@ -624,12 +627,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     studyAgeGroup, 
     studyLevel
   ])
-
-  useEffect(() => {
-    getOnboardingConfig().then(config => {
-      if (config) setOnboardingConfig(config)
-    })
-  }, [])
 
   const currentLevels = onboardingConfig?.subjects?.find((s: any) => s.id === tempStudySubject)?.ageGroups?.find((a: any) => a.id === tempStudyAgeGroup)?.levels || [];
   const isAllStepsCompleted = !!tempStudySubject && !!tempStudyAgeGroup && (currentLevels.length === 0 || !!tempStudyLevel);
@@ -664,11 +661,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   useEffect(() => {
     // Use initialStudySubject to prevent race condition during hydration
     const effectiveSubject = studySubject || initialStudySubject;
-    if (!effectiveSubject && !urlCategoryId && !hasAutoOpened) {
+    if (!effectiveSubject && !urlGoal && !hasAutoOpened) {
       setIsFilterModalOpen(true)
       setHasAutoOpened(true)
     }
-  }, [urlCategoryId, hasAutoOpened, studySubject, initialStudySubject])
+  }, [urlGoal, hasAutoOpened, studySubject, initialStudySubject])
 
   const handleOpenModal = () => {
     setTempUserType(userType)
@@ -706,8 +703,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
 
     // 2. Commit category and sub-category
-    setSelectedCategoryId(tempCategoryId)
-    setSelectedSubCategoryId(tempSubCategoryId)
+    setSelectedCategoryId("")
+    setSelectedSubCategoryId("")
 
     // 3. Trigger background update to server
     await updateAllPreferences({
@@ -718,18 +715,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       studyLevel: tempStudyLevel
     }).catch(console.error);
 
-    // 4. Update URL categoryId
+    // 4. Update URL goal and categoryId
     const qs = new URLSearchParams(window.location.search)
-    if (tempSubCategoryId) {
-      qs.set("categoryId", tempSubCategoryId)
-      localStorage.setItem("cupcakes_preferred_category_id", tempSubCategoryId)
-    } else if (tempCategoryId) {
-      qs.set("categoryId", tempCategoryId)
-      localStorage.setItem("cupcakes_preferred_category_id", tempCategoryId)
-    } else {
-      qs.delete("categoryId")
-      localStorage.removeItem("cupcakes_preferred_category_id")
-    }
+    qs.delete("categoryId")
+    qs.delete("goal")
+    localStorage.removeItem("cupcakes_preferred_category_id")
+    localStorage.removeItem("cupcakes_preferred_goal_id")
 
     // Transition instantly, no artificial delay
     startTransition(() => {

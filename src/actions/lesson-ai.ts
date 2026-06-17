@@ -548,19 +548,6 @@ export async function saveParsedLesson(data: ParsedLessonData) {
       passageHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
     }
 
-    let matchedCategory = null;
-    if (data.subject) {
-      matchedCategory = await prisma.category.findFirst({
-        where: {
-          OR: [
-            { nameVi: { equals: data.subject, mode: 'insensitive' } },
-            { nameEn: { equals: data.subject, mode: 'insensitive' } }
-          ]
-        },
-        select: { id: true }
-      });
-    }
-
     let finalTags = "";
     if (data.tags) {
       const dbPopularTags = await prisma.tag.findMany({
@@ -612,8 +599,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         status: "DRAFT",
         teacherId: session.user.id,
         targetAudiences: data.targetAudience ? [data.targetAudience.toLowerCase()] : [],
-        tags: finalTags,
-        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+        tags: finalTags
       }
     });
 
@@ -624,8 +610,7 @@ export async function saveParsedLesson(data: ParsedLessonData) {
         description: data.shortDescription,
         teacherId: session.user.id,
         assignmentId: assignmentId,
-        targetAudiences: data.targetAudience ? [data.targetAudience.toLowerCase()] : [],
-        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+        targetAudiences: data.targetAudience ? [data.targetAudience.toLowerCase()] : []
       }
     });
 
@@ -736,7 +721,7 @@ function chunkSentences(sentences: string[]): string[][] {
   return chunks;
 }
 
-async function generateTTSHelper(text: string, voice = "Aoede", speed = 1.0, userId: string, mode = "inline") {
+export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1.0, userId: string, mode = "inline") {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const bucketName = process.env.R2_BUCKET_NAME;
   const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
@@ -1390,17 +1375,6 @@ export async function generateAILessonFully(params: {
     const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
     const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
 
-    // Resolve matched category (defaulting to "Tiếng Anh")
-    const matchedCategory = await prisma.category.findFirst({
-      where: {
-        OR: [
-          { nameVi: { equals: "Tiếng Anh", mode: 'insensitive' } },
-          { nameEn: { equals: "English", mode: 'insensitive' } }
-        ]
-      },
-      select: { id: true }
-    });
-
     // Resolve audience IDs to match onboarding config keys (lowercase "kid", "teen", "learner")
     let dbAudiences: string[] = [];
     const lowerAud = audience ? audience.toLowerCase() : "";
@@ -1442,8 +1416,7 @@ export async function generateAILessonFully(params: {
         audioUrl: wholeAudioUrl || null,
         audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
         targetAudiences: dbAudiences,
-        learningGoals: learningGoals,
-        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+        learningGoals: learningGoals
       }
     });
 
@@ -1458,8 +1431,7 @@ export async function generateAILessonFully(params: {
         audioUrl: wholeAudioUrl || null,
         audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
         targetAudiences: dbAudiences,
-        learningGoals: learningGoals,
-        categories: matchedCategory ? { connect: [{ id: matchedCategory.id }] } : undefined
+        learningGoals: learningGoals
       }
     });
 

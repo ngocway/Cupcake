@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { auth } from '@/auth'
-import { getCategoryAndDescendantIds } from '@/lib/cached-queries'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,7 +10,7 @@ export async function GET(request: NextRequest) {
     const tags = tagsParam ? tagsParam.split(',').filter(Boolean) : []
     const subject = searchParams.get('subject') || ''
     const gradeLevel = searchParams.get('gradeLevel') || ''
-    const categoryId = searchParams.get('categoryId') || ''
+    const goal = searchParams.get('goal') || searchParams.get('categoryId') || ''
     const sort = searchParams.get('sort') || 'newest'
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
     const limit = 12
@@ -28,9 +27,8 @@ export async function GET(request: NextRequest) {
     }
     if (subject) where.subject = subject
     if (gradeLevel) where.gradeLevel = gradeLevel
-    if (categoryId) {
-      const categoryIds = await getCategoryAndDescendantIds(categoryId)
-      where.categories = { some: { id: { in: categoryIds } } }
+    if (goal) {
+      where.learningGoals = { has: goal }
     }
     if (tags.length > 0) {
       where.AND = tags.map((tag: string) => ({

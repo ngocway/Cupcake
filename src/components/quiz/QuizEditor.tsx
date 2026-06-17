@@ -7,8 +7,9 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle, MoreVertical, X, Uploa
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
 import type { MaterialType } from './types';
-import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveMaterialThumbnail } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
 import { getPopularTags } from '@/actions/tag-actions';
+import { generateNewUniqueSlugAction, updateMaterialSlugAction } from '@/actions/update-slug-action';
 import { MultipleChoiceBuilder } from './MultipleChoiceBuilder';
 import { ClozeTestBuilder } from './ClozeTestBuilder';
 import { MatchingBuilder } from './MatchingBuilder';
@@ -179,6 +180,36 @@ export function QuizEditor() {
   const { isHidden } = useScrollDirection();
   
   const id = params?.id as string;
+  const [currentId, setCurrentId] = useState(id);
+
+  const lastSavedStateRef = React.useRef<string>('');
+
+  const getSerializedState = () => {
+    return JSON.stringify({
+      title,
+      questions,
+      subject,
+      gradeLevel,
+      shortDescription,
+      instructions,
+      tags,
+      targetAudiences,
+      audienceLevels,
+      learningGoals,
+      thumbnail
+    });
+  };
+
+  useEffect(() => {
+    if (id === 'new') {
+      lastSavedStateRef.current = getSerializedState();
+    }
+  }, []);
+
+  useEffect(() => {
+    setCurrentId(id);
+  }, [id]);
+
   const assignToClassId = searchParams.get('assignToClass');
 
   const [questions, setQuestions] = useState<BaseQuestionProps[]>([
@@ -198,6 +229,7 @@ export function QuizEditor() {
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const [title, setTitle] = useState('Toán lớp 5 - Tuần 12');
+  const [originalTitle, setOriginalTitle] = useState('Toán lớp 5 - Tuần 12');
   const [subject, setSubject] = useState('Khác');
   const [gradeLevel, setGradeLevel] = useState('Khác');
   const [shortDescription, setShortDescription] = useState('');
@@ -205,7 +237,7 @@ export function QuizEditor() {
   const [newTagInput, setNewTagInput] = useState('');
   const [popularTagsList, setPopularTagsList] = useState<string[]>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
-  const [level, setLevel] = useState<string>('');
+  const [audienceLevels, setAudienceLevels] = useState<Record<string, string>>({});
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
@@ -221,12 +253,25 @@ export function QuizEditor() {
   }, []);
 
 
+  const getOrCreateRealId = async (): Promise<string> => {
+    if (currentId && currentId !== 'new') {
+      return currentId;
+    }
+    const newId = await createDraftMaterial(materialType || 'EXERCISE');
+    setCurrentId(newId);
+    const search = searchParams?.toString();
+    const newUrl = `/teacher/materials/${newId}/edit${search ? '?' + search : ''}`;
+    window.history.replaceState(null, '', newUrl);
+    return newId;
+  };
+
   const handleThumbnailChange = async (newValue: string | null) => {
     setIsUploadingThumbnail(true);
     const previousThumbnail = thumbnail;
     setThumbnail(newValue);
     try {
-      const result = await saveMaterialThumbnail(id || 'clp_reading_001', newValue);
+      const realId = await getOrCreateRealId();
+      const result = await saveMaterialThumbnail(realId || 'clp_reading_001', newValue);
       if (result.success) {
         toast.success(newValue ? 'Tải ảnh đại diện thành công!' : 'Đã gỡ bỏ ảnh đại diện!');
       } else {
@@ -293,6 +338,7 @@ export function QuizEditor() {
         const data = await res.json();
         if (data.assignment) {
           setTitle(data.assignment.title);
+          setOriginalTitle(data.assignment.title);
           
           let normalizedSubject = 'Khác';
           if (data.assignment.subject) {
@@ -313,8 +359,8 @@ export function QuizEditor() {
           } else {
             setTargetAudiences([]);
           }
-          if (data.assignment.level) {
-            setLevel(data.assignment.level);
+          if (data.assignment.audienceLevels) {
+            setAudienceLevels(data.assignment.audienceLevels as Record<string, string>);
           }
           if (data.assignment.learningGoals) {
             setLearningGoals(data.assignment.learningGoals || []);
@@ -329,6 +375,21 @@ export function QuizEditor() {
             setQuestions(data.assignment.questions);
             setActiveId(data.assignment.questions[0].id);
           }
+
+          // Capture for dirty check
+          lastSavedStateRef.current = JSON.stringify({
+            title: data.assignment.title,
+            questions: data.assignment.questions?.length > 0 ? data.assignment.questions : questions,
+            subject: normalizedSubject,
+            gradeLevel: data.assignment.gradeLevel || 'Khác',
+            shortDescription: data.assignment.shortDescription || '',
+            instructions: data.assignment.instructions || '',
+            tags: data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : [],
+            targetAudiences: data.assignment.targetAudiences ? data.assignment.targetAudiences.map((t: string) => t.toLowerCase()) : [],
+            audienceLevels: data.assignment.audienceLevels || {},
+            learningGoals: data.assignment.learningGoals || [],
+            thumbnail: data.assignment.thumbnail || null
+          });
         }
       } catch (err) {
         console.error('Failed to fetch assignment:', err);
@@ -355,11 +416,12 @@ export function QuizEditor() {
 
   // Manual save function
   const handleSave = async () => {
-    if (!id || id === 'new' || loading || fetchError) return;
+    if (loading || fetchError) return;
     setSaveStatus('SAVING');
     try {
+      const realId = await getOrCreateRealId();
       await autoSaveMaterial({
-        id,
+        id: realId,
         title,
         questions,
         subject,
@@ -368,11 +430,12 @@ export function QuizEditor() {
         instructions,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
-        level,
+        audienceLevels,
         learningGoals,
         thumbnail
       });
       setSaveStatus('SAVED');
+      lastSavedStateRef.current = getSerializedState();
     } catch (err) {
       console.error('Save failed:', err);
       setSaveStatus('ERROR');
@@ -389,6 +452,8 @@ export function QuizEditor() {
 
     setSaveStatus('SAVING');
     try {
+      const realId = await getOrCreateRealId();
+
       // 1. Save all questions marked for banking
       const questionsToBank = validQuestions.filter(q => q.isBanked !== false);
       if (questionsToBank.length > 0) {
@@ -403,27 +468,24 @@ export function QuizEditor() {
       }
 
       // 2. Save the assignment version
-      if (id && id !== 'new') {
-        // Save only valid questions for the final version
-        await autoSaveMaterial({ 
-          id, 
-          title, 
-          questions: validQuestions,
-          subject,
-          gradeLevel,
-          shortDescription,
-          instructions,
-          tags: tags.join(','),
-          targetAudiences: targetAudiences,
-          level,
-          learningGoals,
-          thumbnail
-        });
-        
-        // If we came from a class assignment flow, assign it now
-        if (assignToClassId) {
-          await syncAssignmentClasses(id, { classIds: [assignToClassId] });
-        }
+      await autoSaveMaterial({ 
+        id: realId, 
+        title, 
+        questions: validQuestions,
+        subject,
+        gradeLevel,
+        shortDescription,
+        instructions,
+        tags: tags.join(','),
+        targetAudiences: targetAudiences,
+        audienceLevels,
+        learningGoals,
+        thumbnail
+      });
+      
+      // If we came from a class assignment flow, assign it now
+      if (assignToClassId) {
+        await syncAssignmentClasses(realId, { classIds: [assignToClassId] });
       }
       
       alert('Chúc mừng! Bài tập đã được hoàn tất và các câu hỏi đã được cập nhật vào ngân hàng cá nhân của bạn.');
@@ -455,11 +517,26 @@ export function QuizEditor() {
       return;
     }
 
+    // Check if there are any changes since last saved state
+    const currentStateStr = getSerializedState();
+    const hasChanges = currentStateStr !== lastSavedStateRef.current;
+
+    if (!hasChanges) {
+      // No changes, redirect immediately
+      if (assignToClassId) {
+        router.push(`/teacher/classes/${assignToClassId}`);
+      } else {
+        router.push('/teacher/materials');
+      }
+      return;
+    }
+
     // 2. Perform a final save to ensure the last few seconds of changes are captured
     setSaveStatus('SAVING');
     try {
+      const realId = await getOrCreateRealId();
       await autoSaveMaterial({
-        id,
+        id: realId,
         title,
         questions,
         subject,
@@ -467,8 +544,8 @@ export function QuizEditor() {
         shortDescription,
         instructions,
         tags: tags.join(','),
-                targetAudiences: targetAudiences,
-        level,
+        targetAudiences: targetAudiences,
+        audienceLevels,
         learningGoals,
         thumbnail
       });
@@ -558,6 +635,13 @@ export function QuizEditor() {
           content.caseSensitive = content.caseSensitive ?? false;
         }
 
+        if (type === 'REORDER' && content.items) {
+          content.items = content.items.map((item: any) => ({
+            ...item,
+            id: item.id || uuidv4()
+          }));
+        }
+
         const explanation = content.explanation;
         delete content.explanation;
 
@@ -578,18 +662,67 @@ export function QuizEditor() {
       return;
     }
 
-    setQuestions((prev) => {
-      // If there's only 1 question and it's a completely blank template
-      const content = prev[0]?.content as any;
-      const isDefaultBlank = prev.length === 1 && (!content || !content.questionText || content.questionText.trim() === '');
-      if (isDefaultBlank) {
-        return aiQuestions;
-      }
-      return [...prev, ...aiQuestions];
-    });
+    let updatedQuestions = [...questions];
+    const firstContent = questions[0]?.content as any;
+    const isDefaultBlank = questions.length === 1 && (!firstContent || !firstContent.questionText || firstContent.questionText.trim() === '');
+    
+    if (isDefaultBlank) {
+      updatedQuestions = aiQuestions;
+    } else {
+      updatedQuestions = [...questions, ...aiQuestions];
+    }
 
+    setQuestions(updatedQuestions);
     setActiveId(aiQuestions[0].id);
     setShowAIModal(false);
+
+    // Auto-save to database immediately
+    if (id && id !== 'new' && !loading && !fetchError) {
+      setSaveStatus('SAVING');
+      autoSaveMaterial({
+        id,
+        title: metadata?.title || title,
+        questions: updatedQuestions,
+        subject,
+        gradeLevel,
+        shortDescription: metadata?.shortDescription || shortDescription,
+        instructions: metadata?.instructions || instructions,
+        tags: tags.join(','),
+        targetAudiences: metadata?.targetAudiences || targetAudiences,
+        audienceLevels: metadata?.audienceLevels || audienceLevels,
+        learningGoals,
+        thumbnail: metadata?.thumbnail || thumbnail
+      }).then(() => {
+        setSaveStatus('SAVED');
+      }).catch((err) => {
+        console.error('Autosave after AI generation failed:', err);
+        setSaveStatus('ERROR');
+      });
+    }
+
+    // Start polling the backend to get the DALL-E generated thumbnail once it finishes
+    if (id && id !== 'new') {
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        if (attempts > 15) {
+          clearInterval(interval);
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/assignments/${id}?t=${Date.now()}`);
+          const data = await res.json();
+          if (data.assignment?.thumbnail && !data.assignment.thumbnail.includes('api.dicebear.com')) {
+            setThumbnail(data.assignment.thumbnail);
+            clearInterval(interval);
+            console.log("Background DALL-E thumbnail loaded successfully via polling:", data.assignment.thumbnail);
+          }
+        } catch (e) {
+          console.error("Error polling thumbnail:", e);
+        }
+      }, 3000);
+    }
   };
 
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
@@ -788,6 +921,26 @@ export function QuizEditor() {
   const isValid = isQuestionValid(activeQuestion);
   const validationMsg = getValidationMessage(activeQuestion);
 
+  const handleTitleBlur = async () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || trimmedTitle === originalTitle || id === 'new') return;
+
+    try {
+      const newSlug = await generateNewUniqueSlugAction(trimmedTitle, 'assignment');
+      if (!newSlug) return;
+
+      const confirmMsg = `Bạn vừa đổi tên bài tập.\nBạn có muốn cập nhật đường dẫn (slug) thành '${newSlug}' cho khớp với tiêu đề mới không?\n\nLưu ý: Nếu học sinh đang sử dụng đường dẫn cũ, thay đổi này sẽ làm đường dẫn cũ không hoạt động.`;
+      if (confirm(confirmMsg)) {
+        await updateMaterialSlugAction(id, newSlug);
+        toast.success('Đã cập nhật đường dẫn bài tập mới!');
+      }
+      setOriginalTitle(trimmedTitle);
+    } catch (err) {
+      console.error('Lỗi khi cập nhật slug:', err);
+      toast.error('Không thể cập nhật đường dẫn (slug)');
+    }
+  };
+
   const renderActiveBuilder = () => {
     if (!activeQuestion) return null;
     
@@ -818,6 +971,7 @@ export function QuizEditor() {
     <div className="flex flex-col min-h-screen bg-background-light dark:bg-background-dark text-[#111418] dark:text-white antialiased">
       {showAIModal && (
         <AIGeneratorModal 
+          assignmentId={id}
           onClose={() => setShowAIModal(false)}
           onQuestionsGenerated={handleAIGeneratedQuestions}
         />
@@ -848,6 +1002,7 @@ export function QuizEditor() {
                 <input 
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  onBlur={handleTitleBlur}
                   className="text-[#111418] dark:text-white text-lg font-bold leading-tight bg-transparent border-none p-0 focus:ring-0 w-full truncate"
                   placeholder="Nhập tiêu đề bài tập..."
                 />
@@ -1389,8 +1544,8 @@ export function QuizEditor() {
                 setSubject={setSubject}
                 targetAudiences={targetAudiences}
                 setTargetAudiences={setTargetAudiences}
-                level={level}
-                setLevel={setLevel}
+                audienceLevels={audienceLevels}
+                setAudienceLevels={setAudienceLevels}
                 learningGoals={learningGoals}
                 setLearningGoals={setLearningGoals}
               />

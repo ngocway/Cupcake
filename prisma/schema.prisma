@@ -166,6 +166,7 @@ model Assignment {
   readingText           String?
   gradeLevel            String?
   level                 String?
+  audienceLevels        Json?
   subject               String?
   instructions          String?
   shortDescription      String?
@@ -189,7 +190,6 @@ model Assignment {
   lesson                Lesson?
   questions             Question[]
   submissions           Submission[]
-  categories            Category[]
   mediaAttachments      MediaAttachment[]
 
   @@index([status])
@@ -321,6 +321,7 @@ model Lesson {
   targetAudiences String[]         @default([])
   learningGoals   String[]         @default([])
   level           String?
+  audienceLevels  Json?
   materialType    String?          @default("READING")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
@@ -331,7 +332,6 @@ model Lesson {
   teacher         User             @relation(fields: [teacherId], references: [id])
   reviews         LessonReview[]
   purchases       Purchase[]
-  categories      Category[]
   progress        LessonProgress[]
   targetClasses   LessonClass[]
 
@@ -515,31 +515,6 @@ enum QuestionType {
   REORDER
 }
 
-model Category {
-  id            String   @id @default(cuid())
-  nameVi        String   @default("")
-  nameEn        String   @default("")
-  slug          String   @unique
-  icon          String?
-  color         String?
-  descriptionVi String?
-  descriptionEn String?
-  parentId      String?
-  orderIndex    Int      @default(0)
-  isHidden      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children Category[] @relation("CategoryHierarchy")
-
-  assignments Assignment[]
-  lessons     Lesson[]
-
-  @@index([parentId])
-  @@index([orderIndex])
-}
-
 model HomepageFeed {
   id              String   @id @default(cuid())
   sourceId        String   @unique
@@ -556,10 +531,11 @@ model HomepageFeed {
   viewCount       Int      @default(0)
   reviewCount     Int      @default(0)
   questionCount   Int      @default(0)
-  categoryId      String?
   targetAudiences String[] @default([])
   learningGoals   String[] @default([])
   level           String?
+  audienceLevels  Json?
+  subject         String?
   tags            String[] @default([])
   status          String   @default("PUBLIC")
   createdAt       DateTime @default(now())
@@ -569,7 +545,6 @@ model HomepageFeed {
   @@index([status])
   @@index([createdAt])
   @@index([viewCount])
-  @@index([categoryId])
 }
 
 model LessonProgress {

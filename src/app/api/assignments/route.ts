@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
         publicSubmissionCount: a.publicSubmissionCount,
         tags: a.tags ? a.tags.split(',') : [],
         targetAudiences: a.targetAudiences || [],
+        audienceLevels: a.audienceLevels || null,
         level: a.level || null,
         learningGoals: a.learningGoals || [],
         classes: a.targetClasses.map(tc => ({
@@ -70,6 +71,8 @@ export async function GET(req: NextRequest) {
           dueDate: tc.dueDate,
         })),
         createdAt: a.createdAt,
+        audioUrl: a.audioUrl,
+        audioMetadata: a.audioMetadata,
       })),
       total: assignments.length,
     });

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Settings } from "lucide-react";
 import { getOnboardingConfig } from "@/actions/user-preferences-actions";
 
-export function SidebarHeroSentence({ categoryTree }: { categoryTree: any[] }) {
+export function SidebarHeroSentence() {
   const nativeLanguage = useContentStore(s => s.nativeLanguage);
   const studySubject = useContentStore(s => (s as any).studySubject);
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);

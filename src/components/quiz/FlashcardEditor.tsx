@@ -24,7 +24,7 @@ export function FlashcardEditor() {
   // Taxonomy State
   const [subject, setSubject] = useState('Khác');
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
-  const [level, setLevel] = useState<string>('');
+  const [audienceLevels, setAudienceLevels] = useState<Record<string, string>>({});
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [config, setConfig] = useState<any>(null);
 
@@ -105,8 +105,8 @@ export function FlashcardEditor() {
                   setSubject={setSubject}
                   targetAudiences={targetAudiences}
                   setTargetAudiences={setTargetAudiences}
-                  level={level}
-                  setLevel={setLevel}
+                  audienceLevels={audienceLevels}
+                  setAudienceLevels={setAudienceLevels}
                   learningGoals={learningGoals}
                   setLearningGoals={setLearningGoals}
                 />

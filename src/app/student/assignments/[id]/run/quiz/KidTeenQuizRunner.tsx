@@ -38,6 +38,8 @@ import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherIn
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
+
 
 // ============================================================
 // HELPERS (duplicated from QuizClientRunner to avoid coupling)
@@ -896,6 +898,12 @@ export default function KidTeenQuizRunner({
       newChecked[q.id] = true;
       
       const isCorrect = getQuestionStatus(q, answers[q.id]) === "correct";
+      if (isCorrect) {
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
+      }
+
       if (!isCorrect && q.explanation) {
         newExpanded[q.id] = true;
       }
@@ -1374,37 +1382,72 @@ export default function KidTeenQuizRunner({
 
               {/* ── TRUE / FALSE ── */}
               {qType === "TRUE_FALSE" && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-6 pt-4">
                   {[
-                    { label: "✅ True", value: true },
-                    { label: "❌ False", value: false },
+                    { 
+                      label: "True", 
+                      value: true,
+                      icon: (colorClass: string) => (
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-hover:scale-110 shadow-sm ${colorClass}`}>
+                          <Check className="w-8 h-8" strokeWidth={4.5} />
+                        </div>
+                      )
+                    },
+                    { 
+                      label: "False", 
+                      value: false,
+                      icon: (colorClass: string) => (
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-hover:scale-110 shadow-sm ${colorClass}`}>
+                          <X className="w-8 h-8" strokeWidth={4.5} />
+                        </div>
+                      )
+                    },
                   ].map((opt, i) => {
                     const isSelected = userAnswer === opt.value;
                     const isCorrectOpt = currentQuestionData.isTrue === opt.value;
-                    let cls = "";
+                    
+                    let btnStyle = "";
+                    let iconBgColor = "";
+                    
                     if (isChecked) {
-                      if (isCorrectOpt) cls = "border-emerald-500 bg-emerald-50 text-emerald-800";
-                      else if (isSelected) cls = "border-rose-500 bg-rose-50 text-rose-800";
-                      else cls = "border-slate-200 bg-slate-50 text-slate-400 opacity-50";
+                      if (isCorrectOpt) {
+                        btnStyle = "border-emerald-400 bg-emerald-100 text-emerald-900 shadow-md scale-[1.02]";
+                        iconBgColor = "bg-emerald-500 text-white";
+                      } else if (isSelected) {
+                        btnStyle = "border-rose-400 bg-rose-100 text-rose-900 shadow-md";
+                        iconBgColor = "bg-rose-500 text-white";
+                      } else {
+                        btnStyle = "border-slate-200 bg-slate-50 text-slate-400 opacity-60";
+                        iconBgColor = "bg-slate-200 text-slate-400";
+                      }
+                    } else if (isSelected) {
+                      if (opt.value) {
+                        btnStyle = "border-emerald-600 bg-emerald-500 text-white scale-[1.05] shadow-xl shadow-emerald-500/30 border-4 z-10 font-black";
+                        iconBgColor = "bg-white text-emerald-600 scale-110 shadow-md";
+                      } else {
+                        btnStyle = "border-rose-600 bg-rose-500 text-white scale-[1.05] shadow-xl shadow-rose-500/30 border-4 z-10 font-black";
+                        iconBgColor = "bg-white text-rose-600 scale-110 shadow-md";
+                      }
                     } else {
-                      cls = isSelected
-                        ? opt.value
-                          ? "border-emerald-500 bg-emerald-500 text-white shadow-emerald-200"
-                          : "border-rose-500 bg-rose-500 text-white shadow-rose-200"
-                        : opt.value
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100"
-                        : "border-rose-200 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100";
+                      if (opt.value) {
+                        btnStyle = "border-emerald-250 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100/80 shadow-sm";
+                        iconBgColor = "bg-emerald-100 text-emerald-600";
+                      } else {
+                        btnStyle = "border-rose-250 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100/80 shadow-sm";
+                        iconBgColor = "bg-rose-100 text-rose-600";
+                      }
                     }
+                    
                     return (
                       <button
                         key={i}
                         disabled={isChecked}
                         onClick={() => handleAnswerChange(currentQuestion, opt.value)}
-                        className={`flex flex-col items-center justify-center py-8 rounded-3xl border-2 font-black text-2xl transition-all duration-200 shadow-md ${cls} ${!isChecked ? "hover:shadow-lg hover:-translate-y-1 active:scale-95" : "cursor-default"}`}
+                        className={`group flex flex-col items-center justify-center py-6 px-4 rounded-[2.5rem] border-[3px] font-extrabold text-xl sm:text-2xl transition-all duration-350 ${btnStyle} ${!isChecked ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "cursor-default"}`}
+                        style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
                       >
-                        {opt.label}
-                        {isChecked && isCorrectOpt && <CheckCircle2 className="mt-2 w-6 h-6" />}
-                        {isChecked && isSelected && !isCorrectOpt && <XCircle className="mt-2 w-6 h-6" />}
+                        {opt.icon(iconBgColor)}
+                        <span>{opt.label}</span>
                       </button>
                     );
                   })}

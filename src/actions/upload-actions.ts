@@ -118,3 +118,49 @@ export async function uploadUrlMedia(imageUrl: string) {
     return { success: false, error: error.message || 'Error processing image URL' };
   }
 }
+
+export async function uploadBase64Image(base64Data: string, assignmentId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
+
+  if (!bucketName || !publicUrlBase) {
+    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
+  }
+
+  try {
+    const s3Client = getR2Client();
+    const base64Content = base64Data.includes('base64,') ? base64Data.split('base64,')[1] : base64Data;
+    const buffer = Buffer.from(base64Content, 'base64');
+    
+    // Determine file type from base64 if present, default to png
+    let contentType = 'image/png';
+    let ext = 'png';
+    const match = base64Data.match(/^data:([^;]+);base64,/);
+    if (match) {
+      contentType = match[1];
+      ext = contentType.split('/')[1] || 'png';
+    }
+
+    const fileName = `${session.user.id}-${assignmentId}-${Date.now()}.${ext}`;
+    const filePath = `uploads/${fileName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: filePath,
+      Body: buffer,
+      ContentType: contentType,
+    });
+
+    await s3Client.send(command);
+
+    const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
+    return { success: true, url: publicUrl };
+  } catch (error: any) {
+    return { success: false, error: error.message || 'Error uploading base64' };
+  }
+}

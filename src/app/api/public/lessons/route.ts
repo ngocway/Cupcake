@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getCategoryAndDescendantIds } from '@/lib/cached-queries'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search') || ''
-    const categoryId = searchParams.get('categoryId') || ''
+    const goal = searchParams.get('goal') || searchParams.get('categoryId') || ''
     const sort = searchParams.get('sort') || 'newest'
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
     const limit = 12
@@ -17,9 +16,8 @@ export async function GET(request: NextRequest) {
       isPremium: false
     }
 
-    if (categoryId) {
-      const categoryIds = await getCategoryAndDescendantIds(categoryId)
-      leWhere.categories = { some: { id: { in: categoryIds } } }
+    if (goal) {
+      leWhere.learningGoals = { has: goal }
     }
 
     if (search) {

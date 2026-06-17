@@ -33,7 +33,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
   const [reference, setReference] = useState("");
   const [audience, setAudience] = useState("All");
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
-  const [language, setLanguage] = useState("Tiếng Anh");
+  const language = "Tiếng Anh";
   const [length, setLength] = useState("Trung bình (~400 từ)");
   const [mcqCount, setMcqCount] = useState(3);
   const [mcqMultiCount, setMcqMultiCount] = useState(0);
@@ -364,21 +364,6 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
               </select>
             </div>
 
-            {/* Language */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="ai-language-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Ngôn ngữ bài viết</label>
-              <select 
-                id="ai-language-select"
-                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                value={language} 
-                onChange={e => setLanguage(e.target.value)}
-              >
-                <option value="Tiếng Anh">Tiếng Anh</option>
-                <option value="Tiếng Việt">Tiếng Việt</option>
-                <option value="Tiếng Pháp">Tiếng Pháp</option>
-                <option value="Tiếng Tây Ban Nha">Tiếng Tây Ban Nha</option>
-              </select>
-            </div>
 
             {/* Reading passage length */}
             <div className="flex flex-col gap-1">
@@ -540,8 +525,9 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
                   value={ttsSpeed} 
                   onChange={e => setTtsSpeed(parseFloat(e.target.value))}
                 >
-                  <option value="0.8">0.8x (Chậm - Phù hợp với trẻ em)</option>
-                  <option value="1.0">1.0x (Bình thường)</option>
+                  <option value="0.8">0.8x (Chậm)</option>
+                  <option value="0.9">0.9x (Hơi chậm)</option>
+                  <option value="1.0">1.0x (Bình thường - Mặc định)</option>
                   <option value="1.2">1.2x (Nhanh)</option>
                 </select>
               </div>

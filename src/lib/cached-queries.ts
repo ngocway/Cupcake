@@ -1,54 +1,5 @@
-
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
-
-export const getCachedCategoryTree = unstable_cache(
-  async () => {
-    const allCategories = await prisma.category.findMany({
-      where: { isHidden: false },
-      orderBy: { orderIndex: 'asc' }
-    });
-
-    const buildTree = (parentId: string | null = null): any[] => {
-      return allCategories
-        .filter(c => c.parentId === parentId)
-        .map(c => ({
-          ...c,
-          children: buildTree(c.id)
-        }));
-    };
-
-    return buildTree(null);
-  },
-  ["category-tree-flat-v2"],
-  { revalidate: 3600, tags: ["categories"] }
-);
-
-export const getCategoryAndDescendantIds = unstable_cache(
-  async (categoryId: string): Promise<string[]> => {
-    const allCategories = await prisma.category.findMany({
-      select: { id: true, parentId: true }
-    });
-
-    const ids = [categoryId];
-    const queue = [categoryId];
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const children = allCategories.filter(c => c.parentId === current).map(c => c.id);
-      for (const childId of children) {
-        if (!ids.includes(childId)) {
-          ids.push(childId);
-          queue.push(childId);
-        }
-      }
-    }
-
-    return ids;
-  },
-  ["category-descendants"],
-  { revalidate: 3600, tags: ["categories"] }
-);
 
 export const getCachedTags = unstable_cache(
   async () => {
@@ -82,28 +33,39 @@ function mapFeedItem(item: any) {
 }
 
 export const getShuffledIds = unstable_cache(
-  async (contentType: "EXERCISE" | "LESSON", categoryId: string, search: string, userType: string) => {
+  async (
+    contentType: "EXERCISE" | "LESSON",
+    goal: string,
+    search: string,
+    userType: string,
+    studySubject?: string,
+    studyLevel?: string
+  ) => {
     const where: any = { status: "PUBLIC", contentType };
 
-    if (categoryId) {
-      const categoryIds = await getCategoryAndDescendantIds(categoryId);
-      where.OR = categoryIds.map(id => ({
-        categoryId: { contains: id }
-      }));
+    if (goal) {
+      where.learningGoals = { has: goal };
     }
     if (search) where.title = { contains: search, mode: 'insensitive' };
+
+    if (studySubject) {
+      where.subject = studySubject;
+    }
+
     if (userType) {
-      const defaultOR = [
-        { targetAudiences: { has: userType } },
-        { targetAudiences: { equals: [] } }
-      ];
-      if (where.OR) {
-        where.AND = [
-          { OR: where.OR },
-          { OR: defaultOR }
-        ];
-        delete where.OR;
+      if (studyLevel) {
+        const ageAndLevelCondition = {
+          targetAudiences: { has: userType },
+          audienceLevels: { path: [userType], equals: studyLevel }
+        };
+
+        where.targetAudiences = ageAndLevelCondition.targetAudiences;
+        where.audienceLevels = ageAndLevelCondition.audienceLevels;
       } else {
+        const defaultOR = [
+          { targetAudiences: { has: userType } },
+          { targetAudiences: { equals: [] } }
+        ];
         where.OR = defaultOR;
       }
     }
@@ -119,14 +81,14 @@ export const getShuffledIds = unstable_cache(
 
     return randomIds;
   },
-  ["homepage-shuffled-ids"],
+  ["homepage-shuffled-ids-v4"],
   { revalidate: 600, tags: ["homepage", "shuffled"] }
 );
 
 // Server-side: newest exercises only — fast first load. Popular is fetched client-side.
 const getAssignmentsInternal = unstable_cache(
-  async (categoryId: string, search: string, userType: string) => {
-    const randomIds = await getShuffledIds("EXERCISE", categoryId, search, userType);
+  async (goal: string, search: string, userType: string, studySubject: string = '', studyLevel: string = '') => {
+    const randomIds = await getShuffledIds("EXERCISE", goal, search, userType, studySubject, studyLevel);
     const slicedIds = randomIds.slice(0, 12);
 
     let items: any[] = [];
@@ -140,21 +102,27 @@ const getAssignmentsInternal = unstable_cache(
 
     return { items: items.map(mapFeedItem), total: randomIds.length };
   },
-  ["homepage-assignments-cached"],
+  ["homepage-assignments-cached-v4"],
   { revalidate: 60, tags: ["assignments", "homepage"] }
 );
 
 // Server-side: newest exercises only — fast first load. Popular is fetched client-side.
 export const getCachedAssignments = async (params: any) => {
-  return getAssignmentsInternal(params.categoryId || '', params.search || '', params.userType || '');
+  return getAssignmentsInternal(
+    params.goal || params.categoryId || '',
+    params.search || '',
+    params.userType || '',
+    params.studySubject || '',
+    params.studyLevel || ''
+  );
 };
 
 // ─── LESSONS (newest) ─────────────────────────────────────────────────────────
 
 // Server-side: newest lessons only — fast first load. Popular is fetched client-side.
 const getLessonsInternal = unstable_cache(
-  async (categoryId: string, search: string, userType: string) => {
-    const randomIds = await getShuffledIds("LESSON", categoryId, search, userType);
+  async (goal: string, search: string, userType: string, studySubject: string = '', studyLevel: string = '') => {
+    const randomIds = await getShuffledIds("LESSON", goal, search, userType, studySubject, studyLevel);
     const slicedIds = randomIds.slice(0, 12);
 
     const items = slicedIds.length > 0 
@@ -169,11 +137,17 @@ const getLessonsInternal = unstable_cache(
       total: randomIds.length
     };
   },
-  ["homepage-lessons-cached"],
+  ["homepage-lessons-cached-v4"],
   { revalidate: 60, tags: ["lessons", "homepage"] }
 );
 
 // Server-side: newest lessons only — fast first load. Popular is fetched client-side.
 export const getCachedLessons = async (params: any) => {
-  return getLessonsInternal(params.categoryId || '', params.search || '', params.userType || '');
+  return getLessonsInternal(
+    params.goal || params.categoryId || '',
+    params.search || '',
+    params.userType || '',
+    params.studySubject || '',
+    params.studyLevel || ''
+  );
 };

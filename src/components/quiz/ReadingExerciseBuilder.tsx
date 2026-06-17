@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { autoSaveMaterial, syncAssignmentClasses, saveMaterialThumbnail } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
 import { getPopularTags } from '@/actions/tag-actions';
 import { InstructionsModal } from './InstructionsModal';
 import { generateVocabularyDetails } from '@/actions/ai-actions';
@@ -10,6 +10,7 @@ import { searchImagesAction } from '@/actions/image-search-actions';
 import { toast } from 'sonner';
 import { uploadMedia, uploadUrlMedia } from '@/actions/upload-actions';
 import { sliceAudioFile } from '@/utils/audioSlicer';
+import { generateNewUniqueSlugAction, updateMaterialSlugAction } from '@/actions/update-slug-action';
 
 import { CustomRichTextEditor } from '@/components/ui/CustomRichTextEditor';
 
@@ -292,24 +293,44 @@ export function ReadingExerciseBuilder({
       return;
     }
 
+    const editor = document.getElementById('rich-text-editor');
+    const contentHtml = editor?.innerHTML || '';
+    const isEmpty = questions.length === 0 && (contentHtml.trim() === '' || contentHtml === '<p><br></p>');
+
+    if (assignmentId === 'new' && isEmpty) {
+      if (!confirm('Bài đọc hiểu chưa có nội dung. Bạn có muốn thoát mà không lưu không?')) {
+        return;
+      }
+      router.push('/teacher/materials');
+      return;
+    }
+
+    // Check if there are any changes since last saved state
+    const currentStateStr = getSerializedState();
+    const hasChanges = currentStateStr !== lastSavedStateRef.current;
+
+    if (!hasChanges) {
+      // No changes, redirect immediately
+      router.push('/teacher/materials');
+      return;
+    }
+
     setSavingStatus('saving');
     try {
-      // Final save
-      const editor = document.getElementById('rich-text-editor');
-      const contentHtml = editor?.innerHTML || '';
+      const realId = await getOrCreateRealId();
       
       const currentQuestionsHash = JSON.stringify(questions);
       const currentAudioMetadataHash = JSON.stringify(audioMetadata);
       
       const payload: any = {
-        id: assignmentId || initialId || 'clp_reading_001',
+        id: realId,
         title,
         content: contentHtml,
         shortDescription,
         tags: tags.join(','),
         targetAudiences,
         subject,
-        level,
+        audienceLevels,
         learningGoals,
         materialType,
         ttsVoice,
@@ -353,6 +374,28 @@ export function ReadingExerciseBuilder({
     }
   };
   const [title, setTitle] = useState('Đang tải...');
+  const [originalTitle, setOriginalTitle] = useState('Đang tải...');
+
+  const handleTitleBlur = async () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || trimmedTitle === originalTitle || assignmentId === 'new') return;
+
+    try {
+      const newSlug = await generateNewUniqueSlugAction(trimmedTitle, 'assignment');
+      if (!newSlug) return;
+
+      const confirmMsg = `Bạn vừa đổi tên bài tập.\nBạn có muốn cập nhật đường dẫn (slug) thành '${newSlug}' cho khớp với tiêu đề mới không?\n\nLưu ý: Nếu học sinh đang sử dụng đường dẫn cũ, thay đổi này sẽ làm đường dẫn cũ không hoạt động.`;
+      if (confirm(confirmMsg)) {
+        await updateMaterialSlugAction(assignmentId, newSlug);
+        toast.success('Đã cập nhật đường dẫn bài tập mới!');
+      }
+      setOriginalTitle(trimmedTitle);
+    } catch (err) {
+      console.error('Lỗi khi cập nhật slug:', err);
+      toast.error('Không thể cập nhật đường dẫn (slug)');
+    }
+  };
+
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [assignmentStatus, setAssignmentStatus] = useState<'DRAFT' | 'PRIVATE' | 'PUBLIC'>('DRAFT');
   const [thumbnail, setThumbnail] = useState<string | null>(null);
@@ -434,7 +477,7 @@ export function ReadingExerciseBuilder({
   const [newTagInput, setNewTagInput] = useState('');
   const [popularTagsList, setPopularTagsList] = useState<string[]>(['Tiếng Anh', 'Toán học', 'Ngữ pháp', 'Từ vựng', 'TOEIC', 'IELTS', 'Lớp 10', 'Lớp 11', 'Lớp 12', 'Ôn thi']);
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
-  const [level, setLevel] = useState<string>('');
+  const [audienceLevels, setAudienceLevels] = useState<Record<string, string>>({});
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [materialType, setMaterialType] = useState<string>('READING');
@@ -444,12 +487,52 @@ export function ReadingExerciseBuilder({
   const [audioMetadata, setAudioMetadata] = useState<any>(null);
   const [lastSavedAudioMetadataHash, setLastSavedAudioMetadataHash] = useState<string | null>(null);
 
+  const lastSavedStateRef = React.useRef<string>('');
+
+  const getSerializedState = () => {
+    const editor = document.getElementById('rich-text-editor');
+    const contentHtml = editor?.innerHTML || '';
+    return JSON.stringify({
+      title,
+      content: contentHtml,
+      questions,
+      subject,
+      gradeLevel,
+      shortDescription,
+      instructions,
+      tags,
+      targetAudiences,
+      audienceLevels,
+      learningGoals,
+      materialType,
+      ttsVoice,
+      ttsSpeed,
+      audioMetadata,
+      videoUrl,
+      audioUrl,
+      thumbnail
+    });
+  };
+
+  const getOrCreateRealId = async (): Promise<string> => {
+    if (assignmentId && assignmentId !== 'new') {
+      return assignmentId;
+    }
+    const newId = await createDraftMaterial(materialType || 'READING');
+    setAssignmentId(newId);
+    const search = window.location.search;
+    const newUrl = `/teacher/materials/${newId}/edit${search}`;
+    window.history.replaceState(null, '', newUrl);
+    return newId;
+  };
+
   const handleThumbnailChange = async (newValue: string | null) => {
     setIsUploadingThumbnail(true);
     const previousThumbnail = thumbnail;
     setThumbnail(newValue);
     try {
-      const result = await saveMaterialThumbnail(assignmentId || initialId || 'clp_reading_001', newValue);
+      const realId = await getOrCreateRealId();
+      const result = await saveMaterialThumbnail(realId, newValue);
       if (result.success) {
         toast.success(newValue ? 'Tải ảnh đại diện thành công!' : 'Đã gỡ bỏ ảnh đại diện!');
       } else {
@@ -480,6 +563,15 @@ export function ReadingExerciseBuilder({
     isEdit?: boolean;
     vocabId?: string;
   } | null>(null);
+
+  const [directSearchVocab, setDirectSearchVocab] = useState<any | null>(null);
+
+  const handleDirectImageSearchClick = (vocab: any) => {
+    setDirectSearchVocab(vocab);
+    handleGoogleImageSearch(vocab.word);
+  };
+
+  const currentSearchWord = vocabForm?.word || directSearchVocab?.word || '';
 
   const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false);
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([]);
@@ -691,11 +783,54 @@ export function ReadingExerciseBuilder({
       const targetId = initialId || 'clp_reading_001';
       setAssignmentId(targetId);
 
+      if (targetId === 'new') {
+        setTitle('Bài đọc hiểu mới');
+        setOriginalTitle('Bài đọc hiểu mới');
+        setAssignmentStatus('DRAFT');
+        setMaterialType('READING');
+        setLastSavedContentHtml('');
+        setLastSavedQuestionsHash(JSON.stringify([]));
+        setLastSavedAudioMetadataHash(JSON.stringify(null));
+        
+        lastSavedStateRef.current = JSON.stringify({
+          title: 'Bài đọc hiểu mới',
+          content: '',
+          questions: [],
+          subject: 'Khác',
+          gradeLevel: 'Khác',
+          shortDescription: '',
+          instructions: '',
+          tags: [],
+          targetAudiences: [],
+          level: '',
+          learningGoals: [],
+          materialType: 'READING',
+          ttsVoice: 'Aoede',
+          ttsSpeed: 1.0,
+          audioMetadata: null,
+          videoUrl: '',
+          audioUrl: '',
+          thumbnail: null
+        });
+
+        setIsInitialLoadDone(true);
+        // Fetch popular tags dynamically
+        getPopularTags().then(tagsList => {
+          if (tagsList && tagsList.length > 0) {
+            setPopularTagsList(tagsList);
+          }
+        }).catch(err => {
+          console.error("Failed to fetch popular tags:", err);
+        });
+        return;
+      }
+
       try {
         const res = await fetch(`/api/assignments/${targetId}`);
         const data = await res.json();
         if (data.assignment) {
           setTitle(data.assignment.title);
+          setOriginalTitle(data.assignment.title);
           setAssignmentStatus(data.assignment.status);
           setVideoUrl(data.assignment.videoUrl || '');
           // Restore thumbnail for YouTube videos that were previously saved
@@ -778,7 +913,7 @@ export function ReadingExerciseBuilder({
           }
           setSubject(normalizedSubject);
 
-          setLevel(data.assignment.level || '');
+          setAudienceLevels((data.assignment.audienceLevels as Record<string, string>) || {});
           setLearningGoals(data.assignment.learningGoals || []);
           setMaterialType(data.assignment.materialType || 'READING');
           if (data.assignment.lesson || data.assignment.lessonId) {
@@ -800,6 +935,56 @@ export function ReadingExerciseBuilder({
           } else {
             setLastSavedQuestionsHash(JSON.stringify([]));
           }
+
+          // Capture for dirty check
+          const assignmentTags = typeof data.assignment.tags === 'string' 
+            ? data.assignment.tags.split(',').filter(Boolean) 
+            : (Array.isArray(data.assignment.tags) ? data.assignment.tags : []);
+          const assignmentAudiences = (data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase());
+          
+          const mappedQuestions = data.assignment.questions ? data.assignment.questions.map((q: any) => {
+            let content = q.content || {};
+            if (typeof content === 'string') {
+              try { content = JSON.parse(content); } catch (e) { content = {}; }
+            }
+            const rawOptions = q.options || content.options || content.data?.options || [];
+            const options = Array.isArray(rawOptions) ? rawOptions.map((opt: any, oIdx: number) => ({
+              id: opt.id || `opt-${oIdx}-${Math.random().toString(36).substr(2, 9)}`,
+              ...opt
+            })) : [];
+            const qText = q.questionText || q.question || q.statement || 
+                          content.questionText || content.question || content.statement || 
+                          content.data?.questionText || content.data?.question || '';
+            return {
+              ...q,
+              questionText: qText,
+              options: options,
+              correctAnswer: q.type === 'TRUE_FALSE' 
+                ? (content.isTrue === false ? 'false' : (q.correctAnswer || 'true')) 
+                : (q.correctAnswer || '')
+            };
+          }) : [];
+
+          lastSavedStateRef.current = JSON.stringify({
+            title: data.assignment.title,
+            content: data.assignment.readingText || '',
+            questions: mappedQuestions,
+            subject: normalizedSubject,
+            gradeLevel: data.assignment.gradeLevel || 'Khác',
+            shortDescription: data.assignment.shortDescription || '',
+            instructions: data.assignment.instructions || '',
+            tags: assignmentTags,
+            targetAudiences: assignmentAudiences,
+            audienceLevels: data.assignment.audienceLevels || {},
+            learningGoals: data.assignment.learningGoals || [],
+            materialType: data.assignment.materialType || 'READING',
+            ttsVoice: data.assignment.ttsVoice || 'Aoede',
+            ttsSpeed: data.assignment.ttsSpeed || 1.0,
+            audioMetadata: data.assignment.audioMetadata || null,
+            videoUrl: data.assignment.videoUrl || '',
+            audioUrl: data.assignment.audioUrl || '',
+            thumbnail: data.assignment.thumbnail || null
+          });
         }
         
         // Fetch popular tags dynamically
@@ -886,6 +1071,16 @@ export function ReadingExerciseBuilder({
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     
+    // Ensure we have a real ID
+    let realId: string;
+    try {
+      realId = await getOrCreateRealId();
+    } catch (err) {
+      console.error('Failed to create assignment on upload:', err);
+      toast.error('Không thể tạo bài tập để tải file lên');
+      return;
+    }
+    
     // Clear the input so the same files can be selected again
     e.target.value = '';
     
@@ -943,7 +1138,7 @@ export function ReadingExerciseBuilder({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              assignmentId: assignmentId || initialId || 'clp_reading_001',
+              assignmentId: realId,
               url: result.url,
               name: finalName,
               type: 'AUDIO'
@@ -1045,11 +1240,9 @@ export function ReadingExerciseBuilder({
     customReadingText?: string,
     customAudioMetadata?: any
   ) => {
-    const idToSave = assignmentId || initialId || 'clp_reading_001';
-    if (!idToSave) return;
-    
     setSavingStatus('saving');
     try {
+      const realId = await getOrCreateRealId();
       const editor = document.getElementById('rich-text-editor');
       const contentHtml = customReadingText !== undefined ? customReadingText : (editor?.innerHTML || '');
       
@@ -1058,7 +1251,7 @@ export function ReadingExerciseBuilder({
       const currentAudioMetadataHash = JSON.stringify(targetMetadata);
       
       const payload: any = {
-        id: idToSave,
+        id: realId,
         title: customTitle || title,
         videoUrl: customVideoUrl !== undefined ? customVideoUrl : videoUrl,
         audioUrl: customAudioUrl !== undefined ? customAudioUrl : audioUrl,
@@ -1067,7 +1260,9 @@ export function ReadingExerciseBuilder({
         shortDescription,
         instructions,
         tags: tags.join(','),
-                targetAudiences: targetAudiences
+        targetAudiences: targetAudiences,
+        audienceLevels,
+        learningGoals
       };
 
       if (contentHtml !== lastSavedContentHtml) {
@@ -1097,6 +1292,28 @@ export function ReadingExerciseBuilder({
       setLastSavedContentHtml(contentHtml);
       setLastSavedQuestionsHash(currentQuestionsHash);
       setLastSavedAudioMetadataHash(currentAudioMetadataHash);
+      
+      lastSavedStateRef.current = JSON.stringify({
+        title: customTitle || title,
+        content: contentHtml,
+        questions,
+        subject,
+        gradeLevel,
+        shortDescription,
+        instructions,
+        tags,
+        targetAudiences,
+        audienceLevels,
+        learningGoals,
+        materialType,
+        ttsVoice,
+        ttsSpeed,
+        audioMetadata: targetMetadata,
+        videoUrl: customVideoUrl !== undefined ? customVideoUrl : videoUrl,
+        audioUrl: customAudioUrl !== undefined ? customAudioUrl : audioUrl,
+        thumbnail
+      });
+
       setTimeout(() => setSavingStatus('idle'), 2000);
     } catch (error) {
       console.error('Save failed:', error);
@@ -1864,6 +2081,7 @@ export function ReadingExerciseBuilder({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleTitleBlur}
               className="font-headline font-extrabold text-xl text-slate-900 dark:text-white tracking-tight bg-transparent border-none outline-none focus:ring-0 p-0 m-0 w-full"
               placeholder="Nhập tiêu đề bài tập..."
             />
@@ -2114,6 +2332,9 @@ export function ReadingExerciseBuilder({
                                <p className="text-sm font-mono text-indigo-600 dark:text-indigo-400">/{vocab.pronunciation}/</p>
                              </div>
                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleDirectImageSearchClick(vocab)} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-all" title="Tìm ảnh Internet nhanh">
+                                  <span className="material-symbols-outlined text-[18px]">travel_explore</span>
+                                </button>
                                 <button onClick={() => handleEditVocabFromList(vocab)} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all">
                                   <span className="material-symbols-outlined text-[18px]">edit</span>
                                 </button>
@@ -2159,8 +2380,8 @@ export function ReadingExerciseBuilder({
 
         {vocabForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-[550px] max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-[640px] max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl border border-gray-200 dark:border-gray-800 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex justify-between items-center mb-5">
                 <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-slate-900 dark:text-white">
                   <span className="material-symbols-outlined text-primary">{vocabForm.isEdit ? 'edit_note' : 'translate'}</span>
                   {vocabForm.isEdit ? 'Chỉnh Sửa Từ Vựng' : 'Thiết Lập Từ Vựng'}
@@ -2179,54 +2400,60 @@ export function ReadingExerciseBuilder({
               </div>
               <form onSubmit={handleVocabSubmit} className="space-y-4 font-body">
                 <div className="flex gap-4">
-                  <div className="flex-1 space-y-4">
+                  <div className="flex-1 space-y-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Từ vựng</label>
-                      <input type="text" value={vocabForm.word} onChange={e => setVocabForm({...vocabForm, word: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" />
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Từ vựng</label>
+                      <input type="text" value={vocabForm.word} onChange={e => setVocabForm({...vocabForm, word: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none" />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phiên âm</label>
-                      <input type="text" value={vocabForm.pronunciation} onChange={e => setVocabForm({...vocabForm, pronunciation: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none font-mono" />
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phiên âm</label>
+                      <input type="text" value={vocabForm.pronunciation} onChange={e => setVocabForm({...vocabForm, pronunciation: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none font-mono" />
                     </div>
                   </div>
-                  <div className="w-32 shrink-0 flex flex-col gap-2">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ảnh minh họa</label>
-                    <div className="w-full h-32 rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 overflow-hidden relative group cursor-pointer shrink-0" onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = async (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) { setIsUploadingVocabImage(true); const formData = new FormData(); formData.append('file', file); try { const result = await uploadMedia(formData); if (result.success && result.url) { setVocabForm(prev => prev ? {...prev, image: result.url} : null); toast.success('Lưu ảnh thành công'); } else { toast.error('Lỗi lưu ảnh', { description: result.error }); } } catch (err: any) { toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) }); } finally { setIsUploadingVocabImage(false); } } }; input.click(); }}>
-                      {isUploadingVocabImage ? <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 bg-slate-50 dark:bg-gray-800"><span className="animate-spin material-symbols-outlined text-[24px]">progress_activity</span><span className="text-[9px] font-bold uppercase tracking-widest text-center">Đang lưu<br/>vào DB...</span></div> : vocabForm.image ? <img src={vocabForm.image} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="material-symbols-outlined text-[24px]">image</span><span className="text-[9px] font-bold mt-1 uppercase">Upload</span></div>}
-                    </div>
-                    <div className="flex gap-2 w-full mt-1">
-                      <button type="button" onClick={() => handleGoogleImageSearch(vocabForm.word)} className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-600 dark:text-slate-300 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tìm ảnh Internet">
-                        <span className="material-symbols-outlined text-[18px]">travel_explore</span>
-                      </button>
-                      <button type="button" onClick={() => setShowAIPromptModal(true)} className="flex-1 bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-400 py-2 rounded-lg flex items-center justify-center transition-colors" title="Tạo prompt AI">
-                        <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-                      </button>
+                  <div className="w-48 shrink-0 flex flex-col gap-1.5">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Ảnh minh họa</label>
+                    <div className="flex gap-2 items-center">
+                      <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-200 dark:border-gray-700 overflow-hidden relative group cursor-pointer shrink-0" onClick={() => { const input = document.createElement('input'); input.type = 'file'; input.accept = 'image/*'; input.onchange = async (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) { setIsUploadingVocabImage(true); const formData = new FormData(); formData.append('file', file); try { const result = await uploadMedia(formData); if (result.success && result.url) { setVocabForm(prev => prev ? {...prev, image: result.url} : null); toast.success('Lưu ảnh thành công'); } else { toast.error('Lỗi lưu ảnh', { description: result.error }); } } catch (err: any) { toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) }); } finally { setIsUploadingVocabImage(false); } } }; input.click(); }}>
+                        {isUploadingVocabImage ? <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-1 bg-slate-50 dark:bg-gray-800"><span className="animate-spin material-symbols-outlined text-[18px]">progress_activity</span><span className="text-[8px] font-bold uppercase tracking-widest text-center leading-none">Đang lưu</span></div> : vocabForm.image ? <img src={vocabForm.image} className="w-full h-full object-cover" /> : <div className="flex flex-col items-center justify-center h-full text-slate-400"><span className="material-symbols-outlined text-[20px]">image</span><span className="text-[8px] font-bold mt-0.5 uppercase">Upload</span></div>}
+                      </div>
+                      <div className="flex flex-col gap-1.5 flex-1">
+                        <button type="button" onClick={() => handleGoogleImageSearch(vocabForm.word)} className="w-full bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-600 dark:text-slate-300 py-1.5 rounded-lg flex items-center justify-center transition-colors border border-slate-200 dark:border-gray-700" title="Tìm ảnh Internet">
+                          <span className="material-symbols-outlined text-[16px]">travel_explore</span>
+                        </button>
+                        <button type="button" onClick={() => setShowAIPromptModal(true)} className="w-full bg-purple-50 hover:bg-purple-100 dark:bg-purple-900/20 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-400 py-1.5 rounded-lg flex items-center justify-center transition-colors border border-purple-100 dark:border-purple-900/30" title="Tạo prompt AI">
+                          <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Việt</label>
-                  <input type="text" value={vocabForm.meaningVi} onChange={e => setVocabForm({...vocabForm, meaningVi: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" required />
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Việt</label>
+                    <input type="text" value={vocabForm.meaningVi} onChange={e => setVocabForm({...vocabForm, meaningVi: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none" required />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Thái</label>
+                    <input type="text" value={vocabForm.meaningTh || ''} onChange={e => setVocabForm({...vocabForm, meaningTh: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Indo</label>
+                    <input type="text" value={vocabForm.meaningId || ''} onChange={e => setVocabForm({...vocabForm, meaningId: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Thái</label>
-                  <input type="text" value={vocabForm.meaningTh || ''} onChange={e => setVocabForm({...vocabForm, meaningTh: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nghĩa Tiếng Indo</label>
-                  <input type="text" value={vocabForm.meaningId || ''} onChange={e => setVocabForm({...vocabForm, meaningId: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none" />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Giải nghĩa Tiếng Anh</label>
-                  <textarea value={vocabForm.explanationEn} onChange={e => setVocabForm({...vocabForm, explanationEn: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none min-h-[80px]"></textarea>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ví dụ (mỗi dòng một ví dụ)</label>
-                  <textarea value={vocabForm.examples} onChange={e => setVocabForm({...vocabForm, examples: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-primary outline-none min-h-[80px]"></textarea>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Giải nghĩa Tiếng Anh</label>
+                    <textarea rows={2} value={vocabForm.explanationEn} onChange={e => setVocabForm({...vocabForm, explanationEn: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none resize-none min-h-[50px]"></textarea>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Ví dụ (mỗi dòng một ví dụ)</label>
+                    <textarea rows={2} value={vocabForm.examples} onChange={e => setVocabForm({...vocabForm, examples: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-sm focus:ring-2 focus:ring-primary outline-none resize-none min-h-[50px]"></textarea>
+                  </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-gray-800">
-                  <button type="button" onClick={() => setVocabForm(null)} className="px-6 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-gray-800 transition-colors">Hủy</button>
-                  <button type="submit" className="px-6 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-blue-700 transition-colors editorial-shadow">Lưu Từ Vựng</button>
+                  <button type="button" onClick={() => setVocabForm(null)} className="px-5 py-2 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-gray-800 transition-colors">Hủy</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl font-bold text-sm bg-primary text-white hover:bg-blue-700 transition-colors editorial-shadow">Lưu Từ Vựng</button>
                 </div>
               </form>
             </div>
@@ -2243,7 +2470,7 @@ export function ReadingExerciseBuilder({
                   Tìm ảnh Internet
                 </h4>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3">
-                  Từ khoá: <span className="text-primary">{vocabForm?.word}</span>
+                  Từ khoá: <span className="text-primary">{currentSearchWord}</span>
                 </p>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -2266,7 +2493,7 @@ export function ReadingExerciseBuilder({
                     <button
                       type="button"
                       disabled={isSearchingImage}
-                      onClick={() => handleGoogleImageSearch(vocabForm?.word || '', imageSearchStyle)}
+                      onClick={() => handleGoogleImageSearch(currentSearchWord, imageSearchStyle)}
                       className="px-3 py-1.5 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 active:scale-95 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-slate-200 dark:border-gray-700 h-full"
                     >
                       <span className="material-symbols-outlined text-[14px]">search</span>
@@ -2291,13 +2518,21 @@ export function ReadingExerciseBuilder({
                   <div className="grid grid-cols-2 gap-3">
                     {imageSearchResults.slice(0, visibleImagesCount).map((img) => (
                       <div key={img.id} className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-slate-200 dark:border-gray-700 hover:border-primary hover:shadow-lg transition-all" onClick={async () => {
-                        if (vocabForm) {
+                        if (vocabForm || directSearchVocab) {
                           setIsUploadingVocabImage(true);
                           setShowImageSearchDrawer(false);
                           try {
                             const result = await uploadUrlMedia(img.url);
                             if (result.success && result.url) {
-                              setVocabForm(prev => prev ? {...prev, image: result.url} : null);
+                              if (vocabForm) {
+                                setVocabForm(prev => prev ? {...prev, image: result.url} : null);
+                              } else if (directSearchVocab) {
+                                const existingElement = document.getElementById('rich-text-editor')?.querySelector(`[data-vocab-id="${directSearchVocab.vocabId}"]`);
+                                if (existingElement) {
+                                  existingElement.setAttribute('data-image', result.url);
+                                  refreshVocabList();
+                                }
+                              }
                               toast.success('Lưu ảnh thành công');
                             } else {
                               toast.error('Lỗi lưu ảnh', { description: result.error });
@@ -2306,6 +2541,7 @@ export function ReadingExerciseBuilder({
                              toast.error('Lỗi hệ thống khi lưu ảnh', { description: err.message || String(err) });
                           } finally {
                              setIsUploadingVocabImage(false);
+                             setDirectSearchVocab(null);
                           }
                         }
                       }}>
@@ -2538,8 +2774,8 @@ export function ReadingExerciseBuilder({
                         setSubject={setSubject}
                         targetAudiences={targetAudiences}
                         setTargetAudiences={setTargetAudiences}
-                        level={level}
-                        setLevel={setLevel}
+                        audienceLevels={audienceLevels}
+                        setAudienceLevels={setAudienceLevels}
                         learningGoals={learningGoals}
                         setLearningGoals={setLearningGoals}
                       />

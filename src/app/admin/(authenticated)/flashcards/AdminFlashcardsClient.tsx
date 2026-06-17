@@ -143,9 +143,9 @@ export function AdminFlashcardsClient({
 
     try {
       const selectedCategory = targetAudiencesList.find(c => c.id === cardForm.targetAudience)
-      const isKid = selectedCategory?.name.toLowerCase().includes("kid") || false
+      const categoryName = selectedCategory?.name || ""
 
-      const res = await generateExampleSentence(cardForm.word, isKid, cardForm.exampleSentence)
+      const res = await generateExampleSentence(cardForm.word, categoryName, cardForm.exampleSentence)
       
       if (res.error) {
         toast.error(res.error)
@@ -171,10 +171,20 @@ export function AdminFlashcardsClient({
     toast.info("Đang tạo audio bằng AI...")
 
     try {
+      const selectedCategory = targetAudiencesList.find(c => c.id === cardForm.targetAudience)
+      const categoryName = selectedCategory?.name || ""
+      const isKindergarten = categoryName.toLowerCase().includes("kindergarten") || 
+                             categoryName.toLowerCase().includes("< 6") || 
+                             categoryName.toLowerCase().includes("under 6")
+
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: word, exampleSentence: exampleSentence })
+        body: JSON.stringify({ 
+          text: word, 
+          exampleSentence: exampleSentence,
+          speed: isKindergarten ? 0.8 : 1.0
+        })
       })
 
       const data = await res.json()
@@ -282,7 +292,9 @@ export function AdminFlashcardsClient({
 
     try {
       // 1. Try generateVocabularyDetails
-      const result = await generateVocabularyDetails(word)
+      const selectedCategory = targetAudiencesList.find(c => c.id === cardForm.targetAudience)
+      const categoryName = selectedCategory?.name || ""
+      const result = await generateVocabularyDetails(word, categoryName)
       if (result && !result.error) {
         setCardForm(prev => ({
           ...prev,
@@ -690,7 +702,7 @@ export function AdminFlashcardsClient({
 
         for (let i = 0; i < words.length; i++) {
           setGeneratingStatus(`Đang tìm ảnh và tạo thẻ ${i + 1}/${words.length}: ${words[i].word}...`)
-          const cardRes = await generateSingleFlashcardWithImage(createRes.topic.id, words[i])
+          const cardRes = await generateSingleFlashcardWithImage(createRes.topic.id, words[i], categoryName)
           if (cardRes.success && cardRes.card) {
             successCount++
             newLocalCards.push({

@@ -22,6 +22,9 @@ interface RelatedItem {
   slug?: string | null;
   title: string;
   thumbnail: string | null;
+  assignment?: {
+    tags: string | null;
+  } | null;
 }
 
 export function LearningSidebar({ 
@@ -71,36 +74,51 @@ export function LearningSidebar({
        )}
 
        {/* Related Lessons Card */}
-       <div className="glass rounded-3xl p-8 space-y-6 shadow-xl">
-          <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{t("relatedLessons")}</h4>
+       <div className="glass rounded-3xl p-6 md:p-8 space-y-6 shadow-xl border border-white/10">
+          <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("relatedLessons")}</h4>
           
-          <div className="space-y-4">
-             {relatedItems.map((item) => (
-                <Link 
-                  key={item.id}
-                  href={isGuest 
-                    ? `/public/lessons/${item.slug || item.id}`
-                    : `/student/lessons/${item.slug || item.id}`
-                  }
-                  className="flex items-center gap-4 group"
-                >
-                   <div className="w-20 h-14 rounded-[4px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
-                      {item.thumbnail ? (
-                        <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                           <Play className="w-5 h-5 text-slate-400" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                   </div>
-                   <div className="flex-1 overflow-hidden">
-                      <h5 className="text-lg font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                        {item.title}
-                      </h5>
-                   </div>
-                </Link>
-             ))}
+          <div className="space-y-3">
+             {relatedItems.map((item) => {
+                const tag = item.assignment?.tags
+                  ? item.assignment.tags.split(',')[0]?.trim()
+                  : null;
+
+                return (
+                   <Link 
+                     key={item.id}
+                     href={isGuest 
+                       ? `/public/lessons/${item.slug || item.id}`
+                       : `/student/lessons/${item.slug || item.id}`
+                     }
+                     className="flex items-center gap-4 p-2 -mx-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-2xl transition-all duration-300 group"
+                   >
+                      <div className="w-28 aspect-video rounded-[3px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
+                         {item.thumbnail ? (
+                           <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                         ) : (
+                           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-700">
+                              <Play className="w-5 h-5 text-orange-500 fill-orange-500/20" />
+                           </div>
+                         )}
+                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                      </div>
+                      <div className="flex-1 overflow-hidden flex flex-col gap-1.5">
+                         <h5 className="text-[13px] font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                           {item.title}
+                         </h5>
+                         {tag ? (
+                           <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded-md w-fit">
+                             #{tag}
+                           </span>
+                         ) : (
+                           <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md w-fit">
+                             Lesson
+                           </span>
+                         )}
+                      </div>
+                   </Link>
+                );
+             })}
 
              {relatedItems.length === 0 && (
                 <p className="text-xs italic text-slate-400 text-center py-4">{t("noRelatedLessons")}</p>

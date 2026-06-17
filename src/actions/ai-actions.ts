@@ -2,18 +2,36 @@
 
 import openai from "@/lib/openai";
 
-export async function generateVocabularyDetails(word: string) {
+export async function generateVocabularyDetails(word: string, categoryName?: string) {
   if (!process.env.OPENAI_API_KEY) {
     return { error: "Missing OPENAI_API_KEY. Please set it in .env file." };
   }
 
   try {
+    // Determine age-appropriate guidelines
+    let explanationGuideline = "a clear, simple English definition (CEFR B1-B2 level)";
+    let examplesGuideline = "exactly 2-3 illustrative, high-quality example sentences";
+
+    if (categoryName) {
+      const cat = categoryName.toLowerCase();
+      if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
+        explanationGuideline = "an extremely simple, child-friendly English definition using basic words suitable for children under 6 years old (e.g., 'a sweet red fruit' for apple)";
+        examplesGuideline = "exactly 2-3 extremely short and simple English example sentences (Pre-A1 level, 3-6 words each, using only basic vocabulary, e.g., 'The apple is red.')";
+      } else if (cat.includes("kid")) {
+        explanationGuideline = "a simple, clear English definition (A1-A2 level) using easy-to-understand language";
+        examplesGuideline = "exactly 2-3 simple English example sentences (A1 level, e.g., 'This is a clean towel.', 'The giraffe has a long neck.')";
+      } else if (cat.includes("teen")) {
+        explanationGuideline = "a clear English definition at CEFR A2-B1 level";
+        examplesGuideline = "exactly 2-3 natural English example sentences (A2-B1 level, e.g., 'I gave some sour tamarind to my mother after school.')";
+      }
+    }
+
     const prompt = `Provide detailed vocabulary information for the English word or phrase: "${word}". 
     The meaningVi should be a SHORT, direct translation in Vietnamese (1-3 words max, e.g. "Quả chuối", NOT a definition). 
     The meaningTh should be a SHORT, direct translation in Thai (1-3 words max). 
     The meaningId should be a SHORT, direct translation in Indonesian (1-3 words max). 
-    The explanationEn should be a clear, simple English definition (CEFR B1-B2 level). 
-    Provide exactly 2-3 illustrative, high-quality example sentences. 
+    The explanationEn should be: ${explanationGuideline}. 
+    The examples should be: ${examplesGuideline}. 
     Provide 2-3 very descriptive English keywords for an image search that perfectly represents the word's meaning (e.g. for "dilemma", use "confused person at crossroads").
     
     Return the result in JSON format matching this structure:
@@ -167,11 +185,27 @@ export async function generateDalleImage(prompt: string) {
   return { error: `Không thể vẽ ảnh bằng AI: ${lastError}` };
 }
 
-export async function generateExampleSentence(word: string, isKid: boolean, currentSentence?: string) {
+export async function generateExampleSentence(word: string, categoryNameOrIsKid: string | boolean, currentSentence?: string) {
   try {
-    const levelInstruction = isKid 
-      ? "Use ONLY A1 level English vocabulary. Keep the sentence extremely simple, short, and easy for young children (2-5 years old) to understand. Do not use complex grammar."
-      : "Use A1 or A2 level English vocabulary. Keep the sentence simple, clear, and easy to understand for beginners.";
+    let levelInstruction = "Use A1 or A2 level English vocabulary. Keep the sentence simple, clear, and easy to understand for beginners.";
+    
+    if (typeof categoryNameOrIsKid === "boolean") {
+      if (categoryNameOrIsKid) {
+        levelInstruction = "Use ONLY A1 level English vocabulary. Keep the sentence extremely simple, short, and easy for young children (2-5 years old) to understand. Do not use complex grammar.";
+      }
+    } else if (categoryNameOrIsKid) {
+      const cat = categoryNameOrIsKid.toLowerCase();
+      if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
+        levelInstruction = "Use ONLY Pre-A1 level English vocabulary. Keep the sentence extremely simple, very short (3-6 words), and easy for very young children (under 6 years old) to understand. Do not use complex grammar (e.g., 'The apple is red.', 'I see a dog.').";
+      } else if (cat.includes("kid")) {
+        levelInstruction = "Use ONLY A1 level English vocabulary. Keep the sentence simple, short, and easy for young children (6-10 years old) to understand (e.g., 'This is a clean towel.', 'The giraffe has a long neck.').";
+      } else if (cat.includes("teen")) {
+        levelInstruction = "Use A2 or B1 level English vocabulary. Keep the sentence natural and clear for teenagers (11-16 years old), allowing slightly more advanced words or compound structures (e.g., 'I gave some sour tamarind to my mother after school.').";
+      } else {
+        // Learner / Adult
+        levelInstruction = "Use B1 or B2 level English vocabulary. Keep the sentence natural, realistic, and high-quality for adult learners, allowing compound or complex structures (e.g., 'He faced a difficult dilemma when choosing between two career paths.').";
+      }
+    }
 
     const avoidInstruction = currentSentence 
       ? `\nIMPORTANT: The user already has this sentence: "${currentSentence}". You MUST generate a completely DIFFERENT sentence with a different meaning or context.` 

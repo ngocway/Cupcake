@@ -161,7 +161,7 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
                   </div>
                   
                   {/* Class Info */}
-                  <div className="p-6 relative -mt-10">
+                  <div className="p-6 relative -mt-5">
                     <div className="w-14 h-14 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center border-2 border-slate-50 dark:border-slate-700 mb-4 text-xl font-black text-slate-800 dark:text-white">
                        {item.class.name.substring(0,2).toUpperCase()}
                     </div>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import openai from "@/lib/openai";
+import { generateTTSHelper } from "@/actions/lesson-ai";
 
 const getR2Client = () => {
   const accountId = process.env.R2_ACCOUNT_ID;
@@ -67,123 +68,14 @@ export async function POST(req: Request) {
       speechText = `${text}. ${text}. ${exampleSentence} ${text}.`;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ success: false, error: "Missing GEMINI_API_KEY in environment variables" }, { status: 500 });
-    }
-
-    // Call Gemini TTS API to generate speech
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
-    
-    let rateStr = "100%";
-    if (speed !== undefined && speed !== null) {
-      rateStr = `${Math.round(speed * 100)}%`;
-    } else if (mode !== "inline" && mode !== "global") {
-      rateStr = "slow";
-    }
-
-    const ssmlText = `<speak><prosody rate="${rateStr}">${speechText}</prosody></speak>`;
-
-    const geminiReqBody = {
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: ssmlText }]
-        }
-      ],
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: {
-              voiceName: voice || "Aoede" // Có thể thay bằng: Puck, Charon, Kore, Fenrir
-            }
-          }
-        }
-      }
-    };
-
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(geminiReqBody)
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Gemini TTS Error:", errText);
-      throw new Error(`Gemini API Error: ${response.status} - ${errText}`);
-    }
-
-    const data = await response.json();
-    
-    // Extract base64 audio data from Gemini response
-    const candidate = data.candidates?.[0];
-    const parts = candidate?.content?.parts || [];
-    const inlineData = parts.find((p: any) => p.inlineData)?.inlineData;
-    
-    if (!inlineData || !inlineData.data) {
-      console.error("No inline data in response:", JSON.stringify(data, null, 2));
-      throw new Error("No audio data returned from Gemini");
-    }
-
-    // Gemini returns base64 string containing raw PCM audio (audio/l16; rate=24000; channels=1)
-    const pcmBuffer = Buffer.from(inlineData.data, "base64");
-    
-    // Trình duyệt không thể phát trực tiếp raw PCM (l16), ta phải bọc nó vào định dạng WAV
-    const wavHeader = getWavHeader(pcmBuffer.length, 24000, 1, 16);
-    const buffer = Buffer.concat([wavHeader, pcmBuffer]);
-    
-    const mimeType = "audio/wav";
-
-    // Upload lên Cloudflare R2
-    const bucketName = process.env.R2_BUCKET_NAME;
-    const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
-
-    if (!bucketName || !publicUrlBase) {
-      throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
-    }
-
-    const s3Client = getR2Client();
-    const fileExtension = mimeType.includes("mp3") ? "mp3" : mimeType.includes("pcm") ? "pcm" : "wav";
-    const fileName = `tts-gemini-${session.user.id}-${Date.now()}.${fileExtension}`;
-    const filePath = `uploads/${fileName}`;
-
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: filePath,
-      Body: buffer,
-      ContentType: mimeType,
-    });
-
-    await s3Client.send(command);
-
-    const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
-
-    let words = null;
-    if (mode === "global") {
-      try {
-        const { toFile } = await import("openai");
-        const file = await toFile(buffer, "speech.wav", { type: "audio/wav" });
-        const transcription = await openai.audio.transcriptions.create({
-          file,
-          model: "whisper-1",
-          response_format: "verbose_json",
-          timestamp_granularities: ["word"],
-        });
-        words = transcription.words;
-      } catch (err) {
-        console.error("OpenAI Whisper alignment failed:", err);
-      }
-    }
+    // Use unified TTS helper with fallback and retries
+    const ttsRes = await generateTTSHelper(speechText, voice, speed, session.user.id, mode);
 
     return NextResponse.json({ 
       success: true, 
-      url: publicUrl, 
-      audioUrl: publicUrl,
-      words
+      url: ttsRes.url, 
+      audioUrl: ttsRes.url,
+      words: ttsRes.words
     });
   } catch (error: any) {
     console.error("TTS API Error:", error);

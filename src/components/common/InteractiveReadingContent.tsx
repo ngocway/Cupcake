@@ -83,6 +83,19 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
       const customEvent = e as CustomEvent<{ currentTime: number }>;
       const { currentTime } = customEvent.detail;
       
+      const sentences = document.querySelectorAll('.interactive-reading-content .reading-sentence');
+      sentences.forEach(sentence => {
+        const start = parseFloat(sentence.getAttribute('data-start') || '0');
+        const end = parseFloat(sentence.getAttribute('data-end') || '0');
+        
+        if (currentTime !== -1 && currentTime >= start && currentTime <= end) {
+          sentence.classList.add('highlighted');
+        } else {
+          sentence.classList.remove('highlighted');
+        }
+      });
+
+      // Fallback for old word-level highlights
       const words = document.querySelectorAll('.interactive-reading-content .reading-word');
       words.forEach(word => {
         const start = parseFloat(word.getAttribute('data-start') || '0');
@@ -475,19 +488,22 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
           color: #eab308 !important;
         }
 
-        .reading-word {
+        .reading-word,
+        .reading-sentence {
           transition: background-color 0.15s ease, color 0.15s ease;
           border-radius: 0.25rem;
           padding: 0 0.125rem;
           margin: 0 -0.125rem;
         }
 
-        .reading-word.highlighted {
+        .reading-word.highlighted,
+        .reading-sentence.highlighted {
           background-color: #fef08a !important; /* bg-yellow-200 */
           color: #1e293b !important; /* text-slate-800 */
         }
 
-        :global(.dark) .reading-word.highlighted {
+        :global(.dark) .reading-word.highlighted,
+        :global(.dark) .reading-sentence.highlighted {
           background-color: rgba(234, 179, 8, 0.4) !important; /* yellow-500 with opacity */
           color: #ffffff !important;
         }

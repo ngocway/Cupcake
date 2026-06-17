@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 
 // Load env
+import { generateTTSHelper } from "../src/actions/lesson-ai";
+
 function loadEnv() {
   const envPath = path.join(process.cwd(), '.env');
   if (fs.existsSync(envPath)) {
@@ -70,85 +72,12 @@ function getWavHeader(dataSize: number, sampleRate = 24000, numChannels = 1, bit
   return header;
 }
 
-async function generateTTS(text: string, exampleSentence: string) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    throw new Error("Missing GEMINI_API_KEY or GOOGLE_API_KEY in environment variables");
-  }
-
-  // Cấu trúc: Từ vựng. Từ vựng. Câu ví dụ. Từ vựng.
-  const speechText = `${text}. ${text}. ${exampleSentence} ${text}.`;
-  const ssmlText = `<speak><prosody rate="slow">${speechText}</prosody></speak>`;
-
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent?key=${apiKey}`;
-
-  const geminiReqBody = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: ssmlText }]
-      }
-    ],
-    generationConfig: {
-      responseModalities: ["AUDIO"],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: {
-            voiceName: "Aoede"
-          }
-        }
-      }
-    }
-  };
-
-  const response = await fetch(geminiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(geminiReqBody)
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API Error: ${response.status} - ${errText}`);
-  }
-
-  const data = await response.json();
-  const candidate = data.candidates?.[0];
-  const parts = candidate?.content?.parts || [];
-  const inlineData = parts.find((p: any) => p.inlineData)?.inlineData;
-
-  if (!inlineData || !inlineData.data) {
-    throw new Error("No audio data returned from Gemini");
-  }
-
-  const pcmBuffer = Buffer.from(inlineData.data, "base64");
-  const wavHeader = getWavHeader(pcmBuffer.length, 24000, 1, 16);
-  return Buffer.concat([wavHeader, pcmBuffer]);
-}
-
-async function uploadToR2(buffer: Buffer, word: string) {
-  const bucketName = process.env.R2_BUCKET_NAME;
-  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
-
-  if (!bucketName || !publicUrlBase) {
-    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
-  }
-
-  const s3Client = getR2Client();
-  const fileName = `tts-gemini-admin-${word.toLowerCase()}-${Date.now()}.wav`;
-  const filePath = `uploads/${fileName}`;
-
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: filePath,
-    Body: buffer,
-    ContentType: "audio/wav",
-  });
-
-  await s3Client.send(command);
-  return `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
+async function generateTTS(word: string, exampleSentence: string) {
+  // Construct speech text following the required structure
+  const speechText = `${word}. ${word}. ${exampleSentence} ${word}.`;
+  // Use unified TTS helper with fallback logic. Use placeholder user ID for scripts.
+  const ttsRes = await generateTTSHelper(speechText, "Aoede", 1.0, "script", "inline");
+  return ttsRes.url;
 }
 
 async function main() {
@@ -170,9 +99,7 @@ async function main() {
 
     console.log(`Generating audio for "${card.word}"...`);
     try {
-      const audioBuffer = await generateTTS(card.word, card.exampleSentence);
-      console.log(`Uploading audio for "${card.word}" to R2...`);
-      const publicUrl = await uploadToR2(audioBuffer, card.word);
+      const publicUrl = await generateTTS(card.word, card.exampleSentence);
       console.log(`Audio URL: ${publicUrl}`);
 
       await prisma.globalFlashcard.update({

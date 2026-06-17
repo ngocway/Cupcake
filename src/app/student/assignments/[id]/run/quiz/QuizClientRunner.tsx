@@ -41,6 +41,8 @@ import { LoginModal } from "@/components/LoginButton";
 import { completeSubmission } from "@/actions/submission-actions";
 import { useTranslations } from "next-intl";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
+
 
 // Helper to determine question correctness
 const getQuestionStatus = (q: any, answer: any) => {
@@ -900,6 +902,11 @@ export default function QuizClientRunner({
       setCheckedQuestions(prev => ({ ...prev, [q.id]: true }));
       
       const isCorrect = getQuestionStatus(q, answers[q.id]) === 'correct';
+      if (isCorrect) {
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
+      }
       if (!isCorrect && q.explanation) {
         setExpandedExplanations(prev => ({ ...prev, [q.id]: true }));
       }

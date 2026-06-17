@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MaterialListItem } from './_components/MaterialListItem';
 import { MaterialStatus } from '@/generated/client';
-import { createDraftMaterial, bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials } from '@/actions/material-actions';
+import { createDraftMaterial, bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials, createMaterialWithQuestions } from '@/actions/material-actions';
 import { useSession } from 'next-auth/react';
-import { Plus, Sparkles, ArrowLeft, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Sparkles, ArrowLeft, Trash2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AIGeneratorModal } from '@/components/quiz/AIGeneratorModal';
+import { QuestionType } from '@/components/quiz/types';
 
 type Assignment = {
   id: string;
@@ -26,6 +28,8 @@ type Assignment = {
   learningGoals?: string[];
   createdAt: string;
   classes?: any[];
+  audioUrl?: string | null;
+  audioMetadata?: any;
 };
 
 export default function MaterialLibraryPage() {
@@ -89,6 +93,81 @@ export default function MaterialLibraryPage() {
   }, []);
 
   const [isCreating, setIsCreating] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [isCreatingFromAI, setIsCreatingFromAI] = useState(false);
+
+  const handleAIGeneratedQuestions = async (
+    generatedData: { type: QuestionType; questions: any[] }[],
+    metadata?: any
+  ) => {
+    setIsCreatingFromAI(true);
+    try {
+      const typeToCreate = typeFilter === 'ALL' ? 'EXERCISE' : typeFilter;
+      
+      const questionsToSave = generatedData.flatMap(({ type, questions }) => {
+        return questions.map((gq: any) => {
+          let content: any = { ...gq };
+          const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+          
+          if (type === 'MULTIPLE_CHOICE' && content.options) {
+            content.options = content.options.map((opt: any) => ({
+              ...opt,
+              id: uuidv4()
+            }));
+            content.allowMultipleAnswers = content.options.filter((o:any)=>o.isCorrect).length > 1;
+          }
+          if (type === 'TRUE_FALSE') {
+            content.displayStyle = 'TRUE_FALSE';
+          }
+          if (type === 'MATCHING' && content.pairs) {
+            content.pairs = content.pairs.map((pair: any) => ({
+              ...pair,
+              id: uuidv4()
+            }));
+          }
+          if (type === 'CLOZE_TEST') {
+            content.caseSensitive = content.caseSensitive ?? false;
+          }
+          if (type === 'REORDER' && content.items) {
+            content.items = content.items.map((item: any) => ({
+              ...item,
+              id: item.id || uuidv4()
+            }));
+          }
+          
+          const explanation = content.explanation;
+          delete content.explanation;
+
+          return {
+            type,
+            points: 1.0,
+            isBanked: false,
+            isAiGenerated: true,
+            explanation: explanation || '',
+            content
+          };
+        });
+      });
+
+      const newId = await createMaterialWithQuestions({
+        title: metadata?.title || 'Bài tập AI mới',
+        materialType: typeToCreate,
+        questions: questionsToSave,
+        shortDescription: metadata?.shortDescription || '',
+        instructions: metadata?.instructions || '',
+        thumbnailImagePrompt: metadata?.thumbnailImagePrompt || '',
+      });
+
+      setShowAIModal(false);
+      router.push(`/teacher/materials/${newId}/edit`);
+    } catch (err) {
+      console.error('Failed to create material from AI:', err);
+      alert('Có lỗi xảy ra khi tạo bài tập từ AI: ' + (err as Error).message);
+    } finally {
+      setIsCreatingFromAI(false);
+    }
+  };
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const fetchAssignments = async (showLoading = true) => {
@@ -182,6 +261,10 @@ export default function MaterialLibraryPage() {
     return matchesSearch && matchesType && matchesStatus && matchesSubject && matchesAge && matchesLevel && matchesGoal && matchesTag;
   });
 
+  const totalItems = filteredAssignments.length;
+  const itemsPerPage = 9;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
   return (
     <div className="flex flex-col gap-8 pb-24">
       {/* Quick Actions & Other UI... (kept same as before but ensured pb-24) */}
@@ -190,13 +273,9 @@ export default function MaterialLibraryPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button 
             disabled={isCreating}
-            onClick={async () => {
-              setIsCreating(true);
-              try {
-                const typeToCreate = typeFilter === 'ALL' ? 'EXERCISE' : typeFilter;
-                const id = await createDraftMaterial(typeToCreate);
-                router.push(`/teacher/materials/${id}/edit`);
-              } finally { setIsCreating(false); }
+            onClick={() => {
+              const targetType = typeFilter === 'ALL' ? 'quiz' : typeFilter.toLowerCase();
+              router.push(`/teacher/materials/new/edit?type=${targetType}`);
             }}
             className="flex items-center gap-5 p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-all text-left group disabled:opacity-50"
           >
@@ -205,14 +284,8 @@ export default function MaterialLibraryPage() {
           </button>
           <button 
             disabled={isCreating}
-            onClick={async () => {
-              if (session?.user?.role !== 'ADMIN') { alert('Chức năng Tạo bằng AI hiện tại chỉ dành cho Super Admin.'); return; }
-              setIsCreating(true);
-              try {
-                const typeToCreate = typeFilter === 'ALL' ? 'EXERCISE' : typeFilter;
-                const id = await createDraftMaterial(typeToCreate);
-                router.push(`/teacher/materials/${id}/edit?ai=true`);
-              } finally { setIsCreating(false); }
+            onClick={() => {
+              setShowAIModal(true);
             }}
             className="relative flex items-center gap-5 p-6 bg-gradient-to-br from-indigo-50/80 to-blue-50/80 dark:from-indigo-900/30 dark:to-blue-900/30 backdrop-blur-md rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:shadow-md transition-all text-left group overflow-hidden disabled:opacity-50"
           >
@@ -335,6 +408,45 @@ export default function MaterialLibraryPage() {
           )}
         </div>
 
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              className="flex items-center justify-center size-10 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const pageNum = i + 1;
+              const isActive = currentPage === pageNum;
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`flex items-center justify-center size-10 rounded-xl font-bold text-sm transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105'
+                      : 'border border-slate-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              className="flex items-center justify-center size-10 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-white dark:disabled:hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
         {/* Toolbar */}
         {selectedIds.length > 0 && (
           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[80] bg-white/80 dark:bg-slate-800/80 backdrop-blur-lg border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl px-8 py-4 flex items-center gap-8 animate-in slide-in-from-bottom-10 pointer-events-auto" style={{ minWidth: '400px' }}>
@@ -374,6 +486,14 @@ export default function MaterialLibraryPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* AI Generator Modal */}
+      {showAIModal && (
+        <AIGeneratorModal
+          assignmentId="new"
+          onClose={() => setShowAIModal(false)}
+          onQuestionsGenerated={handleAIGeneratedQuestions}
+        />
       )}
     </div>
   );

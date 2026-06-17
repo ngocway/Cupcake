@@ -2,6 +2,11 @@
 
 import openai from "@/lib/openai";
 import { QuestionType } from "@/components/quiz/types";
+import { after } from 'next/server';
+import { generateDalleImage } from '@/actions/ai-actions';
+import { uploadBase64Image } from '@/actions/upload-actions';
+import prisma from '@/lib/prisma';
+import { auth } from '@/auth';
 
 export const generateQuizQuestions = async ({
   topic,
@@ -112,3 +117,156 @@ export const generateQuizQuestions = async ({
     throw new Error("Lỗi gọi OpenAI API (" + error.message + ")");
   }
 };
+
+function buildInstructionsHtml(data: {
+  lessonGoal: string;
+  grammarFormula: string;
+  examples: string[];
+  quickMemoryTip: string[];
+  finalSummary: string;
+}): string {
+  return `
+<div class="esl-lesson-instructions space-y-6">
+  <section>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Lesson Goal</h3>
+    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.lessonGoal}</p>
+  </section>
+  
+  <section>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Grammar Formula</h3>
+    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.grammarFormula}</p>
+  </section>
+  
+  <section>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Examples</h3>
+    <ul class="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
+      ${data.examples.map(ex => `<li>${ex}</li>`).join('')}
+    </ul>
+  </section>
+  
+  <section>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Memory Tip</h3>
+    <ul class="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
+      ${data.quickMemoryTip.map(tip => `<li>${tip}</li>`).join('')}
+    </ul>
+  </section>
+  
+  <section>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Summary</h3>
+    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.finalSummary}</p>
+  </section>
+</div>
+  `.trim();
+}
+
+export async function generateAIExerciseAction(assignmentId: string, userPromptText: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, errors: ["Chưa đăng nhập. Vui lòng đăng nhập lại."] };
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return { success: false, errors: ["OPENAI_API_KEY chưa được cấu hình. Vui lòng thêm vào .env"] };
+  }
+
+  try {
+    const systemPrompt = `You are an expert ESL content creator.
+You must return the generated content STRICTLY as a JSON object matching the following structure:
+{
+  "title": "string (Title of the lesson)",
+  "thumbnailImagePrompt": "string (Thumbnail image prompt based on the requirements)",
+  "lessonGoal": "string (Goal of the lesson)",
+  "grammarFormula": "string (Grammar formula explanation)",
+  "examples": ["string (Example 1)", "string (Example 2)", ...],
+  "practiceMultipleChoice": [
+    {
+      "questionText": "string",
+      "options": [
+        { "text": "string", "isCorrect": boolean }
+      ],
+      "explanation": "string"
+    }
+  ],
+  "practiceTrueFalse": [
+    {
+      "statement": "string",
+      "isTrue": boolean,
+      "explanation": "string"
+    }
+  ],
+  "quickMemoryTip": ["string (Tip 1)", "string (Tip 2)", ...],
+  "finalSummary": "string (Final summary)"
+}
+
+Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. Ensure all questions and options are in English only.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPromptText }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0].message.content;
+    if (!responseText) {
+      return { success: false, errors: ["Không nhận được phản hồi từ OpenAI"] };
+    }
+
+    const result = JSON.parse(responseText);
+    
+    // Validate output structure
+    if (!result.title || !result.practiceMultipleChoice || !result.practiceTrueFalse) {
+      return { success: false, errors: ["Dữ liệu phản hồi từ AI không đúng cấu trúc yêu cầu."] };
+    }
+
+    // Convert Goal, Grammar, Examples, Tip, Summary to instructionsHtml
+    const instructionsHtml = buildInstructionsHtml({
+      lessonGoal: result.lessonGoal || "",
+      grammarFormula: result.grammarFormula || "",
+      examples: result.examples || [],
+      quickMemoryTip: result.quickMemoryTip || [],
+      finalSummary: result.finalSummary || ""
+    });
+
+    // Run background task for DALL-E image generation & update DB
+    if (result.thumbnailImagePrompt && assignmentId && assignmentId !== 'new') {
+      after(async () => {
+        try {
+          console.log(`[Background] Starting DALL-E image generation for assignment ${assignmentId}`);
+          const imageResult = await generateDalleImage(result.thumbnailImagePrompt);
+          if (imageResult.base64) {
+            const uploadResult = await uploadBase64Image(imageResult.base64, assignmentId);
+            if (uploadResult.success && uploadResult.url) {
+              await prisma.assignment.update({
+                where: { id: assignmentId },
+                data: { thumbnail: uploadResult.url }
+              });
+              console.log(`[Background] Successfully updated thumbnail for assignment ${assignmentId} to: ${uploadResult.url}`);
+            } else {
+              console.error(`[Background] Failed to upload DALL-E image to R2:`, uploadResult.error);
+            }
+          } else {
+            console.error(`[Background] DALL-E generation failed:`, imageResult.error);
+          }
+        } catch (err) {
+          console.error(`[Background] Error in DALL-E generation task:`, err);
+        }
+      });
+    }
+
+    return {
+      success: true,
+      title: result.title,
+      instructions: instructionsHtml,
+      shortDescription: result.lessonGoal || "",
+      multipleChoice: result.practiceMultipleChoice,
+      trueFalse: result.practiceTrueFalse,
+      thumbnailImagePrompt: result.thumbnailImagePrompt
+    };
+  } catch (error: any) {
+    console.error("OpenAI API Error in custom prompt quiz generator:", error);
+    return { success: false, errors: ["Lỗi khi phân tích bằng AI: " + (error.message || String(error))] };
+  }
+}

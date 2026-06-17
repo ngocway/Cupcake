@@ -21,11 +21,22 @@ export async function generateUniqueSlug(baseTitle: string, model: 'assignment' 
   const baseSlug = toSlug(baseTitle);
   if (!baseSlug) return null;
 
-  let slug = baseSlug;
-  let counter = 1;
+  // 1. Check if the clean base slug is available first
+  let existing;
+  if (model === 'assignment') {
+    existing = await prisma.assignment.findUnique({ where: { slug: baseSlug } });
+  } else {
+    existing = await prisma.lesson.findUnique({ where: { slug: baseSlug } });
+  }
+  
+  if (!existing) return baseSlug;
 
-  while (true) {
-    let existing;
+  // 2. If already taken, append a random 4-character alphanumeric suffix
+  let attempts = 0;
+  while (attempts < 10) {
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const slug = `${baseSlug}-${randomSuffix}`;
+    
     if (model === 'assignment') {
       existing = await prisma.assignment.findUnique({ where: { slug } });
     } else {
@@ -33,6 +44,9 @@ export async function generateUniqueSlug(baseTitle: string, model: 'assignment' 
     }
     
     if (!existing) return slug;
-    slug = `${baseSlug}-${counter++}`;
+    attempts++;
   }
+  
+  // 3. Fallback in case of extreme collision
+  return `${baseSlug}-${Date.now()}`;
 }

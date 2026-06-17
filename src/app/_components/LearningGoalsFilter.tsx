@@ -3,22 +3,30 @@
 import { useContentStore } from "@/store/useContentStore";
 import { FilterLink } from "@/components/public/FilterLink";
 import { useLocale } from "next-intl";
+import { useState, useEffect } from "react";
+import { getOnboardingConfig } from "@/actions/user-preferences-actions";
 
-export function LearningGoalsFilter({ categories, activeId }: { categories: any[], activeId?: string }) {
+export function LearningGoalsFilter({ activeId }: { activeId?: string }) {
   const studySubject = useContentStore(s => (s as any).studySubject);
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
   const locale = useLocale();
 
-  if (studySubject !== "english") return null;
-  if (studyAgeGroup === "kindergarten" || studyAgeGroup === "kindergarden") return null;
+  const [config, setConfig] = useState<any>(null);
 
-  const englishCat = categories.find(c => c.slug === "english");
-  if (!englishCat || !englishCat.children) return null;
+  useEffect(() => {
+    getOnboardingConfig().then(c => {
+      if (c) setConfig(c);
+    });
+  }, []);
 
-  let goals = englishCat.children;
-  if (studyAgeGroup === "kid" || studyAgeGroup === "teen") {
-    goals = goals.filter((g: any) => g.slug !== "ielts-toefl");
-  }
+  if (!studySubject || !studyAgeGroup || !config) return null;
+  if (studyAgeGroup === "kindergarten" || studyAgeGroup === "kindergarden" || studyAgeGroup === "KINDERGARTEN (< 6 YEARS)") return null;
+
+  const subjectData = config.subjects?.find((s: any) => s.id === studySubject);
+  const ageGroupData = subjectData?.ageGroups?.find((a: any) => a.id === studyAgeGroup);
+  const goals = ageGroupData?.goals || [];
+
+  if (goals.length === 0) return null;
 
   const blobShapes = [
     "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
@@ -38,12 +46,11 @@ export function LearningGoalsFilter({ categories, activeId }: { categories: any[
   ];
 
   const allGoals = [
-    { id: englishCat.id, nameEn: "All", nameVi: "Tất cả", slug: "all" },
+    { id: "all", label: "All", nameVi: "Tất cả", nameEn: "All", color: "#64748b" },
     ...goals
   ];
 
-  // If activeId is undefined, "All" should be active. Or if activeId === englishCat.id.
-  const isAllActive = !activeId || activeId === englishCat.id;
+  const isAllActive = !activeId || activeId === "all";
 
   return (
     <div className="pt-6 border-t border-primary/5 animate-in fade-in slide-in-from-left duration-700">
@@ -52,15 +59,17 @@ export function LearningGoalsFilter({ categories, activeId }: { categories: any[
       </h2>
       <div className="flex flex-wrap gap-2.5">
         {allGoals.map((goal, idx) => {
-          const isSelected = goal.slug === "all" ? isAllActive : activeId === goal.id;
+          const isSelected = goal.id === "all" ? isAllActive : activeId === goal.id;
           const blobShape = blobShapes[idx % blobShapes.length];
           const color = colors[idx % colors.length];
-          const displayName = (locale === "vi" ? (goal.nameVi || goal.nameEn) : (goal.nameEn || goal.nameVi)) || "";
+          const displayName = goal.id === "all" && locale === "vi" ? "Tất cả" : goal.label;
+
+          const filterHref = goal.id === "all" ? "/?goal=" : `/?goal=${goal.id}`;
 
           return (
             <FilterLink
               key={goal.id}
-              href={`/?categoryId=${goal.id}`}
+              href={filterHref}
               className={`inline-block border px-3 py-1.5 text-[11px] uppercase tracking-[0.05em] font-black transition-all duration-300 ${blobShape} ${color.border} ${isSelected ? `${color.bg} ${color.text} shadow-md scale-[1.05] ring-2 ring-primary/10` : `bg-white text-slate-500 hover:text-slate-800 ${color.hover} opacity-80 hover:opacity-100 shadow-sm hover:scale-105`}`}
             >
               {displayName}

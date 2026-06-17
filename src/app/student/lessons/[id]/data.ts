@@ -73,9 +73,20 @@ export const getTeacherBasic = cache(async (teacherId: string) => {
 export const getLessonReadingText = async (lessonId: string) => {
   const assignment = await prisma.assignment.findFirst({
     where: { lesson: { id: lessonId } },
-    select: { readingText: true }
+    select: { readingText: true, audioMetadata: true }
   });
-  return assignment?.readingText ?? null;
+  if (!assignment || !assignment.readingText) return null;
+
+  // Nếu có audioMetadata nhưng chưa có span nào được bọc trong readingText, tiến hành bọc động
+  if (assignment.audioMetadata && Array.isArray(assignment.audioMetadata) && assignment.audioMetadata.length > 0) {
+    const hasSpans = assignment.readingText.includes('class="reading-word"');
+    if (!hasSpans) {
+      const { alignAndWrapHtmlServer } = await import("@/actions/material-actions");
+      return await alignAndWrapHtmlServer(assignment.readingText, assignment.audioMetadata as any);
+    }
+  }
+
+  return assignment.readingText;
 };
 
 export const getLessonReviews = async (lessonId: string) => {
@@ -92,10 +103,13 @@ export const getLessonReviews = async (lessonId: string) => {
 };
 
 export const getRelatedLessons = async (lessonId: string) => {
-  // 1. Fetch current lesson's assignment tags and target audiences
-  const lesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
+  // 1. Resolve actual lesson UUID and fetch tags/target audiences
+  const lesson = await prisma.lesson.findFirst({
+    where: {
+      OR: [{ id: lessonId }, { slug: lessonId }]
+    },
     select: {
+      id: true,
       targetAudiences: true,
       assignment: {
         select: { tags: true }
@@ -103,7 +117,9 @@ export const getRelatedLessons = async (lessonId: string) => {
     }
   });
 
-  const currentAudiences = lesson?.targetAudiences || [];
+  if (!lesson) return [];
+  const actualId = lesson.id;
+  const currentAudiences = lesson.targetAudiences || [];
 
   // 2. Fetch popular tags
   const popularTags = await prisma.tag.findMany({
@@ -113,7 +129,7 @@ export const getRelatedLessons = async (lessonId: string) => {
   const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
 
   // 3. Get non-popular tags
-  const currentTags = lesson?.assignment?.tags
+  const currentTags = lesson.assignment?.tags
     ? lesson.assignment.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
     : [];
   const filteredTags = currentTags.filter(tag => !popularTagNames.has(tag));
@@ -123,7 +139,7 @@ export const getRelatedLessons = async (lessonId: string) => {
   if (filteredTags.length > 0) {
     const candidates = await prisma.lesson.findMany({
       where: {
-        id: { not: lessonId },
+        id: { not: actualId },
         deletedAt: null,
         isBlocked: false,
         isPremium: false,
@@ -160,14 +176,14 @@ export const getRelatedLessons = async (lessonId: string) => {
       return overlapB - overlapA;
     });
 
-    relatedLessons = candidates.slice(0, 10);
+    relatedLessons = candidates;
   }
 
   // Fallback: If no lessons found or no filtered tags exist, fetch the latest public lessons
   if (relatedLessons.length === 0) {
     relatedLessons = await prisma.lesson.findMany({
       where: {
-        id: { not: lessonId },
+        id: { not: actualId },
         deletedAt: null,
         isBlocked: false,
         isPremium: false,
@@ -178,15 +194,30 @@ export const getRelatedLessons = async (lessonId: string) => {
       orderBy: {
         createdAt: 'desc'
       },
-      take: 10,
+      take: 50,
       select: {
         id: true,
         slug: true,
         title: true,
-        thumbnail: true
+        thumbnail: true,
+        assignment: {
+          select: { tags: true }
+        }
       }
     });
   }
 
-  return relatedLessons;
+  // Filter out duplicate titles and limit to 10 items
+  const seenTitles = new Set<string>();
+  const uniqueLessons: any[] = [];
+  for (const item of relatedLessons) {
+    const normalizedTitle = item.title.trim().toLowerCase();
+    if (!seenTitles.has(normalizedTitle)) {
+      seenTitles.add(normalizedTitle);
+      uniqueLessons.push(item);
+    }
+    if (uniqueLessons.length >= 10) break;
+  }
+
+  return uniqueLessons;
 };

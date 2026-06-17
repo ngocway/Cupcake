@@ -4,15 +4,16 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { MaterialStatus, MaterialType } from '@/generated/client';
-import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
+import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial, alignMaterialWhisper, autoSaveMaterial } from '@/actions/material-actions';
 import { useRouter } from 'next/navigation';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
 import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';
+import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import {
   Check, Edit2, FileEdit, Lock, Globe, MoreHorizontal, Eye, Copy, 
   GraduationCap, Edit, LineChart, Trash2, HelpCircle, 
   CheckCircle, List, Users, PlayCircle, Calendar, Clock, 
-  PlusCircle, RefreshCw, Send, X, Link2
+  PlusCircle, RefreshCw, Send, X, Link2, Sparkles, Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +40,10 @@ type Assignment = {
   createdAt: string;
   lessonId?: string;
   targetAudiences?: string[];
+  audienceLevels?: any;
+  learningGoals?: string[];
+  audioUrl?: string | null;
+  audioMetadata?: any;
 };
 
 const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: any; className: string }> = {
@@ -60,6 +65,13 @@ const AUDIENCE_CONFIG: Record<string, { label: string; className: string }> = {
   kid:          { label: 'Kid',          className: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' },
   teen:         { label: 'Teen',         className: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400' },
   learner:      { label: 'Learner',      className: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' },
+};
+
+const LEVEL_SHORT_LABELS: Record<string, string> = {
+  beginner: 'A1',
+  elementary: 'A2',
+  intermediate: 'B1',
+  advanced: 'C1',
 };
 
 export function MaterialListItem({ 
@@ -84,10 +96,67 @@ export function MaterialListItem({
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isWhispering, setIsWhispering] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showClassesPopup, setShowClassesPopup] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
+
+  const [isQuickSettingsOpen, setIsQuickSettingsOpen] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [tempSubject, setTempSubject] = useState<string>('');
+  const [tempAudiences, setTempAudiences] = useState<string[]>([]);
+  const [tempLevels, setTempLevels] = useState<Record<string, string>>({});
+  const [tempGoals, setTempGoals] = useState<string[]>([]);
+  const [config, setConfig] = useState<any>(null);
+
+  useEffect(() => {
+    if (isQuickSettingsOpen && !config) {
+      import('@/actions/user-preferences-actions').then(m => m.getOnboardingConfig().then(setConfig));
+    }
+  }, [isQuickSettingsOpen, config]);
+
+  const openQuickSettings = () => {
+    setTempSubject(assignment.subject || '');
+    setTempAudiences(assignment.targetAudiences || []);
+    setTempLevels(assignment.audienceLevels || {});
+    setTempGoals(assignment.learningGoals || []);
+    setIsQuickSettingsOpen(true);
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    const toastId = toast.loading("Đang lưu thiết lập nhanh...");
+    try {
+      const payload: any = {
+        id: assignment.id,
+        title: assignment.title,
+        subject: tempSubject || null,
+        targetAudiences: tempAudiences,
+        audienceLevels: tempLevels,
+        learningGoals: tempGoals
+      };
+      
+      const res = await autoSaveMaterial(payload);
+      if (res && res.success) {
+        toast.success("Thiết lập nhanh thành công!", { id: toastId });
+        setIsQuickSettingsOpen(false);
+        if (onRefresh) {
+          onRefresh();
+        } else {
+          router.refresh();
+        }
+      } else {
+        toast.error("Lưu thiết lập thất bại.", { id: toastId });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Lỗi khi lưu thiết lập.", { id: toastId });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
   const [teacherClasses, setTeacherClasses] = useState<ClassOption[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
@@ -308,6 +377,33 @@ export function MaterialListItem({
     }
   };
 
+  const handleWhisperAlign = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isWhispering) return;
+
+    if (!assignment.audioUrl) {
+      toast.warning("Bài học chưa có file âm thanh/giọng đọc. Vui lòng tạo giọng đọc trước trong phần chỉnh sửa bài học.");
+      return;
+    }
+
+    setIsWhispering(true);
+    const toastId = toast.loading("Đang chạy Whisper AI đồng bộ giọng đọc...");
+    try {
+      const res = await alignMaterialWhisper(assignment.id);
+      if (res && res.success) {
+        toast.success("Đồng bộ giọng đọc thành công!", { id: toastId });
+        if (onRefresh) onRefresh();
+      } else {
+        toast.error("Đồng bộ giọng đọc thất bại.", { id: toastId });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Lỗi khi chạy đồng bộ Whisper.", { id: toastId });
+    } finally {
+      setIsWhispering(false);
+    }
+  };
+
   const status = STATUS_CONFIG[assignment.status] || STATUS_CONFIG.DRAFT;
   const dateStr = new Date(assignment.createdAt).toLocaleDateString('vi-VN');
 
@@ -375,20 +471,39 @@ export function MaterialListItem({
                   >
                     {assignment.title}
                   </h3>
-                  {/* Audience badges */}
-                  {assignment.targetAudiences && assignment.targetAudiences.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {assignment.targetAudiences.map(aud => {
-                        const cfg = AUDIENCE_CONFIG[aud];
-                        if (!cfg) return null;
-                        return (
-                          <span key={aud} className={`${cfg.className} text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider`}>
-                            {cfg.label}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Audience badges & settings */}
+                  <div className="flex items-center flex-wrap gap-2 mt-2">
+                    {assignment.targetAudiences && assignment.targetAudiences.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {assignment.targetAudiences.map(aud => {
+                          const cfg = AUDIENCE_CONFIG[aud];
+                          if (!cfg) return null;
+
+                          const levelId = assignment.audienceLevels?.[aud];
+                          const levelShort = levelId ? (LEVEL_SHORT_LABELS[levelId] || levelId.toUpperCase()) : null;
+                          const labelText = levelShort ? `${cfg.label} (${levelShort})` : cfg.label;
+
+                          return (
+                            <span key={aud} className={`${cfg.className} text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider`}>
+                              {labelText}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {!isTrash && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openQuickSettings();
+                        }}
+                        className="size-5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-400 hover:text-primary hover:border-primary flex items-center justify-center shadow-sm shrink-0 transition-colors"
+                        title="Thiết lập nhanh độ tuổi, level, goals"
+                      >
+                        <Settings className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {!isTrash && (
                   <div className="relative group/menu shrink-0 -mt-1 -mr-1" ref={menuRef}>
@@ -624,6 +739,37 @@ export function MaterialListItem({
                     {assignment.tags?.length > 2 && (
                       <span className="text-[10px] text-slate-400 font-bold px-1">+{assignment.tags.length - 2}</span>
                     )}
+                    {assignment.materialType === 'READING' && (
+                      <>
+                        {assignment.audioMetadata && Array.isArray(assignment.audioMetadata) && assignment.audioMetadata.length > 0 ? (
+                          <span 
+                            className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/30 text-[10px] font-bold rounded flex items-center gap-1 select-none"
+                            title="Bài đọc đã được đồng bộ Whisper AI thành công"
+                          >
+                            <CheckCircle className="w-3 h-3 text-emerald-500" />
+                            AI Whisper
+                          </span>
+                        ) : (
+                          <button
+                            onClick={handleWhisperAlign}
+                            disabled={isWhispering}
+                            className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex items-center gap-1 border transition-all ${
+                              isWhispering 
+                                ? 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-600 dark:border-slate-700 cursor-not-allowed'
+                                : 'bg-violet-50 text-violet-600 border-violet-200/50 hover:bg-violet-100 hover:text-violet-700 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-800/30 dark:hover:bg-violet-900/30 dark:hover:text-violet-300'
+                            }`}
+                            title="Đồng bộ giọng đọc từng từ bằng Whisper AI"
+                          >
+                            {isWhispering ? (
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-3 h-3" />
+                            )}
+                            Đồng bộ AI
+                          </button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -731,6 +877,78 @@ export function MaterialListItem({
         assignmentId={assignment.id}
         title={assignment.title}
       />
+
+      {/* Quick Settings Modal */}
+      {isQuickSettingsOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200" onClick={() => setIsQuickSettingsOpen(false)}>
+          <div 
+            className="bg-white dark:bg-slate-800 rounded-[2rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-700 flex flex-col max-h-[85vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-gray-700 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 text-primary p-2.5 rounded-xl">
+                  <Settings className="w-5 h-5 animate-spin duration-1000" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-800 dark:text-gray-100">Thiết lập nhanh học liệu</h2>
+                  <p className="text-xs text-slate-400 mt-0.5 max-w-[320px] truncate" title={assignment.title}>{assignment.title}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsQuickSettingsOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-300 transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              {config ? (
+                <TaxonomySelector
+                  config={config}
+                  subject={tempSubject}
+                  setSubject={setTempSubject}
+                  targetAudiences={tempAudiences}
+                  setTargetAudiences={setTempAudiences}
+                  audienceLevels={tempLevels}
+                  setAudienceLevels={setTempLevels}
+                  learningGoals={tempGoals}
+                  setLearningGoals={setTempGoals}
+                />
+              ) : (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-gray-800/50 border-t border-slate-100 dark:border-gray-700 flex gap-3 shrink-0">
+              <button 
+                onClick={() => setIsQuickSettingsOpen(false)}
+                className="flex-1 py-2 px-4 bg-slate-200 dark:bg-gray-700 text-slate-700 dark:text-gray-300 font-bold rounded-xl hover:bg-slate-300 dark:hover:bg-gray-600 transition-colors uppercase tracking-wide text-[10px]"
+                disabled={isSavingSettings}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                onClick={handleSaveSettings}
+                className="flex-1 py-2 px-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 shadow-md shadow-primary/20 transition-colors uppercase tracking-wide text-[10px] flex items-center justify-center gap-2"
+                disabled={isSavingSettings}
+              >
+                {isSavingSettings ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  'Lưu thay đổi'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

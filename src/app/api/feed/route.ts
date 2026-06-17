@@ -11,9 +11,11 @@ import { getShuffledIds } from '@/lib/cached-queries'
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type       = searchParams.get('type')        // 'exercises' | 'lessons'
-  const categoryId = searchParams.get('categoryId') || ''
+  const goal       = searchParams.get('goal') || searchParams.get('categoryId') || ''
   const search     = searchParams.get('search') || ''
   const userType   = searchParams.get('userType') || ''
+  const subject    = searchParams.get('subject') || ''
+  const level      = searchParams.get('level') || ''
 
   const pageStr    = searchParams.get('page') || '1'
   const limitStr   = searchParams.get('limit') || '12'
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const contentType = type === 'lessons' ? 'LESSON' : 'EXERCISE'
 
-  const randomIds = await getShuffledIds(contentType, categoryId, search, userType)
+  const randomIds = await getShuffledIds(contentType, goal, search, userType, subject, level)
   const slicedIds = randomIds.slice(skip, skip + limit)
   const hasMore = skip + limit < randomIds.length
 

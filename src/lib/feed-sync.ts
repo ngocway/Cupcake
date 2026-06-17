@@ -8,7 +8,6 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         where: { id: sourceId },
         include: { 
           teacher: true, 
-          categories: true,
           lesson: true,
           _count: { select: { reviews: true, questions: true } }
         }
@@ -33,9 +32,12 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
           questionCount: ass._count.questions,
-          categoryId: ass.categories.length > 0 ? ass.categories.map(c => c.id).join(',') : null,
           status: ass.status,
           targetAudiences: ass.targetAudiences,
+          learningGoals: ass.learningGoals,
+          level: ass.level,
+          audienceLevels: ass.audienceLevels as any,
+          subject: ass.subject,
           tags: ass.tags ? ass.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           updatedAt: new Date()
         },
@@ -54,9 +56,12 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           viewCount: ass.viewCount,
           reviewCount: ass._count.reviews,
           questionCount: ass._count.questions,
-          categoryId: ass.categories.length > 0 ? ass.categories.map(c => c.id).join(',') : null,
           status: ass.status,
           targetAudiences: ass.targetAudiences,
+          learningGoals: ass.learningGoals,
+          level: ass.level,
+          audienceLevels: ass.audienceLevels as any,
+          subject: ass.subject,
           tags: ass.tags ? ass.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           createdAt: ass.createdAt
         }
@@ -66,8 +71,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         where: { id: sourceId },
         include: { 
           teacher: true, 
-          categories: true,
-          assignment: { select: { tags: true, status: true } },
+          assignment: { select: { tags: true, status: true, subject: true } },
           _count: { select: { reviews: true } }
         }
       });
@@ -90,9 +94,12 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: lesson.teacher.image ?? undefined,
           viewCount: lesson.viewsCount,
           reviewCount: lesson._count.reviews,
-          categoryId: lesson.categories.length > 0 ? lesson.categories.map(c => c.id).join(',') : null,
           status: lesson.assignment.status,
           targetAudiences: lesson.targetAudiences,
+          learningGoals: lesson.learningGoals,
+          level: lesson.level,
+          audienceLevels: lesson.audienceLevels as any,
+          subject: lesson.assignment?.subject || null,
           tags: lesson.assignment?.tags ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           updatedAt: new Date()
         },
@@ -110,9 +117,12 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           teacherImage: lesson.teacher.image ?? undefined,
           viewCount: lesson.viewsCount,
           reviewCount: lesson._count.reviews,
-          categoryId: lesson.categories.length > 0 ? lesson.categories.map(c => c.id).join(',') : null,
           status: lesson.assignment.status,
           targetAudiences: lesson.targetAudiences,
+          learningGoals: lesson.learningGoals,
+          level: lesson.level,
+          audienceLevels: lesson.audienceLevels as any,
+          subject: lesson.assignment?.subject || null,
           tags: lesson.assignment?.tags ? lesson.assignment.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
           createdAt: lesson.createdAt
         }

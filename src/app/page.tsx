@@ -3,7 +3,7 @@ import { Suspense } from "react"
 import { LandingPage } from "@/components/public/LandingPage"
 import { HomeShell } from "./_components/HomeShell"
 import { HomeSidebar } from "./_components/HomeSidebar"
-import { getCachedCategoryTree, getCachedAssignments, getCachedLessons } from "@/lib/cached-queries"
+import { getCachedAssignments, getCachedLessons } from "@/lib/cached-queries"
 import { cookies } from "next/headers"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
@@ -45,10 +45,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // Popular data is pre-fetched client-side in the background (via /api/feed)
   // after the page has already rendered — so sort switching feels instant
   // without slowing down the initial page load.
-  const queryParams = { ...params, userType: initialUserType };
+  const queryParams = { 
+    ...params, 
+    userType: initialUserType,
+    studySubject,
+    studyLevel
+  };
   const assignmentsPromise  = getCachedAssignments(queryParams);
   const lessonsPromise      = getCachedLessons(queryParams);
-  const categoryTreePromise = getCachedCategoryTree();
 
   // Kindergarten specific data
   let flashcardsPromise = Promise.resolve([] as any[]);
@@ -103,7 +107,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               promises={{
                 assignments: assignmentsPromise,
                 lessons: lessonsPromise,
-                categoryTree: categoryTreePromise,
                 flashcards: flashcardsPromise,
                 kindergartenGames: kindergartenGamesPromise,
               }}

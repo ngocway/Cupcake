@@ -42,6 +42,17 @@ export async function updateTeacherProfile(data: {
             }
         });
 
+        // Sync name and avatar changes to HomepageFeed
+        if (data.name !== undefined || data.image !== undefined) {
+            await prisma.homepageFeed.updateMany({
+                where: { teacherId: session.user.id },
+                data: {
+                    ...(data.name !== undefined ? { teacherName: data.name } : {}),
+                    ...(data.image !== undefined ? { teacherImage: data.image } : {})
+                }
+            });
+        }
+
         revalidatePath("/teacher/profile");
         revalidatePath(`/teacher/profile/${session.user.id}`);
         revalidatePath(`/profile/${session.user.id}`);
@@ -49,6 +60,7 @@ export async function updateTeacherProfile(data: {
         revalidateTag("assignments", {});
         revalidateTag("lesson", {});
         revalidateTag("lessons", {});
+        revalidateTag("homepage", {});
         return { success: true };
     } catch (error) {
         console.error("Error updating profile:", error);

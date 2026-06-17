@@ -28,11 +28,15 @@ export async function GET(req: NextRequest) {
           title: true,
           description: true,
           videoUrl: true,
+          audioUrl: true,
+          audioMetadata: true,
           viewsCount: true,
           createdAt: true,
           isPremium: true,
           price: true,
           targetAudiences: true,
+          audienceLevels: true,
+          learningGoals: true,
           teacher: {
             select: {
               name: true
@@ -47,8 +51,12 @@ export async function GET(req: NextRequest) {
               gradeLevel: true,
               thumbnail: true,
               targetAudiences: true,
+              audienceLevels: true,
+              learningGoals: true,
               tags: true,
               publicSubmissionCount: true,
+              audioUrl: true,
+              audioMetadata: true,
               _count: {
                 select: {
                   questions: true,
@@ -88,8 +96,12 @@ export async function GET(req: NextRequest) {
         assignedCount: l.assignment?._count?.targetClasses || 0,
         publicSubmissionCount: l.assignment?.publicSubmissionCount || 0,
         targetAudiences: l.targetAudiences?.length ? l.targetAudiences : (l.assignment?.targetAudiences || []),
+        audienceLevels: l.audienceLevels || l.assignment?.audienceLevels || null,
+        learningGoals: l.learningGoals?.length ? l.learningGoals : (l.assignment?.learningGoals || []),
         createdAt: l.createdAt,
         teacher: l.teacher,
+        audioUrl: l.audioUrl || l.assignment?.audioUrl || null,
+        audioMetadata: l.audioMetadata || l.assignment?.audioMetadata || null,
         isPremium: l.isPremium,
         price: l.price
       })),
