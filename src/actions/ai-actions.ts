@@ -118,7 +118,7 @@ export async function fetchImageAsBase64(url: string) {
   }
 }
 
-export async function generateDalleImage(prompt: string) {
+export async function generateDalleImage(prompt: string, size: string = "1024x1024") {
   if (!process.env.OPENAI_API_KEY) {
     return { error: "Missing OPENAI_API_KEY. Please set it in .env file." };
   }
@@ -133,6 +133,12 @@ export async function generateDalleImage(prompt: string) {
   for (const model of models) {
     try {
       console.log(`Attempting image generation with model: ${model}`);
+      const requestedSize = model === "dall-e-2" 
+        ? "512x512" 
+        : model === "gpt-image-2" 
+          ? "1024x1024" 
+          : size;
+
       const res = await fetch(`${baseURL}/images/generations`, {
         method: "POST",
         headers: {
@@ -143,7 +149,7 @@ export async function generateDalleImage(prompt: string) {
           model: model,
           prompt: prompt,
           n: 1,
-          size: model === "dall-e-2" ? "512x512" : "1024x1024"
+          size: requestedSize
         })
       });
       

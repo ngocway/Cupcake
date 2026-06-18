@@ -706,8 +706,15 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     setSelectedCategoryId("")
     setSelectedSubCategoryId("")
 
-    // 3. Trigger background update to server
-    await updateAllPreferences({
+    // 3. Set cookies immediately on the client side so next request has them instantly
+    if (tempUserType) document.cookie = `user_type=${tempUserType}; path=/; max-age=31536000; samesite=lax`;
+    if (tempNativeLanguage) document.cookie = `native_language=${tempNativeLanguage}; path=/; max-age=31536000; samesite=lax`;
+    if (tempStudySubject) document.cookie = `study_subject=${tempStudySubject}; path=/; max-age=31536000; samesite=lax`;
+    if (tempStudyAgeGroup) document.cookie = `study_age_group=${tempStudyAgeGroup}; path=/; max-age=31536000; samesite=lax`;
+    if (tempStudyLevel) document.cookie = `study_level=${tempStudyLevel}; path=/; max-age=31536000; samesite=lax`;
+
+    // 4. Trigger background update to server (FIRE AND FORGET - NO AWAIT)
+    updateAllPreferences({
       userType: tempUserType,
       nativeLanguage: tempNativeLanguage,
       studySubject: tempStudySubject,
@@ -715,7 +722,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       studyLevel: tempStudyLevel
     }).catch(console.error);
 
-    // 4. Update URL goal and categoryId
+    // 5. Update URL goal and categoryId
     const qs = new URLSearchParams(window.location.search)
     qs.delete("categoryId")
     qs.delete("goal")
@@ -725,6 +732,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     // Transition instantly, no artificial delay
     startTransition(() => {
       router.push(`/?${qs.toString()}`, { scroll: false })
+      router.refresh()
     })
 
     // 4. Close the modal
@@ -770,6 +778,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [isFilterModalOpen])
+
+  const feedKey = `feed-${initialUserType}-${initialStudySubject}-${initialStudyLevel}-${searchParams.goal || searchParams.categoryId || ''}-${searchParams.search || ''}`
 
   return (
     <div className="space-y-6 relative">
@@ -1007,6 +1017,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         </div>
       )}
 
+      {/* Background content wrapped for blurring during first time setup */}
+      <div className={`transition-all duration-700 ${isFirstTimeSetup ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
@@ -1112,14 +1125,16 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
             </Suspense>
           ) : activeTab === "exercises" ? (
             <Suspense fallback={<SectionSkeleton />}>
-              <ExerciseList promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
+              <ExerciseList key={`ex-${feedKey}`} promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
             </Suspense>
           ) : (
             <Suspense fallback={<SectionSkeleton />}>
-              <LessonList promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
+              <LessonList key={`ls-${feedKey}`} promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
             </Suspense>
           )}
         </div>
+      </div>
+
       </div>
 
     </div>

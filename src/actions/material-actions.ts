@@ -262,6 +262,15 @@ export async function autoSaveMaterial(payload: {
     );
   }
 
+  // Intercept Base64 Thumbnail
+  if (thumbnail && thumbnail.startsWith('data:image')) {
+    const { uploadBase64Image } = await import('@/actions/upload-actions');
+    const uploadResult = await uploadBase64Image(thumbnail, payload.id);
+    if (uploadResult.success && uploadResult.url) {
+      thumbnail = uploadResult.url;
+    }
+  }
+
   console.log(`[AutoSave] Starting update for assignment: ${payload.id}`);
 
   const updatePayload: any = { 
@@ -378,6 +387,31 @@ export async function autoSaveMaterial(payload: {
       const q = payload.questions[idx];
       const isExisting = q.id && currentIds.includes(q.id);
 
+      // Intercept Base64 in Questions
+      let safeImageUrl = q.imageUrl;
+      let safeMediaUrl = q.mediaUrl;
+      let safeAudioUrl = q.audioUrl;
+      let safeVideoUrl = q.videoUrl;
+
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      
+      if (safeImageUrl?.startsWith('data:')) {
+        const res = await uploadBase64Image(safeImageUrl, payload.id);
+        if (res.success && res.url) safeImageUrl = res.url;
+      }
+      if (safeMediaUrl?.startsWith('data:')) {
+        const res = await uploadBase64Image(safeMediaUrl, payload.id);
+        if (res.success && res.url) safeMediaUrl = res.url;
+      }
+      if (safeAudioUrl?.startsWith('data:')) {
+        const res = await uploadBase64Image(safeAudioUrl, payload.id);
+        if (res.success && res.url) safeAudioUrl = res.url;
+      }
+      if (safeVideoUrl?.startsWith('data:')) {
+        const res = await uploadBase64Image(safeVideoUrl, payload.id);
+        if (res.success && res.url) safeVideoUrl = res.url;
+      }
+
       const questionData = {
         assignmentId: payload.id,
         type: q.type,
@@ -386,10 +420,10 @@ export async function autoSaveMaterial(payload: {
         explanation: q.explanation || null,
         content: typeof q.content === 'object' ? JSON.stringify(q.content) : q.content || "{}",
         mediaType: q.mediaType || 'NONE',
-        mediaUrl: q.mediaUrl || null,
-        imageUrl: q.imageUrl || null,
-        audioUrl: q.audioUrl || null,
-        videoUrl: q.videoUrl || null,
+        mediaUrl: safeMediaUrl || null,
+        imageUrl: safeImageUrl || null,
+        audioUrl: safeAudioUrl || null,
+        videoUrl: safeVideoUrl || null,
         isBanked: q.isBanked !== undefined ? q.isBanked : (q.isAiGenerated ? false : true),
         isAiGenerated: q.isAiGenerated || false,
         originalId: q.originalId || null
@@ -505,10 +539,20 @@ export async function saveMaterialThumbnail(id: string, thumbnail: string | null
     throw new Error('Forbidden: You do not have permission to edit this material.');
   }
 
+  // Intercept Base64
+  let finalThumbnail = thumbnail;
+  if (finalThumbnail && finalThumbnail.startsWith('data:image')) {
+    const { uploadBase64Image } = await import('@/actions/upload-actions');
+    const uploadResult = await uploadBase64Image(finalThumbnail, id);
+    if (uploadResult.success && uploadResult.url) {
+      finalThumbnail = uploadResult.url;
+    }
+  }
+
   // Update assignment thumbnail
   const updatedAssignment = await prisma.assignment.update({
     where: { id },
-    data: { thumbnail },
+    data: { thumbnail: finalThumbnail },
     include: { lesson: true }
   });
 
@@ -516,7 +560,7 @@ export async function saveMaterialThumbnail(id: string, thumbnail: string | null
   if (updatedAssignment.lesson) {
     await prisma.lesson.update({
       where: { id: updatedAssignment.lesson.id },
-      data: { thumbnail }
+      data: { thumbnail: finalThumbnail }
     });
   }
 

@@ -83,13 +83,27 @@ export async function createSentenceBuilderQuestion(data: {
   orderIndex?: number
 }) {
   try {
+    let safeImage = data.image;
+    let safeAudio = data.audio;
+
+    if (safeImage && safeImage.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeImage, `game-sb`);
+      if (res.success && res.url) safeImage = res.url;
+    }
+    if (safeAudio && safeAudio.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudio, `game-sb-audio`);
+      if (res.success && res.url) safeAudio = res.url;
+    }
+
     const question = await prisma.sentenceBuilderQuestion.create({
       data: {
         gameId: data.gameId,
-        image: data.image,
+        image: safeImage,
         expected: data.expected,
         pool: data.pool,
-        audio: data.audio,
+        audio: safeAudio,
         orderIndex: data.orderIndex || 0,
       },
     })
@@ -113,9 +127,27 @@ export async function updateSentenceBuilderQuestion(
   }
 ) {
   try {
+    let safeImage = data.image;
+    let safeAudio = data.audio;
+
+    if (safeImage && safeImage.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeImage, `game-sb`);
+      if (res.success && res.url) safeImage = res.url;
+    }
+    if (safeAudio && safeAudio.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudio, `game-sb-audio`);
+      if (res.success && res.url) safeAudio = res.url;
+    }
+
     const question = await prisma.sentenceBuilderQuestion.update({
       where: { id },
-      data,
+      data: {
+        ...data,
+        image: safeImage,
+        audio: safeAudio,
+      },
     })
     revalidatePath("/admin/games/sentence-builder")
     return { success: true, question }

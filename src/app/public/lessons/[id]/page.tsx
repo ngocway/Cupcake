@@ -127,8 +127,15 @@ async function PublicSidebarWrapper({ teacherId, lessonId, isGuest }: { teacherI
 }
 
 async function PublicActionsWrapper({ lessonId, studentId }: { lessonId: string, studentId: string | undefined }) {
-  const extra = await getLessonExtra(lessonId);
-  const isBookmarked = studentId ? (extra?.favorites?.some((f: any) => f.studentId === studentId) || false) : false;
+  let isBookmarked = false;
+  if (studentId) {
+    const favorite = await prisma.favoriteLesson.findUnique({
+      where: {
+        studentId_lessonId: { studentId, lessonId }
+      }
+    });
+    isBookmarked = !!favorite;
+  }
   
   return (
     <div className="flex items-center justify-end">

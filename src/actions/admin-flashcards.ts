@@ -60,6 +60,20 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
 
     const orderIndex = maxCard ? maxCard.orderIndex + 1 : 0
 
+    let safeImageUrl = data.imageUrl?.trim() || null;
+    let safeAudioUrl = data.audioUrl?.trim() || null;
+
+    if (safeImageUrl?.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeImageUrl, 'flashcard');
+      if (res.success && res.url) safeImageUrl = res.url;
+    }
+    if (safeAudioUrl?.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudioUrl, 'flashcard');
+      if (res.success && res.url) safeAudioUrl = res.url;
+    }
+
     // 2. Tạo thẻ mới
     const newCard = await prisma.globalFlashcard.create({
       data: {
@@ -71,8 +85,8 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
         definitionTh: data.definitionTh?.trim() || null,
         definitionId: data.definitionId?.trim() || null,
         exampleSentence: data.exampleSentence?.trim() || null,
-        imageUrl: data.imageUrl?.trim() || null,
-        audioUrl: data.audioUrl?.trim() || null,
+        imageUrl: safeImageUrl,
+        audioUrl: safeAudioUrl,
         orderIndex
       }
     })
@@ -104,6 +118,20 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
   await checkAdminAuth()
 
   try {
+    let safeImageUrl = data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : undefined;
+    let safeAudioUrl = data.audioUrl !== undefined ? (data.audioUrl?.trim() || null) : undefined;
+
+    if (safeImageUrl && safeImageUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeImageUrl, `flashcard-${id}`);
+      if (res.success && res.url) safeImageUrl = res.url;
+    }
+    if (safeAudioUrl && safeAudioUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudioUrl, `flashcard-${id}`);
+      if (res.success && res.url) safeAudioUrl = res.url;
+    }
+
     const updatedCard = await prisma.globalFlashcard.update({
       where: { id },
       data: {
@@ -115,8 +143,8 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
         definitionTh: data.definitionTh !== undefined ? (data.definitionTh?.trim() || null) : undefined,
         definitionId: data.definitionId !== undefined ? (data.definitionId?.trim() || null) : undefined,
         exampleSentence: data.exampleSentence !== undefined ? (data.exampleSentence?.trim() || null) : undefined,
-        imageUrl: data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : undefined,
-        audioUrl: data.audioUrl !== undefined ? (data.audioUrl?.trim() || null) : undefined
+        imageUrl: safeImageUrl,
+        audioUrl: safeAudioUrl
       }
     })
 
@@ -175,12 +203,19 @@ export async function adminCreateTopic(targetAudience: string, name: string, ico
       return { success: false, error: "Chủ đề này đã tồn tại trong nhóm tuổi này." }
     }
 
+    let safeIconUrl = iconUrl?.trim() || null;
+    if (safeIconUrl && safeIconUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeIconUrl, 'topic');
+      if (res.success && res.url) safeIconUrl = res.url;
+    }
+
     const newTopic = await prisma.flashcardTopic.create({
       data: {
         targetAudience,
         name: trimmedName,
         slug,
-        iconUrl: iconUrl?.trim() || null
+        iconUrl: safeIconUrl
       }
     })
 
@@ -217,13 +252,20 @@ export async function adminUpdateTopic(id: string, name: string, targetAudience:
       return { success: false, error: "Tên chủ đề bị trùng với chủ đề khác trong cùng nhóm tuổi." }
     }
 
+    let safeIconUrl = iconUrl !== undefined ? (iconUrl?.trim() || null) : undefined;
+    if (safeIconUrl && safeIconUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeIconUrl, `topic-${id}`);
+      if (res.success && res.url) safeIconUrl = res.url;
+    }
+
     const updatedTopic = await prisma.flashcardTopic.update({
       where: { id },
       data: {
         name: trimmedName,
         targetAudience,
         slug,
-        iconUrl: iconUrl !== undefined ? (iconUrl?.trim() || null) : undefined
+        iconUrl: safeIconUrl
       }
     })
 

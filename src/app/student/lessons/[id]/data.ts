@@ -1,72 +1,75 @@
 import { unstable_cache } from "next/cache";
 import prisma from "@/lib/prisma";
-
+import { fetchWithRedis } from "@/lib/cached-queries";
 import { cache } from "react";
 
 export const getLessonBasic = cache(async (id: string) => {
-  return prisma.lesson.findFirst({
-    where: {
-      OR: [{ id }, { slug: id }]
-    },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      description: true,
-      videoUrl: true,
-      audioUrl: true,
-      audioMetadata: true,
-      teacherId: true,
-      assignment: {
-        select: {
-          id: true,
-          slug: true,
-          thumbnail: true,
-          readingText: true,
-          audioUrl: true,
-          audioMetadata: true
+  return fetchWithRedis(`lesson:basic:${id}`, 300, async () => {
+    return prisma.lesson.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }]
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        videoUrl: true,
+        audioUrl: true,
+        audioMetadata: true,
+        teacherId: true,
+        assignment: {
+          select: {
+            id: true,
+            slug: true,
+            thumbnail: true,
+            readingText: true,
+            audioUrl: true,
+            audioMetadata: true
+          }
         }
       }
-    }
+    });
   });
 });
 
 export const getLessonExtra = cache(async (id: string) => {
-  return prisma.lesson.findFirst({
-    where: {
-      OR: [{ id }, { slug: id }]
-    },
-    select: {
-      assignment: {
-        select: {
-          id: true,
-          slug: true,
-          title: true,
-          tags: true,
-          _count: { select: { questions: true } }
-        }
+  return fetchWithRedis(`lesson:extra:${id}`, 300, async () => {
+    return prisma.lesson.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }]
       },
-      favorites: {
-        select: { studentId: true }
+      select: {
+        assignment: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            tags: true,
+            _count: { select: { questions: true } }
+          }
+        }
       }
-    }
+    });
   });
 });
 
 export const getTeacherBasic = cache(async (teacherId: string) => {
-  return prisma.user.findUnique({
-    where: { id: teacherId },
-    select: {
-      id: true,
-      name: true,
-      image: true,
-      professionalTitle: true,
-      bio: true,
-      isPortfolioPublished: true,
-      _count: {
-        select: { lessons: true, assignments: true }
+  return fetchWithRedis(`teacher:basic:${teacherId}`, 3600, async () => {
+    return prisma.user.findUnique({
+      where: { id: teacherId },
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        professionalTitle: true,
+        bio: true,
+        isPortfolioPublished: true,
+        _count: {
+          select: { lessons: true, assignments: true }
+        }
       }
-    }
+    });
   });
 });
 
@@ -103,121 +106,123 @@ export const getLessonReviews = async (lessonId: string) => {
 };
 
 export const getRelatedLessons = async (lessonId: string) => {
-  // 1. Resolve actual lesson UUID and fetch tags/target audiences
-  const lesson = await prisma.lesson.findFirst({
-    where: {
-      OR: [{ id: lessonId }, { slug: lessonId }]
-    },
-    select: {
-      id: true,
-      targetAudiences: true,
-      assignment: {
-        select: { tags: true }
-      }
-    }
-  });
-
-  if (!lesson) return [];
-  const actualId = lesson.id;
-  const currentAudiences = lesson.targetAudiences || [];
-
-  // 2. Fetch popular tags
-  const popularTags = await prisma.tag.findMany({
-    where: { isPopular: true },
-    select: { name: true }
-  });
-  const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
-
-  // 3. Get non-popular tags
-  const currentTags = lesson.assignment?.tags
-    ? lesson.assignment.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
-    : [];
-  const filteredTags = currentTags.filter(tag => !popularTagNames.has(tag));
-
-  let relatedLessons: any[] = [];
-
-  if (filteredTags.length > 0) {
-    const candidates = await prisma.lesson.findMany({
+  return fetchWithRedis(`lesson:related:${lessonId}`, 900, async () => {
+    // 1. Resolve actual lesson UUID and fetch tags/target audiences
+    const lesson = await prisma.lesson.findFirst({
       where: {
-        id: { not: actualId },
-        deletedAt: null,
-        isBlocked: false,
-        isPremium: false,
-        ...(currentAudiences.length > 0 && {
-          targetAudiences: { hasSome: currentAudiences }
-        }),
-        assignment: {
-          OR: filteredTags.map(tag => ({
-            tags: { contains: tag, mode: 'insensitive' }
-          }))
-        }
+        OR: [{ id: lessonId }, { slug: lessonId }]
       },
-      take: 100,
       select: {
         id: true,
-        slug: true,
-        title: true,
-        thumbnail: true,
+        targetAudiences: true,
         assignment: {
           select: { tags: true }
         }
       }
     });
 
-    const getOverlapCount = (tagsStr: string | null | undefined) => {
-      if (!tagsStr) return 0;
-      const tags = tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-      return tags.filter(tag => filteredTags.includes(tag)).length;
-    };
+    if (!lesson) return [];
+    const actualId = lesson.id;
+    const currentAudiences = lesson.targetAudiences || [];
 
-    candidates.sort((a, b) => {
-      const overlapA = getOverlapCount(a.assignment?.tags);
-      const overlapB = getOverlapCount(b.assignment?.tags);
-      return overlapB - overlapA;
+    // 2. Fetch popular tags
+    const popularTags = await prisma.tag.findMany({
+      where: { isPopular: true },
+      select: { name: true }
     });
+    const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
 
-    relatedLessons = candidates;
-  }
+    // 3. Get non-popular tags
+    const currentTags = lesson.assignment?.tags
+      ? lesson.assignment.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const filteredTags = currentTags.filter(tag => !popularTagNames.has(tag));
 
-  // Fallback: If no lessons found or no filtered tags exist, fetch the latest public lessons
-  if (relatedLessons.length === 0) {
-    relatedLessons = await prisma.lesson.findMany({
-      where: {
-        id: { not: actualId },
-        deletedAt: null,
-        isBlocked: false,
-        isPremium: false,
-        ...(currentAudiences.length > 0 && {
-          targetAudiences: { hasSome: currentAudiences }
-        })
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50,
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        thumbnail: true,
-        assignment: {
-          select: { tags: true }
+    let relatedLessons: any[] = [];
+
+    if (filteredTags.length > 0) {
+      const candidates = await prisma.lesson.findMany({
+        where: {
+          id: { not: actualId },
+          deletedAt: null,
+          isBlocked: false,
+          isPremium: false,
+          ...(currentAudiences.length > 0 && {
+            targetAudiences: { hasSome: currentAudiences }
+          }),
+          assignment: {
+            OR: filteredTags.map(tag => ({
+              tags: { contains: tag, mode: 'insensitive' }
+            }))
+          }
+        },
+        take: 100,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          thumbnail: true,
+          assignment: {
+            select: { tags: true }
+          }
         }
-      }
-    });
-  }
+      });
 
-  // Filter out duplicate titles and limit to 10 items
-  const seenTitles = new Set<string>();
-  const uniqueLessons: any[] = [];
-  for (const item of relatedLessons) {
-    const normalizedTitle = item.title.trim().toLowerCase();
-    if (!seenTitles.has(normalizedTitle)) {
-      seenTitles.add(normalizedTitle);
-      uniqueLessons.push(item);
+      const getOverlapCount = (tagsStr: string | null | undefined) => {
+        if (!tagsStr) return 0;
+        const tags = tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        return tags.filter(tag => filteredTags.includes(tag)).length;
+      };
+
+      candidates.sort((a, b) => {
+        const overlapA = getOverlapCount(a.assignment?.tags);
+        const overlapB = getOverlapCount(b.assignment?.tags);
+        return overlapB - overlapA;
+      });
+
+      relatedLessons = candidates;
     }
-    if (uniqueLessons.length >= 10) break;
-  }
 
-  return uniqueLessons;
+    // Fallback: If no lessons found or no filtered tags exist, fetch the latest public lessons
+    if (relatedLessons.length === 0) {
+      relatedLessons = await prisma.lesson.findMany({
+        where: {
+          id: { not: actualId },
+          deletedAt: null,
+          isBlocked: false,
+          isPremium: false,
+          ...(currentAudiences.length > 0 && {
+            targetAudiences: { hasSome: currentAudiences }
+          })
+        },
+        orderBy: {
+          createdAt: 'desc'
+        },
+        take: 50,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          thumbnail: true,
+          assignment: {
+            select: { tags: true }
+          }
+        }
+      });
+    }
+
+    // Filter out duplicate titles and limit to 10 items
+    const seenTitles = new Set<string>();
+    const uniqueLessons: any[] = [];
+    for (const item of relatedLessons) {
+      const normalizedTitle = item.title.trim().toLowerCase();
+      if (!seenTitles.has(normalizedTitle)) {
+        seenTitles.add(normalizedTitle);
+        uniqueLessons.push(item);
+      }
+      if (uniqueLessons.length >= 10) break;
+    }
+
+    return uniqueLessons;
+  });
 };

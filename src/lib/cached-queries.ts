@@ -1,15 +1,40 @@
 import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
+import { redis } from "@/lib/redis";
+
+export async function fetchWithRedis<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
+  try {
+    const cached = await redis.get(key);
+    if (cached) {
+      console.log(`[REDIS HIT] ${key}`);
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn("Redis GET failed for key:", key, e);
+  }
+
+  console.log(`[REDIS MISS] ${key} - Fetching from DB...`);
+  const data = await fetcher();
+
+  try {
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+  } catch (e) {
+    console.warn("Redis SET failed for key:", key, e);
+  }
+
+  return data;
+}
 
 export const getCachedTags = unstable_cache(
   async () => {
-    const popularDbTags = await prisma.tag.findMany({
-      where: { isPopular: true },
-      select: { name: true },
-      orderBy: { name: "asc" }
+    return fetchWithRedis("feed:public-tags", 1800, async () => {
+      const popularDbTags = await prisma.tag.findMany({
+        where: { isPopular: true },
+        select: { name: true },
+        orderBy: { name: "asc" }
+      });
+      return popularDbTags.map(t => t.name);
     });
-
-    return popularDbTags.map(t => t.name);
   },
   ["public-tags"],
   { revalidate: 1800, tags: ["tags"] }
@@ -41,45 +66,48 @@ export const getShuffledIds = unstable_cache(
     studySubject?: string,
     studyLevel?: string
   ) => {
-    const where: any = { status: "PUBLIC", contentType };
+    const cacheKey = `feed:shuffledIds:v1:${contentType}:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
+    return fetchWithRedis(cacheKey, 600, async () => {
+      const where: any = { status: "PUBLIC", contentType };
 
-    if (goal) {
-      where.learningGoals = { has: goal };
-    }
-    if (search) where.title = { contains: search, mode: 'insensitive' };
-
-    if (studySubject) {
-      where.subject = studySubject;
-    }
-
-    if (userType) {
-      if (studyLevel) {
-        const ageAndLevelCondition = {
-          targetAudiences: { has: userType },
-          audienceLevels: { path: [userType], equals: studyLevel }
-        };
-
-        where.targetAudiences = ageAndLevelCondition.targetAudiences;
-        where.audienceLevels = ageAndLevelCondition.audienceLevels;
-      } else {
-        const defaultOR = [
-          { targetAudiences: { has: userType } },
-          { targetAudiences: { equals: [] } }
-        ];
-        where.OR = defaultOR;
+      if (goal) {
+        where.learningGoals = { has: goal };
       }
-    }
+      if (search) where.title = { contains: search, mode: 'insensitive' };
 
-    const idRows = await prisma.homepageFeed.findMany({
-      where,
-      select: { id: true }
+      if (studySubject) {
+        where.subject = studySubject;
+      }
+
+      if (userType) {
+        if (studyLevel) {
+          const ageAndLevelCondition = {
+            targetAudiences: { has: userType },
+            audienceLevels: { path: [userType], equals: studyLevel }
+          };
+
+          where.targetAudiences = ageAndLevelCondition.targetAudiences;
+          where.audienceLevels = ageAndLevelCondition.audienceLevels;
+        } else {
+          const defaultOR = [
+            { targetAudiences: { has: userType } },
+            { targetAudiences: { equals: [] } }
+          ];
+          where.OR = defaultOR;
+        }
+      }
+
+      const idRows = await prisma.homepageFeed.findMany({
+        where,
+        select: { id: true }
+      });
+
+      const randomIds = idRows
+        .map(row => row.id)
+        .sort(() => 0.5 - Math.random());
+
+      return randomIds;
     });
-
-    const randomIds = idRows
-      .map(row => row.id)
-      .sort(() => 0.5 - Math.random());
-
-    return randomIds;
   },
   ["homepage-shuffled-ids-v4"],
   { revalidate: 600, tags: ["homepage", "shuffled"] }
@@ -88,19 +116,22 @@ export const getShuffledIds = unstable_cache(
 // Server-side: newest exercises only — fast first load. Popular is fetched client-side.
 const getAssignmentsInternal = unstable_cache(
   async (goal: string, search: string, userType: string, studySubject: string = '', studyLevel: string = '') => {
-    const randomIds = await getShuffledIds("EXERCISE", goal, search, userType, studySubject, studyLevel);
-    const slicedIds = randomIds.slice(0, 12);
+    const cacheKey = `feed:assignments:v1:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
+    return fetchWithRedis(cacheKey, 300, async () => {
+      const randomIds = await getShuffledIds("EXERCISE", goal, search, userType, studySubject, studyLevel);
+      const slicedIds = randomIds.slice(0, 12);
 
-    let items: any[] = [];
-    if (slicedIds.length > 0) {
-      const placeholders = slicedIds.map((_, i) => `$${i + 1}`).join(',');
-      items = await prisma.$queryRawUnsafe(`SELECT * FROM "HomepageFeed" WHERE id IN (${placeholders})`, ...slicedIds);
-    }
+      let items: any[] = [];
+      if (slicedIds.length > 0) {
+        const placeholders = slicedIds.map((_, i) => `$${i + 1}`).join(',');
+        items = await prisma.$queryRawUnsafe(`SELECT * FROM "HomepageFeed" WHERE id IN (${placeholders})`, ...slicedIds);
+      }
 
-    // Restore the exact random order
-    items.sort((a, b) => slicedIds.indexOf(a.id) - slicedIds.indexOf(b.id));
+      // Restore the exact random order
+      items.sort((a, b) => slicedIds.indexOf(a.id) - slicedIds.indexOf(b.id));
 
-    return { items: items.map(mapFeedItem), total: randomIds.length };
+      return { items: items.map(mapFeedItem), total: randomIds.length };
+    });
   },
   ["homepage-assignments-cached-v4"],
   { revalidate: 60, tags: ["assignments", "homepage"] }
@@ -122,20 +153,23 @@ export const getCachedAssignments = async (params: any) => {
 // Server-side: newest lessons only — fast first load. Popular is fetched client-side.
 const getLessonsInternal = unstable_cache(
   async (goal: string, search: string, userType: string, studySubject: string = '', studyLevel: string = '') => {
-    const randomIds = await getShuffledIds("LESSON", goal, search, userType, studySubject, studyLevel);
-    const slicedIds = randomIds.slice(0, 12);
+    const cacheKey = `feed:lessons:v1:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
+    return fetchWithRedis(cacheKey, 300, async () => {
+      const randomIds = await getShuffledIds("LESSON", goal, search, userType, studySubject, studyLevel);
+      const slicedIds = randomIds.slice(0, 12);
 
-    const items = slicedIds.length > 0 
-      ? await prisma.homepageFeed.findMany({ where: { id: { in: slicedIds } } })
-      : [];
+      const items = slicedIds.length > 0 
+        ? await prisma.homepageFeed.findMany({ where: { id: { in: slicedIds } } })
+        : [];
 
-    // Restore the exact random order
-    items.sort((a, b) => slicedIds.indexOf(a.id) - slicedIds.indexOf(b.id));
+      // Restore the exact random order
+      items.sort((a, b) => slicedIds.indexOf(a.id) - slicedIds.indexOf(b.id));
 
-    return {
-      items: items.map(item => ({ ...mapFeedItem(item), type: 'VIDEO_LESSON' })),
-      total: randomIds.length
-    };
+      return {
+        items: items.map(item => ({ ...mapFeedItem(item), type: 'VIDEO_LESSON' })),
+        total: randomIds.length
+      };
+    });
   },
   ["homepage-lessons-cached-v4"],
   { revalidate: 60, tags: ["lessons", "homepage"] }

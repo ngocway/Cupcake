@@ -24,6 +24,21 @@ export async function updateTeacherProfile(data: {
             return { error: "Không có quyền thực hiện" };
         }
 
+        let safeImage = data.image;
+        let safeCoverImage = data.coverImage;
+
+        if (safeImage && safeImage.startsWith('data:')) {
+            const { uploadBase64Image } = await import('@/actions/upload-actions');
+            const res = await uploadBase64Image(safeImage, `user-${session.user.id}`);
+            if (res.success && res.url) safeImage = res.url;
+        }
+
+        if (safeCoverImage && safeCoverImage.startsWith('data:')) {
+            const { uploadBase64Image } = await import('@/actions/upload-actions');
+            const res = await uploadBase64Image(safeCoverImage, `user-cover-${session.user.id}`);
+            if (res.success && res.url) safeCoverImage = res.url;
+        }
+
         await prisma.user.update({
             where: { id: session.user.id },
             data: {
@@ -32,8 +47,8 @@ export async function updateTeacherProfile(data: {
                 professionalTitle: data.professionalTitle,
                 expertiseTags: data.expertiseTags,
                 socialLinks: data.socialLinks,
-                coverImage: data.coverImage,
-                image: data.image,
+                coverImage: safeCoverImage,
+                image: safeImage,
                 isPortfolioPublished: data.isPortfolioPublished,
                 hourlyRate: data.hourlyRate,
                 location: data.location,
@@ -43,12 +58,12 @@ export async function updateTeacherProfile(data: {
         });
 
         // Sync name and avatar changes to HomepageFeed
-        if (data.name !== undefined || data.image !== undefined) {
+        if (data.name !== undefined || safeImage !== undefined) {
             await prisma.homepageFeed.updateMany({
                 where: { teacherId: session.user.id },
                 data: {
                     ...(data.name !== undefined ? { teacherName: data.name } : {}),
-                    ...(data.image !== undefined ? { teacherImage: data.image } : {})
+                    ...(safeImage !== undefined ? { teacherImage: safeImage } : {})
                 }
             });
         }

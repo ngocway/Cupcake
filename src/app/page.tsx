@@ -33,11 +33,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       select: { userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
     })
     if (user) {
-      if (user.userType) initialUserType = user.userType
-      if (user.studySubject) studySubject = user.studySubject
-      if (user.studyAgeGroup) studyAgeGroup = user.studyAgeGroup
-      if (user.studyLevel) studyLevel = user.studyLevel
-      hasUserPreference = !!user.userType || !!user.studySubject
+      if (!userTypeCookie && user.userType) initialUserType = user.userType
+      if (!studySubjectCookie && user.studySubject) studySubject = user.studySubject
+      if (!studyAgeGroupCookie && user.studyAgeGroup) studyAgeGroup = user.studyAgeGroup
+      if (!studyLevelCookie && user.studyLevel) studyLevel = user.studyLevel
+      hasUserPreference = hasUserPreference || !!user.userType || !!user.studySubject
     }
   }
 
