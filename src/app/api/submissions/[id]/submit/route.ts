@@ -71,24 +71,32 @@ export async function POST(
 
             case "CLOZE_TEST": {
               stringifiedAns = JSON.stringify(studentAns)
-              const textWithBlanks = content.textWithBlanks || ""
+              const textWithBlanks = content.textWithBlanks || content.questionText || ""
               const matches = [...textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)]
+              const userAnswer = studentAns || {}
               
-              if (Array.isArray(studentAns)) {
+              if (matches.length > 0) {
                 let correctCount = 0
-                studentAns.forEach((ans, idx) => {
-                  if (ans && matches[idx]) {
+                matches.forEach((match, idx) => {
+                  const expectedWord = match[1]
+                  let ans = ""
+                  if (Array.isArray(userAnswer)) {
+                    ans = userAnswer[idx]
+                  } else {
+                    ans = userAnswer[idx] !== undefined ? userAnswer[idx] : userAnswer[String(idx)]
+                  }
+                  
+                  if (ans !== undefined && ans !== null) {
                     const studentCleaned = String(ans).trim().toLowerCase()
                     // Allow splitting multiple correct variants using pipe "|"
-                    const validOptions = String(matches[idx][1]).split('|').map(v => v.trim().toLowerCase())
+                    const validOptions = expectedWord.split('|').map(v => v.trim().toLowerCase())
                     
                     if (validOptions.includes(studentCleaned)) {
                       correctCount++
                     }
                   }
                 })
-                // ALL OR NOTHING PER QUESTION (can be customized later to partial points)
-                isCorrect = correctCount === matches.length && matches.length > 0
+                isCorrect = correctCount === matches.length
               }
               break;
             }

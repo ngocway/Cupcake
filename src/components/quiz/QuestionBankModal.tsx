@@ -143,7 +143,7 @@ export function QuestionBankModal({ isOpen, onClose, onSelect }: { isOpen: boole
                     <p className="text-sm font-medium text-slate-700 dark:text-gray-200 line-clamp-2">
                       {q.type === 'MULTIPLE_CHOICE' ? q.content.questionText : 
                        q.type === 'TRUE_FALSE' ? q.content.statement :
-                       q.type === 'CLOZE_TEST' ? q.content.textWithBlanks :
+                       q.type === 'CLOZE_TEST' ? (q.content.textWithBlanks || q.content.questionText) :
                        q.content.instruction || 'Câu hỏi không có tiêu đề'}
                     </p>
                   </div>

@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from "next/cache";
 import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
+import { invalidateMaterialCache } from '@/lib/cached-queries';
 import crypto from 'crypto';
 import { MaterialStatus } from '@/generated/client';
 import { after } from 'next/server';
@@ -489,6 +490,10 @@ export async function autoSaveMaterial(payload: {
 
   // Sync to Homepage Feed and Tags
   after(() => {
+    invalidateMaterialCache(payload.id).catch(err => {
+      console.error("[AutoSave] Background cache invalidation failed:", err);
+    });
+
     syncToHomepageFeed(payload.id, "EXERCISE").catch(err => {
       console.error("[AutoSave] Background sync feed failed:", err);
     });
@@ -566,6 +571,10 @@ export async function saveMaterialThumbnail(id: string, thumbnail: string | null
 
   // Sync to Homepage Feed (Background execution, non-blocking)
   after(() => {
+    invalidateMaterialCache(id).catch(err => {
+      console.error("[SaveThumbnail] Background cache invalidation failed:", err);
+    });
+
     syncToHomepageFeed(id, "EXERCISE").catch(err => {
       console.error("[SaveThumbnail] Background sync feed failed:", err);
     });
@@ -786,6 +795,8 @@ export async function deleteMaterial(id: string) {
   await removeFromHomepageFeed(id);
   if (assignment?.lesson) await removeFromHomepageFeed(assignment.lesson.id);
 
+  await invalidateMaterialCache(id);
+
   return { success: true };
 }
 
@@ -895,6 +906,7 @@ export async function restoreMaterial(id: string) {
   revalidatePath('/teacher/materials/trash');
   revalidatePath('/teacher/materials');
   revalidatePath('/teacher/lessons');
+  await invalidateMaterialCache(id);
   return { success: true };
 }
 
@@ -1047,6 +1059,10 @@ export async function updateMaterialStatus(id: string, newStatus: MaterialStatus
   revalidatePath(`/teacher/materials/${id}`);
 
   // Sync feed so visibility changes reflect immediately
+  invalidateMaterialCache(id).catch(err => {
+    console.error("[UpdateStatus] Background cache invalidation failed:", err);
+  });
+
   syncToHomepageFeed(id, "EXERCISE").catch(err => {
     console.error("[UpdateStatus] Background sync feed failed:", err);
   });
@@ -1385,6 +1401,11 @@ export async function alignMaterialWhisper(assignmentId: string) {
   }
 
   revalidatePath('/teacher/materials');
+  after(() => {
+    invalidateMaterialCache(assignmentId).catch(err => {
+      console.error("[AlignWhisper] Background cache invalidation failed:", err);
+    });
+  });
   return { success: true };
 }
 

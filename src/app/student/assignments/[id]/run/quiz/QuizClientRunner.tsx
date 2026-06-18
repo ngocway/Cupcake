@@ -79,7 +79,7 @@ const getQuestionStatus = (q: any, answer: any) => {
   }
 
   if (qType === "CLOZE_TEST") {
-    const textWithBlanks = questionData.textWithBlanks || "";
+    const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
     const blanks = Array.from(textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)).map((m: any) => m[1]);
     const userAnswer = answer || {};
     
@@ -108,7 +108,7 @@ const getQuestionStatus = (q: any, answer: any) => {
 };
 
 function ClozeTestQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange }: any) {
-  const textWithBlanks = questionData.textWithBlanks || "";
+  const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
   const parts = textWithBlanks.split(/(\{\{.*?\}\})/g);
   let blankIndex = 0;
 
@@ -1052,6 +1052,9 @@ export default function QuizClientRunner({
               if (questionText && questionText.startsWith('{') && questionText.endsWith('}')) {
                 questionText = "";
               }
+              if (qType === "CLOZE_TEST" && questionText && questionText.includes("{{")) {
+                questionText = questionData.instruction || t("clozeTest") || "Fill in the blank";
+              }
               
               const userAnswer = answers[q.id];
               const isChecked = checkedQuestions[q.id] || false;
@@ -1073,7 +1076,7 @@ export default function QuizClientRunner({
                           t('multipleChoice')
                         }
                      </div>
-                      {questionText && questionText !== "{}" && (
+                      {qType !== "MATCHING" && questionText && questionText !== "{}" && (
                         <div className="flex items-center justify-center gap-3 flex-wrap">
                           <h3 className="text-2xl md:text-3xl font-black text-on-surface leading-tight text-center">
                             {questionText}
@@ -1247,14 +1250,38 @@ export default function QuizClientRunner({
                       )}
 
                       {qType === "MATCHING" && (
-                        <MatchingQuestionBlock 
-                          q={q}
-                          questionData={questionData}
-                          userAnswer={userAnswer}
-                          isChecked={isChecked}
-                          handleAnswerChange={handleAnswerChange}
-                          matchingColors={matchingColors}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start w-full min-h-0">
+                          {/* Cột bên trái: Yêu cầu câu hỏi và media đính kèm */}
+                          <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left space-y-5 px-2">
+                            {questionText && questionText !== "{}" && (
+                              <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+                                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-on-surface leading-tight">
+                                  {questionText}
+                                </h3>
+                                {q.audioUrl && (
+                                  <QuestionAudioPlayButton src={q.audioUrl} />
+                                )}
+                              </div>
+                            )}
+                            {q.imageUrl && (
+                              <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-3xl overflow-hidden shadow-md border-4 border-white dark:border-slate-800 bg-white dark:bg-slate-900">
+                                <img src={q.imageUrl} alt="Question media" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Cột bên phải: Khu vực làm bài nối cặp */}
+                          <div className="md:col-span-8 w-full min-h-0">
+                            <MatchingQuestionBlock 
+                              q={q}
+                              questionData={questionData}
+                              userAnswer={userAnswer}
+                              isChecked={isChecked}
+                              handleAnswerChange={handleAnswerChange}
+                              matchingColors={matchingColors}
+                            />
+                          </div>
+                        </div>
                       )}
 
                       {qType === "CLOZE_TEST" && (

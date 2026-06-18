@@ -185,3 +185,50 @@ export const getCachedLessons = async (params: any) => {
     params.studyLevel || ''
   );
 };
+
+export async function invalidateMaterialCache(assignmentId: string) {
+  try {
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      include: { lesson: true }
+    });
+
+    if (!assignment) return;
+
+    const keysToDelete = new Set<string>([
+      `assignment:questions:${assignment.id}`,
+      `assignment:meta:${assignment.id}`,
+      `assignment:instructions:${assignment.id}`,
+      `assignment:teacher:${assignment.id}`,
+      `assignment:related:${assignment.id}`,
+      `assignment:public:${assignment.id}`
+    ]);
+
+    if (assignment.slug) {
+      keysToDelete.add(`assignment:meta:${assignment.slug}`);
+      keysToDelete.add(`assignment:instructions:${assignment.slug}`);
+      keysToDelete.add(`assignment:teacher:${assignment.slug}`);
+      keysToDelete.add(`assignment:related:${assignment.slug}`);
+      keysToDelete.add(`assignment:public:${assignment.slug}`);
+    }
+
+    if (assignment.lesson) {
+      const lesson = assignment.lesson;
+      keysToDelete.add(`lesson:basic:${lesson.id}`);
+      keysToDelete.add(`lesson:extra:${lesson.id}`);
+      keysToDelete.add(`lesson:related:${lesson.id}`);
+      if (lesson.slug) {
+        keysToDelete.add(`lesson:basic:${lesson.slug}`);
+        keysToDelete.add(`lesson:extra:${lesson.slug}`);
+        keysToDelete.add(`lesson:related:${lesson.slug}`);
+      }
+    }
+
+    const keys = Array.from(keysToDelete);
+    await Promise.all(keys.map(key => redis.del(key)));
+    console.log(`[Cache Invalidation] Successfully deleted keys:`, keys);
+  } catch (e) {
+    console.error(`[Cache Invalidation] Error invalidating cache for assignment ${assignmentId}:`, e);
+  }
+}
+

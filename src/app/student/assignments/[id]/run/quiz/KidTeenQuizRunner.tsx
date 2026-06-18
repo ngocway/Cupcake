@@ -74,7 +74,7 @@ const getQuestionStatus = (q: any, answer: any) => {
     return answer === questionData.isTrue ? "correct" : "incorrect";
   }
   if (qType === "CLOZE_TEST") {
-    const textWithBlanks = questionData.textWithBlanks || "";
+    const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
     const blanks = Array.from(textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)).map((m: any) => m[1]);
     const userAnswer = answer || {};
     if (Object.keys(userAnswer).length === 0) return "pending";
@@ -107,7 +107,7 @@ const getYoutubeVideoId = (url: string | null) => {
 // CLOZE TEST BLOCK (Kid/Teen style)
 // ============================================================
 function ClozeTestBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange }: any) {
-  const textWithBlanks = questionData.textWithBlanks || "";
+  const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
   const parts = textWithBlanks.split(/(\{\{.*?\}\})/g);
   let blankIndex = 0;
 
@@ -962,6 +962,9 @@ export default function KidTeenQuizRunner({
     currentQuestionData.statement ??
     currentQuestion?.content;
   if (questionText?.startsWith("{") && questionText?.endsWith("}")) questionText = "";
+  if (qType === "CLOZE_TEST" && questionText && questionText.includes("{{")) {
+    questionText = currentQuestionData.instruction || t("clozeTest") || "Fill in the blank";
+  }
 
   const userAnswer = answers[currentQuestion?.id];
   const isChecked = checkedQuestions[currentQuestion?.id] || false;
@@ -1273,8 +1276,8 @@ export default function KidTeenQuizRunner({
 
             {/* Card body */}
             <div className="px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)] flex-1 overflow-y-auto min-h-0 relative">
-              {/* Question text */}
-              {questionText && questionText !== "{}" && (
+              {/* Question text (not for MATCHING as MATCHING has it on the left column) */}
+              {qType !== "MATCHING" && questionText && questionText !== "{}" && (
                 <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
                   <h3 className="text-[clamp(1.25rem,3.5dvh,2rem)] font-[800] text-[#2D366D] leading-tight" style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
                     {questionText}
@@ -1456,14 +1459,38 @@ export default function KidTeenQuizRunner({
 
               {/* ── MATCHING ── */}
               {qType === "MATCHING" && (
-                <MatchingBlock
-                  q={currentQuestion}
-                  questionData={currentQuestionData}
-                  userAnswer={userAnswer}
-                  isChecked={isChecked}
-                  handleAnswerChange={handleAnswerChange}
-                  matchingColors={matchingColors}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start w-full min-h-0">
+                  {/* Cột bên trái: Yêu cầu câu hỏi và media đính kèm */}
+                  <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left space-y-5 px-2">
+                    {questionText && questionText !== "{}" && (
+                      <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-[800] text-[#2D366D] leading-tight" style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
+                          {questionText}
+                        </h3>
+                        {currentQuestion?.audioUrl && (
+                          <QuestionAudioPlayButton src={currentQuestion.audioUrl} />
+                        )}
+                      </div>
+                    )}
+                    {currentQuestion?.imageUrl && (
+                      <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-3xl overflow-hidden shadow-md border-4 border-white bg-white">
+                        <img src={currentQuestion.imageUrl} alt="Question media" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cột bên phải: Khu vực làm bài nối cặp */}
+                  <div className="md:col-span-8 w-full min-h-0">
+                    <MatchingBlock
+                      q={currentQuestion}
+                      questionData={currentQuestionData}
+                      userAnswer={userAnswer}
+                      isChecked={isChecked}
+                      handleAnswerChange={handleAnswerChange}
+                      matchingColors={matchingColors}
+                    />
+                  </div>
+                </div>
               )}
 
               {/* ── CLOZE TEST ── */}

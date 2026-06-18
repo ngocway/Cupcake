@@ -4,6 +4,7 @@ import openai from "@/lib/openai";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { invalidateMaterialCache } from "@/lib/cached-queries";
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
@@ -1492,6 +1493,8 @@ export async function generateAILessonFully(params: {
             where: { id: assignmentId },
             data: updateData
           });
+
+          await invalidateMaterialCache(assignmentId);
 
           if (actualThumbUrl) {
             await prisma.lesson.updateMany({

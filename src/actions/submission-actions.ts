@@ -61,6 +61,31 @@ export async function completeSubmission(submissionId: string, answers: any) {
               break;
             }
 
+            case "CLOZE_TEST": {
+              stringifiedAns = JSON.stringify(studentAns)
+              const textWithBlanks = content.textWithBlanks || content.questionText || ""
+              const matches = [...textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)]
+              const userAnswer = studentAns || {}
+              
+              if (matches.length > 0) {
+                let correctCount = 0
+                matches.forEach((match, idx) => {
+                  const expectedWord = match[1]
+                  const userWord = (userAnswer[idx] !== undefined ? userAnswer[idx] : (userAnswer[String(idx)] || "")).trim()
+                  // Allow splitting multiple correct variants using pipe "|"
+                  const validOptions = expectedWord.split('|').map(v => v.trim().toLowerCase())
+                  const matchesWord = content.caseSensitive
+                    ? expectedWord.split('|').map(v => v.trim()).includes(userWord)
+                    : validOptions.includes(userWord.toLowerCase())
+                  if (matchesWord) {
+                    correctCount++
+                  }
+                })
+                isCorrect = correctCount === matches.length
+              }
+              break;
+            }
+
             case "MATCHING": {
               stringifiedAns = JSON.stringify(studentAns)
               if (content.pairs && typeof studentAns === 'object' && studentAns !== null) {
