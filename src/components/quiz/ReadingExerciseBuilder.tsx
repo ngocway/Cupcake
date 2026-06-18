@@ -4,13 +4,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { autoSaveMaterial, syncAssignmentClasses, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
 import { getPopularTags } from '@/actions/tag-actions';
-import { InstructionsModal } from './InstructionsModal';
+
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { searchImagesAction } from '@/actions/image-search-actions';
 import { toast } from 'sonner';
 import { uploadMedia, uploadUrlMedia } from '@/actions/upload-actions';
 import { sliceAudioFile } from '@/utils/audioSlicer';
 import { generateNewUniqueSlugAction, updateMaterialSlugAction } from '@/actions/update-slug-action';
+import { AiAudioQuestionsModal } from './AiAudioQuestionsModal';
+import { generateQuestionsFromAudioChunks } from '@/actions/ai-audio-questions';
 
 import { CustomRichTextEditor } from '@/components/ui/CustomRichTextEditor';
 
@@ -173,7 +175,7 @@ function SortableQuestionItem({
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <p className="font-bold text-slate-800 dark:text-slate-200 leading-relaxed">
-                {q.questionText}
+                {q.questionText || q.statement || q.textWithBlanks || q.instruction || '(Không có nội dung)'}
               </p>
               {q.audioUrl && (
                 <button
@@ -191,7 +193,9 @@ function SortableQuestionItem({
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded text-[10px] font-bold text-slate-500 uppercase">
-                {q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Trắc nghiệm'}
+                {q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 
+                 q.type === 'CLOZE_TEST' ? 'Điền từ' :
+                 q.type === 'MATCHING' ? 'Nối từ' : 'Trắc nghiệm'}
               </span>
               <span className="px-2 py-1 bg-primary/5 rounded text-[10px] font-bold text-primary uppercase">
                 {q.points} Điểm
@@ -463,7 +467,7 @@ export function ReadingExerciseBuilder({
 
 
   const [instructions, setInstructions] = useState('');
-  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
+
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [lastSavedContentHtml, setLastSavedContentHtml] = useState<string | null>(null);
@@ -661,6 +665,8 @@ export function ReadingExerciseBuilder({
   const [showVocabDisableWarning, setShowVocabDisableWarning] = useState(false);
   const [vocabList, setVocabList] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
+  const [isAiAudioQuestionsModalOpen, setIsAiAudioQuestionsModalOpen] = useState(false);
+  const [isGeneratingAiAudioQs, setIsGeneratingAiAudioQs] = useState(false);
   const [questionModal, setQuestionModal] = useState<{
     isOpen: boolean;
     type: 'TRUE_FALSE' | 'MULTIPLE_CHOICE' | 'NONE';
@@ -1703,6 +1709,135 @@ export function ReadingExerciseBuilder({
     }
   };
 
+  const handleAiAudioQuestionsConfirm = async (counts: { mcq: number; tf: number; cloze: number; matching: number }) => {
+    const parser = new DOMParser();
+    const contentHtml = document.getElementById('rich-text-editor')?.innerHTML || '';
+    const doc = parser.parseFromString(contentHtml, 'text/html');
+    const chunks: { text: string; audioUrl: string }[] = [];
+    
+    const paragraphs = doc.querySelectorAll('p, div, h1, h2, h3, h4, li');
+    paragraphs.forEach(p => {
+      let currentText = "";
+      p.childNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          currentText += node.textContent;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as Element;
+          if (el.classList.contains('inline-audio-marker') || el.closest('.inline-audio-marker')) {
+            const markerEl = el.classList.contains('inline-audio-marker') ? el : el.closest('.inline-audio-marker');
+            const url = markerEl?.getAttribute('data-audio-url');
+            if (url && currentText.trim()) {
+              chunks.push({ text: currentText.trim(), audioUrl: url });
+              currentText = ""; // reset
+            }
+          } else {
+             currentText += el.textContent;
+          }
+        }
+      });
+    });
+
+    if (chunks.length === 0) {
+      toast.error("Không tìm thấy đoạn audio nào trong bài đọc.");
+      return;
+    }
+
+    setIsGeneratingAiAudioQs(true);
+    try {
+      const taxonomyContext = {
+        subject: subject,
+        level: Object.values(audienceLevels)[0] || 'A1',
+        audience: targetAudiences[0] || 'kid',
+        learningGoals: learningGoals
+      };
+
+      const result = await generateQuestionsFromAudioChunks(assignmentId || 'new', chunks, counts, taxonomyContext);
+      
+      if (!result.success || !result.data) {
+        toast.error(result.errors?.[0] || "Có lỗi xảy ra khi tạo câu hỏi.");
+        setIsGeneratingAiAudioQs(false);
+        return;
+      }
+
+      const newQuestions: any[] = [];
+      const aiData = result.data;
+
+      if (aiData.mcq) {
+        aiData.mcq.forEach((q: any) => {
+          newQuestions.push({
+            id: crypto.randomUUID(),
+            type: 'MULTIPLE_CHOICE',
+            questionText: q.questionText,
+            options: q.options || [],
+            explanation: q.explanation || '',
+            points: 1,
+            audioUrl: q.audioUrl || null
+          });
+        });
+      }
+
+      if (aiData.tf) {
+        aiData.tf.forEach((q: any) => {
+          newQuestions.push({
+            id: crypto.randomUUID(),
+            type: 'TRUE_FALSE',
+            questionText: q.statement, // map to questionText for immediate UI render
+            statement: q.statement,
+            isTrue: q.isTrue,
+            explanation: q.explanation || '',
+            points: 1,
+            audioUrl: q.audioUrl || null
+          });
+        });
+      }
+
+      if (aiData.cloze) {
+        aiData.cloze.forEach((q: any) => {
+          newQuestions.push({
+            id: crypto.randomUUID(),
+            type: 'CLOZE_TEST',
+            questionText: q.textWithBlanks, // map to questionText for immediate UI render
+            textWithBlanks: q.textWithBlanks,
+            caseSensitive: false,
+            explanation: q.explanation || '',
+            points: 1,
+            audioUrl: q.audioUrl || null
+          });
+        });
+      }
+
+      if (aiData.matching) {
+        aiData.matching.forEach((q: any) => {
+          newQuestions.push({
+            id: crypto.randomUUID(),
+            type: 'MATCHING',
+            questionText: q.instruction || 'Nối các cặp tương ứng', // map to questionText for immediate UI render
+            instruction: q.instruction || 'Nối các cặp tương ứng',
+            pairs: q.pairs || [],
+            presentationType: 'QUESTION_ANSWER',
+            explanation: q.explanation || '',
+            points: 1,
+            audioUrl: q.audioUrl || null
+          });
+        });
+      }
+
+      if (newQuestions.length > 0) {
+        setQuestions(prev => [...prev, ...newQuestions]);
+        toast.success(`Đã tạo thành công ${newQuestions.length} câu hỏi từ Audio!`);
+        setIsAiAudioQuestionsModalOpen(false);
+      } else {
+        toast.error("AI không tạo được câu hỏi nào.");
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Có lỗi hệ thống khi xử lý câu hỏi.");
+    } finally {
+      setIsGeneratingAiAudioQs(false);
+    }
+  };
+
   const updateImageToolbarPosition = (img: HTMLImageElement) => {
     const wrapper = document.getElementById('editor-wrapper');
     if (wrapper && img) {
@@ -1805,13 +1940,7 @@ export function ReadingExerciseBuilder({
 
   return (
     <div className="flex bg-surface font-body text-on-surface h-[calc(100vh-120px)] overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm relative">
-      {showInstructionsModal && (
-        <InstructionsModal 
-          initialValue={instructions}
-          onClose={() => setShowInstructionsModal(false)}
-          onSave={(val) => setInstructions(val)}
-        />
-      )}
+
       <style>{`
         .editorial-shadow { box-shadow: 0 8px 24px rgba(25, 27, 35, 0.06); }
         .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(67, 70, 85, 0.1); }
@@ -1865,17 +1994,7 @@ export function ReadingExerciseBuilder({
             <span className="material-symbols-outlined text-[18px]">quiz</span> Question Bank
           </button>
           
-          <button 
-            onClick={() => setShowInstructionsModal(true)}
-            className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
-              showInstructionsModal 
-                ? 'text-blue-700 bg-blue-50/50 dark:bg-blue-900/20 shadow-sm border-l-4 border-blue-700' 
-                : 'text-slate-500 hover:text-blue-600 hover:bg-[#f0f2f4] dark:hover:bg-gray-800'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">menu_book</span> Hướng dẫn làm bài
-          </button>
-          
+
           <button 
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
             className={`w-full flex items-center gap-3 px-4 py-3 font-label text-xs font-semibold rounded-xl transition-all ${
@@ -2235,6 +2354,12 @@ export function ReadingExerciseBuilder({
                   <p className="text-slate-500 font-label text-xs uppercase tracking-widest mt-1">Manage Lesson Assessment</p>
                 </div>
                 <div className="flex gap-3">
+                  <button 
+                    onClick={() => setIsAiAudioQuestionsModalOpen(true)}
+                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-[13px] editorial-shadow hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">auto_awesome</span> Tạo từ Audio
+                  </button>
                   <div className="relative group">
                     <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-[13px] editorial-shadow hover:scale-105 active:scale-95 transition-all">
                       <span className="material-symbols-outlined text-[20px]">add_circle</span> Tạo câu hỏi
@@ -2377,6 +2502,13 @@ export function ReadingExerciseBuilder({
             initialData={questionModal.editingIndex !== undefined ? questions[questionModal.editingIndex] : null}
           />
         )}
+
+        <AiAudioQuestionsModal
+          isOpen={isAiAudioQuestionsModalOpen}
+          onClose={() => setIsAiAudioQuestionsModalOpen(false)}
+          onConfirm={handleAiAudioQuestionsConfirm}
+          isGenerating={isGeneratingAiAudioQs}
+        />
 
         {vocabForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -2876,13 +3008,7 @@ export function ReadingExerciseBuilder({
         )}
 
       </main>
-      {showInstructionsModal && (
-        <InstructionsModal 
-          initialValue={instructions}
-          onClose={() => setShowInstructionsModal(false)}
-          onSave={(val) => setInstructions(val)}
-        />
-      )}
+
     </div>
   );
 }
@@ -2921,10 +3047,18 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
         rawOptions = [];
       }
 
+      let rawPairs = initialData.pairs || content.pairs || content.data?.pairs;
+      if (!rawPairs && qType === 'MATCHING') {
+        rawPairs = [{ id: crypto.randomUUID(), leftText: '', rightText: '' }, { id: crypto.randomUUID(), leftText: '', rightText: '' }];
+      } else if (!rawPairs) {
+        rawPairs = [];
+      }
+
       return {
         ...initialData,
         questionText: qText,
         options: rawOptions.map((o: any, i: number) => ({ ...o, id: o.id || `opt-${i}` })),
+        pairs: rawPairs.map((p: any) => ({ ...p, id: p.id || crypto.randomUUID() })),
         correctAnswer: qType === 'TRUE_FALSE' 
           ? (content.isTrue === false ? 'false' : (initialData.correctAnswer || 'true')) 
           : (initialData.correctAnswer || ''),
@@ -2936,12 +3070,13 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
       questionText: '',
       type: type,
       isMultiple: isMultiple,
-      options: type === 'TRUE_FALSE' ? [] : [
+      options: type === 'TRUE_FALSE' || type === 'MATCHING' || type === 'CLOZE_TEST' ? [] : [
         { id: '1', text: '', isCorrect: false },
         { id: '2', text: '', isCorrect: false },
         { id: '3', text: '', isCorrect: false },
         { id: '4', text: '', isCorrect: false }
       ],
+      pairs: type === 'MATCHING' ? [{ id: crypto.randomUUID(), leftText: '', rightText: '' }, { id: crypto.randomUUID(), leftText: '', rightText: '' }] : [],
       correctAnswer: type === 'TRUE_FALSE' ? 'true' : '',
       points: 1,
       explanation: ''
@@ -2963,7 +3098,10 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
               {initialData ? 'Sửa câu hỏi' : 'Tạo câu hỏi mới'}
             </h3>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-              {type === 'TRUE_FALSE' ? 'Đúng / Sai' : !isMultiple ? 'Trắc nghiệm 1 đáp án' : 'Trắc nghiệm nhiều đáp án'}
+              {type === 'TRUE_FALSE' ? 'Đúng / Sai' : 
+               type === 'MATCHING' ? 'Nối từ' :
+               type === 'CLOZE_TEST' ? 'Điền từ' :
+               !isMultiple ? 'Trắc nghiệm 1 đáp án' : 'Trắc nghiệm nhiều đáp án'}
             </p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
@@ -2973,10 +3111,14 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
           <div>
-            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">Nội dung câu hỏi</label>
+            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">
+              {type === 'MATCHING' ? 'Yêu cầu (Instruction)' : 
+               type === 'CLOZE_TEST' ? 'Nội dung câu hỏi (Dùng {{answer}} để tạo ô trống)' : 
+               'Nội dung câu hỏi'}
+            </label>
             <textarea 
               value={formData.questionText}
-              onChange={e => setFormData({...formData, questionText: e.target.value})}
+              onChange={e => setFormData({...formData, questionText: e.target.value, instruction: type === 'MATCHING' ? e.target.value : formData.instruction, textWithBlanks: type === 'CLOZE_TEST' ? e.target.value : formData.textWithBlanks})}
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-primary outline-none font-medium min-h-[100px] resize-none"
               placeholder="Nhập nội dung câu hỏi..."
               required
@@ -3011,6 +3153,58 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
                 </button>
               </div>
             </div>
+          ) : type === 'MATCHING' ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest font-label">Các cặp nối</label>
+                <button 
+                  type="button" 
+                  onClick={() => setFormData({...formData, pairs: [...(formData.pairs || []), { id: crypto.randomUUID(), leftText: '', rightText: '' }]})}
+                  className="text-xs font-bold text-primary hover:text-primary-dark"
+                >
+                  + Thêm cặp
+                </button>
+              </div>
+              {formData.pairs?.map((pair: any, idx: number) => (
+                <div key={pair.id || idx} className="flex items-center gap-2">
+                  <input 
+                    type="text"
+                    value={pair.leftText}
+                    onChange={e => {
+                      const newPairs = [...formData.pairs];
+                      newPairs[idx].leftText = e.target.value;
+                      setFormData({...formData, pairs: newPairs});
+                    }}
+                    className="flex-1 px-4 py-3 rounded-xl bg-slate-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-primary outline-none font-medium"
+                    placeholder="Bên trái..."
+                  />
+                  <span className="material-symbols-outlined text-slate-300">arrow_right_alt</span>
+                  <input 
+                    type="text"
+                    value={pair.rightText}
+                    onChange={e => {
+                      const newPairs = [...formData.pairs];
+                      newPairs[idx].rightText = e.target.value;
+                      setFormData({...formData, pairs: newPairs});
+                    }}
+                    className="flex-1 px-4 py-3 rounded-xl bg-slate-50 dark:bg-gray-800 border-none focus:ring-2 focus:ring-primary outline-none font-medium"
+                    placeholder="Bên phải..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newPairs = formData.pairs.filter((_: any, i: number) => i !== idx);
+                      setFormData({...formData, pairs: newPairs});
+                    }}
+                    className="size-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : type === 'CLOZE_TEST' ? (
+            null // Text field above is sufficient for CLOZE_TEST
           ) : (
             <div className="space-y-4">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-label">Các lựa chọn đáp án</label>

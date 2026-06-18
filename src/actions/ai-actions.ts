@@ -9,8 +9,8 @@ export async function generateVocabularyDetails(word: string, categoryName?: str
 
   try {
     // Determine age-appropriate guidelines
-    let explanationGuideline = "a clear, simple English definition (CEFR B1-B2 level)";
-    let examplesGuideline = "exactly 2-3 illustrative, high-quality example sentences";
+    let explanationGuideline = "a very clear, simple English definition using easy words (A1-A2 level)";
+    let examplesGuideline = "exactly 2-3 extremely simple, short, and easy-to-understand English example sentences (A1 level, using only basic vocabulary with very few new words)";
 
     if (categoryName) {
       const cat = categoryName.toLowerCase();

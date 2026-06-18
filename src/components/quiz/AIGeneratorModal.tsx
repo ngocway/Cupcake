@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { QuestionType } from './types';
 import { generateAIExerciseAction } from '@/actions/ai-quiz-generator';
+import { TaxonomySelector } from '@/components/common/TaxonomySelector';
+import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 
 const DEFAULT_PROMPT_TEMPLATE = `You are an expert ESL content creator for young learners (A1 level, kids aged 6–7).
 
@@ -118,6 +120,17 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
   const [isGenerating, setIsGenerating] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
+  // Taxonomy states
+  const [subject, setSubject] = useState("english");
+  const [targetAudiences, setTargetAudiences] = useState<string[]>(["kid"]);
+  const [audienceLevels, setAudienceLevels] = useState<Record<string, string>>({});
+  const [learningGoals, setLearningGoals] = useState<string[]>([]);
+  const [onboardingConfig, setOnboardingConfig] = useState<any>(null);
+
+  useEffect(() => {
+    getOnboardingConfig().then(config => setOnboardingConfig(config)).catch(console.error);
+  }, []);
+
   const handleGenerate = async () => {
     if (!questionsText.trim()) {
       setErrors(['Vui lòng nhập hoặc chỉnh sửa nội dung prompt mẫu.']);
@@ -128,7 +141,24 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
     setErrors([]);
     
     try {
-      const result = await generateAIExerciseAction(assignmentId || 'new', questionsText);
+      const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
+      const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
+      const primaryLevel = audienceLevels[primaryAudience] || "A1";
+
+      const enhancedPrompt = `
+Context Information for AI:
+- Subject: ${subject}
+- Target Audiences: ${targetAudiences.join(', ')}
+- Primary Audience (Tone): ${primaryAudience}
+- CEFR Level: ${primaryLevel}
+- Selected Learning Goals: ${learningGoals.join(', ')}
+
+==================
+User Prompt:
+${questionsText}
+`;
+
+      const result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
       
       if (!result.success) {
         // Kết hợp các lỗi từ backend và chi tiết lỗi thô nếu có
@@ -238,6 +268,24 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
               </ul>
             </div>
           )}
+
+          {/* Taxonomy Config */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Cấu hình đối tượng & mục tiêu</label>
+            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4.5 bg-slate-50/40 dark:bg-slate-800/20">
+              <TaxonomySelector
+                config={onboardingConfig}
+                subject={subject}
+                setSubject={setSubject}
+                targetAudiences={targetAudiences}
+                setTargetAudiences={setTargetAudiences}
+                audienceLevels={audienceLevels}
+                setAudienceLevels={setAudienceLevels}
+                learningGoals={learningGoals}
+                setLearningGoals={setLearningGoals}
+              />
+            </div>
+          </div>
 
           {/* Questions input */}
           <div className="flex flex-col gap-2">

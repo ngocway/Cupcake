@@ -6,6 +6,7 @@ import { getSystemMetadata } from '@/actions/material-actions';
 import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 import { useLocale } from 'next-intl';
 import { Sparkles, X, RefreshCw, Settings, HelpCircle, Volume2 } from 'lucide-react';
+import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 
 interface AiGeneratorModalProps {
   isOpen?: boolean;
@@ -31,8 +32,13 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
   // Form states
   const [topic, setTopic] = useState("");
   const [reference, setReference] = useState("");
-  const [audience, setAudience] = useState("All");
+  
+  // Taxonomy states
+  const [subject, setSubject] = useState("english");
+  const [targetAudiences, setTargetAudiences] = useState<string[]>(["kid"]);
+  const [audienceLevels, setAudienceLevels] = useState<Record<string, string>>({});
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
+  
   const language = "Tiếng Anh";
   const [length, setLength] = useState("Trung bình (~400 từ)");
   const [mcqCount, setMcqCount] = useState(3);
@@ -44,108 +50,14 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
 
   const [onboardingConfig, setOnboardingConfig] = useState<any>(null);
-  const [audiencesList, setAudiencesList] = useState<string[]>(['All', 'Kindergarten', 'Kid', 'Teen', 'Learner']);
 
-  // Dynamic fallback learning goals by audience key
-  const FALLBACK_GOALS_BY_AUDIENCE: Record<string, { id: string; label: string; color: string }[]> = {
-    kid: [
-      { id: "communication", label: "Communication", color: "#10b981" },
-      { id: "vocabulary", label: "Vocabulary", color: "#3b82f6" },
-      { id: "reading", label: "Reading", color: "#f59e0b" },
-      { id: "writing-&-grammar", label: "Writing & Grammar", color: "#8b5cf6" },
-    ],
-    teen: [
-      { id: "communication", label: "Communication", color: "#10b981" },
-      { id: "vocabulary", label: "Vocabulary", color: "#3b82f6" },
-      { id: "reading", label: "Reading", color: "#f59e0b" },
-      { id: "writing-&-grammar", label: "Writing & Grammar", color: "#8b5cf6" },
-      { id: "listening", label: "Listening", color: "#ef4444" },
-    ],
-    learner: [
-      { id: "communication", label: "Communication", color: "#10b981" },
-      { id: "vocabulary", label: "Vocabulary", color: "#3b82f6" },
-      { id: "reading", label: "Reading", color: "#f59e0b" },
-      { id: "writing-&-grammar", label: "Writing & Grammar", color: "#8b5cf6" },
-      { id: "listening", label: "Listening", color: "#ef4444" },
-      { id: "business-english", label: "Business English", color: "#ec4899" },
-      { id: "ielts-preparation", label: "IELTS Preparation", color: "#14b8a6" },
-    ],
-    kindergarten: [
-      { id: "vocabulary", label: "Vocabulary", color: "#3b82f6" },
-      { id: "phonics", label: "Phonics", color: "#14b8a6" },
-      { id: "communication", label: "Communication", color: "#10b981" },
-    ]
-  };
-
-  const getAvailableGoals = () => {
-    const audKey = audience.toLowerCase();
-    
-    // If audience is "All", return union of all fallbacks or all onboarding goals
-    if (audKey === "all") {
-      const allUnique = new Map<string, { id: string; label: string; color: string }>();
-      
-      // Load from onboardingConfig first if it exists
-      if (onboardingConfig?.subjects) {
-        onboardingConfig.subjects.forEach((subj: any) => {
-          if (subj.id === "english") {
-            subj.ageGroups?.forEach((ag: any) => {
-              ag.goals?.forEach((g: any) => {
-                allUnique.set(g.id, g);
-              });
-            });
-          }
-        });
-      }
-      
-      // If we got nothing from DB, load fallback values
-      if (allUnique.size === 0) {
-        Object.values(FALLBACK_GOALS_BY_AUDIENCE).flat().forEach(g => {
-          allUnique.set(g.id, g);
-        });
-      }
-      
-      return Array.from(allUnique.values());
-    }
-
-    // Try to find in onboardingConfig first
-    if (onboardingConfig?.subjects) {
-      const englishSubj = onboardingConfig.subjects.find((s: any) => s.id === "english");
-      if (englishSubj) {
-        const matchedAgeGroup = englishSubj.ageGroups?.find((ag: any) => ag.id === audKey || (audKey === "kindergarten" && ag.id === "kid"));
-        if (matchedAgeGroup && matchedAgeGroup.goals && matchedAgeGroup.goals.length > 0) {
-          return matchedAgeGroup.goals;
-        }
-      }
-    }
-
-    // Fallback if not configured in DB
-    const key = audKey === "kindergarten" ? "kindergarten" : (audKey === "teen" ? "teen" : (audKey === "learner" ? "learner" : "kid"));
-    return FALLBACK_GOALS_BY_AUDIENCE[key] || FALLBACK_GOALS_BY_AUDIENCE.kid;
-  };
-
-  const availableGoals = getAvailableGoals();
+  // Dynamic fallback learning goals removed as TaxonomySelector handles it
 
   useEffect(() => {
-    getSystemMetadata().then(meta => {
-      if (meta.targetAudiences.length > 0) {
-        const normalizedAuds = meta.targetAudiences
-          .map((a: string) => a.trim().charAt(0).toUpperCase() + a.trim().slice(1).toLowerCase())
-          .filter((a: string) => a !== 'All');
-        const uniqueAuds = Array.from(new Set(normalizedAuds));
-        setAudiencesList(['All', ...uniqueAuds]);
-      }
-    }).catch(console.error);
-
     getOnboardingConfig().then(config => {
       setOnboardingConfig(config);
     }).catch(console.error);
   }, [locale]);
-
-  // Sync selected learning goals with available list when audience changes
-  useEffect(() => {
-    const availableIds = getAvailableGoals().map((g: any) => g.id);
-    setLearningGoals(prev => prev.filter(id => availableIds.includes(id)));
-  }, [audience, onboardingConfig]);
 
   const handleCreateLesson = async () => {
     const topicsList = topic
@@ -194,7 +106,9 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
           const res = await generateAILessonFully({
             topic: activeTopic,
             learningGoals,
-            audience,
+            subject,
+            targetAudiences,
+            audienceLevels,
             language,
             length,
             vocabCount,
@@ -349,86 +263,49 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
           </div>
 
           {/* SECTION 2: CONFIGURATION GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             
-            {/* Target Audience / Age group */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="ai-audience-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Độ tuổi</label>
-              <select 
-                id="ai-audience-select"
-                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                value={audience} 
-                onChange={e => setAudience(e.target.value)}
-              >
-                {audiencesList.map((a, i) => <option key={`${a}-${i}`} value={a}>{a}</option>)}
-              </select>
-            </div>
+            <TaxonomySelector
+              config={onboardingConfig}
+              subject={subject}
+              setSubject={setSubject}
+              targetAudiences={targetAudiences}
+              setTargetAudiences={setTargetAudiences}
+              audienceLevels={audienceLevels}
+              setAudienceLevels={setAudienceLevels}
+              learningGoals={learningGoals}
+              setLearningGoals={setLearningGoals}
+            />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              {/* Reading passage length */}
+              <div className="flex flex-col gap-1">
+                <label htmlFor="ai-length-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Độ dài bài đọc</label>
+                <select 
+                  id="ai-length-select"
+                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                  value={length} 
+                  onChange={e => setLength(e.target.value)}
+                >
+                  <option value="Rất ngắn (~200 từ)">Rất ngắn (~200 từ)</option>
+                  <option value="Trung bình (~400 từ)">Trung bình (~400 từ)</option>
+                  <option value="Dài (~600 từ)">Dài (~600 từ)</option>
+                  <option value="Rất dài (>800 từ)">Rất dài (&gt;800 từ)</option>
+                </select>
+              </div>
 
-            {/* Reading passage length */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="ai-length-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Độ dài bài đọc</label>
-              <select 
-                id="ai-length-select"
-                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                value={length} 
-                onChange={e => setLength(e.target.value)}
-              >
-                <option value="Rất ngắn (~200 từ)">Rất ngắn (~200 từ)</option>
-                <option value="Trung bình (~400 từ)">Trung bình (~400 từ)</option>
-                <option value="Dài (~600 từ)">Dài (~600 từ)</option>
-                <option value="Rất dài (>800 từ)">Rất dài (&gt;800 từ)</option>
-              </select>
-            </div>
-
-            {/* Vocab count */}
-            <div className="flex flex-col gap-1">
-              <label htmlFor="ai-vocab-input" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Số từ vựng nổi bật cần trích xuất</label>
-              <input
-                id="ai-vocab-input"
-                type="number"
-                min="0"
-                max="20"
-                className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                value={vocabCount}
-                onChange={e => setVocabCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
-              />
-            </div>
-
-            {/* Learning Goals (Multi-select) */}
-            <div className="flex flex-col gap-2.5 md:col-span-2 border p-4.5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/10 border-slate-100 dark:border-slate-800 mt-2 shadow-sm">
-              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Mục tiêu học tập (Learning Goals) - Tích chọn nhiều mục tiêu
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {availableGoals.map((goal: any) => {
-                  const isSelected = learningGoals.includes(goal.id);
-                  return (
-                    <button
-                      key={goal.id}
-                      type="button"
-                      onClick={() => {
-                        if (isSelected) {
-                          setLearningGoals(prev => prev.filter(id => id !== goal.id));
-                        } else {
-                          setLearningGoals(prev => [...prev, goal.id]);
-                        }
-                      }}
-                      className="px-4 py-2 rounded-full text-xs font-bold transition-all border-2 flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                      style={{
-                        color: isSelected ? '#fff' : goal.color,
-                        backgroundColor: isSelected ? goal.color : 'transparent',
-                        borderColor: goal.color,
-                        boxShadow: isSelected ? `${goal.color}25 0px 4px 12px` : 'none'
-                      }}
-                    >
-                      {goal.label}
-                    </button>
-                  );
-                })}
-                {availableGoals.length === 0 && (
-                  <p className="text-xs text-slate-400 italic">Không có mục tiêu học tập nào phù hợp.</p>
-                )}
+              {/* Vocab count */}
+              <div className="flex flex-col gap-1">
+                <label htmlFor="ai-vocab-input" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Số từ vựng nổi bật cần trích xuất</label>
+                <input
+                  id="ai-vocab-input"
+                  type="number"
+                  min="0"
+                  max="20"
+                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  value={vocabCount}
+                  onChange={e => setVocabCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                />
               </div>
             </div>
           </div>

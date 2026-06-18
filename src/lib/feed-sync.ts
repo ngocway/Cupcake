@@ -71,7 +71,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         where: { id: sourceId },
         include: { 
           teacher: true, 
-          assignment: { select: { tags: true, status: true, subject: true } },
+          assignment: { select: { tags: true, status: true, subject: true, thumbnail: true } },
           _count: { select: { reviews: true } }
         }
       });
@@ -86,7 +86,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
         update: {
           title: lesson.title,
           slug: lesson.slug || sourceId,
-          thumbnail: lesson.thumbnail ?? undefined,
+          thumbnail: lesson.assignment?.thumbnail ?? undefined,
           videoUrl: lesson.videoUrl ?? undefined,
           audioUrl: lesson.audioUrl ?? undefined,
           materialType: lesson.materialType,
@@ -108,7 +108,7 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
           contentType: "LESSON",
           title: lesson.title,
           slug: lesson.slug || sourceId,
-          thumbnail: lesson.thumbnail ?? undefined,
+          thumbnail: lesson.assignment?.thumbnail ?? undefined,
           videoUrl: lesson.videoUrl ?? undefined,
           audioUrl: lesson.audioUrl ?? undefined,
           materialType: lesson.materialType,

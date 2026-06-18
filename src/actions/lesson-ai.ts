@@ -1000,7 +1000,9 @@ export async function getGenProgress() {
 export async function generateAILessonFully(params: {
   topic: string;
   learningGoals: string[];
-  audience: string;
+  subject: string;
+  targetAudiences: string[];
+  audienceLevels: Record<string, string>;
   language: string;
   length: string;
   vocabCount: number;
@@ -1020,7 +1022,7 @@ export async function generateAILessonFully(params: {
   setGenProgress(session.user.id, "Đang khởi tạo cấu trúc và phân tích tham số...", 5);
 
   const {
-    topic, learningGoals, audience, language, length,
+    topic, learningGoals, subject, targetAudiences, audienceLevels, language, length,
     vocabCount, mcqCount, mcqMultiCount, tfCount, clozeCount,
     reference, ttsVoice = "Aoede", ttsSpeed = 1.0
   } = params;
@@ -1037,12 +1039,19 @@ export async function generateAILessonFully(params: {
       targetWordCount = 800;
     }
 
+    // Priority: lowest age -> lowest level
+    const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
+    const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
+    const primaryLevel = audienceLevels[primaryAudience] || "A1";
+
     // 1. GENERATE LESSON JSON
     setGenProgress(session.user.id, "Đang soạn thảo nội dung bài học bằng AI (gpt-4o-mini)...", 10);
     const gptPrompt = `Create a complete educational lesson for students in JSON format.
     Topic: "${topic}"
-    Subject/Category: "English"
-    Audience: "${audience}"
+    Subject/Category: "${subject}"
+    Target Audiences: "${targetAudiences.join(', ')}"
+    Primary Audience for Content Tone: "${primaryAudience}"
+    Primary CEFR Target Level: "${primaryLevel}"
     Language: "${language}"
     Target Reading Text Length: EXACTLY ${targetWordCount} words. The final text MUST contain at least ${targetWordCount - 30} words. This is a strict constraint!
     Vocabulary count: ${vocabCount}
@@ -1375,22 +1384,8 @@ export async function generateAILessonFully(params: {
     const assignmentSlug = await generateUniqueSlug(assignmentTitle, 'assignment');
     const lessonSlug = await generateUniqueSlug(assignmentTitle, 'lesson');
 
-    // Resolve audience IDs to match onboarding config keys (lowercase "kid", "teen", "learner")
-    let dbAudiences: string[] = [];
-    const lowerAud = audience ? audience.toLowerCase() : "";
-    if (lowerAud === "all") {
-      dbAudiences = ["kid", "teen", "learner"];
-    } else if (lowerAud === "kindergarten") {
-      dbAudiences = ["kid"]; // maps to Kid in onboarding config
-    } else if (lowerAud === "kid") {
-      dbAudiences = ["kid"];
-    } else if (lowerAud === "teen") {
-      dbAudiences = ["teen"];
-    } else if (lowerAud === "learner") {
-      dbAudiences = ["learner"];
-    } else if (lowerAud) {
-      dbAudiences = [lowerAud];
-    }
+    // Save to Database
+    const finalLevel = Object.values(audienceLevels).join(',') || parsedData.level || "B1";
 
     // Fallback thumbnail if DALL-E failed
     let finalThumbnail = thumbnailImgUrl;
@@ -1406,17 +1401,19 @@ export async function generateAILessonFully(params: {
         shortDescription: parsedData.shortDescription || "",
         readingText: readingTextHtml,
         gradeLevel: parsedData.gradeLevel || "Khác",
-        subject: "english", // Save as "english" to match taxonomy config subject id
+        level: finalLevel,
+        audienceLevels: audienceLevels,
+        subject: subject,
         materialType: "READING",
+        targetAudiences: targetAudiences,
+        learningGoals: learningGoals,
         status: "DRAFT",
         teacherId: session.user.id,
         isAiGenerated: true,
         instructions: vocabHtml,
         thumbnail: finalThumbnail,
         audioUrl: wholeAudioUrl || null,
-        audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
-        targetAudiences: dbAudiences,
-        learningGoals: learningGoals
+        audioMetadata: audioMetadata ? (audioMetadata as any) : undefined
       }
     });
 
@@ -1430,7 +1427,7 @@ export async function generateAILessonFully(params: {
         thumbnail: finalThumbnail,
         audioUrl: wholeAudioUrl || null,
         audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
-        targetAudiences: dbAudiences,
+        targetAudiences: targetAudiences,
         learningGoals: learningGoals
       }
     });
