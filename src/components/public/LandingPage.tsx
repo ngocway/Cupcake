@@ -415,14 +415,30 @@ const KindergartenGameList = memo(function KindergartenGameList({ promise }: { p
           className="group cursor-pointer"
         >
           <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
-            <div className={`aspect-video bg-gradient-to-br ${game.gradient} relative overflow-hidden flex items-center justify-center p-6`}>
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-              <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
-                 <div className="text-6xl animate-bounce">{game.emoji}</div>
-                 <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
-              </div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
+            <div className={`aspect-video relative overflow-hidden flex items-center justify-center ${!game.thumbnail ? `bg-gradient-to-br ${game.gradient} p-6` : ''}`}>
+              {game.thumbnail ? (
+                <img
+                  src={game.thumbnail}
+                  alt={game.title}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+                  <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
+                    <div className="text-6xl animate-bounce">{game.emoji}</div>
+                    <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
+                  </div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
+                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
+                </>
+              )}
+              {/* Title overlay on thumbnail */}
+              {game.thumbnail && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5 z-10">
+                  <h3 className="text-2xl font-black text-white drop-shadow-lg">{game.title}</h3>
+                </div>
+              )}
             </div>
             <div className="p-6 flex-1 flex flex-col justify-between">
               <div>
@@ -628,8 +644,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     studyLevel
   ])
 
-  const currentLevels = onboardingConfig?.subjects?.find((s: any) => s.id === tempStudySubject)?.ageGroups?.find((a: any) => a.id === tempStudyAgeGroup)?.levels || [];
-  const isAllStepsCompleted = !!tempStudySubject && !!tempStudyAgeGroup && (currentLevels.length === 0 || !!tempStudyLevel);
+  // Level selection removed from popup — now handled in sidebar
+  const isAllStepsCompleted = !!tempStudySubject && !!tempStudyAgeGroup;
   const isReadyEnabled = isAllStepsCompleted && !!tempNativeLanguage;
   const isFirstTimeSetup = !initialStudySubject;
 
@@ -696,10 +712,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       localStorage.setItem("cupcakes_native_language", tempNativeLanguage)
     }
 
-    if (studySubject !== tempStudySubject || studyAgeGroup !== tempStudyAgeGroup || studyLevel !== tempStudyLevel) {
+    if (studySubject !== tempStudySubject || studyAgeGroup !== tempStudyAgeGroup) {
       setStudySubject(tempStudySubject || "")
       setStudyAgeGroup(tempStudyAgeGroup || "")
-      setStudyLevel(tempStudyLevel || "")
+      // Level is not set from popup — user selects from sidebar
+      setStudyLevel("")
     }
 
     // 2. Commit category and sub-category
@@ -711,7 +728,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     if (tempNativeLanguage) document.cookie = `native_language=${tempNativeLanguage}; path=/; max-age=31536000; samesite=lax`;
     if (tempStudySubject) document.cookie = `study_subject=${tempStudySubject}; path=/; max-age=31536000; samesite=lax`;
     if (tempStudyAgeGroup) document.cookie = `study_age_group=${tempStudyAgeGroup}; path=/; max-age=31536000; samesite=lax`;
-    if (tempStudyLevel) document.cookie = `study_level=${tempStudyLevel}; path=/; max-age=31536000; samesite=lax`;
+    // Clear level when age group changes (level is now selected from sidebar)
+    document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
 
     // 4. Trigger background update to server (FIRE AND FORGET - NO AWAIT)
     updateAllPreferences({
@@ -719,7 +737,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       nativeLanguage: tempNativeLanguage,
       studySubject: tempStudySubject,
       studyAgeGroup: tempStudyAgeGroup,
-      studyLevel: tempStudyLevel
+      studyLevel: "" // Level is now selected from sidebar, reset on age group change
     }).catch(console.error);
 
     // 5. Update URL goal and categoryId
@@ -913,52 +931,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               </>
             )}
 
-            {/* Level Selection (Step 3) */}
-            {onboardingConfig && tempStudySubject && tempStudyAgeGroup && onboardingConfig.subjects.find((s: any) => s.id === tempStudySubject)?.ageGroups.find((a: any) => a.id === tempStudyAgeGroup)?.levels?.length > 0 && (
-              <>
-                <hr className="border-primary/10" />
-                <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
-                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
-                    Your Level
-                  </h2>
-                  <div className="flex flex-wrap gap-4 items-center pl-4 md:pl-10 py-2">
-                    {onboardingConfig.subjects.find((s: any) => s.id === tempStudySubject)?.ageGroups.find((a: any) => a.id === tempStudyAgeGroup)?.levels.map((level: any, idx: number) => {
-                      const isActive = tempStudyLevel === level.id;
-                      const blobShapes = [
-                        "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
-                        "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
-                        "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
-                        "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
-                        "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
-                      ];
-                      const levelStyles = [
-                        { bg: "bg-emerald-100", border: "border-emerald-300", activeBg: "bg-emerald-500", text: "text-emerald-900", activeText: "text-white", shadow: "shadow-emerald-900/30" },
-                        { bg: "bg-sky-100", border: "border-sky-300", activeBg: "bg-sky-500", text: "text-sky-900", activeText: "text-white", shadow: "shadow-sky-900/30" },
-                        { bg: "bg-purple-100", border: "border-purple-300", activeBg: "bg-purple-500", text: "text-purple-900", activeText: "text-white", shadow: "shadow-purple-900/30" },
-                        { bg: "bg-orange-100", border: "border-orange-300", activeBg: "bg-orange-500", text: "text-orange-900", activeText: "text-white", shadow: "shadow-orange-900/30" },
-                        { bg: "bg-rose-100", border: "border-rose-300", activeBg: "bg-rose-500", text: "text-rose-900", activeText: "text-white", shadow: "shadow-rose-900/30" },
-                      ];
-                      const blobShape = blobShapes[(idx + 2) % blobShapes.length];
-                      const style = levelStyles[idx % levelStyles.length];
-
-                      return (
-                         <button
-                          key={level.id}
-                          onClick={() => setTempStudyLevel(level.id)}
-                          className={`px-8 py-3 ${blobShape} text-xs font-black transition-all duration-500 border-2 uppercase tracking-[0.1em] shadow-sm hover:scale-110 active:scale-95 cursor-pointer ${
-                            isActive
-                              ? `${style.activeBg} ${style.border} ${style.activeText} shadow-xl ${style.shadow} scale-105`
-                              : `${style.bg} ${style.border} ${style.text} hover:opacity-90`
-                          }`}
-                         >
-                            {level.label}
-                         </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Level Selection removed from popup — now in sidebar */}
 
             {/* Native Language Section */}
             {isAllStepsCompleted && (
@@ -1023,89 +996,69 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-col md:flex-row md:items-center justify-start gap-6 pt-8 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
+        className="flex flex-col md:flex-row md:items-center justify-start gap-6 pt-0 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
       >
         <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
           {isKindergarten ? (
-            <>
+            <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
+              {/* Sliding indicator */}
+              <div
+                className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                style={{
+                  left: activeTab === "flashcards" ? "6px" : "calc(50%)",
+                  right: activeTab === "games" ? "6px" : "calc(50%)",
+                }}
+              />
               <button
                 onClick={() => handleTabChange("flashcards")}
-                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-                  activeTab === "flashcards"
-                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
-                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                  activeTab === "flashcards" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
                 {locale === "vi" ? "THẺ TỪ VỰNG" : "FLASHCARDS"}
               </button>
               <button
                 onClick={() => handleTabChange("games")}
-                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-                  activeTab === "games"
-                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
-                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                  activeTab === "games" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
                 {locale === "vi" ? "TRÒ CHƠI" : "GAMES"}
               </button>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
+              {/* Sliding indicator */}
+              <div
+                className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                style={{
+                  left: activeTab === "lessons" ? "6px" : "calc(50%)",
+                  right: activeTab === "exercises" ? "6px" : "calc(50%)",
+                }}
+              />
               <button
                 onClick={() => handleTabChange("lessons")}
-                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-                  activeTab === "lessons"
-                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
-                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                  activeTab === "lessons" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
                 {nt("lessons").toUpperCase()}
               </button>
               <button
                 onClick={() => handleTabChange("exercises")}
-                className={`px-10 py-4 rounded-[1.75rem] text-sm font-black transition-all duration-500 ease-out border-2 ${
-                  activeTab === "exercises"
-                    ? "bg-primary border-primary text-on-primary shadow-lg shadow-primary/20 scale-[1.03] translate-y-[-2px]"
-                    : "bg-white border-primary/10 text-on-surface-variant hover:text-primary hover:border-primary/40 shadow-sm"
+                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                  activeTab === "exercises" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
                 {locale === "vi" ? "BÀI TẬP" : "EXERCISES"}
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Active filters display */}
-      {!isKindergarten && (activeNames.categoryName || searchParams.search) && (
-        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
-          <div className="flex flex-wrap items-center gap-2">
-            {activeNames.categoryName && (
-              <>
-                <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-bold flex items-center gap-2">
-                  <span>{activeNames.categoryName}</span>
-                  <button onClick={() => {
-                    const p = new URLSearchParams(window.location.search)
-                    p.delete("categoryId")
-                    router.push(`?${p.toString()}`, { scroll: false })
-                  }} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer"><X className="w-3.5 h-3.5" /></button>
-                </div>
-                {activeNames.subCategoryName && (
-                  <div className="px-4 py-1.5 bg-primary/5 border border-primary/10 text-primary/80 rounded-full text-sm font-bold flex items-center gap-2">
-                    <span>{activeNames.subCategoryName}</span>
-                  </div>
-                )}
-              </>
-            )}
-            {searchParams.search && (
-              <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-sm font-bold flex items-center gap-2">
-                <span>Search: {searchParams.search}</span>
-                <button onClick={handleClearSearch} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors cursor-pointer"><X className="w-3.5 h-3.5" /></button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+
+
 
       {/* Lists */}
       <div className="relative">

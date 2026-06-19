@@ -4,13 +4,24 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTranslations } from "next-intl"
 
-const getAudienceColor = (aud: string) => {
-  switch (aud.toLowerCase()) {
-    case "kindergarten": return "bg-teal-500 text-white"
-    case "kid": return "bg-blue-500 text-white"
-    case "teen": return "bg-rose-500 text-white"
-    case "learner": return "bg-purple-500 text-white"
-    default: return "bg-primary text-white"
+const levelToShortLabel = (level: string | null | undefined): string | null => {
+  if (!level) return null;
+  switch (level.toLowerCase()) {
+    case 'beginner':     return 'Pre-A1'
+    case 'elementary':   return 'A2'
+    case 'intermediate': return 'B1'
+    case 'advanced':     return 'C1'
+    default:             return level.toUpperCase()
+  }
+}
+
+const getLevelColor = (level: string | null | undefined) => {
+  switch ((level || '').toLowerCase()) {
+    case 'beginner':     return 'bg-emerald-500 text-white'
+    case 'elementary':   return 'bg-sky-500 text-white'
+    case 'intermediate': return 'bg-violet-500 text-white'
+    case 'advanced':     return 'bg-rose-500 text-white'
+    default:             return 'bg-primary text-white'
   }
 }
 
@@ -93,14 +104,10 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-5 border-t border-primary/5">
           <div className="flex items-center flex-wrap gap-2">
-            {item.targetAudiences && item.targetAudiences.length > 0 && (
-              <div className="flex items-center gap-1">
-                {Array.from(new Set((item.targetAudiences as string[]).map(a => String(a).toLowerCase()))).slice(0, 3).map((aud: string) => (
-                  <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
-                    {aud === 'kindergarten' ? 'Kindergarten' : aud === 'kid' ? 'Kid' : aud === 'teen' ? 'Teen' : aud === 'learner' ? 'Learner' : aud}
-                  </span>
-                ))}
-              </div>
+            {item.level && (
+              <span className={`${getLevelColor(item.level)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
+                {levelToShortLabel(item.level)}
+              </span>
             )}
             {tagsArray.length > 0 && (
               <div className="flex items-center gap-1">
@@ -221,14 +228,10 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-5 border-t border-secondary/5">
           <div className="flex items-center flex-wrap gap-2">
-            {item.targetAudiences && item.targetAudiences.length > 0 && (
-              <div className="flex items-center gap-1">
-                {Array.from(new Set((item.targetAudiences as string[]).map(a => String(a).toLowerCase()))).slice(0, 3).map((aud: string) => (
-                  <span key={aud} className={`${getAudienceColor(aud)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
-                    {aud === 'kindergarten' ? 'Kindergarten' : aud === 'kid' ? 'Kid' : aud === 'teen' ? 'Teen' : aud === 'learner' ? 'Learner' : aud}
-                  </span>
-                ))}
-              </div>
+            {item.level && (
+              <span className={`${getLevelColor(item.level)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
+                {levelToShortLabel(item.level)}
+              </span>
             )}
             {tagsArray.length > 0 && (
               <div className="flex items-center gap-1">
