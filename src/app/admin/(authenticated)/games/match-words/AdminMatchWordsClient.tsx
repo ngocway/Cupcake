@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, Folders, ArrowRightLeft, Pencil, Check } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, Folders, ArrowRightLeft, Pencil, Check, Sparkles, X, Wand2 } from "lucide-react"
 import { searchImagesAction } from "@/actions/image-search-actions"
 import { uploadUrlMedia } from "@/actions/upload-actions"
 import { useRouter } from "next/navigation"
@@ -15,8 +15,10 @@ import {
   addMatchWordItem, 
   updateMatchWordItem,
   deleteMatchWordItem,
-  updateMatchWordGame
+  updateMatchWordGame,
+  updateMatchWordTopic
 } from "@/actions/admin-match-words"
+import { generateMatchWordVocabList, generateSingleMatchWordItem } from "@/actions/admin-match-words-ai"
 
 export function AdminMatchWordsClient({ 
   initialGames2to5, 
@@ -60,10 +62,22 @@ export function AdminMatchWordsClient({
 
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [topicForm, setTopicForm] = useState({ name: "", icon: "🐶" })
+  const [draftWords, setDraftWords] = useState<{ word: string; emoji: string }[]>([])
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false)
+  const [newDraftWord, setNewDraftWord] = useState("")
+  const [newDraftEmoji, setNewDraftEmoji] = useState("✨")
+  const [aiProgress, setAiProgress] = useState<{
+    active: boolean;
+    text: string;
+    current: number;
+    total: number;
+  } | null>(null)
 
   const [showMoveTopicModal, setShowMoveTopicModal] = useState(false)
   const [topicToMove, setTopicToMove] = useState<{id: string, name: string} | null>(null)
   const [targetGameId, setTargetGameId] = useState<string>("")
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
+  const [editingTopicForm, setEditingTopicForm] = useState({ name: "", icon: "" })
 
   const [showItemModal, setShowItemModal] = useState(false)
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
@@ -127,21 +141,119 @@ export function AdminMatchWordsClient({
   }
 
   // --- Topic Actions ---
+  const handleAIGenerateDraft = async () => {
+    if (!topicForm.name.trim()) return toast.error("Vui lòng nhập tên chủ đề trước")
+    setIsGeneratingDraft(true)
+    try {
+      const res = await generateMatchWordVocabList(activeTab, topicForm.name)
+      if (res.success && res.vocabularies) {
+        setDraftWords(res.vocabularies)
+        if (res.topicEmoji) {
+          setTopicForm(prev => ({ ...prev, icon: res.topicEmoji }))
+        }
+        toast.success("Đã tạo 10 từ gợi ý nháp kèm icon phù hợp!")
+      } else {
+        toast.error(res.error || "Không thể tạo từ gợi ý.")
+      }
+    } catch (err: any) {
+      toast.error("Lỗi: " + err.message)
+    } finally {
+      setIsGeneratingDraft(false)
+    }
+  }
+
+  const handleAddDraftWord = () => {
+    if (!newDraftWord.trim()) return toast.error("Vui lòng nhập từ vựng")
+    const wordLower = newDraftWord.trim().toLowerCase()
+    if (draftWords.some(d => d.word === wordLower)) {
+      return toast.error("Từ này đã có trong danh sách nháp")
+    }
+    setDraftWords(prev => [...prev, { word: wordLower, emoji: newDraftEmoji }])
+    setNewDraftWord("")
+    setNewDraftEmoji("✨")
+  }
+
+  const handleRemoveDraftWord = (index: number) => {
+    setDraftWords(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleCloseTopicModal = () => {
+    setShowTopicModal(false)
+    setDraftWords([])
+    setTopicForm({ name: "", icon: "🐶" })
+  }
+
   const handleSaveTopic = () => {
     if (!selectedGameId) return toast.error("Vui lòng chọn một bộ Game trước")
     if (!topicForm.name || !topicForm.icon) return toast.error("Vui lòng điền đủ tên và icon")
     
     startTransition(async () => {
+      // 1. Tạo chủ đề trước
       const res = await createMatchWordTopic({
         gameId: selectedGameId,
         name: topicForm.name,
         icon: topicForm.icon,
         ageGroup: activeTab
       })
+
+      if (!res.success || !res.topic) {
+        toast.error("Lỗi tạo chủ đề: " + res.error)
+        return
+      }
+
+      const topicId = res.topic.id
+
+      // 2. Nếu có từ nháp, chạy tiến trình AI sinh ảnh/audio
+      if (draftWords.length > 0) {
+        setAiProgress({
+          active: true,
+          text: "Bắt đầu tạo tài nguyên học tập bằng AI...",
+          current: 0,
+          total: draftWords.length
+        })
+
+        for (let i = 0; i < draftWords.length; i++) {
+          const item = draftWords[i]
+          setAiProgress({
+            active: true,
+            text: `Đang tạo ảnh & audio cho từ "${item.word}"...`,
+            current: i + 1,
+            total: draftWords.length
+          })
+
+          try {
+            const singleRes = await generateSingleMatchWordItem(topicId, item.word, item.emoji, activeTab)
+            if (!singleRes.success) {
+              console.error(`Lỗi tạo từ ${item.word}:`, singleRes.error)
+            }
+          } catch (itemErr) {
+            console.error(`Lỗi hệ thống khi tạo từ ${item.word}:`, itemErr)
+          }
+        }
+
+        setAiProgress(null)
+      }
+
+      toast.success("Đã tạo chủ đề và đồng bộ từ vựng thành công!")
+      setShowTopicModal(false)
+      setTopicForm({ name: "", icon: "🐶" })
+      setDraftWords([])
+      router.refresh()
+    })
+  }
+
+  const handleRenameTopic = (id: string) => {
+    if (!editingTopicForm.name.trim() || !editingTopicForm.icon.trim()) {
+      return toast.error("Tên chủ đề và icon không được để trống")
+    }
+    startTransition(async () => {
+      const res = await updateMatchWordTopic(id, { 
+        name: editingTopicForm.name.trim(),
+        icon: editingTopicForm.icon.trim()
+      })
       if (res.success) {
-        toast.success("Tạo chủ đề thành công")
-        setShowTopicModal(false)
-        setTopicForm({ name: "", icon: "🐶" })
+        toast.success("Cập nhật chủ đề thành công")
+        setEditingTopicId(null)
         router.refresh()
       } else {
         toast.error("Lỗi: " + res.error)
@@ -233,13 +345,17 @@ export function AdminMatchWordsClient({
   }
 
   // --- Image Search Actions ---
-  const handleSearchImage = async (wordToSearch?: string | React.MouseEvent) => {
-    const word = typeof wordToSearch === 'string' ? wordToSearch : itemForm.word;
+  const handleSearchImage = async (wordToSearch?: string | React.MouseEvent | any, styleOverride?: "REALISTIC" | "CARTOON") => {
+    let word = itemForm.word;
+    if (typeof wordToSearch === 'string') {
+      word = wordToSearch;
+    }
     if (!word) return toast.error("Vui lòng nhập từ vựng trước khi tìm ảnh")
     setIsSearchingImage(true)
     setShowImageSearch(true)
     
-    const searchTerm = imageSearchStyle === "CARTOON" ? `${word} cartoon illustration` : word
+    const currentStyle = styleOverride || imageSearchStyle;
+    const searchTerm = currentStyle === "CARTOON" ? `${word} cartoon illustration` : word
     
     try {
       const results = await searchImagesAction(searchTerm)
@@ -438,9 +554,46 @@ export function AdminMatchWordsClient({
                     selectedGame.topics?.map((topic: any) => (
                       <div key={topic.id} className="bg-neutral-950 border border-neutral-800 rounded-2xl p-6 shadow-sm">
                         <div className="flex justify-between items-center mb-4 pb-4 border-b border-neutral-800">
-                          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                            <span className="text-2xl">{topic.icon}</span> {topic.name}
-                          </h3>
+                          {editingTopicId === topic.id ? (
+                            <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                              <input
+                                value={editingTopicForm.icon}
+                                onChange={e => setEditingTopicForm(p => ({ ...p, icon: e.target.value }))}
+                                className="bg-neutral-900 border border-neutral-800 rounded px-2 py-1 text-sm w-12 text-center outline-none focus:border-indigo-500 font-bold"
+                                placeholder="🐶"
+                                title="Icon/Emoji"
+                              />
+                              <input
+                                value={editingTopicForm.name}
+                                onChange={e => setEditingTopicForm(p => ({ ...p, name: e.target.value }))}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleRenameTopic(topic.id)
+                                  if (e.key === 'Escape') setEditingTopicId(null)
+                                }}
+                                autoFocus
+                                className="bg-neutral-900 border border-neutral-800 rounded px-3 py-1 text-sm w-48 outline-none focus:border-indigo-500 font-bold text-white"
+                                placeholder="Tên chủ đề"
+                              />
+                              <button 
+                                onClick={() => handleRenameTopic(topic.id)}
+                                className="p-1 text-green-400 hover:bg-green-500/10 rounded"
+                                title="Lưu"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => setEditingTopicId(null)}
+                                className="p-1 text-red-400 hover:bg-red-500/10 rounded"
+                                title="Hủy"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                              <span className="text-2xl">{topic.icon}</span> {topic.name}
+                            </h3>
+                          )}
                           <div className="flex gap-2">
                             <button 
                               onClick={() => { setSelectedTopicId(topic.id); setShowItemModal(true); setItemForm({ word: "", emoji: "", imageUrl: "" }) }}
@@ -448,11 +601,23 @@ export function AdminMatchWordsClient({
                             >
                               <Plus className="w-4 h-4" /> Thêm Từ
                             </button>
+                            {editingTopicId !== topic.id && (
+                              <button 
+                                onClick={() => {
+                                  setEditingTopicId(topic.id);
+                                  setEditingTopicForm({ name: topic.name, icon: topic.icon || "🐶" });
+                                }}
+                                className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                title="Sửa chủ đề"
+                              >
+                                <Pencil className="w-5 h-5" />
+                              </button>
+                            )}
                             <button 
                               onClick={() => {
-                                setTopicToMove({ id: topic.id, name: topic.name })
-                                setTargetGameId("")
-                                setShowMoveTopicModal(true)
+                                  setTopicToMove({ id: topic.id, name: topic.name })
+                                  setTargetGameId("")
+                                  setShowMoveTopicModal(true)
                               }}
                               className="p-1.5 text-orange-400 hover:bg-orange-500/10 rounded-lg transition-colors"
                               title="Chuyển Game"
@@ -535,19 +700,92 @@ export function AdminMatchWordsClient({
       {/* TOPIC MODAL */}
       {showTopicModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-md shadow-2xl transition-all">
             <h3 className="text-xl font-bold text-white mb-4">Thêm Chủ Đề Mới</h3>
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Tên chủ đề (Tiếng Anh)</label>
-                <input value={topicForm.name} onChange={e => setTopicForm(p => ({...p, name: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all" placeholder="e.g. Animals" />
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5">Tên chủ đề (Tiếng Anh)</label>
+                  <input value={topicForm.name} onChange={e => setTopicForm(p => ({...p, name: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all" placeholder="e.g. Animals" />
+                </div>
+                <button 
+                  type="button"
+                  onClick={handleAIGenerateDraft} 
+                  disabled={isGeneratingDraft || !topicForm.name.trim()} 
+                  className="px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 hover:border-blue-500/50 rounded-xl flex items-center justify-center gap-1.5 font-bold transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed h-[46px]"
+                  title="Gợi ý 10 từ bằng AI"
+                >
+                  {isGeneratingDraft ? (
+                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  <span>AI Gợi Ý</span>
+                </button>
               </div>
+              
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Icon / Emoji</label>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Icon / Emoji chủ đề</label>
                 <input value={topicForm.icon} onChange={e => setTopicForm(p => ({...p, icon: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all" placeholder="e.g. 🐶" />
               </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button onClick={() => setShowTopicModal(false)} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
+
+              {/* Draft words list */}
+              {draftWords.length > 0 && (
+                <div className="mt-4">
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5">Danh sách từ nháp ({draftWords.length})</label>
+                  <div className="bg-neutral-950/80 border border-neutral-800 rounded-xl p-3 max-h-40 overflow-y-auto flex flex-wrap gap-2">
+                    {draftWords.map((item, idx) => (
+                      <span 
+                        key={idx} 
+                        className="inline-flex items-center gap-1 bg-neutral-800 text-neutral-200 px-2.5 py-1 rounded-lg text-sm border border-neutral-700 font-medium group"
+                      >
+                        <span>{item.emoji}</span>
+                        <span>{item.word}</span>
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveDraftWord(idx)} 
+                          className="text-neutral-500 hover:text-red-400 transition-colors ml-1 focus:outline-none"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add manual draft word */}
+              {draftWords.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-neutral-800/55">
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5">Thêm nhanh từ mới vào nháp</label>
+                  <div className="flex gap-2">
+                    <input 
+                      value={newDraftEmoji} 
+                      onChange={e => setNewDraftEmoji(e.target.value)} 
+                      className="w-12 text-center bg-neutral-950 border border-neutral-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-blue-500 transition-all text-lg"
+                      placeholder="🍎"
+                      title="Emoji đại diện"
+                    />
+                    <input 
+                      value={newDraftWord} 
+                      onChange={e => setNewDraftWord(e.target.value)} 
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddDraftWord(); } }}
+                      className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 transition-all text-sm"
+                      placeholder="Nhập từ mới (e.g. orange)"
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleAddDraftWord}
+                      className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-xl text-sm font-bold transition-all shadow-md"
+                    >
+                      Thêm từ
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 mt-6 pt-3 border-t border-neutral-800/55">
+                <button onClick={handleCloseTopicModal} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
                 <button onClick={handleSaveTopic} disabled={isPending} className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-green-600/20 disabled:opacity-50">Lưu Chủ Đề</button>
               </div>
             </div>
@@ -649,8 +887,8 @@ export function AdminMatchWordsClient({
             </div>
 
             <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 shrink-0 flex justify-center gap-3">
-              <button onClick={() => { setImageSearchStyle("REALISTIC"); handleSearchImage(); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${imageSearchStyle === "REALISTIC" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>📸 Ảnh thật thực tế</button>
-              <button onClick={() => { setImageSearchStyle("CARTOON"); handleSearchImage(); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${imageSearchStyle === "CARTOON" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>🎨 Hình vẽ (Cartoon)</button>
+              <button onClick={() => { setImageSearchStyle("REALISTIC"); handleSearchImage(undefined, "REALISTIC"); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${imageSearchStyle === "REALISTIC" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>📸 Ảnh thật thực tế</button>
+              <button onClick={() => { setImageSearchStyle("CARTOON"); handleSearchImage(undefined, "CARTOON"); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${imageSearchStyle === "CARTOON" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>🎨 Hình vẽ (Cartoon)</button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 bg-neutral-950">
@@ -679,6 +917,39 @@ export function AdminMatchWordsClient({
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* AI PROCESSING OVERLAY */}
+      {aiProgress && aiProgress.active && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md">
+          <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-3xl w-full max-w-md shadow-2xl flex flex-col items-center text-center">
+            {/* Spinning glowing gradient ring */}
+            <div className="relative w-24 h-24 flex items-center justify-center mb-6">
+              <div className="absolute inset-0 border-4 border-indigo-500/20 border-t-indigo-500 border-r-indigo-500 rounded-full animate-spin"></div>
+              <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+            </div>
+
+            <h3 className="text-xl font-black text-white mb-2">Đang xử lý bằng AI</h3>
+            <p className="text-neutral-400 text-sm mb-6 max-w-xs h-12 flex items-center justify-center">
+              {aiProgress.text}
+            </p>
+
+            {/* Custom progress bar */}
+            <div className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-1 mb-3">
+              <div 
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-xl transition-all duration-300 shadow-md"
+                style={{ width: `${aiProgress.total > 0 ? (aiProgress.current / aiProgress.total) * 100 : 0}%` }}
+              ></div>
+            </div>
+
+            {/* Step indicator */}
+            <div className="flex justify-between items-center w-full px-2 text-xs font-bold text-neutral-500">
+              <span>Tiến trình</span>
+              <span className="text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full">
+                {aiProgress.current} / {aiProgress.total} từ
+              </span>
             </div>
           </div>
         </div>

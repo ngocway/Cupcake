@@ -66,6 +66,7 @@ export async function GET(request: Request) {
           word: item.word,
           emoji: item.emoji || "✨",
           image: item.imageUrl,
+          audio: item.audioUrl,
           imgColor: randomImgColor.color,
           imgBorder: randomImgColor.border,
           txtColor: randomTxtColor.color,

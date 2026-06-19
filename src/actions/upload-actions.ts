@@ -84,21 +84,36 @@ export async function uploadUrlMedia(imageUrl: string) {
 
   try {
     const s3Client = getR2Client();
-    const response = await fetch(imageUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+
+    let buffer: Buffer;
+    let mimeType = 'image/jpeg';
+    let ext = 'jpg';
+
+    if (imageUrl.startsWith('data:')) {
+      const base64Content = imageUrl.includes('base64,') ? imageUrl.split('base64,')[1] : imageUrl;
+      buffer = Buffer.from(base64Content, 'base64');
+      const match = imageUrl.match(/^data:([^;]+);base64,/);
+      if (match) {
+        mimeType = match[1];
+        ext = mimeType.split('/')[1] || 'png';
       }
-    });
-    if (!response.ok) {
-      return { success: false, error: `Failed to fetch external image (Status: ${response.status})` };
+    } else {
+      const response = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        }
+      });
+      if (!response.ok) {
+        return { success: false, error: `Failed to fetch external image (Status: ${response.status})` };
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      mimeType = response.headers.get('content-type') || 'image/jpeg';
+      ext = mimeType.split('/')[1] || 'jpg';
+      if (ext === 'jpeg') ext = 'jpg';
     }
-    
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const mimeType = response.headers.get('content-type') || 'image/jpeg';
-    let ext = mimeType.split('/')[1] || 'jpg';
-    if (ext === 'jpeg') ext = 'jpg';
     
     const fileName = `${session.user.id}-${Date.now()}.${ext}`;
     const filePath = `uploads/${fileName}`;

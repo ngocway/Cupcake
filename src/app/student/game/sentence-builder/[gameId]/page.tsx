@@ -47,7 +47,7 @@ export default function PlaySentenceBuilderGamePage() {
           src={`/games/sentence-builder/index.html?gameId=${gameId}&age=${age}`}
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Sentence Builder Game"
-          sandbox="allow-scripts allow-same-origin"
+          allow="autoplay"
           onLoad={() => setIsLoading(false)}
         />
       </div>

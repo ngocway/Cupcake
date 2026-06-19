@@ -163,6 +163,7 @@
             border-radius: 20px;
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
             align-items: center;
             gap: 10px;
             padding: 15px;
@@ -288,6 +289,142 @@
             .word-block { font-size: 1.1rem; padding: 8px 15px; }
             .dropzone-container { min-height: 60px; padding: 10px; }
         }
+
+        /* Image + Hint wrapper */
+        .image-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            width: 100%;
+        }
+
+        /* Hint Button - Pill Design */
+        .hint-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 9999px;
+            border: 2px solid #fbd38d; /* border-amber-200 */
+            background-color: #fefbeb; /* bg-amber-50 */
+            color: #b7791f; /* text-amber-700 */
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            user-select: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            position: relative;
+            font-family: 'Nunito', sans-serif;
+        }
+
+        .hint-btn::before {
+            display: none !important;
+        }
+
+        .hint-btn:hover:not(.no-audio):not(.playing):not(.loading) {
+            background-color: #fef3c7; /* bg-amber-100 */
+            border-color: #fcd34d; /* border-amber-300 */
+            color: #92400e; /* text-amber-800 */
+        }
+
+        .hint-btn:active:not(.no-audio) {
+            transform: scale(0.95);
+        }
+
+        .hint-btn.playing {
+            background-color: #f59e0b !important; /* bg-amber-500 */
+            border-color: #f59e0b !important; /* border-amber-500 */
+            color: #ffffff !important;
+            box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4), 0 2px 4px -1px rgba(245, 158, 11, 0.2);
+            animation: pulse-btn 1.5s infinite;
+        }
+
+        .hint-btn.loading {
+            background-color: #f1f5f9 !important; /* bg-slate-100 */
+            border-color: #e2e8f0 !important; /* border-slate-200 */
+            color: #94a3b8 !important; /* text-slate-400 */
+            cursor: wait;
+        }
+
+        .hint-btn.no-audio {
+            background-color: #f1f5f9 !important;
+            border-color: #e2e8f0 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed;
+            opacity: 0.45;
+        }
+
+        .hint-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.5;
+            fill: none;
+        }
+        
+        .hint-btn.playing svg {
+            fill: currentColor;
+        }
+
+        @keyframes pulse-btn {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes spin-btn {
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .hint-btn { padding: 6px 14px; font-size: 0.7rem; }
+        }
+
+        /* Skip Button - same pill style, blue */
+        .skip-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 9999px;
+            border: 2px solid #90cdf4; /* border-blue-300 */
+            background-color: #ebf8ff; /* bg-blue-50 */
+            color: #2b6cb0; /* text-blue-700 */
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            user-select: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            flex-shrink: 0;
+            font-family: 'Nunito', sans-serif;
+        }
+        .skip-btn:hover {
+            background-color: #bee3f8;
+            border-color: #63b3ed;
+            color: #2c5282;
+        }
+        .skip-btn:active {
+            transform: scale(0.95);
+        }
+        .skip-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke-width: 2.5;
+            fill: none;
+        }
+        @media (max-width: 768px) {
+            .skip-btn { padding: 6px 14px; font-size: 0.7rem; }
+        }
     </style>
 
 </head>
@@ -311,11 +448,30 @@
         </div>
 
         <div class="game-area">
-            <!-- Image Area -->
-            <div class="image-area" style="position: relative;">
-                <div class="progress-text" id="progressText">1/5</div>
-                <img id="mainImage" src="" alt="Task Image">
-                <div id="levelCompleteOverlay" style="display: none; position: absolute; inset: 0; background: #fff; justify-content: center; align-items: center; font-size: 2.2rem; color: #00b894; font-weight: 900; text-align: center; animation: pulse 2s infinite; z-index: 20; padding: 10px; box-sizing: border-box;">LEVEL COMPLETE! 🎉</div>
+            <!-- Image Area + Hint Button -->
+            <div class="image-wrapper" id="imageWrapper">
+                <div class="image-area" style="position: relative;">
+                    <div class="progress-text" id="progressText">1/5</div>
+                    <img id="mainImage" src="" alt="Task Image">
+                    <div id="levelCompleteOverlay" style="display: none; position: absolute; inset: 0; background: #fff; justify-content: center; align-items: center; font-size: 2.2rem; color: #00b894; font-weight: 900; text-align: center; animation: pulse 2s infinite; z-index: 20; padding: 10px; box-sizing: border-box;">LEVEL COMPLETE! 🎉</div>
+                </div>
+                <!-- Buttons column: Hint + Skip -->
+                <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                    <!-- Hint Button - Pill -->
+                    <button class="hint-btn" id="hintBtn" onclick="playHint()" title="Nghe gợi ý âm thanh">
+                        <span id="hintIcon" style="display: inline-flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" stroke="currentColor"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                        <span id="hintText">Hint</span>
+                    </button>
+                    <!-- Skip Button -->
+                    <button class="skip-btn" id="skipBtn" onclick="skipQuestion()" title="Bỏ qua câu này">
+                        <svg viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M5 12h14M15 7l5 5-5 5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Skip</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Dropzone Area -->
@@ -336,6 +492,7 @@
         let currentQuestions = [];
         let currentQuestionIndex = 0;
         let gameFinished = false;
+        let hintAudio = null;
 
         const dropzone = document.getElementById('dropzone');
         const wordPool = document.getElementById('wordPool');
@@ -396,7 +553,101 @@
             initQuestion();
         }
 
+        const svgLightbulb = `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .6 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+        const svgPause = `<svg viewBox="0 0 24 24" stroke="currentColor" fill="currentColor"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`;
+        const svgSpinner = `<svg class="animate-spin" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" style="width: 14px; height: 14px; animation: spin-btn 1s linear infinite;"><circle opacity="0.25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path opacity="0.75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+        let loadingTimeout = null;
+
+        function playHint() {
+            const qData = currentQuestions[currentQuestionIndex];
+            const btn = document.getElementById('hintBtn');
+            const iconSpan = document.getElementById('hintIcon');
+            const textSpan = document.getElementById('hintText');
+            if (!qData || !qData.audio) return;
+
+            // Toggle: if already playing or loading, stop it
+            if (hintAudio) {
+                if (loadingTimeout) {
+                    clearTimeout(loadingTimeout);
+                    loadingTimeout = null;
+                }
+                hintAudio.pause();
+                hintAudio.currentTime = 0;
+                hintAudio = null;
+                btn.classList.remove('playing', 'loading');
+                if (iconSpan) iconSpan.innerHTML = svgLightbulb;
+                if (textSpan) textSpan.textContent = 'Hint';
+                return;
+            }
+
+            btn.classList.add('loading');
+            if (iconSpan) iconSpan.innerHTML = svgSpinner;
+            if (textSpan) textSpan.textContent = 'Loading...';
+
+            hintAudio = new Audio(qData.audio);
+
+            const onPlay = () => {
+                if (loadingTimeout) {
+                    clearTimeout(loadingTimeout);
+                    loadingTimeout = null;
+                }
+                btn.classList.remove('loading');
+                btn.classList.add('playing');
+                if (iconSpan) iconSpan.innerHTML = svgPause;
+                if (textSpan) textSpan.textContent = 'Playing...';
+            };
+
+            const onStop = () => {
+                if (loadingTimeout) {
+                    clearTimeout(loadingTimeout);
+                    loadingTimeout = null;
+                }
+                btn.classList.remove('playing', 'loading');
+                if (iconSpan) iconSpan.innerHTML = svgLightbulb;
+                if (textSpan) textSpan.textContent = 'Hint';
+                hintAudio = null;
+            };
+
+            hintAudio.addEventListener('play', onPlay);
+            hintAudio.addEventListener('playing', onPlay);
+            hintAudio.addEventListener('canplay', onPlay);
+            hintAudio.addEventListener('ended', onStop);
+            hintAudio.addEventListener('pause', onStop);
+            hintAudio.addEventListener('error', onStop);
+
+            // Safety timeout: 6 seconds max loading time
+            loadingTimeout = setTimeout(() => {
+                console.warn("Hint audio loading timed out.");
+                onStop();
+            }, 6000);
+
+            hintAudio.play().catch(() => {
+                onStop();
+            });
+        }
+
+        function stopHint() {
+            if (loadingTimeout) {
+                clearTimeout(loadingTimeout);
+                loadingTimeout = null;
+            }
+            if (hintAudio) {
+                hintAudio.pause();
+                hintAudio = null;
+            }
+            const btn = document.getElementById('hintBtn');
+            const iconSpan = document.getElementById('hintIcon');
+            const textSpan = document.getElementById('hintText');
+            if (btn) btn.classList.remove('playing', 'loading');
+            if (iconSpan) iconSpan.innerHTML = svgLightbulb;
+            if (textSpan) textSpan.textContent = 'Hint';
+        }
+
         function initQuestion() {
+            // Stop any hint audio from previous question
+            stopHint();
+
             // Hide loading overlay
             const loader = document.getElementById('loadingOverlay');
             if (loader) {
@@ -414,15 +665,30 @@
             mainImage.style.display = 'block';
             progressText.style.display = 'block';
 
+            // Show hint button
+            const hintBtn = document.getElementById('hintBtn');
+            if (hintBtn) hintBtn.style.display = 'flex';
+
             if (currentQuestions.length === 0) {
                 progressText.textContent = "No questions available.";
                 return;
             }
 
             const qData = currentQuestions[currentQuestionIndex];
-            
+
             mainImage.src = qData.image;
             progressText.textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
+
+            // Update hint button: grey out if no audio
+            if (hintBtn) {
+                if (qData.audio) {
+                    hintBtn.classList.remove('no-audio');
+                    hintBtn.disabled = false;
+                } else {
+                    hintBtn.classList.add('no-audio');
+                    hintBtn.disabled = true;
+                }
+            }
 
             const shuffledPool = shuffle(qData.pool);
             shuffledPool.forEach((word) => {
@@ -433,6 +699,20 @@
                 btn.onclick = () => handleWordClick(btn);
                 wordPool.appendChild(btn);
             });
+
+            // Show skip button
+            const skipBtn = document.getElementById('skipBtn');
+            if (skipBtn) skipBtn.style.display = 'flex';
+
+            // Auto-play audio after a short delay (let image load first)
+            if (qData.audio) {
+                setTimeout(() => {
+                    const autoAudio = new Audio(qData.audio);
+                    autoAudio.play().catch(() => {
+                        // Browser blocked autoplay — user can still click Hint manually
+                    });
+                }, 600);
+            }
         }
 
         function checkAnswer() {
@@ -474,31 +754,55 @@
             playSound('success-sound');
             createConfetti(40);
 
-            // Play correct sentence audio after a short delay
             const qData = currentQuestions[currentQuestionIndex];
-            setTimeout(() => {
-                const sentenceAudio = new Audio(qData.audio);
-                sentenceAudio.play().catch(e => console.log(e));
-            }, 600);
 
-            setTimeout(() => {
+            // Single flag to prevent double-transition
+            let transitioned = false;
+            const goNext = () => {
+                if (transitioned) return;
+                transitioned = true;
                 if (currentQuestionIndex + 1 < currentQuestions.length) {
-                    // Next question in the same level
                     currentQuestionIndex++;
                     initQuestion();
                 } else {
-                    // Finished entire level
                     showLevelComplete();
                 }
-            }, 3500);
+            };
+
+            // Wait 600ms (success animation), then play audio and wait for it to finish
+            setTimeout(() => {
+                if (!qData.audio) {
+                    // No audio — go next after 1.5s
+                    setTimeout(goNext, 1500);
+                    return;
+                }
+
+                const sentenceAudio = new Audio(qData.audio);
+
+                // ✅ Normal: go next 600ms after audio ends
+                sentenceAudio.onended = () => setTimeout(goNext, 600);
+
+                // ⚠️ Audio failed to load/play
+                sentenceAudio.onerror = () => setTimeout(goNext, 1500);
+
+                sentenceAudio.play().catch(() => setTimeout(goNext, 1500));
+
+                // 🛡️ Safety net: max 12s total (600 delay + up to ~11s audio)
+                setTimeout(goNext, 11000);
+            }, 600);
         }
 
         function showLevelComplete() {
+            stopHint();
             playSound('win-level-sound');
             
             // Hide standard image area elements
             mainImage.style.display = 'none';
             progressText.style.display = 'none';
+            const hintBtn = document.getElementById('hintBtn');
+            if (hintBtn) hintBtn.style.display = 'none';
+            const skipBtn = document.getElementById('skipBtn');
+            if (skipBtn) skipBtn.style.display = 'none';
             
             // Show level complete overlay
             levelCompleteOverlay.style.display = 'flex';
@@ -525,6 +829,18 @@
             }
         }
 
+        function skipQuestion() {
+            // Stop any playing hint audio
+            stopHint();
+            // Move to next question or show level complete
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) {
+                initQuestion();
+            } else {
+                showLevelComplete();
+            }
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('gameId');
 
@@ -536,7 +852,7 @@
                     const res = await fetch(`/api/games/sentence-builder/${gameId}`);
                     const data = await res.json();
                     if (data.success && data.game) {
-                        currentQuestions = data.game.questions;
+                        currentQuestions = shuffle(data.game.questions);
                         currentQuestionIndex = 0;
                         initQuestion();
                     } else {
@@ -551,7 +867,25 @@
             }
         }
 
-        // Start game
+        // --- Hướng 2: Unlock audio ẩn qua tương tác đầu tiên ---
+        // Browser cho phép audio.play() sau khi user đã tương tác (click/touch) 1 lần.
+        // Chúng ta play 1 file WAV im lặng ngay lần đầu user chạm vào bất cứ đâu.
+        let _audioUnlocked = false;
+        function _unlockAudio() {
+            if (_audioUnlocked) return;
+            _audioUnlocked = true;
+            // Silent WAV (44 bytes, 0 samples) encoded as base64
+            const silentWav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+            const a = new Audio(silentWav);
+            a.volume = 0.001;
+            a.play().catch(() => {});
+            document.removeEventListener('click', _unlockAudio, true);
+            document.removeEventListener('touchstart', _unlockAudio, true);
+        }
+        document.addEventListener('click', _unlockAudio, true);
+        document.addEventListener('touchstart', _unlockAudio, true);
+
+        // Start game immediately on load
         window.addEventListener('DOMContentLoaded', initDynamicGame);
     </script>
 </body>

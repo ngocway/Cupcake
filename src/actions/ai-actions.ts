@@ -119,8 +119,46 @@ export async function fetchImageAsBase64(url: string) {
 }
 
 export async function generateDalleImage(prompt: string, size: string = "1024x1024") {
+  if (process.env.DEEPINFRA_API_KEY) {
+    try {
+      console.log(`Generating image using DeepInfra FLUX.1 Schnell: "${prompt.substring(0, 60)}..."`);
+      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX-1-schnell",
+          prompt: prompt,
+          n: 1,
+          size: size === "1792x1024" ? "1024x1024" : size,
+          response_format: "b64_json"
+        })
+      });
+      
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = responseData.error?.message || `HTTP error! status: ${res.status}`;
+        throw new Error(errMsg);
+      }
+      
+      const b64 = responseData.data?.[0]?.b64_json;
+      if (!b64) throw new Error("Empty b64_json image data from DeepInfra");
+      
+      return { base64: `data:image/png;base64,${b64}` };
+    } catch (error: any) {
+      console.error(`Error with DeepInfra FLUX:`, error);
+      // Fallback to OpenAI if it's configured
+      if (!process.env.OPENAI_API_KEY) {
+        return { error: `Không thể vẽ ảnh bằng FLUX: ${error.message}` };
+      }
+      console.log("DeepInfra failed, falling back to OpenAI DALL-E...");
+    }
+  }
+
   if (!process.env.OPENAI_API_KEY) {
-    return { error: "Missing OPENAI_API_KEY. Please set it in .env file." };
+    return { error: "Missing OPENAI_API_KEY or DEEPINFRA_API_KEY. Please set it in .env file." };
   }
   
   const apiKey = process.env.OPENAI_API_KEY;

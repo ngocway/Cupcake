@@ -113,6 +113,30 @@ export async function moveMatchWordTopic(id: string, targetGameId: string) {
   }
 }
 
+// UPDATE TOPIC
+export async function updateMatchWordTopic(id: string, data: { name?: string; icon?: string }) {
+  try {
+    const updateData: any = {}
+    if (data.name !== undefined) {
+      updateData.name = data.name
+      updateData.slug = toSlug(data.name)
+    }
+    if (data.icon !== undefined) {
+      updateData.icon = data.icon
+    }
+    
+    const topic = await prisma.matchWordTopic.update({
+      where: { id },
+      data: updateData
+    })
+    revalidatePath("/admin/games/match-words")
+    return { success: true, topic }
+  } catch (error: any) {
+    console.error("Failed to update topic:", error)
+    return { success: false, error: error.message }
+  }
+}
+
 // DELETE TOPIC
 export async function deleteMatchWordTopic(id: string) {
   try {
@@ -128,7 +152,7 @@ export async function deleteMatchWordTopic(id: string) {
 }
 
 // ADD ITEM TO TOPIC
-export async function addMatchWordItem(data: { topicId: string; word: string; imageUrl?: string; emoji?: string }) {
+export async function addMatchWordItem(data: { topicId: string; word: string; imageUrl?: string; emoji?: string; audioUrl?: string }) {
   try {
     const item = await prisma.matchWordItem.create({
       data: {
@@ -136,6 +160,7 @@ export async function addMatchWordItem(data: { topicId: string; word: string; im
         word: data.word,
         imageUrl: data.imageUrl,
         emoji: data.emoji,
+        audioUrl: data.audioUrl,
       },
     })
     revalidatePath("/admin/games/match-words")
@@ -147,7 +172,7 @@ export async function addMatchWordItem(data: { topicId: string; word: string; im
 }
 
 // UPDATE ITEM
-export async function updateMatchWordItem(id: string, data: { word: string; imageUrl?: string; emoji?: string }) {
+export async function updateMatchWordItem(id: string, data: { word: string; imageUrl?: string; emoji?: string; audioUrl?: string }) {
   try {
     const item = await prisma.matchWordItem.update({
       where: { id },
@@ -155,6 +180,7 @@ export async function updateMatchWordItem(id: string, data: { word: string; imag
         word: data.word,
         imageUrl: data.imageUrl,
         emoji: data.emoji,
+        audioUrl: data.audioUrl,
       },
     })
     revalidatePath("/admin/games/match-words")

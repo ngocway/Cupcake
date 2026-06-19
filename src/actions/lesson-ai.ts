@@ -739,10 +739,12 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
   }
 
   const modelsToTry = [
+    "gemini-2.5-flash-preview-tts",   // correct 2.5 flash name (works)
     "gemini-3.1-flash-tts-preview",
+    "gemini-2.5-pro-preview-tts",     // correct 2.5 pro name
+    "gemini-2.5-flash-lite-tts-preview",
     "gemini-2.5-flash-tts",
     "gemini-2.5-pro-tts",
-    "gemini-2.5-flash-lite-tts-preview"
   ];
   let success = false;
 
@@ -877,8 +879,8 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
 }
 
 async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dall-e-2" = "dall-e-2", size: string = "1024x1024", userId: string) {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("Missing OPENAI_API_KEY environment variable");
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPINFRA_API_KEY) {
+    throw new Error("Missing AI API key environment variables (OPENAI_API_KEY or DEEPINFRA_API_KEY)");
   }
 
   // Try gpt-image-2 first since dall-e-2 / dall-e-3 do not exist on this endpoint
@@ -886,29 +888,67 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
   let response = null;
   let lastError = null;
 
-  for (const m of modelsToTry) {
+  if (process.env.DEEPINFRA_API_KEY) {
     try {
-      console.log(`Generating image using model: ${m}`);
-      const quality = m.startsWith("dall-e") ? "standard" : "auto";
-      response = await openai.images.generate({
-        model: m as any,
-        prompt,
-        n: 1,
-        size: size as any,
-        quality: quality as any
+      console.log(`Generating image using DeepInfra FLUX.1 Schnell for lesson: "${prompt.substring(0, 60)}..."`);
+      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX-1-schnell",
+          prompt: prompt,
+          n: 1,
+          size: size === "1792x1024" ? "1024x1024" : size,
+          response_format: "b64_json"
+        })
       });
-      if (response?.data?.[0]) {
-        console.log(`Successfully generated image using model: ${m}`);
-        break;
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+      }
+      if (responseData.data?.[0]?.b64_json) {
+        response = {
+          data: [{ b64_json: responseData.data[0].b64_json }]
+        };
+        console.log(`Successfully generated image using DeepInfra FLUX.1 Schnell`);
       }
     } catch (err: any) {
-      console.error(`Failed to generate image with model ${m}:`, err.message);
+      console.error(`Failed to generate image with DeepInfra FLUX:`, err.message);
       lastError = err;
+      if (!process.env.OPENAI_API_KEY) {
+        throw err;
+      }
+    }
+  }
+
+  if (!response && process.env.OPENAI_API_KEY) {
+    for (const m of modelsToTry) {
+      try {
+        console.log(`Generating image using model: ${m}`);
+        const quality = m.startsWith("dall-e") ? "standard" : "auto";
+        response = await openai.images.generate({
+          model: m as any,
+          prompt,
+          n: 1,
+          size: size as any,
+          quality: quality as any
+        });
+        if (response?.data?.[0]) {
+          console.log(`Successfully generated image using model: ${m}`);
+          break;
+        }
+      } catch (err: any) {
+        console.error(`Failed to generate image with model ${m}:`, err.message);
+        lastError = err;
+      }
     }
   }
 
   if (!response?.data?.[0]) {
-    throw new Error(`Failed to generate image from OpenAI: ${lastError?.message || "No working model found"}`);
+    throw new Error(`Failed to generate image from AI: ${lastError?.message || "No working model found"}`);
   }
 
   const imgData = response.data[0];

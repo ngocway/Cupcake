@@ -509,7 +509,9 @@
 
             // Preload audio for all items in the current topic asynchronously
             topic.items.forEach(item => {
-                if (!preloadedAudio[item.word]) {
+                if (item.audio) {
+                    preloadedAudio[item.word] = item.audio;
+                } else if (!preloadedAudio[item.word]) {
                     fetch('/api/tts', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

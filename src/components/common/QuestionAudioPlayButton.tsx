@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, Pause, VolumeX, Lightbulb } from 'lucide-react';
+import { Pause, Lightbulb } from 'lucide-react';
 
 interface QuestionAudioPlayButtonProps {
   src: string;
@@ -25,66 +25,55 @@ export function QuestionAudioPlayButton({ src, className = "" }: QuestionAudioPl
 
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
-    } else {
-      // Pause all other audio players on the page
-      window.dispatchEvent(new CustomEvent('pauseAllAudio', { detail: { source: 'QuestionAudio' } }));
-      
-      if (!audioRef.current) {
-        setIsLoading(true);
-        const audio = new Audio(src);
-        audioRef.current = audio;
+      return;
+    }
 
-        audio.addEventListener('canplaythrough', () => {
-          setIsLoading(false);
-        });
+    // Pause all other audio
+    window.dispatchEvent(new CustomEvent('pauseAllAudio', { detail: { source: 'QuestionAudio' } }));
 
-        audio.addEventListener('ended', () => {
-          setIsPlaying(false);
-          window.dispatchEvent(new CustomEvent('hintAudioPause'));
-        });
+    if (!audioRef.current) {
+      setIsLoading(true);
+      const audio = new Audio(src);
+      audioRef.current = audio;
 
-        audio.addEventListener('pause', () => {
-          setIsPlaying(false);
-          window.dispatchEvent(new CustomEvent('hintAudioPause'));
-        });
-
-        audio.addEventListener('play', () => {
-          setIsPlaying(true);
-          window.dispatchEvent(new CustomEvent('hintAudioPlay'));
-        });
-
-        audio.addEventListener('error', (err) => {
-          console.error("Audio playback error:", err);
-          setIsLoading(false);
-          setIsPlaying(false);
-        });
-      }
-
-      audioRef.current.play().catch(err => {
-        console.error("Error playing question audio:", err);
+      audio.addEventListener('canplaythrough', () => setIsLoading(false));
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        window.dispatchEvent(new CustomEvent('hintAudioPause'));
+      });
+      audio.addEventListener('pause', () => {
+        setIsPlaying(false);
+        window.dispatchEvent(new CustomEvent('hintAudioPause'));
+      });
+      audio.addEventListener('play', () => {
+        setIsPlaying(true);
+        window.dispatchEvent(new CustomEvent('hintAudioPlay'));
+      });
+      audio.addEventListener('error', () => {
         setIsLoading(false);
         setIsPlaying(false);
       });
     }
+
+    audioRef.current.play().catch(() => {
+      setIsLoading(false);
+      setIsPlaying(false);
+    });
   };
 
   useEffect(() => {
     const handleGlobalPause = (e: CustomEvent) => {
-      // Pause if any other player starts (except ourselves)
       if (e.detail?.source !== 'QuestionAudio' || e.detail?.src !== src) {
         audioRef.current?.pause();
         setIsPlaying(false);
       }
     };
-    
-    // Listen to pause events
     window.addEventListener('pauseAllAudio', handleGlobalPause as EventListener);
     window.addEventListener('materialAudioPlay', handleGlobalPause as EventListener);
-    
     return () => {
       window.removeEventListener('pauseAllAudio', handleGlobalPause as EventListener);
       window.removeEventListener('materialAudioPlay', handleGlobalPause as EventListener);
