@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Play } from "lucide-react";
 import Link from "next/link";
 import { DirectStartLink } from "./DirectStartLink";
 import { useTranslations } from "next-intl";
 import { ExerciseCard } from "@/components/public/ContentCards";
+import { LoginPromptModal } from "./LoginPromptModal";
 
 interface RelatedItem {
   id: string;
@@ -52,6 +53,7 @@ export function RelatedAssignmentsSection({
   onNavigate?: (href: string) => void
 }) {
   const t = useTranslations("header");
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   return (
     <div className="glass rounded-3xl p-5 md:p-8 space-y-6 shadow-xl w-full">
@@ -67,15 +69,20 @@ export function RelatedAssignmentsSection({
             return (
               <React.Fragment key={item.id}>
                 {/* Mobile version: compact row layout */}
-                <Link 
-                  href={href}
-                  className="flex md:hidden items-center gap-4 group bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full"
+                <div
+                  className="flex md:hidden items-center gap-4 group bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full cursor-pointer"
+                  onClick={() => setShowLoginModal(true)}
                 >
                   <RelatedItemContent item={item} />
-                </Link>
-                {/* Desktop/Tablet version: Premium ExerciseCard */}
-                <div className="hidden md:block w-full">
-                  <ExerciseCard item={item as any} isLoggedIn={false} />
+                </div>
+                {/* Desktop/Tablet version: Premium ExerciseCard — wrapped to intercept click */}
+                <div
+                  className="hidden md:block w-full cursor-pointer"
+                  onClick={() => setShowLoginModal(true)}
+                >
+                  <div className="pointer-events-none">
+                    <ExerciseCard item={item as any} isLoggedIn={false} />
+                  </div>
                 </div>
               </React.Fragment>
             );
@@ -102,6 +109,12 @@ export function RelatedAssignmentsSection({
           <p className="text-xs italic text-slate-400 text-center py-4 col-span-full">{t("noRelatedLessons")}</p>
         )}
       </div>
+
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </div>
   );
 }

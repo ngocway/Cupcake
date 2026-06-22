@@ -36,7 +36,7 @@ export function SettingsClientWrapper({ user, translations }: { user: any, trans
                 ))}
             </aside>
 
-            <main className="lg:col-span-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-8 md:p-10 rounded-[40px] shadow-sm border border-slate-200 dark:border-slate-700 min-h-[600px]">
+            <main className="lg:col-span-3 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 sm:p-8 md:p-10 rounded-3xl sm:rounded-[40px] shadow-sm border border-slate-200 dark:border-slate-700 min-h-[600px]">
                 {activeTab === "profile" && <ProfileSettings user={user} />}
                 {activeTab === "notifications" && <NotificationSettings />}
                 {activeTab === "security" && <SecuritySettings user={user} />}

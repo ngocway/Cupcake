@@ -3,21 +3,16 @@
 import { useContentStore } from "@/store/useContentStore";
 import { FilterLink } from "@/components/public/FilterLink";
 import { useLocale } from "next-intl";
-import { useState, useEffect } from "react";
-import { getOnboardingConfig } from "@/actions/user-preferences-actions";
 
-export function LearningGoalsFilter({ activeId }: { activeId?: string }) {
+interface Props {
+  config: any;
+  activeId?: string;
+}
+
+export function LearningGoalsFilter({ config, activeId }: Props) {
   const studySubject = useContentStore(s => (s as any).studySubject);
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
   const locale = useLocale();
-
-  const [config, setConfig] = useState<any>(null);
-
-  useEffect(() => {
-    getOnboardingConfig().then(c => {
-      if (c) setConfig(c);
-    });
-  }, []);
 
   if (!studySubject || !studyAgeGroup || !config) return null;
   if (studyAgeGroup === "kindergarten" || studyAgeGroup === "kindergarden" || studyAgeGroup === "KINDERGARTEN (< 6 YEARS)") return null;
@@ -53,7 +48,7 @@ export function LearningGoalsFilter({ activeId }: { activeId?: string }) {
   const isAllActive = !activeId || activeId === "all";
 
   return (
-    <div className="pt-6 border-t border-primary/5 animate-in fade-in slide-in-from-left duration-700">
+    <div className="pt-4 border-t border-primary/5 animate-in fade-in slide-in-from-left duration-700">
       <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
         {locale === "vi" ? "Mục tiêu học tập" : "Learning Goals"}
       </h2>

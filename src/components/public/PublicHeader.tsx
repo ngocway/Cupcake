@@ -75,15 +75,15 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const isActive = (path: string) => pathname === path
 
   return (
-    <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-6 md:px-10 py-4 w-[95%] max-w-[1440px] bg-white/70 backdrop-blur-xl border border-primary/10 rounded-full shadow-2xl transition-all duration-700 ease-in-out ${isAtTop ? "translate-y-0 opacity-100" : "-translate-y-40 opacity-0 pointer-events-none"}`}>
+    <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/70 backdrop-blur-xl border border-primary/10 rounded-full shadow-2xl transition-all duration-700 ease-in-out ${isAtTop ? "translate-y-0 opacity-100" : "-translate-y-40 opacity-0 pointer-events-none"}`}>
       <div className="flex items-center gap-10">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-12 h-12 bg-primary text-on-primary rounded-full flex items-center justify-center text-on-primary font-black group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-primary/20">
-            <span className="material-symbols-outlined text-[28px] animate-leaf-sway">eco</span>
+        <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
+          <div className="w-9 h-9 sm:w-12 sm:h-12 bg-primary text-on-primary rounded-full flex items-center justify-center font-black group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-primary/20 shrink-0">
+            <span className="material-symbols-outlined text-[20px] sm:text-[28px] animate-leaf-sway">eco</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-headline font-black text-2xl tracking-tighter text-primary leading-none">Cupcakes</span>
-            <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase">Student Portal</span>
+            <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Cupcakes</span>
+            <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
           </div>
         </Link>
         <div className="hidden lg:flex gap-8 items-center">
@@ -248,7 +248,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               )}
             </div>
           ) : (
-            <LoginButton className="bg-primary text-on-primary px-8 py-3 rounded-2xl font-black text-small uppercase tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
+            <LoginButton className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
               {t("getStarted")}
             </LoginButton>
           )}

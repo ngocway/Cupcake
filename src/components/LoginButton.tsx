@@ -44,11 +44,11 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111418]/60 backdrop-blur-sm overflow-y-auto">
-      <div className={`bg-white dark:bg-gray-900 w-full ${view === 'studentLogin' ? 'max-w-2xl' : 'max-w-lg'} rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 text-left my-8 relative`}>
+      <div className={`bg-white dark:bg-gray-900 w-full ${view === 'studentLogin' ? 'max-w-2xl' : 'max-w-lg'} rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 text-left my-8 relative max-h-[90vh] flex flex-col`}>
         
         {view === 'role' && (
-          <>
-            <div className="px-8 pt-8 pb-4 flex items-center justify-between">
+          <div className="flex flex-col min-h-0 flex-1">
+            <div className="px-8 pt-8 pb-4 flex items-center justify-between shrink-0">
               <h2 className="text-2xl font-black text-[#111418] dark:text-white">Welcome 👋</h2>
               <button 
                 onClick={handleClose}
@@ -59,7 +59,7 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
               </button>
             </div>
             
-            <div className="px-8 py-4">
+            <div className="px-8 py-4 overflow-y-auto no-scrollbar flex-1 pb-8">
               <p className="text-sm text-neutral-500 dark:text-gray-400 mb-6 font-medium">
                 Please select your role to continue logging in
               </p>
@@ -96,28 +96,31 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
             </div>
             
             <div className="px-8 pb-8 pt-4 empty:hidden"></div>
-          </>
+          </div>
         )}
 
         {view === 'studentLogin' && (
-          <div className="relative w-full overflow-y-auto max-h-[85vh] p-4 md:p-8">
-            <button 
-              onClick={handleClose}
-              className="absolute top-6 right-6 z-50 size-10 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 transition-colors"
-              aria-label="Close"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
+          <div className="flex flex-col max-h-[85vh]">
+            {/* Non-scrollable header for navigation */}
+            <div className="relative h-16 shrink-0 px-8 border-b border-neutral-100 dark:border-gray-800 flex items-center justify-between">
+              <button 
+                onClick={() => setView("role")}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 text-sm font-semibold transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+              <button 
+                onClick={handleClose}
+                className="size-10 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 transition-colors"
+                aria-label="Close"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
 
-            <button 
-              onClick={() => setView("role")}
-              className="absolute top-6 left-6 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 text-sm font-medium transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
-
-            <div className="pt-8">
+            {/* Scrollable form content */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar">
               <StudentLoginForm onSuccess={handleClose} />
             </div>
           </div>

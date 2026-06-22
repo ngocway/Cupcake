@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { User, Play } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { LoginPromptModal } from "./LoginPromptModal";
 
 interface TeacherInfo {
   id: string;
@@ -37,9 +39,10 @@ export function LearningSidebar({
   isGuest?: boolean
 }) {
   const t = useTranslations("header");
+  const [showLoginModal, setShowLoginModal] = useState(false);
   
   return (
-    <aside className="w-full h-full flex flex-col bg-transparent overflow-y-auto no-scrollbar p-10 pt-7 space-y-10">
+    <aside className="w-full h-full flex flex-col bg-transparent overflow-y-auto no-scrollbar p-4 sm:p-10 pt-4 sm:pt-7 space-y-8 sm:space-y-10">
        {/* Teacher Profile Card */}
        {teacher?.isPortfolioPublished && (
          <div className="glass rounded-3xl p-8 space-y-8 flex flex-col items-center text-center shadow-xl">
@@ -83,40 +86,56 @@ export function LearningSidebar({
                   ? item.assignment.tags.split(',')[0]?.trim()
                   : null;
 
+                const itemContent = (
+                  <>
+                    <div className="w-28 aspect-video rounded-[3px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
+                      {item.thumbnail ? (
+                        <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-700">
+                          <Play className="w-5 h-5 text-orange-500 fill-orange-500/20" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                    </div>
+                    <div className="flex-1 overflow-hidden flex flex-col gap-1.5">
+                      <h5 className="text-[13px] font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                        {item.title}
+                      </h5>
+                      {tag ? (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded-md w-fit">
+                          #{tag}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md w-fit">
+                          Lesson
+                        </span>
+                      )}
+                    </div>
+                  </>
+                );
+
+                // Guest: use plain div (no Link) to avoid triggering Next.js router/loading spinner
+                if (isGuest) {
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setShowLoginModal(true)}
+                      className="flex items-center gap-4 p-2 -mx-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-2xl transition-all duration-300 group cursor-pointer"
+                    >
+                      {itemContent}
+                    </div>
+                  );
+                }
+
                 return (
-                   <Link 
-                     key={item.id}
-                     href={isGuest 
-                       ? `/public/lessons/${item.slug || item.id}`
-                       : `/student/lessons/${item.slug || item.id}`
-                     }
-                     className="flex items-center gap-4 p-2 -mx-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-2xl transition-all duration-300 group"
-                   >
-                      <div className="w-28 aspect-video rounded-[3px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
-                         {item.thumbnail ? (
-                           <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                         ) : (
-                           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-100 to-orange-100 dark:from-slate-800 dark:to-slate-700">
-                              <Play className="w-5 h-5 text-orange-500 fill-orange-500/20" />
-                           </div>
-                         )}
-                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                      </div>
-                      <div className="flex-1 overflow-hidden flex flex-col gap-1.5">
-                         <h5 className="text-[13px] font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                           {item.title}
-                         </h5>
-                         {tag ? (
-                           <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded-md w-fit">
-                             #{tag}
-                           </span>
-                         ) : (
-                           <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md w-fit">
-                             Lesson
-                           </span>
-                         )}
-                      </div>
-                   </Link>
+                  <Link
+                    key={item.id}
+                    href={`/student/lessons/${item.slug || item.id}`}
+                    className="flex items-center gap-4 p-2 -mx-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-2xl transition-all duration-300 group"
+                  >
+                    {itemContent}
+                  </Link>
                 );
              })}
 
@@ -125,6 +144,12 @@ export function LearningSidebar({
              )}
           </div>
        </div>
+
+       {/* Login Prompt Modal */}
+       <LoginPromptModal
+         isOpen={showLoginModal}
+         onClose={() => setShowLoginModal(false)}
+       />
     </aside>
   );
 }

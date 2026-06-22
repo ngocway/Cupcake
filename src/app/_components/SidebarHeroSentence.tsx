@@ -3,10 +3,15 @@
 import { useContentStore } from "@/store/useContentStore";
 import { useState, useEffect, useTransition } from "react";
 import { Settings } from "lucide-react";
-import { getOnboardingConfig, updateAllPreferences } from "@/actions/user-preferences-actions";
+import { updateAllPreferences } from "@/actions/user-preferences-actions";
 import { useRouter } from "next/navigation";
+import { SubjectSelector } from "./SubjectSelector";
 
-export function SidebarHeroSentence() {
+interface Props {
+  config: any;
+}
+
+export function SidebarHeroSentence({ config }: Props) {
   const router = useRouter();
   const nativeLanguage = useContentStore(s => s.nativeLanguage);
   const studySubject = useContentStore(s => (s as any).studySubject);
@@ -15,26 +20,17 @@ export function SidebarHeroSentence() {
   const setStudyLevel = useContentStore(s => (s as any).setStudyLevel);
   const setFilterModalOpen = useContentStore(s => (s as any).setFilterModalOpen);
 
-  const [config, setConfig] = useState<any>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    getOnboardingConfig().then(c => {
-      if (c) setConfig(c);
-    });
-  }, []);
 
   const subjectData = config?.subjects?.find((s: any) => s.id === studySubject);
   const ageGroupData = subjectData?.ageGroups?.find((a: any) => a.id === studyAgeGroup);
   const levelData = ageGroupData?.levels?.find((l: any) => l.id === studyLevel);
   const availableLevels: any[] = ageGroupData?.levels || [];
 
-  const subjectLabel = subjectData?.label || "Anything";
   const rawAgeGroupLabel = ageGroupData?.label || "Learner";
   const ageGroupLabel = (rawAgeGroupLabel?.toUpperCase() === "KINDERGARTEN (< 6 YEARS)" || rawAgeGroupLabel?.toLowerCase() === "kindergarten")
     ? "Kindergarten"
     : rawAgeGroupLabel;
-  const levelLabel = levelData?.label;
   const avatarSrc = ageGroupData?.avatar || "/images/avatars/adult.png";
 
   const handleSelectLevel = (levelId: string) => {
@@ -73,7 +69,7 @@ export function SidebarHeroSentence() {
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-left duration-1000">
-      {/* "I'm a..." sentence */}
+      {/* "I'm a..." sentence — without "learning [Subject]" */}
       <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 text-xs md:text-sm font-headline font-bold text-primary leading-tight relative">
         <span>I'm a</span>
         <div className="flex flex-col items-center gap-0.5 shrink-0 px-0.5 mt-1">
@@ -92,10 +88,6 @@ export function SidebarHeroSentence() {
         <div className="inline-block border border-amber-300 px-2 py-0.5 bg-amber-100/60 text-amber-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300">
           {nativeLanguage === 'vi' ? 'Tiếng Việt' : nativeLanguage === 'th' ? 'ภาษาไทย' : nativeLanguage === 'id' ? 'Bahasa Indonesia' : 'English'}
         </div>
-        <span>learning</span>
-        <div className="inline-block border border-emerald-300 px-2 py-0.5 bg-emerald-100/60 text-emerald-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300">
-          {subjectLabel}
-        </div>
         <span className="inline-flex items-center">
           <button
             onClick={() => setFilterModalOpen(true)}
@@ -107,7 +99,10 @@ export function SidebarHeroSentence() {
         </span>
       </div>
 
-      {/* Level Selector */}
+      {/* Subject Selector — between sentence and level */}
+      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} />
+
+      {/* Level Selector — shown only when levels exist for current subject+ageGroup */}
       {availableLevels.length > 0 && (
         <div className="pt-3 border-t border-primary/5 animate-in fade-in slide-in-from-left duration-700">
           <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-3">
@@ -159,4 +154,3 @@ export function SidebarHeroSentence() {
     </div>
   );
 }
-

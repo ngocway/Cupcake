@@ -76,7 +76,7 @@ async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
     : "0";
 
   return (
-    <div className="bg-[#eef8fa] dark:bg-slate-900/50 rounded-3xl p-10 space-y-12 mb-20 animate-in fade-in duration-700">
+    <div className="bg-[#eef8fa] dark:bg-slate-900/50 rounded-3xl p-6 md:p-10 space-y-12 mb-20 animate-in fade-in duration-700">
       <div className="space-y-4">
         <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t("studentReviews")}</h3>
         <div className="flex items-end gap-6">
@@ -223,7 +223,7 @@ async function LessonAssignmentBannerWrapper({ lessonId }: { lessonId: string })
   if (!assignment) return null;
 
   return (
-      <div className="p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10 mt-32 animate-in fade-in duration-500">
+      <div className="p-6 md:p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10 mt-32 animate-in fade-in duration-500">
          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
             <div className="space-y-4">
                <div className="flex items-center gap-3">
@@ -316,7 +316,7 @@ export default async function StudentLessonDetailPage({
                   <AudioPlayerWrapper lessonId={lesson.id} />
                </Suspense>
 
-               <div className="glass rounded-3xl p-10 lg:p-12 space-y-12 shadow-xl border border-white/40 mb-12">
+               <div className="glass rounded-3xl p-6 md:p-10 lg:p-12 space-y-12 shadow-xl border border-white/40 mb-12">
                   <div className="space-y-6">
                      <Suspense fallback={<div className="h-8 flex justify-end"><div className="w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-full" /></div>}>
                         <LessonActionsWrapper lessonId={lesson.id} />

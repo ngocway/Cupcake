@@ -22,7 +22,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const studySubjectCookie = cookieStore.get("study_subject")?.value
   const studyLevelCookie = cookieStore.get("study_level")?.value
   const studyAgeGroupCookie = cookieStore.get("study_age_group")?.value
-  let studySubject = studySubjectCookie || ""
+  let studySubject = studySubjectCookie || "english"
   let studyAgeGroup = studyAgeGroupCookie || ""
   let studyLevel = studyLevelCookie || ""
 
@@ -33,11 +33,27 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       select: { userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
     })
     if (user) {
-      if (!userTypeCookie && user.userType) initialUserType = user.userType
-      if (!studySubjectCookie && user.studySubject) studySubject = user.studySubject
-      if (!studyAgeGroupCookie && user.studyAgeGroup) studyAgeGroup = user.studyAgeGroup
-      if (!studyLevelCookie && user.studyLevel) studyLevel = user.studyLevel
-      hasUserPreference = hasUserPreference || !!user.userType || !!user.studySubject
+      const dbHasPrefs = !!(user.studySubject || user.userType)
+      const cookieHasPrefs = !!(studySubjectCookie || userTypeCookie)
+
+      if (dbHasPrefs) {
+        // DB wins — logged-in user's saved preferences override any guest cookie
+        if (user.userType) initialUserType = user.userType
+        if (user.studySubject) studySubject = user.studySubject
+        if (user.studyAgeGroup) studyAgeGroup = user.studyAgeGroup
+        if (user.studyLevel) studyLevel = user.studyLevel
+        hasUserPreference = true
+      } else if (cookieHasPrefs) {
+        // DB empty but guest had already set preferences in cookie → sync to DB
+        // This handles: guest sets up → logs in → preferences persist across devices
+        const syncData: Record<string, string> = {}
+        if (userTypeCookie) syncData.userType = userTypeCookie
+        if (studySubjectCookie) syncData.studySubject = studySubjectCookie
+        if (studyAgeGroupCookie) syncData.studyAgeGroup = studyAgeGroupCookie
+        if (studyLevelCookie) syncData.studyLevel = studyLevelCookie
+        prisma.user.update({ where: { id: session.user.id }, data: syncData }).catch(() => {})
+        hasUserPreference = true
+      }
     }
   }
 

@@ -81,7 +81,7 @@ export default async function BookmarksPage() {
       </div>
 
       {!hasBookmarks ? (
-        <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[3rem] p-20 text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
+        <div className="bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[3rem] p-6 sm:p-20 text-center space-y-8 animate-in fade-in zoom-in-95 duration-700">
           <div className="w-24 h-24 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-6">
             <Plus className="w-12 h-12 text-slate-300 dark:text-slate-500" />
           </div>

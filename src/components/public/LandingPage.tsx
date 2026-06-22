@@ -469,6 +469,47 @@ const KindergartenGameList = memo(function KindergartenGameList({ promise }: { p
   )
 });
 
+// ─── Mobile Subject Bar ───────────────────────────────────────────────────────
+
+const subjectStyleMap: Record<string, { bg: string; activeBg: string; border: string; activeBorder: string; text: string; activeText: string; icon: string }> = {
+  english: { bg: "bg-emerald-50", activeBg: "bg-emerald-500", border: "border-emerald-200", activeBorder: "border-emerald-500", text: "text-emerald-800", activeText: "text-white", icon: "/images/english.png" },
+  math: { bg: "bg-orange-50", activeBg: "bg-orange-500", border: "border-orange-200", activeBorder: "border-orange-500", text: "text-orange-800", activeText: "text-white", icon: "/images/math.png" },
+  global: { bg: "bg-sky-50", activeBg: "bg-sky-500", border: "border-sky-200", activeBorder: "border-sky-500", text: "text-sky-800", activeText: "text-white", icon: "/images/global.png" },
+};
+const defaultSubjectStyle = { bg: "bg-purple-50", activeBg: "bg-purple-500", border: "border-purple-200", activeBorder: "border-purple-500", text: "text-purple-800", activeText: "text-white", icon: "/images/english.png" };
+
+function MobileSubjectBar({ subjects, activeSubject, onSelect, isPending }: { subjects: any[]; activeSubject: string; onSelect: (id: string) => void; isPending: boolean }) {
+  return (
+    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+      {subjects.map((subject: any) => {
+        const isActive = activeSubject === subject.id;
+        const style = subjectStyleMap[subject.id] || defaultSubjectStyle;
+        return (
+          <button
+            key={subject.id}
+            onClick={() => onSelect(subject.id)}
+            disabled={isPending}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border-2 transition-all duration-300 shadow-sm cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-60 disabled:cursor-not-allowed ${
+              isActive
+                ? `${style.activeBg} ${style.activeBorder} ${style.activeText} shadow-md scale-[1.03]`
+                : `${style.bg} ${style.border} ${style.text} hover:scale-105 hover:shadow-md opacity-80 hover:opacity-100`
+            }`}
+          >
+            {isActive && isPending ? (
+              <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <img src={style.icon} alt={subject.label} className="w-5 h-5 object-contain" />
+            )}
+            <span>{subject.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
@@ -645,9 +686,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   ])
 
   // Level selection removed from popup — now handled in sidebar
-  const isAllStepsCompleted = !!tempStudySubject && !!tempStudyAgeGroup;
+  // Subject selection also removed — now handled in sidebar, defaults to "english"
+  const isAllStepsCompleted = !!tempStudyAgeGroup;
   const isReadyEnabled = isAllStepsCompleted && !!tempNativeLanguage;
-  const isFirstTimeSetup = !initialStudySubject;
+  const isFirstTimeSetup = !initialStudyAgeGroup;
 
 
   // Auto-detect native language if not set
@@ -673,15 +715,14 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
   }, [hasUserPreference, setNativeLanguage])
 
-  // Auto-open modal if user has no filter selections AND hasn't explicitly set a preference
+  // Auto-open modal if user has no age group set (first time)
   useEffect(() => {
-    // Use initialStudySubject to prevent race condition during hydration
-    const effectiveSubject = studySubject || initialStudySubject;
-    if (!effectiveSubject && !urlGoal && !hasAutoOpened) {
+    const effectiveAgeGroup = studyAgeGroup || initialStudyAgeGroup;
+    if (!effectiveAgeGroup && !hasAutoOpened) {
       setIsFilterModalOpen(true)
       setHasAutoOpened(true)
     }
-  }, [urlGoal, hasAutoOpened, studySubject, initialStudySubject])
+  }, [hasAutoOpened, studyAgeGroup, initialStudyAgeGroup])
 
   const handleOpenModal = () => {
     setTempUserType(userType)
@@ -712,8 +753,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       localStorage.setItem("cupcakes_native_language", tempNativeLanguage)
     }
 
-    if (studySubject !== tempStudySubject || studyAgeGroup !== tempStudyAgeGroup) {
-      setStudySubject(tempStudySubject || "")
+    // Subject defaults to "english" if not already set (subject is now managed in sidebar)
+    const effectiveSubject = studySubject || "english";
+    if (effectiveSubject !== studySubject) {
+      setStudySubject(effectiveSubject)
+    }
+    if (studyAgeGroup !== tempStudyAgeGroup) {
       setStudyAgeGroup(tempStudyAgeGroup || "")
       // Level is not set from popup — user selects from sidebar
       setStudyLevel("")
@@ -726,7 +771,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     // 3. Set cookies immediately on the client side so next request has them instantly
     if (tempUserType) document.cookie = `user_type=${tempUserType}; path=/; max-age=31536000; samesite=lax`;
     if (tempNativeLanguage) document.cookie = `native_language=${tempNativeLanguage}; path=/; max-age=31536000; samesite=lax`;
-    if (tempStudySubject) document.cookie = `study_subject=${tempStudySubject}; path=/; max-age=31536000; samesite=lax`;
+    // Subject defaults to "english" — managed in sidebar
+    const subjectToSave = studySubject || "english";
+    document.cookie = `study_subject=${subjectToSave}; path=/; max-age=31536000; samesite=lax`;
     if (tempStudyAgeGroup) document.cookie = `study_age_group=${tempStudyAgeGroup}; path=/; max-age=31536000; samesite=lax`;
     // Clear level when age group changes (level is now selected from sidebar)
     document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
@@ -735,7 +782,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     updateAllPreferences({
       userType: tempUserType,
       nativeLanguage: tempNativeLanguage,
-      studySubject: tempStudySubject,
+      studySubject: studySubject || "english",
       studyAgeGroup: tempStudyAgeGroup,
       studyLevel: "" // Level is now selected from sidebar, reset on age group change
     }).catch(console.error);
@@ -827,77 +874,18 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               </button>
             )}
             
-            {/* Subject Selection (Step 1) */}
+            {/* Subject Selection removed — now managed in sidebar */}
+
+            {/* Age Group Selection (Step 1 — was Step 2 before subject removal) */}
             {onboardingConfig && (
-              <div className="space-y-4">
-                <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
-                  What do you want to learn?
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-8 p-6 category-grid">
-                  {onboardingConfig.subjects.map((subject: any, idx: number) => {
-                    const isActive = tempStudySubject === subject.id;
-                    const blobShapes = [
-                      "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
-                      "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
-                      "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
-                      "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
-                      "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
-                    ];
-                    const solarpunkStyles = [
-                      { icon: "/images/english.png", color: "text-emerald-900", bg: "bg-emerald-50", activeBg: "bg-emerald-200", border: "border-emerald-400", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10" },
-                      { icon: "/images/math.png", color: "text-orange-900", bg: "bg-orange-50", activeBg: "bg-orange-200", border: "border-orange-400", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10" },
-                      { icon: "/images/global.png", color: "text-sky-900", bg: "bg-sky-50", activeBg: "bg-sky-200", border: "border-sky-400", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10" },
-                      { icon: "/images/english.png", color: "text-purple-900", bg: "bg-purple-50", activeBg: "bg-purple-200", border: "border-purple-400", iconBg: "bg-purple-200", shadow: "shadow-purple-900/10" },
-                    ];
-                    const n = (subject.label || "").toLowerCase();
-                    let style = solarpunkStyles[idx % solarpunkStyles.length];
-                    if (n.includes("anh") || n.includes("english")) style = solarpunkStyles[0];
-                    else if (n.includes("toán") || n.includes("math")) style = solarpunkStyles[1];
-                    else if (n.includes("global") || n.includes("xã hội") || n.includes("science")) style = solarpunkStyles[2];
-                    
-                    const blobShape = blobShapes[idx % blobShapes.length];
-                    const Icon = style.icon;
-
-                    return (
-                      <button
-                        key={subject.id}
-                        onClick={() => {
-                          setTempStudySubject(subject.id);
-                          setTempStudyAgeGroup("");
-                          setTempStudyLevel("");
-                        }}
-                        className={`group relative h-24 md:h-28 ${blobShape} p-6 transition-all duration-700 flex flex-col items-center justify-center gap-2 border-[3px] shadow-xl cursor-pointer ${
-                          isActive 
-                            ? `${style.activeBg} ${style.border} scale-[1.08] shadow-2xl z-20 animate-solar-pulse border-4` 
-                            : `${style.bg} ${style.border} hover:scale-[1.05] ${style.shadow} opacity-80 hover:opacity-100`
-                        }`}
-                      >
-                         <div className={`absolute -top-5 -left-4 rounded-2xl shadow-lg transition-all duration-700 flex items-center justify-center w-14 h-14 ${style.iconBg} ${style.color} ${isActive ? "scale-110 -rotate-6 shadow-xl" : "group-hover:scale-110 group-hover:-rotate-12"}`}>
-                           <img src={Icon} alt={subject.label} className="w-10 h-10 object-contain drop-shadow-sm" />
-                         </div>
-                         <div className={`relative z-10 font-headline font-black text-lg md:text-xl tracking-tight transition-all duration-500 ${isActive ? style.color + " scale-105" : "text-slate-700/80"}`}>
-                           {subject.label}
-                         </div>
-                         {isActive && (
-                           <div className={`relative z-10 w-8 h-1.5 bg-current opacity-20 rounded-full blur-[1px] ${style.color}`} />
-                         )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Age Group Selection (Step 2) */}
-            {onboardingConfig && tempStudySubject && (
               <>
-                <hr className="border-primary/10" />
                 <div className="space-y-4">
                   <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
                     {t("whoAreYou")}
                   </h2>
                   <div className="flex flex-wrap gap-8 items-center pl-4 md:pl-10 py-2">
-                    {onboardingConfig.subjects.find((s: any) => s.id === tempStudySubject)?.ageGroups.map((age: any) => {
+                    {/* Use the first subject's (english) age groups as reference */}
+                    {(onboardingConfig.subjects[0]?.ageGroups || []).map((age: any) => {
                       const isActive = tempStudyAgeGroup === age.id;
                       return (
                          <button
@@ -993,10 +981,47 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Background content wrapped for blurring during first time setup */}
       <div className={`transition-all duration-700 ${isFirstTimeSetup ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
 
+      {/* Mobile Subject Selector — visible only when sidebar is hidden */}
+      {onboardingConfig && (
+        <div className="lg:hidden mb-6">
+          <MobileSubjectBar
+            subjects={onboardingConfig.subjects}
+            activeSubject={studySubject}
+            isPending={isPending}
+            onSelect={(subjectId: string) => {
+              if (subjectId === studySubject) return;
+
+              // 1. Update store instantly
+              setStudySubject(subjectId);
+              setStudyLevel("");
+
+              // 2. Set cookies client-side
+              document.cookie = `study_subject=${subjectId}; path=/; max-age=31536000; samesite=lax`;
+              document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
+
+              // 3. Fire-and-forget DB update
+              updateAllPreferences({ studySubject: subjectId, studyLevel: "" }).catch(console.error);
+
+              // 4. Clear goal and refresh
+              const qs = new URLSearchParams(window.location.search);
+              qs.delete("goal");
+              qs.delete("categoryId");
+              localStorage.removeItem("cupcakes_preferred_goal_id");
+              localStorage.removeItem("cupcakes_preferred_category_id");
+
+              startTransition(() => {
+                router.push(`/?${qs.toString()}`, { scroll: false });
+                router.refresh();
+              });
+            }}
+          />
+        </div>
+      )}
+
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-col md:flex-row md:items-center justify-start gap-6 pt-0 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
+        className="flex flex-row items-center justify-center lg:justify-start gap-6 pt-0 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
       >
         <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
           {isKindergarten ? (
@@ -1011,7 +1036,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               />
               <button
                 onClick={() => handleTabChange("flashcards")}
-                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
                   activeTab === "flashcards" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
@@ -1019,7 +1044,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               </button>
               <button
                 onClick={() => handleTabChange("games")}
-                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
                   activeTab === "games" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
@@ -1038,7 +1063,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               />
               <button
                 onClick={() => handleTabChange("lessons")}
-                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
                   activeTab === "lessons" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
@@ -1046,7 +1071,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               </button>
               <button
                 onClick={() => handleTabChange("exercises")}
-                className={`relative z-10 px-10 py-3.5 min-w-[130px] rounded-[1.5rem] text-sm font-black transition-colors duration-300 cursor-pointer ${
+                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
                   activeTab === "exercises" ? "text-white" : "text-slate-400 hover:text-primary"
                 }`}
               >
