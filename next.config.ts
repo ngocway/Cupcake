@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: '100mb',
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'api.dicebear.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
