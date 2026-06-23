@@ -617,6 +617,7 @@ model GlobalFlashcard {
   exampleSentence String? // e.g. "The cat is an animal."
   imageUrl        String?
   audioUrl        String?
+  audioWordUrl    String?
   topic           FlashcardTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
   orderIndex      Int            @default(0)
   createdAt       DateTime       @default(now())

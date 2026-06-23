@@ -722,7 +722,7 @@ function chunkSentences(sentences: string[]): string[][] {
   return chunks;
 }
 
-export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1.0, userId: string, mode = "inline") {
+export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1.0, userId: string, mode = "inline", specificModel?: string) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   const bucketName = process.env.R2_BUCKET_NAME;
   const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
@@ -738,10 +738,10 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
     throw new Error("Missing GEMINI_API_KEY or GOOGLE_API_KEY. Cannot generate audio using Google TTS.");
   }
 
-  const modelsToTry = [
-    "gemini-2.5-flash-preview-tts",   // correct 2.5 flash name (works)
+  const modelsToTry = specificModel ? [specificModel] : [
     "gemini-3.1-flash-tts-preview",
-    "gemini-2.5-pro-preview-tts",     // correct 2.5 pro name
+    "gemini-2.5-flash-preview-tts",   // correct 2.5 flash name (works)
+    "gemini-2.5-pro-preview-tts",     // correct 2.5 pro name (works, but low 2 RPM limit)
     "gemini-2.5-flash-lite-tts-preview",
     "gemini-2.5-flash-tts",
     "gemini-2.5-pro-tts",
@@ -786,6 +786,9 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
       const retries = 3;
 
       for (let i = 0; i < retries; i++) {
+        let is404 = false;
+        let waitTime = 800 * (i + 1);
+
         try {
           response = await fetch(geminiUrl, {
             method: "POST",
@@ -799,14 +802,46 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
           }
           const errText = await response.text();
           lastError = new Error(`Status ${response.status}: ${errText}`);
-          console.warn(`${modelName} attempt ${i + 1} failed: ${lastError.message}. Retrying...`);
+          console.warn(`${modelName} attempt ${i + 1} failed: ${lastError.message}`);
+          
+          if (response.status === 404) {
+            is404 = true;
+            console.warn(`${modelName} returned status 404. Skipping model.`);
+            break;
+          }
+
+          if (response.status === 429) {
+            try {
+              const errJson = JSON.parse(errText);
+              const details = errJson.error?.details || [];
+              const retryInfo = details.find((d: any) => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo");
+              if (retryInfo && retryInfo.retryDelay) {
+                const seconds = parseFloat(retryInfo.retryDelay.replace("s", ""));
+                if (!isNaN(seconds)) {
+                  if (seconds > 600) {
+                    console.log(`Daily limit exhausted for ${modelName} (retryDelay: ${seconds}s). Skipping model immediately.`);
+                    is404 = true;
+                    break;
+                  }
+                  waitTime = Math.min((seconds * 1000) + 1000, 65000); // Wait up to 65 seconds
+                  console.log(`Rate limited (429) for ${modelName}. Waiting ${waitTime}ms before retry...`);
+                }
+              }
+            } catch (jsonErr) {
+              // ignore parse errors
+            }
+          }
         } catch (err: any) {
           lastError = err;
           console.warn(`${modelName} attempt ${i + 1} failed with fetch error: ${err.message}. Retrying...`);
         }
 
+        if (is404) {
+          break;
+        }
+
         if (i < retries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 800 * (i + 1)));
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
 

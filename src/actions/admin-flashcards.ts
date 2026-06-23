@@ -174,6 +174,26 @@ export async function adminDeleteFlashcard(id: string) {
   }
 }
 
+export async function adminDeleteFlashcardsBulk(ids: string[]) {
+  await checkAdminAuth()
+
+  try {
+    await prisma.globalFlashcard.deleteMany({
+      where: {
+        id: { in: ids }
+      }
+    })
+
+    await triggerCacheRevalidation()
+
+    return { success: true }
+  } catch (error: any) {
+    console.error("Lỗi khi xóa hàng loạt flashcards:", error)
+    return { success: false, error: error.message || "Không thể xóa hàng loạt thẻ học." }
+  }
+}
+
+
 // ============================================================================
 // PHÂN HỆ 2: CRUD TOPICS (CHỦ ĐỀ)
 // ============================================================================

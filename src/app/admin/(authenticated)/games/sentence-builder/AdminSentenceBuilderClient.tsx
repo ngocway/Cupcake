@@ -259,178 +259,167 @@ export function AdminSentenceBuilderClient({
         </button>
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
-        
-        {/* LEFT PANE: GAMES LIST */}
-        <div className="w-1/4 bg-neutral-900 border border-neutral-800 rounded-2xl flex flex-col overflow-hidden shrink-0">
-          <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950/50">
-            <h2 className="font-bold text-neutral-200 flex items-center gap-2">
-              <Gamepad2 className="w-5 h-5 text-blue-500" />
-              Danh sách Game
-            </h2>
-            <button 
-              onClick={() => setShowGameModal(true)}
-              className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              title="Thêm Game Mới"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {initialGames.length === 0 ? (
-              <p className="text-sm text-neutral-500 p-4 text-center">Chưa có Game nào.</p>
-            ) : (
-              initialGames.map((game: any) => (
-                <div 
-                  key={game.id}
-                  onClick={() => setSelectedGameId(game.id)}
-                  className={`group flex justify-between items-center p-3 rounded-xl cursor-pointer transition-colors ${selectedGameId === game.id ? 'bg-blue-600/20 border border-blue-500/50 text-blue-100' : 'hover:bg-neutral-800 text-neutral-300 border border-transparent'}`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <Gamepad2 className={`w-4 h-4 shrink-0 ${selectedGameId === game.id ? 'text-blue-400' : 'text-neutral-500'}`} />
-                    {editingGameId === game.id ? (
-                      <input
-                        value={editingGameName}
-                        onChange={e => setEditingGameName(e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleRenameGame(game.id, e)
-                          if (e.key === 'Escape') setEditingGameId(null)
-                        }}
-                        autoFocus
-                        className="bg-neutral-950 border border-blue-500 rounded px-2 py-0.5 text-sm w-full outline-none"
-                      />
-                    ) : (
-                      <span className="font-medium truncate">{game.name}</span>
-                    )}
-                  </div>
-                  <div className={`flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
-                    {editingGameId === game.id ? (
-                      <button 
-                        onClick={(e) => handleRenameGame(game.id, e)}
-                        className={`p-1.5 rounded-lg hover:bg-green-500/20 text-green-400`}
-                        title="Lưu"
-                      >
-                        <Check className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditingGameId(game.id)
-                          setEditingGameName(game.name)
-                        }}
-                        className={`p-1.5 rounded-lg hover:bg-blue-500/20 text-blue-400`}
-                        title="Đổi tên"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button 
-                      onClick={(e) => handleDeleteGame(game.id, e)}
-                      className={`p-1.5 rounded-lg hover:bg-red-500/20 text-red-400`}
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+      <div className="flex-1 min-h-0">
+        <div className="h-full bg-neutral-900 border border-neutral-800 rounded-2xl flex flex-col overflow-hidden">
+          {/* HEADER: GAME SELECTOR & ACTIONS */}
+          <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950/50 shrink-0 flex-wrap gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-1.5 focus-within:border-blue-500 transition-colors">
+                <Gamepad2 className="text-blue-500 w-5 h-5 shrink-0" />
+                {editingGameId === selectedGame?.id && selectedGame ? (
+                  <input
+                    value={editingGameName}
+                    onChange={e => setEditingGameName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleRenameGame(selectedGame.id, e)
+                      if (e.key === 'Escape') setEditingGameId(null)
+                    }}
+                    autoFocus
+                    className="bg-transparent text-white font-bold outline-none w-48 lg:w-64"
+                  />
+                ) : (
+                  <select 
+                    value={selectedGameId || ""}
+                    onChange={(e) => setSelectedGameId(e.target.value)}
+                    className="bg-transparent text-white font-bold text-lg outline-none cursor-pointer pr-8 w-48 lg:w-64 truncate"
+                  >
+                    {initialGames.map((g: any) => (
+                      <option key={g.id} value={g.id} className="bg-neutral-900 text-white text-base font-normal">
+                        {g.name}
+                      </option>
+                    ))}
+                    {initialGames.length === 0 && <option value="" disabled>Chưa có Game nào</option>}
+                  </select>
+                )}
+              </div>
 
-        {/* RIGHT PANE: QUESTIONS LIST */}
-        <div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-2xl flex flex-col overflow-hidden">
-          {selectedGame ? (
-            <>
-              <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950/50 shrink-0">
-                <h2 className="font-bold text-white text-lg flex items-center gap-2">
-                  <Gamepad2 className="text-blue-500" /> {selectedGame.name}
-                  <span className="text-sm font-normal text-neutral-500 bg-neutral-800 px-2 py-0.5 rounded-md">
+              {selectedGame && (
+                <div className="flex gap-1 items-center bg-neutral-900 rounded-lg p-1 border border-neutral-800">
+                  <span className="text-sm font-medium text-neutral-400 px-3 border-r border-neutral-800">
                     {selectedGame.questions?.length || 0} câu hỏi
                   </span>
-                </h2>
-                <button 
-                  onClick={() => { setSelectedQuestionId(null); setShowQuestionModal(true); setQuestionForm({ expected: "", pool: "", imageUrl: "", audioUrl: "" }) }} 
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
-                >
-                  <Plus className="w-5 h-5" /> Thêm Câu Hỏi
-                </button>
-              </div>
-              
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {selectedGame.questions?.length === 0 ? (
-                    <div className="col-span-full text-center py-20 text-neutral-500 flex flex-col items-center">
-                      <MessageSquare className="w-16 h-16 opacity-20 mb-4" />
-                      <p>Chưa có câu hỏi nào trong Game này.</p>
-                      <p className="text-sm">Bấm "Thêm Câu Hỏi" để bắt đầu tạo nội dung.</p>
-                    </div>
+                  {editingGameId === selectedGame.id ? (
+                    <button 
+                      onClick={(e) => handleRenameGame(selectedGame.id, e)}
+                      className="p-1.5 mx-1 rounded-lg hover:bg-green-500/20 text-green-400"
+                      title="Lưu tên"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
                   ) : (
-                    selectedGame.questions?.map((q: any) => (
-                      <div 
-                        key={q.id} 
-                        onClick={() => {
-                          setSelectedQuestionId(q.id);
-                          setQuestionForm({ 
-                            expected: q.expected.join(" "), 
-                            pool: q.pool.join(" "), 
-                            imageUrl: q.image || "", 
-                            audioUrl: q.audio || "" 
-                          });
-                          setShowQuestionModal(true);
-                        }}
-                        className="bg-neutral-800 cursor-pointer rounded-xl overflow-hidden flex flex-col relative group border border-neutral-700 hover:border-blue-500 transition-colors"
-                      >
-                        <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setQuestionToMove({ id: q.id, name: q.expected.join(" ") });
-                              setTargetGameId("");
-                              setShowMoveQuestionModal(true);
-                            }}
-                            className="p-1.5 bg-orange-500/90 hover:bg-orange-600 text-white rounded-md shadow-md"
-                            title="Chuyển Game"
-                          >
-                            <ArrowRightLeft className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={(e) => handleDeleteQuestion(q.id, e)} 
-                            className="p-1.5 bg-red-500/90 hover:bg-red-600 text-white rounded-md shadow-md"
-                            title="Xóa câu hỏi"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div className="h-32 bg-neutral-900 w-full relative">
-                          {q.image ? (
-                            <img src={q.image} alt="Question" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                              <ImageIcon className="w-8 h-8" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4 flex-1 flex flex-col">
-                          <p className="font-bold text-white text-sm line-clamp-2 mb-2">{q.expected.join(" ")}</p>
-                          <div className="flex flex-wrap gap-1 mt-auto">
-                            {q.pool.map((word: string, i: number) => (
-                              <span key={i} className="text-[10px] bg-neutral-700 text-neutral-300 px-1.5 py-0.5 rounded">{word}</span>
-                            ))}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingGameId(selectedGame.id)
+                        setEditingGameName(selectedGame.name)
+                      }}
+                      className="p-1.5 mx-1 rounded-lg hover:bg-blue-500/20 text-blue-400"
+                      title="Đổi tên Game"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button 
+                    onClick={(e) => handleDeleteGame(selectedGame.id, e)}
+                    className="p-1.5 mr-1 rounded-lg hover:bg-red-500/20 text-red-400"
+                    title="Xóa Game"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              <button 
+                onClick={() => setShowGameModal(true)}
+                className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl transition-colors flex items-center gap-2 font-medium border border-neutral-700"
+                title="Thêm Game Mới"
+              >
+                <Plus className="w-4 h-4 text-blue-400" /> <span className="text-sm">Thêm Game</span>
+              </button>
+            </div>
+
+            {selectedGame && (
+              <button 
+                onClick={() => { setSelectedQuestionId(null); setShowQuestionModal(true); setQuestionForm({ expected: "", pool: "", imageUrl: "", audioUrl: "" }) }} 
+                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+              >
+                <Plus className="w-5 h-5" /> Thêm Câu Hỏi
+              </button>
+            )}
+          </div>
+
+          {selectedGame ? (
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+                {selectedGame.questions?.length === 0 ? (
+                  <div className="col-span-full text-center py-20 text-neutral-500 flex flex-col items-center">
+                    <MessageSquare className="w-16 h-16 opacity-20 mb-4" />
+                    <p>Chưa có câu hỏi nào trong Game này.</p>
+                    <p className="text-sm">Bấm "Thêm Câu Hỏi" để bắt đầu tạo nội dung.</p>
+                  </div>
+                ) : (
+                  selectedGame.questions?.map((q: any) => (
+                    <div 
+                      key={q.id} 
+                      onClick={() => {
+                        setSelectedQuestionId(q.id);
+                        setQuestionForm({ 
+                          expected: q.expected.join(" "), 
+                          pool: q.pool.join(" "), 
+                          imageUrl: q.image || "", 
+                          audioUrl: q.audio || "" 
+                        });
+                        setShowQuestionModal(true);
+                      }}
+                      className="bg-neutral-800 cursor-pointer rounded-xl overflow-hidden flex flex-col relative group border border-neutral-700 hover:border-blue-500 transition-colors"
+                    >
+                      <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setQuestionToMove({ id: q.id, name: q.expected.join(" ") });
+                            setTargetGameId("");
+                            setShowMoveQuestionModal(true);
+                          }}
+                          className="p-1.5 bg-orange-500/90 hover:bg-orange-600 text-white rounded-md shadow-md"
+                          title="Chuyển Game"
+                        >
+                          <ArrowRightLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={(e) => handleDeleteQuestion(q.id, e)} 
+                          className="p-1.5 bg-red-500/90 hover:bg-red-600 text-white rounded-md shadow-md"
+                          title="Xóa câu hỏi"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="h-32 bg-neutral-900 w-full relative">
+                        {q.image ? (
+                          <img src={q.image} alt="Question" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                            <ImageIcon className="w-8 h-8" />
                           </div>
+                        )}
+                      </div>
+                      <div className="p-4 flex-1 flex flex-col">
+                        <p className="font-bold text-white text-sm line-clamp-2 mb-2">{q.expected.join(" ")}</p>
+                        <div className="flex flex-wrap gap-1 mt-auto">
+                          {q.pool.map((word: string, i: number) => (
+                            <span key={i} className="text-[10px] bg-neutral-700 text-neutral-300 px-1.5 py-0.5 rounded">{word}</span>
+                          ))}
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
-            </>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-neutral-500 flex-col gap-4">
               <Gamepad2 className="w-16 h-16 opacity-20" />
-              <p>Hãy chọn một Game ở bên trái để xem và quản lý câu hỏi.</p>
+              <p>Hãy chọn một Game ở bên trên để xem và quản lý câu hỏi.</p>
             </div>
           )}
         </div>

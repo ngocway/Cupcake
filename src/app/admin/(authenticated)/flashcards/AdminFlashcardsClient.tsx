@@ -6,6 +6,7 @@ import {
   adminCreateFlashcard, 
   adminUpdateFlashcard, 
   adminDeleteFlashcard,
+  adminDeleteFlashcardsBulk,
   adminCreateTopic,
   adminUpdateTopic,
   adminDeleteTopic
@@ -42,6 +43,7 @@ interface Flashcard {
   exampleSentence: string | null
   imageUrl: string | null
   audioUrl: string | null
+  audioWordUrl: string | null
   createdAt: Date
   topic: {
     id: string
@@ -86,6 +88,7 @@ export function AdminFlashcardsClient({
     phonetic: "",
     imageUrl: "",
     audioUrl: "",
+    audioWordUrl: "",
     definition: "",
     definitionVi: "",
     definitionTh: "",
@@ -109,6 +112,10 @@ export function AdminFlashcardsClient({
   const [deletingId, setDeletingId] = useState("")
   const [deletingType, setDeletingType] = useState<"card" | "topic">("card")
   const [deletingName, setDeletingName] = useState("")
+
+  // Bulk delete states
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([])
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
 
   // Action status
   const [isPending, startTransition] = useTransition()
@@ -486,6 +493,7 @@ export function AdminFlashcardsClient({
         phonetic: card.phonetic || "",
         imageUrl: card.imageUrl || "",
         audioUrl: card.audioUrl || "",
+        audioWordUrl: card.audioWordUrl || "",
         definition: card.definition || "",
         definitionVi: card.definitionVi || "",
         definitionTh: card.definitionTh || "",
@@ -504,6 +512,7 @@ export function AdminFlashcardsClient({
         phonetic: "",
         imageUrl: "",
         audioUrl: "",
+        audioWordUrl: "",
         definition: "",
         definitionVi: "",
         definitionTh: "",
@@ -750,6 +759,7 @@ export function AdminFlashcardsClient({
         const res = await adminDeleteFlashcard(deletingId)
         if (res.success) {
           setFlashcards(prev => prev.filter(c => c.id !== deletingId))
+          setSelectedCardIds(prev => prev.filter(id => id !== deletingId))
           setShowDeleteConfirm(false)
         } else {
           alert("Không thể xóa thẻ: " + res.error)
@@ -759,7 +769,9 @@ export function AdminFlashcardsClient({
         if (res.success) {
           // Cascade local state updates: remove topic and all cards under this topic!
           setTopics(prev => prev.filter(t => t.id !== deletingId))
+          const cardsInTopic = flashcards.filter(c => c.topicId === deletingId).map(c => c.id)
           setFlashcards(prev => prev.filter(c => c.topicId !== deletingId))
+          setSelectedCardIds(prev => prev.filter(id => !cardsInTopic.includes(id)))
           setShowDeleteConfirm(false)
         } else {
           alert("Không thể xóa chủ đề: " + res.error)
@@ -768,12 +780,46 @@ export function AdminFlashcardsClient({
     })
   }
 
+  const handleBulkDeleteConfirm = () => {
+    startTransition(async () => {
+      const res = await adminDeleteFlashcardsBulk(selectedCardIds)
+      if (res.success) {
+        setFlashcards(prev => prev.filter(c => !selectedCardIds.includes(c.id)))
+        setSelectedCardIds([])
+        setShowBulkDeleteConfirm(false)
+        toast.success("Xóa hàng loạt thẻ học thành công!")
+      } else {
+        toast.error("Không thể xóa hàng loạt: " + res.error)
+      }
+    })
+  }
+
+  const toggleSelectCard = (cardId: string) => {
+    setSelectedCardIds(prev => 
+      prev.includes(cardId) 
+        ? prev.filter(id => id !== cardId) 
+        : [...prev, cardId]
+    )
+  }
+
+
   // Audio preview handler
   const handlePlayAudio = (e: React.MouseEvent, card: any) => {
     e.stopPropagation()
     if (typeof window !== "undefined") {
       if (card.audioUrl && card.audioUrl.trim()) {
         new Audio(card.audioUrl).play().catch(() => playSpeechSynthesis(card.word))
+      } else {
+        playSpeechSynthesis(card.word)
+      }
+    }
+  }
+
+  const handlePlayWordAudio = (e: React.MouseEvent, card: any) => {
+    e.stopPropagation()
+    if (typeof window !== "undefined") {
+      if (card.audioWordUrl && card.audioWordUrl.trim()) {
+        new Audio(card.audioWordUrl).play().catch(() => playSpeechSynthesis(card.word))
       } else {
         playSpeechSynthesis(card.word)
       }
@@ -914,80 +960,111 @@ export function AdminFlashcardsClient({
               </div>
             ) : (
               filteredFlashcards.map((card) => {
-                const langsCount = getLangsDoneCount(card)
                 return (
-                  <div key={card.id} className="bg-neutral-900 border border-neutral-800 p-5 rounded-[28px] flex justify-between gap-4 shadow-lg hover:border-neutral-700 transition-all duration-300">
+                  <div key={card.id} className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex justify-between gap-4 shadow-lg hover:border-neutral-700 transition-all duration-300">
                     
-                    <div className="flex gap-4 min-w-0">
+                    <div className="flex gap-3.5 min-w-0 flex-1">
                       {/* Thumbnail frame */}
-                      <div className="w-24 h-24 rounded-2xl overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0">
+                      <div className="w-20 h-20 rounded-none overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0">
                         {card.imageUrl ? (
                           <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-neutral-600 bg-neutral-900">
-                            <ImageIcon className="w-6 h-6" />
+                            <ImageIcon className="w-5 h-5" />
                           </div>
                         )}
                       </div>
 
-                      <div className="min-w-0 space-y-1.5 flex flex-col justify-center">
-                        <span className="inline-flex px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-400 border border-neutral-700 self-start">
-                          {card.topic?.category?.name || "Kids"}
-                        </span>
-                        
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-white font-black text-lg truncate leading-tight">{card.word}</h3>
+                      <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 gap-1">
+                        {/* Tags line */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
+                            {targetAudiencesList.find(c => c.id === card.topic?.targetAudience)?.name || card.topic?.targetAudience || "Kids"}
+                          </span>
+                          <span className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-400 border border-neutral-700">
+                            {card.topic?.name}
+                          </span>
+                        </div>
+
+                        {/* Word & phonetic */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-white font-black text-base truncate leading-none">{card.word}</h3>
                           {card.phonetic && (
-                            <span className="text-blue-400 font-mono text-xs font-bold">{card.phonetic}</span>
+                            <span className="text-blue-400 font-mono text-[11px] font-bold leading-none">{card.phonetic}</span>
                           )}
                           <button 
                             onClick={(e) => handlePlayAudio(e, card)}
-                            className="p-1 rounded-full bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-white transition-colors"
-                            title="Nghe phát âm"
+                            className="p-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-white transition-colors"
+                            title="Nghe phát âm ví dụ"
                           >
-                            <Volume2 className="w-4 h-4" />
+                            <Volume2 className="w-3.5 h-3.5" />
                           </button>
+                          {card.audioWordUrl && (
+                            <button 
+                              onClick={(e) => handlePlayWordAudio(e, card)}
+                              className="p-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-white border border-emerald-500/20 transition-colors"
+                              title="Nghe phát âm từ vựng (ElevenLabs)"
+                            >
+                              <Volume2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
 
-                        <p className="text-xs font-semibold text-neutral-400 truncate max-w-xs" title={card.exampleSentence || "No example sentence set"}>{card.exampleSentence || "No example sentence set"}</p>
+                        {/* Vietnamese Meaning */}
+                        {card.definitionVi && (
+                          <p className="text-xs font-black text-emerald-400 leading-tight">
+                            Nghĩa: {card.definitionVi}
+                          </p>
+                        )}
+
+                        {/* Example sentence */}
+                        {card.exampleSentence && (
+                          <p className="text-[11px] italic text-neutral-500 line-clamp-1" title={card.exampleSentence}>
+                            Ex: {card.exampleSentence}
+                          </p>
+                        )}
                         
                         {/* Translations Badge Row */}
-                        <div className="flex items-center gap-1.5 pt-0.5">
-                          <span className="text-[10px] font-bold text-neutral-500 mr-1 uppercase">Translations:</span>
+                        <div className="flex items-center gap-1 opacity-80 mt-0.5">
+                          <span className="text-[8px] font-bold text-neutral-500 mr-1 uppercase">Langs:</span>
                           <span className="text-xs" title="English default">🇺🇸</span>
-                          <span className={`text-xs transition-opacity ${card.definitionVi ? "opacity-100" : "opacity-20"}`} title="Tiếng Việt">🇻🇳</span>
-                          <span className={`text-xs transition-opacity ${card.definitionTh ? "opacity-100" : "opacity-20"}`} title="Thai">🇹🇭</span>
-                          <span className={`text-xs transition-opacity ${card.definitionId ? "opacity-100" : "opacity-20"}`} title="Indonesian">🇮🇩</span>
+                          <span className={`text-xs ${card.definitionVi ? "opacity-100" : "opacity-20"}`} title="Tiếng Việt">🇻🇳</span>
+                          <span className={`text-xs ${card.definitionTh ? "opacity-100" : "opacity-20"}`} title="Thai">🇹🇭</span>
+                          <span className={`text-xs ${card.definitionId ? "opacity-100" : "opacity-20"}`} title="Indonesian">🇮🇩</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-col justify-between items-end shrink-0 pl-2">
-                      <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">
-                        Topic: <span className="text-blue-500 font-black">{card.topic?.name}</span>
-                      </span>
+                    {/* Right column with checkbox and actions */}
+                    <div className="flex flex-col justify-between items-end shrink-0 pl-1.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedCardIds.includes(card.id)}
+                        onChange={() => toggleSelectCard(card.id)}
+                        className="w-4 h-4 rounded border border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 transition-all hover:scale-110"
+                      />
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => {
                             setActiveOuterCardForImage(card)
                             handleGoogleImageSearch(card.word)
                           }}
-                          className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                          className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
                           title="Tìm ảnh trên Web"
                         >
-                          <Globe className="w-4.5 h-4.5" />
+                          <Globe className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => openCardModal(card)}
-                          className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                          className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
                           title="Sửa thẻ"
                         >
-                          <Edit className="w-4.5 h-4.5" />
+                          <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => triggerDelete(card.id, "card", card.word)}
-                          className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                          className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
                           title="Xóa thẻ"
                         >
                           <Trash2 className="w-4.5 h-4.5" />
@@ -1840,6 +1917,79 @@ export function AdminFlashcardsClient({
         </div>
       )}
 
+      {/* Floating Bulk Action Bar */}
+      {activeTab === "cards" && selectedCardIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-neutral-900/90 backdrop-blur-md border border-neutral-800 px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom duration-300">
+          <div className="text-sm font-semibold text-neutral-300">
+            Đã chọn <strong className="text-white text-base">{selectedCardIds.length}</strong> thẻ học
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedCardIds([])}
+              className="px-4 py-2 text-xs font-bold text-neutral-400 hover:text-white transition-colors"
+            >
+              Bỏ chọn tất cả
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              className="px-5 py-2 bg-rose-600 hover:bg-rose-750 active:scale-95 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shadow-rose-600/10"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Xóa hàng loạt
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            
+            <div className="flex items-center gap-4 text-rose-500">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 shadow-inner shrink-0">
+                <Trash2 className="w-6 h-6 text-rose-500" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-black text-white tracking-tight">Xác nhận xóa hàng loạt?</h2>
+                <p className="text-xs text-neutral-500 font-semibold mt-0.5">Hành động này sẽ xóa vĩnh viễn khỏi hệ thống.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-neutral-300 leading-relaxed">
+                Bạn có chắc chắn muốn xóa <strong className="text-white text-base">{selectedCardIds.length}</strong> thẻ học đã chọn không? Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 justify-end border-t border-neutral-800/80 pt-6">
+              <button 
+                type="button"
+                disabled={isPending}
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="px-5 py-2.5 font-bold text-neutral-400 hover:text-white transition-colors text-sm"
+              >
+                Hủy
+              </button>
+              <button 
+                type="button"
+                disabled={isPending}
+                onClick={handleBulkDeleteConfirm}
+                className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold rounded-2xl flex items-center gap-2 text-sm shadow-lg shadow-rose-600/20 transition-all disabled:opacity-50"
+              >
+                {isPending ? (
+                  <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : 'Đồng ý xóa'}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
+

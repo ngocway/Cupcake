@@ -230,7 +230,34 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     }
   }
 
-  // Tự động phát âm khi lật sang mặt sau (áp dụng cho mọi nhóm tuổi)
+  // Hàm phát âm chỉ từ vựng (không kèm câu ví dụ)
+  const handlePlayWordAudio = (card: any) => {
+    if (!card) return
+    stopCurrentAudio()
+    if (card.audioWordUrl && card.audioWordUrl.trim()) {
+      const audio = new Audio(card.audioWordUrl)
+      currentAudioRef.current = audio
+      audio.play().catch(err => {
+        console.error("Lỗi phát audio từ vựng tùy chỉnh:", err)
+        // Fallback to speech synthesis
+        handleSpeak(card.word)
+      })
+    } else {
+      handleSpeak(card.word)
+    }
+  }
+
+  // Tự động phát âm chỉ từ vựng khi học sinh xem mặt trước thẻ mới
+  useEffect(() => {
+    if (!isFlipped && selectedCategory && flashcards[currentIndex]) {
+      const timer = setTimeout(() => {
+        handlePlayWordAudio(flashcards[currentIndex])
+      }, 300) // Delay nhẹ để tránh chồng chéo âm thanh khi chuyển thẻ
+      return () => clearTimeout(timer)
+    }
+  }, [currentIndex, isFlipped, selectedCategory, flashcards])
+
+  // Tự động phát âm đầy đủ (từ + ví dụ) khi lật sang mặt sau (áp dụng cho mọi nhóm tuổi)
   useEffect(() => {
     if (isFlipped && selectedCategory && flashcards[currentIndex]) {
       // Delay nhẹ để âm thanh phát ra đồng thời cùng lúc xoay mặt thẻ xong

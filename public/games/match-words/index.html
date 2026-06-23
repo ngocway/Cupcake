@@ -231,9 +231,53 @@
             .game-item-image { width: 90px; height: 90px; font-size: 3.5rem; }
             .game-item-text { font-size: 1.5rem; padding: 10px 25px; }
         }
+
+        /* Start Overlay */
+        #startOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+        .play-btn {
+            background: #ff6b6b;
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 3rem;
+            padding: 20px 50px;
+            border: 8px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        .play-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 0 #ee5253, 0 25px 35px rgba(0,0,0,0.3);
+        }
+        .play-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #ee5253, 0 5px 10px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
+
+    <!-- Start Overlay -->
+    <div id="startOverlay">
+        <div style="font-size: 4rem; color: white; text-shadow: 3px 3px 0 #ff6b6b; margin-bottom: 40px; text-align: center;">Ready to Play?</div>
+        <button class="play-btn" id="startBtn">▶ PLAY</button>
+    </div>
 
     <!-- Sidebar with Categories -->
     <div class="sidebar">
@@ -257,7 +301,27 @@
         <div class="cloud" style="width: 200px; height: 70px; top: 70%; animation-duration: 50s; animation-delay: 10s;"></div>
     </div>
 
+    <audio id="bgMusic" loop>
+        <source src="/sounds/bg-music.mp3" type="audio/mpeg">
+    </audio>
+
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bgMusic = document.getElementById('bgMusic');
+            bgMusic.volume = 0.3;
+            
+            const startOverlay = document.getElementById('startOverlay');
+            const startBtn = document.getElementById('startBtn');
+            
+            startBtn.addEventListener('click', () => {
+                bgMusic.play().catch(e => console.log("Audio play failed:", e));
+                startOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    startOverlay.style.display = 'none';
+                }, 500);
+            });
+        });
+
         // Web Audio API Synthesizer Sound Effects
         function playSuccessSound() {
             try {
@@ -344,31 +408,11 @@
                     return;
                 }
 
-                // Try using Google AI Studio Gemini API (via local proxy endpoint)
-                const response = await fetch('/api/tts', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        text: wordText,
-                        voice: 'Aoede', // Default clear voice
-                        speed: 0.85,
-                        mode: 'inline'
-                    })
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.success && data.url) {
-                        const audio = new Audio(data.url);
-                        audio.volume = 1.0;
-                        await audio.play();
-                        spoken = true;
-                    }
-                }
+                // Try using Google AI Studio Gemini API is temporarily disabled 
+                // due to exhausted quota to prevent 15-second timeout delays.
+                
             } catch (err) {
-                console.error("Gemini TTS API failed, falling back to Web Speech API", err);
+                console.error("Audio playback error", err);
             }
 
             // Fallback to Web Speech API
@@ -512,18 +556,8 @@
                 if (item.audio) {
                     preloadedAudio[item.word] = item.audio;
                 } else if (!preloadedAudio[item.word]) {
-                    fetch('/api/tts', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: item.word, voice: 'Aoede', speed: 0.85, mode: 'inline' })
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success && data.url) {
-                            preloadedAudio[item.word] = data.url;
-                        }
-                    })
-                    .catch(e => console.error("Preload TTS failed for", item.word, e));
+                    // Preloading from /api/tts is temporarily disabled to prevent
+                    // quota exhaustion and timeout delays.
                 }
             });
 
@@ -644,7 +678,10 @@
 
                 const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
                 const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
-                obj.radius = Math.max(elemWidth, elemHeight) / 2 + 5;
+                
+                // Add more padding for images (circles) so they stay further apart
+                const extraPadding = obj.type === 'img' ? 35 : 15;
+                obj.radius = Math.max(elemWidth, elemHeight) / 2 + extraPadding;
 
                 // Move element
                 obj.x += obj.vx;
@@ -677,6 +714,12 @@
                 for (let j = i + 1; j < elements.length; j++) {
                     const obj2 = elements[j];
                     if (obj2.matched) continue;
+
+                    // Allow texts and images to float over each other without bouncing
+                    // This prevents overcrowding in the game area
+                    if (!obj1.dragging && !obj2.dragging && obj1.type !== obj2.type) {
+                        continue;
+                    }
 
                     const dx = obj2.x - obj1.x;
                     const dy = obj2.y - obj1.y;

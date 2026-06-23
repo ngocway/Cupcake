@@ -168,3 +168,44 @@ export async function generateSingleMatchWordItem(topicId: string, word: string,
     return { success: false, error: error.message };
   }
 }
+
+import { updateMatchWordItem } from "@/actions/admin-match-words";
+
+export async function generateAudioForMatchWordItem(itemId: string, word: string, ageGroup: string, modelName?: string) {
+  try {
+    let userId = "system";
+    try {
+      const session = await auth();
+      if (session?.user?.id) userId = session.user.id;
+    } catch (e) {
+      // ignore outside next.js context
+    }
+    const speechText = `${word.trim()}.`;
+    
+    const systemAge = mapAgeGroupToSystem(ageGroup);
+    let speed = 0.85;
+    if (systemAge === "kindergarten") {
+      speed = 0.8;
+    } else if (systemAge === "kid") {
+      speed = 0.85;
+    } else if (systemAge === "teen") {
+      speed = 0.9;
+    } else {
+      speed = 1.0;
+    }
+
+    console.log(`Generating TTS for match-word '${word}' with model ${modelName || 'auto'}`);
+    const ttsRes = await generateTTSHelper(speechText, "Aoede", speed, userId, "match-word", modelName);
+    
+    if (ttsRes && ttsRes.url) {
+      const res = await updateMatchWordItem(itemId, { word, audioUrl: ttsRes.url });
+      return { success: res.success, error: res.error, url: ttsRes.url };
+    }
+    
+    return { success: false, error: "Không tạo được audio URL từ Gemini" };
+  } catch (error: any) {
+    console.error(`Error generating audio for item '${word}':`, error);
+    return { success: false, error: error.message };
+  }
+}
+

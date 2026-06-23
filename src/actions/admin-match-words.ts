@@ -4,6 +4,14 @@ import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { toSlug } from "@/lib/slugify"
 
+function safeRevalidatePath(path: string) {
+  try {
+    revalidatePath(path);
+  } catch (error) {
+    // Ignore error when called outside of Next.js server context (e.g., standalone scripts)
+  }
+}
+
 // CREATE GAME
 export async function createMatchWordGame(data: { name: string; ageGroup: string; order?: number }) {
   try {
@@ -14,7 +22,7 @@ export async function createMatchWordGame(data: { name: string; ageGroup: string
         order: data.order || 0,
       },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, game }
   } catch (error: any) {
     console.error("Failed to create game:", error)
@@ -55,7 +63,7 @@ export async function updateMatchWordGame(id: string, data: { name?: string; ord
       where: { id },
       data,
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, game }
   } catch (error: any) {
     console.error("Failed to update game:", error)
@@ -69,7 +77,7 @@ export async function deleteMatchWordGame(id: string) {
     await prisma.matchWordGame.delete({
       where: { id },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true }
   } catch (error: any) {
     console.error("Failed to delete game:", error)
@@ -90,7 +98,7 @@ export async function createMatchWordTopic(data: { gameId: string; name: string;
         slug: slug,
       },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, topic }
   } catch (error: any) {
     console.error("Failed to create topic:", error)
@@ -105,7 +113,7 @@ export async function moveMatchWordTopic(id: string, targetGameId: string) {
       where: { id },
       data: { gameId: targetGameId }
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, topic }
   } catch (error: any) {
     console.error("Failed to move topic:", error)
@@ -129,7 +137,7 @@ export async function updateMatchWordTopic(id: string, data: { name?: string; ic
       where: { id },
       data: updateData
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, topic }
   } catch (error: any) {
     console.error("Failed to update topic:", error)
@@ -143,7 +151,7 @@ export async function deleteMatchWordTopic(id: string) {
     await prisma.matchWordTopic.delete({
       where: { id },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true }
   } catch (error: any) {
     console.error("Failed to delete topic:", error)
@@ -163,7 +171,7 @@ export async function addMatchWordItem(data: { topicId: string; word: string; im
         audioUrl: data.audioUrl,
       },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, item }
   } catch (error: any) {
     console.error("Failed to add item:", error)
@@ -183,7 +191,7 @@ export async function updateMatchWordItem(id: string, data: { word: string; imag
         audioUrl: data.audioUrl,
       },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true, item }
   } catch (error: any) {
     console.error("Failed to update item:", error)
@@ -197,7 +205,7 @@ export async function deleteMatchWordItem(id: string) {
     await prisma.matchWordItem.delete({
       where: { id },
     })
-    revalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/admin/games/match-words")
     return { success: true }
   } catch (error: any) {
     console.error("Failed to delete item:", error)
