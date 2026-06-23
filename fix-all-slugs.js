@@ -1,4 +1,4 @@
-const { PrismaClient } = require('./src/generated/client');
+const { PrismaClient } = require('@prisma/client');
 const p = new PrismaClient();
 
 function toSlug(title) {

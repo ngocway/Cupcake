@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { TrashListItem } from './_components/TrashListItem';
-import { MaterialStatus } from '@/generated/client';
+import { MaterialStatus } from '@prisma/client';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 
 type Assignment = {

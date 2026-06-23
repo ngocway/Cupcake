@@ -1,5 +1,5 @@
 
-import { PrismaClient } from '../generated/client'
+import { PrismaClient } from '@prisma/client'
 
 // Client Version: 1.0.2 - Forced New Instance
 const prismaClientSingleton = () => {

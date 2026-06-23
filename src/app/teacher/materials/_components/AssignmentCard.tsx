@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { MaterialStatus, MaterialType } from '@/generated/client';
+import { MaterialStatus, MaterialType } from '@prisma/client';
 import { syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, duplicateMaterial, deleteMaterial } from '@/actions/material-actions';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
 import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';

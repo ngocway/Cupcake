@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
 import { invalidateMaterialCache } from '@/lib/cached-queries';
 import crypto from 'crypto';
-import { MaterialStatus } from '@/generated/client';
+import { MaterialStatus } from '@prisma/client';
 import { after } from 'next/server';
 import { generateUniqueSlug } from '@/lib/slugify';
 import openai from "@/lib/openai";

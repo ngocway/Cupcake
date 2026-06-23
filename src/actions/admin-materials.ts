@@ -3,7 +3,7 @@
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { MaterialStatus } from '@/generated/client';
+import { MaterialStatus } from '@prisma/client';
 
 export async function adminToggleBlockMaterial(id: string, isLessons: boolean, isBlocked: boolean) {
   const session = await auth();

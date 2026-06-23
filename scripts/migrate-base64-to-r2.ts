@@ -1,4 +1,4 @@
-import { PrismaClient } from '../src/generated/client';
+import { PrismaClient } from '@prisma/client';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
 dotenv.config();

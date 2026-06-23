@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
-import { MaterialStatus, MaterialType } from '@/generated/client';
+import { MaterialStatus, MaterialType } from '@prisma/client';
 import { Image as ImageIcon, HelpCircle, Calendar, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
 
 type Assignment = {
