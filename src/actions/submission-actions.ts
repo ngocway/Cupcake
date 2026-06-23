@@ -73,9 +73,9 @@ export async function completeSubmission(submissionId: string, answers: any) {
                   const expectedWord = match[1]
                   const userWord = (userAnswer[idx] !== undefined ? userAnswer[idx] : (userAnswer[String(idx)] || "")).trim()
                   // Allow splitting multiple correct variants using pipe "|"
-                  const validOptions = expectedWord.split('|').map(v => v.trim().toLowerCase())
+                  const validOptions = expectedWord.split('|').map((v: string) => v.trim().toLowerCase())
                   const matchesWord = content.caseSensitive
-                    ? expectedWord.split('|').map(v => v.trim()).includes(userWord)
+                    ? expectedWord.split('|').map((v: string) => v.trim()).includes(userWord)
                     : validOptions.includes(userWord.toLowerCase())
                   if (matchesWord) {
                     correctCount++

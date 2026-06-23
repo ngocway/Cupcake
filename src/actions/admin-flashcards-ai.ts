@@ -2,7 +2,7 @@
 
 import openai from "@/lib/openai";
 import { searchImagesAction } from "@/actions/image-search-actions";
-import { uploadUrlMedia } from "@/actions/upload-actions";
+import { uploadUrlMedia, uploadBufferToR2 } from "@/actions/upload-actions";
 import { adminCreateFlashcard } from "@/actions/admin-flashcards";
 import { generateTTSHelper } from "@/actions/lesson-ai";
 import { auth } from "@/auth";
@@ -166,3 +166,208 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
     return { success: false, error: error.message };
   }
 }
+
+// WAV Header Helper
+function getWavHeader(dataLength: number, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + dataLength, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
+  header.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(dataLength, 40);
+  return header;
+}
+
+// Adaptive WAV audio splitter
+async function splitWavFileAdaptive(audioUrl: string): Promise<Buffer | null> {
+  const response = await fetch(audioUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download audio file: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const fileBuffer = Buffer.from(arrayBuffer);
+
+  const riff = fileBuffer.toString('utf8', 0, 4);
+  const wave = fileBuffer.toString('utf8', 8, 12);
+  if (riff !== 'RIFF' || wave !== 'WAVE') {
+    throw new Error("Not a valid RIFF/WAVE file");
+  }
+
+  const numChannels = fileBuffer.readUInt16LE(22);
+  const sampleRate = fileBuffer.readUInt32LE(24);
+  const bitsPerSample = fileBuffer.readUInt16LE(34);
+
+  if (bitsPerSample !== 16) {
+    throw new Error(`Unsupported bits per sample: ${bitsPerSample}`);
+  }
+
+  // Find the 'data' subchunk
+  let dataOffset = 12;
+  while (dataOffset < fileBuffer.length - 8) {
+    const chunkId = fileBuffer.toString('utf8', dataOffset, dataOffset + 4);
+    const chunkSize = fileBuffer.readUInt32LE(dataOffset + 4);
+    if (chunkId === 'data') {
+      dataOffset += 8;
+      break;
+    }
+    dataOffset += 8 + chunkSize;
+  }
+
+  const pcmBytes = fileBuffer.subarray(dataOffset);
+  const numSamples = pcmBytes.length / 2;
+  const samples = new Int16Array(pcmBytes.buffer, pcmBytes.byteOffset, numSamples);
+
+  const frameSize = Math.floor(sampleRate * 0.01); // 10ms
+  const numFrames = Math.floor(numSamples / frameSize);
+
+  const frameEnergies = new Float32Array(numFrames);
+  for (let i = 0; i < numFrames; i++) {
+    let sumAbs = 0;
+    const start = i * frameSize;
+    for (let j = 0; j < frameSize; j++) {
+      sumAbs += Math.abs(samples[start + j]);
+    }
+    frameEnergies[i] = sumAbs / frameSize;
+  }
+
+  // Adaptive thresholds
+  const options = [
+    { activeThreshold: 200, silenceThreshold: 100, silenceDurationNeeded: 15 },
+    { activeThreshold: 200, silenceThreshold: 120, silenceDurationNeeded: 12 },
+    { activeThreshold: 150, silenceThreshold: 120, silenceDurationNeeded: 10 },
+    { activeThreshold: 100, silenceThreshold: 150, silenceDurationNeeded: 8 },
+    { activeThreshold: 80,  silenceThreshold: 180, silenceDurationNeeded: 6 },
+    { activeThreshold: 50,  silenceThreshold: 200, silenceDurationNeeded: 5 }
+  ];
+
+  for (const opt of options) {
+    let onsetFrame = -1;
+    let offsetFrame = -1;
+
+    for (let i = 0; i < numFrames; i++) {
+      if (frameEnergies[i] > opt.activeThreshold) {
+        onsetFrame = i;
+        break;
+      }
+    }
+
+    if (onsetFrame === -1) {
+      continue;
+    }
+
+    for (let i = onsetFrame; i < numFrames; i++) {
+      let isSilence = true;
+      for (let j = 0; j < opt.silenceDurationNeeded; j++) {
+        if (i + j >= numFrames || frameEnergies[i + j] > opt.silenceThreshold) {
+          isSilence = false;
+          break;
+        }
+      }
+      if (isSilence) {
+        offsetFrame = i;
+        break;
+      }
+    }
+
+    if (offsetFrame !== -1) {
+      console.log(`  [Split Success] active=${opt.activeThreshold}, silence=${opt.silenceThreshold}, duration=${opt.silenceDurationNeeded}`);
+      const cutFrame = Math.min(offsetFrame + 10, numFrames);
+      const cutSampleIndex = cutFrame * frameSize;
+      const cutByteLength = cutSampleIndex * 2;
+
+      const cutPcmBytes = pcmBytes.subarray(0, cutByteLength);
+      const newHeader = getWavHeader(cutPcmBytes.length, sampleRate, numChannels, bitsPerSample);
+      return Buffer.concat([newHeader, cutPcmBytes]);
+    }
+  }
+
+  // Fallback cut (first 1.2 seconds)
+  console.log(`  [Split Fallback] Silence not found. Cutting first 1.2 seconds.`);
+  const defaultDuration = 1.2;
+  const cutFrame = Math.min(Math.floor(defaultDuration * 100), numFrames);
+  const cutSampleIndex = cutFrame * frameSize;
+  const cutByteLength = cutSampleIndex * 2;
+
+  const cutPcmBytes = pcmBytes.subarray(0, cutByteLength);
+  const newHeader = getWavHeader(cutPcmBytes.length, sampleRate, numChannels, bitsPerSample);
+  return Buffer.concat([newHeader, cutPcmBytes]);
+}
+
+// Action to generate card image
+export async function generateCardImageAction(word: string, imageSearchKeyword: string) {
+  let imageUrl = null;
+  if (imageSearchKeyword || word) {
+    try {
+      const searchKeyword = imageSearchKeyword || word;
+      const images = await searchImagesAction(searchKeyword);
+      if (images && images.length > 0) {
+        const firstImage = images[0];
+        const uploadRes = await uploadUrlMedia(firstImage.url);
+        if (uploadRes.success && uploadRes.url) {
+          imageUrl = uploadRes.url;
+        }
+      }
+    } catch (imgError) {
+      console.error("Error finding or uploading image for", word, imgError);
+    }
+  }
+  return { success: true, imageUrl };
+}
+
+// Action to generate card audio (includes splitting)
+export async function generateCardAudioAction(word: string, exampleSentence: string, categoryName?: string) {
+  let audioUrl = null;
+  let audioWordUrl = null;
+
+  if (word) {
+    try {
+      const session = await auth();
+      const userId = session?.user?.id || "system";
+      
+      const cleanWord = word.trim();
+      const speechText = exampleSentence.trim() 
+        ? `${cleanWord}. ${cleanWord}. ${exampleSentence} ${cleanWord}.`
+        : `${cleanWord}. ${cleanWord}. ${cleanWord}.`;
+
+      let speed = 1.0;
+      if (categoryName) {
+        const cat = categoryName.toLowerCase();
+        if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
+          speed = 0.8;
+        }
+      }
+
+      console.log(`Generating auto TTS for server action card: ${cleanWord} with speed ${speed}`);
+      const ttsRes = await generateTTSHelper(speechText, "Aoede", speed, userId, "flashcard");
+      if (ttsRes && ttsRes.url) {
+        audioUrl = ttsRes.url;
+
+        // Try to split vocabulary audio
+        try {
+          console.log(`Splitting vocabulary audio for card: ${cleanWord}`);
+          const splitBuffer = await splitWavFileAdaptive(audioUrl);
+          if (splitBuffer) {
+            const fileNameAudio = `tts-split-${cleanWord.replace(/\s+/g, '_')}-${Date.now()}.wav`;
+            audioWordUrl = await uploadBufferToR2(splitBuffer, fileNameAudio, "audio/wav");
+            console.log(`Uploaded word audio to R2: ${audioWordUrl}`);
+          }
+        } catch (splitErr) {
+          console.error(`Error splitting audio for word: ${cleanWord}`, splitErr);
+        }
+      }
+    } catch (ttsError) {
+      console.error("Error generating auto TTS for word", word, ttsError);
+    }
+  }
+  return { success: true, audioUrl, audioWordUrl };
+}
+

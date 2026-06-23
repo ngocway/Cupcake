@@ -45,6 +45,7 @@ interface CreateFlashcardData {
   exampleSentence?: string
   imageUrl?: string
   audioUrl?: string
+  audioWordUrl?: string
 }
 
 export async function adminCreateFlashcard(data: CreateFlashcardData) {
@@ -62,6 +63,7 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
 
     let safeImageUrl = data.imageUrl?.trim() || null;
     let safeAudioUrl = data.audioUrl?.trim() || null;
+    let safeAudioWordUrl = data.audioWordUrl?.trim() || null;
 
     if (safeImageUrl?.startsWith('data:')) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
@@ -72,6 +74,11 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
       const res = await uploadBase64Image(safeAudioUrl, 'flashcard');
       if (res.success && res.url) safeAudioUrl = res.url;
+    }
+    if (safeAudioWordUrl?.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudioWordUrl, 'flashcard');
+      if (res.success && res.url) safeAudioWordUrl = res.url;
     }
 
     // 2. Tạo thẻ mới
@@ -87,6 +94,7 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
         exampleSentence: data.exampleSentence?.trim() || null,
         imageUrl: safeImageUrl,
         audioUrl: safeAudioUrl,
+        audioWordUrl: safeAudioWordUrl,
         orderIndex
       }
     })

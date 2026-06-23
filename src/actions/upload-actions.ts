@@ -179,3 +179,26 @@ export async function uploadBase64Image(base64Data: string, assignmentId: string
     return { success: false, error: error.message || 'Error uploading base64' };
   }
 }
+
+export async function uploadBufferToR2(buffer: Buffer, fileName: string, contentType: string) {
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
+
+  if (!bucketName || !publicUrlBase) {
+    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
+  }
+
+  const s3Client = getR2Client();
+  const filePath = `uploads/${fileName}`;
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: filePath,
+    Body: buffer,
+    ContentType: contentType,
+  });
+
+  await s3Client.send(command);
+  return `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
+}
+

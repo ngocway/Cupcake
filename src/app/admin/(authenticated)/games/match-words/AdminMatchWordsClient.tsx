@@ -18,7 +18,13 @@ import {
   updateMatchWordGame,
   updateMatchWordTopic
 } from "@/actions/admin-match-words"
-import { generateMatchWordVocabList, generateSingleMatchWordItem, generateAudioForMatchWordItem } from "@/actions/admin-match-words-ai"
+import { 
+  generateMatchWordVocabList, 
+  generateSingleMatchWordItem, 
+  generateAudioForMatchWordItem,
+  generateMatchWordImageAction,
+  generateMatchWordAudioAction 
+} from "@/actions/admin-match-words-ai"
 
 export function AdminMatchWordsClient({ 
   initialGames2to5, 
@@ -216,15 +222,38 @@ export function AdminMatchWordsClient({
 
         for (let i = 0; i < draftWords.length; i++) {
           const item = draftWords[i]
+          
           setAiProgress({
             active: true,
-            text: `Đang tạo ảnh & audio cho từ "${item.word}"...`,
+            text: `[${i + 1}/${draftWords.length}] Đang tìm ảnh cho "${item.word}"...`,
+            current: i + 1,
+            total: draftWords.length
+          })
+          const imgRes = await generateMatchWordImageAction(item.word, activeTab)
+
+          setAiProgress({
+            active: true,
+            text: `[${i + 1}/${draftWords.length}] Đang tạo âm thanh cho "${item.word}"...`,
+            current: i + 1,
+            total: draftWords.length
+          })
+          const audioRes = await generateMatchWordAudioAction(item.word, activeTab)
+
+          setAiProgress({
+            active: true,
+            text: `[${i + 1}/${draftWords.length}] Đang lưu từ "${item.word}"...`,
             current: i + 1,
             total: draftWords.length
           })
 
           try {
-            const singleRes = await generateSingleMatchWordItem(topicId, item.word, item.emoji, activeTab)
+            const singleRes = await addMatchWordItem({
+              topicId,
+              word: item.word.toLowerCase().trim(),
+              emoji: item.emoji || "✨",
+              imageUrl: imgRes.imageUrl || undefined,
+              audioUrl: audioRes.audioUrl || undefined
+            })
             if (!singleRes.success) {
               console.error(`Lỗi tạo từ ${item.word}:`, singleRes.error)
             }

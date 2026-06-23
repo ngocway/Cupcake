@@ -209,3 +209,56 @@ export async function generateAudioForMatchWordItem(itemId: string, word: string
   }
 }
 
+export async function generateMatchWordImageAction(word: string, ageGroup: string) {
+  let imageUrl = null;
+  try {
+    const systemAge = mapAgeGroupToSystem(ageGroup);
+    const isCartoon = systemAge === "kindergarten" || systemAge === "kid";
+    const searchKeyword = isCartoon ? `${word} cartoon illustration` : word;
+
+    console.log(`Searching image for match-word '${word}' (isCartoon: ${isCartoon}) with query: '${searchKeyword}'`);
+    const images = await searchImagesAction(searchKeyword);
+    if (images && images.length > 0) {
+      const firstImage = images[0];
+      const uploadRes = await uploadUrlMedia(firstImage.url);
+      if (uploadRes.success && uploadRes.url) {
+        imageUrl = uploadRes.url;
+      }
+    }
+  } catch (imgError) {
+    console.error(`Error searching image for match-word '${word}':`, imgError);
+  }
+  return { success: true, imageUrl };
+}
+
+export async function generateMatchWordAudioAction(word: string, ageGroup: string) {
+  let audioUrl = null;
+  try {
+    const session = await auth();
+    const userId = session?.user?.id || "system";
+    const speechText = `${word.trim()}.`;
+    
+    const systemAge = mapAgeGroupToSystem(ageGroup);
+    let speed = 0.85;
+    if (systemAge === "kindergarten") {
+      speed = 0.8;
+    } else if (systemAge === "kid") {
+      speed = 0.85;
+    } else if (systemAge === "teen") {
+      speed = 0.9;
+    } else {
+      speed = 1.0;
+    }
+
+    console.log(`Generating TTS for match-word '${word}' with system age '${systemAge}' and speed ${speed}`);
+    const ttsRes = await generateTTSHelper(speechText, "Aoede", speed, userId, "match-word");
+    if (ttsRes && ttsRes.url) {
+      audioUrl = ttsRes.url;
+    }
+  } catch (ttsError) {
+    console.error(`Error generating TTS for match-word '${word}':`, ttsError);
+  }
+  return { success: true, audioUrl };
+}
+
+

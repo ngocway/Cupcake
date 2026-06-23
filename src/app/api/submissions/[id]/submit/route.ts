@@ -89,7 +89,7 @@ export async function POST(
                   if (ans !== undefined && ans !== null) {
                     const studentCleaned = String(ans).trim().toLowerCase()
                     // Allow splitting multiple correct variants using pipe "|"
-                    const validOptions = expectedWord.split('|').map(v => v.trim().toLowerCase())
+                    const validOptions = expectedWord.split('|').map((v: string) => v.trim().toLowerCase())
                     
                     if (validOptions.includes(studentCleaned)) {
                       correctCount++

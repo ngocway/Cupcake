@@ -13,7 +13,12 @@ import {
 } from "@/actions/admin-flashcards"
 import { generateVocabularyDetails, generateExampleSentence } from "@/actions/ai-actions"
 import { searchImagesAction } from "@/actions/image-search-actions"
-import { generateFlashcardVocabularyList, generateSingleFlashcardWithImage } from "@/actions/admin-flashcards-ai"
+import { 
+  generateFlashcardVocabularyList, 
+  generateSingleFlashcardWithImage,
+  generateCardImageAction,
+  generateCardAudioAction 
+} from "@/actions/admin-flashcards-ai"
 
 import { toast } from "sonner"
 import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy } from "lucide-react"
@@ -710,12 +715,34 @@ export function AdminFlashcardsClient({
         const newLocalCards: Flashcard[] = []
 
         for (let i = 0; i < words.length; i++) {
-          setGeneratingStatus(`Đang tìm ảnh và tạo thẻ ${i + 1}/${words.length}: ${words[i].word}...`)
-          const cardRes = await generateSingleFlashcardWithImage(createRes.topic.id, words[i], categoryName)
+          const item = words[i]
+          
+          setGeneratingStatus(`[${i + 1}/${words.length}] Đang tìm ảnh cho "${item.word}"...`)
+          const imgRes = await generateCardImageAction(item.word, item.imageSearchKeyword)
+          
+          setGeneratingStatus(`[${i + 1}/${words.length}] Đang tạo âm thanh cho "${item.word}"...`)
+          const audioRes = await generateCardAudioAction(item.word, item.exampleSentence, categoryName)
+          
+          setGeneratingStatus(`[${i + 1}/${words.length}] Đang lưu thẻ "${item.word}"...`)
+          const cardRes = await adminCreateFlashcard({
+            topicId: createRes.topic.id,
+            word: item.word,
+            phonetic: item.phonetic,
+            definition: item.definition,
+            definitionVi: item.definitionVi,
+            definitionTh: item.definitionTh,
+            definitionId: item.definitionId,
+            exampleSentence: item.exampleSentence,
+            imageUrl: imgRes.imageUrl || undefined,
+            audioUrl: audioRes.audioUrl || undefined,
+            audioWordUrl: audioRes.audioWordUrl || undefined,
+          })
+
           if (cardRes.success && cardRes.card) {
             successCount++
             newLocalCards.push({
               ...cardRes.card,
+              audioWordUrl: (cardRes.card as any).audioWordUrl || null,
               topic: {
                 id: createRes.topic.id,
                 name: topicForm.name,
