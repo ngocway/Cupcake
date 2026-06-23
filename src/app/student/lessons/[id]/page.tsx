@@ -224,7 +224,7 @@ async function LessonAssignmentBannerWrapper({ lessonId }: { lessonId: string })
 
   return (
       <div className="p-6 md:p-10 bg-slate-900 dark:bg-primary text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden group border border-white/10 mt-32 animate-in fade-in duration-500">
-         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-4">
                <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
@@ -232,7 +232,7 @@ async function LessonAssignmentBannerWrapper({ lessonId }: { lessonId: string })
                   </div>
                   <p className="text-white/60 text-[10px] font-black uppercase tracking-[0.2em]">{t("relatedAssignment")}</p>
                </div>
-               <h3 className="text-2xl font-black tracking-tight uppercase italic">{assignment.title}</h3>
+               <h3 className="text-xl md:text-2xl font-black tracking-tight uppercase italic">{assignment.title}</h3>
                <div className="flex items-center gap-6 text-xs font-bold">
                   <span>{t("questionsCount", { count: assignment._count?.questions || 0 })}</span>
                   <span>{t("autoGrading")}</span>
@@ -240,7 +240,7 @@ async function LessonAssignmentBannerWrapper({ lessonId }: { lessonId: string })
             </div>
             <Link 
                href={`/student/assignments/${assignment.slug || assignment.id}/run?direct=true`}
-               className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
+               className="w-full md:w-auto inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-slate-900 rounded-full font-black text-xs tracking-[0.2em] uppercase hover:bg-slate-100 transition-all hover:scale-105 active:scale-95 shrink-0"
             >
                {t("startAssignment")}
                <ArrowRight className="w-5 h-5" />
@@ -304,7 +304,7 @@ export default async function StudentLessonDetailPage({
                {/* Back Button */}
                <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/50 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
                   <ChevronLeft className="w-4 h-4" />
-                  Back
+                  <span>Back</span>
                </BackButton>
                {/* Video Player (Facade Optimization) */}
                <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-3xl" />}>
@@ -321,7 +321,7 @@ export default async function StudentLessonDetailPage({
                      <Suspense fallback={<div className="h-8 flex justify-end"><div className="w-24 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-full" /></div>}>
                         <LessonActionsWrapper lessonId={lesson.id} />
                      </Suspense>
-                     <h2 className="text-2xl md:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
+                     <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-on-surface tracking-tight leading-tight uppercase font-headline">
                         {lesson.title}
                      </h2>
                      <Suspense fallback={<div className="flex gap-2 mt-4"><div className="w-16 h-6 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-full" /></div>}>

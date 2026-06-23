@@ -26,7 +26,7 @@ export function MainContentWrapper({
     )
   )
 
-  console.log('MainContentWrapper', { pathname, isLearningRoute, isTeacher });
+
 
   const noSidebar = isLearningRoute || isTeacher
 

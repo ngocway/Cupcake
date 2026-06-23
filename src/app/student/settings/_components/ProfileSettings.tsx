@@ -13,9 +13,12 @@ export function ProfileSettings({ user }: { user: any }) {
 
     const handleSave = async () => {
         setLoading(true)
-        const res = await updateStudentProfile({ name })
+        const trimmedName = name.trim()
+        const res = await updateStudentProfile({ name: trimmedName })
         setLoading(false)
         if (res.success) {
+            // Reset to the saved trimmed value to prevent merge bug
+            setName(trimmedName)
             alert("Profile information updated successfully!")
         } else {
             alert(res.error || "An error occurred")
@@ -23,7 +26,7 @@ export function ProfileSettings({ user }: { user: any }) {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-28 md:pb-8">
             <div className="flex flex-col md:flex-row items-center gap-8">
                 <div className="relative group">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-200 dark:border-slate-700 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -87,11 +90,12 @@ export function ProfileSettings({ user }: { user: any }) {
                 </div>
             </div>
 
-            <div className="flex justify-end">
+            {/* Sticky Save Button: floats above bottom nav on mobile */}
+            <div className="fixed bottom-[60px] left-0 right-0 md:static md:bottom-auto flex justify-end px-4 md:px-0 py-3 md:py-0 bg-white/90 md:bg-transparent backdrop-blur-md md:backdrop-blur-none border-t border-slate-100 md:border-none z-40">
                 <Button 
                     onClick={handleSave} 
                     disabled={loading}
-                    className="bg-primary hover:bg-primary/90 text-white px-8 h-12 rounded-full font-bold uppercase tracking-widest text-xs transition-all hover:shadow-lg hover:shadow-primary/20 active:scale-95"
+                    className="w-full md:w-auto bg-primary hover:bg-primary/90 text-white px-8 h-12 rounded-full font-bold uppercase tracking-widest text-xs transition-all hover:shadow-lg hover:shadow-primary/20 active:scale-95"
                 >
                     {loading ? "Saving..." : "Save Changes"}
                 </Button>

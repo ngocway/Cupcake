@@ -356,12 +356,25 @@ export default function LessonsPageContent(props: Props) {
         </div>
       )}
 
-      {/* Results Grid with Virtual Scrolling */}
+      {/* Results Grid — simple render on mobile, virtual scroll on desktop */}
       {!isLoading && filteredLessons.length > 0 ? (
         <>
+          {/* Mobile: simple grid (no virtual scroll to avoid layout bugs) */}
+          <div className="grid grid-cols-1 gap-6 md:hidden">
+            {filteredLessons.map((lesson) => (
+              <LessonCard
+                key={lesson.id}
+                lesson={lesson}
+                onToast={showToast}
+                onBadgeClick={handleBadgeClick}
+              />
+            ))}
+          </div>
+
+          {/* Desktop: virtual scroll for performance */}
           <div 
             ref={parentRef}
-            className="overflow-auto"
+            className="overflow-auto hidden md:block"
             style={{ maxHeight: "80vh" }}
           >
             <div

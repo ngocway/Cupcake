@@ -83,7 +83,8 @@ export function SubjectSelector({ subjects }: Props) {
       <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-3">
         Subject
       </h2>
-      <div className="flex flex-wrap gap-2">
+      {/* Use flex wrap for desktop, overflow-x scroll on mobile */}
+      <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap sm:overflow-visible sm:pb-0">
         {subjects.map((subject) => {
           const isActive = studySubject === subject.id;
           const style = getStyle(subject.id);
@@ -93,7 +94,7 @@ export function SubjectSelector({ subjects }: Props) {
               key={subject.id}
               onClick={() => handleSelect(subject.id)}
               disabled={isPending}
-              className={`group flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wide border-2 transition-all duration-300 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+              className={`group flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wide border-2 transition-all duration-300 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                 isActive
                   ? `${style.activeBg} ${style.activeBorder} ${style.activeText} shadow-md scale-[1.05]`
                   : `${style.bg} ${style.border} ${style.text} hover:scale-105 hover:shadow-md opacity-80 hover:opacity-100`

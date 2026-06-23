@@ -10,8 +10,8 @@ export default async function SettingsPage() {
     if (!session?.user) redirect("/student/login")
 
     return (
-        <div className="max-w-5xl mx-auto py-8">
-            <header className="mb-10">
+        <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 pb-32 md:pb-8">
+        <header className="mb-8 md:mb-10">
                 <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight font-headline">{t("title")}</h1>
                 <p className="text-slate-500 dark:text-slate-400 mt-2">{t("subtitle")}</p>
             </header>

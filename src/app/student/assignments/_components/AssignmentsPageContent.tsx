@@ -288,12 +288,24 @@ export default function AssignmentsPageContent(props: Props) {
         </div>
       )}
 
-      {/* Result Grid with Virtual Scrolling */}
+      {/* Result Grid — simple render on mobile, virtual scroll on desktop */}
       {!isLoading && filteredAssignments.length > 0 ? (
         <>
+          {/* Mobile: simple grid (no virtual scroll) */}
+          <div className="grid grid-cols-1 gap-6 md:hidden">
+            {filteredAssignments.map((a) => (
+              <AssignmentCard
+                key={a.id}
+                assignment={a}
+                source={initialSource}
+              />
+            ))}
+          </div>
+
+          {/* Desktop: virtual scroll */}
           <div 
             ref={parentRef}
-            className="overflow-auto"
+            className="overflow-auto hidden md:block"
             style={{ maxHeight: "80vh" }}
           >
             <div

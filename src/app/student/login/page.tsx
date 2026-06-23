@@ -65,9 +65,10 @@ export default function LoginPage() {
       <div className="w-full md:w-1/2 bg-background flex flex-col justify-center px-6 py-12 md:px-24 relative overflow-y-auto">
         
         {/* Mobile Header */}
-        <div className="md:hidden absolute top-6 left-6 z-20">
-          <Link href="/" className="flex items-center gap-2 p-2 bg-white/50 backdrop-blur-sm rounded-full text-sm font-bold text-on-surface">
-            <ArrowLeft className="w-5 h-5" />
+        <div className="md:hidden absolute top-6 left-4 z-20">
+          <Link href="/" className="flex items-center gap-1.5 px-3 py-2 bg-white/50 backdrop-blur-sm rounded-full text-xs font-bold text-on-surface">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Home</span>
           </Link>
         </div>
 

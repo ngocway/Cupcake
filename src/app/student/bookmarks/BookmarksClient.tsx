@@ -32,11 +32,11 @@ export default function BookmarksClient({
 
   return (
     <div className="space-y-8">
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-3 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl w-full sm:w-fit">
+      {/* Tabs — full width on mobile with proper tap targets */}
+      <div className="flex gap-2 p-1.5 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl w-full">
         <button
           onClick={() => setActiveTab('lessons')}
-          className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+          className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 min-h-[44px] ${
             activeTab === 'lessons'
               ? 'bg-white/80 dark:bg-slate-700/80 shadow-md text-primary dark:text-blue-400'
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -47,7 +47,7 @@ export default function BookmarksClient({
         </button>
         <button
           onClick={() => setActiveTab('assignments')}
-          className={`px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+          className={`flex-1 sm:flex-none px-4 sm:px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 min-h-[44px] ${
             activeTab === 'assignments'
               ? 'bg-white/80 dark:bg-slate-700/80 shadow-md text-primary dark:text-blue-400'
               : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
@@ -67,11 +67,13 @@ export default function BookmarksClient({
               href={`/student/lessons/${lesson.id}`}
               className="group bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
-              <div className="aspect-video relative overflow-hidden">
+              {/* Limit thumbnail height to max 200px on mobile */}
+              <div className="max-h-48 md:aspect-video relative overflow-hidden">
                 <img 
                   src={lesson.thumbnail || "/placeholder-lesson.jpg"} 
                   alt={lesson.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  style={{ minHeight: '160px' }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>

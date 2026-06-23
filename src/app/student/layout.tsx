@@ -7,8 +7,8 @@ import { SideNavWrapper } from "@/app/student/_components/SideNavWrapper"
 import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper"
 import { SideNavItem } from "@/app/student/_components/SideNavItem"
 import { SmartHeader } from "@/components/student/SmartHeader"
+import { BottomNav } from "@/app/student/_components/BottomNav"
 import { getTranslations } from "next-intl/server"
-import { LayoutDashboard, BookOpen, ClipboardList, Users, TrendingUp } from "lucide-react"
 import prisma from "@/lib/prisma"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -75,8 +75,6 @@ export default async function StudentLayout({ children }: { children: React.Reac
           </div>
         </a>
       )}
-      {/* TopNavBar */}
-      {/* TopNavBar removed as per user request to hide header on non-homepage routes */}
  
       {/* SideNavBar - Controlled by Wrapper */}
       <SideNavWrapper isTeacher={isTeacher}>
@@ -123,29 +121,16 @@ export default async function StudentLayout({ children }: { children: React.Reac
         {children}
       </MainContentWrapper>
  
-      {/* BottomNavBar (Mobile Only) */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center py-4 md:hidden z-50">
-        <Link className="flex flex-col items-center gap-1 text-primary" href="/student/dashboard">
-          <LayoutDashboard className="w-6 h-6 stroke-[2.5px]" />
-          <span className="text-[10px] font-label font-bold">{t("dash")}</span>
-        </Link>
-        <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/lessons">
-          <BookOpen className="w-6 h-6 stroke-2" />
-          <span className="text-[10px] font-label font-bold">{t("lessons")}</span>
-        </Link>
-        <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/assignments">
-          <ClipboardList className="w-6 h-6 stroke-2" />
-          <span className="text-[10px] font-label font-bold">{t("work")}</span>
-        </Link>
-        <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/classes">
-          <Users className="w-6 h-6 stroke-2" />
-          <span className="text-[10px] font-label font-bold">{t("class")}</span>
-        </Link>
-        <Link className="flex flex-col items-center gap-1 text-slate-400" href="/student/growth">
-          <TrendingUp className="w-6 h-6 stroke-2" />
-          <span className="text-[10px] font-label font-bold">{t("growth")}</span>
-        </Link>
-      </nav>
+      {/* BottomNavBar (Mobile Only) — client component handles auth/game page detection */}
+      <BottomNav
+        labels={{
+          dash: t("dash"),
+          lessons: t("lessons"),
+          work: t("work"),
+          class: t("class"),
+          growth: t("growth"),
+        }}
+      />
  
     </div>
   )

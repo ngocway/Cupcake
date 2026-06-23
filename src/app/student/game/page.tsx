@@ -152,7 +152,7 @@ export default function GameHubPage() {
   const games = GAMES_DATA[selectedCategoryId] || [];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-16 md:pt-8 pb-12 font-body relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-20 md:pt-8 pb-24 md:pb-12 font-body relative">
       {/* Back Button (Moved to top left) */}
       <Link 
         href="/"
@@ -172,7 +172,7 @@ export default function GameHubPage() {
               <Layers className="w-4.5 h-4.5 text-primary" />
               <span>Step 1: Select Age Category</span>
             </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 [&>*:last-child:nth-child(odd)]:col-span-2 [&>*:last-child:nth-child(odd)]:md:col-span-1">
               {GAME_CATEGORIES.map((cat) => {
                 const isActive = selectedCategoryId === cat.id;
 

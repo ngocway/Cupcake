@@ -106,10 +106,11 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
 
       <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl p-1.5">
+          {/* Tabs — scrollable on mobile with proper tap targets */}
+          <div className="flex items-center gap-2 bg-slate-100/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl p-1.5 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+              className={`flex-shrink-0 px-4 sm:px-5 py-3 rounded-xl font-bold text-sm transition-all min-h-[44px] ${
                 activeTab === "all"
                    ? "bg-white/80 dark:bg-slate-700/80 shadow-sm text-slate-900 dark:text-white"
                    : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -119,7 +120,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
             </button>
             <button
               onClick={() => setActiveTab("lesson")}
-              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-4 sm:px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 min-h-[44px] ${
                 activeTab === "lesson"
                   ? "bg-white/80 dark:bg-slate-700/80 shadow-sm text-slate-900 dark:text-white"
                   : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -130,7 +131,7 @@ export function MyReviewsClient({ initialLessonReviews, initialAssignmentReviews
             </button>
             <button
               onClick={() => setActiveTab("assignment")}
-              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+              className={`flex-shrink-0 px-4 sm:px-5 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 min-h-[44px] ${
                 activeTab === "assignment"
                   ? "bg-white/80 dark:bg-slate-700/80 shadow-sm text-slate-900 dark:text-white"
                   : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
