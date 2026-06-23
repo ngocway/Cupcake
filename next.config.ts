@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
     },
     proxyClientMaxBodySize: '100mb',
   },
+  outputFileTracingExcludes: {
+    '*': [
+      './node_modules/@swc/core-linux-x64-gnu/**/*',
+      './node_modules/@swc/core-linux-x64-musl/**/*',
+      './node_modules/@esbuild/linux-x64/**/*',
+      './node_modules/typescript/**/*',
+      './node_modules/postcss/**/*',
+      './node_modules/tailwindcss/**/*',
+      './scratch/**/*',
+      './.git/**/*',
+    ],
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

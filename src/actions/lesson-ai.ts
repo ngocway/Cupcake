@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { invalidateMaterialCache } from "@/lib/cached-queries";
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { randomUUID } from 'crypto';
 import { generateUniqueSlug } from '@/lib/slugify';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -35,7 +36,7 @@ export interface AILessonResponse {
 }
 
 function logProgress(msg: string) {
-  const logDir = path.join(process.cwd(), 'scratch');
+  const logDir = path.join(os.tmpdir(), 'scratch');
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
   const logFile = path.join(logDir, 'ai_gen_progress.log');
   fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
@@ -1042,7 +1043,7 @@ const progressCache = new Map<string, { status: string; percent: number }>();
 function setGenProgress(userId: string, status: string, percent: number) {
   progressCache.set(userId, { status, percent });
   try {
-    const logDir = path.join(process.cwd(), 'scratch');
+    const logDir = path.join(os.tmpdir(), 'scratch');
     if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
     const progressFile = path.join(logDir, `progress-${userId}.json`);
     fs.writeFileSync(progressFile, JSON.stringify({ status, percent }));
@@ -1061,7 +1062,7 @@ export async function getGenProgress() {
   }
   
   try {
-    const progressFile = path.join(process.cwd(), 'scratch', `progress-${userId}.json`);
+    const progressFile = path.join(os.tmpdir(), 'scratch', `progress-${userId}.json`);
     if (fs.existsSync(progressFile)) {
       const content = fs.readFileSync(progressFile, 'utf-8');
       return JSON.parse(content);
