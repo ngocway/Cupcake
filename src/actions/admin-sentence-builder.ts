@@ -80,6 +80,7 @@ export async function createSentenceBuilderQuestion(data: {
   expected: string[]
   pool: string[]
   audio?: string
+  audioRate?: number
   orderIndex?: number
 }) {
   try {
@@ -104,6 +105,7 @@ export async function createSentenceBuilderQuestion(data: {
         expected: data.expected,
         pool: data.pool,
         audio: safeAudio,
+        audioRate: data.audioRate ?? 0.85,
         orderIndex: data.orderIndex || 0,
       },
     })
@@ -123,6 +125,7 @@ export async function updateSentenceBuilderQuestion(
     expected?: string[]
     pool?: string[]
     audio?: string
+    audioRate?: number
     orderIndex?: number
   }
 ) {
@@ -168,6 +171,21 @@ export async function moveSentenceBuilderQuestion(id: string, targetGameId: stri
     return { success: true, question }
   } catch (error: any) {
     console.error("Failed to move question:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// BULK MOVE QUESTIONS
+export async function bulkMoveSentenceBuilderQuestions(ids: string[], targetGameId: string) {
+  try {
+    const result = await prisma.sentenceBuilderQuestion.updateMany({
+      where: { id: { in: ids } },
+      data: { gameId: targetGameId },
+    })
+    revalidatePath("/admin/games/sentence-builder")
+    return { success: true, count: result.count }
+  } catch (error: any) {
+    console.error("Failed to bulk move questions:", error)
     return { success: false, error: error.message }
   }
 }

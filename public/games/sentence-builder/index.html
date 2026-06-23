@@ -586,6 +586,7 @@
             if (textSpan) textSpan.textContent = 'Loading...';
 
             hintAudio = new Audio(qData.audio);
+            hintAudio.playbackRate = qData.audioRate ?? 0.85;
 
             const onPlay = () => {
                 if (loadingTimeout) {
@@ -708,6 +709,7 @@
             if (qData.audio) {
                 setTimeout(() => {
                     const autoAudio = new Audio(qData.audio);
+                    autoAudio.playbackRate = qData.audioRate ?? 0.85;
                     autoAudio.play().catch(() => {
                         // Browser blocked autoplay — user can still click Hint manually
                     });
@@ -778,6 +780,7 @@
                 }
 
                 const sentenceAudio = new Audio(qData.audio);
+                sentenceAudio.playbackRate = qData.audioRate ?? 0.85;
 
                 // ✅ Normal: go next 600ms after audio ends
                 sentenceAudio.onended = () => setTimeout(goNext, 600);

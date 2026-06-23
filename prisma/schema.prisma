@@ -680,6 +680,7 @@ model SentenceBuilderQuestion {
   expected   String[]
   pool       String[]
   audio      String?
+  audioRate  Float?              @default(0.85)
   orderIndex Int                 @default(0)
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt

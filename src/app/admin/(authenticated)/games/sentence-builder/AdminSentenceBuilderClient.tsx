@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react"
 import { toast } from "sonner"
-import { Plus, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, ArrowRightLeft, MessageSquare, Pencil, Check } from "lucide-react"
+import { Plus, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, ArrowRightLeft, MessageSquare, Pencil, Check, Volume2, VolumeX } from "lucide-react"
 import { searchImagesAction } from "@/actions/image-search-actions"
 import { uploadUrlMedia } from "@/actions/upload-actions"
 import { useRouter } from "next/navigation"
@@ -13,6 +13,7 @@ import {
   updateSentenceBuilderQuestion,
   deleteSentenceBuilderQuestion,
   moveSentenceBuilderQuestion,
+  bulkMoveSentenceBuilderQuestions,
   updateSentenceBuilderGame
 } from "@/actions/admin-sentence-builder"
 
@@ -60,9 +61,37 @@ export function AdminSentenceBuilderClient({
   const [questionToMove, setQuestionToMove] = useState<{id: string, name: string} | null>(null)
   const [targetGameId, setTargetGameId] = useState<string>("")
 
+  // Bulk selection state
+  const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(new Set())
+  const [showBulkMoveModal, setShowBulkMoveModal] = useState(false)
+  const [bulkTargetGameId, setBulkTargetGameId] = useState<string>("")
+
+  // Audio preview state
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
+  const audioRef = { current: null as HTMLAudioElement | null }
+
+  const playCardAudio = (e: React.MouseEvent, questionId: string, audioUrl: string, rate: number = 0.85) => {
+    e.stopPropagation()
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current = null
+    }
+    if (playingAudioId === questionId) {
+      setPlayingAudioId(null)
+      return
+    }
+    const audio = new Audio(audioUrl)
+    audioRef.current = audio
+    audio.playbackRate = rate
+    audio.play().catch(() => {})
+    audio.onended = () => setPlayingAudioId(null)
+    audio.onerror = () => setPlayingAudioId(null)
+    setPlayingAudioId(questionId)
+  }
+
   const [showQuestionModal, setShowQuestionModal] = useState(false)
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
-  const [questionForm, setQuestionForm] = useState({ expected: "", pool: "", imageUrl: "", audioUrl: "" })
+  const [questionForm, setQuestionForm] = useState({ expected: "", pool: "", imageUrl: "", audioUrl: "", audioRate: 0.85 })
 
   // Image Search State
   const [isSearchingImage, setIsSearchingImage] = useState(false)
@@ -135,6 +164,41 @@ export function AdminSentenceBuilderClient({
     })
   }
 
+  const handleBulkMove = () => {
+    if (selectedQuestions.size === 0) return toast.error("Chưa chọn câu hỏi nào")
+    if (!bulkTargetGameId) return toast.error("Vui lòng chọn Game đích")
+    if (bulkTargetGameId === selectedGameId) return toast.error("Game đích trùng với Game hiện tại")
+
+    startTransition(async () => {
+      const res = await bulkMoveSentenceBuilderQuestions(Array.from(selectedQuestions), bulkTargetGameId)
+      if (res.success) {
+        toast.success(`Đã chuyển ${res.count} câu hỏi`)
+        setShowBulkMoveModal(false)
+        setSelectedQuestions(new Set())
+        setBulkTargetGameId("")
+        router.refresh()
+      } else {
+        toast.error("Lỗi: " + res.error)
+      }
+    })
+  }
+
+  const toggleSelectQuestion = (id: string) => {
+    setSelectedQuestions(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAll = () => {
+    const allIds = selectedGame?.questions?.map((q: any) => q.id) || []
+    setSelectedQuestions(new Set(allIds))
+  }
+
+  const deselectAll = () => setSelectedQuestions(new Set())
+
   // --- Question Actions ---
   const handleSaveQuestion = () => {
     if (!questionForm.expected) return toast.error("Vui lòng nhập câu đúng (expected)")
@@ -149,7 +213,8 @@ export function AdminSentenceBuilderClient({
           expected: expectedArray,
           pool: poolArray,
           image: questionForm.imageUrl,
-          audio: questionForm.audioUrl
+          audio: questionForm.audioUrl,
+          audioRate: questionForm.audioRate
         })
       } else {
         if (!selectedGameId) {
@@ -161,7 +226,8 @@ export function AdminSentenceBuilderClient({
           expected: expectedArray,
           pool: poolArray,
           image: questionForm.imageUrl,
-          audio: questionForm.audioUrl
+          audio: questionForm.audioUrl,
+          audioRate: questionForm.audioRate
         })
       }
 
@@ -340,7 +406,7 @@ export function AdminSentenceBuilderClient({
 
             {selectedGame && (
               <button 
-                onClick={() => { setSelectedQuestionId(null); setShowQuestionModal(true); setQuestionForm({ expected: "", pool: "", imageUrl: "", audioUrl: "" }) }} 
+                onClick={() => { setSelectedQuestionId(null); setShowQuestionModal(true); setQuestionForm({ expected: "", pool: "", imageUrl: "", audioUrl: "", audioRate: 0.85 }) }} 
                 className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
               >
                 <Plus className="w-5 h-5" /> Thêm Câu Hỏi
@@ -362,17 +428,46 @@ export function AdminSentenceBuilderClient({
                     <div 
                       key={q.id} 
                       onClick={() => {
+                        // Don't open edit modal if clicking when in selection mode
+                        if (selectedQuestions.size > 0) {
+                          toggleSelectQuestion(q.id)
+                          return
+                        }
                         setSelectedQuestionId(q.id);
                         setQuestionForm({ 
                           expected: q.expected.join(" "), 
                           pool: q.pool.join(" "), 
                           imageUrl: q.image || "", 
-                          audioUrl: q.audio || "" 
+                          audioUrl: q.audio || "",
+                          audioRate: q.audioRate ?? 0.85
                         });
                         setShowQuestionModal(true);
                       }}
-                      className="bg-neutral-800 cursor-pointer rounded-xl overflow-hidden flex flex-col relative group border border-neutral-700 hover:border-blue-500 transition-colors"
+                      className={`bg-neutral-800 cursor-pointer rounded-xl overflow-hidden flex flex-col relative group border transition-colors ${
+                        selectedQuestions.has(q.id)
+                          ? "border-orange-500 ring-2 ring-orange-500/40"
+                          : "border-neutral-700 hover:border-blue-500"
+                      }`}
                     >
+                      {/* Checkbox top-left */}
+                      <div
+                        onClick={e => { e.stopPropagation(); toggleSelectQuestion(q.id) }}
+                        className="absolute top-2 left-2 z-10"
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                          selectedQuestions.has(q.id)
+                            ? "bg-orange-500 border-orange-500"
+                            : "bg-black/40 border-white/40 opacity-0 group-hover:opacity-100"
+                        }`}>
+                          {selectedQuestions.has(q.id) && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action buttons top-right */}
                       <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={(e) => {
@@ -404,7 +499,33 @@ export function AdminSentenceBuilderClient({
                         )}
                       </div>
                       <div className="p-4 flex-1 flex flex-col">
-                        <p className="font-bold text-white text-sm line-clamp-2 mb-2">{q.expected.join(" ")}</p>
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <p className="font-bold text-white text-sm line-clamp-2 flex-1">{q.expected.join(" ")}</p>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {q.audioRate && q.audioRate !== 0.85 && (
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                q.audioRate <= 0.75 ? "bg-purple-500/20 text-purple-400" : "bg-blue-500/20 text-blue-400"
+                              }`}>
+                                {q.audioRate}x
+                              </span>
+                            )}
+                            {q.audio && (
+                              <button
+                                onClick={e => playCardAudio(e, q.id, q.audio, q.audioRate ?? 0.85)}
+                                title={playingAudioId === q.id ? "Dừng" : "Nghe audio"}
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
+                                  playingAudioId === q.id
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-neutral-700 hover:bg-blue-500/30 text-neutral-400 hover:text-blue-400"
+                                }`}
+                              >
+                                {playingAudioId === q.id
+                                  ? <VolumeX className="w-3.5 h-3.5" />
+                                  : <Volume2 className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex flex-wrap gap-1 mt-auto">
                           {q.pool.map((word: string, i: number) => (
                             <span key={i} className="text-[10px] bg-neutral-700 text-neutral-300 px-1.5 py-0.5 rounded">{word}</span>
@@ -424,6 +545,39 @@ export function AdminSentenceBuilderClient({
           )}
         </div>
       </div>
+
+      {/* FLOATING BULK ACTION BAR */}
+      {selectedQuestions.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-neutral-900 border border-orange-500/50 shadow-2xl shadow-orange-500/10 rounded-2xl px-5 py-3 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-2 text-orange-400 font-black text-sm">
+            <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-black">
+              {selectedQuestions.size}
+            </div>
+            câu đã chọn
+          </div>
+          <div className="w-px h-5 bg-neutral-700" />
+          <button
+            onClick={selectAll}
+            className="text-xs font-bold text-neutral-400 hover:text-white transition-colors"
+          >
+            Chọn tất cả
+          </button>
+          <button
+            onClick={deselectAll}
+            className="text-xs font-bold text-neutral-400 hover:text-white transition-colors"
+          >
+            Bỏ chọn
+          </button>
+          <div className="w-px h-5 bg-neutral-700" />
+          <button
+            onClick={() => { setBulkTargetGameId(""); setShowBulkMoveModal(true) }}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-sm transition-colors"
+          >
+            <ArrowRightLeft className="w-4 h-4" />
+            Chuyển {selectedQuestions.size} câu
+          </button>
+        </div>
+      )}
 
       {/* MODALS */}
       {showGameModal && (
@@ -460,9 +614,34 @@ export function AdminSentenceBuilderClient({
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 appearance-none"
                 >
                   <option value="" disabled>-- Chọn Game --</option>
-                  {initialGames.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
+                  {initialGames2to5.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="🧒 Tuổi 2-5">
+                      {initialGames2to5.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {initialGames6to12.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="👦 Tuổi 6-12">
+                      {initialGames6to12.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {initialGamesTeen.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="🧑 Teenagers">
+                      {initialGamesTeen.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {initialGamesReaders.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="📚 Advanced Readers">
+                      {initialGamesReaders.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <div className="flex justify-end gap-3 mt-6">
@@ -506,6 +685,33 @@ export function AdminSentenceBuilderClient({
                 <input value={questionForm.audioUrl} onChange={e => setQuestionForm(p => ({...p, audioUrl: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500" placeholder="/games/sentence-builder/audio/l1_q1.wav" />
               </div>
 
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-2">🔊 Tốc độ đọc</label>
+                <div className="flex gap-2">
+                  {[
+                    { value: 0.75, label: "0.75x", desc: "Rất chậm", color: "purple" },
+                    { value: 0.85, label: "0.85x", desc: "Chậm", color: "blue" },
+                    { value: 1.00, label: "1.00x", desc: "Bình thường", color: "green" },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setQuestionForm(p => ({ ...p, audioRate: opt.value }))}
+                      className={`flex-1 py-2.5 px-3 rounded-xl border-2 text-center transition-all ${
+                        questionForm.audioRate === opt.value
+                          ? opt.color === "purple" ? "border-purple-500 bg-purple-500/10 text-purple-300"
+                          : opt.color === "green" ? "border-green-500 bg-green-500/10 text-green-300"
+                          : "border-blue-500 bg-blue-500/10 text-blue-300"
+                          : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-500"
+                      }`}
+                    >
+                      <div className="font-black text-sm">{opt.label}</div>
+                      <div className="text-[10px] mt-0.5 opacity-70">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-neutral-800">
                 <button onClick={() => setShowQuestionModal(false)} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium">Hủy</button>
                 <button onClick={handleSaveQuestion} disabled={isPending || isUploadingImage} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold">
@@ -545,6 +751,73 @@ export function AdminSentenceBuilderClient({
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK MOVE MODAL */}
+      {showBulkMoveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-1">Chuyển hàng loạt</h3>
+            <p className="text-neutral-400 text-sm mb-4">
+              Chuyển <span className="font-bold text-orange-400">{selectedQuestions.size} câu hỏi</span> sang Game khác.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Game Đích</label>
+                <select
+                  value={bulkTargetGameId}
+                  onChange={e => setBulkTargetGameId(e.target.value)}
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500 appearance-none"
+                >
+                  <option value="" disabled>-- Chọn Game --</option>
+                  {initialGames2to5.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="🧒 Tuổi 2-5">
+                      {initialGames2to5.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {initialGames6to12.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="👦 Tuổi 6-12">
+                      {initialGames6to12.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {initialGamesTeen.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="🧑 Teenagers">
+                      {initialGamesTeen.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {initialGamesReaders.filter((g: any) => g.id !== selectedGameId).length > 0 && (
+                    <optgroup label="📚 Advanced Readers">
+                      {initialGamesReaders.filter((g: any) => g.id !== selectedGameId).map((g: any) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900">{g.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => { setShowBulkMoveModal(false); setBulkTargetGameId("") }}
+                  className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleBulkMove}
+                  disabled={isPending || !bulkTargetGameId}
+                  className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-xl font-bold transition-colors"
+                >
+                  {isPending ? "Đang chuyển..." : `Xác nhận chuyển ${selectedQuestions.size} câu`}
+                </button>
+              </div>
             </div>
           </div>
         </div>
