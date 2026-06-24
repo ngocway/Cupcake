@@ -101,6 +101,13 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               >
                 {t("game")}
               </Link>
+              <Link 
+                className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+                href="/student/game/robot-chat"
+              >
+                <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+                <span>{t("chatWithDolbot")}</span>
+              </Link>
             </>
           )}
         </div>

@@ -235,7 +235,7 @@ export function AdminSentenceBuilderClient({
         toast.success(selectedQuestionId ? "Đã cập nhật câu hỏi" : "Đã thêm câu hỏi")
         setShowQuestionModal(false)
         setSelectedQuestionId(null)
-        setQuestionForm({ expected: "", pool: "", imageUrl: "", audioUrl: "" })
+        setQuestionForm({ expected: "", pool: "", imageUrl: "", audioUrl: "", audioRate: 0.85 })
         router.refresh()
       } else {
         toast.error("Lỗi: " + res.error)

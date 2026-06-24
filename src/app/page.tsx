@@ -101,6 +101,16 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
       comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=2-5",
+      gradient: "from-pink-300 to-rose-500",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
     }
   ]);
 

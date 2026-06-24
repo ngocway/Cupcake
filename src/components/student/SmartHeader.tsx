@@ -57,22 +57,21 @@ export function SmartHeader({ session }: SmartHeaderProps) {
       
       {/* Header */}
       <header 
-        className={`fixed top-0 left-0 right-0 z-50 flex justify-center transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+        className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-[1440px] transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
           shouldHide 
-            ? '-translate-y-full opacity-0 pointer-events-none' 
+            ? '-translate-y-40 opacity-0 pointer-events-none' 
             : 'translate-y-0 opacity-100'
         }`}
       >
-        <div className="w-[95%] max-w-[1440px] pt-6">
-          <nav className="glass rounded-[32px] shadow-2xl flex justify-between items-center px-6 md:px-10 py-4">
+        <nav className="bg-white/70 backdrop-blur-xl border border-primary/10 rounded-full shadow-2xl flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4">
             <div className="flex items-center gap-10">
-              <Link href="/" className="flex items-center gap-3 group">
-                <div className="w-12 h-12 bg-primary text-on-primary rounded-[18px] flex items-center justify-center font-black group-hover:rotate-12 transition-all duration-500 shadow-xl shadow-primary/30">
-                  <span className="material-symbols-outlined text-[28px]">auto_stories</span>
+              <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 bg-primary text-on-primary rounded-full flex items-center justify-center font-black group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-primary/20 shrink-0">
+                  <span className="material-symbols-outlined text-[20px] sm:text-[28px] animate-leaf-sway">eco</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-black text-2xl tracking-tighter text-primary leading-none">Scholar Script</span>
-                  <span className="text-tiny font-black text-on-surface-variant tracking-[0.3em] uppercase opacity-60">The Fluid Academy</span>
+                  <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Cupcakes</span>
+                  <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
                 </div>
               </Link>
               <div className="hidden lg:flex gap-8 items-center">
@@ -84,16 +83,23 @@ export function SmartHeader({ session }: SmartHeaderProps) {
                 )) && (
                   <>
                     <Link 
-                      className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/flashcards') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
+                      className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
                       href="/flashcards"
                     >
                       {t("flashcards")}
                     </Link>
                     <Link 
-                      className={`text-small font-black uppercase tracking-widest transition-all duration-300 ${isActive('/student/game') ? 'text-primary border-b-2 border-primary pb-1' : 'text-primary/80 hover:text-primary'}`} 
+                      className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
                       href="/student/game"
                     >
                       {t("game")}
+                    </Link>
+                    <Link 
+                      className="px-4 py-2 rounded-full font-black uppercase tracking-widest text-small text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+                      href="/student/game/robot-chat"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">smart_toy</span>
+                      <span>{t("chatWithDolbot")}</span>
                     </Link>
                   </>
                 )}
@@ -222,7 +228,6 @@ export function SmartHeader({ session }: SmartHeaderProps) {
               )}
             </div>
           </nav>
-        </div>
       </header>
     </>
   )

@@ -94,6 +94,8 @@ export function AdminFlashcardsClient({
     imageUrl: "",
     audioUrl: "",
     audioWordUrl: "",
+    quizQuestion: "",
+    quizAudioUrl: "",
     definition: "",
     definitionVi: "",
     definitionTh: "",
@@ -499,6 +501,8 @@ export function AdminFlashcardsClient({
         imageUrl: card.imageUrl || "",
         audioUrl: card.audioUrl || "",
         audioWordUrl: card.audioWordUrl || "",
+        quizQuestion: (card as any).quizQuestion || "",
+        quizAudioUrl: (card as any).quizAudioUrl || "",
         definition: card.definition || "",
         definitionVi: card.definitionVi || "",
         definitionTh: card.definitionTh || "",
@@ -518,6 +522,8 @@ export function AdminFlashcardsClient({
         imageUrl: "",
         audioUrl: "",
         audioWordUrl: "",
+        quizQuestion: "",
+        quizAudioUrl: "",
         definition: "",
         definitionVi: "",
         definitionTh: "",
@@ -561,7 +567,9 @@ export function AdminFlashcardsClient({
           definitionVi: cardForm.definitionVi,
           definitionTh: cardForm.definitionTh,
           definitionId: cardForm.definitionId,
-          exampleSentence: cardForm.exampleSentence
+          exampleSentence: cardForm.exampleSentence,
+          quizQuestion: cardForm.quizQuestion,
+          quizAudioUrl: cardForm.quizAudioUrl
         })
 
         if (res.success && res.card) {
@@ -591,7 +599,9 @@ export function AdminFlashcardsClient({
           definitionVi: cardForm.definitionVi,
           definitionTh: cardForm.definitionTh,
           definitionId: cardForm.definitionId,
-          exampleSentence: cardForm.exampleSentence
+          exampleSentence: cardForm.exampleSentence,
+          quizQuestion: cardForm.quizQuestion,
+          quizAudioUrl: cardForm.quizAudioUrl
         })
 
         if (res.success && res.card) {
@@ -853,6 +863,17 @@ export function AdminFlashcardsClient({
     }
   }
 
+  const handlePlayQuizAudio = (e: React.MouseEvent, card: any) => {
+    e.stopPropagation()
+    if (typeof window !== "undefined") {
+      if (card.quizAudioUrl && card.quizAudioUrl.trim()) {
+        new Audio(card.quizAudioUrl).play().catch(() => playSpeechSynthesis(card.quizQuestion))
+      } else {
+        playSpeechSynthesis(card.quizQuestion)
+      }
+    }
+  }
+
   const playSpeechSynthesis = (text: string) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel()
@@ -1042,6 +1063,23 @@ export function AdminFlashcardsClient({
                           <p className="text-xs font-black text-emerald-400 leading-tight">
                             Nghĩa: {card.definitionVi}
                           </p>
+                        )}
+
+                        {/* Quiz Question */}
+                        {card.quizQuestion && (
+                          <div className="flex items-center gap-1.5 text-xs text-neutral-300 font-bold leading-tight mt-0.5 flex-wrap">
+                            <span className="text-violet-400 font-black">Q:</span>
+                            <span className="italic">{card.quizQuestion}</span>
+                            {card.quizAudioUrl && (
+                              <button 
+                                onClick={(e) => handlePlayQuizAudio(e, card)}
+                                className="p-0.5 rounded bg-violet-950/60 hover:bg-violet-900/80 text-violet-400 hover:text-white border border-violet-500/20 transition-colors"
+                                title="Nghe câu hỏi trắc nghiệm (ElevenLabs)"
+                              >
+                                <Volume2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         )}
 
                         {/* Example sentence */}
@@ -1546,6 +1584,30 @@ export function AdminFlashcardsClient({
                   placeholder="e.g. The strong wind blew the colorful kite high up."
                   className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl outline-none text-white focus:border-blue-500 text-sm font-semibold resize-none"
                 />
+              </div>
+
+              {/* Quiz Question & Audio */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-neutral-800/50">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Câu hỏi trắc nghiệm (Quiz Question)</label>
+                  <input
+                    type="text"
+                    value={cardForm.quizQuestion}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, quizQuestion: e.target.value }))}
+                    placeholder="e.g. Who has orange stripes?"
+                    className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl outline-none text-white focus:border-blue-500 text-sm font-semibold"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">URL âm thanh câu hỏi (Quiz Audio URL)</label>
+                  <input
+                    type="text"
+                    value={cardForm.quizAudioUrl}
+                    onChange={(e) => setCardForm(prev => ({ ...prev, quizAudioUrl: e.target.value }))}
+                    placeholder="Đường dẫn âm thanh câu hỏi..."
+                    className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-xl outline-none text-white focus:border-blue-500 text-sm font-semibold"
+                  />
+                </div>
               </div>
 
               {/* Actions row */}

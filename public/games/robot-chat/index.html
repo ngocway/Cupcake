@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Robot Chat — English Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0f0c1a; --card: #1a1630; --card2: #231e3d; --border: #312c55;
+    --accent: #7c5cfc; --accent2: #a78bfa; --teal: #22d3ee; --green: #4ade80;
+    --yellow: #fbbf24; --red: #f87171; --text: #e8e3ff; --muted: #8b83b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .star { position: absolute; border-radius: 50%; background: white; animation: twinkle var(--d) ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{opacity:.1} 50%{opacity:.7} }
+
+  .screen { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  .screen.hidden { display: none; }
+
+  /* ── WELCOME ── */
+  .welcome-title { font-size: clamp(2rem,5vw,3.2rem); font-weight:900; text-align:center; margin-bottom:8px;
+    background: linear-gradient(135deg,var(--accent2),var(--teal)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .welcome-sub { color:var(--muted); text-align:center; font-size:1.1rem; margin-bottom:40px; }
+  .section-label { font-size:.8rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+  .level-grid { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:36px; }
+  .level-btn { padding:10px 22px; border-radius:100px; border:2px solid var(--border); background:var(--card2);
+    color:var(--text); font-family:inherit; font-size:.95rem; font-weight:700; cursor:pointer; transition:all .2s; }
+  .level-btn:hover { border-color:var(--accent2); transform:translateY(-2px); }
+  .level-btn.active { border-color:var(--accent); background:var(--accent); color:white; box-shadow:0 0 20px var(--accent)55; }
+  .topic-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; max-width:700px; width:100%; }
+  .topic-card { background:var(--card); border:2px solid var(--border); border-radius:20px; padding:20px 12px;
+    text-align:center; cursor:pointer; transition:all .25s; }
+  .topic-card:hover { border-color:var(--accent2); transform:translateY(-3px); box-shadow:0 8px 24px #7c5cfc33; }
+  .topic-card .icon { font-size:2.4rem; margin-bottom:8px; }
+  .topic-card .name { font-size:.9rem; font-weight:800; }
+
+  /* ── GAME LAYOUT ── */
+  .game-wrap { width:100%; max-width:580px; display:flex; flex-direction:column; align-items:center; }
+  .game-header { width:100%; display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .game-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .badge { padding:5px 14px; border-radius:100px; font-size:.8rem; font-weight:800; letter-spacing:.05em; }
+  .badge-topic { background:#7c5cfc22; border:1.5px solid var(--accent); color:var(--accent2); }
+  .badge-level { background:#22d3ee22; border:1.5px solid var(--teal); color:var(--teal); }
+  .btn-new { padding:7px 16px; border-radius:100px; border:1.5px solid var(--border); background:transparent;
+    color:var(--muted); font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; transition:all .2s; }
+  .btn-new:hover { border-color:var(--red); color:var(--red); }
+
+  /* ── ROBOT ── */
+  .robot-wrap { position:relative; width:110px; height:110px; margin-bottom:24px; }
+  #robotSvg { width:100%; height:100%; filter:drop-shadow(0 0 20px #7c5cfc66); }
+  .robot-ring { position:absolute; inset:-14px; border-radius:50%; border:2px solid transparent;
+    background:linear-gradient(var(--bg),var(--bg)) padding-box, linear-gradient(135deg,var(--accent),var(--teal)) border-box;
+    animation:ringPulse 2.5s ease-in-out infinite; }
+  @keyframes ringPulse { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:.8;transform:scale(1.04)} }
+
+  /* Robot state animations */
+  .robot-idle #robotBody { animation:bodyBounce 2.5s ease-in-out infinite; transform-origin:center bottom; }
+  @keyframes bodyBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  .robot-idle #eyeL,.robot-idle #eyeR { animation:blink 3.5s ease-in-out infinite; transform-origin:center; }
+  @keyframes blink { 0%,93%,100%{transform:scaleY(1)} 95%{transform:scaleY(.05)} }
+  .robot-speaking #robotBody { animation:speakBounce .4s ease-in-out infinite alternate; transform-origin:center bottom; }
+  @keyframes speakBounce { from{transform:translateY(0)} to{transform:translateY(-4px)} }
+  .robot-speaking #mouth { animation:mouthTalk .22s ease-in-out infinite alternate; transform-origin:center; }
+  @keyframes mouthTalk { from{transform:scaleY(.15)} to{transform:scaleY(1)} }
+  .robot-speaking .robot-ring { animation:ringPulse .55s ease-in-out infinite; }
+  .robot-thinking #eyeL,.robot-thinking #eyeR { animation:thinkEye 1s ease-in-out infinite; }
+  @keyframes thinkEye { 0%,100%{transform:translateX(0)} 50%{transform:translateX(3px)} }
+  .robot-thinking #antenna-ball { animation:antBlink .5s ease-in-out infinite alternate; }
+  @keyframes antBlink { from{fill:#7c5cfc} to{fill:#22d3ee} }
+
+  /* ── CHAT AREA ── */
+  .chat-area { width:100%; display:flex; flex-direction:column; gap:10px; margin-bottom:16px; min-height:80px; }
+
+  /* Robot bubble */
+  .robot-bubble { background:var(--card); border:2px solid var(--border); border-radius:18px 18px 18px 4px;
+    padding:14px 18px; font-size:1.1rem; font-weight:700; line-height:1.5;
+    animation:bubblePop .3s cubic-bezier(.17,.67,.35,1.3); align-self:flex-start; max-width:90%; }
+  @keyframes bubblePop { from{opacity:0;transform:scale(.9) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .typing-dots span { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--accent2);
+    margin:0 3px; animation:dot 1.2s ease-in-out infinite; }
+  .typing-dots span:nth-child(2){animation-delay:.2s} .typing-dots span:nth-child(3){animation-delay:.4s}
+  @keyframes dot { 0%,80%,100%{transform:scale(.6);opacity:.4} 40%{transform:scale(1);opacity:1} }
+
+  /* Student bubble */
+  .student-bubble { background:#1a3a2a; border:2px solid #4ade8066; border-radius:18px 18px 4px 18px;
+    padding:12px 18px; font-size:1rem; font-weight:700; line-height:1.5; color:#86efac;
+    align-self:flex-end; max-width:90%; animation:bubblePop .25s ease; }
+  .student-bubble .label { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:#4ade8088; margin-bottom:3px; }
+
+  /* ── HINT CHIPS ── */
+  .hint-section { width:100%; margin-bottom:14px; }
+  .hint-label { font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; text-align:center; }
+  .hint-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .hint-chip { padding:7px 16px; border-radius:100px; border:1.5px dashed var(--accent); background:#7c5cfc0d;
+    color:var(--accent2); font-family:inherit; font-size:.9rem; font-weight:700;
+    animation:chipIn .3s cubic-bezier(.17,.67,.35,1.3) both; pointer-events:none; opacity:.85; }
+  @keyframes chipIn { from{opacity:0;transform:scale(.8)} to{opacity:.85;transform:scale(1)} }
+  .hint-chips.loading .hint-chip { animation:shimmer 1.4s infinite; background:var(--card2); border-color:var(--border); color:var(--muted); }
+  @keyframes shimmer { 0%,100%{opacity:.3} 50%{opacity:.7} }
+
+  /* ── MIC / DONE ── */
+  .mic-section { display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:12px; }
+
+  /* Mic icon (small, decorative when listening) */
+  .mic-icon { width:44px; height:44px; border-radius:50%; background:var(--card2); border:2px solid var(--border);
+    display:flex; align-items:center; justify-content:center; }
+  .mic-icon svg { width:20px; height:20px; fill:var(--muted); }
+  .mic-icon.active { background:#f8717122; border-color:var(--red); animation:micPulse .8s ease-in-out infinite; }
+  .mic-icon.active svg { fill:var(--red); }
+  @keyframes micPulse { 0%{box-shadow:0 0 0 0 #f8717166} 70%{box-shadow:0 0 0 16px #f8717100} 100%{box-shadow:0 0 0 0 #f8717100} }
+
+  /* Done button */
+  .done-btn { padding:14px 52px; border-radius:100px; border:none; background:var(--green); color:#0a1f12;
+    font-family:inherit; font-size:1.15rem; font-weight:900; cursor:pointer; transition:all .2s;
+    animation:donePop .3s cubic-bezier(.17,.67,.35,1.3); letter-spacing:.03em; }
+  .done-btn:hover { transform:scale(1.06); box-shadow:0 8px 28px #4ade8055; }
+  @keyframes donePop { from{opacity:0;transform:scale(.75)} to{opacity:1;transform:scale(1)} }
+  .done-btn.hidden { display:none; }
+
+  /* live transcript */
+  .live-text-wrap { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 24px; max-width: 500px; margin: 0 auto; }
+  .live-text { font-size:1rem; font-weight:700; color:var(--teal); font-style:italic; padding:0 4px; text-align: center; }
+  .btn-clear-text { background: transparent; border: none; color: var(--red); opacity: 0.7; cursor: pointer; display: none; align-items: center; justify-content: center; padding: 4px; border-radius: 50%; transition: all 0.25s; vertical-align: middle; }
+  .btn-clear-text:hover { opacity: 1; background: rgba(248, 113, 113, 0.15); transform: rotate(-45deg); }
+  .btn-clear-text svg { display: block; }
+
+  .mic-status { font-size:.85rem; font-weight:800; color:var(--muted); transition:color .2s; min-height:20px; }
+  .mic-status.listening { color:var(--red); }
+  .mic-status.processing { color:var(--yellow); }
+
+  /* Turn info */
+  .turn-info { font-size:.75rem; color:var(--muted); font-weight:700; margin-top:4px; }
+
+  /* Toast */
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a1630;
+    border:1.5px solid var(--red); color:var(--red); padding:10px 20px; border-radius:12px;
+    font-size:.9rem; font-weight:700; z-index:999; animation:toastIn .3s ease; }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+  /* no-speech banner */
+  .nospeech-banner { background:#231e3d; border:1.5px solid var(--yellow); border-radius:14px;
+    padding:12px 16px; font-size:.85rem; color:var(--yellow); font-weight:700; text-align:center;
+    margin-bottom:12px; display:none; }
+
+  @media(max-width:480px){ .robot-wrap{width:90px;height:90px; margin-bottom:16px;} .robot-bubble{font-size:1rem} }
+
+  /* Switch Toggle Styles */
+  .toggle-translate { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .toggle-translate input { display: none; }
+  .toggle-slider { position: relative; width: 34px; height: 18px; background: var(--border); border-radius: 100px; transition: all 0.3s; }
+  .toggle-slider::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--muted); border-radius: 50%; transition: all 0.3s; }
+  .toggle-translate input:checked + .toggle-slider { background: var(--green); }
+  .toggle-translate input:checked + .toggle-slider::after { left: 18px; background: #0a1f12; }
+  .toggle-text { font-size: 0.72rem; font-weight: 800; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; transition: color 0.3s; }
+  .toggle-translate input:checked ~ .toggle-text { color: var(--text); }
+
+  /* Speed Select Styles */
+  .speed-select { background: var(--card2); border: 1.5px solid var(--border); color: var(--text); font-family: inherit; font-size: 0.72rem; font-weight: 800; padding: 4px 10px; border-radius: 100px; cursor: pointer; outline: none; transition: all 0.25s; text-transform: uppercase; letter-spacing: 0.05em; }
+  .speed-select:hover { border-color: var(--accent2); }
+  .speed-select option { background: var(--bg); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<!-- ══ WELCOME ══ -->
+<div class="screen" id="screenWelcome">
+  <div style="max-width:700px;width:100%">
+    <div class="welcome-title">Chat with ROBO 🤖</div>
+    <div class="welcome-sub">Choose your level and a topic — then <b>speak</b> your answers!</div>
+
+    <div class="section-label" style="text-align:center">Your Level</div>
+    <div class="level-grid" id="levelGrid">
+      <button class="level-btn" data-level="kindergarten">🧒 Kindergarten</button>
+      <button class="level-btn" data-level="kid">👦 Kid</button>
+      <button class="level-btn" data-level="teen">🧑 Teen</button>
+      <button class="level-btn" data-level="learner">📖 Learner A2</button>
+    </div>
+
+    <div class="section-label" style="text-align:center">Choose a Topic</div>
+    <div class="topic-grid">
+      <div class="topic-card" data-topic="Animals">  <div class="icon">🐾</div><div class="name">Animals</div></div>
+      <div class="topic-card" data-topic="Food">     <div class="icon">🍎</div><div class="name">Food</div></div>
+      <div class="topic-card" data-topic="Colors">   <div class="icon">🎨</div><div class="name">Colors</div></div>
+      <div class="topic-card" data-topic="Family">   <div class="icon">👨‍👩‍👧</div><div class="name">Family</div></div>
+      <div class="topic-card" data-topic="School">   <div class="icon">🏫</div><div class="name">School</div></div>
+      <div class="topic-card" data-topic="Sports">   <div class="icon">⚽</div><div class="name">Sports</div></div>
+      <div class="topic-card" data-topic="Nature">   <div class="icon">🌿</div><div class="name">Nature</div></div>
+      <div class="topic-card" data-topic="Daily Life"><div class="icon">🌅</div><div class="name">Daily Life</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GAME ══ -->
+<div class="screen hidden" id="screenGame">
+  <div class="game-wrap">
+
+    <!-- Header -->
+    <div class="game-header">
+      <div class="game-meta">
+        <span class="badge badge-topic" id="badgeTopic"></span>
+        <span class="badge badge-level" id="badgeLevel"></span>
+      </div>
+      <div style="display: flex; gap: 16px; align-items: center;">
+        <label class="toggle-translate" id="toggleTranslateLabel">
+          <input type="checkbox" id="toggleTranslate">
+          <span class="toggle-slider"></span>
+          <span class="toggle-text" id="toggleTranslateText">Dịch câu hỏi</span>
+        </label>
+        
+        <div class="speed-control">
+          <select id="speedSelect" class="speed-select" title="Speech Speed">
+            <option value="0.75">🐢 0.75x</option>
+            <option value="0.85">🤖 0.85x</option>
+            <option value="0.95">⚡ 0.95x</option>
+          </select>
+        </div>
+
+        <button class="btn-new" id="btnNew">✕ New Topic</button>
+      </div>
+    </div>
+
+    <!-- Robot avatar -->
+    <div class="robot-wrap">
+      <div class="robot-ring"></div>
+      <svg id="robotSvg" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g id="robotBody">
+          <rect x="96" y="4" width="8" height="28" rx="4" fill="#5b4db3"/>
+          <circle id="antenna-ball" cx="100" cy="4" r="8" fill="#7c5cfc"/>
+          <rect x="30" y="32" width="140" height="100" rx="28" fill="#231e3d" stroke="#4c4280" stroke-width="2.5"/>
+          <rect x="44" y="48" width="112" height="70" rx="16" fill="#0f0c1a" stroke="#312c55" stroke-width="1.5"/>
+          <g id="eyeL"><circle cx="74" cy="78" r="14" fill="#7c5cfc" opacity=".15"/><circle cx="74" cy="78" r="9" fill="#22d3ee"/><circle cx="77" cy="75" r="3" fill="white"/></g>
+          <g id="eyeR"><circle cx="126" cy="78" r="14" fill="#7c5cfc" opacity=".15"/><circle cx="126" cy="78" r="9" fill="#22d3ee"/><circle cx="129" cy="75" r="3" fill="white"/></g>
+          <g id="mouth"><rect x="76" y="100" width="48" height="10" rx="5" fill="#7c5cfc" opacity=".8"/></g>
+          <circle cx="30" cy="82" r="8" fill="#312c55" stroke="#4c4280" stroke-width="1.5"/>
+          <circle cx="170" cy="82" r="8" fill="#312c55" stroke="#4c4280" stroke-width="1.5"/>
+          <rect x="50" y="140" width="100" height="70" rx="20" fill="#1a1630" stroke="#312c55" stroke-width="2"/>
+          <circle cx="100" cy="165" r="10" fill="#7c5cfc" opacity=".6"/><circle cx="100" cy="165" r="6" fill="#a78bfa"/>
+          <rect x="65" y="185" width="20" height="8" rx="4" fill="#312c55"/>
+          <rect x="115" y="185" width="20" height="8" rx="4" fill="#312c55"/>
+          <rect x="14" y="145" width="28" height="50" rx="14" fill="#231e3d" stroke="#312c55" stroke-width="1.5"/>
+          <rect x="158" y="145" width="28" height="50" rx="14" fill="#231e3d" stroke="#312c55" stroke-width="1.5"/>
+          <circle cx="28" cy="200" r="10" fill="#312c55"/>
+          <circle cx="172" cy="200" r="10" fill="#312c55"/>
+        </g>
+      </svg>
+    </div>
+
+    <!-- Chat: robot bubble + student bubble -->
+    <div class="chat-area" id="chatArea">
+      <div class="robot-bubble" id="robotBubble">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- No speech API banner -->
+    <div class="nospeech-banner" id="nospeechBanner">
+      ⚠️ Your browser doesn't support speech recognition. Please use Chrome or Edge.
+    </div>
+
+    <!-- Hint keywords (visual only, not clickable) -->
+    <div class="hint-section" id="hintSection" style="display:none">
+      <div class="hint-label">💡 Hint — try saying one of these words:</div>
+      <div class="hint-chips loading" id="hintChips">
+        <div class="hint-chip">···</div>
+        <div class="hint-chip">···</div>
+        <div class="hint-chip">···</div>
+        <div class="hint-chip">···</div>
+      </div>
+    </div>
+
+    <!-- Mic indicator + Done button -->
+    <div class="mic-section">
+      <div class="live-text-wrap">
+        <div class="live-text" id="liveText"></div>
+        <button class="btn-clear-text" id="btnClearText" title="Clear and speak again">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+          </svg>
+        </button>
+      </div>
+      <div class="mic-icon" id="micIcon">
+        <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 18.93V21H9v2h6v-2h-2v-1.07A7 7 0 0 0 19 13h-2a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93z"/></svg>
+      </div>
+      <button class="done-btn hidden" id="doneBtn">✓ Done</button>
+      <div class="mic-status" id="micStatus">Listening to ROBO...</div>
+    </div>
+
+    <div class="turn-info" id="turnInfo">Turn 0</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════ CONFIG ═══════════════════
+const ELEVEN_VOICE = 'EXAVITQu4vr4xnSDxMaL';
+
+// Warm up voices
+if (window.speechSynthesis) { speechSynthesis.getVoices(); }
+
+// ═══════════════════ STARS ════════════════════
+(()=>{ const c=document.getElementById('stars'); for(let i=0;i<120;i++){const s=document.createElement('div'),sz=Math.random()*2.5+.5;s.className='star';s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;animation-delay:${Math.random()*5}s`;c.appendChild(s);}})();
+
+// ═══════════════════ STATE ════════════════════
+let selectedLevel = null;
+let initialSpeed = localStorage.getItem('cupcakes_speech_speed');
+if (initialSpeed !== '0.75' && initialSpeed !== '0.85' && initialSpeed !== '0.95') {
+  initialSpeed = '0.75';
+}
+let state = { topic:'', level:'', history:[], turn:0, phase:'idle', isClearing: false, showTranslation: false, currentTranslation: '', speechSpeed: parseFloat(initialSpeed) };
+// phase: idle | robot-speaking | listening | processing
+
+const LEVEL_CONFIG = {
+  kindergarten: { label:'🧒 Kindergarten', words:'3-5',  vocab:'extremely simple words (colors, animals, yes/no)', style:'very short simple sentences' },
+  kid:          { label:'👦 Kid',          words:'5-8',  vocab:'everyday simple words',                           style:'simple present tense' },
+  teen:         { label:'🧑 Teen',         words:'8-12', vocab:'varied vocabulary',                               style:'mix of tenses' },
+  learner:      { label:'📖 Learner A2',   words:'6-10', vocab:'A2 CEFR vocabulary',                             style:'simple past and future' },
+};
+
+// ═══════════════════ WELCOME EVENTS ═══════════════════
+document.querySelectorAll('.level-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.level-btn').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); selectedLevel=b.dataset.level;
+}));
+document.querySelectorAll('.topic-card').forEach(c=>c.addEventListener('click',()=>{
+  if(!selectedLevel){showToast('Choose your level first! 👆');return;}
+  startGame(selectedLevel,c.dataset.topic);
+}));
+document.getElementById('btnNew').addEventListener('click',()=>{ stopAudio(); stopListening(); showScreen('welcome'); });
+
+// ═══════════════════ GAME START ═══════════════════
+function startGame(level,topic){
+  const isChecked = document.getElementById('toggleTranslate')?.checked || false;
+  
+  // Set default speed based on level if no custom preference is saved in localStorage
+  let speedVal = localStorage.getItem('cupcakes_speech_speed');
+  if (speedVal !== '0.75' && speedVal !== '0.85' && speedVal !== '0.95') {
+    speedVal = null;
+  }
+  if (!speedVal) {
+    speedVal = '0.75';
+  }
+  
+  const selectEl = document.getElementById('speedSelect');
+  if (selectEl) {
+    selectEl.value = speedVal;
+  }
+  
+  state={topic,level,history:[],turn:0,phase:'idle',isClearing:false,showTranslation:isChecked,currentTranslation:'',speechSpeed:parseFloat(speedVal),keywords:[]};
+  document.getElementById('badgeTopic').textContent=topicIcon(topic)+' '+topic;
+  document.getElementById('badgeLevel').textContent=LEVEL_CONFIG[level].label;
+  document.getElementById('chatArea').innerHTML='';
+  document.getElementById('hintSection').style.display='none';
+  showScreen('game');
+  setRobotState('thinking');
+  setMicStatus('loading','Generating question...');
+  robotTurn(null);
+}
+
+// ═══════════════════ MAIN LOOP ════════════════════
+async function robotTurn(studentSpeech){
+  state.turn++;
+  state.phase='processing';
+  document.getElementById('turnInfo').textContent=`Turn ${state.turn}`;
+  setMicBtn(false);
+  showTyping();
+  setRobotState('thinking');
+  document.getElementById('hintSection').style.display='none';
+
+  try {
+    const {robotSays,translatedSays,keywords} = await callOpenAI(studentSpeech);
+    if(studentSpeech) state.history.push({role:'user',text:studentSpeech});
+    state.history.push({role:'robot',text:robotSays});
+    if(state.history.length>14) state.history=state.history.slice(-14);
+
+    state.currentTranslation = translatedSays || '';
+    state.keywords = keywords || [];
+    showRobotBubble(robotSays, state.currentTranslation);
+    // Keep robot in thinking state while loading/decoding TTS audio
+    setMicStatus('loading', 'ROBO is thinking...');
+    showHintChips([],true);
+
+    await speakText(robotSays, () => {
+      // Callback triggers when audio starts playing
+      setRobotState('speaking');
+      state.phase='robot-speaking';
+      setMicStatus('loading','ROBO is talking...');
+    });
+    setRobotState('idle');
+
+    showHintChips(keywords, false);
+    state.phase = 'listening';
+    setMicStatus('listening', '🎤 Your turn — speak your answer!');
+
+    // Mic bật tự động sau khi robot nói xong
+    setTimeout(() => autoStartListening(), 300);
+
+  } catch(err){
+    console.error(err);
+    showRobotBubble('⚠️ '+err.message, null, 'error');
+    setMicStatus('idle','Error — try again');
+    setMicBtn(true);
+    state.phase='idle';
+  }
+}
+
+// ═══════════════════ OPENAI ═══════════════════
+async function callOpenAI(studentSpeech){
+  const urlParams = new URLSearchParams(window.location.search);
+  const nativeLang = urlParams.get('nativeLang') || 'vi';
+  const langNames = { vi: 'Vietnamese', th: 'Thai', id: 'Indonesian', en: 'English' };
+  const targetLangName = langNames[nativeLang] || 'Vietnamese';
+
+  const lc=LEVEL_CONFIG[state.level];
+  const historyMsgs=state.history.map(h=>({role:h.role==='robot'?'assistant':'user',content:h.text}));
+  const userMsg=studentSpeech
+    ? studentSpeech
+    : `[CONVERSATION START] Begin talking about ${state.topic}.`;
+
+  const systemPrompt=`You are ROBO, a friendly English-speaking robot teacher.
+Student level: ${state.level}. Topic: ${state.topic}.
+Rules:
+- Robot sentence: ${lc.words} words MAX, ${lc.vocab}, ${lc.style}
+- FORCE/CRITICAL RULE: Your response (the 'robotSays' text) MUST ALWAYS end with a direct question to the student. The absolute last character of the English text MUST be a question mark (?).
+- NEVER output a response that ends with a period, exclamation mark, or anything other than a question mark.
+- For example: instead of "I love sports too! Tell me about your favorite player.", you MUST ask: "I love sports too! Who is your favorite player?"
+- React briefly to what the student said (1 short sentence), then immediately ask a new question.
+- Be warm, encouraging, fun.
+- Ask ONE question per turn — keep the conversation going naturally.
+- Translate the robot's generated English response (the 'robotSays' text) into ${targetLangName} and put it in the 'translatedSays' field.
+
+CRITICAL about Student Spoken Input:
+- The student's input is recognized by a Speech-to-Text browser engine, which might contain transcription errors (e.g. "banned" instead of "banana", "cold" instead of "gold", "choose" instead of "juice").
+- Auto-correct phonetic or spelling mismatches mentally based on the topic (${state.topic}) and level (${state.level}) context. Respond to the INTENDED meaning of what the student said. Do NOT point out their mistakes or grammar errors.
+
+Respond ONLY with valid JSON:
+{"robotSays":"your reaction + question","translatedSays":"translation in ${targetLangName}","keywords":["hint1","hint2","hint3","hint4"]}
+
+CRITICAL about keywords:
+- They are HINT WORDS to help the student build their spoken answer
+- Example: Robot says "Cool! What animal do you like?" → keywords: ["Dog","Cat","Fish","Bird"]
+- Example: Robot says "Nice! Do you like ice cream?" → keywords: ["Yes I do","No I don't","I love it","Sometimes"]
+- Keywords should be what the STUDENT would say as an answer
+- NEVER repeat words from the robot's question as keywords
+- 1-3 words each, level-appropriate`;
+
+  const res=await fetch('/api/games/robot-chat/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({systemPrompt, historyMsgs, userMsg})
+  });
+  if(!res.ok){
+    const d=await res.json().catch(()=>({}));
+    throw new Error(`OpenAI HTTP ${res.status}: ${d?.error?.message||JSON.stringify(d)}`);
+  }
+  const data=await res.json();
+  const parsed=JSON.parse(data.choices[0].message.content||'{}');
+  return {
+    robotSays: parsed.robotSays || '...',
+    translatedSays: parsed.translatedSays || '',
+    keywords: (parsed.keywords || []).slice(0,4)
+  };
+}
+
+// ═══════════════════ ELEVENLABS TTS ═══════════════════
+let currentAudioSource = null;
+let currentAudioCtx = null;
+
+function stopAudio() {
+  try { if(currentAudioSource) { currentAudioSource.stop(); currentAudioSource=null; } } catch{}
+  try { if(currentAudioCtx) { currentAudioCtx.close(); currentAudioCtx=null; } } catch{}
+}
+
+async function speakText(text, onStart) {
+  stopAudio();
+  
+  // Lựa chọn giọng nói ElevenLabs theo cấp độ
+  let voiceId = ELEVEN_VOICE; // Mặc định Bella (Giọng nữ trẻ trung)
+  if (state.level === 'kindergarten' || state.level === 'kid') {
+    voiceId = 'pFZP5JQG7iQjIQuC4Bku'; // Lily (Giọng nữ ngọt ngào, kể chuyện, giống giọng trẻ em nhất)
+  }
+
+  try {
+    const res = await fetch('/api/games/robot-chat/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voiceId, speed: state.speechSpeed })
+    });
+    if (!res.ok) {
+      if (onStart) onStart();
+      return browserSpeak(text);
+    }
+
+    // Pre-decode toàn bộ buffer → không bị cắt đầu câu
+    const arrayBuffer = await res.arrayBuffer();
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    currentAudioCtx = audioCtx;
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+    if (onStart) onStart();
+
+    return new Promise(resolve => {
+      const source = audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioCtx.destination);
+      source.onended = resolve;
+      currentAudioSource = source;
+      source.start(0); // buffer đã decode xong, phát ngay tức thì
+    });
+  } catch {
+    if (onStart) onStart();
+    return browserSpeak(text);
+  }
+}
+
+function browserSpeak(text) {
+  return new Promise(r => {
+    if (!window.speechSynthesis) return r();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = state.speechSpeed;
+    
+    // Nếu là Kindergarten hoặc Kid, nâng pitch để giả lập giọng trẻ con
+    if (state.level === 'kindergarten' || state.level === 'kid') {
+      u.pitch = 1.45;
+    } else {
+      u.pitch = 1.15;
+    }
+    
+    u.lang = 'en-US';
+    
+    const voices = speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      // Ưu tiên chọn giọng nữ tiếng Anh của Google hoặc Microsoft Zira
+      const preferred = voices.find(v => 
+        v.lang.startsWith('en') && 
+        (v.name.includes('Google US English') || v.name.includes('Zira') || v.name.includes('Hazel') || v.name.includes('Female'))
+      );
+      if (preferred) {
+        u.voice = preferred;
+      }
+    }
+    
+    u.onend = r;
+    u.onerror = r;
+    speechSynthesis.speak(u);
+  });
+}
+
+// ═══════════════════ SPEECH RECOGNITION ═══════════════════
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
+let fullTranscript = '';
+
+if (!SpeechRec) {
+  document.getElementById('nospeechBanner').style.display = 'block';
+}
+
+function initRecognition() {
+  if (!SpeechRec) return null;
+  const r = new SpeechRec();
+  r.lang = 'en-US';
+  r.continuous = true;       // Không tự dừng — học sinh bấm Done để submit
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+
+  // GRAMMAR PRIMING (Cải tiến Phương án 3)
+  const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+  if (SpeechGrammarList) {
+    const list = [];
+    if (state.topic) {
+      list.push(state.topic);
+      state.topic.split(/\s+/).forEach(w => {
+        const clean = w.replace(/[^a-zA-Z]/g, '');
+        if (clean && clean.length > 2 && !list.includes(clean)) list.push(clean);
+      });
+    }
+    if (state.keywords && state.keywords.length > 0) {
+      state.keywords.forEach(kw => {
+        kw.split(/\s+/).forEach(w => {
+          const clean = w.replace(/[^a-zA-Z]/g, '');
+          if (clean && clean.length > 1 && !list.includes(clean)) list.push(clean);
+        });
+      });
+    }
+    const commonWords = ["yes", "no", "like", "love", "don't", "have", "play", "go", "see", "want", "favorite"];
+    commonWords.forEach(w => {
+      if (!list.includes(w)) list.push(w);
+    });
+
+    if (list.length > 0) {
+      try {
+        const grammar = '#JSGF V1.0; grammar cupcakes; public <word> = ' + list.join(' | ') + ' ;';
+        const speechRecognitionList = new SpeechGrammarList();
+        speechRecognitionList.addFromString(grammar, 1);
+        r.grammars = speechRecognitionList;
+      } catch (err) {
+        console.warn('SpeechGrammarList error:', err);
+      }
+    }
+  }
+
+  r.onstart = () => {
+    isListening = true;
+    fullTranscript = '';
+    document.getElementById('liveText').textContent = '';
+    document.getElementById('micIcon').classList.add('active');
+    document.getElementById('doneBtn').classList.remove('hidden');
+    
+    const clearBtn = document.getElementById('btnClearText');
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    setMicStatus('listening', '🔴 Listening... say your answer!');
+  };
+
+  r.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        fullTranscript += e.results[i][0].transcript + ' ';
+      } else {
+        interim = e.results[i][0].transcript;
+      }
+    }
+    const val = (fullTranscript + interim).trim();
+    document.getElementById('liveText').textContent = val;
+    
+    const clearBtn = document.getElementById('btnClearText');
+    if (clearBtn) {
+      clearBtn.style.display = val ? 'inline-flex' : 'none';
+    }
+  };
+
+  r.onend = () => {
+    isListening = false;
+    document.getElementById('micIcon').classList.remove('active');
+    document.getElementById('doneBtn').classList.add('hidden');
+    
+    const clearBtn = document.getElementById('btnClearText');
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    const spoken = fullTranscript.trim() || document.getElementById('liveText').textContent.trim();
+    document.getElementById('liveText').textContent = '';
+
+    if (state.isClearing) {
+      state.isClearing = false;
+      if (state.phase === 'listening') {
+        setMicStatus('listening', '🎤 Ready to listen...');
+        setTimeout(() => autoStartListening(), 200);
+      }
+      return;
+    }
+
+    if (spoken && state.phase === 'listening') {
+      showStudentBubble(spoken);
+      setMicStatus('processing', '⏳ Processing...');
+      state.phase = 'processing';
+      setTimeout(() => robotTurn(spoken), 400);
+    } else if (state.phase === 'listening') {
+      // Nothing heard — restart
+      setMicStatus('listening', '🎤 Nothing heard, try again...');
+      setTimeout(() => autoStartListening(), 800);
+    }
+  };
+
+  r.onerror = (e) => {
+    isListening = false;
+    document.getElementById('micIcon').classList.remove('active');
+    document.getElementById('doneBtn').classList.add('hidden');
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      showToast('Mic error: ' + e.error);
+    }
+    if (state.phase === 'listening') {
+      setMicStatus('listening', '🎤 Ready to listen...');
+    }
+  };
+
+  return r;
+}
+
+function autoStartListening() {
+  if (state.phase !== 'listening') return;
+  recognition = initRecognition();
+  if (!recognition) { showToast('Speech recognition not supported — use Chrome/Edge'); return; }
+  try { recognition.start(); }
+  catch (e) { console.warn('Mic start error:', e.message); }
+}
+
+function stopListening() {
+  if (recognition && isListening) {
+    try { recognition.stop(); } catch {}
+  }
+}
+
+// Done button → submit transcript
+document.getElementById('doneBtn').addEventListener('click', () => {
+  if (!isListening) return;
+  try { recognition.stop(); }  // triggers onend → submits
+  catch (e) { showToast('Error: ' + e.message); }
+});
+
+// Clear/Reset button -> clear transcript and restart listening
+document.getElementById('btnClearText').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!isListening) return;
+  
+  state.isClearing = true;
+  fullTranscript = '';
+  document.getElementById('liveText').textContent = '';
+  
+  const clearBtn = document.getElementById('btnClearText');
+  if (clearBtn) clearBtn.style.display = 'none';
+  
+  stopListening(); // triggers onend which resets isClearing and restarts recognition
+});
+
+// ToggleTranslate change listener
+document.getElementById('toggleTranslate').addEventListener('change', function() {
+  state.showTranslation = this.checked;
+  updateTranslationVisibility();
+});
+
+function updateTranslationVisibility() {
+  const transElements = document.querySelectorAll('.trans-msg');
+  transElements.forEach(el => {
+    el.style.display = state.showTranslation ? 'block' : 'none';
+  });
+}
+
+// Initialize speed from localStorage and register speed change listener
+(() => {
+  let speedVal = localStorage.getItem('cupcakes_speech_speed');
+  if (speedVal !== '0.75' && speedVal !== '0.85' && speedVal !== '0.95') {
+    speedVal = '0.75';
+  }
+  const selectEl = document.getElementById('speedSelect');
+  if (selectEl) {
+    selectEl.value = speedVal;
+    selectEl.addEventListener('change', function() {
+      state.speechSpeed = parseFloat(this.value);
+      localStorage.setItem('cupcakes_speech_speed', this.value);
+    });
+  }
+})();
+
+// ═══════════════════ LOCALIZATION ═══════════════════
+(()=> {
+  const urlParams = new URLSearchParams(window.location.search);
+  const nativeLang = urlParams.get('nativeLang') || 'vi';
+
+  const uiLabels = {
+    vi: { translate: 'Dịch câu hỏi', done: '✓ Xong', newTopic: '✕ Đổi chủ đề' },
+    en: { translate: 'Translate', done: '✓ Done', newTopic: '✕ New Topic' },
+    th: { translate: 'แปลคำถาม', done: '✓ เสร็จ', newTopic: '✕ เปลี่ยนหัวข้อ' },
+    id: { translate: 'Terjemahkan', done: '✓ Selesai', newTopic: '✕ Topik Baru' }
+  };
+  const currentLabels = uiLabels[nativeLang] || uiLabels.vi;
+
+  document.getElementById('toggleTranslateText').textContent = currentLabels.translate;
+  document.getElementById('btnNew').textContent = currentLabels.newTopic;
+  document.getElementById('doneBtn').textContent = currentLabels.done;
+})();
+
+
+// ═══════════════════ UI HELPERS ═══════════════════
+function showScreen(n){
+  document.getElementById('screenWelcome').classList.toggle('hidden',n!=='welcome');
+  document.getElementById('screenGame').classList.toggle('hidden',n!=='game');
+}
+
+function setRobotState(s){
+  const w=document.querySelector('.robot-wrap');
+  w.classList.remove('robot-idle','robot-speaking','robot-thinking');
+  w.classList.add('robot-'+s);
+}
+
+function limitBubbles() {
+  const area = document.getElementById('chatArea');
+  while (area.children.length > 5) {
+    area.removeChild(area.firstChild);
+  }
+}
+
+function showTyping(){
+  const area = document.getElementById('chatArea');
+  const oldTyping = document.getElementById('typingBubble');
+  if (oldTyping) oldTyping.remove();
+
+  const d = document.createElement('div');
+  d.className = 'robot-bubble';
+  d.id = 'typingBubble';
+  d.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  area.appendChild(d);
+  limitBubbles();
+  d.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function showRobotBubble(text, translatedText, type){
+  const area = document.getElementById('chatArea');
+  let b = document.getElementById('typingBubble');
+  
+  if (b) {
+    b.removeAttribute('id');
+  } else {
+    b = document.createElement('div');
+    b.className = 'robot-bubble';
+    area.appendChild(b);
+  }
+
+  if(type==='error') {
+    b.textContent=text; 
+    b.style.color='var(--red)'; 
+  } else {
+    b.style.color='';
+    b.innerHTML = `
+      <div class="eng-msg">${escHtml(text)}</div>
+      <div class="trans-msg" style="font-size:0.85rem; color:var(--muted); font-style:italic; margin-top:6px; display:${state.showTranslation ? 'block' : 'none'};">${escHtml(translatedText || '')}</div>
+    `;
+  }
+  limitBubbles();
+  b.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function showStudentBubble(text){
+  const area=document.getElementById('chatArea');
+  const d=document.createElement('div');
+  d.className='student-bubble';
+  d.innerHTML=`<div class="label">You said</div>${escHtml(text)}`;
+  area.appendChild(d);
+  limitBubbles();
+  d.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function showHintChips(words,loading){
+  const sec=document.getElementById('hintSection');
+  const chips=document.getElementById('hintChips');
+  sec.style.display='block';
+  if(loading){
+    chips.className='hint-chips loading';
+    chips.innerHTML='<div class="hint-chip">···</div>'.repeat(4);
+    return;
+  }
+  chips.className='hint-chips';
+  chips.innerHTML=words.map((w,i)=>`<div class="hint-chip" style="animation-delay:${i*.08}s">${escHtml(w)}</div>`).join('');
+}
+
+function setMicStatus(phase, text) {
+  const el = document.getElementById('micStatus');
+  el.textContent = text;
+  el.className = 'mic-status ' + phase;
+}
+
+function setMicBtn(enabled) {
+  const micIcon = document.getElementById('micIcon');
+  if (micIcon) {
+    if (enabled) {
+      micIcon.style.opacity = '1';
+      micIcon.style.pointerEvents = 'auto';
+    } else {
+      micIcon.style.opacity = '0.5';
+      micIcon.style.pointerEvents = 'none';
+    }
+  }
+}
+
+
+function showToast(msg){
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),3500);
+}
+
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function topicIcon(t){ return {Animals:'🐾',Food:'🍎',Colors:'🎨',Family:'👨‍👩‍👧',School:'🏫',Sports:'⚽',Nature:'🌿','Daily Life':'🌅'}[t]||'💬'; }
+</script>
+</body>
+</html>

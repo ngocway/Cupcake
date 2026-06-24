@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Quiz! ❓</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(45deg, #fef3c7 0%, #fdf2f8 50%, #e0f2fe 100%);
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            touch-action: manipulation;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Container styling */
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Loading Overlay */
+        .loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #ffeaa7 0%, #ff7675 100%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .loader-text {
+            color: white;
+            font-size: 1.8rem;
+            margin-top: 20px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+        }
+
+        @keyframes spin { 
+            100% { transform: rotate(360deg); } 
+        }
+
+        /* Top Progress Bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background-color: #fef3c7; /* bg-amber-100 */
+            border-radius: 9999px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #fbbf24 0%, #f97316 100%); /* from-amber-400 to-orange-500 */
+            border-radius: 9999px;
+            transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Main Question Area (Card) */
+        .question-card {
+            width: 100%;
+            flex-grow: 1;
+            max-height: 380px;
+            background-color: white;
+            border: 8px solid #fcd34d; /* border-amber-300 */
+            border-radius: 48px;
+            box-shadow: 0 24px 50px rgba(251, 191, 36, 0.12);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            box-sizing: border-box;
+            gap: 15px;
+            position: relative;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .question-card.correct-card {
+            border-color: #2ed573;
+            background-color: rgba(46, 213, 115, 0.05);
+            box-shadow: 0 24px 50px rgba(46, 213, 115, 0.15);
+        }
+
+        /* Image Display container */
+        .image-container {
+            width: 200px;
+            height: 200px;
+            border-radius: 32px;
+            border: 4px solid #fef3c7; /* border-amber-100 */
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fffdf5;
+            box-shadow: inset 0 2px 8px rgba(251, 191, 36, 0.05);
+            flex-shrink: 0;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-placeholder {
+            font-size: 4.5rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }        /* Speaker/Voice Button */
+        .audio-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 3px solid white;
+            background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
+            outline: none;
+            flex-shrink: 0;
+        }
+
+        .audio-btn:hover:not(.disabled) {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 15px rgba(108, 92, 231, 0.45);
+        }
+
+        .audio-btn:active:not(.disabled) {
+            transform: translateY(1px) scale(0.95);
+        }
+
+        .audio-btn.playing {
+            background: linear-gradient(135deg, #ff7675 0%, #d63031 100%) !important;
+            box-shadow: 0 6px 15px rgba(214, 48, 49, 0.4) !important;
+            animation: pulse-audio 1s infinite;
+        }
+
+        .audio-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        @keyframes pulse-audio {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.03); }
+        }
+
+        .audio-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 3;
+            fill: none;
+        }
+
+        /* Question & Speaker Inline Wrapper */
+        .question-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Question Text */
+        .question-text {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #2d3436;
+            text-align: center;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        /* Lưới đáp án */
+        .options-grid {
+            width: 100%;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
+        /* Option Button Styles */
+        .option-btn {
+            background: white;
+            border: 4px solid white;
+            border-radius: 9999px;
+            padding: 14px 24px;
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: white;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 70px;
+            outline: none;
+            word-break: normal;
+            white-space: nowrap;
+            text-transform: uppercase;
+            box-sizing: border-box;
+            flex: 1 0 calc(50% - 16px);
+            min-width: 170px;
+        }
+
+        .option-btn.opt-0 {
+            background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%); /* amber-400 to orange-500 */
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+        }
+        .option-btn.opt-0:hover:not(.correct):not(.incorrect):not(.disabled) {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 12px 24px rgba(249, 115, 22, 0.45);
+        }
+
+        .option-btn.opt-1 {
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%); /* emerald-400 to teal-600 */
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.3);
+        }
+        .option-btn.opt-1:hover:not(.correct):not(.incorrect):not(.disabled) {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 12px 24px rgba(5, 150, 105, 0.45);
+        }
+
+        .option-btn.opt-2 {
+            background: linear-gradient(135deg, #818cf8 0%, #4f46e5 100%); /* indigo-400 to violet-600 */
+            box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+        }
+        .option-btn.opt-2:hover:not(.correct):not(.incorrect):not(.disabled) {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 12px 24px rgba(79, 70, 229, 0.45);
+        }
+
+        .option-btn.opt-3 {
+            background: linear-gradient(135deg, #f472b6 0%, #e11d48 100%); /* pink-400 to rose-600 */
+            box-shadow: 0 8px 20px rgba(225, 29, 72, 0.3);
+        }
+        .option-btn.opt-3:hover:not(.correct):not(.incorrect):not(.disabled) {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 12px 24px rgba(225, 29, 72, 0.45);
+        }
+
+        .option-btn:active:not(.correct):not(.incorrect):not(.disabled) {
+            transform: translateY(2px) scale(0.98);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .option-btn.correct {
+            background-color: #2ed573 !important;
+            color: white !important;
+            border-color: white !important;
+            box-shadow: 0 8px 20px rgba(46, 213, 115, 0.4) !important;
+            transform: scale(1.05) !important;
+            animation: bounce-correct 0.5s ease;
+        }
+
+        .option-btn.incorrect {
+            background-color: #ff4757 !important;
+            color: white !important;
+            border-color: white !important;
+            box-shadow: 0 8px 20px rgba(255, 71, 87, 0.4) !important;
+            animation: shake 0.4s;
+            cursor: not-allowed;
+        }
+
+        @keyframes bounce-correct {
+            0%, 100% { transform: scale(1.02); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        /* Confetti Styles */
+        .confetti {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            pointer-events: none;
+            animation: fall linear forwards;
+            z-index: 9999;
+            border-radius: 2px;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+
+        /* Completion Overlay */
+        .completion-overlay {
+            position: absolute;
+            inset: 0;
+            background: white;
+            z-index: 500;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            box-sizing: border-box;
+            text-align: center;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .completion-emoji {
+            font-size: 6rem;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .completion-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #00b894;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .completion-subtitle {
+            font-size: 1.3rem;
+            color: #64748b;
+            margin: 0 0 35px 0;
+            max-width: 450px;
+            line-height: 1.5;
+        }
+
+        .back-btn {
+            background-color: #6c5ce7;
+            border: none;
+            border-radius: 24px;
+            padding: 16px 40px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #5f27cd;
+            transition: all 0.2s ease;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #5f27cd;
+        }
+
+        .back-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #5f27cd;
+        }
+
+        /* Mobile View Adjustment */
+        @media (max-width: 600px) {
+            .question-text { font-size: 1.4rem; }
+            .image-container { width: 130px; height: 130px; }
+            .option-btn { font-size: 1.05rem; padding: 8px 18px; min-height: 55px; border-radius: 16px; border-width: 3px; box-shadow: 0 4px 0 currentColor; flex: 1 0 calc(50% - 8px); min-width: 130px; }
+            .option-btn:hover:not(.correct):not(.incorrect):not(.disabled) { transform: none; box-shadow: 0 4px 0 currentColor; }
+            .question-card { border-radius: 28px; padding: 16px; max-height: 300px; }
+            .options-grid { gap: 8px; flex-wrap: wrap !important; }
+            .completion-title { font-size: 2rem; }
+            .completion-subtitle { font-size: 1.1rem; }
+            .back-btn { font-size: 1.1rem; padding: 12px 30px; }
+        }
+
+        /* Floating background circles */
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(40px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bg-circle-1 {
+            top: 20%;
+            left: 10%;
+            width: 250px;
+            height: 250px;
+            background-color: rgba(253, 230, 138, 0.6); /* amber-200/60 */
+            animation: pulse-circle 8s infinite alternate ease-in-out;
+        }
+
+        .bg-circle-2 {
+            bottom: 20%;
+            right: 10%;
+            width: 300px;
+            height: 300px;
+            background-color: rgba(254, 205, 211, 0.5); /* rose-200/50 */
+            animation: pulse-circle 10s infinite alternate-reverse ease-in-out;
+        }
+
+        @keyframes pulse-circle {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.5; }
+            50% { transform: scale(1.1) translate(20px, -20px); opacity: 0.8; }
+            100% { transform: scale(0.9) translate(-10px, 10px); opacity: 0.6; }
+        }
+
+        /* Start Screen Overlay */
+        .start-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #fef3c7 0%, #fdf2f8 50%, #e0f2fe 100%);
+            z-index: 900;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .start-emoji {
+            font-size: 6.5rem;
+            margin-bottom: 20px;
+            animation: bounce-slow 2s infinite;
+        }
+
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(5deg); }
+        }
+
+        .start-title {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ff7675;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0px white, 4px 4px 0px rgba(255, 118, 117, 0.1);
+        }
+
+        .start-subtitle {
+            font-size: 1.4rem;
+            color: #6c5ce7;
+            font-weight: 700;
+            margin: 0 0 35px 0;
+            max-width: 480px;
+            line-height: 1.5;
+            background-color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.08);
+            border: 2px solid #eee9ff;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #fbbf24 0%, #f97316 100%); /* orange gradient matching flashcard */
+            border: 4px solid white;
+            border-radius: 9999px;
+            padding: 18px 50px;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(249, 115, 22, 0.35);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            outline: none;
+            text-transform: uppercase;
+            animation: pulse-start 2s infinite;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 14px 30px rgba(249, 115, 22, 0.5);
+        }
+
+        .start-btn:active {
+            transform: translateY(2px) scale(0.98);
+            box-shadow: 0 6px 15px rgba(249, 115, 22, 0.3);
+        }
+
+        @keyframes pulse-start {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating background circles -->
+    <div class="bg-circle bg-circle-1"></div>
+    <div class="bg-circle bg-circle-2"></div>
+
+    <div class="game-container">
+        <!-- Loader Screen -->
+        <div class="loader-overlay" id="loader">
+            <div class="spinner"></div>
+            <div class="loader-text">Loading Questions...</div>
+        </div>
+
+        <!-- Start Screen Overlay -->
+        <div class="start-overlay" id="startScreen" style="display: none;">
+            <div class="start-emoji">🎮</div>
+            <h1 class="start-title">Flashcard Quiz</h1>
+            <p class="start-subtitle" id="startSubtitle">Are you ready to test your vocabulary?</p>
+            <button class="start-btn" id="startBtn" onclick="startGame()">Play ➔</button>
+        </div>
+
+        <!-- Top Progress Bar -->
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+
+        <!-- Card Section -->
+        <div class="question-card" id="card">
+            <!-- Image Area -->
+            <div class="image-container">
+                <img id="cardImage" src="" style="display:none;" alt="Question illustration">
+                <div class="image-placeholder" id="placeholder">❓</div>
+            </div>
+
+            <!-- Question & Speaker inline wrapper -->
+            <div class="question-wrapper">
+                <h2 class="question-text" id="questionText">Ready to start?</h2>
+                <button class="audio-btn" id="audioBtn" onclick="playVoice()">
+                    <span id="speakerIcon">
+                        <svg viewBox="0 0 24 24" stroke="currentColor"><path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Options grid -->
+        <div class="options-grid" id="optionsGrid">
+            <button class="option-btn">Option 1</button>
+            <button class="option-btn">Option 2</button>
+            <button class="option-btn">Option 3</button>
+            <button class="option-btn">Option 4</button>
+        </div>
+
+        <!-- Completed Screen Overlay -->
+        <div class="completion-overlay" id="completionScreen" style="display: none;">
+            <div class="completion-emoji">🎉</div>
+            <h2 class="completion-title">Excellent Job!</h2>
+            <p class="completion-subtitle">You have completed all questions in this topic. You are doing amazing!</p>
+            <button class="back-btn" onclick="goBack()">Back to Topics</button>
+        </div>
+    </div>
+
+    <script>
+        let questions = [];
+        let currentIndex = 0;
+        let questionAudio = null;
+        let currentWord = "";
+        let audioUnlocked = false;
+        let blockClicks = false;
+
+        let audioCtx = null;
+        let bgMusic = null;
+        let isMusicPlaying = false;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // Initialize and play background music
+        function initBgMusic() {
+            if (bgMusic) return;
+            bgMusic = new Audio('/sounds/bg-music.mp3');
+            bgMusic.loop = true;
+            bgMusic.volume = 0.20; // Default volume 20%
+            bgMusic.play().then(() => {
+                isMusicPlaying = true;
+            }).catch(err => {
+                console.warn("Background music autoplay blocked:", err);
+            });
+        }
+
+        // Adjust background music volume
+        function setBgMusicVolume(vol) {
+            if (bgMusic) {
+                bgMusic.volume = vol;
+            }
+        }
+
+        const loader = document.getElementById('loader');
+        const startScreen = document.getElementById('startScreen');
+        const startSubtitle = document.getElementById('startSubtitle');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const card = document.getElementById('card');
+        const cardImage = document.getElementById('cardImage');
+        const placeholder = document.getElementById('placeholder');
+        const questionText = document.getElementById('questionText');
+        const optionsGrid = document.getElementById('optionsGrid');
+        const audioBtn = document.getElementById('audioBtn');
+        const completionScreen = document.getElementById('completionScreen');
+
+        // URL Parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const age = urlParams.get('age') || "2-5";
+        const topicId = urlParams.get('topicId');
+
+        // Synthesis sound generation (Web Audio API)
+        function playSfx(correct) {
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const now = ctx.currentTime;
+                
+                if (correct) {
+                    // Ting arpeggio
+                    const playTone = (freq, time, duration) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, time);
+                        gain.gain.setValueAtTime(0.08, time);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, time + duration - 0.02);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(time);
+                        osc.stop(time + duration);
+                    };
+                    playTone(523.25, now, 0.12);       // C5
+                    playTone(659.25, now + 0.08, 0.12); // E5
+                    playTone(783.99, now + 0.16, 0.12); // G5
+                    playTone(1046.50, now + 0.24, 0.25); // C6
+                } else {
+                    // Buzz slide
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(170, now);
+                    osc.frequency.linearRampToValueAtTime(90, now + 0.25);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.23);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {
+                console.warn("Sound generation failed:", e);
+            }
+        }
+
+        //Confetti particle shower
+        function spawnConfetti(amount) {
+            for (let i = 0; i < amount; i++) {
+                const c = document.createElement('div');
+                c.classList.add('confetti');
+                c.style.left = Math.random() * 100 + '%';
+                c.style.top = -15 + 'px';
+                const colors = ['#ff7675', '#0984e3', '#fdcb6e', '#00b894', '#a29bfe', '#ff9f43'];
+                c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                if (Math.random() > 0.5) c.style.borderRadius = '50%';
+                c.style.animationDuration = (Math.random() * 1.5 + 1.2) + 's';
+                c.style.animationDelay = (Math.random() * 0.4) + 's';
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 3000);
+            }
+        }
+
+        // Initialize dynamic API call
+        async function initGame() {
+            if (!topicId) {
+                questionText.textContent = "No topic selected!";
+                loader.style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/games/flashcard-quiz/${topicId}`);
+                const data = await res.json();
+                if (data.success && data.questions && data.questions.length > 0) {
+                    questions = data.questions;
+                    currentIndex = 0;
+                    
+                    // Update start screen subtitle with topic name
+                    if (data.topicName) {
+                        startSubtitle.innerHTML = `Are you ready to play the <strong>${data.topicName}</strong> quiz? 🌟`;
+                    }
+                    
+                    // Show start screen
+                    startScreen.style.display = 'flex';
+                    
+                    // Hide loader overlay
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 400);
+                } else {
+                    questionText.textContent = "No questions with audio found for this topic!";
+                    loader.style.display = 'none';
+                }
+            } catch (e) {
+                console.error("Failed to load questions:", e);
+                questionText.textContent = "Connection Error. Could not load game!";
+                loader.style.display = 'none';
+            }
+        }
+
+        // Start game handler
+        function startGame() {
+            // Unlock audio context and trigger bg music
+            unlockAudio();
+            
+            // Smoothly fade out start screen
+            startScreen.style.transition = 'opacity 0.4s ease';
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                // Load the first question
+                loadQuestion();
+            }, 400);
+        }
+
+        // Stop current audio hint
+        function stopVoice() {
+            if (questionAudio) {
+                questionAudio.pause();
+                questionAudio = null;
+            }
+            audioBtn.classList.remove('playing');
+            setBgMusicVolume(0.20); // Restore background music volume
+        }
+
+        // Play current audio hint
+        function playVoice() {
+            const q = questions[currentIndex];
+            if (!q || !q.audioUrl) return;
+
+            if (questionAudio) {
+                stopVoice();
+                return;
+            }
+
+            audioBtn.classList.add('playing');
+            questionAudio = new Audio(q.audioUrl);
+            
+            // Set playback rate to 0.75 for slow pacing as configured
+            questionAudio.playbackRate = 0.75;
+
+            // Reduce background music volume to 10%
+            setBgMusicVolume(0.10);
+
+            const onEnded = () => {
+                audioBtn.classList.remove('playing');
+                questionAudio = null;
+                // Restore background music volume to 20%
+                setBgMusicVolume(0.20);
+            };
+
+            questionAudio.addEventListener('ended', onEnded);
+            questionAudio.addEventListener('pause', onEnded);
+            questionAudio.addEventListener('error', onEnded);
+
+            questionAudio.play().catch(err => {
+                console.warn("Audio play blocked/failed:", err);
+                onEnded();
+            });
+        }
+
+        // Render current question
+        function loadQuestion() {
+            stopVoice();
+            blockClicks = false;
+            card.className = 'question-card';
+
+            // Hide loader on first load
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 400);
+
+            if (currentIndex >= questions.length) {
+                showLevelComplete();
+                return;
+            }
+
+            const q = questions[currentIndex];
+            currentWord = q.word;
+
+            // Render text and image
+            const percent = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
+            if (progressBarFill) {
+                progressBarFill.style.width = `${percent}%`;
+            }
+            questionText.textContent = q.question;
+
+            if (q.imageUrl) {
+                cardImage.src = q.imageUrl;
+                cardImage.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                cardImage.style.display = 'none';
+                placeholder.style.display = 'block';
+            }
+
+            // Audio availability
+            if (q.audioUrl) {
+                audioBtn.classList.remove('disabled');
+                audioBtn.disabled = false;
+
+                // Autoplay audio on load (handled safely)
+                setTimeout(() => {
+                    stopVoice(); // ensure previous is stopped
+                    
+                    questionAudio = new Audio(q.audioUrl);
+                    questionAudio.playbackRate = 0.75;
+                    
+                    // Reduce bg music volume to 10%
+                    setBgMusicVolume(0.10);
+                    
+                    const onEnded = () => {
+                        audioBtn.classList.remove('playing');
+                        questionAudio = null;
+                        // Restore bg music volume to 20%
+                        setBgMusicVolume(0.20);
+                    };
+
+                    questionAudio.addEventListener('ended', onEnded);
+                    questionAudio.addEventListener('pause', onEnded);
+                    questionAudio.addEventListener('error', onEnded);
+                    
+                    audioBtn.classList.add('playing');
+                    questionAudio.play().catch(() => {
+                        onEnded(); // Suppress autoplays blocked by browser
+                    });
+                }, 800);
+            } else {
+                audioBtn.classList.add('disabled');
+                audioBtn.disabled = true;
+            }
+
+            // Render option buttons
+            optionsGrid.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn opt-${idx % 4}`;
+                btn.textContent = opt;
+                btn.onclick = () => selectOption(btn, opt);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        // Selection handler
+        function selectOption(btn, optValue) {
+            if (blockClicks) return;
+
+            // Disable clicking for this button if it was incorrect
+            if (btn.classList.contains('incorrect') || btn.classList.contains('correct')) return;
+
+            if (optValue.toLowerCase() === currentWord.toLowerCase()) {
+                // Correct!
+                blockClicks = true;
+                btn.classList.add('correct');
+                card.classList.add('correct-card');
+                
+                // Disable other buttons
+                Array.from(optionsGrid.children).forEach(child => {
+                    if (child !== btn) child.classList.add('disabled');
+                });
+
+                playSfx(true);
+                spawnConfetti(50);
+
+                // Auto-advance after 1.5 seconds
+                setTimeout(() => {
+                    currentIndex++;
+                    loadQuestion();
+                }, 1600);
+            } else {
+                // Incorrect
+                btn.classList.add('incorrect');
+                playSfx(false);
+            }
+        }
+
+        // Complete Screen
+        function showLevelComplete() {
+            stopVoice();
+            playSfx(true);
+            spawnConfetti(120);
+
+            // Display completion panel
+            completionScreen.style.display = 'flex';
+            card.style.display = 'none';
+            optionsGrid.style.display = 'none';
+            
+            const pBar = document.querySelector('.progress-bar-container');
+            if (pBar) pBar.style.display = 'none';
+        }
+
+        // Back action
+        function goBack() {
+            // Safe redirect via parent location
+            window.parent.location.href = `/student/game/flashcard-quiz/select?age=${age}`;
+        }
+
+        // Audio Unlocker for mobile and desktop browsers
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            audioUnlocked = true;
+
+            // Unlock Web Audio API context
+            try {
+                const ctx = getAudioContext();
+                if (ctx) {
+                    const buffer = ctx.createBuffer(1, 1, 22050);
+                    const source = ctx.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(ctx.destination);
+                    source.start(0);
+                }
+            } catch (e) {
+                console.warn("Failed to unlock AudioContext:", e);
+            }
+
+            // Start background music
+            initBgMusic();
+            
+            document.removeEventListener('click', unlockAudio, true);
+            document.removeEventListener('touchstart', unlockAudio, true);
+        }
+        document.addEventListener('click', unlockAudio, true);
+        document.addEventListener('touchstart', unlockAudio, true);
+
+        // Start game on load
+        window.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>

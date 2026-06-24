@@ -46,6 +46,8 @@ interface CreateFlashcardData {
   imageUrl?: string
   audioUrl?: string
   audioWordUrl?: string
+  quizQuestion?: string
+  quizAudioUrl?: string
 }
 
 export async function adminCreateFlashcard(data: CreateFlashcardData) {
@@ -64,6 +66,7 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
     let safeImageUrl = data.imageUrl?.trim() || null;
     let safeAudioUrl = data.audioUrl?.trim() || null;
     let safeAudioWordUrl = data.audioWordUrl?.trim() || null;
+    let safeQuizAudioUrl = data.quizAudioUrl?.trim() || null;
 
     if (safeImageUrl?.startsWith('data:')) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
@@ -80,6 +83,11 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
       const res = await uploadBase64Image(safeAudioWordUrl, 'flashcard');
       if (res.success && res.url) safeAudioWordUrl = res.url;
     }
+    if (safeQuizAudioUrl?.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeQuizAudioUrl, 'flashcard');
+      if (res.success && res.url) safeQuizAudioUrl = res.url;
+    }
 
     // 2. Tạo thẻ mới
     const newCard = await prisma.globalFlashcard.create({
@@ -95,6 +103,8 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
         imageUrl: safeImageUrl,
         audioUrl: safeAudioUrl,
         audioWordUrl: safeAudioWordUrl,
+        quizQuestion: data.quizQuestion?.trim() || null,
+        quizAudioUrl: safeQuizAudioUrl,
         orderIndex
       }
     })
@@ -120,6 +130,9 @@ interface UpdateFlashcardData {
   exampleSentence?: string | null
   imageUrl?: string | null
   audioUrl?: string | null
+  audioWordUrl?: string | null
+  quizQuestion?: string | null
+  quizAudioUrl?: string | null
 }
 
 export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData) {
@@ -128,6 +141,8 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
   try {
     let safeImageUrl = data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : undefined;
     let safeAudioUrl = data.audioUrl !== undefined ? (data.audioUrl?.trim() || null) : undefined;
+    let safeAudioWordUrl = data.audioWordUrl !== undefined ? (data.audioWordUrl?.trim() || null) : undefined;
+    let safeQuizAudioUrl = data.quizAudioUrl !== undefined ? (data.quizAudioUrl?.trim() || null) : undefined;
 
     if (safeImageUrl && safeImageUrl.startsWith('data:')) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
@@ -138,6 +153,16 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
       const { uploadBase64Image } = await import('@/actions/upload-actions');
       const res = await uploadBase64Image(safeAudioUrl, `flashcard-${id}`);
       if (res.success && res.url) safeAudioUrl = res.url;
+    }
+    if (safeAudioWordUrl && safeAudioWordUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudioWordUrl, `flashcard-${id}`);
+      if (res.success && res.url) safeAudioWordUrl = res.url;
+    }
+    if (safeQuizAudioUrl && safeQuizAudioUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeQuizAudioUrl, `flashcard-${id}`);
+      if (res.success && res.url) safeQuizAudioUrl = res.url;
     }
 
     const updatedCard = await prisma.globalFlashcard.update({
@@ -152,7 +177,10 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
         definitionId: data.definitionId !== undefined ? (data.definitionId?.trim() || null) : undefined,
         exampleSentence: data.exampleSentence !== undefined ? (data.exampleSentence?.trim() || null) : undefined,
         imageUrl: safeImageUrl,
-        audioUrl: safeAudioUrl
+        audioUrl: safeAudioUrl,
+        audioWordUrl: safeAudioWordUrl,
+        quizQuestion: data.quizQuestion !== undefined ? (data.quizQuestion?.trim() || null) : undefined,
+        quizAudioUrl: safeQuizAudioUrl
       }
     })
 

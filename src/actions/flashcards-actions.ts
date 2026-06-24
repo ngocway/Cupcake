@@ -51,7 +51,7 @@ const fetchFlashcardsByTopic = async (topicId: string) => {
 
 export const getCachedFlashcardsByTopic = unstable_cache(
   fetchFlashcardsByTopic,
-  ["flashcards-by-topic-cache-v1"],
+  ["flashcards-by-topic-cache-v3"],
   { revalidate: 43200, tags: ["flashcards"] } // Cache for 12 hours
 );
 

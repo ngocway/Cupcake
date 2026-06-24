@@ -42,6 +42,16 @@ const GAMES_DATA: Record<string, Game[]> = {
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
       comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=2-5",
+      gradient: "from-pink-200 to-rose-400",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
     }
   ],
   "kid-6-12": [
@@ -63,6 +73,16 @@ const GAMES_DATA: Record<string, Game[]> = {
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=6-12",
+      gradient: "from-pink-200 to-rose-400",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
       comingSoon: false,
     },
     {
@@ -98,6 +118,16 @@ const GAMES_DATA: Record<string, Game[]> = {
       comingSoon: false,
     },
     {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=teen",
+      gradient: "from-pink-200 to-rose-400",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
+    },
+    {
       id: "grammar-escape",
       title: "Grammar Escape",
       href: "#",
@@ -127,6 +157,16 @@ const GAMES_DATA: Record<string, Game[]> = {
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=readers",
+      gradient: "from-pink-200 to-rose-400",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
       comingSoon: false,
     },
     {
