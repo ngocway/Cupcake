@@ -107,6 +107,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=2-5",
       gradient: "from-pink-300 to-rose-500",
+      thumbnail: "/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",

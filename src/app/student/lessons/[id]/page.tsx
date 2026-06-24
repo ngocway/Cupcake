@@ -42,7 +42,7 @@ import { LessonVideoPlayer } from "./_components/LessonVideoPlayer";
 import { getLessonBasic, getLessonExtra, getTeacherBasic, getLessonReviews, getRelatedLessons, getLessonReadingText } from "./data";
 import { getTranslations, getLocale } from "next-intl/server";
 
-import BackButton from "@/components/ui/BackButton";
+
 
 // --- Sub-components for Streaming ---
 
@@ -301,11 +301,6 @@ export default async function StudentLessonDetailPage({
       <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
          <div className="w-full lg:w-[70%] flex flex-col bg-transparent lg:overflow-y-auto no-scrollbar">
             <div className="px-4 md:px-8 lg:px-12 pt-4 pb-8 space-y-6 max-w-5xl mx-auto w-full">
-               {/* Back Button */}
-               <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/50 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
-                  <ChevronLeft className="w-4 h-4" />
-                  <span>Back</span>
-               </BackButton>
                {/* Video Player (Facade Optimization) */}
                <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-3xl" />}>
                   <LessonVideoPlayerWrapper lesson={lesson} />

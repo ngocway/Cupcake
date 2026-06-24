@@ -21,7 +21,7 @@ import { vi, enUS } from 'date-fns/locale';
 import { ReviewTrigger } from '@/components/reviews/ReviewTrigger';
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import Link from "next/link";
-import BackButton from "@/components/ui/BackButton";
+
 import { getAssignmentMeta } from './data';
 import { 
   SidebarReviewsWrapper, 
@@ -198,10 +198,7 @@ export default async function StudentAssignmentLobbyPage({
 
       <div className="h-12 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-6 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md shrink-0 z-50 shadow-sm">
         <div className="flex items-center gap-4">
-          <BackButton className="flex items-center gap-2 px-4 py-2 bg-white/50 hover:bg-white dark:bg-slate-800/50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200/50 dark:border-slate-700/50 transition-all active:scale-95 shadow-sm">
-            <ChevronLeft className="w-4 h-4 stroke-[2px]" />
-            {t("back")}
-          </BackButton>
+
           <div className="h-4 w-px bg-slate-200 dark:bg-slate-700" />
           <div className="flex items-center gap-2 text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em]">
             <BookOpen className="w-4 h-4 text-blue-500 stroke-[2px]" />

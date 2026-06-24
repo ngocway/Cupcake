@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import BackButton from "@/components/ui/BackButton";
+
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 export function PublicTeacherHeader() {
@@ -26,7 +26,7 @@ export function PublicTeacherHeader() {
               <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
             </div>
           </Link>
-          <BackButton />
+
         </nav>
       </header>
     </>

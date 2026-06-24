@@ -7,7 +7,7 @@ import { LessonCard, ExerciseCard } from "@/components/public/ContentCards";
 import { TeacherProfileContent } from "./TeacherProfileContent";
 import { User, MapPin, Briefcase, GraduationCap, LayoutGrid, BookOpen, ChevronLeft } from "lucide-react";
 import Image from "next/image";
-import BackButton from "@/components/ui/BackButton";
+
 
 export default async function TeacherProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const sessionData = await auth();
@@ -56,12 +56,7 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
       <main className="pt-24 pb-20">
         {/* Cover Image */}
         <div className="w-full h-40 md:h-56 lg:h-64 relative bg-gradient-to-br from-primary/20 via-tertiary/20 to-secondary/20 overflow-hidden">
-          <div className="absolute top-6 left-6 md:top-10 md:left-10 z-20">
-            <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/60 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-white/40 shadow-sm backdrop-blur-md transition-all active:scale-95">
-              <ChevronLeft className="w-4 h-4" />
-              Back
-            </BackButton>
-          </div>
+
           {teacher.coverImage && (
             <Image 
               src={teacher.coverImage} 

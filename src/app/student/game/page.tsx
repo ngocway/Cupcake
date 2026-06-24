@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Gamepad2, Play, Sparkles, Layers, Lock, ArrowLeft, Loader2 } from "lucide-react";
 
 interface Game {
@@ -13,6 +14,7 @@ interface Game {
   tag: string;
   desc: string;
   comingSoon: boolean;
+  thumbnail?: string;
 }
 
 const GAME_CATEGORIES = [
@@ -28,6 +30,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Word Match",
       href: "/student/game/match-words/select?age=2-5",
       gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
       emoji: "🐾",
       tag: "Vocabulary",
       desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
@@ -38,6 +41,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=2-5",
       gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
@@ -48,6 +52,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=2-5",
       gradient: "from-pink-200 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -60,6 +65,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Word Match",
       href: "/student/game/match-words/select?age=6-12",
       gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
       emoji: "🐾",
       tag: "Vocabulary",
       desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
@@ -70,6 +76,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=6-12",
       gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
@@ -80,6 +87,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=6-12",
       gradient: "from-pink-200 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -102,6 +110,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Word Match",
       href: "/student/game/match-words/select?age=teen",
       gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
       emoji: "🐾",
       tag: "Vocabulary",
       desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
@@ -112,6 +121,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=teen",
       gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
@@ -122,6 +132,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=teen",
       gradient: "from-pink-200 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -144,6 +155,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Word Match",
       href: "/student/game/match-words/select?age=readers",
       gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
       emoji: "🐾",
       tag: "Vocabulary",
       desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
@@ -154,6 +166,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=readers",
       gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
@@ -164,6 +177,7 @@ const GAMES_DATA: Record<string, Game[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=readers",
       gradient: "from-pink-200 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -315,16 +329,33 @@ export default function GameHubPage() {
                     className="group cursor-pointer"
                   >
                     <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
-                      <div className={`aspect-video bg-gradient-to-br ${game.gradient} relative overflow-hidden flex items-center justify-center p-6`}>
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-                        <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
-                           <div className="text-6xl animate-bounce">{game.emoji}</div>
-                           <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
-                        </div>
-                        
-                        {/* Decorative blobs */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
-                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
+                      <div className={`aspect-video relative overflow-hidden flex items-center justify-center ${!game.thumbnail ? `bg-gradient-to-br ${game.gradient} p-6` : ''}`}>
+                        {game.thumbnail ? (
+                          <Image
+                            src={game.thumbnail}
+                            alt={game.title}
+                            fill
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
+                          />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+                            <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
+                              <div className="text-6xl animate-bounce">{game.emoji}</div>
+                              <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
+                            </div>
+                            
+                            {/* Decorative blobs */}
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
+                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
+                          </>
+                        )}
+                        {/* Title overlay on thumbnail */}
+                        {game.thumbnail && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5 z-10">
+                            <h3 className="text-2xl font-black text-white drop-shadow-lg">{game.title}</h3>
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-6 flex-1 flex flex-col justify-between">

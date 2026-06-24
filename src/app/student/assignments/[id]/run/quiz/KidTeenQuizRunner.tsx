@@ -25,7 +25,7 @@ import {
   Clock,
   User,
 } from "lucide-react";
-import BackButton from "@/components/ui/BackButton";
+
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LoginModal } from "@/components/LoginButton";
 import { submitAssignmentReview } from "@/actions/reviews";
@@ -1000,12 +1000,7 @@ export default function KidTeenQuizRunner({
         style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
         {/* Transparent header just for the BACK button */}
-        <div className="absolute top-4 left-4 z-50">
-          <BackButton className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 font-black text-sm tracking-wider rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm">
-            <ChevronLeft className="w-5 h-5 text-purple-500" />
-            BACK
-          </BackButton>
-        </div>
+
 
         {/* Start Card */}
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-2xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center">
@@ -1065,10 +1060,7 @@ export default function KidTeenQuizRunner({
         {/* Row 1: Back button + Title */}
         <div className="flex items-center gap-3">
           <div className="shrink-0 flex items-center gap-2">
-            <BackButton className="flex items-center gap-2 px-4 py-2 bg-white text-purple-600 font-black text-sm tracking-wider rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm">
-              <ChevronLeft className="w-5 h-5 text-purple-500" />
-              BACK
-            </BackButton>
+
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="flex items-center justify-center p-2 bg-white text-purple-600 rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm"

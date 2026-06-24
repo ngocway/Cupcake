@@ -25,7 +25,7 @@ import {
   Volume2,
   Info
 } from "lucide-react";
-import BackButton from "@/components/ui/BackButton";
+
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
@@ -970,10 +970,7 @@ export default function QuizClientRunner({
            {/* Progress Navigation Header (Sticky) */}
            <div className={`sticky top-0 z-50 transition-transform duration-500 ease-in-out ${(isHidden && !hasAnyChecked) ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'} min-h-[5rem] py-3 border-b border-outline-variant/10 flex flex-col md:flex-row items-center md:items-center px-4 md:px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-md shrink-0 gap-3 md:gap-6`}>
               <div className="shrink-0 w-full md:w-auto flex justify-start">
-                <BackButton className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-slate-200 transition-all active:scale-95">
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-                </BackButton>
+
               </div>
               
               <div className="flex-1 flex flex-col items-center justify-center gap-2 md:gap-4 pr-0 md:pr-20 w-full min-w-0"> {/* min-w-0 to allow flex child to shrink properly */}

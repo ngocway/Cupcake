@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Gamepad2, Play } from "lucide-react";
 import prisma from "@/lib/prisma";
-import BackButton from "@/components/ui/BackButton";
+
 
 export const metadata = {
   title: "Flashcard Quiz Topics",
@@ -118,12 +118,7 @@ export default async function FlashcardQuizSelectPage({
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-violet-400/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
-        <BackButton 
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700 transition-all font-bold mb-10 shadow-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Game Hub</span>
-        </BackButton>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {topics.length === 0 ? (

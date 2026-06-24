@@ -27,7 +27,7 @@ import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
-import BackButton from "@/components/ui/BackButton";
+
 import { Suspense } from "react";
 
 // Reuse data fetching from student page
@@ -277,11 +277,7 @@ export default async function PublicLessonPage({
          {/* Main Column: Video & Content & Reviews */}
          <div className="w-full lg:w-[70%] flex flex-col bg-transparent lg:overflow-y-auto no-scrollbar">
             <div className="px-4 md:px-8 lg:px-12 pt-4 pb-8 space-y-6 max-w-5xl mx-auto w-full">
-               {/* Back Button */}
-               <BackButton className="flex items-center gap-2 w-fit px-4 py-2 bg-white/60 hover:bg-white text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl border border-white/40 shadow-sm backdrop-blur-md transition-all active:scale-95">
-                  <ChevronLeft className="w-4 h-4" />
-                  Back
-               </BackButton>
+
 
                {/* Video Player */}
                {(videoId || lesson.videoUrl) && (
