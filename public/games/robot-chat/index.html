@@ -363,6 +363,8 @@ function startGame(level,topic){
 
 // ═══════════════════ MAIN LOOP ════════════════════
 async function robotTurn(studentSpeech){
+  stopListening();
+
   state.turn++;
   state.phase='processing';
   document.getElementById('turnInfo').textContent=`Turn ${state.turn}`;
@@ -397,7 +399,7 @@ async function robotTurn(studentSpeech){
     setMicStatus('listening', '🎤 Your turn — speak your answer!');
 
     // Mic bật tự động sau khi robot nói xong
-    setTimeout(() => autoStartListening(), 300);
+    setTimeout(() => autoStartListening(), 700);
 
   } catch(err){
     console.error(err);
@@ -656,6 +658,19 @@ function initRecognition() {
     }
 
     if (spoken && state.phase === 'listening') {
+      // Check for echo of the robot's own question
+      const lastRobotSays = state.history.filter(h => h.role === 'robot').pop()?.text || '';
+      if (lastRobotSays) {
+        const cleanSpoken = spoken.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanRobot = lastRobotSays.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (cleanRobot.includes(cleanSpoken) && cleanSpoken.length > 10) {
+          console.warn("Echo detected and ignored:", spoken);
+          setMicStatus('listening', '🎤 Echo detected, try speaking now...');
+          setTimeout(() => autoStartListening(), 500);
+          return;
+        }
+      }
+
       showStudentBubble(spoken);
       setMicStatus('processing', '⏳ Processing...');
       state.phase = 'processing';
@@ -684,6 +699,7 @@ function initRecognition() {
 
 function autoStartListening() {
   if (state.phase !== 'listening') return;
+  stopListening();
   recognition = initRecognition();
   if (!recognition) { showToast('Speech recognition not supported — use Chrome/Edge'); return; }
   try { recognition.start(); }
