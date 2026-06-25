@@ -70,14 +70,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const assignmentsPromise  = getCachedAssignments(queryParams);
   const lessonsPromise      = getCachedLessons(queryParams);
 
-  // Kindergarten specific data
-  let flashcardsPromise = Promise.resolve([] as any[]);
-  if (initialUserType === 'kindergarten' || initialUserType === 'kid' || studyAgeGroup?.toLowerCase().includes('kindergarten') || studyAgeGroup === 'KINDERGARTEN (< 6 YEARS)') {
-    const { getFlashcardTopics } = await import('@/actions/flashcards-actions');
-    flashcardsPromise = getFlashcardTopics().then(topics => 
-      topics.filter(t => t.targetAudience === 'kindergarten' || t.targetAudience === 'kids-2-5' || t.targetAudience === 'KINDERGARTEN (< 6 YEARS)')
-    );
-  }
+  // Fetch all flashcard topics for dynamic age group filtering on the home page
+  const { getFlashcardTopics } = await import('@/actions/flashcards-actions');
+  const flashcardsPromise = getFlashcardTopics();
+
 
   const kindergartenGamesPromise = Promise.resolve([
     {

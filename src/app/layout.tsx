@@ -16,8 +16,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EngMaster - Educational Magazine",
-  description: "Master English through Community.",
+  title: "Dolcake - Student Portal",
+  description: "Dolcake - Interactive English Learning Portal for Students.",
 };
 
 export default async function RootLayout({

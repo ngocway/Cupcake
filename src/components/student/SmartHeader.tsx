@@ -66,11 +66,13 @@ export function SmartHeader({ session }: SmartHeaderProps) {
         <nav className="bg-white/70 backdrop-blur-xl border border-primary/10 rounded-full shadow-2xl flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4">
             <div className="flex items-center gap-10">
               <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
-                <div className="w-9 h-9 sm:w-12 sm:h-12 bg-primary text-on-primary rounded-full flex items-center justify-center font-black group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-primary/20 shrink-0">
-                  <span className="material-symbols-outlined text-[20px] sm:text-[28px] animate-leaf-sway">eco</span>
-                </div>
+                <img 
+                  src="/images/logo.png" 
+                  alt="Dolcake" 
+                  className="w-9 h-9 sm:w-12 sm:h-12 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0" 
+                />
                 <div className="flex flex-col">
-                  <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Cupcakes</span>
+                  <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Dolcake</span>
                   <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
                 </div>
               </Link>
@@ -81,27 +83,13 @@ export function SmartHeader({ session }: SmartHeaderProps) {
                   session.studyAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
                   session.studyAgeGroup === "kids-2-5"
                 )) && (
-                  <>
-                    <Link 
-                      className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/flashcards') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
-                      href="/flashcards"
-                    >
-                      {t("flashcards")}
-                    </Link>
-                    <Link 
-                      className={`text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${isActive('/student/game') ? 'text-primary scale-110' : 'text-primary/80 hover:text-primary hover:scale-105'}`} 
-                      href="/student/game"
-                    >
-                      {t("game")}
-                    </Link>
-                    <Link 
-                      className="px-4 py-2 rounded-full font-black uppercase tracking-widest text-small text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
-                      href="/student/game/robot-chat"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">smart_toy</span>
-                      <span>{t("chatWithDolbot")}</span>
-                    </Link>
-                  </>
+                  <Link 
+                    className="px-4 py-2 rounded-full font-black uppercase tracking-widest text-small text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+                    href="/student/game/robot-chat"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">smart_toy</span>
+                    <span>{t("chatWithDolbot")}</span>
+                  </Link>
                 )}
               </div>
             </div>

@@ -332,14 +332,185 @@ const cardBackgroundStyles = [
   }
 ];
 
-const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promise?: Promise<any[]> }) {
-  if (!promise) return null;
-  const items = use(promise);
-  if (!items || items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No flashcards available.</div>;
+const ALL_GAMES_DATA: Record<string, any[]> = {
+  kindergarten: [
+    {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=2-5",
+      gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=2-5",
+      gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=2-5",
+      gradient: "from-pink-250 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
+    }
+  ],
+  kid: [
+    {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=6-12",
+      gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=6-12",
+      gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=6-12",
+      gradient: "from-pink-250 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
+    },
+    {
+      id: "spell-quest",
+      title: "Spell Quest",
+      href: "#",
+      gradient: "from-emerald-250 to-teal-400 dark:from-emerald-900/40 dark:to-teal-800/40",
+      emoji: "📝",
+      tag: "Spelling",
+      desc: "Unscramble letters to spell vocabulary words correctly. Level up your spelling and win badges!",
+      comingSoon: true,
+    }
+  ],
+  teen: [
+    {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=teen",
+      gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=teen",
+      gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=teen",
+      gradient: "from-pink-250 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
+    },
+    {
+      id: "grammar-escape",
+      title: "Grammar Escape",
+      href: "#",
+      gradient: "from-indigo-250 to-violet-400 dark:from-indigo-900/40 dark:to-violet-800/40",
+      emoji: "🏰",
+      tag: "Reading",
+      desc: "Solve grammar riddles to escape the haunted classroom. Challenge your reading and sentence building skills!",
+      comingSoon: true,
+    }
+  ],
+  learner: [
+    {
+      id: "word-match",
+      title: "Word Match",
+      href: "/student/game/match-words/select?age=readers",
+      gradient: "from-blue-200 to-sky-400",
+      thumbnail: "/images/games/word-match.png",
+      emoji: "🐾",
+      tag: "Vocabulary",
+      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "sentence-builder",
+      title: "Sentence Builder",
+      href: "/student/game/sentence-builder?age=readers",
+      gradient: "from-purple-200 to-fuchsia-400",
+      thumbnail: "/images/games/sentence-builder.png",
+      emoji: "🧩",
+      tag: "Grammar",
+      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-quiz",
+      title: "Flashcard Quiz",
+      href: "/student/game/flashcard-quiz/select?age=readers",
+      gradient: "from-pink-250 to-rose-400",
+      thumbnail: "/images/games/flashcard-quiz.png",
+      emoji: "❓",
+      tag: "Quiz",
+      desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
+      comingSoon: false,
+    },
+    {
+      id: "speed-reader",
+      title: "Speed Reader",
+      href: "#",
+      gradient: "from-amber-250 to-orange-400 dark:from-amber-900/40 dark:to-orange-800/40",
+      emoji: "⚡",
+      tag: "Reading",
+      desc: "Read fast-scrolling texts and answer comprehension questions. Boost your reading speed and accuracy!",
+      comingSoon: true,
+    }
+  ]
+};
+
+const FlashcardTopicList = memo(function FlashcardTopicList({ topics }: { topics: any[] }) {
+  if (!topics || topics.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No flashcards available.</div>;
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {items.map((topic, idx) => {
+      {topics.map((topic, idx) => {
         const style = cardBackgroundStyles[idx % cardBackgroundStyles.length];
         return (
           <div
@@ -401,72 +572,86 @@ const FlashcardTopicList = memo(function FlashcardTopicList({ promise }: { promi
   )
 });
 
-const KindergartenGameList = memo(function KindergartenGameList({ promise }: { promise?: Promise<any[]> }) {
-  if (!promise) return null;
-  const items = use(promise);
-  if (!items || items.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No games available.</div>;
+const GameList = memo(function GameList({ games, locale }: { games: any[]; locale: string }) {
+  if (!games || games.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">{locale === 'vi' ? 'Không có trò chơi nào.' : 'No games available.'}</div>;
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {items.map((game) => (
-        <div 
-          key={game.id} 
-          onClick={() => window.location.href = game.href}
-          className="group cursor-pointer"
-        >
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
-            <div className={`aspect-video relative overflow-hidden flex items-center justify-center ${!game.thumbnail ? `bg-gradient-to-br ${game.gradient} p-6` : ''}`}>
-              {game.thumbnail ? (
-                <img
-                  src={game.thumbnail}
-                  alt={game.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              ) : (
-                <>
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-                  <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
-                    <div className="text-6xl animate-bounce">{game.emoji}</div>
-                    <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
+      {games.map((game) => {
+        const isComingSoon = game.comingSoon;
+        return (
+          <div 
+            key={game.id} 
+            onClick={() => {
+              if (!isComingSoon) {
+                window.location.href = game.href;
+              }
+            }}
+            className={`group ${isComingSoon ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'}`}
+          >
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
+              <div className={`aspect-video relative overflow-hidden flex items-center justify-center ${!game.thumbnail ? `bg-gradient-to-br ${game.gradient} p-6` : ''}`}>
+                {game.thumbnail ? (
+                  <img
+                    src={game.thumbnail}
+                    alt={game.title}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+                    <div className="relative z-20 flex flex-col items-center justify-center space-y-2">
+                      <div className="text-6xl animate-bounce">{game.emoji}</div>
+                      <h3 className="text-3xl font-black text-white text-center drop-shadow-md">{game.title}</h3>
+                    </div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
+                  </>
+                )}
+                {/* Title overlay on thumbnail */}
+                {game.thumbnail && (
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5 z-10">
+                    <h3 className="text-2xl font-black text-white drop-shadow-lg">{game.title}</h3>
                   </div>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -mr-10 -mt-10" />
-                  <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-600/20 rounded-full blur-2xl -ml-10 -mb-10" />
-                </>
-              )}
-              {/* Title overlay on thumbnail */}
-              {game.thumbnail && (
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5 z-10">
-                  <h3 className="text-2xl font-black text-white drop-shadow-lg">{game.title}</h3>
-                </div>
-              )}
-            </div>
-            <div className="p-6 flex-1 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full text-xs font-black uppercase tracking-wider">
-                    {game.tag}
-                  </span>
-                  <span className="px-3 py-1 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 rounded-full text-xs font-black uppercase tracking-wider">
-                    Kids
-                  </span>
-                </div>
-                <h2 className="text-xl font-black text-slate-800 dark:text-white mb-2 group-hover:text-primary transition-colors">
-                  {game.title}
-                </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                  {game.desc}
-                </p>
+                )}
+                
+                {/* Coming Soon overlay */}
+                {isComingSoon && (
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] flex flex-col items-center justify-center z-30">
+                    <span className="material-symbols-outlined text-white text-4xl mb-2 animate-pulse">lock</span>
+                    <span className="px-4 py-1 bg-white/20 border border-white/25 rounded-full text-white text-xs font-bold uppercase tracking-widest">
+                      Coming Soon
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="mt-6 flex items-center text-primary font-black text-sm uppercase tracking-widest gap-2 group-hover:translate-x-2 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-primary"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                Play Now
+              <div className="p-6 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-full text-xs font-black uppercase tracking-wider">
+                      {game.tag}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-black text-slate-800 dark:text-white mb-2 group-hover:text-primary transition-colors">
+                    {game.title}
+                  </h2>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+                    {game.desc}
+                  </p>
+                </div>
+                {!isComingSoon && (
+                  <div className="mt-6 flex items-center text-primary font-black text-sm uppercase tracking-widest gap-2 group-hover:translate-x-2 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play w-5 h-5 fill-primary"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                    Play Now
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
-  )
+  );
 });
 
 // ─── Mobile Subject Bar ───────────────────────────────────────────────────────
@@ -520,6 +705,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const nt = useTranslations("nav")
   const locale = useLocale()
 
+  // Resolve flashcard topics promise
+  const allFlashcardTopics = promises.flashcards ? (use(promises.flashcards) || []) : [];
+
   // Local states — switching tab never triggers server roundtrip
   const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "lessons")
 
@@ -543,17 +731,55 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     currentAgeGroup.toLowerCase().includes("kindergarden") || 
     currentAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
     currentAgeGroup === "kids-2-5";
+  const isKid = currentAgeGroup === "kid" || currentAgeGroup.toLowerCase().includes("kid");
+  const isTeen = currentAgeGroup === "teen" || currentAgeGroup.toLowerCase().includes("teen");
+  const isLearner = currentAgeGroup === "learner" || currentAgeGroup.toLowerCase().includes("learner");
+
+  // Determine dynamic tabs array based on current age group
+  const tabs = useMemo(() => {
+    if (isKindergarten) return ["flashcards", "games"];
+    if (isKid || isTeen) return ["flashcards", "games", "lessons", "exercises"];
+    if (isLearner) return ["lessons", "exercises", "flashcards", "games"];
+    return ["lessons", "exercises", "flashcards", "games"]; // Fallback
+  }, [isKindergarten, isKid, isTeen, isLearner]);
+
+  // Sync activeTab with available tabs
+  useEffect(() => {
+    if (!tabs.includes(activeTab)) {
+      setActiveTab(tabs[0]);
+    }
+  }, [tabs, activeTab]);
+
+  // Age group selector filter for Flashcards/Games (only for Kid, Teen, Learner)
+  const [selectedAgeFilter, setSelectedAgeFilter] = useState<string>("");
+
   useEffect(() => {
     if (isKindergarten) {
-       if (activeTab === "lessons" || activeTab === "exercises") {
-         setActiveTab("flashcards");
-       }
-     } else {
-       if (activeTab === "flashcards" || activeTab === "games") {
-         setActiveTab("lessons");
-       }
-     }
-  }, [isKindergarten, activeTab]);
+      setSelectedAgeFilter("kindergarten");
+    } else if (isKid) {
+      setSelectedAgeFilter("kid");
+    } else if (isTeen) {
+      setSelectedAgeFilter("teen");
+    } else if (isLearner) {
+      setSelectedAgeFilter("learner");
+    } else {
+      setSelectedAgeFilter("kid"); // Default fallback
+    }
+  }, [currentAgeGroup, isKindergarten, isKid, isTeen, isLearner]);
+
+  const filteredFlashcards = useMemo(() => {
+    return allFlashcardTopics.filter((t: any) => {
+      const aud = t.targetAudience?.toLowerCase() || "";
+      if (selectedAgeFilter === "kindergarten") {
+        return aud === "kindergarten" || aud === "kids-2-5" || aud.includes("kindergarten");
+      }
+      return aud === selectedAgeFilter;
+    });
+  }, [allFlashcardTopics, selectedAgeFilter]);
+
+  const filteredGames = useMemo(() => {
+    return ALL_GAMES_DATA[selectedAgeFilter] || ALL_GAMES_DATA.kindergarten;
+  }, [selectedAgeFilter]);
 
   const setNativeLanguage   = useContentStore(s => s.setNativeLanguage)
   const selectedCategoryId  = useContentStore(s => s.selectedCategoryId)
@@ -1021,65 +1247,68 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-row items-center justify-center lg:justify-start gap-6 pt-0 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
+        className="flex flex-col items-center justify-center lg:items-start gap-4 pt-0 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
       >
         <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
-          {isKindergarten ? (
-            <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
-              {/* Sliding indicator */}
-              <div
-                className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                style={{
-                  left: activeTab === "flashcards" ? "6px" : "calc(50%)",
-                  right: activeTab === "games" ? "6px" : "calc(50%)",
-                }}
-              />
-              <button
-                onClick={() => handleTabChange("flashcards")}
-                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
-                  activeTab === "flashcards" ? "text-white" : "text-slate-400 hover:text-primary"
-                }`}
-              >
-                {locale === "vi" ? "THẺ TỪ VỰNG" : "FLASHCARDS"}
-              </button>
-              <button
-                onClick={() => handleTabChange("games")}
-                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
-                  activeTab === "games" ? "text-white" : "text-slate-400 hover:text-primary"
-                }`}
-              >
-                {locale === "vi" ? "TRÒ CHƠI" : "GAMES"}
-              </button>
-            </div>
-          ) : (
-            <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
-              {/* Sliding indicator */}
-              <div
-                className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                style={{
-                  left: activeTab === "lessons" ? "6px" : "calc(50%)",
-                  right: activeTab === "exercises" ? "6px" : "calc(50%)",
-                }}
-              />
-              <button
-                onClick={() => handleTabChange("lessons")}
-                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
-                  activeTab === "lessons" ? "text-white" : "text-slate-400 hover:text-primary"
-                }`}
-              >
-                {nt("lessons").toUpperCase()}
-              </button>
-              <button
-                onClick={() => handleTabChange("exercises")}
-                className={`relative z-10 px-4 sm:px-10 py-2.5 sm:py-3.5 min-w-[100px] sm:min-w-[130px] rounded-[1.5rem] text-xs sm:text-sm font-black transition-colors duration-300 cursor-pointer ${
-                  activeTab === "exercises" ? "text-white" : "text-slate-400 hover:text-primary"
-                }`}
-              >
-                {locale === "vi" ? "BÀI TẬP" : "EXERCISES"}
-              </button>
-            </div>
-          )}
+          <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
+            {/* Sliding indicator */}
+            <div
+              className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              style={{
+                width: `calc((100% - 12px) / ${tabs.length})`,
+                transform: `translateX(calc(${tabs.indexOf(activeTab)} * 100%))`,
+                left: "6px",
+              }}
+            />
+            {tabs.map((tab) => {
+              const label = 
+                tab === "lessons" ? nt("lessons").toUpperCase() :
+                tab === "exercises" ? (locale === "vi" ? "BÀI TẬP" : "EXERCISES") :
+                tab === "flashcards" ? (locale === "vi" ? "THẺ TỪ VỰNG" : "FLASHCARDS") :
+                (locale === "vi" ? "TRÒ CHƠI" : "GAMES");
+              return (
+                <button
+                  key={tab}
+                  onClick={() => handleTabChange(tab)}
+                  className={`relative z-10 px-2 sm:px-10 py-2.5 sm:py-3.5 min-w-[65px] sm:min-w-[130px] rounded-[1.5rem] text-[10px] sm:text-sm font-black transition-colors duration-300 cursor-pointer text-center ${
+                    activeTab === tab ? "text-white" : "text-slate-400 hover:text-primary"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Pill Selector for Age Groups (Kid, Teen, Learner) */}
+        {!isKindergarten && (activeTab === "flashcards" || activeTab === "games") && (
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-350">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
+              {locale === "vi" ? "Độ tuổi:" : "Age Group:"}
+            </span>
+            {[
+              { id: "kid", label: locale === "vi" ? "Kid (6-10 tuổi)" : "Kid (6-10 years)", activeBg: "bg-emerald-500 text-white" },
+              { id: "teen", label: locale === "vi" ? "Teen (11-16 tuổi)" : "Teen (11-16 years)", activeBg: "bg-indigo-500 text-white" },
+              { id: "learner", label: locale === "vi" ? "Người lớn (16+)" : "Learner (16+)", activeBg: "bg-rose-500 text-white" }
+            ].map((pill) => {
+              const isActive = selectedAgeFilter === pill.id;
+              return (
+                <button
+                  key={pill.id}
+                  onClick={() => setSelectedAgeFilter(pill.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
+                    isActive 
+                      ? `${pill.activeBg} border-transparent shadow-md scale-105` 
+                      : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
 
@@ -1095,11 +1324,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
           {activeTab === "flashcards" ? (
             <Suspense fallback={<SectionSkeleton />}>
-              <FlashcardTopicList promise={promises.flashcards} />
+              <FlashcardTopicList topics={filteredFlashcards} />
             </Suspense>
           ) : activeTab === "games" ? (
             <Suspense fallback={<SectionSkeleton />}>
-              <KindergartenGameList promise={promises.kindergartenGames} />
+              <GameList games={filteredGames} locale={locale} />
             </Suspense>
           ) : activeTab === "exercises" ? (
             <Suspense fallback={<SectionSkeleton />}>

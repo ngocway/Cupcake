@@ -96,7 +96,7 @@ export default function TeacherLoginPage() {
 
           <h1 className="font-headline font-black text-5xl text-on-surface mb-6 tracking-tight leading-tight">
             Teach with <span className="text-primary italic relative inline-block">
-              Cupcakes
+              Dolcake
               <div className="absolute -bottom-2 left-0 w-full h-3 bg-secondary/30 rounded-full -z-10 -rotate-2"></div>
             </span>
           </h1>
@@ -154,7 +154,7 @@ export default function TeacherLoginPage() {
             <div className="w-16 h-16 bg-primary text-white rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20 mb-4 animate-float">
               <span className="material-symbols-outlined text-[32px] animate-leaf-sway">co_present</span>
             </div>
-            <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Cupcakes</h2>
+            <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Dolcake</h2>
             <p className="text-xs text-on-surface-variant font-bold uppercase tracking-[0.2em] mt-1">Teacher Portal</p>
           </div>
 

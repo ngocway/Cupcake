@@ -125,10 +125,12 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <div className="max-w-md w-full mx-auto relative z-10 p-2">
       <div className="md:hidden mb-12 flex flex-col items-center">
-        <div className="w-16 h-16 bg-primary text-white rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20 mb-4 animate-float">
-          <span className="material-symbols-outlined text-[32px] animate-leaf-sway">eco</span>
-        </div>
-        <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Cupcakes</h2>
+        <img 
+          src="/images/logo.png" 
+          alt="Dolcake" 
+          className="w-16 h-16 object-contain mb-4 animate-float" 
+        />
+        <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Dolcake</h2>
         <p className="text-xs text-on-surface-variant font-bold uppercase tracking-[0.2em] mt-1">Student Portal</p>
       </div>
 

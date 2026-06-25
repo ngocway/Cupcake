@@ -11,7 +11,7 @@ export default function AnalyticsDashboard({ growthData, topLessons, topAssignme
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-black text-white mb-2">Phân tích chuyên sâu</h1>
-          <p className="text-neutral-500 font-medium">Theo dõi nhịp đập tăng trưởng của hệ thống Cupcakes.</p>
+          <p className="text-neutral-500 font-medium">Theo dõi nhịp đập tăng trưởng của hệ thống Dolcake.</p>
         </div>
         <div className="flex gap-2">
            <div className="px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-neutral-400 text-xs font-bold uppercase tracking-widest">30 Ngày qua</div>

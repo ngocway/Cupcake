@@ -5,7 +5,7 @@ import { getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { FlashcardsClient } from "./FlashcardsClient"
 
 export const metadata = {
-  title: "Flashcard Học Tiếng Anh Đa Tương Tác | Cupcakes",
+  title: "Flashcard Học Tiếng Anh Đa Tương Tác | Dolcake",
   description: "Trang học từ vựng tiếng Anh qua thẻ Flashcard tương tác 3D sinh động, phát âm chuẩn cho bé từ 2-12 tuổi và câu ví dụ chi tiết cho học sinh lớn tuổi.",
 }
 

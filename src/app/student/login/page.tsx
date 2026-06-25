@@ -22,13 +22,15 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 max-w-md text-center">
-          <div className="mb-10 inline-flex items-center justify-center w-24 h-24 bg-primary text-white rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-xl shadow-primary/20 animate-float">
-            <span className="material-symbols-outlined text-[48px] animate-leaf-sway">eco</span>
-          </div>
+          <img 
+            src="/images/logo.png" 
+            alt="Dolcake" 
+            className="w-24 h-24 object-contain mb-10 animate-float" 
+          />
 
           <h1 className="font-headline font-black text-5xl text-on-surface mb-6 tracking-tight leading-tight">
             Learn with <span className="text-primary italic relative inline-block">
-              Cupcakes
+              Dolcake
               <div className="absolute -bottom-2 left-0 w-full h-3 bg-secondary/30 rounded-full -z-10 -rotate-2"></div>
             </span>
           </h1>
