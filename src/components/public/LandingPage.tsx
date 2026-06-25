@@ -733,7 +733,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     currentAgeGroup === "kids-2-5";
   const isKid = currentAgeGroup === "kid" || currentAgeGroup.toLowerCase().includes("kid");
   const isTeen = currentAgeGroup === "teen" || currentAgeGroup.toLowerCase().includes("teen");
-  const isLearner = currentAgeGroup === "learner" || currentAgeGroup.toLowerCase().includes("learner");
+  const isLearner = currentAgeGroup === "learner" || currentAgeGroup.toLowerCase().includes("learner") || currentAgeGroup.toLowerCase().includes("adult");
 
   // Determine dynamic tabs array based on current age group
   const tabs = useMemo(() => {
