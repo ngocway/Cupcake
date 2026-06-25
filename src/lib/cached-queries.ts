@@ -62,10 +62,11 @@ export const getShuffledIds = unstable_cache(
     contentType: "EXERCISE" | "LESSON",
     goal: string,
     search: string,
-    userType: string,
+    rawUserType: string,
     studySubject?: string,
     studyLevel?: string
   ) => {
+    const userType = rawUserType === "adults" ? "learner" : rawUserType;
     const cacheKey = `feed:shuffledIds:v1:${contentType}:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
     return fetchWithRedis(cacheKey, 600, async () => {
       const where: any = { status: "PUBLIC", contentType };
@@ -115,7 +116,8 @@ export const getShuffledIds = unstable_cache(
 
 // Server-side: newest exercises only — fast first load. Popular is fetched client-side.
 const getAssignmentsInternal = unstable_cache(
-  async (goal: string, search: string, userType: string, studySubject: string = '', studyLevel: string = '') => {
+  async (goal: string, search: string, rawUserType: string, studySubject: string = '', studyLevel: string = '') => {
+    const userType = rawUserType === "adults" ? "learner" : rawUserType;
     const cacheKey = `feed:assignments:v1:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
     return fetchWithRedis(cacheKey, 300, async () => {
       const randomIds = await getShuffledIds("EXERCISE", goal, search, userType, studySubject, studyLevel);
@@ -152,7 +154,8 @@ export const getCachedAssignments = async (params: any) => {
 
 // Server-side: newest lessons only — fast first load. Popular is fetched client-side.
 const getLessonsInternal = unstable_cache(
-  async (goal: string, search: string, userType: string, studySubject: string = '', studyLevel: string = '') => {
+  async (goal: string, search: string, rawUserType: string, studySubject: string = '', studyLevel: string = '') => {
+    const userType = rawUserType === "adults" ? "learner" : rawUserType;
     const cacheKey = `feed:lessons:v1:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
     return fetchWithRedis(cacheKey, 300, async () => {
       const randomIds = await getShuffledIds("LESSON", goal, search, userType, studySubject, studyLevel);
