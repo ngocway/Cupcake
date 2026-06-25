@@ -8,8 +8,6 @@ import { cookies } from "next/headers"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 
-export const revalidate = 10; // ISR: Revalidate every 10 seconds
-
 export default async function HomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
 

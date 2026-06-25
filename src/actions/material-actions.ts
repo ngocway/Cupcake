@@ -10,6 +10,8 @@ import { MaterialStatus } from '@prisma/client';
 import { after } from 'next/server';
 import { generateUniqueSlug } from '@/lib/slugify';
 import openai from "@/lib/openai";
+import { reindexAssignment, reindexLesson } from '@/lib/ai-embeddings';
+
 
 export async function generateMaterialThumbnail(assignment: { title: string; subject: string | null }, questions: any[]) {
   // Analyze content to create a stable seed
@@ -152,6 +154,10 @@ export async function createMaterialWithQuestions(payload: {
   after(() => {
     syncToHomepageFeed(newAss.id, "EXERCISE").catch(err => {
       console.error("[createMaterialWithQuestions] Background sync feed failed:", err);
+    });
+    // AI embedding: index this new assignment for related content
+    reindexAssignment(newAss.id).catch(err => {
+      console.error("[createMaterialWithQuestions] AI reindex failed:", err);
     });
   });
 
@@ -521,6 +527,18 @@ export async function autoSaveMaterial(payload: {
             }).catch(e => console.error("[AutoSave] Failed to create tags:", e));
           }
         }).catch(e => console.error("[AutoSave] Failed to fetch tags:", e));
+      }
+    }
+
+    // AI embedding: re-index when content is PUBLIC so related lists stay accurate
+    if (existing?.status === 'PUBLIC') {
+      reindexAssignment(payload.id).catch(err => {
+        console.error("[AutoSave] AI reindex assignment failed:", err);
+      });
+      if (existing?.lesson) {
+        reindexLesson(existing.lesson.id).catch(err => {
+          console.error("[AutoSave] AI reindex lesson failed:", err);
+        });
       }
     }
   });
@@ -907,6 +925,21 @@ export async function restoreMaterial(id: string) {
   revalidatePath('/teacher/materials');
   revalidatePath('/teacher/lessons');
   await invalidateMaterialCache(id);
+
+  // AI embedding: re-index restored content
+  after(() => {
+    if (assignment) {
+      reindexAssignment(id).catch(err =>
+        console.error('[Restore] AI reindex assignment failed:', err)
+      );
+      if (assignment.lesson) {
+        reindexLesson(assignment.lesson.id).catch(err =>
+          console.error('[Restore] AI reindex lesson failed:', err)
+        );
+      }
+    }
+  });
+
   return { success: true };
 }
 
@@ -1071,6 +1104,20 @@ export async function updateMaterialStatus(id: string, newStatus: MaterialStatus
   if (updatedAss?.lesson) {
     syncToHomepageFeed(updatedAss.lesson.id, "LESSON").catch(err => {
       console.error("[UpdateStatus] Background sync feed failed for lesson:", err);
+    });
+  }
+
+  // AI embedding: re-index when becoming PUBLIC
+  if (newStatus === 'PUBLIC') {
+    after(() => {
+      reindexAssignment(id).catch(err => {
+        console.error("[UpdateStatus] AI reindex assignment failed:", err);
+      });
+      if (updatedAss?.lesson) {
+        reindexLesson(updatedAss.lesson.id).catch(err => {
+          console.error("[UpdateStatus] AI reindex lesson failed:", err);
+        });
+      }
     });
   }
   

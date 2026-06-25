@@ -181,6 +181,7 @@ model Assignment {
   viewCount             Int                  @default(0)
   publicSubmissionCount Int                  @default(0)
   isBlocked             Boolean              @default(false)
+  relatedAssignmentIds  String[]             @default([])
   teacher               User                 @relation(fields: [teacherId], references: [id])
   targetClasses         AssignmentClass[]
   reviews               AssignmentReview[]
@@ -326,6 +327,7 @@ model Lesson {
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
   isBlocked       Boolean          @default(false)
+  relatedLessonIds String[]         @default([])
   favorites       FavoriteLesson[]
   assignment      Assignment?      @relation(fields: [assignmentId], references: [id])
   teacher         User             @relation(fields: [teacherId], references: [id])
@@ -694,4 +696,17 @@ model SystemSetting {
   value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// AI Embedding for related content recommendations
+model ContentEmbedding {
+  id          String   @id @default(cuid())
+  contentId   String
+  contentType String   // "LESSON" | "ASSIGNMENT"
+  embedding   Float[]  // 768-dim vector from Gemini text-embedding-004
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([contentId, contentType])
+  @@index([contentType])
 }

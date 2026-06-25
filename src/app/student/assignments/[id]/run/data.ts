@@ -80,6 +80,32 @@ export const getCachedAssignmentQuestions = async (assignmentId: string) => {
 
 export const getRelatedAssignmentsCached = async (assignmentId: string, assignmentTags: string | null, targetAudiences: string[]) => {
   return fetchWithRedis(`assignment:related:${assignmentId}`, 900, async () => {
+    // 1. Fetch assignment with pre-computed related IDs
+    const assignment = await prisma.assignment.findFirst({
+      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+      select: { id: true, relatedAssignmentIds: true }
+    });
+
+    const actualId = assignment?.id ?? assignmentId;
+
+    // 2. If AI has pre-computed related IDs, use them directly (fast DB read)
+    if (assignment?.relatedAssignmentIds && assignment.relatedAssignmentIds.length > 0) {
+      const related = await prisma.assignment.findMany({
+        where: {
+          id: { in: assignment.relatedAssignmentIds },
+          status: 'PUBLIC',
+          deletedAt: null
+        },
+        include: { teacher: { select: { name: true, image: true } } }
+      });
+
+      // Preserve AI-ranked order
+      const orderMap = new Map(assignment.relatedAssignmentIds.map((id, i) => [id, i]));
+      related.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
+      return related;
+    }
+
+    // 3. Fallback: tag-matching (for assignments not yet indexed by AI)
     const popularTags = await prisma.tag.findMany({
       where: { isPopular: true },
       select: { name: true }
@@ -90,7 +116,6 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       ? assignmentTags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
       : [];
     const filteredTags = currentTags.filter((tag: string) => !popularTagNames.has(tag));
-
     const currentAudiences = targetAudiences || [];
 
     let relatedAssignments: any[] = [];
@@ -99,7 +124,7 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       const candidates = await prisma.assignment.findMany({
         where: {
           status: 'PUBLIC',
-          id: { not: assignmentId },
+          id: { not: actualId },
           deletedAt: null,
           lesson: null,
           ...(currentAudiences.length > 0 && {
@@ -110,9 +135,7 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
           }))
         },
         take: 100,
-        include: {
-          teacher: { select: { name: true, image: true } }
-        }
+        include: { teacher: { select: { name: true, image: true } } }
       });
 
       const getOverlapCount = (tagsStr: string | null | undefined) => {
@@ -134,7 +157,7 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       relatedAssignments = await prisma.assignment.findMany({
         where: {
           status: 'PUBLIC',
-          id: { not: assignmentId },
+          id: { not: actualId },
           deletedAt: null,
           lesson: null,
           ...(currentAudiences.length > 0 && {
@@ -150,3 +173,4 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
     return relatedAssignments;
   });
 };
+

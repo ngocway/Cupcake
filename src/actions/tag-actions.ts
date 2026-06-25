@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidateTag } from "next/cache";
 import { syncToHomepageFeed } from "@/lib/feed-sync";
+import { reindexAssignment, reindexLesson } from '@/lib/ai-embeddings';
+
 
 // Verify admin authorization
 async function requireAdmin() {
@@ -198,11 +200,14 @@ export async function renameTag(oldName: string, newName: string) {
       data: { tags: uniqueTags }
     });
 
-    // Sync to Homepage Feed
+    // Sync to Homepage Feed + AI reindex
     await syncToHomepageFeed(a.id, "EXERCISE").catch(() => {});
     if (a.lesson) {
       await syncToHomepageFeed(a.lesson.id, "LESSON").catch(() => {});
     }
+    // Tags changed — re-embed so related content stays accurate
+    reindexAssignment(a.id).catch(() => {});
+    if (a.lesson) reindexLesson(a.lesson.id).catch(() => {});
   }
 
   // 3. Process Questions in Bank
@@ -268,11 +273,14 @@ export async function deleteTag(tagName: string) {
       data: { tags: uniqueTags }
     });
 
-    // Sync to Homepage Feed
+    // Sync to Homepage Feed + AI reindex
     await syncToHomepageFeed(a.id, "EXERCISE").catch(() => {});
     if (a.lesson) {
       await syncToHomepageFeed(a.lesson.id, "LESSON").catch(() => {});
     }
+    // Tags changed — re-embed so related content stays accurate
+    reindexAssignment(a.id).catch(() => {});
+    if (a.lesson) reindexLesson(a.lesson.id).catch(() => {});
   }
 
   // 3. Process Questions in Bank
@@ -360,11 +368,14 @@ export async function deleteMultipleTags(tagNames: string[]) {
       data: { tags: uniqueTags }
     });
 
-    // Sync to Homepage Feed
+    // Sync to Homepage Feed + AI reindex
     await syncToHomepageFeed(a.id, "EXERCISE").catch(() => {});
     if (a.lesson) {
       await syncToHomepageFeed(a.lesson.id, "LESSON").catch(() => {});
     }
+    // Tags changed — re-embed so related content stays accurate
+    reindexAssignment(a.id).catch(() => {});
+    if (a.lesson) reindexLesson(a.lesson.id).catch(() => {});
   }
 
   // 3. Process Questions in Bank

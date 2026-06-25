@@ -107,7 +107,7 @@ export const getLessonReviews = async (lessonId: string) => {
 
 export const getRelatedLessons = async (lessonId: string) => {
   return fetchWithRedis(`lesson:related:${lessonId}`, 900, async () => {
-    // 1. Resolve actual lesson UUID and fetch tags/target audiences
+    // 1. Resolve actual lesson UUID and fetch pre-computed related IDs
     const lesson = await prisma.lesson.findFirst({
       where: {
         OR: [{ id: lessonId }, { slug: lessonId }]
@@ -115,6 +115,7 @@ export const getRelatedLessons = async (lessonId: string) => {
       select: {
         id: true,
         targetAudiences: true,
+        relatedLessonIds: true,
         assignment: {
           select: { tags: true }
         }
@@ -123,16 +124,41 @@ export const getRelatedLessons = async (lessonId: string) => {
 
     if (!lesson) return [];
     const actualId = lesson.id;
+
+    // 2. If AI has pre-computed related IDs, use them directly (fast DB read)
+    if (lesson.relatedLessonIds && lesson.relatedLessonIds.length > 0) {
+      const relatedLessons = await prisma.lesson.findMany({
+        where: {
+          id: { in: lesson.relatedLessonIds },
+          deletedAt: null,
+          isBlocked: false
+        },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          thumbnail: true,
+          assignment: {
+            select: { tags: true }
+          }
+        }
+      });
+
+      // Preserve AI-ranked order
+      const orderMap = new Map(lesson.relatedLessonIds.map((id, i) => [id, i]));
+      relatedLessons.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
+      return relatedLessons;
+    }
+
+    // 3. Fallback: tag-matching (for lessons not yet indexed by AI)
     const currentAudiences = lesson.targetAudiences || [];
 
-    // 2. Fetch popular tags
     const popularTags = await prisma.tag.findMany({
       where: { isPopular: true },
       select: { name: true }
     });
     const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
 
-    // 3. Get non-popular tags
     const currentTags = lesson.assignment?.tags
       ? lesson.assignment.tags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
       : [];
@@ -183,7 +209,6 @@ export const getRelatedLessons = async (lessonId: string) => {
       relatedLessons = candidates;
     }
 
-    // Fallback: If no lessons found or no filtered tags exist, fetch the latest public lessons
     if (relatedLessons.length === 0) {
       relatedLessons = await prisma.lesson.findMany({
         where: {
@@ -195,9 +220,7 @@ export const getRelatedLessons = async (lessonId: string) => {
             targetAudiences: { hasSome: currentAudiences }
           })
         },
-        orderBy: {
-          createdAt: 'desc'
-        },
+        orderBy: { createdAt: 'desc' },
         take: 50,
         select: {
           id: true,
@@ -211,7 +234,6 @@ export const getRelatedLessons = async (lessonId: string) => {
       });
     }
 
-    // Filter out duplicate titles and limit to 10 items
     const seenTitles = new Set<string>();
     const uniqueLessons: any[] = [];
     for (const item of relatedLessons) {

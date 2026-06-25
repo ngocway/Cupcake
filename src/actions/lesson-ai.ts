@@ -11,6 +11,8 @@ import os from 'os';
 import { randomUUID } from 'crypto';
 import { generateUniqueSlug } from '@/lib/slugify';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { reindexAssignment, reindexLesson } from '@/lib/ai-embeddings';
+
 
 export interface AILessonResponse {
   title: string;
@@ -395,6 +397,14 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
     revalidatePath("/teacher/lessons");
     revalidatePath("/teacher/materials");
     revalidatePath("/admin/materials");
+
+    // AI embedding: index this new lesson+assignment in background
+    const _lessonAssignmentId = assignmentId;
+    setImmediate(() => {
+      reindexAssignment(_lessonAssignmentId).catch(err =>
+        console.error('[lesson-ai] AI reindex assignment failed:', err)
+      );
+    });
     
     return { success: true, id: result };
   } catch (error: any) {
@@ -631,6 +641,15 @@ export async function saveParsedLesson(data: ParsedLessonData) {
 
     revalidatePath("/teacher/lessons");
     revalidatePath("/teacher/materials");
+
+    // AI embedding: index this new lesson+assignment in background
+    const _savedAssId = assignmentId;
+    setImmediate(() => {
+      reindexAssignment(_savedAssId).catch(err =>
+        console.error('[lesson-ai] AI reindex assignment (parsed) failed:', err)
+      );
+    });
+
     return { success: true, id: resultId };
   } catch (err: any) {
     console.error("Save Parsed Lesson Error:", err);
@@ -1587,6 +1606,15 @@ export async function generateAILessonFully(params: {
     })();
 
     setGenProgress(session.user.id, "Hoàn thành!", 100);
+
+    // AI embedding: index after full generation (DRAFT — will also re-trigger on publish)
+    const _fullGenId = assignmentId;
+    setImmediate(() => {
+      reindexAssignment(_fullGenId).catch(err =>
+        console.error('[lesson-ai] AI reindex (full gen) failed:', err)
+      );
+    });
+
     return { success: true, id: assignmentId };
   } catch (error: any) {
     console.error("Full automated lesson gen failed:", error);
