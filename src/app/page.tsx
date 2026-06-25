@@ -31,7 +31,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       select: { userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
     })
     if (user) {
-      const dbHasPrefs = !!(user.studySubject || user.userType)
+      const dbHasPrefs = !!(user.studySubject || user.studyAgeGroup)
       const cookieHasPrefs = !!(studySubjectCookie || userTypeCookie)
 
       if (dbHasPrefs) {

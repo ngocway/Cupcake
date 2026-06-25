@@ -1004,8 +1004,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     // Clear level when age group changes (level is now selected from sidebar)
     document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
 
-    // 4. Trigger background update to server (FIRE AND FORGET - NO AWAIT)
-    updateAllPreferences({
+    // 4. Update preferences on server and AWAIT it to prevent client/server race condition
+    await updateAllPreferences({
       userType: tempUserType,
       nativeLanguage: tempNativeLanguage,
       studySubject: studySubject || "english",

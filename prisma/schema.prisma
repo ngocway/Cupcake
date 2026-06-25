@@ -30,7 +30,7 @@ model User {
   location             String?
   education            String?
   teachingExperience   String?
-  userType             String?              @default("adults")
+  userType             String?
   themeColor           String?              @default("#00adef")
   logoUrl              String?
   isIncognito          Boolean              @default(false)
