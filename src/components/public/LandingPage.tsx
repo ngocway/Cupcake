@@ -792,17 +792,22 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
   // Sync initial userType and study preferences
   useEffect(() => {
+    const cookieOpts = "; path=/; max-age=31536000; samesite=lax";
     if (initialUserType) {
       setUserType(initialUserType);
+      document.cookie = `user_type=${initialUserType}${cookieOpts}`;
     }
     if (initialStudySubject) {
       setStudySubject(initialStudySubject);
+      document.cookie = `study_subject=${initialStudySubject}${cookieOpts}`;
     }
     if (initialStudyAgeGroup) {
       setStudyAgeGroup(initialStudyAgeGroup);
+      document.cookie = `study_age_group=${initialStudyAgeGroup}${cookieOpts}`;
     }
     if (initialStudyLevel) {
       setStudyLevel(initialStudyLevel);
+      document.cookie = `study_level=${initialStudyLevel}${cookieOpts}`;
     }
     const savedLang = localStorage.getItem("cupcakes_native_language");
     if (savedLang) {
