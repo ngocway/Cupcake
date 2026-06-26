@@ -1256,7 +1256,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
           <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
             {/* Sliding indicator */}
             <div
-              className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+              className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none"
               style={{
                 width: `calc((100% - 12px) / ${tabs.length})`,
                 transform: `translateX(calc(${tabs.indexOf(activeTab)} * 100%))`,
