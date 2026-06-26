@@ -4,6 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n.ts");
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["192.168.1.6", "localhost", "127.0.0.1"],
   experimental: {
     serverActions: {
       bodySizeLimit: '100mb',
