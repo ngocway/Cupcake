@@ -75,7 +75,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const isActive = (path: string) => pathname === path
 
   return (
-    <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/70 backdrop-blur-xl border border-primary/10 rounded-full shadow-2xl transition-all duration-700 ease-in-out ${isAtTop ? "translate-y-0 opacity-100" : "-translate-y-40 opacity-0 pointer-events-none"}`}>
+    <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/95 border border-primary/10 rounded-full shadow-2xl transition-all duration-700 ease-in-out ${isAtTop ? "translate-y-0 opacity-100" : "-translate-y-40 opacity-0 pointer-events-none"}`}>
       <div className="flex items-center gap-10">
         <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
           <img 
