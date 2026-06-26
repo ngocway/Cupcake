@@ -92,7 +92,16 @@ export function SubjectSelector({ subjects }: Props) {
           return (
             <button
               key={subject.id}
-              onClick={() => handleSelect(subject.id)}
+              onPointerDown={(e) => {
+                if (e.button === 0) {
+                  e.preventDefault();
+                  handleSelect(subject.id);
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSelect(subject.id);
+              }}
               disabled={isPending}
               className={`group flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wide border-2 transition-all duration-300 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                 isActive

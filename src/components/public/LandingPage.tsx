@@ -1272,7 +1272,16 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               return (
                 <button
                   key={tab}
-                  onClick={() => handleTabChange(tab)}
+                  onPointerDown={(e) => {
+                    if (e.button === 0) {
+                      e.preventDefault();
+                      handleTabChange(tab);
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleTabChange(tab);
+                  }}
                   className="relative z-10 px-2 sm:px-10 py-2.5 sm:py-3.5 min-w-[65px] sm:min-w-[130px] rounded-[1.5rem] text-[10px] sm:text-sm font-black transition-colors duration-300 cursor-pointer text-center text-slate-400 hover:text-primary active:text-white touch-manipulation"
                   style={{
                     color: activeTab === tab ? '#ffffff' : undefined
@@ -1300,7 +1309,16 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               return (
                 <button
                   key={pill.id}
-                  onClick={() => setSelectedAgeFilter(pill.id)}
+                  onPointerDown={(e) => {
+                    if (e.button === 0) {
+                      e.preventDefault();
+                      setSelectedAgeFilter(pill.id);
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedAgeFilter(pill.id);
+                  }}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
                     isActive 
                       ? `${pill.activeBg} border-transparent shadow-md scale-105` 

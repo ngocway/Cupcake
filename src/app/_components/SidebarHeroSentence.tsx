@@ -82,21 +82,48 @@ export function SidebarHeroSentence({ config }: Props) {
           </div>
         </div>
         <button 
-          onClick={() => setFilterModalOpen(true)}
+          onPointerDown={(e) => {
+            if (e.button === 0) {
+              e.preventDefault();
+              setFilterModalOpen(true);
+            }
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            setFilterModalOpen(true);
+          }}
           className="inline-block border border-sky-300 px-2 py-0.5 bg-sky-100/60 text-sky-900 rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] shadow-sm transform-gpu will-change-transform touch-manipulation -rotate-1 hover:rotate-0 transition-transform duration-300 cursor-pointer focus:outline-none"
         >
           {ageGroupLabel}
         </button>
         <span>speaking</span>
         <button 
-          onClick={() => setFilterModalOpen(true)}
+          onPointerDown={(e) => {
+            if (e.button === 0) {
+              e.preventDefault();
+              setFilterModalOpen(true);
+            }
+          }}
+          onClick={(e) => {
+            e.preventDefault();
+            setFilterModalOpen(true);
+          }}
           className="inline-block border border-amber-300 px-2 py-0.5 bg-amber-100/60 text-amber-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform-gpu will-change-transform touch-manipulation rotate-1 hover:rotate-0 transition-transform duration-300 cursor-pointer focus:outline-none"
         >
           {nativeLanguage === 'vi' ? 'Tiếng Việt' : nativeLanguage === 'th' ? 'ภาษาไทย' : nativeLanguage === 'id' ? 'Bahasa Indonesia' : 'English'}
         </button>
         <span className="inline-flex items-center">
           <button
-            onClick={() => setFilterModalOpen(true)}
+            onPointerDown={(e) => {
+              if (e.button === 0) {
+                e.preventDefault();
+                setFilterModalOpen(true);
+              }
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              setFilterModalOpen(true);
+            }}
             className="ml-1 text-primary/40 hover:text-primary hover:rotate-90 transition-all duration-300 focus:outline-none cursor-pointer p-1 rounded-full hover:bg-primary/5"
             title="Change Preferences"
           >
@@ -117,7 +144,16 @@ export function SidebarHeroSentence({ config }: Props) {
           <div className="flex flex-wrap gap-2">
             {/* "All" option */}
             <button
-              onClick={() => handleSelectLevel("all")}
+              onPointerDown={(e) => {
+                if (e.button === 0) {
+                  e.preventDefault();
+                  handleSelectLevel("all");
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSelectLevel("all");
+              }}
               disabled={isPending}
               className={`px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.05em] border transition-all duration-300 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                 !studyLevel
@@ -136,7 +172,16 @@ export function SidebarHeroSentence({ config }: Props) {
               return (
                 <button
                   key={level.id}
-                  onClick={() => handleSelectLevel(level.id)}
+                  onPointerDown={(e) => {
+                    if (e.button === 0) {
+                      e.preventDefault();
+                      handleSelectLevel(level.id);
+                    }
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSelectLevel(level.id);
+                  }}
                   disabled={isPending}
                   className={`px-3 py-1.5 ${blob} text-[11px] font-black uppercase tracking-[0.05em] border-2 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                     isActive
