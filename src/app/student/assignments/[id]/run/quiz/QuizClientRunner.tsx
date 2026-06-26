@@ -185,6 +185,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
   const [dragging, setDragging] = useState<any>(null);
   const [hoveredLine, setHoveredLine] = useState<any>(null);
   const [, setForceUpdate] = useState({});
+  const [selectedLeftId, setSelectedLeftId] = useState<string | null>(null);
 
   useEffect(() => {
     // Force a re-render after mount to ensure DOM nodes exist for getDotCoords
@@ -222,7 +223,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
       <div 
         ref={containerRef}
         className="grid grid-cols-2 gap-x-8 md:gap-x-16 gap-y-4 relative p-2 md:p-4"
-        style={{ touchAction: "none" }}
+        style={{ touchAction: "auto" }}
         onPointerMove={(e) => {
           if (!dragging || !containerRef.current) return;
           const rect = containerRef.current.getBoundingClientRect();
@@ -233,7 +234,7 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
             const target = document.elementFromPoint(e.clientX, e.clientY);
             const dot = target?.closest('[id^="dot-"]');
             if (dot) {
-              const id = dot.id;
+              const id = dot.id.replace('-wrapper', '');
               if (dragging.fromSide === 'left' && id.includes('dot-right-')) {
                 const idx = parseInt(id.split('-').pop()!);
                 if (!isNaN(idx) && shuffledRightItems[idx] !== undefined)
@@ -335,32 +336,79 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
           {(questionData.pairs || []).map((pair: any, idx: number) => {
             const pairedRightText = userAnswer?.[pair.id];
             const leftIsImage = !!(pair.leftImageUrl || pair.leftText?.startsWith('http') || pair.leftText?.startsWith('/'));
+            const isSelected = selectedLeftId === pair.id;
             return (
               <div key={pair.id || idx} className="relative transition-all" style={leftIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
                 {leftIsImage ? (
                   <div
-                    className="relative"
+                    className={`relative cursor-pointer rounded-2xl p-1 border-2 transition-all ${
+                      isSelected 
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
+                        : pairedRightText 
+                          ? 'border-secondary/40' 
+                          : 'border-transparent hover:border-outline-variant/30'
+                    }`}
                     style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
+                    onClick={() => {
+                      if (isChecked) return;
+                      setSelectedLeftId(isSelected ? null : pair.id);
+                    }}
                   >
                     <img src={pair.leftImageUrl || pair.leftText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
-                    <div id={`dot-left-${q.id}-${pair.id}`}
+                    <div 
+                      id={`dot-left-${q.id}-${pair.id}-wrapper`}
                       onPointerDown={(e) => {
                         if (isChecked) return;
+                        e.stopPropagation();
+                        e.currentTarget.setPointerCapture(e.pointerId);
                         const coords = getDotCoords(pair.id, 'left');
-                        setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                        setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
                       }}
-                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                      onPointerUp={(e) => {
+                        try {
+                          e.currentTarget.releasePointerCapture(e.pointerId);
+                        } catch (err) {}
+                      }}
+                      className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center z-30 cursor-crosshair touch-none"
+                    >
+                      <div id={`dot-left-${q.id}-${pair.id}`}
+                        className={`w-5 h-5 rounded-full border-4 border-white shadow-sm transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                    </div>
                   </div>
                 ) : (
-                  <div className={`relative flex items-center justify-between p-5 rounded-2xl border-2 ${pairedRightText ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
+                  <div 
+                    onClick={() => {
+                      if (isChecked) return;
+                      setSelectedLeftId(isSelected ? null : pair.id);
+                    }}
+                    className={`relative flex items-center justify-between p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
+                        : pairedRightText 
+                          ? 'border-secondary/40 bg-secondary/5' 
+                          : 'border-outline-variant/30 bg-white hover:border-outline-variant'
+                    }`}
+                  >
                     <span className="font-bold text-on-surface">{pair.leftText}</span>
-                    <div id={`dot-left-${q.id}-${pair.id}`}
+                    <div 
+                      id={`dot-left-${q.id}-${pair.id}-wrapper`}
                       onPointerDown={(e) => {
                         if (isChecked) return;
+                        e.stopPropagation();
+                        e.currentTarget.setPointerCapture(e.pointerId);
                         const coords = getDotCoords(pair.id, 'left');
-                        setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                        setDragging({ fromId: pair.id, fromSide: 'left', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
                       }}
-                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -right-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                      onPointerUp={(e) => {
+                        try {
+                          e.currentTarget.releasePointerCapture(e.pointerId);
+                        } catch (err) {}
+                      }}
+                      className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center z-30 cursor-crosshair touch-none"
+                    >
+                      <div id={`dot-left-${q.id}-${pair.id}`}
+                        className={`w-5 h-5 rounded-full border-4 border-white shadow-sm transition-transform hover:scale-150 ${pairedRightText ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -373,46 +421,103 @@ function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleA
             const pairedLeftId = Object.keys(userAnswer || {}).find(k => userAnswer[k] === rightText);
             const isPairCorrect = isChecked && pairedLeftId && (questionData.pairs.find((p:any) => p.id === pairedLeftId)?.rightText === rightText);
             const rightIsImage = !!(rightText?.startsWith('http') || rightText?.startsWith('/'));
+            const isSelectedPartner = selectedLeftId === pairedLeftId;
             return (
               <div key={idx} className="relative transition-all" style={rightIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
                 {rightIsImage ? (
                   <div
-                    className="relative"
+                    className={`relative cursor-pointer rounded-2xl p-1 border-2 transition-all ${
+                      isSelectedPartner 
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
+                        : pairedLeftId 
+                          ? 'border-secondary/40' 
+                          : 'border-transparent hover:border-outline-variant/30'
+                    }`}
                     style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
+                    onClick={() => {
+                      if (isChecked) return;
+                      if (selectedLeftId) {
+                        handleAnswerChange(q, { leftId: selectedLeftId, rightText });
+                        setSelectedLeftId(null);
+                      } else if (pairedLeftId) {
+                        setSelectedLeftId(pairedLeftId);
+                      }
+                    }}
                   >
-                    <div id={`dot-right-${q.id}-${idx}`}
+                    <div 
+                      id={`dot-right-${q.id}-${idx}-wrapper`}
                       onPointerDown={(e) => {
                         if (isChecked) return;
+                        e.stopPropagation();
+                        e.currentTarget.setPointerCapture(e.pointerId);
                         const rect = containerRef.current!.getBoundingClientRect();
                         if (pairedLeftId) {
                           const coords = getDotCoords(pairedLeftId, 'left');
-                          setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                          setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top, pointerId: e.pointerId });
                         } else {
                           const coords = getDotCoords(idx.toString(), 'right');
-                          setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                          setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
                         }
                       }}
-                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                      onPointerUp={(e) => {
+                        try {
+                          e.currentTarget.releasePointerCapture(e.pointerId);
+                        } catch (err) {}
+                      }}
+                      className="absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center z-30 cursor-crosshair touch-none"
+                    >
+                      <div id={`dot-right-${q.id}-${idx}`}
+                        className={`w-5 h-5 rounded-full border-4 border-white shadow-sm transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                    </div>
                     <img src={rightText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
                     {isChecked && pairedLeftId && (
                       <div className="absolute top-2 right-2">{isPairCorrect ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}</div>
                     )}
                   </div>
                 ) : (
-                  <div className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 ${pairedLeftId ? 'border-secondary/40 bg-secondary/5' : 'border-outline-variant/30 bg-white'}`}>
-                    <div id={`dot-right-${q.id}-${idx}`}
+                  <div 
+                    onClick={() => {
+                      if (isChecked) return;
+                      if (selectedLeftId) {
+                        handleAnswerChange(q, { leftId: selectedLeftId, rightText });
+                        setSelectedLeftId(null);
+                      } else if (pairedLeftId) {
+                        setSelectedLeftId(pairedLeftId);
+                      }
+                    }}
+                    className={`relative flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${
+                      isSelectedPartner 
+                        ? 'border-primary ring-2 ring-primary/20 bg-primary/5' 
+                        : pairedLeftId 
+                          ? 'border-secondary/40 bg-secondary/5' 
+                          : 'border-outline-variant/30 bg-white hover:border-outline-variant'
+                    }`}
+                  >
+                    <div 
+                      id={`dot-right-${q.id}-${idx}-wrapper`}
                       onPointerDown={(e) => {
                         if (isChecked) return;
+                        e.stopPropagation();
+                        e.currentTarget.setPointerCapture(e.pointerId);
                         const rect = containerRef.current!.getBoundingClientRect();
                         if (pairedLeftId) {
                           const coords = getDotCoords(pairedLeftId, 'left');
-                          setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
+                          setDragging({ fromId: pairedLeftId, fromSide: 'left', x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top, pointerId: e.pointerId });
                         } else {
                           const coords = getDotCoords(idx.toString(), 'right');
-                          setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y });
+                          setDragging({ fromId: idx.toString(), fromSide: 'right', x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
                         }
                       }}
-                      className={`w-5 h-5 rounded-full border-4 border-white shadow-sm cursor-crosshair absolute -left-2.5 top-1/2 -translate-y-1/2 z-30 transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                      onPointerUp={(e) => {
+                        try {
+                          e.currentTarget.releasePointerCapture(e.pointerId);
+                        } catch (err) {}
+                      }}
+                      className="absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center z-30 cursor-crosshair touch-none"
+                    >
+                      <div id={`dot-right-${q.id}-${idx}`}
+                        className={`w-5 h-5 rounded-full border-4 border-white shadow-sm transition-transform hover:scale-150 ${pairedLeftId ? 'bg-secondary' : 'bg-outline-variant hover:bg-primary'}`} />
+                    </div>
                     <span className="font-bold text-on-surface">{rightText}</span>
                     {isChecked && pairedLeftId && <div className="ml-auto">{isPairCorrect ? <CheckCircle className="w-5 h-5 text-emerald-500" /> : <XCircle className="w-5 h-5 text-rose-500" />}</div>}
                   </div>

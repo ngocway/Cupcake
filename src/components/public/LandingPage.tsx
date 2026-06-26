@@ -1247,9 +1247,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-col items-center justify-center lg:items-start gap-4 pt-0 pb-12 -mb-8 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none"
+        className="flex flex-col items-center justify-center lg:items-start gap-4 pt-0 pb-3 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40"
       >
-        <div className="inline-flex items-center gap-4 relative z-10 pointer-events-auto">
+        {/* Background gradient decorator with pointer-events-none (bypasses iOS Webkit touch bugs) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none h-[calc(100%+32px)] z-0" />
+        
+        <div className="inline-flex items-center gap-4 relative z-10">
           <div className="relative inline-flex items-center bg-white/90 backdrop-blur-sm border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
             {/* Sliding indicator */}
             <div
@@ -1270,9 +1273,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
                 <button
                   key={tab}
                   onClick={() => handleTabChange(tab)}
-                  className={`relative z-10 px-2 sm:px-10 py-2.5 sm:py-3.5 min-w-[65px] sm:min-w-[130px] rounded-[1.5rem] text-[10px] sm:text-sm font-black transition-colors duration-300 cursor-pointer text-center ${
-                    activeTab === tab ? "text-white" : "text-slate-400 hover:text-primary"
-                  }`}
+                  className="relative z-10 px-2 sm:px-10 py-2.5 sm:py-3.5 min-w-[65px] sm:min-w-[130px] rounded-[1.5rem] text-[10px] sm:text-sm font-black transition-colors duration-300 cursor-pointer text-center text-slate-400 hover:text-primary active:text-white"
+                  style={{
+                    color: activeTab === tab ? '#ffffff' : undefined
+                  }}
                 >
                   {label}
                 </button>
@@ -1283,7 +1287,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
         {/* Pill Selector for Age Groups (Kid, Teen, Learner) */}
         {!isKindergarten && (activeTab === "flashcards" || activeTab === "games") && (
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-350">
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
               {locale === "vi" ? "Độ tuổi:" : "Age Group:"}
             </span>

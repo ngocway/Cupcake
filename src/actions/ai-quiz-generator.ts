@@ -270,3 +270,136 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
     return { success: false, errors: ["Lỗi khi phân tích bằng AI: " + (error.message || String(error))] };
   }
 }
+
+export async function generateAIExerciseFromUrlAction(assignmentId: string, url: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, errors: ["Chưa đăng nhập. Vui lòng đăng nhập lại."] };
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return { success: false, errors: ["OPENAI_API_KEY chưa được cấu hình. Vui lòng thêm vào .env"] };
+  }
+
+  try {
+    const { scrapeUrlContent } = await import('@/lib/url-scraper');
+    console.log(`[AI Quiz Generator] Scraping URL: ${url}`);
+    const scrapedText = await scrapeUrlContent(url);
+    
+    // Clean text a bit
+    const cleanText = scrapedText.trim().replace(/\s+/g, ' ');
+
+    console.log(`[AI Quiz Generator] Scraped content length: ${cleanText.length}. Calling OpenAI...`);
+
+    const systemPrompt = `You are an expert ESL content creator.
+You must return the generated content STRICTLY as a JSON object matching the following structure:
+{
+  "title": "string (Title of the lesson)",
+  "thumbnailImagePrompt": "string (Thumbnail image prompt based on the requirements)",
+  "lessonGoal": "string (Goal of the lesson)",
+  "grammarFormula": "string (Grammar formula explanation)",
+  "examples": ["string (Example 1)", "string (Example 2)", ...],
+  "practiceMultipleChoice": [
+    {
+      "questionText": "string",
+      "options": [
+        { "text": "string", "isCorrect": boolean }
+      ],
+      "explanation": "string"
+    }
+  ],
+  "practiceTrueFalse": [
+    {
+      "statement": "string",
+      "isTrue": boolean,
+      "explanation": "string"
+    }
+  ],
+  "quickMemoryTip": ["string (Tip 1)", "string (Tip 2)", ...],
+  "finalSummary": "string (Final summary)"
+}
+
+Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. Ensure all questions and options are in English only.`;
+
+    const userPrompt = `Read the following text scraped from an exercise webpage:
+---
+${cleanText}
+---
+
+Your tasks:
+1. Extract the questions present in the text above. You must ONLY extract the existing questions and options (with their correct states) from the text. DO NOT invent or make up any new questions.
+2. Extract at most 30 questions in total (prioritizing multiple choice, and then true/false if any are found). If there are fewer than 30 questions, extract all of them.
+3. Automatically generate the lesson title, lesson goal (2-3 sentences), grammar formula, examples (6-8 sentences), memory tips, and final summary based on the theme of these questions.
+4. Create a prompt for an image generator (16:9 ratio, flat design 2D cartoon style) that matches the theme of this lesson.
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0].message.content;
+    if (!responseText) {
+      return { success: false, errors: ["Không nhận được phản hồi từ OpenAI"] };
+    }
+
+    const result = JSON.parse(responseText);
+    
+    // Validate output structure
+    if (!result.title || !result.practiceMultipleChoice || !result.practiceTrueFalse) {
+      return { success: false, errors: ["Dữ liệu phản hồi từ AI không đúng cấu trúc yêu cầu."] };
+    }
+
+    // Convert Goal, Grammar, Examples, Tip, Summary to instructionsHtml
+    const instructionsHtml = buildInstructionsHtml({
+      lessonGoal: result.lessonGoal || "",
+      grammarFormula: result.grammarFormula || "",
+      examples: result.examples || [],
+      quickMemoryTip: result.quickMemoryTip || [],
+      finalSummary: result.finalSummary || ""
+    });
+
+    // Run background task for DALL-E image generation & update DB
+    if (result.thumbnailImagePrompt && assignmentId && assignmentId !== 'new') {
+      after(async () => {
+        try {
+          console.log(`[Background] Starting DALL-E image generation for assignment ${assignmentId}`);
+          const imageResult = await generateDalleImage(result.thumbnailImagePrompt);
+          if (imageResult.base64) {
+            const uploadResult = await uploadBase64Image(imageResult.base64, assignmentId);
+            if (uploadResult.success && uploadResult.url) {
+              await prisma.assignment.update({
+                where: { id: assignmentId },
+                data: { thumbnail: uploadResult.url }
+              });
+              console.log(`[Background] Successfully updated thumbnail for assignment ${assignmentId} to: ${uploadResult.url}`);
+            } else {
+              console.error(`[Background] Failed to upload DALL-E image to R2:`, uploadResult.error);
+            }
+          } else {
+            console.error(`[Background] DALL-E generation failed:`, imageResult.error);
+          }
+        } catch (err) {
+          console.error(`[Background] Error in DALL-E generation task:`, err);
+        }
+      });
+    }
+
+    return {
+      success: true,
+      title: result.title,
+      instructions: instructionsHtml,
+      shortDescription: result.lessonGoal || "",
+      multipleChoice: result.practiceMultipleChoice,
+      trueFalse: result.practiceTrueFalse,
+      thumbnailImagePrompt: result.thumbnailImagePrompt
+    };
+  } catch (error: any) {
+    console.error("OpenAI API Error in URL exercise generator:", error);
+    return { success: false, errors: ["Lỗi khi phân tích bằng AI: " + (error.message || String(error))] };
+  }
+}

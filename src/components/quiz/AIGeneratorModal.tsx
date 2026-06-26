@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { QuestionType } from './types';
-import { generateAIExerciseAction } from '@/actions/ai-quiz-generator';
+import { generateAIExerciseAction, generateAIExerciseFromUrlAction } from '@/actions/ai-quiz-generator';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 
@@ -124,6 +124,10 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
   const [questionsText, setQuestionsText] = useState(DEFAULT_PROMPT_TEMPLATE);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  
+  // Custom mode or URL mode switcher
+  const [generatorMode, setGeneratorMode] = useState<'prompt' | 'url'>('prompt');
+  const [urlInput, setUrlInput] = useState('');
 
   // Taxonomy states
   const [subject, setSubject] = useState("english");
@@ -142,11 +146,24 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
 
   const handleGenerate = async () => {
     const newErrors = [];
-    if (isCreationMode && partsCount === null) {
+    if (isCreationMode && generatorMode === 'prompt' && partsCount === null) {
       newErrors.push('Vui lòng chọn số lượng phần bài tập (Parts) muốn tạo.');
     }
-    if (!questionsText.trim()) {
-      newErrors.push('Vui lòng nhập hoặc chỉnh sửa nội dung prompt mẫu.');
+    
+    if (generatorMode === 'prompt') {
+      if (!questionsText.trim()) {
+        newErrors.push('Vui lòng nhập hoặc chỉnh sửa nội dung prompt mẫu.');
+      }
+    } else {
+      if (!urlInput.trim()) {
+        newErrors.push('Vui lòng nhập đường dẫn (URL) bài tập.');
+      } else {
+        try {
+          new URL(urlInput.trim());
+        } catch (_) {
+          newErrors.push('Đường dẫn không hợp lệ. Vui lòng nhập URL đầy đủ bắt đầu bằng http:// hoặc https://');
+        }
+      }
     }
 
     if (newErrors.length > 0) {
@@ -158,19 +175,22 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
     setErrors([]);
     
     try {
-      const partsToGenerate = isCreationMode ? (partsCount || 1) : 1;
+      const partsToGenerate = generatorMode === 'url' ? 1 : (isCreationMode ? (partsCount || 1) : 1);
 
       const promises = Array.from({ length: partsToGenerate }).map(async (_, idx) => {
         const partNum = idx + 1;
-        const partPromptText = partsToGenerate > 1 
-          ? `${questionsText}\n\nIMPORTANT: This is Part ${partNum} of a ${partsToGenerate}-part series. Generate distinct questions and vocabulary for Part ${partNum}. The title of this part MUST end with " Part ${partNum}" (e.g. if the title is "Present Continuous", it must be "Present Continuous Part ${partNum}"). Do not repeat questions or options from other parts.`
-          : questionsText;
+        
+        let result;
+        if (generatorMode === 'prompt') {
+          const partPromptText = partsToGenerate > 1 
+            ? `${questionsText}\n\nIMPORTANT: This is Part ${partNum} of a ${partsToGenerate}-part series. Generate distinct questions and vocabulary for Part ${partNum}. The title of this part MUST end with " Part ${partNum}" (e.g. if the title is "Present Continuous", it must be "Present Continuous Part ${partNum}"). Do not repeat questions or options from other parts.`
+            : questionsText;
 
-        const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
-        const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
-        const primaryLevel = audienceLevels[primaryAudience] || "A1";
+          const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
+          const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
+          const primaryLevel = audienceLevels[primaryAudience] || "A1";
 
-        const enhancedPrompt = `
+          const enhancedPrompt = `
 Context Information for AI:
 - Subject: ${subject}
 - Target Audiences: ${targetAudiences.join(', ')}
@@ -183,18 +203,21 @@ User Prompt:
 ${partPromptText}
 `;
 
-        const result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
+          result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
+        } else {
+          result = await generateAIExerciseFromUrlAction(assignmentId || 'new', urlInput.trim());
+        }
         
         if (!result.success) {
           throw new Error(
-            `Lỗi khi sinh Part ${partNum}: ` + 
+            `Lỗi khi xử lý bằng AI: ` + 
             (result.errors?.join(', ') || 'Lỗi không xác định') + 
             ((result as any).rawError ? ` (Chi tiết: ${(result as any).rawError})` : '')
           );
         }
         
         if (!result.multipleChoice || !result.trueFalse) {
-          throw new Error(`AI không nhận diện được câu hỏi nào từ nội dung cho Part ${partNum}.`);
+          throw new Error(`AI không nhận diện được câu hỏi nào từ nội dung.`);
         }
 
         const formattedQuestions = [
@@ -270,7 +293,7 @@ ${partPromptText}
           </div>
           <div className="flex-1">
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Tạo bài tập bằng AI Assistant</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Điều chỉnh prompt mẫu bên dưới để tạo tiêu đề, hướng dẫn học bằng HTML, các câu hỏi và ảnh đại diện.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Thiết lập đối tượng học và cung cấp prompt tùy chỉnh hoặc link bài tập có sẵn.</p>
           </div>
           <button 
             onClick={onClose}
@@ -296,9 +319,35 @@ ${partPromptText}
             </div>
           )}
 
+          {/* Tab Switcher */}
+          <div className="flex border-b border-slate-200 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => setGeneratorMode('prompt')}
+              className={`flex-1 py-3 text-center text-sm font-bold border-b-2 transition-all ${
+                generatorMode === 'prompt'
+                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Tự nhập prompt tùy chỉnh
+            </button>
+            <button
+              type="button"
+              onClick={() => setGeneratorMode('url')}
+              className={`flex-1 py-3 text-center text-sm font-bold border-b-2 transition-all ${
+                generatorMode === 'url'
+                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Từ link bài tập có sẵn
+            </button>
+          </div>
+
           {/* Taxonomy Config */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Cấu hình đối tượng & mục tiêu</label>
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Cấu hình đối tượng & mục tiêu (AI tham khảo ngữ cảnh)</label>
             <div className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4.5 bg-slate-50/40 dark:bg-slate-800/20">
               <TaxonomySelector
                 config={onboardingConfig}
@@ -314,8 +363,8 @@ ${partPromptText}
             </div>
           </div>
 
-          {/* Parts Count Config */}
-          {isCreationMode && (
+          {/* Parts Count Config (Only show in custom prompt mode) */}
+          {isCreationMode && generatorMode === 'prompt' && (
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Số lượng phần bài tập (Parts) muốn tạo</label>
               <div className="flex items-center gap-3">
@@ -345,15 +394,33 @@ ${partPromptText}
             </div>
           )}
 
-          {/* Questions input */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Nội dung Prompt tùy chỉnh <span className="text-red-500">*</span></label>
-            <textarea 
-              value={questionsText}
-              onChange={(e) => setQuestionsText(e.target.value)}
-              className="resize-none h-96 p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-mono font-medium"
-            />
-          </div>
+          {/* Mode inputs */}
+          {generatorMode === 'prompt' ? (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Nội dung Prompt tùy chỉnh <span className="text-red-500">*</span></label>
+              <textarea 
+                value={questionsText}
+                onChange={(e) => setQuestionsText(e.target.value)}
+                className="resize-none h-96 p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-mono font-medium"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">
+                Đường dẫn (URL) bài tập gốc <span className="text-red-500">*</span>
+              </label>
+              <input 
+                type="text"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="Dán link chứa bài tập tại đây (ví dụ: https://preply.com/...)"
+                className="p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
+              />
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                AI sẽ tự động cào và trích xuất tối đa 30 câu hỏi từ link này để thiết lập bài tập. Cam kết không tự sáng tạo câu hỏi ngoài.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

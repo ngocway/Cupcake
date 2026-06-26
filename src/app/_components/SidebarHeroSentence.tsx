@@ -81,13 +81,19 @@ export function SidebarHeroSentence({ config }: Props) {
             />
           </div>
         </div>
-        <div className="inline-block border border-sky-300 px-2 py-0.5 bg-sky-100/60 text-sky-900 rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] shadow-sm transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+        <button 
+          onClick={() => setFilterModalOpen(true)}
+          className="inline-block border border-sky-300 px-2 py-0.5 bg-sky-100/60 text-sky-900 rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] shadow-sm transform -rotate-1 hover:rotate-0 transition-transform duration-300 cursor-pointer focus:outline-none"
+        >
           {ageGroupLabel}
-        </div>
+        </button>
         <span>speaking</span>
-        <div className="inline-block border border-amber-300 px-2 py-0.5 bg-amber-100/60 text-amber-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300">
+        <button 
+          onClick={() => setFilterModalOpen(true)}
+          className="inline-block border border-amber-300 px-2 py-0.5 bg-amber-100/60 text-amber-900 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm transform rotate-1 hover:rotate-0 transition-transform duration-300 cursor-pointer focus:outline-none"
+        >
           {nativeLanguage === 'vi' ? 'Tiếng Việt' : nativeLanguage === 'th' ? 'ภาษาไทย' : nativeLanguage === 'id' ? 'Bahasa Indonesia' : 'English'}
-        </div>
+        </button>
         <span className="inline-flex items-center">
           <button
             onClick={() => setFilterModalOpen(true)}
