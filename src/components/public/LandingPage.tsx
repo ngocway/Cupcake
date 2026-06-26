@@ -1244,10 +1244,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         </div>
       )}
 
-      {/* Tab + Sort controls */}
       <div 
         id="content-tabs" 
-        className="flex flex-col items-center justify-center lg:items-start gap-4 pt-0 pb-3 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-40 transform-gpu will-change-transform touch-manipulation"
+        className="flex flex-col items-center justify-center lg:items-start gap-4 pt-0 pb-3 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-[40] touch-manipulation"
       >
         {/* Background gradient decorator with pointer-events-none (bypasses iOS Webkit touch bugs) */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none h-[calc(100%+32px)] z-0" />

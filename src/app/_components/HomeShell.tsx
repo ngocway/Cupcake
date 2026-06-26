@@ -72,7 +72,7 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
         headerVisible ? "pt-44" : "pt-8"
       }`}>
         {isPending && (
-          <div className="fixed top-32 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-2xl border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[101] flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-2xl border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
              <span className="font-bold text-primary text-sm uppercase tracking-wider">Searching...</span>
           </div>
@@ -129,7 +129,7 @@ export function HomeLoadingSkeleton() {
       </div>
 
       {/* Centered Loading Spinner Overlay */}
-      <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none">
+      <div className="fixed inset-0 flex items-center justify-center z-[110] pointer-events-none">
         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-5 rounded-3xl shadow-2xl flex flex-col items-center justify-center border border-slate-200/50 dark:border-slate-800/50 pointer-events-auto">
           <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
