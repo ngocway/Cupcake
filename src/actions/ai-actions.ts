@@ -119,6 +119,80 @@ export async function fetchImageAsBase64(url: string) {
 }
 
 export async function generateDalleImage(prompt: string, size: string = "1024x1024") {
+  let lastError = "";
+
+  // 1. Try OpenAI DALL-E first if key is available
+  if (process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    const baseURL = openai.baseURL || "https://api.openai.com/v1";
+    const models = ["gpt-image-2", "dall-e-3", "dall-e-2"];
+    
+    for (const model of models) {
+      try {
+        console.log(`Attempting image generation with model: ${model}`);
+        
+        let requestedSize = size;
+        if (size === "1024x576" || size === "1792x1024") {
+          if (model === "dall-e-3") {
+            requestedSize = "1792x1024";
+          } else {
+            requestedSize = "1024x1024";
+          }
+        } else if (model === "dall-e-2" && size === "1024x1024") {
+          requestedSize = "512x512";
+        }
+
+        const res = await fetch(`${baseURL}/images/generations`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            n: 1,
+            size: requestedSize
+          })
+        });
+        
+        const responseData = await res.json().catch(() => ({}));
+        
+        if (!res.ok) {
+          const errMsg = responseData.error?.message || `HTTP error! status: ${res.status}`;
+          console.warn(`Model ${model} failed: ${errMsg}`);
+          lastError = errMsg;
+          
+          if (errMsg.includes("does not exist") || errMsg.includes("invalid_value") || res.status === 404) {
+            continue;
+          }
+          throw new Error(errMsg);
+        }
+        
+        const imgData = responseData.data?.[0];
+        if (!imgData) throw new Error("Empty image data response from OpenAI");
+        
+        let base64 = "";
+        if (imgData.b64_json) {
+          base64 = `data:image/png;base64,${imgData.b64_json}`;
+        } else if (imgData.url) {
+          const downloaded = await fetchImageAsBase64(imgData.url);
+          if (!downloaded) throw new Error("Failed to convert generated image to base64");
+          base64 = downloaded;
+        } else {
+          throw new Error("No image URL or base64 data returned from OpenAI");
+        }
+        
+        return { base64 };
+      } catch (error: any) {
+        console.error(`Error with model ${model}:`, error);
+        lastError = error.message;
+      }
+    }
+    console.warn("All OpenAI DALL-E attempts failed, falling back to other models...");
+  }
+
+  // 2. Fallback to Gemini Imagen
   const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (geminiApiKey) {
     try {
@@ -148,9 +222,11 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
       }
     } catch (err: any) {
       console.warn(`Failed to generate image with Gemini Imagen:`, err.message);
+      lastError = err.message;
     }
   }
 
+  // 3. Fallback to DeepInfra FLUX
   if (process.env.DEEPINFRA_API_KEY) {
     try {
       console.log(`Generating image using DeepInfra FLUX.1 Schnell: "${prompt.substring(0, 60)}..."`);
@@ -187,90 +263,11 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
       return { base64: `data:image/png;base64,${b64}` };
     } catch (error: any) {
       console.error(`Error with DeepInfra FLUX:`, error);
-      // Fallback to OpenAI if it's configured
-      if (!process.env.OPENAI_API_KEY) {
-        return { error: `Không thể vẽ ảnh bằng FLUX: ${error.message}` };
-      }
-      console.log("DeepInfra failed, falling back to OpenAI DALL-E...");
-    }
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    return { error: "Missing OPENAI_API_KEY or DEEPINFRA_API_KEY. Please set it in .env file." };
-  }
-  
-  const apiKey = process.env.OPENAI_API_KEY;
-  const baseURL = openai.baseURL || "https://api.openai.com/v1";
-  
-  // Try models in order of availability / preference
-  const models = ["gpt-image-2", "dall-e-3", "dall-e-2"];
-  let lastError = "";
-  
-  for (const model of models) {
-    try {
-      console.log(`Attempting image generation with model: ${model}`);
-      
-      let requestedSize = size;
-      if (size === "1024x576" || size === "1792x1024") {
-        if (model === "dall-e-3") {
-          requestedSize = "1792x1024";
-        } else {
-          requestedSize = "1024x1024";
-        }
-      } else if (model === "dall-e-2" && size === "1024x1024") {
-        requestedSize = "512x512";
-      }
-
-      const res = await fetch(`${baseURL}/images/generations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: model,
-          prompt: prompt,
-          n: 1,
-          size: requestedSize
-        })
-      });
-      
-      const responseData = await res.json().catch(() => ({}));
-      
-      if (!res.ok) {
-        const errMsg = responseData.error?.message || `HTTP error! status: ${res.status}`;
-        console.warn(`Model ${model} failed: ${errMsg}`);
-        lastError = errMsg;
-        
-        // If the error indicates the model doesn't exist, try the next one
-        if (errMsg.includes("does not exist") || errMsg.includes("invalid_value") || res.status === 404) {
-          continue;
-        }
-        throw new Error(errMsg);
-      }
-      
-      const imgData = responseData.data?.[0];
-      if (!imgData) throw new Error("Empty image data response from OpenAI");
-      
-      let base64 = "";
-      if (imgData.b64_json) {
-        base64 = `data:image/png;base64,${imgData.b64_json}`;
-      } else if (imgData.url) {
-        const downloaded = await fetchImageAsBase64(imgData.url);
-        if (!downloaded) throw new Error("Failed to convert generated image to base64");
-        base64 = downloaded;
-      } else {
-        throw new Error("No image URL or base64 data returned from OpenAI");
-      }
-      
-      return { base64 };
-    } catch (error: any) {
-      console.error(`Error with model ${model}:`, error);
       lastError = error.message;
     }
   }
-  
-  return { error: `Không thể vẽ ảnh bằng AI: ${lastError}` };
+
+  return { error: `Không thể vẽ ảnh bằng bất kỳ AI model nào. Lỗi cuối cùng: ${lastError}` };
 }
 
 export async function generateExampleSentence(word: string, categoryNameOrIsKid: string | boolean, currentSentence?: string) {

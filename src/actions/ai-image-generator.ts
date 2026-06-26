@@ -14,7 +14,31 @@ export async function generateThumbnailFromTitle(title: string) {
     let response = null;
     let lastError = null;
 
-    if (process.env.DEEPINFRA_API_KEY) {
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        console.log("Generating thumbnail using OpenAI DALL-E...");
+        const completion = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: prompt,
+          n: 1,
+          size: "1792x1024",
+          quality: "standard",
+        });
+        if (completion?.data?.[0]?.url) {
+          response = {
+            data: [{ url: completion.data[0].url }]
+          };
+        }
+      } catch (err: any) {
+        console.error("OpenAI DALL-E thumbnail generation failed:", err);
+        lastError = err;
+        if (!process.env.DEEPINFRA_API_KEY) {
+          throw err;
+        }
+      }
+    }
+
+    if (!response && process.env.DEEPINFRA_API_KEY) {
       try {
         console.log(`Generating thumbnail using DeepInfra FLUX.1 Schnell for title: "${title}"`);
         const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
@@ -43,25 +67,6 @@ export async function generateThumbnailFromTitle(title: string) {
       } catch (err: any) {
         console.error("DeepInfra thumbnail generation failed:", err);
         lastError = err;
-        if (!process.env.OPENAI_API_KEY) {
-          throw err;
-        }
-      }
-    }
-
-    if (!response && process.env.OPENAI_API_KEY) {
-      console.log("Generating thumbnail using OpenAI DALL-E...");
-      const completion = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: prompt,
-        n: 1,
-        size: "1792x1024",
-        quality: "standard",
-      });
-      if (completion?.data?.[0]?.url) {
-        response = {
-          data: [{ url: completion.data[0].url }]
-        };
       }
     }
 

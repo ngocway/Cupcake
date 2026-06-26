@@ -80,6 +80,9 @@ export async function createMaterialWithQuestions(payload: {
   instructions?: string;
   targetAudiences?: string[];
   thumbnailImagePrompt?: string;
+  level?: string;
+  audienceLevels?: any;
+  learningGoals?: string[];
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -104,6 +107,9 @@ export async function createMaterialWithQuestions(payload: {
       shortDescription: payload.shortDescription || null,
       instructions: payload.instructions || null,
       targetAudiences: payload.targetAudiences || [],
+      level: payload.level || null,
+      audienceLevels: payload.audienceLevels || null,
+      learningGoals: payload.learningGoals || [],
       thumbnail,
       questions: {
         create: payload.questions.map((q, idx) => ({

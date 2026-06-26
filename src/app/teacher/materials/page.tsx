@@ -164,6 +164,10 @@ export default function MaterialLibraryPage() {
           finalTitle = finalTitle.replace(/\s+Part\s+\d+$/i, '').trim();
         }
 
+        const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
+        const primaryAudience = audienceOrder.find(a => metadata?.targetAudiences?.includes(a)) || "kid";
+        const primaryLevel = metadata?.audienceLevels?.[primaryAudience] || null;
+
         const newId = await createMaterialWithQuestions({
           title: finalTitle,
           materialType: typeToCreate,
@@ -171,6 +175,11 @@ export default function MaterialLibraryPage() {
           shortDescription: metadata?.shortDescription || '',
           instructions: metadata?.instructions || '',
           thumbnailImagePrompt: metadata?.thumbnailImagePrompt || '',
+          subject: metadata?.subject,
+          targetAudiences: metadata?.targetAudiences,
+          audienceLevels: metadata?.audienceLevels,
+          learningGoals: metadata?.learningGoals,
+          level: primaryLevel || undefined,
         });
 
         if (i === 0) {

@@ -977,6 +977,39 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
     }
   }
 
+  if (!response && process.env.OPENAI_API_KEY) {
+    for (const m of modelsToTry) {
+      try {
+        console.log(`Generating image using model: ${m}`);
+        const quality = m.startsWith("dall-e") ? "standard" : "auto";
+        
+        let requestedSize = size;
+        if (size === "1024x576" || size === "1792x1024") {
+          if (m === "dall-e-3") {
+            requestedSize = "1792x1024";
+          } else {
+            requestedSize = "1024x1024";
+          }
+        }
+
+        response = await openai.images.generate({
+          model: m as any,
+          prompt,
+          n: 1,
+          size: requestedSize as any,
+          quality: quality as any
+        });
+        if (response?.data?.[0]) {
+          console.log(`Successfully generated image using model: ${m}`);
+          break;
+        }
+      } catch (err: any) {
+        console.error(`Failed to generate image with model ${m}:`, err.message);
+        lastError = err;
+      }
+    }
+  }
+
   if (!response && process.env.DEEPINFRA_API_KEY) {
     try {
       console.log(`Generating image using DeepInfra FLUX.1 Schnell for lesson: "${prompt.substring(0, 60)}..."`);
@@ -1013,42 +1046,6 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
     } catch (err: any) {
       console.error(`Failed to generate image with DeepInfra FLUX:`, err.message);
       lastError = err;
-      if (!process.env.OPENAI_API_KEY) {
-        throw err;
-      }
-    }
-  }
-
-  if (!response && process.env.OPENAI_API_KEY) {
-    for (const m of modelsToTry) {
-      try {
-        console.log(`Generating image using model: ${m}`);
-        const quality = m.startsWith("dall-e") ? "standard" : "auto";
-        
-        let requestedSize = size;
-        if (size === "1024x576" || size === "1792x1024") {
-          if (m === "dall-e-3") {
-            requestedSize = "1792x1024";
-          } else {
-            requestedSize = "1024x1024";
-          }
-        }
-
-        response = await openai.images.generate({
-          model: m as any,
-          prompt,
-          n: 1,
-          size: requestedSize as any,
-          quality: quality as any
-        });
-        if (response?.data?.[0]) {
-          console.log(`Successfully generated image using model: ${m}`);
-          break;
-        }
-      } catch (err: any) {
-        console.error(`Failed to generate image with model ${m}:`, err.message);
-        lastError = err;
-      }
     }
   }
 

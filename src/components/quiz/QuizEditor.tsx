@@ -455,7 +455,7 @@ export function QuizEditor() {
       const realId = await getOrCreateRealId();
 
       // 1. Save all questions marked for banking in batch
-      const questionsToBank = validQuestions.filter(q => q.isBanked !== false);
+      const questionsToBank = validQuestions.filter(q => q.isBanked ?? !q.isAiGenerated);
       if (questionsToBank.length > 0) {
         try {
           await saveManyToQuestionBank(questionsToBank, { subject, gradeLevel, tags: tags.join(',') });
@@ -608,8 +608,13 @@ export function QuizEditor() {
       }
       if (metadata.instructions) setInstructions(metadata.instructions);
       if (metadata.shortDescription) setShortDescription(metadata.shortDescription);
+      if (metadata.subject) setSubject(metadata.subject);
       if (metadata.targetAudiences && Array.isArray(metadata.targetAudiences)) {
         setTargetAudiences(metadata.targetAudiences);
+      }
+      if (metadata.audienceLevels) setAudienceLevels(metadata.audienceLevels);
+      if (metadata.learningGoals && Array.isArray(metadata.learningGoals)) {
+        setLearningGoals(metadata.learningGoals);
       }
       if (metadata.thumbnail) setThumbnail(metadata.thumbnail);
     }
@@ -1246,21 +1251,21 @@ export function QuizEditor() {
                 {/* Banking Toggle - Hide if already from bank */}
                 {!activeQuestion?.originalId && (
                   <button 
-                    onClick={() => updateActiveQuestion({ isBanked: !activeQuestion?.isBanked })}
+                    onClick={() => updateActiveQuestion({ isBanked: !(activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated) })}
                     disabled={!isValid}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
-                      activeQuestion?.isBanked !== false 
+                      (activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated)
                         ? 'bg-amber-100 text-amber-700 border border-amber-200' 
                         : 'bg-slate-100 text-slate-400 border border-slate-200'
                     }`}
-                    title={activeQuestion?.isBanked !== false ? "Câu hỏi này sẽ được tự động lưu vào ngân hàng" : "Câu hỏi này sẽ KHÔNG được lưu vào ngân hàng"}
+                    title={(activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated) ? "Câu hỏi này sẽ được tự động lưu vào ngân hàng" : "Câu hỏi này sẽ KHÔNG được lưu vào ngân hàng"}
                   >
-                    <span className={`material-symbols-outlined text-[18px] transition-transform ${activeQuestion?.isBanked !== false ? 'scale-110' : 'scale-90'}`}>
-                      {activeQuestion?.isBanked !== false ? 'bookmark_added' : 'bookmark_add'}
+                    <span className={`material-symbols-outlined text-[18px] transition-transform ${(activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated) ? 'scale-110' : 'scale-90'}`}>
+                      {(activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated) ? 'bookmark_added' : 'bookmark_add'}
                     </span>
                     <span>Lưu vào Ngân hàng</span>
-                    <div className={`w-8 h-4 rounded-full relative transition-colors ${activeQuestion?.isBanked !== false ? 'bg-amber-500' : 'bg-slate-300'}`}>
-                      <div className={`absolute top-0.5 size-3 bg-white rounded-full transition-all ${activeQuestion?.isBanked !== false ? 'left-[18px]' : 'left-0.5'}`}></div>
+                    <div className={`w-8 h-4 rounded-full relative transition-colors ${(activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated) ? 'bg-amber-500' : 'bg-slate-300'}`}>
+                      <div className={`absolute top-0.5 size-3 bg-white rounded-full transition-all ${(activeQuestion?.isBanked ?? !activeQuestion?.isAiGenerated) ? 'left-[18px]' : 'left-0.5'}`}></div>
                     </div>
                   </button>
                 )}

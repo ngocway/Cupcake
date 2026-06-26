@@ -68,7 +68,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             imageUrl: q.imageUrl,
             audioUrl: q.audioUrl,
             videoUrl: q.videoUrl,
-            isAiGenerated: q.isAiGenerated
+            isAiGenerated: q.isAiGenerated,
+            isBanked: q.isBanked
           };
         })
       }

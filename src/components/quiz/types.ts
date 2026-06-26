@@ -28,6 +28,7 @@ export type BaseQuestionProps = {
   audioUrl?: string;
   videoUrl?: string;
   isBanked?: boolean;
+  isAiGenerated?: boolean;
   originalId?: string;
   saveToBank?: boolean;
 };

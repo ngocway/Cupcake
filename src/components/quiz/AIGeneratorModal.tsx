@@ -241,7 +241,11 @@ ${partPromptText}
             title: result.title,
             instructions: result.instructions,
             shortDescription: result.shortDescription,
-            thumbnailImagePrompt: result.thumbnailImagePrompt
+            thumbnailImagePrompt: result.thumbnailImagePrompt,
+            subject,
+            targetAudiences,
+            audienceLevels,
+            learningGoals
           }
         };
       });
