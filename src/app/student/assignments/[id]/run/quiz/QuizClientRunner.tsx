@@ -1043,7 +1043,7 @@ export default function QuizClientRunner({
 
               const qType = questionData.isMultiple ? "MULTIPLE_SELECT" : (questionData.type || q.type);
               const isMultiSelect = qType === "MULTIPLE_SELECT";
-              let questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? q.content;
+              let questionText = questionData.instruction ?? questionData.questionText ?? questionData.statement ?? questionData.textWithBlanks ?? q.content;
               
               // Prevent showing raw JSON if questionText is just the stringified content
               if (questionText && questionText.startsWith('{') && questionText.endsWith('}')) {

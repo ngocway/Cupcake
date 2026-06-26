@@ -384,7 +384,7 @@ export default function LessonsPageContent(props: Props) {
                 position: "relative",
               }}
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 absolute w-full">
+              <div className="absolute top-0 left-0 w-full">
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const startIndex = virtualRow.index * columns;
                   const rowLessons = filteredLessons.slice(startIndex, startIndex + columns);

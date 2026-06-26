@@ -23,7 +23,7 @@ export function useAutoSave() {
     timeoutRef.current = setTimeout(async () => {
       setSavingStatus(true);
       try {
-        const payload = { id, title, type, questions };
+        const payload = { id, title, type, questions, isAutoSave: true };
         const result = await autoSaveMaterial(payload);
         if (result.success) {
           setSavingStatus(false, result.savedAt);

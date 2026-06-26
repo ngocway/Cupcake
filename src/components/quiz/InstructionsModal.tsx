@@ -12,35 +12,47 @@ interface InstructionsModalProps {
 
 export function InstructionsModal({ initialValue, onClose, onSave }: InstructionsModalProps) {
   const [value, setValue] = useState(initialValue);
+  const [isUploading, setIsUploading] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
 
   const handleFileUpload = (type: 'image' | 'video' | 'audio') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'image' ? 'image/*' : type === 'video' ? 'video/*' : 'audio/*';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64 = event.target?.result as string;
-          let htmlToInsert = '';
-          if (type === 'image') {
-            htmlToInsert = `<img src="${base64}" class="max-w-full rounded-xl my-4 shadow-md" />`;
-          } else if (type === 'video') {
-            htmlToInsert = `<video src="${base64}" controls class="max-w-full rounded-xl my-4 shadow-md"></video>`;
-          } else if (type === 'audio') {
-            htmlToInsert = `<audio src="${base64}" controls class="w-full my-4"></audio>`;
+        setIsUploading(true);
+        try {
+          const { uploadMedia } = await import('@/actions/upload-actions');
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await uploadMedia(formData);
+          if (res.success && res.url) {
+            let htmlToInsert = '';
+            if (type === 'image') {
+              htmlToInsert = `<img src="${res.url}" class="max-w-full rounded-xl my-4 shadow-md" />`;
+            } else if (type === 'video') {
+              htmlToInsert = `<video src="${res.url}" controls class="max-w-full rounded-xl my-4 shadow-md"></video>`;
+            } else if (type === 'audio') {
+              htmlToInsert = `<audio src="${res.url}" controls class="w-full my-4"></audio>`;
+            }
+            
+            if (htmlToInsert) {
+               document.execCommand('insertHTML', false, htmlToInsert);
+               if (editorRef.current) {
+                  setValue(editorRef.current.innerHTML);
+               }
+            }
+          } else {
+            alert('Tải file thất bại: ' + res.error);
           }
-          
-          if (htmlToInsert) {
-             document.execCommand('insertHTML', false, htmlToInsert);
-             if (editorRef.current) {
-                setValue(editorRef.current.innerHTML);
-             }
-          }
-        };
-        reader.readAsDataURL(file);
+        } catch (err: any) {
+          console.error(err);
+          alert('Có lỗi xảy ra khi tải file lên.');
+        } finally {
+          setIsUploading(false);
+        }
       }
     };
     input.click();
@@ -65,6 +77,7 @@ export function InstructionsModal({ initialValue, onClose, onSave }: Instruction
             </div>
           </div>
           <button 
+            disabled={isUploading}
             onClick={onClose}
             className="size-10 rounded-full hover:bg-slate-200 dark:hover:bg-gray-800 flex items-center justify-center text-slate-400 transition-all active:scale-90"
           >
@@ -95,15 +108,16 @@ export function InstructionsModal({ initialValue, onClose, onSave }: Instruction
             <span className="text-xs font-bold uppercase tracking-wider">Tự động đồng bộ với bài tập</span>
           </div>
           <div className="flex gap-4">
-            <Button variant="ghost" onClick={onClose} className="rounded-2xl font-bold px-8 h-14 hover:bg-slate-200 dark:hover:bg-gray-800 transition-all">Hủy bỏ</Button>
+            <Button variant="ghost" onClick={onClose} disabled={isUploading} className="rounded-2xl font-bold px-8 h-14 hover:bg-slate-200 dark:hover:bg-gray-800 transition-all">Hủy bỏ</Button>
             <Button 
+              disabled={isUploading}
               onClick={() => {
                 onSave(value);
                 onClose();
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-12 h-14 shadow-xl shadow-blue-500/20 uppercase tracking-widest text-sm transition-all active:scale-95 translate-y-0 hover:-translate-y-1"
             >
-              Lưu & Áp dụng
+              {isUploading ? 'Đang tải file lên...' : 'Lưu & Áp dụng'}
             </Button>
           </div>
         </div>

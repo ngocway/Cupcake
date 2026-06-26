@@ -46,7 +46,7 @@ Return ONLY the image prompt.
 
 ---
 
-## 4. GRAMMAR FORMULA (VERY SIMPLE)
+## 4. GRAMMAR FORMULA (VERY detail)
 Explain:
 - Structure
 - When to use
@@ -112,7 +112,12 @@ RULES:
 interface AIGeneratorModalProps {
   assignmentId?: string;
   onClose: () => void;
-  onQuestionsGenerated: (generatedData: { type: QuestionType, questions: any[] }[], metadata?: any) => void;
+  onQuestionsGenerated: (
+    results: {
+      generatedData: { type: QuestionType; questions: any[] }[];
+      metadata?: any;
+    }[]
+  ) => void;
 }
 
 export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }: AIGeneratorModalProps) {
@@ -127,13 +132,25 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [onboardingConfig, setOnboardingConfig] = useState<any>(null);
 
+  // Part configuration state
+  const [partsCount, setPartsCount] = useState<number | null>(null);
+  const isCreationMode = !assignmentId || assignmentId === 'new';
+
   useEffect(() => {
     getOnboardingConfig().then(config => setOnboardingConfig(config)).catch(console.error);
   }, []);
 
   const handleGenerate = async () => {
+    const newErrors = [];
+    if (isCreationMode && partsCount === null) {
+      newErrors.push('Vui lòng chọn số lượng phần bài tập (Parts) muốn tạo.');
+    }
     if (!questionsText.trim()) {
-      setErrors(['Vui lòng nhập hoặc chỉnh sửa nội dung prompt mẫu.']);
+      newErrors.push('Vui lòng nhập hoặc chỉnh sửa nội dung prompt mẫu.');
+    }
+
+    if (newErrors.length > 0) {
+      setErrors(newErrors);
       return;
     }
     
@@ -141,11 +158,19 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
     setErrors([]);
     
     try {
-      const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
-      const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
-      const primaryLevel = audienceLevels[primaryAudience] || "A1";
+      const partsToGenerate = isCreationMode ? (partsCount || 1) : 1;
 
-      const enhancedPrompt = `
+      const promises = Array.from({ length: partsToGenerate }).map(async (_, idx) => {
+        const partNum = idx + 1;
+        const partPromptText = partsToGenerate > 1 
+          ? `${questionsText}\n\nIMPORTANT: This is Part ${partNum} of a ${partsToGenerate}-part series. Generate distinct questions and vocabulary for Part ${partNum}. The title of this part MUST end with " Part ${partNum}" (e.g. if the title is "Present Continuous", it must be "Present Continuous Part ${partNum}"). Do not repeat questions or options from other parts.`
+          : questionsText;
+
+        const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
+        const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
+        const primaryLevel = audienceLevels[primaryAudience] || "A1";
+
+        const enhancedPrompt = `
 Context Information for AI:
 - Subject: ${subject}
 - Target Audiences: ${targetAudiences.join(', ')}
@@ -155,76 +180,74 @@ Context Information for AI:
 
 ==================
 User Prompt:
-${questionsText}
+${partPromptText}
 `;
 
-      const result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
-      
-      if (!result.success) {
-        // Kết hợp các lỗi từ backend và chi tiết lỗi thô nếu có
-        const combinedErrors: string[] = [];
-        if (result.errors && Array.isArray(result.errors)) {
-          combinedErrors.push(...result.errors);
-        }
-        if ((result as any).rawError) {
-          combinedErrors.push(`Chi tiết: ${(result as any).rawError}`);
-        }
-        if (combinedErrors.length === 0) {
-          combinedErrors.push('Có lỗi xảy ra khi phân tích câu hỏi.');
-        }
-        setErrors(combinedErrors);
-        return;
-      }
-      
-      if (!result.multipleChoice || !result.trueFalse) {
-        setErrors(['AI không nhận diện được câu hỏi nào từ nội dung bạn cung cấp.']);
-        return;
-      }
-      
-      const formattedQuestions = [
-        ...result.multipleChoice.map((q: any) => ({
-          type: 'MULTIPLE_CHOICE' as QuestionType,
-          questionText: q.questionText,
-          options: q.options,
-          explanation: q.explanation
-        })),
-        ...result.trueFalse.map((q: any) => ({
-          type: 'TRUE_FALSE' as QuestionType,
-          statement: q.statement,
-          isTrue: q.isTrue,
-          explanation: q.explanation
-        }))
-      ];
-      
-      // Group questions by type
-      const groupedMap: Record<QuestionType, any[]> = {
-        MULTIPLE_CHOICE: [],
-        TRUE_FALSE: [],
-        CLOZE_TEST: [],
-        MATCHING: [],
-        REORDER: []
-      };
-      
-      formattedQuestions.forEach((q) => {
-        const type = q.type as QuestionType;
-        if (groupedMap[type]) {
-          groupedMap[type].push(q);
-        }
-      });
-      
-      const generatedData = Object.keys(groupedMap)
-        .map(typeKey => ({
-          type: typeKey as QuestionType,
-          questions: groupedMap[typeKey as QuestionType]
-        }))
-        .filter(group => group.questions.length > 0);
+        const result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
         
-      onQuestionsGenerated(generatedData, {
-        title: result.title,
-        instructions: result.instructions,
-        shortDescription: result.shortDescription,
-        thumbnailImagePrompt: result.thumbnailImagePrompt
+        if (!result.success) {
+          throw new Error(
+            `Lỗi khi sinh Part ${partNum}: ` + 
+            (result.errors?.join(', ') || 'Lỗi không xác định') + 
+            ((result as any).rawError ? ` (Chi tiết: ${(result as any).rawError})` : '')
+          );
+        }
+        
+        if (!result.multipleChoice || !result.trueFalse) {
+          throw new Error(`AI không nhận diện được câu hỏi nào từ nội dung cho Part ${partNum}.`);
+        }
+
+        const formattedQuestions = [
+          ...result.multipleChoice.map((q: any) => ({
+            type: 'MULTIPLE_CHOICE' as QuestionType,
+            questionText: q.questionText,
+            options: q.options,
+            explanation: q.explanation
+          })),
+          ...result.trueFalse.map((q: any) => ({
+            type: 'TRUE_FALSE' as QuestionType,
+            statement: q.statement,
+            isTrue: q.isTrue,
+            explanation: q.explanation
+          }))
+        ];
+
+        // Group questions by type
+        const groupedMap: Record<QuestionType, any[]> = {
+          MULTIPLE_CHOICE: [],
+          TRUE_FALSE: [],
+          CLOZE_TEST: [],
+          MATCHING: [],
+          REORDER: []
+        };
+        
+        formattedQuestions.forEach((q) => {
+          const type = q.type as QuestionType;
+          if (groupedMap[type]) {
+            groupedMap[type].push(q);
+          }
+        });
+        
+        const generatedData = Object.keys(groupedMap)
+          .map(typeKey => ({
+            type: typeKey as QuestionType,
+            questions: groupedMap[typeKey as QuestionType]
+          }))
+          .filter(group => group.questions.length > 0);
+
+        return {
+          generatedData,
+          metadata: {
+            title: result.title,
+            instructions: result.instructions,
+            shortDescription: result.shortDescription,
+            thumbnailImagePrompt: result.thumbnailImagePrompt
+          }
+        };
       });
+
+      const allResults = await Promise.all(promises);
+      onQuestionsGenerated(allResults);
     } catch (err: any) {
       setErrors([err.message || 'Có lỗi xảy ra khi gọi AI phân tích.']);
     } finally {
@@ -286,6 +309,37 @@ ${questionsText}
               />
             </div>
           </div>
+
+          {/* Parts Count Config */}
+          {isCreationMode && (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Số lượng phần bài tập (Parts) muốn tạo</label>
+              <div className="flex items-center gap-3">
+                <select
+                  value={partsCount ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPartsCount(val === "" ? null : Number(val));
+                  }}
+                  className={`px-4 py-2.5 rounded-xl border bg-slate-50 dark:bg-gray-800 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 text-[#111418] dark:text-white transition-all ${
+                    errors.includes('Vui lòng chọn số lượng phần bài tập (Parts) muốn tạo.')
+                      ? 'border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50'
+                      : 'border-slate-200 dark:border-gray-700'
+                  }`}
+                >
+                  <option value="">-- Chọn số lượng Part --</option>
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <option key={num} value={num}>
+                      Tạo {num} bài tập ({num} Parts)
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Hệ thống sẽ tạo ra các phần bài tập riêng biệt (ví dụ: Part 1, Part 2...) với các câu hỏi khác nhau.
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Questions input */}
           <div className="flex flex-col gap-2">

@@ -934,8 +934,8 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
 }
 
 async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dall-e-2" = "dall-e-2", size: string = "1024x1024", userId: string) {
-  if (!process.env.OPENAI_API_KEY && !process.env.DEEPINFRA_API_KEY) {
-    throw new Error("Missing AI API key environment variables (OPENAI_API_KEY or DEEPINFRA_API_KEY)");
+  if (!process.env.OPENAI_API_KEY && !process.env.DEEPINFRA_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+    throw new Error("Missing AI API key environment variables (GEMINI_API_KEY, OPENAI_API_KEY or DEEPINFRA_API_KEY)");
   }
 
   // Try gpt-image-2 first since dall-e-2 / dall-e-3 do not exist on this endpoint
@@ -943,9 +943,49 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
   let response = null;
   let lastError = null;
 
-  if (process.env.DEEPINFRA_API_KEY) {
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (geminiApiKey) {
+    try {
+      console.log(`Generating image using Gemini Imagen for lesson: "${prompt.substring(0, 60)}..."`);
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiApiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ["IMAGE"]
+          }
+        })
+      });
+
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+      }
+
+      const base64Data = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
+      if (base64Data) {
+        response = {
+          data: [{ b64_json: base64Data }]
+        };
+        console.log(`Successfully generated image using Gemini Imagen`);
+      }
+    } catch (err: any) {
+      console.warn(`Failed to generate image with Gemini Imagen:`, err.message);
+      lastError = err;
+    }
+  }
+
+  if (!response && process.env.DEEPINFRA_API_KEY) {
     try {
       console.log(`Generating image using DeepInfra FLUX.1 Schnell for lesson: "${prompt.substring(0, 60)}..."`);
+      
+      let fluxSize = size;
+      if (size === "1792x1024" || size === "1024x576") {
+        fluxSize = "1024x576";
+      }
+
       const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
         method: "POST",
         headers: {
@@ -956,7 +996,7 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
           model: "black-forest-labs/FLUX-1-schnell",
           prompt: prompt,
           n: 1,
-          size: size === "1792x1024" ? "1024x1024" : size,
+          size: fluxSize,
           response_format: "b64_json"
         })
       });
@@ -984,11 +1024,21 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
       try {
         console.log(`Generating image using model: ${m}`);
         const quality = m.startsWith("dall-e") ? "standard" : "auto";
+        
+        let requestedSize = size;
+        if (size === "1024x576" || size === "1792x1024") {
+          if (m === "dall-e-3") {
+            requestedSize = "1792x1024";
+          } else {
+            requestedSize = "1024x1024";
+          }
+        }
+
         response = await openai.images.generate({
           model: m as any,
           prompt,
           n: 1,
-          size: size as any,
+          size: requestedSize as any,
           quality: quality as any
         });
         if (response?.data?.[0]) {
@@ -1221,15 +1271,13 @@ export async function generateAILessonFully(params: {
 
     // 2. PREPARE PASSAGE CHUNKS
     const paragraphs = parsedData.passage || [];
-    const thumbPrompt = `Simple, vivid cartoon style illustration for an educational lesson thumbnail themed around: "${topic}". Clean vector art style, isolated background, no text, no letters.`;
-    const inLessonPrompt = `Simple, vivid cartoon style illustration of: "${topic}". Clean vector art style, isolated white background, no text, no labels, engaging for students.`;
+    const styleSuffix = "cute 2D cartoon vector illustration style, clean bold outlines, vibrant colors, friendly character design, isolated on a plain white background, aspect ratio 16:9, no realistic rendering, no 3D shading, no text, no letters";
+    const thumbPrompt = `A 16:9 aspect ratio illustration themed around "${topic}". ${styleSuffix}`;
+    const inLessonPrompt = `A 16:9 aspect ratio illustration of "${topic}". ${styleSuffix}`;
 
     const assignmentId = randomUUID();
     const placeholderThumbUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-thumb")}`;
     const placeholderContentImgUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-content")}`;
-
-    const thumbnailImgUrl = placeholderThumbUrl;
-    const inLessonImageUrl = placeholderContentImgUrl;
 
     const paragraphChunksList: { pIdx: number; chunkText: string }[] = [];
     for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
@@ -1244,12 +1292,14 @@ export async function generateAILessonFully(params: {
       }
     }
 
-    setGenProgress(session.user.id, "Đang tạo âm thanh giọng đọc bằng AI...", 30);
+    setGenProgress(session.user.id, "Đang tạo âm thanh và hình ảnh minh họa bằng AI...", 30);
 
-    // 3. RUN TTS GENERATION IN PARALLEL (Backgrounding DALL-E)
+    // 3. RUN TTS GENERATION AND IMAGE GENERATION IN PARALLEL
     const [
       globalTtsRes,
-      chunksTtsRes
+      chunksTtsRes,
+      actualThumbUrl,
+      actualInLessonUrl
     ] = await Promise.all([
       // A. Global audio generation
       (async () => {
@@ -1285,11 +1335,25 @@ export async function generateAILessonFully(params: {
             audioUrl: ""
           };
         }
-      }))
+      })),
+      // C. Thumbnail image generation
+      generateDalleImageHelper(thumbPrompt, "dall-e-2", "1024x576", session.user.id)
+        .catch(err => {
+          console.error("Failed to generate thumbnail image synchronously:", err);
+          return "";
+        }),
+      // D. In-lesson content image generation
+      generateDalleImageHelper(inLessonPrompt, "dall-e-2", "1024x576", session.user.id)
+        .catch(err => {
+          console.error("Failed to generate content image synchronously:", err);
+          return "";
+        })
     ]);
 
     const wholeAudioUrl = globalTtsRes.url;
     const audioMetadata = globalTtsRes.words;
+    const finalThumbnail = actualThumbUrl || placeholderThumbUrl;
+    const finalInLessonImageUrl = actualInLessonUrl || placeholderContentImgUrl;
 
     // 4. FORMAT LESSON READING TEXT HTML & INSERT CHUNK AUDIO MARKERS
     setGenProgress(session.user.id, "Đang định dạng văn bản bài học...", 75);
@@ -1313,9 +1377,9 @@ export async function generateAILessonFully(params: {
     }
 
     // Insert DALL-E-2 content image in the middle of readingTextHtml
-    if (inLessonImageUrl && processedParagraphs.length > 0) {
+    if (finalInLessonImageUrl && processedParagraphs.length > 0) {
       const middleIndex = Math.floor(processedParagraphs.length / 2);
-      const imgHtml = `<div class="my-6 text-center"><img src="${inLessonImageUrl}" alt="Lesson illustration" style="max-width: 100%; width: 50%; display: inline-block; border-radius: 0.75rem; margin: 0.5rem;" class="custom-editable-image" /></div>`;
+      const imgHtml = `<div class="my-6 text-center"><img src="${finalInLessonImageUrl}" alt="Lesson illustration" style="max-width: 100%; width: 50%; display: inline-block; border-radius: 0.75rem; margin: 0.5rem;" class="custom-editable-image" /></div>`;
       processedParagraphs.splice(middleIndex, 0, imgHtml);
     }
 
@@ -1353,7 +1417,8 @@ export async function generateAILessonFully(params: {
         };
       } else if (qType === "CLOZE_TEST") {
         contentObj = {
-          textWithBlanks: q.questionText
+          textWithBlanks: q.questionText,
+          questionText: q.questionText
         };
       }
 
@@ -1483,12 +1548,6 @@ export async function generateAILessonFully(params: {
     // Save to Database
     const finalLevel = Object.values(audienceLevels).join(',') || parsedData.level || "B1";
 
-    // Fallback thumbnail if DALL-E failed
-    let finalThumbnail = thumbnailImgUrl;
-    if (!finalThumbnail) {
-      finalThumbnail = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentTitle)}`;
-    }
-
     await prisma.assignment.create({
       data: {
         id: assignmentId,
@@ -1543,67 +1602,7 @@ export async function generateAILessonFully(params: {
     revalidatePath("/teacher/materials");
     revalidatePath("/admin/materials");
 
-    // Trigger background image generation and database updates
-    (async () => {
-      try {
-        console.log(`[Background] Starting DALL-E image generation for assignment ${assignmentId}`);
-        
-        // Generate actual images in parallel
-        const [actualThumbUrl, actualInLessonUrl] = await Promise.all([
-          generateDalleImageHelper(thumbPrompt, "dall-e-2", "1024x1024", session.user.id)
-            .catch(err => {
-              console.error("[Background] Failed to generate thumbnail image:", err);
-              return "";
-            }),
-          generateDalleImageHelper(inLessonPrompt, "dall-e-2", "1024x1024", session.user.id)
-            .catch(err => {
-              console.error("[Background] Failed to generate content image:", err);
-              return "";
-            })
-        ]);
-
-        console.log(`[Background] DALL-E completed. Thumb: ${actualThumbUrl}, Content: ${actualInLessonUrl}`);
-
-        const updateData: any = {};
-
-        if (actualThumbUrl) {
-          updateData.thumbnail = actualThumbUrl;
-        }
-
-        if (actualInLessonUrl) {
-          // Retrieve current assignment readingText to replace placeholder with actual URL
-          const currentAssignment = await prisma.assignment.findUnique({
-            where: { id: assignmentId },
-            select: { readingText: true }
-          });
-
-          if (currentAssignment && currentAssignment.readingText) {
-            const updatedReadingText = currentAssignment.readingText.replace(placeholderContentImgUrl, actualInLessonUrl);
-            updateData.readingText = updatedReadingText;
-          }
-        }
-
-        if (Object.keys(updateData).length > 0) {
-          await prisma.assignment.update({
-            where: { id: assignmentId },
-            data: updateData
-          });
-
-          await invalidateMaterialCache(assignmentId);
-
-          if (actualThumbUrl) {
-            await prisma.lesson.updateMany({
-              where: { assignmentId: assignmentId },
-              data: { thumbnail: actualThumbUrl }
-            });
-          }
-
-          console.log(`[Background] Successfully updated assignment and lesson with DALL-E images for ${assignmentId}`);
-        }
-      } catch (backgroundError) {
-        console.error("[Background] Error in background image generator:", backgroundError);
-      }
-    })();
+    // Images are already generated synchronously and saved to the database.
 
     setGenProgress(session.user.id, "Hoàn thành!", 100);
 

@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, CheckCircle2, Circle, MoreVertical, X, Uploa
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
 import type { MaterialType } from './types';
-import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
+import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveManyToQuestionBank, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
 import { getPopularTags } from '@/actions/tag-actions';
 import { generateNewUniqueSlugAction, updateMaterialSlugAction } from '@/actions/update-slug-action';
 import { MultipleChoiceBuilder } from './MultipleChoiceBuilder';
@@ -454,16 +454,13 @@ export function QuizEditor() {
     try {
       const realId = await getOrCreateRealId();
 
-      // 1. Save all questions marked for banking
+      // 1. Save all questions marked for banking in batch
       const questionsToBank = validQuestions.filter(q => q.isBanked !== false);
       if (questionsToBank.length > 0) {
-        for (const q of questionsToBank) {
-          try {
-            await saveToQuestionBank(q, { subject, gradeLevel, tags: tags.join(',') });
-          } catch (bankErr) {
-            console.error('Failed to bank question:', q.id, bankErr);
-            // Non-blocking error for individual questions
-          }
+        try {
+          await saveManyToQuestionBank(questionsToBank, { subject, gradeLevel, tags: tags.join(',') });
+        } catch (bankErr) {
+          console.error('Failed to bank questions in batch:', bankErr);
         }
       }
 
@@ -595,9 +592,20 @@ export function QuizEditor() {
     if (activeId === id) setActiveId(newQ[0].id);
   };
 
-  const handleAIGeneratedQuestions = (generatedData: { type: QuestionType, questions: any[] }[], metadata?: any) => {
+  const handleAIGeneratedQuestions = (
+    results: {
+      generatedData: { type: QuestionType; questions: any[] }[];
+      metadata?: any;
+    }[]
+  ) => {
+    if (results.length === 0) return;
+    const { generatedData, metadata } = results[0];
+
     if (metadata) {
-      if (metadata.title) setTitle(metadata.title);
+      if (metadata.title) {
+        const cleanTitle = metadata.title.replace(/\s+Part\s+\d+$/i, '').trim();
+        setTitle(cleanTitle);
+      }
       if (metadata.instructions) setInstructions(metadata.instructions);
       if (metadata.shortDescription) setShortDescription(metadata.shortDescription);
       if (metadata.targetAudiences && Array.isArray(metadata.targetAudiences)) {

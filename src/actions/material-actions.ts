@@ -230,6 +230,7 @@ export async function autoSaveMaterial(payload: {
   ttsVoice?: string;
   ttsSpeed?: number;
   audioMetadata?: any;
+  isAutoSave?: boolean;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -530,15 +531,50 @@ export async function autoSaveMaterial(payload: {
       }
     }
 
-    // AI embedding: re-index when content is PUBLIC so related lists stay accurate
-    if (existing?.status === 'PUBLIC') {
-      reindexAssignment(payload.id).catch(err => {
-        console.error("[AutoSave] AI reindex assignment failed:", err);
-      });
-      if (existing?.lesson) {
-        reindexLesson(existing.lesson.id).catch(err => {
-          console.error("[AutoSave] AI reindex lesson failed:", err);
+    // AI embedding: re-index when content is PUBLIC, it is NOT an autosave, and core content actually changed
+    if (existing?.status === 'PUBLIC' && !payload.isAutoSave) {
+      const titleChanged = payload.title !== undefined && payload.title !== existing.title;
+      const readingTextChanged = payload.readingText !== undefined && payload.readingText !== existing.readingText;
+      const subjectChanged = payload.subject !== undefined && payload.subject !== existing.subject;
+      const tagsChanged = payload.tags !== undefined && payload.tags !== existing.tags;
+      const descChanged = payload.shortDescription !== undefined && payload.shortDescription !== existing.shortDescription;
+      const instChanged = payload.instructions !== undefined && payload.instructions !== existing.instructions;
+      const audienceChanged = payload.targetAudiences !== undefined && JSON.stringify(payload.targetAudiences) !== JSON.stringify(existing.targetAudiences);
+      const levelChanged = payload.level !== undefined && payload.level !== existing.level;
+      
+      let questionsChanged = false;
+      if (payload.questions && Array.isArray(payload.questions)) {
+        if (payload.questions.length !== currentQuestions.length) {
+          questionsChanged = true;
+        } else {
+          for (let i = 0; i < payload.questions.length; i++) {
+            const pq = payload.questions[i];
+            const eq = currentQuestions.find(cq => cq.id === pq.id);
+            if (!eq) {
+              questionsChanged = true;
+              break;
+            }
+            const pqContentStr = typeof pq.content === 'object' ? JSON.stringify(pq.content) : pq.content || "{}";
+            const eqContentStr = typeof eq.content === 'object' ? JSON.stringify(eq.content) : eq.content || "{}";
+            if (pqContentStr !== eqContentStr || pq.explanation !== eq.explanation) {
+              questionsChanged = true;
+              break;
+            }
+          }
+        }
+      }
+
+      const hasCoreContentChanged = titleChanged || readingTextChanged || subjectChanged || tagsChanged || descChanged || instChanged || audienceChanged || levelChanged || questionsChanged;
+
+      if (hasCoreContentChanged) {
+        reindexAssignment(payload.id).catch(err => {
+          console.error("[AutoSave] AI reindex assignment failed:", err);
         });
+        if (existing?.lesson) {
+          reindexLesson(existing.lesson.id).catch(err => {
+            console.error("[AutoSave] AI reindex lesson failed:", err);
+          });
+        }
       }
     }
   });
@@ -1190,6 +1226,33 @@ export async function saveToQuestionBank(question: any, meta: { subject?: string
       gradeLevel: meta.gradeLevel,
       tags: meta.tags
     }
+  });
+
+  return { success: true };
+}
+
+export async function saveManyToQuestionBank(questions: any[], meta: { subject?: string; gradeLevel?: string; tags?: string }) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  if (questions.length === 0) return { success: true };
+
+  await prisma.questionBank.createMany({
+    data: questions.map(question => ({
+      teacherId: session.user.id!,
+      type: question.type,
+      points: question.points,
+      explanation: question.explanation,
+      content: typeof question.content === 'object' ? JSON.stringify(question.content) : question.content,
+      mediaType: question.mediaType,
+      mediaUrl: question.mediaUrl,
+      imageUrl: question.imageUrl || null,
+      audioUrl: question.audioUrl || null,
+      videoUrl: question.videoUrl || null,
+      subject: meta.subject,
+      gradeLevel: meta.gradeLevel,
+      tags: meta.tags
+    }))
   });
 
   return { success: true };

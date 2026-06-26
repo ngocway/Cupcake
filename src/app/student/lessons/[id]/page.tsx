@@ -67,6 +67,19 @@ async function AudioPlayerWrapper({ lessonId }: { lessonId: string }) {
   );
 }
 
+async function ReadingContentWrapper({ lessonId }: { lessonId: string }) {
+  const readingText = await getLessonReadingText(lessonId);
+  if (!readingText) return null;
+
+  return (
+    <div className="animate-in fade-in duration-500">
+      <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
+        <InteractiveReadingContent html={readingText} isLoggedIn={true} />
+      </div>
+    </div>
+  );
+}
+
 async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
   const t = await getTranslations("student.lessonDetail");
   const reviews = await getLessonReviews(lessonId);
@@ -327,11 +340,9 @@ export default async function StudentLessonDetailPage({
                   <div className="space-y-10">
 
                      {lesson.assignment?.readingText && (
-                        <div className="animate-in fade-in duration-500">
-                           <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
-                              <InteractiveReadingContent html={lesson.assignment.readingText} isLoggedIn={true} />
-                           </div>
-                        </div>
+                        <Suspense fallback={<div className="h-64 bg-slate-100 dark:bg-slate-900 animate-pulse rounded-3xl w-full" />}>
+                           <ReadingContentWrapper lessonId={lesson.id} />
+                        </Suspense>
                      )}
 
                      {lesson.assignment && (

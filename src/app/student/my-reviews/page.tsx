@@ -72,7 +72,7 @@ export default async function MyReviewsPage() {
           noReviews: t("noReviews"),
           noResults: t("noResults"),
           emptyMessage: t("emptyMessage"),
-          emptyTypeMessage: t("emptyTypeMessage"),
+          emptyTypeMessage: t("emptyTypeMessage", { type: "{type}" }),
           explore: t("explore"),
           lesson: t("lesson"),
           assignment: t("assignment"),

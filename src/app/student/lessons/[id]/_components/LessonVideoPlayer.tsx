@@ -15,6 +15,13 @@ interface LessonVideoPlayerProps {
 
 import { startLessonProgress, completeLessonProgress } from "@/actions/lesson-progress-actions";
 
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
 export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail, lessonId, studentId }: LessonVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   
@@ -29,6 +36,48 @@ export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail, lessonI
     // Update if props change
     setImgSrc(videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : (thumbnail || null));
   }, [videoId, thumbnail]);
+
+  useEffect(() => {
+    if (!isPlaying || !videoId) return;
+
+    let player: any;
+
+    const initPlayer = () => {
+      if (window.YT && window.YT.Player) {
+        player = new window.YT.Player('yt-player', {
+          events: {
+            onStateChange: (event: any) => {
+              if (event.data === window.YT.PlayerState.ENDED) {
+                handleEnded();
+              }
+            }
+          }
+        });
+      }
+    };
+
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+      const prevCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (prevCallback) prevCallback();
+        initPlayer();
+      };
+    } else {
+      const timer = setTimeout(initPlayer, 500);
+      return () => clearTimeout(timer);
+    }
+
+    return () => {
+      if (player && typeof player.destroy === 'function') {
+        player.destroy();
+      }
+    };
+  }, [isPlaying, videoId]);
 
   const handlePlay = () => {
     setIsPlaying(true);
@@ -54,8 +103,9 @@ export function LessonVideoPlayer({ videoId, videoUrl, title, thumbnail, lessonI
       <div className="aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-white/10 shrink-0">
         {videoId ? (
           <iframe
+            id="yt-player"
             className="w-full h-full"
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+            src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`}
             title={title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen

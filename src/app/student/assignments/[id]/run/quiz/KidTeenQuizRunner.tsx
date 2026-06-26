@@ -960,6 +960,7 @@ export default function KidTeenQuizRunner({
     currentQuestionData.instruction ??
     currentQuestionData.questionText ??
     currentQuestionData.statement ??
+    currentQuestionData.textWithBlanks ??
     currentQuestion?.content;
   if (questionText?.startsWith("{") && questionText?.endsWith("}")) questionText = "";
   if (qType === "CLOZE_TEST" && questionText && questionText.includes("{{")) {

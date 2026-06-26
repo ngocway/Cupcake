@@ -119,9 +119,47 @@ export async function fetchImageAsBase64(url: string) {
 }
 
 export async function generateDalleImage(prompt: string, size: string = "1024x1024") {
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (geminiApiKey) {
+    try {
+      console.log(`Generating image using Gemini Imagen: "${prompt.substring(0, 60)}..."`);
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiApiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseModalities: ["IMAGE"]
+          }
+        })
+      });
+
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+      }
+
+      const base64Data = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
+      if (base64Data) {
+        const mimeType = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.mimeType || "image/png";
+        console.log(`Successfully generated image using Gemini Imagen`);
+        return { base64: `data:${mimeType};base64,${base64Data}` };
+      }
+    } catch (err: any) {
+      console.warn(`Failed to generate image with Gemini Imagen:`, err.message);
+    }
+  }
+
   if (process.env.DEEPINFRA_API_KEY) {
     try {
       console.log(`Generating image using DeepInfra FLUX.1 Schnell: "${prompt.substring(0, 60)}..."`);
+      
+      let fluxSize = size;
+      if (size === "1792x1024" || size === "1024x576") {
+        fluxSize = "1024x576";
+      }
+
       const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
         method: "POST",
         headers: {
@@ -132,7 +170,7 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
           model: "black-forest-labs/FLUX-1-schnell",
           prompt: prompt,
           n: 1,
-          size: size === "1792x1024" ? "1024x1024" : size,
+          size: fluxSize,
           response_format: "b64_json"
         })
       });
@@ -171,11 +209,17 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
   for (const model of models) {
     try {
       console.log(`Attempting image generation with model: ${model}`);
-      const requestedSize = model === "dall-e-2" 
-        ? "512x512" 
-        : model === "gpt-image-2" 
-          ? "1024x1024" 
-          : size;
+      
+      let requestedSize = size;
+      if (size === "1024x576" || size === "1792x1024") {
+        if (model === "dall-e-3") {
+          requestedSize = "1792x1024";
+        } else {
+          requestedSize = "1024x1024";
+        }
+      } else if (model === "dall-e-2" && size === "1024x1024") {
+        requestedSize = "512x512";
+      }
 
       const res = await fetch(`${baseURL}/images/generations`, {
         method: "POST",

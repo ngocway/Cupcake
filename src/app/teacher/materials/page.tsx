@@ -97,69 +97,91 @@ export default function MaterialLibraryPage() {
   const [isCreatingFromAI, setIsCreatingFromAI] = useState(false);
 
   const handleAIGeneratedQuestions = async (
-    generatedData: { type: QuestionType; questions: any[] }[],
-    metadata?: any
+    results: {
+      generatedData: { type: QuestionType; questions: any[] }[];
+      metadata?: any;
+    }[]
   ) => {
     setIsCreatingFromAI(true);
     try {
       const typeToCreate = typeFilter === 'ALL' ? 'EXERCISE' : typeFilter;
-      
-      const questionsToSave = generatedData.flatMap(({ type, questions }) => {
-        return questions.map((gq: any) => {
-          let content: any = { ...gq };
-          const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-          
-          if (type === 'MULTIPLE_CHOICE' && content.options) {
-            content.options = content.options.map((opt: any) => ({
-              ...opt,
-              id: uuidv4()
-            }));
-            content.allowMultipleAnswers = content.options.filter((o:any)=>o.isCorrect).length > 1;
-          }
-          if (type === 'TRUE_FALSE') {
-            content.displayStyle = 'TRUE_FALSE';
-          }
-          if (type === 'MATCHING' && content.pairs) {
-            content.pairs = content.pairs.map((pair: any) => ({
-              ...pair,
-              id: uuidv4()
-            }));
-          }
-          if (type === 'CLOZE_TEST') {
-            content.caseSensitive = content.caseSensitive ?? false;
-          }
-          if (type === 'REORDER' && content.items) {
-            content.items = content.items.map((item: any) => ({
-              ...item,
-              id: item.id || uuidv4()
-            }));
-          }
-          
-          const explanation = content.explanation;
-          delete content.explanation;
+      let firstId = '';
 
-          return {
-            type,
-            points: 1.0,
-            isBanked: false,
-            isAiGenerated: true,
-            explanation: explanation || '',
-            content
-          };
+      for (let i = 0; i < results.length; i++) {
+        const { generatedData, metadata } = results[i];
+        
+        const questionsToSave = generatedData.flatMap(({ type, questions }) => {
+          return questions.map((gq: any) => {
+            let content: any = { ...gq };
+            const uuidv4 = () => typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+            
+            if (type === 'MULTIPLE_CHOICE' && content.options) {
+              content.options = content.options.map((opt: any) => ({
+                ...opt,
+                id: uuidv4()
+              }));
+              content.allowMultipleAnswers = content.options.filter((o:any)=>o.isCorrect).length > 1;
+            }
+            if (type === 'TRUE_FALSE') {
+              content.displayStyle = 'TRUE_FALSE';
+            }
+            if (type === 'MATCHING' && content.pairs) {
+              content.pairs = content.pairs.map((pair: any) => ({
+                ...pair,
+                id: uuidv4()
+              }));
+            }
+            if (type === 'CLOZE_TEST') {
+              content.caseSensitive = content.caseSensitive ?? false;
+            }
+            if (type === 'REORDER' && content.items) {
+              content.items = content.items.map((item: any) => ({
+                ...item,
+                id: item.id || uuidv4()
+              }));
+            }
+            
+            const explanation = content.explanation;
+            delete content.explanation;
+
+            return {
+              type,
+              points: 1.0,
+              isBanked: false,
+              isAiGenerated: true,
+              explanation: explanation || '',
+              content
+            };
+          });
         });
-      });
 
-      const newId = await createMaterialWithQuestions({
-        title: metadata?.title || 'Bài tập AI mới',
-        materialType: typeToCreate,
-        questions: questionsToSave,
-        shortDescription: metadata?.shortDescription || '',
-        instructions: metadata?.instructions || '',
-        thumbnailImagePrompt: metadata?.thumbnailImagePrompt || '',
-      });
+        let finalTitle = metadata?.title || `Bài tập AI mới`;
+        if (results.length > 1) {
+          const suffix = ` Part ${i + 1}`;
+          const cleanTitle = finalTitle.replace(/\s+Part\s+\d+$/i, '').trim();
+          finalTitle = `${cleanTitle}${suffix}`;
+        } else {
+          finalTitle = finalTitle.replace(/\s+Part\s+\d+$/i, '').trim();
+        }
+
+        const newId = await createMaterialWithQuestions({
+          title: finalTitle,
+          materialType: typeToCreate,
+          questions: questionsToSave,
+          shortDescription: metadata?.shortDescription || '',
+          instructions: metadata?.instructions || '',
+          thumbnailImagePrompt: metadata?.thumbnailImagePrompt || '',
+        });
+
+        if (i === 0) {
+          firstId = newId;
+        }
+      }
 
       setShowAIModal(false);
-      router.push(`/teacher/materials/${newId}/edit`);
+      if (firstId) {
+        router.push(`/teacher/materials/${firstId}/edit`);
+      }
     } catch (err) {
       console.error('Failed to create material from AI:', err);
       alert('Có lỗi xảy ra khi tạo bài tập từ AI: ' + (err as Error).message);

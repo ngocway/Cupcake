@@ -70,7 +70,7 @@ export default function BookmarksClient({
               {/* Limit thumbnail height to max 200px on mobile */}
               <div className="max-h-48 md:aspect-video relative overflow-hidden">
                 <img 
-                  src={lesson.thumbnail || "/placeholder-lesson.jpg"} 
+                  src={lesson.thumbnail || "/images/p1_thumb.png"} 
                   alt={lesson.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   style={{ minHeight: '160px' }}

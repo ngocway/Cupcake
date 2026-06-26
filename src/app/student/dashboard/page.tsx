@@ -72,11 +72,11 @@ export default async function StudentDashboardPage() {
 
   const pendingTasks = assignedToMe.filter((a: any) => new Date() < (a.dueDate || new Date(9999, 11, 31)))
   
-  // High scores (say, score > 80)
+  // High scores (say, score >= 8.0 on a scale of 10)
   const submissions = await prisma.submission.findMany({
     where: { studentId: userId }
   })
-  const highScores = submissions.filter((s: any) => (s.score || 0) >= 80).length
+  const highScores = submissions.filter((s: any) => (s.score || 0) >= 8.0).length
 
   // Recent activity
   const recentActivity = await prisma.submission.findMany({
@@ -326,7 +326,7 @@ export default async function StudentDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm font-bold">{t("assignmentSubmitted")}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{sub.assignment.title}: <span className="font-bold text-amber-500 dark:text-amber-400">{sub.score}%</span></p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{sub.assignment.title}: <span className="font-bold text-amber-500 dark:text-amber-400">{sub.score !== null ? (sub.score * 10).toFixed(0) : 0}%</span></p>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 uppercase">
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString(locale) : t("recently")}
                     </p>

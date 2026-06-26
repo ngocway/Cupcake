@@ -9,6 +9,7 @@ export interface MatchingBuilderProps {
 }
 
 export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps) {
+  const [uploadingState, setUploadingState] = useState<Record<string, boolean>>({});
   const [data, setData] = useState<MatchingContent>(initialData || {
     instruction: 'Hãy nối các con vật với tên gọi tương ứng...',
     presentationType: 'IMAGE_ANSWER',
@@ -55,7 +56,7 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
     handleChange({ pairs: newPairs });
   };
 
-  const handleImageUpload = (id: string, field: 'leftImageUrl' | 'rightImageUrl', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (id: string, field: 'leftImageUrl' | 'rightImageUrl', e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -64,11 +65,25 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      updatePair(id, field, event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    const key = `${id}_${field}`;
+    setUploadingState(prev => ({ ...prev, [key]: true }));
+
+    try {
+      const { uploadMedia } = await import('@/actions/upload-actions');
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await uploadMedia(formData);
+      if (res.success && res.url) {
+        updatePair(id, field, res.url);
+      } else {
+        alert('Tải ảnh thất bại: ' + res.error);
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Có lỗi xảy ra khi tải ảnh lên.');
+    } finally {
+      setUploadingState(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   return (
@@ -144,7 +159,11 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
                 {data.presentationType === 'IMAGE_ANSWER' || data.presentationType === 'IMAGE_IMAGE' ? (
                   <div className="flex items-center gap-4 w-full px-2">
                     <div className="relative group/img size-14 shrink-0 bg-slate-50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
-                      {pair.leftImageUrl ? (
+                      {uploadingState[`${pair.id}_leftImageUrl`] ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-gray-800">
+                          <span className="animate-spin material-symbols-outlined text-[20px] text-primary">progress_activity</span>
+                        </div>
+                      ) : pair.leftImageUrl ? (
                         <>
                           <img alt="Match" className="w-full h-full object-cover" src={pair.leftImageUrl} />
                           <button 
@@ -191,7 +210,11 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
                 {data.presentationType === 'IMAGE_IMAGE' ? (
                   <div className="flex items-center gap-4 w-full px-2">
                     <div className="relative group/img size-14 shrink-0 bg-slate-50 rounded-lg border border-dashed border-slate-200 flex items-center justify-center overflow-hidden transition-all hover:border-primary/50">
-                      {pair.rightImageUrl ? (
+                      {uploadingState[`${pair.id}_rightImageUrl`] ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-gray-800">
+                          <span className="animate-spin material-symbols-outlined text-[20px] text-primary">progress_activity</span>
+                        </div>
+                      ) : pair.rightImageUrl ? (
                         <>
                           <img alt="Match" className="w-full h-full object-cover" src={pair.rightImageUrl} />
                           <button 

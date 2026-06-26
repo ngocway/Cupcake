@@ -867,7 +867,7 @@ export function ReadingExerciseBuilder({
               })) : [];
               
               const qText = q.questionText || q.question || q.statement || 
-                            content.questionText || content.question || content.statement || 
+                            content.questionText || content.question || content.statement || content.textWithBlanks ||
                             content.data?.questionText || content.data?.question || '';
 
               return {
@@ -959,7 +959,7 @@ export function ReadingExerciseBuilder({
               ...opt
             })) : [];
             const qText = q.questionText || q.question || q.statement || 
-                          content.questionText || content.question || content.statement || 
+                          content.questionText || content.question || content.statement || content.textWithBlanks ||
                           content.data?.questionText || content.data?.question || '';
             return {
               ...q,
@@ -1049,27 +1049,41 @@ export function ReadingExerciseBuilder({
     }
   };
 
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 100 * 1024 * 1024) return alert('Video dung lượng quá lớn (tối đa 100MB)');
-      setVideoUploadProgress(0);
+      setVideoUploadProgress(10);
       // Generate thumbnail from first frame via canvas
       generateVideoThumbnail(file)
         .then(thumb => setVideoThumbnail(thumb))
         .catch(() => setVideoThumbnail(''));
-      const reader = new FileReader();
-      reader.onprogress = (event) => {
-        if (event.lengthComputable) {
-          setVideoUploadProgress(Math.round((event.loaded / event.total) * 100));
+      
+      let progress = 10;
+      const interval = setInterval(() => {
+        progress = Math.min(90, progress + 10);
+        setVideoUploadProgress(progress);
+      }, 400);
+
+      try {
+        const { uploadMedia } = await import('@/actions/upload-actions');
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await uploadMedia(formData);
+        
+        if (result.success && result.url) {
+          setVideoUploadProgress(100);
+          setVideoUrl(result.url);
+        } else {
+          alert('Tải video lên thất bại: ' + result.error);
         }
-      };
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        setVideoUrl(result);
+      } catch (err: any) {
+        console.error(err);
+        alert('Có lỗi xảy ra khi tải video lên.');
+      } finally {
+        clearInterval(interval);
         setVideoUploadProgress(null);
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -3029,7 +3043,7 @@ function QuestionModalInternal({ type, isMultiple, onClose, onSave, initialData 
       
       // Aggressive property resolution with even more aliases
       const qText = initialData.questionText || initialData.question || initialData.statement || 
-                    content.questionText || content.question || content.statement || 
+                    content.questionText || content.question || content.statement || content.textWithBlanks ||
                     content.data?.questionText || content.data?.question || '';
       
       // Robust options loading

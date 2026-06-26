@@ -174,11 +174,11 @@ export default async function StudentAssignmentLobbyPage({
   const totalQuestions = assignment._count.questions;
   const maxScore = assignment.defaultPoints * totalQuestions;
 
-  // ── Always go directly to quiz (no lobby) ──────────────────────────────
+  // ── Always go directly to quiz (no lobby) ONLY if direct === "true" and attempts are left
   const identifier = assignment.slug || assignment.id;
   if (activeSubmission) {
     redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
-  } else {
+  } else if (direct === "true" && hasAttemptsLeft && !isDeadlinePassed) {
     const nextAttemptNumber = completedCount + 1;
     const newSubmission = await prisma.submission.create({
       data: {
