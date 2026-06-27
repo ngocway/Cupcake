@@ -53,7 +53,7 @@ export default async function TeacherProfilePage({ params }: { params: Promise<{
     <div className="min-h-screen bg-surface selection:bg-primary/20 selection:text-primary">
       <PublicHeader session={headerSession} />
       
-      <main className="pt-24 pb-20">
+      <main className="pt-6 pb-20">
         {/* Cover Image */}
         <div className="w-full h-40 md:h-56 lg:h-64 relative bg-gradient-to-br from-primary/20 via-tertiary/20 to-secondary/20 overflow-hidden">
 

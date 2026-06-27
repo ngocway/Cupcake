@@ -121,9 +121,10 @@
 
         /* Image Area */
         .image-area {
-            width: 100%;
+            width: fit-content;
             max-width: 400px;
-            height: 250px;
+            height: fit-content;
+            max-height: 250px;
             background-color: #fff;
             border: 6px solid #ffeaa7;
             border-radius: 24px;
@@ -136,9 +137,12 @@
         }
 
         .image-area img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            max-width: 100%;
+            max-height: 238px; /* 250px - 12px for border */
+            width: auto;
+            height: auto;
+            display: block;
+            object-fit: contain;
         }
         
         .progress-text {
@@ -493,6 +497,27 @@
         let currentQuestionIndex = 0;
         let gameFinished = false;
         let hintAudio = null;
+        let currentVoiceAudio = null;
+        let bgMusic = null;
+        let isMusicPlaying = false;
+
+        function initBgMusic() {
+            if (bgMusic) return;
+            bgMusic = new Audio('/sounds/bg-music.mp3');
+            bgMusic.loop = true;
+            bgMusic.volume = 0.15; // Default volume 15%
+            bgMusic.play().then(() => {
+                isMusicPlaying = true;
+            }).catch(err => {
+                console.warn("Background music autoplay blocked:", err);
+            });
+        }
+
+        function setBgMusicVolume(vol) {
+            if (bgMusic) {
+                bgMusic.volume = vol;
+            }
+        }
 
         const dropzone = document.getElementById('dropzone');
         const wordPool = document.getElementById('wordPool');
@@ -578,12 +603,18 @@
                 btn.classList.remove('playing', 'loading');
                 if (iconSpan) iconSpan.innerHTML = svgLightbulb;
                 if (textSpan) textSpan.textContent = 'Hint';
+                setBgMusicVolume(0.15); // Restore background music volume to 15%
                 return;
             }
 
             btn.classList.add('loading');
             if (iconSpan) iconSpan.innerHTML = svgSpinner;
             if (textSpan) textSpan.textContent = 'Loading...';
+
+            if (currentVoiceAudio) {
+                currentVoiceAudio.pause();
+                currentVoiceAudio = null;
+            }
 
             hintAudio = new Audio(qData.audio);
             hintAudio.playbackRate = qData.audioRate ?? 0.85;
@@ -597,6 +628,7 @@
                 btn.classList.add('playing');
                 if (iconSpan) iconSpan.innerHTML = svgPause;
                 if (textSpan) textSpan.textContent = 'Playing...';
+                setBgMusicVolume(0.05); // Reduce background music volume to 5%
             };
 
             const onStop = () => {
@@ -608,6 +640,7 @@
                 if (iconSpan) iconSpan.innerHTML = svgLightbulb;
                 if (textSpan) textSpan.textContent = 'Hint';
                 hintAudio = null;
+                setBgMusicVolume(0.15); // Restore background music volume to 15%
             };
 
             hintAudio.addEventListener('play', onPlay);
@@ -637,6 +670,11 @@
                 hintAudio.pause();
                 hintAudio = null;
             }
+            if (currentVoiceAudio) {
+                currentVoiceAudio.pause();
+                currentVoiceAudio = null;
+            }
+            setBgMusicVolume(0.15); // Restore background music volume to 15%
             const btn = document.getElementById('hintBtn');
             const iconSpan = document.getElementById('hintIcon');
             const textSpan = document.getElementById('hintText');
@@ -708,10 +746,30 @@
             // Auto-play audio after a short delay (let image load first)
             if (qData.audio) {
                 setTimeout(() => {
+                    if (currentVoiceAudio) {
+                        currentVoiceAudio.pause();
+                        currentVoiceAudio = null;
+                    }
+
                     const autoAudio = new Audio(qData.audio);
                     autoAudio.playbackRate = qData.audioRate ?? 0.85;
+                    currentVoiceAudio = autoAudio;
+                    
+                    setBgMusicVolume(0.05); // Reduce bg music volume to 5%
+                    
+                    const restoreVol = () => {
+                        setBgMusicVolume(0.15); // Restore bg music volume to 15%
+                        if (currentVoiceAudio === autoAudio) {
+                            currentVoiceAudio = null;
+                        }
+                    };
+                    autoAudio.addEventListener('ended', restoreVol);
+                    autoAudio.addEventListener('pause', restoreVol);
+                    autoAudio.addEventListener('error', restoreVol);
+
                     autoAudio.play().catch(() => {
                         // Browser blocked autoplay — user can still click Hint manually
+                        restoreVol();
                     });
                 }, 600);
             }
@@ -779,19 +837,49 @@
                     return;
                 }
 
+                if (currentVoiceAudio) {
+                    currentVoiceAudio.pause();
+                    currentVoiceAudio = null;
+                }
+
                 const sentenceAudio = new Audio(qData.audio);
                 sentenceAudio.playbackRate = qData.audioRate ?? 0.85;
+                currentVoiceAudio = sentenceAudio;
+                
+                setBgMusicVolume(0.05); // Reduce bg music volume to 5%
+                
+                const restoreVol = () => {
+                    setBgMusicVolume(0.15); // Restore bg music volume to 15%
+                    if (currentVoiceAudio === sentenceAudio) {
+                        currentVoiceAudio = null;
+                    }
+                };
+
+                sentenceAudio.onerror = restoreVol;
+                sentenceAudio.onpause = restoreVol;
 
                 // ✅ Normal: go next 600ms after audio ends
-                sentenceAudio.onended = () => setTimeout(goNext, 600);
+                sentenceAudio.onended = () => {
+                    restoreVol();
+                    setTimeout(goNext, 600);
+                };
 
                 // ⚠️ Audio failed to load/play
-                sentenceAudio.onerror = () => setTimeout(goNext, 1500);
+                sentenceAudio.onerror = () => {
+                    restoreVol();
+                    setTimeout(goNext, 1500);
+                };
 
-                sentenceAudio.play().catch(() => setTimeout(goNext, 1500));
+                sentenceAudio.play().catch(() => {
+                    restoreVol();
+                    setTimeout(goNext, 1500);
+                });
 
                 // 🛡️ Safety net: max 12s total (600 delay + up to ~11s audio)
-                setTimeout(goNext, 11000);
+                setTimeout(() => {
+                    restoreVol();
+                    goNext();
+                }, 11000);
             }, 600);
         }
 
@@ -881,7 +969,11 @@
             const silentWav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
             const a = new Audio(silentWav);
             a.volume = 0.001;
-            a.play().catch(() => {});
+            a.play().then(() => {
+                initBgMusic();
+            }).catch(() => {
+                initBgMusic();
+            });
             document.removeEventListener('click', _unlockAudio, true);
             document.removeEventListener('touchstart', _unlockAudio, true);
         }

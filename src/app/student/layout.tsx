@@ -6,7 +6,7 @@ import { NotificationBell } from "@/components/common/NotificationBell"
 import { SideNavWrapper } from "@/app/student/_components/SideNavWrapper"
 import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper"
 import { SideNavItem } from "@/app/student/_components/SideNavItem"
-import { SmartHeader } from "@/components/student/SmartHeader"
+import { PublicHeader } from "@/components/public/PublicHeader"
 import { BottomNav } from "@/app/student/_components/BottomNav"
 import { getTranslations } from "next-intl/server"
 import prisma from "@/lib/prisma"
@@ -46,8 +46,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-body text-slate-900 dark:text-white">
-      <SmartHeader session={publicSession} />
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-body text-slate-900 dark:text-white relative">
       
       {/* Admin/Teacher Impersonation Floating Button */}
       {(session.user.role === 'ADMIN' || isTeacher) && (
@@ -116,8 +115,8 @@ export default async function StudentLayout({ children }: { children: React.Reac
         </div>
       </SideNavWrapper>
  
-      {/* Main Content Canvas - Controlled by Wrapper */}
       <MainContentWrapper isTeacher={isTeacher}>
+        <PublicHeader session={publicSession} />
         {children}
       </MainContentWrapper>
  

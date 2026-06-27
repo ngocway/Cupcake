@@ -2,6 +2,7 @@
 
 import { useContentStore } from "@/store/useContentStore";
 import { updateAllPreferences } from "@/actions/user-preferences-actions";
+import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
@@ -13,6 +14,7 @@ interface SubjectConfig {
 
 interface Props {
   subjects: SubjectConfig[];
+  config: any;
 }
 
 const subjectStyles: Record<string, { bg: string; activeBg: string; border: string; activeBorder: string; text: string; activeText: string; icon: string }> = {
@@ -43,27 +45,40 @@ function getStyle(subjectId: string) {
   return subjectStyles[subjectId] || defaultStyle;
 }
 
-export function SubjectSelector({ subjects }: Props) {
+export function SubjectSelector({ subjects, config }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const studySubject = useContentStore(s => (s as any).studySubject);
   const setStudySubject = useContentStore(s => (s as any).setStudySubject);
+  const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
+  const setStudyAgeGroup = useContentStore(s => (s as any).setStudyAgeGroup);
+  const studyLevel = useContentStore(s => (s as any).studyLevel);
   const setStudyLevel = useContentStore(s => (s as any).setStudyLevel);
+  const userType = useContentStore(s => s.userType);
 
   const handleSelect = (subjectId: string) => {
     if (subjectId === studySubject) return;
 
+    // Resolve matching age group for the new subject
+    const newAgeGroup = getBestAgeGroupForSubject(subjectId, userType, studyAgeGroup, config);
+
     // 1. Update store instantly (optimistic)
     setStudySubject(subjectId);
+    setStudyAgeGroup(newAgeGroup);
     setStudyLevel(""); // Reset level — new subject has different levels
 
     // 2. Set cookies client-side immediately
     document.cookie = `study_subject=${subjectId}; path=/; max-age=31536000; samesite=lax`;
+    document.cookie = `study_age_group=${newAgeGroup}; path=/; max-age=31536000; samesite=lax`;
     document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
 
     // 3. Fire-and-forget DB update
-    updateAllPreferences({ studySubject: subjectId, studyLevel: "" }).catch(console.error);
+    updateAllPreferences({ 
+      studySubject: subjectId, 
+      studyAgeGroup: newAgeGroup,
+      studyLevel: "" 
+    }).catch(console.error);
 
     // 4. Clear goal from URL and refresh
     const qs = new URLSearchParams(window.location.search);

@@ -310,6 +310,11 @@ export function AdminFlashcardsClient({
       const categoryName = selectedCategory?.name || ""
       const result = await generateVocabularyDetails(word, categoryName)
       if (result && !result.error) {
+        const sentence = Array.isArray(result.examples) && result.examples.length > 0 
+          ? result.examples[0] 
+          : (typeof result.examples === "string" ? result.examples : "")
+        const generatedQuestion = result.quizQuestion || ""
+
         setCardForm(prev => ({
           ...prev,
           word: result.word || prev.word,
@@ -318,12 +323,60 @@ export function AdminFlashcardsClient({
           definitionVi: result.meaningVi || prev.definitionVi || "",
           definitionTh: result.meaningTh || prev.definitionTh || "",
           definitionId: result.meaningId || prev.definitionId || "",
-          exampleSentence: Array.isArray(result.examples) && result.examples.length > 0 
-            ? result.examples[0] 
-            : (typeof result.examples === "string" ? result.examples : prev.exampleSentence || "")
+          exampleSentence: sentence || prev.exampleSentence || "",
+          quizQuestion: generatedQuestion || prev.quizQuestion || ""
         }))
 
-        toast.success("AI tự điền thông tin thành công!")
+        toast.success("AI tự điền thông tin và câu hỏi thành công!")
+
+        const isKindergarten = categoryName.toLowerCase().includes("kindergarten") || 
+                               categoryName.toLowerCase().includes("< 6") || 
+                               categoryName.toLowerCase().includes("under 6")
+        const speed = isKindergarten ? 0.8 : 1.0
+
+        // Automatically trigger AI audio generation for word
+        try {
+          toast.info("Đang tự động tạo audio từ vựng...")
+          const audioRes = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              text: result.word || word, 
+              exampleSentence: sentence,
+              speed
+            })
+          })
+          const audioData = await audioRes.json()
+          if (audioRes.ok && audioData.url) {
+            setCardForm(prev => ({ ...prev, audioUrl: audioData.url }))
+            toast.success("Tạo audio từ vựng thành công!")
+          }
+        } catch (audioErr) {
+          console.error("Auto card audio generation failed:", audioErr)
+        }
+
+        // Automatically trigger AI audio generation for quiz question
+        if (generatedQuestion) {
+          try {
+            toast.info("Đang tự động tạo audio câu hỏi...")
+            const qAudioRes = await fetch("/api/tts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                text: generatedQuestion, 
+                mode: "inline",
+                speed
+              })
+            })
+            const qAudioData = await qAudioRes.json()
+            if (qAudioRes.ok && qAudioData.url) {
+              setCardForm(prev => ({ ...prev, quizAudioUrl: qAudioData.url }))
+              toast.success("Tạo audio câu hỏi thành công!")
+            }
+          } catch (qAudioErr) {
+            console.error("Auto quiz audio generation failed:", qAudioErr)
+          }
+        }
         
         // 2. Automatically trigger Google Image search as requested!
         setIsAiLoading(false)
@@ -360,15 +413,59 @@ export function AdminFlashcardsClient({
       const transData = await transRes.json()
       const meaningVi = transData?.responseData?.translatedText || ""
 
+      const fallbackQuestion = `Can you find the ${word}?`
+
       setCardForm(prev => ({
         ...prev,
         phonetic: pronunciation || prev.phonetic || "/.../",
         definition: explanationEn || prev.definition || `Definition for '${prev.word}' not found.`,
         definitionVi: meaningVi || prev.definitionVi || `(Nghĩa của từ "${prev.word}")`,
-        exampleSentence: exampleSentence || prev.exampleSentence || ""
+        exampleSentence: exampleSentence || prev.exampleSentence || "",
+        quizQuestion: prev.quizQuestion || fallbackQuestion
       }))
 
       toast.success("Tự điền thông tin từ điển thành công!")
+
+      // Try to generate audio for fallback
+      try {
+        const selectedCategory = targetAudiencesList.find(c => c.id === cardForm.targetAudience)
+        const categoryName = selectedCategory?.name || ""
+        const isKindergarten = categoryName.toLowerCase().includes("kindergarten") || 
+                               categoryName.toLowerCase().includes("< 6") || 
+                               categoryName.toLowerCase().includes("under 6")
+        const speed = isKindergarten ? 0.8 : 1.0
+
+        const ttsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            text: word, 
+            exampleSentence: exampleSentence,
+            speed
+          })
+        })
+        const ttsData = await ttsRes.json()
+        if (ttsRes.ok && ttsData.url) {
+          setCardForm(prev => ({ ...prev, audioUrl: ttsData.url }))
+        }
+
+        const qTtsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            text: fallbackQuestion, 
+            mode: "inline",
+            speed
+          })
+        })
+        const qTtsData = await qTtsRes.json()
+        if (qTtsRes.ok && qTtsData.url) {
+          setCardForm(prev => ({ ...prev, quizAudioUrl: qTtsData.url }))
+        }
+      } catch (audioErr) {
+        console.error("Fallback audio generation failed:", audioErr)
+      }
+
       await handleGoogleImageSearch(word)
     } catch (innerError) {
       console.error("Fallback dictionary error:", innerError)
@@ -731,7 +828,7 @@ export function AdminFlashcardsClient({
           const imgRes = await generateCardImageAction(item.word, item.imageSearchKeyword)
           
           setGeneratingStatus(`[${i + 1}/${words.length}] Đang tạo âm thanh cho "${item.word}"...`)
-          const audioRes = await generateCardAudioAction(item.word, item.exampleSentence, categoryName)
+          const audioRes = await generateCardAudioAction(item.word, item.exampleSentence, categoryName, item.quizQuestion)
           
           setGeneratingStatus(`[${i + 1}/${words.length}] Đang lưu thẻ "${item.word}"...`)
           const cardRes = await adminCreateFlashcard({
@@ -746,6 +843,8 @@ export function AdminFlashcardsClient({
             imageUrl: imgRes.imageUrl || undefined,
             audioUrl: audioRes.audioUrl || undefined,
             audioWordUrl: audioRes.audioWordUrl || undefined,
+            quizQuestion: item.quizQuestion || undefined,
+            quizAudioUrl: audioRes.quizAudioUrl || undefined,
           })
 
           if (cardRes.success && cardRes.card) {

@@ -15,6 +15,7 @@ import {
   addMatchWordItem, 
   updateMatchWordItem,
   deleteMatchWordItem,
+  deleteMatchWordItems,
   updateMatchWordGame,
   updateMatchWordTopic
 } from "@/actions/admin-match-words"
@@ -47,18 +48,26 @@ export function AdminMatchWordsClient({
                      : initialGamesReaders
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   
+  // Selected items for bulk action
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+  
   // Rename state
   const [editingGameId, setEditingGameId] = useState<string | null>(null)
   const [editingGameName, setEditingGameName] = useState("")
 
   // Auto-select first game when tab changes
   useEffect(() => {
+    setSelectedItemIds([])
     if (currentGames.length > 0 && !currentGames.find(g => g.id === selectedGameId)) {
       setSelectedGameId(currentGames[0].id)
     } else if (currentGames.length === 0) {
       setSelectedGameId(null)
     }
   }, [activeTab, currentGames])
+
+  useEffect(() => {
+    setSelectedItemIds([])
+  }, [selectedGameId])
 
   const selectedGame = currentGames.find(g => g.id === selectedGameId)
 
@@ -375,6 +384,28 @@ export function AdminMatchWordsClient({
     })
   }
 
+  const handleToggleSelectItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedItemIds(prev => 
+      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+    );
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedItemIds.length === 0) return
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${selectedItemIds.length} từ vựng đã chọn?`)) return
+    startTransition(async () => {
+      const res = await deleteMatchWordItems(selectedItemIds)
+      if (res.success) {
+        toast.success(`Đã xóa thành công ${selectedItemIds.length} từ vựng`)
+        setSelectedItemIds([])
+        router.refresh()
+      } else {
+        toast.error("Lỗi xóa hàng loạt: " + res.error)
+      }
+    })
+  }
+
   const handleGenerateTopicAudio = async (topicId: string, items: any[]) => {
     const itemsWithoutAudio = items.filter(i => !i.audioUrl);
     if (itemsWithoutAudio.length === 0) {
@@ -678,6 +709,28 @@ export function AdminMatchWordsClient({
                             >
                               <Plus className="w-4 h-4" /> Thêm Từ
                             </button>
+                            {topic.items && topic.items.length > 0 && (
+                              <button
+                                onClick={() => {
+                                  const topicItemIds = topic.items.map((i: any) => i.id);
+                                  const allSelected = topicItemIds.every((id: string) => selectedItemIds.includes(id));
+                                  if (allSelected) {
+                                    setSelectedItemIds(prev => prev.filter(id => !topicItemIds.includes(id)));
+                                  } else {
+                                    setSelectedItemIds(prev => {
+                                      const newSelections = [...prev];
+                                      topicItemIds.forEach((id: string) => {
+                                        if (!newSelections.includes(id)) newSelections.push(id);
+                                      });
+                                      return newSelections;
+                                    });
+                                  }
+                                }}
+                                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 rounded-lg text-sm font-bold flex items-center gap-1 transition-colors"
+                              >
+                                {topic.items.map((i: any) => i.id).every((id: string) => selectedItemIds.includes(id)) ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                              </button>
+                            )}
                             {editingTopicId !== topic.id && (
                               <button 
                                 onClick={() => {
@@ -716,7 +769,11 @@ export function AdminMatchWordsClient({
                                 setItemForm({ word: item.word, emoji: item.emoji || "", imageUrl: item.imageUrl || "" });
                                 handleSearchImage(item.word);
                               }}
-                              className="bg-neutral-800 cursor-pointer rounded-xl p-3 flex flex-col items-center relative group border border-neutral-700 hover:border-indigo-500 transition-colors"
+                              className={`bg-neutral-800 cursor-pointer rounded-xl p-3 flex flex-col items-center relative group border transition-all ${
+                                selectedItemIds.includes(item.id) 
+                                  ? "border-indigo-500 ring-2 ring-indigo-500/30" 
+                                  : "border-neutral-700 hover:border-indigo-500"
+                              }`}
                             >
                               {item.audioUrl && (
                                 <button 
@@ -727,9 +784,24 @@ export function AdminMatchWordsClient({
                                   <Play className="w-3.5 h-3.5 fill-current" />
                                 </button>
                               )}
+                              
+                              {/* Selection Checkbox */}
+                              <div 
+                                onClick={(e) => handleToggleSelectItem(item.id, e)}
+                                className={`absolute top-2 right-2 w-5 h-5 rounded-md border flex items-center justify-center z-20 transition-all ${
+                                  selectedItemIds.includes(item.id) 
+                                    ? "bg-indigo-600 border-indigo-500 text-white" 
+                                    : "border-neutral-500 bg-neutral-900 hover:border-neutral-400 opacity-60 group-hover:opacity-100"
+                                }`}
+                              >
+                                {selectedItemIds.includes(item.id) && (
+                                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                )}
+                              </div>
+
                               <button 
                                 onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }} 
-                                className="absolute top-2 right-2 p-1.5 bg-red-500/90 hover:bg-red-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-md"
+                                className="absolute top-2 right-9 p-1.5 bg-red-500/90 hover:bg-red-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-md"
                                 title="Xóa từ"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1036,6 +1108,33 @@ export function AdminMatchWordsClient({
                 {aiProgress.current} / {aiProgress.total} từ
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK ACTIONS FLOATING BAR */}
+      {selectedItemIds.length > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-neutral-900/95 border border-neutral-800 backdrop-blur-md px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-indigo-400" />
+            <span className="text-white font-bold text-sm">
+              Đã chọn <span className="text-indigo-400 text-base">{selectedItemIds.length}</span> từ vựng
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSelectedItemIds([])}
+              className="px-4 py-2 hover:bg-neutral-800 text-neutral-300 rounded-xl text-xs font-bold transition-all border border-neutral-800"
+            >
+              Bỏ chọn
+            </button>
+            <button 
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-lg shadow-red-600/20"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Xóa hàng loạt
+            </button>
           </div>
         </div>
       )}

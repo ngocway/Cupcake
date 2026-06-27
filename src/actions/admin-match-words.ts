@@ -212,3 +212,19 @@ export async function deleteMatchWordItem(id: string) {
     return { success: false, error: error.message }
   }
 }
+
+// DELETE MULTIPLE ITEMS
+export async function deleteMatchWordItems(ids: string[]) {
+  try {
+    await prisma.matchWordItem.deleteMany({
+      where: {
+        id: { in: ids }
+      }
+    })
+    safeRevalidatePath("/admin/games/match-words")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Failed to delete items:", error)
+    return { success: false, error: error.message }
+  }
+}

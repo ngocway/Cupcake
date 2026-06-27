@@ -11,18 +11,22 @@ export async function generateVocabularyDetails(word: string, categoryName?: str
     // Determine age-appropriate guidelines
     let explanationGuideline = "a very clear, simple English definition using easy words (A1-A2 level)";
     let examplesGuideline = "exactly 2-3 extremely simple, short, and easy-to-understand English example sentences (A1 level, using only basic vocabulary with very few new words)";
+    let quizQuestionGuideline = "a simple English question (CEFR A1-A2 level) about the word's definition or usage, suitable for language learners (e.g. for pencil: 'What do we use to write?')";
 
     if (categoryName) {
       const cat = categoryName.toLowerCase();
       if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
         explanationGuideline = "an extremely simple, child-friendly English definition using basic words suitable for children under 6 years old (e.g., 'a sweet red fruit' for apple)";
         examplesGuideline = "exactly 2-3 extremely short and simple English example sentences (Pre-A1 level, 3-6 words each, using only basic vocabulary, e.g., 'The apple is red.')";
+        quizQuestionGuideline = "a very short, extremely simple question in English (maximum 5-7 words) that a toddler can easily answer by looking at the picture of a " + word + " (e.g., 'Who says moo?' for cow, 'What keeps food cold?' for fridge)";
       } else if (cat.includes("kid")) {
         explanationGuideline = "a simple, clear English definition (A1-A2 level) using easy-to-understand language";
         examplesGuideline = "exactly 2-3 simple English example sentences (A1 level, e.g., 'This is a clean towel.', 'The giraffe has a long neck.')";
+        quizQuestionGuideline = "a simple English question (CEFR A1 level) about the word's description or function (e.g., 'What keeps our food cold?' for fridge)";
       } else if (cat.includes("teen")) {
         explanationGuideline = "a clear English definition at CEFR A2-B1 level";
         examplesGuideline = "exactly 2-3 natural English example sentences (A2-B1 level, e.g., 'I gave some sour tamarind to my mother after school.')";
+        quizQuestionGuideline = "a natural English question (CEFR A2-B1 level) asking about the meaning or usage of the word";
       }
     }
 
@@ -32,6 +36,7 @@ export async function generateVocabularyDetails(word: string, categoryName?: str
     The meaningId should be a SHORT, direct translation in Indonesian (1-3 words max). 
     The explanationEn should be: ${explanationGuideline}. 
     The examples should be: ${examplesGuideline}. 
+    The quizQuestion should be: ${quizQuestionGuideline}. 
     Provide 2-3 very descriptive English keywords for an image search that perfectly represents the word's meaning (e.g. for "dilemma", use "confused person at crossroads").
     
     Return the result in JSON format matching this structure:
@@ -43,6 +48,7 @@ export async function generateVocabularyDetails(word: string, categoryName?: str
       "meaningId": "string",
       "explanationEn": "string",
       "examples": ["string"],
+      "quizQuestion": "string",
       "imageSearchKeywords": "string"
     }`;
 

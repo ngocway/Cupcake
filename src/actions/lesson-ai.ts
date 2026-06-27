@@ -1580,7 +1580,9 @@ export async function generateAILessonFully(params: {
         audioUrl: wholeAudioUrl || null,
         audioMetadata: audioMetadata ? (audioMetadata as any) : undefined,
         targetAudiences: targetAudiences,
-        learningGoals: learningGoals
+        learningGoals: learningGoals,
+        level: finalLevel,
+        audienceLevels: audienceLevels
       }
     });
 

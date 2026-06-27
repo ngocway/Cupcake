@@ -33,7 +33,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
 
   if (isDetailOrRunPage) return null;
 
-  const [isAtTop, setIsAtTop] = useState(true)
+  const isAtTop = true
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [localSearch, setLocalSearch] = useState(search || "")
@@ -49,23 +49,15 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   }
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsAtTop(window.scrollY < 20)
-    }
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setIsMenuOpen(false)
       }
     }
 
-    window.addEventListener("scroll", handleScroll, { passive: true })
     window.addEventListener("mousedown", handleClickOutside)
     
-    // Also run once on mount to set initial state correctly
-    handleScroll()
-    
     return () => {
-      window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
@@ -75,7 +67,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const isActive = (path: string) => pathname === path
 
   return (
-    <nav className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/95 border border-primary/10 rounded-full shadow-2xl transition-all duration-700 ease-in-out ${isAtTop ? "translate-y-0 opacity-100" : "-translate-y-40 opacity-0 pointer-events-none"}`}>
+    <nav className="relative mt-6 mx-auto z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/95 border border-primary/10 rounded-full shadow-2xl">
       <div className="flex items-center gap-10">
         <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
           <img 
@@ -89,15 +81,13 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           </div>
         </Link>
         <div className="hidden lg:flex gap-8 items-center">
-          {!isKindergarten && (
-            <Link 
-              className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
-              href="/student/game/robot-chat"
-            >
-              <span className="material-symbols-outlined text-[14px]">smart_toy</span>
-              <span>{t("chatWithDolbot")}</span>
-            </Link>
-          )}
+          <Link 
+            className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+            href="/student/game/robot-chat"
+          >
+            <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+            <span>{t("chatWithDolbot")}</span>
+          </Link>
         </div>
       </div>
 
@@ -217,10 +207,10 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       <span>{t("myBookmarks")}</span>
                     </Link>
                     <Link 
-                      href="/student/reviews"
+                      href="/student/my-reviews"
                       onClick={() => setIsMenuOpen(false)}
                       className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        isActive('/student/reviews') 
+                        isActive('/student/my-reviews') 
                           ? "bg-primary/5 text-primary" 
                           : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                       }`}
