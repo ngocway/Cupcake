@@ -14,26 +14,30 @@ function getAgeGroupGuidelines(categoryName: string) {
     return {
       vocabulary: "Extremely simple, basic, concrete nouns or visual concepts (e.g., 'apple', 'cat', 'sun', 'ball'). Avoid abstract, complex, or multi-syllable words.",
       definition: "An extremely simple, child-friendly English definition using basic words suitable for children under 6 years old (e.g., 'a sweet red fruit' for apple).",
-      example: "An extremely short and simple English sentence (Pre-A1 level, 3-6 words, e.g., 'The apple is red.', 'I see a cute dog.'). Use only basic words."
+      example: "An extremely short and simple English sentence (Pre-A1 level, 3-6 words, e.g., 'The apple is red.', 'I see a cute dog.'). Use only basic words.",
+      quiz: "A very short, extremely simple quiz question in English (maximum 5-7 words) that a toddler can easily answer by looking at the picture of the card's word (e.g., 'Who says moo?' for cow, 'What keeps food cold?' for fridge)."
     };
   } else if (cat.includes("kid")) {
     return {
       vocabulary: "Simple, everyday vocabulary words that elementary school students (6-10 years old) encounter (e.g., 'kitchen', 'pencil', 'towel', 'giraffe'). Avoid overly formal or complex academic words.",
       definition: "A simple, clear English definition (A1-A2 level) using easy-to-understand language.",
-      example: "A simple English sentence (A1 level, e.g., 'This is a clean towel.', 'The giraffe has a long neck.'). Keep it clear and direct."
+      example: "A simple English sentence (A1 level, e.g., 'This is a clean towel.', 'The giraffe has a long neck.'). Keep it clear and direct.",
+      quiz: "A simple English question (CEFR A1 level) about the word's description or function (e.g., 'What keeps our food cold?' for fridge)."
     };
   } else if (cat.includes("teen")) {
     return {
       vocabulary: "General intermediate vocabulary words suitable for middle/high school students (11-16 years old) (e.g., 'tamarind', 'adventure', 'celebrate', 'solution').",
       definition: "A clear English definition at CEFR A2-B1 level.",
-      example: "A natural, slightly longer English sentence (A2-B1 level, e.g., 'I gave some sour tamarind to my mother after school.'). Feel free to use compound sentences."
+      example: "A natural, slightly longer English sentence (A2-B1 level, e.g., 'I gave some sour tamarind to my mother after school.'). Feel free to use compound sentences.",
+      quiz: "A natural English question (CEFR A2-B1 level) asking about the meaning or usage of the word."
     };
   } else {
     // Default to Learner / Adult
     return {
       vocabulary: "Intermediate to advanced English vocabulary suitable for adults or advanced learners (16+ years old) (e.g., 'dilemma', 'consequence', 'nostalgic', 'persistent').",
       definition: "A clear, precise English definition at CEFR B1-B2 level.",
-      example: "A natural, high-quality English sentence (B1-B2 level, e.g., 'He faced a difficult dilemma when choosing between two career paths.'). Use compound or complex structures where appropriate."
+      example: "A natural, high-quality English sentence (B1-B2 level, e.g., 'He faced a difficult dilemma when choosing between two career paths.'). Use compound or complex structures where appropriate.",
+      quiz: "A clear English question (CEFR B1-B2 level) about the word's definition or usage, suitable for language learners (e.g. 'What do we use to write?' for pencil)."
     };
   }
 }
@@ -53,6 +57,7 @@ export async function generateFlashcardVocabularyList(categoryName: string, topi
     1. Vocabulary: Select words that match this guideline: ${guidelines.vocabulary}
     2. Definition: Define the words matching this guideline: ${guidelines.definition}
     3. Example Sentence: Create sentences matching this guideline: ${guidelines.example}
+    4. Quiz Question: Create a quiz question matching this guideline: ${guidelines.quiz}
 
     For each word, provide:
     - "word": The English word
@@ -62,6 +67,7 @@ export async function generateFlashcardVocabularyList(categoryName: string, topi
     - "definitionTh": A SHORT, direct Thai translation (1-3 words max).
     - "definitionId": A SHORT, direct Indonesian translation (1-3 words max).
     - "exampleSentence": A simple English example sentence matching the rules above.
+    - "quizQuestion": A simple English quiz question matching the rules above.
     - "imageSearchKeyword": A very descriptive English search keyword for finding a representative image on Google Images (e.g. for "dilemma", use "confused person at crossroads").
 
     Return the result as a JSON object with a single key "vocabularies" containing the array of these words.`;
@@ -323,10 +329,11 @@ export async function generateCardImageAction(word: string, imageSearchKeyword: 
   return { success: true, imageUrl };
 }
 
-// Action to generate card audio (includes splitting)
-export async function generateCardAudioAction(word: string, exampleSentence: string, categoryName?: string) {
+// Action to generate card audio (includes splitting and quiz audio generation)
+export async function generateCardAudioAction(word: string, exampleSentence: string, categoryName?: string, quizQuestion?: string) {
   let audioUrl = null;
   let audioWordUrl = null;
+  let quizAudioUrl = null;
 
   if (word) {
     try {
@@ -364,10 +371,24 @@ export async function generateCardAudioAction(word: string, exampleSentence: str
           console.error(`Error splitting audio for word: ${cleanWord}`, splitErr);
         }
       }
+
+      // Generate Quiz Audio if present
+      if (quizQuestion && quizQuestion.trim()) {
+        try {
+          console.log(`Generating auto Quiz TTS for: ${quizQuestion} with speed ${speed}`);
+          const qTtsRes = await generateTTSHelper(quizQuestion, "Aoede", speed, userId, "inline");
+          if (qTtsRes && qTtsRes.url) {
+            quizAudioUrl = qTtsRes.url;
+            console.log(`Generated quiz audio URL: ${quizAudioUrl}`);
+          }
+        } catch (qTtsErr) {
+          console.error(`Error generating quiz audio for: ${quizQuestion}`, qTtsErr);
+        }
+      }
     } catch (ttsError) {
       console.error("Error generating auto TTS for word", word, ttsError);
     }
   }
-  return { success: true, audioUrl, audioWordUrl };
+  return { success: true, audioUrl, audioWordUrl, quizAudioUrl };
 }
 

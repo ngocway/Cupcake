@@ -9,6 +9,7 @@ import { useContentStore } from "@/store/useContentStore"
 import { useTranslations, useLocale } from "next-intl"
 import { TypingText } from "@/components/public/TypingText"
 import { updateAllPreferences, getOnboardingConfig } from "@/actions/user-preferences-actions"
+import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
 import { X, SlidersHorizontal } from "lucide-react"
 import {
   Select,
@@ -1222,16 +1223,25 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
             onSelect={(subjectId: string) => {
               if (subjectId === studySubject) return;
 
+              // Resolve matching age group for the new subject
+              const newAgeGroup = getBestAgeGroupForSubject(subjectId, userType, studyAgeGroup, onboardingConfig);
+
               // 1. Update store instantly
               setStudySubject(subjectId);
+              setStudyAgeGroup(newAgeGroup);
               setStudyLevel("");
 
               // 2. Set cookies client-side
               document.cookie = `study_subject=${subjectId}; path=/; max-age=31536000; samesite=lax`;
+              document.cookie = `study_age_group=${newAgeGroup}; path=/; max-age=31536000; samesite=lax`;
               document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
 
               // 3. Fire-and-forget DB update
-              updateAllPreferences({ studySubject: subjectId, studyLevel: "" }).catch(console.error);
+              updateAllPreferences({ 
+                studySubject: subjectId, 
+                studyAgeGroup: newAgeGroup,
+                studyLevel: "" 
+              }).catch(console.error);
 
               // 4. Clear goal and refresh
               const qs = new URLSearchParams(window.location.search);

@@ -4,25 +4,27 @@ import Link from "next/link"
 import Image from "next/image"
 import { useTranslations } from "next-intl"
 
-const levelToShortLabel = (level: string | null | undefined): string | null => {
-  if (!level) return null;
-  switch (level.toLowerCase()) {
-    case 'beginner':     return 'Pre-A1'
-    case 'elementary':   return 'A2'
-    case 'intermediate': return 'B1'
-    case 'advanced':     return 'C1'
-    default:             return level.toUpperCase()
-  }
-}
-
-const getLevelColor = (level: string | null | undefined) => {
-  switch ((level || '').toLowerCase()) {
-    case 'beginner':     return 'bg-emerald-500 text-white'
-    case 'elementary':   return 'bg-sky-500 text-white'
-    case 'intermediate': return 'bg-violet-500 text-white'
-    case 'advanced':     return 'bg-rose-500 text-white'
-    default:             return 'bg-primary text-white'
-  }
+const getLevelsWithColors = (level: string | null | undefined): { label: string; color: string }[] => {
+  if (!level) return [];
+  const levels = level.split(',').map(l => l.trim().toLowerCase()).filter(Boolean);
+  const uniqueLevels = Array.from(new Set(levels));
+  
+  return uniqueLevels.map(l => {
+    switch (l) {
+      case 'beginner':
+        return { label: 'Pre-A1', color: 'bg-emerald-500 text-white' };
+      case 'elementary':
+        return { label: 'A2', color: 'bg-sky-500 text-white' };
+      case 'intermediate':
+        return { label: 'B1', color: 'bg-violet-500 text-white' };
+      case 'upper-intermediate':
+        return { label: 'B2', color: 'bg-amber-500 text-white' };
+      case 'advanced':
+        return { label: 'C1', color: 'bg-rose-500 text-white' };
+      default:
+        return { label: l.toUpperCase(), color: 'bg-primary text-white' };
+    }
+  });
 }
 
 export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: boolean }) {
@@ -96,19 +98,28 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
 
         {/* Title */}
         <Link href={href}>
-          <h3 className="text-foreground text-lg font-black leading-tight mb-6 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-primary transition-colors">
+          <h3 className="text-foreground text-lg font-black leading-tight mb-2 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-primary transition-colors">
             {item.title}
           </h3>
         </Link>
 
-        {/* Stats Row */}
-        <div className="flex items-center justify-between pt-5 border-t border-primary/5">
-          <div className="flex items-center flex-wrap gap-2">
-            {item.level && (
-              <span className={`${getLevelColor(item.level)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
-                {levelToShortLabel(item.level)}
+        {/* Level Badges */}
+        {item.level && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {getLevelsWithColors(item.level).map((lvl, index) => (
+              <span 
+                key={index}
+                className={`${lvl.color} px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider shadow-sm`}
+              >
+                {lvl.label}
               </span>
-            )}
+            ))}
+          </div>
+        )}
+
+        {/* Stats Row */}
+        <div className="flex items-center justify-between pt-3 border-t border-primary/5">
+          <div className="flex items-center flex-wrap gap-2">
             {tagsArray.length > 0 && (
               <div className="flex items-center gap-1">
                 {tagsArray.slice(0, 3).map((tag: string) => (
@@ -220,19 +231,28 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
 
         {/* Title */}
         <Link href={href}>
-          <h3 className="text-foreground text-lg font-black leading-tight mb-6 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-secondary transition-colors">
+          <h3 className="text-foreground text-lg font-black leading-tight mb-2 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-secondary transition-colors">
             {item.title}
           </h3>
         </Link>
 
-        {/* Stats Row */}
-        <div className="flex items-center justify-between pt-5 border-t border-secondary/5">
-          <div className="flex items-center flex-wrap gap-2">
-            {item.level && (
-              <span className={`${getLevelColor(item.level)} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-sm`}>
-                {levelToShortLabel(item.level)}
+        {/* Level Badges */}
+        {item.level && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {getLevelsWithColors(item.level).map((lvl, index) => (
+              <span 
+                key={index}
+                className={`${lvl.color} px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider shadow-sm`}
+              >
+                {lvl.label}
               </span>
-            )}
+            ))}
+          </div>
+        )}
+
+        {/* Stats Row */}
+        <div className="flex items-center justify-between pt-3 border-t border-secondary/5">
+          <div className="flex items-center flex-wrap gap-2">
             {tagsArray.length > 0 && (
               <div className="flex items-center gap-1">
                 {tagsArray.slice(0, 3).map((tag: string) => (

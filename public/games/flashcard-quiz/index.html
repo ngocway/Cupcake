@@ -634,7 +634,7 @@
             if (bgMusic) return;
             bgMusic = new Audio('/sounds/bg-music.mp3');
             bgMusic.loop = true;
-            bgMusic.volume = 0.20; // Default volume 20%
+            bgMusic.volume = 0.15; // Default volume 15%
             bgMusic.play().then(() => {
                 isMusicPlaying = true;
             }).catch(err => {
@@ -786,7 +786,7 @@
                 questionAudio = null;
             }
             audioBtn.classList.remove('playing');
-            setBgMusicVolume(0.20); // Restore background music volume
+            setBgMusicVolume(0.15); // Restore background music volume
         }
 
         // Play current audio hint
@@ -805,14 +805,14 @@
             // Set playback rate to 0.75 for slow pacing as configured
             questionAudio.playbackRate = 0.75;
 
-            // Reduce background music volume to 10%
-            setBgMusicVolume(0.10);
+            // Reduce background music volume to 5%
+            setBgMusicVolume(0.05);
 
             const onEnded = () => {
                 audioBtn.classList.remove('playing');
                 questionAudio = null;
-                // Restore background music volume to 20%
-                setBgMusicVolume(0.20);
+                // Restore background music volume to 15%
+                setBgMusicVolume(0.15);
             };
 
             questionAudio.addEventListener('ended', onEnded);
@@ -871,14 +871,14 @@
                     questionAudio = new Audio(q.audioUrl);
                     questionAudio.playbackRate = 0.75;
                     
-                    // Reduce bg music volume to 10%
-                    setBgMusicVolume(0.10);
+                    // Reduce bg music volume to 5%
+                    setBgMusicVolume(0.05);
                     
                     const onEnded = () => {
                         audioBtn.classList.remove('playing');
                         questionAudio = null;
-                        // Restore bg music volume to 20%
-                        setBgMusicVolume(0.20);
+                        // Restore bg music volume to 15%
+                        setBgMusicVolume(0.15);
                     };
 
                     questionAudio.addEventListener('ended', onEnded);

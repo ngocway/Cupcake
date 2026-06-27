@@ -7,6 +7,8 @@ import { getCachedAssignments, getCachedLessons } from "@/lib/cached-queries"
 import { cookies } from "next/headers"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
+import { getOnboardingConfig } from "@/actions/user-preferences-actions"
+import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
@@ -52,6 +54,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         prisma.user.update({ where: { id: session.user.id }, data: syncData }).catch(() => {})
         hasUserPreference = true
       }
+    }
+  }
+
+  // Resolve matching age group if it is mismatched for the active subject
+  const config = await getOnboardingConfig()
+  const resolvedAgeGroup = getBestAgeGroupForSubject(studySubject, initialUserType, studyAgeGroup, config)
+  if (resolvedAgeGroup !== studyAgeGroup) {
+    studyAgeGroup = resolvedAgeGroup
+    // Update the cookie for server component persistence
+    try {
+      cookieStore.set("study_age_group", resolvedAgeGroup, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" })
+    } catch (e) {
+      // In Next.js, setting cookies might fail if headers are already sent, which is safe to ignore here
     }
   }
 

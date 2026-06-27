@@ -133,7 +133,7 @@ export function SidebarHeroSentence({ config }: Props) {
       </div>
 
       {/* Subject Selector — between sentence and level */}
-      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} />
+      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} config={config} />
 
       {/* Level Selector — shown only when levels exist for current subject+ageGroup */}
       {availableLevels.length > 0 && (
@@ -155,13 +155,16 @@ export function SidebarHeroSentence({ config }: Props) {
                 handleSelectLevel("all");
               }}
               disabled={isPending}
-              className={`px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.05em] border transition-all duration-300 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.05em] border transition-all duration-300 rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem] shadow-sm hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                 !studyLevel
                   ? "bg-slate-700 border-slate-600 text-white shadow-md scale-[1.05]"
                   : "bg-white border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
-              All
+              {!studyLevel && isPending && (
+                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+              )}
+              <span>All</span>
             </button>
 
             {availableLevels.map((level: any, idx: number) => {
@@ -183,23 +186,20 @@ export function SidebarHeroSentence({ config }: Props) {
                     handleSelectLevel(level.id);
                   }}
                   disabled={isPending}
-                  className={`px-3 py-1.5 ${blob} text-[11px] font-black uppercase tracking-[0.05em] border-2 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 ${blob} text-[11px] font-black uppercase tracking-[0.05em] border-2 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                     isActive
                       ? `${style.activeBg} ${style.border} ${style.activeText} shadow-md scale-[1.05]`
                       : `bg-white ${style.border} ${style.text} hover:${style.bg}`
                   }`}
                 >
-                  {level.label}
+                  {isActive && isPending && (
+                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                  )}
+                  <span>{level.label}</span>
                 </button>
               );
             })}
           </div>
-          {isPending && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-[10px] text-primary/60 font-bold">Updating...</span>
-            </div>
-          )}
         </div>
       )}
     </div>

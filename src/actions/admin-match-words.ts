@@ -13,13 +13,14 @@ function safeRevalidatePath(path: string) {
 }
 
 // CREATE GAME
-export async function createMatchWordGame(data: { name: string; ageGroup: string; order?: number }) {
+export async function createMatchWordGame(data: { name: string; ageGroup: string; order?: number; level?: number }) {
   try {
     const game = await prisma.matchWordGame.create({
       data: {
         name: data.name,
         ageGroup: data.ageGroup,
         order: data.order || 0,
+        level: data.level ?? 1,
       },
     })
     safeRevalidatePath("/admin/games/match-words")
@@ -31,10 +32,13 @@ export async function createMatchWordGame(data: { name: string; ageGroup: string
 }
 
 // GET GAMES WITH TOPICS
-export async function getMatchWordGames(ageGroup?: string) {
+export async function getMatchWordGames(ageGroup?: string, level?: number) {
   try {
+    const where: any = {}
+    if (ageGroup) where.ageGroup = ageGroup
+    if (level !== undefined) where.level = level
     const games = await prisma.matchWordGame.findMany({
-      where: ageGroup ? { ageGroup } : undefined,
+      where: Object.keys(where).length > 0 ? where : undefined,
       include: {
         topics: {
           include: {
@@ -45,9 +49,10 @@ export async function getMatchWordGames(ageGroup?: string) {
           },
         },
       },
-      orderBy: {
-        order: "asc",
-      },
+      orderBy: [
+        { level: "asc" },
+        { order: "asc" },
+      ],
     })
     return { success: true, games }
   } catch (error: any) {
@@ -57,7 +62,7 @@ export async function getMatchWordGames(ageGroup?: string) {
 }
 
 // UPDATE GAME
-export async function updateMatchWordGame(id: string, data: { name?: string; order?: number }) {
+export async function updateMatchWordGame(id: string, data: { name?: string; order?: number; level?: number }) {
   try {
     const game = await prisma.matchWordGame.update({
       where: { id },
@@ -67,6 +72,23 @@ export async function updateMatchWordGame(id: string, data: { name?: string; ord
     return { success: true, game }
   } catch (error: any) {
     console.error("Failed to update game:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// CHANGE GAME LEVEL
+export async function changeMatchWordGameLevel(id: string, level: number) {
+  try {
+    if (level < 1 || level > 5) return { success: false, error: "Level must be between 1 and 5" }
+    const game = await prisma.matchWordGame.update({
+      where: { id },
+      data: { level },
+    })
+    safeRevalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/student/game/match-words/select")
+    return { success: true, game }
+  } catch (error: any) {
+    console.error("Failed to change game level:", error)
     return { success: false, error: error.message }
   }
 }
@@ -209,6 +231,22 @@ export async function deleteMatchWordItem(id: string) {
     return { success: true }
   } catch (error: any) {
     console.error("Failed to delete item:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// DELETE MULTIPLE ITEMS
+export async function deleteMatchWordItems(ids: string[]) {
+  try {
+    await prisma.matchWordItem.deleteMany({
+      where: {
+        id: { in: ids }
+      }
+    })
+    safeRevalidatePath("/admin/games/match-words")
+    return { success: true }
+  } catch (error: any) {
+    console.error("Failed to delete items:", error)
     return { success: false, error: error.message }
   }
 }
