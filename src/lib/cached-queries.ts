@@ -5,7 +5,7 @@ import { redis } from "@/lib/redis";
 export async function fetchWithRedis<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
   try {
     const cached = await redis.get(key);
-    if (cached) {
+    if (cached !== null && cached !== undefined && cached !== 'null' && cached !== 'undefined') {
       console.log(`[REDIS HIT] ${key}`);
       return JSON.parse(cached);
     }
@@ -16,10 +16,13 @@ export async function fetchWithRedis<T>(key: string, ttlSeconds: number, fetcher
   console.log(`[REDIS MISS] ${key} - Fetching from DB...`);
   const data = await fetcher();
 
-  try {
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-  } catch (e) {
-    console.warn("Redis SET failed for key:", key, e);
+  // Only cache non-null results to avoid stale null entries
+  if (data !== null && data !== undefined) {
+    try {
+      await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Redis SET failed for key:", key, e);
+    }
   }
 
   return data;

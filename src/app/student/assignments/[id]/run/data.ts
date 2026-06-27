@@ -78,6 +78,35 @@ export const getCachedAssignmentQuestions = async (assignmentId: string) => {
   });
 };
 
+/** Fetch explanationTranslations for all questions in an assignment (raw SQL, bypasses Prisma schema cache).
+ *  Returns a map: { [questionId]: { vi, th, id } | null }
+ */
+export const getQuestionTranslationMap = async (assignmentId: string) => {
+  return fetchWithRedis(`assignment:question-translations:${assignmentId}`, 3600, async () => {
+    const rows = await prisma.$queryRawUnsafe<Array<{ id: string; explanationTranslations: any }>>(
+      `SELECT id, "explanationTranslations" FROM "Question" WHERE "assignmentId" = $1`,
+      assignmentId
+    );
+    const map: Record<string, any> = {};
+    for (const r of rows) {
+      map[r.id] = r.explanationTranslations ?? null;
+    }
+    return map;
+  });
+};
+
+/** Fetch instructionsTranslations for an assignment (raw SQL). */
+export const getAssignmentTranslations = async (assignmentId: string) => {
+  return fetchWithRedis(`assignment:translations:${assignmentId}`, 3600, async () => {
+    const rows = await prisma.$queryRawUnsafe<Array<{ instructionsTranslations: any }>>(
+      `SELECT "instructionsTranslations" FROM "Assignment" WHERE id = $1`,
+      assignmentId
+    );
+    return rows[0]?.instructionsTranslations ?? null;
+  });
+};
+
+
 export const getRelatedAssignmentsCached = async (assignmentId: string, assignmentTags: string | null, targetAudiences: string[]) => {
   return fetchWithRedis(`assignment:related:${assignmentId}`, 900, async () => {
     // 1. Fetch assignment with pre-computed related IDs

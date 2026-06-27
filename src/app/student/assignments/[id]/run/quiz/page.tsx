@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import QuizClientRunner from "./QuizClientRunner";
-import { getCachedAssignmentQuestions } from "../data";
+import { getCachedAssignmentQuestions, getQuestionTranslationMap, getAssignmentTranslations } from "../data";
 
 async function getRelatedAssignments(assignment: any) {
   const popularTags = await prisma.tag.findMany({
@@ -153,6 +153,8 @@ export default async function StudentQuizPage({
 
   const relatedAssignmentsPromise = getRelatedAssignments(assignmentCore);
   const questions = await getCachedAssignmentQuestions(assignmentCore.id);
+  const questionTranslationsPromise = getQuestionTranslationMap(assignmentCore.id);
+  const assignmentTranslationsPromise = getAssignmentTranslations(assignmentCore.id);
 
   return (
     <div className="min-h-screen w-full max-w-none bg-slate-50 dark:bg-slate-950">
@@ -163,6 +165,8 @@ export default async function StudentQuizPage({
           initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft as string) : {}}
           extraDataPromise={extraDataPromise}
           relatedAssignmentsPromise={relatedAssignmentsPromise}
+          questionTranslationsPromise={questionTranslationsPromise}
+          assignmentTranslationsPromise={assignmentTranslationsPromise}
           isGuest={!userId}
        />
     </div>

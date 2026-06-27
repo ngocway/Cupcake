@@ -167,8 +167,9 @@ model Assignment {
   level                 String?
   audienceLevels        Json?
   subject               String?
-  instructions          String?
-  shortDescription      String?
+  instructions              String?
+  instructionsTranslations  Json?
+  shortDescription          String?
   tags                  String?              @default("")
   targetAudiences       String[]             @default([])
   learningGoals         String[]             @default([])
@@ -236,9 +237,10 @@ model Question {
   assignmentId  String
   type          QuestionType
   orderIndex    Int
-  points        Float
-  explanation   String?
-  content       String
+  points                   Float
+  explanation              String?
+  explanationTranslations  Json?
+  content                  String
   mediaType     MediaType          @default(NONE)
   mediaUrl      String?
   imageUrl      String?

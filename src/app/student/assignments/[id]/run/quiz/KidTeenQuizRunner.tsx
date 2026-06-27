@@ -36,6 +36,8 @@ import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
+import { ExplanationBlock } from "@/components/common/ExplanationBlock";
+import { InstructionsBlock } from "@/components/common/InstructionsBlock";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
@@ -563,7 +565,37 @@ interface Props {
   initialAnswers: any;
   extraDataPromise: Promise<any>;
   relatedAssignmentsPromise?: Promise<any[]>;
+  questionTranslationsPromise?: Promise<Record<string, any>>;
+  assignmentTranslationsPromise?: Promise<any>;
   isGuest?: boolean;
+}
+
+/** Resolves questionTranslationsPromise and renders ExplanationBlock with translations. 
+ *  Must be inside a React.Suspense boundary. */
+function ExplanationResolver({
+  promise,
+  questionId,
+  explanation,
+  isExpanded,
+  onToggleExpand,
+}: {
+  promise: Promise<Record<string, any>> | undefined;
+  questionId: string;
+  explanation: string;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const translationMap = promise ? React.use(promise) : null;
+  const translations = translationMap?.[questionId] ?? null;
+  return (
+    <ExplanationBlock
+      questionId={questionId}
+      explanation={explanation}
+      explanationTranslations={translations}
+      isExpanded={isExpanded}
+      onToggleExpand={onToggleExpand}
+    />
+  );
 }
 
 function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
@@ -591,8 +623,9 @@ function StartScreenTeacherAvatar({ promise }: { promise: Promise<any> }) {
   );
 }
 
-function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<any>, isGuest: boolean, t: any }) {
+function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
   const extraData = React.use(promise);
+  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) : null;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
@@ -636,9 +669,12 @@ function KidTeenExtraDataConsumer({ promise, isGuest, t }: { promise: Promise<an
             <Info className="w-4 h-4" />
             {t("instructions")}
           </div>
-          <div className="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10">
-            <InteractiveReadingContent html={extraData.instructions} isLoggedIn={!isGuest} />
-          </div>
+          <InstructionsBlock
+            instructions={extraData.instructions}
+            instructionsTranslations={instructionsTranslations}
+            isLoggedIn={!isGuest}
+            proseClassName="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10"
+          />
         </div>
       )}
 
@@ -709,6 +745,8 @@ export default function KidTeenQuizRunner({
   initialAnswers,
   extraDataPromise,
   relatedAssignmentsPromise,
+  questionTranslationsPromise,
+  assignmentTranslationsPromise,
   isGuest = false,
 }: Props) {
   const t = useTranslations("student.quiz");
@@ -1596,24 +1634,28 @@ export default function KidTeenQuizRunner({
                 />
               )}
 
-              {/* ── EXPLANATION ── */}
+              {/* ── EXPLANATION (with language toggle) ── */}
               {isChecked && currentQuestion?.explanation && (
                 <div className="space-y-3 mt-2">
-                  <button
-                    onClick={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
-                    className="w-full flex items-center justify-between px-5 py-3 bg-amber-50 border-2 border-amber-200 rounded-2xl text-amber-700 font-bold hover:bg-amber-100 transition-all"
+                  <React.Suspense
+                    fallback={
+                      <ExplanationBlock
+                        questionId={currentQuestion.id}
+                        explanation={currentQuestion.explanation}
+                        explanationTranslations={null}
+                        isExpanded={!!expandedExplanations[currentQuestion.id]}
+                        onToggleExpand={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
+                      />
+                    }
                   >
-                    <span className="flex items-center gap-2 text-sm">
-                      <Info className="w-4 h-4" />
-                      View explanation
-                    </span>
-                    <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedExplanations[currentQuestion.id] ? "rotate-180" : ""}`} />
-                  </button>
-                  <div className={`overflow-hidden transition-all duration-400 ease-in-out ${expandedExplanations[currentQuestion.id] ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"}`}>
-                    <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl text-slate-700 leading-relaxed text-base whitespace-pre-wrap">
-                      {currentQuestion.explanation}
-                    </div>
-                  </div>
+                    <ExplanationResolver
+                      promise={questionTranslationsPromise}
+                      questionId={currentQuestion.id}
+                      explanation={currentQuestion.explanation}
+                      isExpanded={!!expandedExplanations[currentQuestion.id]}
+                      onToggleExpand={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
+                    />
+                  </React.Suspense>
                 </div>
               )}
             </div>
@@ -1720,7 +1762,7 @@ export default function KidTeenQuizRunner({
         {/* Panel body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
           <React.Suspense fallback={<div className="space-y-4 animate-pulse"><div className="h-40 bg-slate-100 rounded-2xl w-full"></div><div className="h-8 bg-slate-100 rounded-lg w-1/2"></div></div>}>
-            <KidTeenExtraDataConsumer promise={extraDataPromise} isGuest={isGuest} t={t} />
+            <ExtraDataConsumer promise={extraDataPromise} translationsPromise={assignmentTranslationsPromise} isGuest={isGuest} t={t} />
           </React.Suspense>
         </div>
       </div>

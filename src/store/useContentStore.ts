@@ -39,6 +39,9 @@ interface ContentState {
   nativeLanguage: string
   setNativeLanguage: (val: string) => void
 
+  showNativeLang: boolean
+  setShowNativeLang: (val: boolean) => void
+
   setExercises: (items: any[]) => void
   setLessons: (items: any[]) => void
   addExercises: (items: any[]) => void
@@ -98,6 +101,14 @@ export const useContentStore = create<ContentState>((set) => ({
       localStorage.setItem("cupcakes_native_language", val)
     }
     return { nativeLanguage: val }
+  }),
+
+  showNativeLang: typeof window !== "undefined" ? localStorage.getItem("cupcakes_show_native_lang") === "true" : false,
+  setShowNativeLang: (val) => set(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("cupcakes_show_native_lang", String(val))
+    }
+    return { showNativeLang: val }
   }),
 
   setExercises: (items) => set({ exercises: items }),

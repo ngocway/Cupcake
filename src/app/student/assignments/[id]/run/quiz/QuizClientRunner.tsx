@@ -33,6 +33,8 @@ import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayBu
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
+import { InstructionsBlock } from "@/components/common/InstructionsBlock";
+import { ExplanationBlock } from "@/components/common/ExplanationBlock";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
 import KidTeenQuizRunner from "./KidTeenQuizRunner";
@@ -557,7 +559,37 @@ interface Props {
   initialAnswers: any;
   extraDataPromise: Promise<any>;
   relatedAssignmentsPromise?: Promise<any[]>;
+  questionTranslationsPromise?: Promise<Record<string, any>>;
+  assignmentTranslationsPromise?: Promise<any>;
   isGuest?: boolean;
+}
+
+/** Resolves questionTranslationsPromise and renders ExplanationBlock with translations.
+ *  Must be inside a React.Suspense boundary. */
+function ExplanationResolver({
+  promise,
+  questionId,
+  explanation,
+  isExpanded,
+  onToggleExpand,
+}: {
+  promise: Promise<Record<string, any>> | undefined;
+  questionId: string;
+  explanation: string;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const translationMap = promise ? React.use(promise) : null;
+  const translations = translationMap?.[questionId] ?? null;
+  return (
+    <ExplanationBlock
+      questionId={questionId}
+      explanation={explanation}
+      explanationTranslations={translations}
+      isExpanded={isExpanded}
+      onToggleExpand={onToggleExpand}
+    />
+  );
 }
 
 function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
@@ -566,8 +598,9 @@ function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
   return <FloatingTeacherInfo teacher={extraData.teacher} onNavigate={handleSafeNavigate} />;
 }
 
-function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }: any) {
+function AssignmentExtraDataConsumer({ promise, translationsPromise, isGuest, handleSafeNavigate, t }: any) {
   const extraData = React.use(promise) as any;
+  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) : null;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
@@ -575,7 +608,9 @@ function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }
   const youtubeId = getYoutubeVideoId(videoUrl);
 
   const hasMaterialSection = videoUrl || audioUrl || extraData.readingText;
-  const hasInstructionText = !!extraData.instructions;
+  const hasInstructionText = extraData.instructions &&
+    (String(extraData.instructions).replace(/<[^>]*>/g, "").trim().length > 0 ||
+     /<(img|video|audio|iframe|embed)\b/i.test(String(extraData.instructions)));
 
   return (
     <>
@@ -642,16 +677,18 @@ function AssignmentExtraDataConsumer({ promise, isGuest, handleSafeNavigate, t }
           </div>
         )}
 
-        {/* Material Section */}
+        {/* Instructions with language toggle */}
         {hasInstructionText && (
-          <div className="space-y-6">
+          <div className="space-y-3">
             <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
               <Info className="w-4 h-4 stroke-[2px]" />
               {t("instructions")}
             </div>
-            <div className="prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10">
-              <InteractiveReadingContent html={extraData.instructions} isLoggedIn={!isGuest} />
-            </div>
+            <InstructionsBlock
+              instructions={extraData.instructions}
+              instructionsTranslations={instructionsTranslations}
+              isLoggedIn={!isGuest}
+            />
           </div>
         )}
       </div>
@@ -714,6 +751,8 @@ export default function QuizClientRunner({
   initialAnswers,
   extraDataPromise,
   relatedAssignmentsPromise,
+  questionTranslationsPromise,
+  assignmentTranslationsPromise,
   isGuest = false
 }: Props) {
   const t = useTranslations("student.quiz");
@@ -1053,6 +1092,8 @@ export default function QuizClientRunner({
         initialAnswers={initialAnswers}
         extraDataPromise={extraDataPromise}
         relatedAssignmentsPromise={relatedAssignmentsPromise}
+        questionTranslationsPromise={questionTranslationsPromise}
+        assignmentTranslationsPromise={assignmentTranslationsPromise}
         isGuest={isGuest}
       />
     );
@@ -1396,7 +1437,7 @@ export default function QuizClientRunner({
                         />
                       )}
 
-                      {/* Explanation Section */}
+                      {/* Explanation Section — with language toggle */}
                       {isChecked && q.explanation && (
                         <div className="flex flex-col items-center mt-6 relative">
                           <button
@@ -1404,24 +1445,37 @@ export default function QuizClientRunner({
                             className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary hover:border-primary transition-all duration-300 flex items-center justify-center shadow-sm z-10 group"
                           >
                             <ChevronDown className={`w-6 h-6 transition-transform duration-300 ${expandedExplanations[q.id] ? 'rotate-180' : ''}`} />
-                            {/* Custom Tooltip via CSS (group-hover) */}
                             <div className="absolute -top-10 scale-0 group-hover:scale-100 transition-all bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg whitespace-nowrap pointer-events-none shadow-xl border border-slate-700">
                               {t("viewExplanation")}
                               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 border-r border-b border-slate-700"></div>
                             </div>
                           </button>
                           
-                          {/* Animated Explanation Box */}
+                          {/* Animated Explanation Box with Lang Toggle */}
                           <div className={`w-full mx-auto overflow-hidden transition-all duration-500 ease-in-out ${expandedExplanations[q.id] ? 'max-h-[800px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
                             <div className="pt-5 pb-2 px-1">
-                              <div className="p-6 pt-6 bg-emerald-50/50 dark:bg-emerald-900/10 border-2 border-emerald-100 dark:border-emerald-900/30 rounded-3xl text-sm text-slate-700 dark:text-slate-300 leading-relaxed relative">
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/40 px-4 py-1 rounded-full text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest border border-emerald-200 dark:border-emerald-900/50">
-                                  {t("explanation")}
-                                </div>
-                                <div className="whitespace-pre-wrap">{q.explanation}</div>
-                              </div>
+                              <React.Suspense
+                                fallback={
+                                  <ExplanationBlock
+                                    questionId={q.id}
+                                    explanation={q.explanation}
+                                    explanationTranslations={null}
+                                    isExpanded={!!expandedExplanations[q.id]}
+                                    onToggleExpand={() => setExpandedExplanations(prev => ({...prev, [q.id]: !prev[q.id]}))}
+                                  />
+                                }
+                              >
+                                <ExplanationResolver
+                                  promise={questionTranslationsPromise}
+                                  questionId={q.id}
+                                  explanation={q.explanation}
+                                  isExpanded={!!expandedExplanations[q.id]}
+                                  onToggleExpand={() => setExpandedExplanations(prev => ({...prev, [q.id]: !prev[q.id]}))}
+                                />
+                              </React.Suspense>
                             </div>
                           </div>
+
                         </div>
                       )}
                   {/* Next Question Button - mobile only */}
@@ -1517,7 +1571,7 @@ export default function QuizClientRunner({
           <X className="w-5 h-5" />
         </button>
         <React.Suspense fallback={<div className="p-8 space-y-8 animate-pulse"><div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-lg w-1/3"></div><div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-2xl w-full"></div></div>}>
-          <AssignmentExtraDataConsumer promise={extraDataPromise} isGuest={isGuest} handleSafeNavigate={handleSafeNavigate} t={t} />
+          <AssignmentExtraDataConsumer promise={extraDataPromise} translationsPromise={assignmentTranslationsPromise} isGuest={isGuest} handleSafeNavigate={handleSafeNavigate} t={t} />
         </React.Suspense>
       </div>
 
