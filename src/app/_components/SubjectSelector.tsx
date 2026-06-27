@@ -5,6 +5,7 @@ import { updateAllPreferences } from "@/actions/user-preferences-actions";
 import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { Lock } from "lucide-react";
 
 interface SubjectConfig {
   id: string;
@@ -103,25 +104,34 @@ export function SubjectSelector({ subjects, config }: Props) {
         {subjects.map((subject) => {
           const isActive = studySubject === subject.id;
           const style = getStyle(subject.id);
+          const isLocked = subject.id === "math" || subject.id === "global";
 
           return (
             <button
               key={subject.id}
               onPointerDown={(e) => {
-                if (e.button === 0) {
+                if (e.button === 0 && !isLocked) {
                   e.preventDefault();
                   handleSelect(subject.id);
                 }
               }}
               onClick={(e) => {
                 e.preventDefault();
-                handleSelect(subject.id);
+                if (!isLocked) {
+                  handleSelect(subject.id);
+                }
               }}
-              disabled={isPending}
-              className={`group flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wide border-2 transition-all duration-300 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
+              disabled={isPending || isLocked}
+              className={`group flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wide border-2 transition-all duration-300 shadow-sm ${
+                isLocked 
+                  ? "cursor-not-allowed opacity-50" 
+                  : "cursor-pointer"
+              } ${
                 isActive
                   ? `${style.activeBg} ${style.activeBorder} ${style.activeText} shadow-md scale-[1.05]`
-                  : `${style.bg} ${style.border} ${style.text} hover:scale-105 hover:shadow-md opacity-80 hover:opacity-100`
+                  : `${style.bg} ${style.border} ${style.text} ${
+                      !isLocked ? "hover:scale-105 hover:shadow-md opacity-80 hover:opacity-100" : ""
+                    }`
               }`}
             >
               {isActive && isPending ? (
@@ -138,6 +148,9 @@ export function SubjectSelector({ subjects, config }: Props) {
                 />
               )}
               <span>{subject.label}</span>
+              {isLocked && (
+                <Lock className="w-3.5 h-3.5 ml-1 shrink-0 opacity-70" />
+              )}
             </button>
           );
         })}

@@ -17,7 +17,8 @@ import {
   deleteMatchWordItem,
   deleteMatchWordItems,
   updateMatchWordGame,
-  updateMatchWordTopic
+  updateMatchWordTopic,
+  changeMatchWordGameLevel
 } from "@/actions/admin-match-words"
 import { 
   generateMatchWordVocabList, 
@@ -54,10 +55,12 @@ export function AdminMatchWordsClient({
   // Rename state
   const [editingGameId, setEditingGameId] = useState<string | null>(null)
   const [editingGameName, setEditingGameName] = useState("")
+  const [filterLevel, setFilterLevel] = useState<number | null>(null)
 
   // Auto-select first game when tab changes
   useEffect(() => {
     setSelectedItemIds([])
+    setFilterLevel(null)
     if (currentGames.length > 0 && !currentGames.find(g => g.id === selectedGameId)) {
       setSelectedGameId(currentGames[0].id)
     } else if (currentGames.length === 0) {
@@ -74,6 +77,7 @@ export function AdminMatchWordsClient({
   // --- Modals State ---
   const [showGameModal, setShowGameModal] = useState(false)
   const [gameForm, setGameForm] = useState({ name: "" })
+  const [gameLevel, setGameLevel] = useState<number>(1)
 
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [topicForm, setTopicForm] = useState({ name: "", icon: "🐶" })
@@ -91,6 +95,7 @@ export function AdminMatchWordsClient({
   const [showMoveTopicModal, setShowMoveTopicModal] = useState(false)
   const [topicToMove, setTopicToMove] = useState<{id: string, name: string} | null>(null)
   const [targetGameId, setTargetGameId] = useState<string>("")
+  const [targetLevel, setTargetLevel] = useState<number | null>(null)
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
   const [editingTopicForm, setEditingTopicForm] = useState({ name: "", icon: "" })
 
@@ -114,12 +119,14 @@ export function AdminMatchWordsClient({
     startTransition(async () => {
       const res = await createMatchWordGame({
         name: gameForm.name,
-        ageGroup: activeTab
+        ageGroup: activeTab,
+        level: gameLevel
       })
       if (res.success) {
         toast.success("Tạo Game thành công")
         setShowGameModal(false)
         setGameForm({ name: "" })
+        setGameLevel(1)
         if (!selectedGameId) setSelectedGameId(res.game?.id || null)
         router.refresh()
       } else {
@@ -203,9 +210,8 @@ export function AdminMatchWordsClient({
   const handleSaveTopic = () => {
     if (!selectedGameId) return toast.error("Vui lòng chọn một bộ Game trước")
     if (!topicForm.name || !topicForm.icon) return toast.error("Vui lòng điền đủ tên và icon")
-    
+
     startTransition(async () => {
-      // 1. Tạo chủ đề trước
       const res = await createMatchWordTopic({
         gameId: selectedGameId,
         name: topicForm.name,
@@ -321,10 +327,11 @@ export function AdminMatchWordsClient({
     startTransition(async () => {
       const res = await moveMatchWordTopic(topicToMove.id, targetGameId)
       if (res.success) {
-        toast.success("Đã chuyển chủ đề")
+        toast.success("Chào, đã chuyển chủ đề")
         setShowMoveTopicModal(false)
         setTopicToMove(null)
         setTargetGameId("")
+        setTargetLevel(null)
         router.refresh()
       } else {
         toast.error("Lỗi: " + res.error)
@@ -552,6 +559,29 @@ export function AdminMatchWordsClient({
           {/* HEADER: GAME SELECTOR & ACTIONS */}
           <div className="p-4 border-b border-neutral-800 flex justify-between items-center bg-neutral-950/50 shrink-0 flex-wrap gap-4">
             <div className="flex items-center gap-4 flex-wrap">
+              {/* Level Filter Dropdown - always shows Level 1-5 */}
+              {currentGames.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-1.5">
+                  <span className="text-xs font-medium text-neutral-400 shrink-0">Level</span>
+                  <select
+                    value={filterLevel ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      const newLevel = val === "" ? null : parseInt(val)
+                      setFilterLevel(newLevel)
+                      const filtered = currentGames.filter((g: any) => newLevel === null || (g.level ?? 1) === newLevel)
+                      if (filtered.length > 0) setSelectedGameId(filtered[0].id)
+                    }}
+                    className="bg-transparent text-white font-bold text-sm outline-none cursor-pointer"
+                  >
+                    <option value="" className="bg-neutral-900">Tất cả</option>
+                    {[1,2,3,4,5].map((lvl) => (
+                      <option key={lvl} value={lvl} className="bg-neutral-900">Level {lvl}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-700 rounded-xl px-3 py-1.5 focus-within:border-blue-500 transition-colors">
                 <Gamepad2 className="text-blue-500 w-5 h-5 shrink-0" />
                 {editingGameId === selectedGame?.id && selectedGame ? (
@@ -571,7 +601,7 @@ export function AdminMatchWordsClient({
                     onChange={(e) => setSelectedGameId(e.target.value)}
                     className="bg-transparent text-white font-bold text-lg outline-none cursor-pointer pr-8 w-48 lg:w-64 truncate"
                   >
-                    {currentGames.map((g: any) => (
+                    {(filterLevel === null ? currentGames : currentGames.filter((g: any) => (g.level ?? 1) === filterLevel)).map((g: any) => (
                       <option key={g.id} value={g.id} className="bg-neutral-900 text-white text-base font-normal">
                         {g.name}
                       </option>
@@ -614,6 +644,31 @@ export function AdminMatchWordsClient({
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {/* Level Selector */}
+                  <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-neutral-700">
+                    <span className="text-xs font-medium text-neutral-400">Level</span>
+                    <select
+                      value={(selectedGame as any).level ?? 1}
+                      onChange={(e) => {
+                        const newLevel = parseInt(e.target.value)
+                        startTransition(async () => {
+                          const res = await changeMatchWordGameLevel(selectedGame.id, newLevel)
+                          if (res.success) {
+                            toast.success(`Đã chuyển sang Level ${newLevel}`)
+                            router.refresh()
+                          } else {
+                            toast.error("Lỗi: " + res.error)
+                          }
+                        })
+                      }}
+                      className="bg-neutral-800 border border-neutral-600 text-white text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer hover:border-blue-500 transition-colors"
+                      disabled={isPending}
+                    >
+                      {[1,2,3,4,5].map(lvl => (
+                        <option key={lvl} value={lvl} className="bg-neutral-900">Level {lvl}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
@@ -845,6 +900,25 @@ export function AdminMatchWordsClient({
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5">Tên Bộ Game</label>
                 <input value={gameForm.name} onChange={e => setGameForm(p => ({...p, name: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Ví dụ: Game Mức Cơ Bản" />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-2">Level</label>
+                <div className="flex gap-2 flex-wrap">
+                  {[1,2,3,4,5].map(lvl => (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setGameLevel(lvl)}
+                      className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+                        gameLevel === lvl
+                          ? "bg-blue-600 text-white"
+                          : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border border-neutral-700"
+                      }`}
+                    >
+                      Level {lvl}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button onClick={() => setShowGameModal(false)} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
                 <button onClick={handleSaveGame} disabled={isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50">Lưu Game</button>
@@ -959,24 +1033,56 @@ export function AdminMatchWordsClient({
               <p className="text-neutral-400 text-sm">
                 Bạn đang chuyển chủ đề <span className="font-bold text-white">{topicToMove?.name}</span> sang Game khác.
               </p>
+              {/* Always show Level 1-5 */}
               <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Game Đích</label>
-                <select 
-                  value={targetGameId} 
-                  onChange={e => setTargetGameId(e.target.value)} 
-                  className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all appearance-none"
-                >
-                  <option value="" disabled>-- Chọn Game --</option>
-                  {currentGames.filter(g => g.id !== selectedGameId).map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Level</label>
+                <div className="flex flex-wrap gap-2">
+                  {[1,2,3,4,5].map((lvl) => (
+                    <button
+                      key={lvl}
+                      onClick={() => {
+                        setTargetLevel(lvl)
+                        const eligible = currentGames.filter((g: any) => g.id !== selectedGameId && (g.level ?? 1) === lvl)
+                        setTargetGameId(eligible.length === 1 ? eligible[0].id : "")
+                      }}
+                      className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+                        targetLevel === lvl
+                          ? "bg-blue-600 text-white"
+                          : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border border-neutral-700"
+                      }`}
+                    >
+                      Level {lvl}
+                    </button>
                   ))}
-                </select>
-                {currentGames.filter(g => g.id !== selectedGameId).length === 0 && (
-                  <p className="text-xs text-red-400 mt-2">Không có Game nào khác trong độ tuổi này để chuyển sang.</p>
-                )}
+                </div>
               </div>
+              {/* Game dropdown or info for selected level */}
+              {targetLevel !== null && (() => {
+                const eligible = currentGames.filter((g: any) => g.id !== selectedGameId && (g.level ?? 1) === targetLevel)
+                if (eligible.length === 0) return (
+                  <p className="text-xs text-amber-400">⚠️ Chưa có Game nào ở Level {targetLevel}. Hãy tạo Game mới ở level này trước.</p>
+                )
+                if (eligible.length === 1) return (
+                  <p className="text-xs text-green-400">→ Chủ đề sẽ được chuyển vào Game: <span className="font-bold text-white">{eligible[0].name}</span></p>
+                )
+                return (
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Game Đích</label>
+                    <select
+                      value={targetGameId}
+                      onChange={e => setTargetGameId(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all appearance-none"
+                    >
+                      <option value="" disabled>-- Chọn Game --</option>
+                      {eligible.map(g => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              })()}
               <div className="flex justify-end gap-3 mt-6">
-                <button onClick={() => { setShowMoveTopicModal(false); setTopicToMove(null); setTargetGameId(""); }} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
+                <button onClick={() => { setShowMoveTopicModal(false); setTopicToMove(null); setTargetGameId(""); setTargetLevel(null); }} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
                 <button 
                   onClick={handleMoveTopic} 
                   disabled={isPending || !targetGameId} 
