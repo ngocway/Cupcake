@@ -192,6 +192,7 @@ export function QuizEditor() {
       gradeLevel,
       shortDescription,
       instructions,
+      instructionsTranslations,
       tags,
       targetAudiences,
       audienceLevels,
@@ -291,6 +292,7 @@ export function QuizEditor() {
   const [showBankModal, setShowBankModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(searchParams.get('ai') === 'true');
   const [instructions, setInstructions] = useState('');
+  const [instructionsTranslations, setInstructionsTranslations] = useState<any>(null);
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [loading, setLoading] = useState(id !== 'new');
   const [fetchError, setFetchError] = useState(false);
@@ -353,6 +355,7 @@ export function QuizEditor() {
           setGradeLevel(data.assignment.gradeLevel || 'Khác');
           setShortDescription(data.assignment.shortDescription || '');
           setInstructions(data.assignment.instructions || '');
+          setInstructionsTranslations(data.assignment.instructionsTranslations || null);
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           if (data.assignment.targetAudiences) {
             setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
@@ -384,6 +387,7 @@ export function QuizEditor() {
             gradeLevel: data.assignment.gradeLevel || 'Khác',
             shortDescription: data.assignment.shortDescription || '',
             instructions: data.assignment.instructions || '',
+            instructionsTranslations: data.assignment.instructionsTranslations || null,
             tags: data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : [],
             targetAudiences: data.assignment.targetAudiences ? data.assignment.targetAudiences.map((t: string) => t.toLowerCase()) : [],
             audienceLevels: data.assignment.audienceLevels || {},
@@ -428,6 +432,7 @@ export function QuizEditor() {
         gradeLevel,
         shortDescription,
         instructions,
+        instructionsTranslations,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
         audienceLevels,
@@ -473,6 +478,7 @@ export function QuizEditor() {
         gradeLevel,
         shortDescription,
         instructions,
+        instructionsTranslations,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
         audienceLevels,
@@ -540,6 +546,7 @@ export function QuizEditor() {
         gradeLevel,
         shortDescription,
         instructions,
+        instructionsTranslations,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
         audienceLevels,
@@ -607,6 +614,7 @@ export function QuizEditor() {
         setTitle(cleanTitle);
       }
       if (metadata.instructions) setInstructions(metadata.instructions);
+      if (metadata.instructionsTranslations) setInstructionsTranslations(metadata.instructionsTranslations);
       if (metadata.shortDescription) setShortDescription(metadata.shortDescription);
       if (metadata.subject) setSubject(metadata.subject);
       if (metadata.targetAudiences && Array.isArray(metadata.targetAudiences)) {
@@ -656,7 +664,9 @@ export function QuizEditor() {
         }
 
         const explanation = content.explanation;
+        const explanationTranslations = content.explanationTranslations || null;
         delete content.explanation;
+        delete content.explanationTranslations;
 
         return {
           id,
@@ -665,6 +675,7 @@ export function QuizEditor() {
           isBanked: false,
           isAiGenerated: true,
           explanation: explanation || '',
+          explanationTranslations,
           content
         };
       });
@@ -700,6 +711,7 @@ export function QuizEditor() {
         gradeLevel,
         shortDescription: metadata?.shortDescription || shortDescription,
         instructions: metadata?.instructions || instructions,
+        instructionsTranslations: metadata?.instructionsTranslations || instructionsTranslations,
         tags: tags.join(','),
         targetAudiences: metadata?.targetAudiences || targetAudiences,
         audienceLevels: metadata?.audienceLevels || audienceLevels,

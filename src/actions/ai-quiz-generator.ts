@@ -124,35 +124,43 @@ function buildInstructionsHtml(data: {
   examples: string[];
   quickMemoryTip: string[];
   finalSummary: string;
-}): string {
+}, lang: 'en' | 'vi' | 'th' | 'id' = 'en'): string {
+  const headers = {
+    en: { goal: "Lesson Goal", formula: "Grammar Formula", examples: "Examples", tip: "Memory Tip", summary: "Summary" },
+    vi: { goal: "Mục tiêu bài học", formula: "Điểm chính", examples: "Ví dụ", tip: "Mẹo ghi nhớ", summary: "Tóm tắt" },
+    th: { goal: "เป้าหมายการเรียนรู้", formula: "จุดสำคัญ", examples: "ตัวอย่าง", tip: "เคล็ดลับในการจำ", summary: "สรุป" },
+    id: { goal: "Tujuan Pelajaran", formula: "Poin Kunci", examples: "Contoh", tip: "Tips Memori", summary: "Ringkasan" }
+  };
+  const h = headers[lang] || headers.en;
+
   return `
 <div class="esl-lesson-instructions space-y-6">
   <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Lesson Goal</h3>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.goal}</h3>
     <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.lessonGoal}</p>
   </section>
   
   <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Grammar Formula</h3>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.formula}</h3>
     <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.grammarFormula}</p>
   </section>
   
   <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Examples</h3>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.examples}</h3>
     <ul class="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
       ${data.examples.map(ex => `<li>${ex}</li>`).join('')}
     </ul>
   </section>
   
   <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Memory Tip</h3>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.tip}</h3>
     <ul class="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
       ${data.quickMemoryTip.map(tip => `<li>${tip}</li>`).join('')}
     </ul>
   </section>
   
   <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Summary</h3>
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.summary}</h3>
     <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.finalSummary}</p>
   </section>
 </div>
@@ -178,25 +186,63 @@ You must return the generated content STRICTLY as a JSON object matching the fol
   "lessonGoal": "string (Goal of the lesson)",
   "grammarFormula": "string (Grammar formula explanation)",
   "examples": ["string (Example 1)", "string (Example 2)", ...],
+  "quickMemoryTip": ["string (Tip 1)", "string (Tip 2)", ...],
+  "finalSummary": "string (Final summary)",
+  "instructionsTranslations": {
+    "vi": {
+      "lessonGoal": "string (Goal in Vietnamese)",
+      "grammarFormula": "string (Grammar formula in Vietnamese)",
+      "examples": ["string (Example 1 with its translation in parentheses, e.g. 'I study in the morning (Tôi học vào buổi sáng)')", ...],
+      "quickMemoryTip": ["string (Tip 1 in Vietnamese)", ...],
+      "finalSummary": "string (Final summary in Vietnamese)"
+    },
+    "th": {
+      "lessonGoal": "string (Goal in Thai)",
+      "grammarFormula": "string (Grammar formula in Thai)",
+      "examples": ["string (Example 1 with its translation in parentheses, e.g. 'I study in the morning (ฉันเรียนในตอนเช้า)')", ...],
+      "quickMemoryTip": ["string (Tip 1 in Thai)", ...],
+      "finalSummary": "string (Final summary in Thai)"
+    },
+    "id": {
+      "lessonGoal": "string (Goal in Indonesian)",
+      "grammarFormula": "string (Grammar formula in Indonesian)",
+      "examples": ["string (Example 1 with its translation in parentheses, e.g. 'I study in the morning (Saya belajar di pagi hari)')", ...],
+      "quickMemoryTip": ["string (Tip 1 in Indonesian)", ...],
+      "finalSummary": "string (Final summary in Indonesian)"
+    }
+  },
   "practiceMultipleChoice": [
     {
       "questionText": "string",
       "options": [
         { "text": "string", "isCorrect": boolean }
       ],
-      "explanation": "string"
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string (Vietnamese translation of explanation, 10-30 words)",
+        "th": "string (Thai translation of explanation, 10-30 words)",
+        "id": "string (Indonesian translation of explanation, 10-30 words)"
+      }
     }
   ],
   "practiceTrueFalse": [
     {
       "statement": "string",
       "isTrue": boolean,
-      "explanation": "string"
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string (Vietnamese translation of explanation, 10-30 words)",
+        "th": "string (Thai translation of explanation, 10-30 words)",
+        "id": "string (Indonesian translation of explanation, 10-30 words)"
+      }
     }
-  ],
-  "quickMemoryTip": ["string (Tip 1)", "string (Tip 2)", ...],
-  "finalSummary": "string (Final summary)"
+  ]
 }
+
+Strict Rules for Translation & Localization (ELT Guidelines):
+1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
+2. Example Sentences: In translations (vi, th, id), keep the example sentences fully in English, but add their translation in parentheses (e.g. "I study in the morning (Tôi học vào buổi sáng)"). Do NOT create mixed hybrid sentences (e.g. do NOT write "Tôi học in buổi sáng").
+3. Explanation length: Keep all question explanations (English and translations) between 10 to 30 words. Focus directly on the grammar logic, explaining why the correct choice is correct. Avoid meta-phrases like "The correct answer is...".
 
 Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. Ensure all questions and options are in English only.`;
 
@@ -228,7 +274,37 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
       examples: result.examples || [],
       quickMemoryTip: result.quickMemoryTip || [],
       finalSummary: result.finalSummary || ""
-    });
+    }, 'en');
+
+    const viHtml = result.instructionsTranslations?.vi ? buildInstructionsHtml({
+      lessonGoal: result.instructionsTranslations.vi.lessonGoal || "",
+      grammarFormula: result.instructionsTranslations.vi.grammarFormula || "",
+      examples: result.instructionsTranslations.vi.examples || [],
+      quickMemoryTip: result.instructionsTranslations.vi.quickMemoryTip || [],
+      finalSummary: result.instructionsTranslations.vi.finalSummary || ""
+    }, 'vi') : null;
+
+    const thHtml = result.instructionsTranslations?.th ? buildInstructionsHtml({
+      lessonGoal: result.instructionsTranslations.th.lessonGoal || "",
+      grammarFormula: result.instructionsTranslations.th.grammarFormula || "",
+      examples: result.instructionsTranslations.th.examples || [],
+      quickMemoryTip: result.instructionsTranslations.th.quickMemoryTip || [],
+      finalSummary: result.instructionsTranslations.th.finalSummary || ""
+    }, 'th') : null;
+
+    const idHtml = result.instructionsTranslations?.id ? buildInstructionsHtml({
+      lessonGoal: result.instructionsTranslations.id.lessonGoal || "",
+      grammarFormula: result.instructionsTranslations.id.grammarFormula || "",
+      examples: result.instructionsTranslations.id.examples || [],
+      quickMemoryTip: result.instructionsTranslations.id.quickMemoryTip || [],
+      finalSummary: result.instructionsTranslations.id.finalSummary || ""
+    }, 'id') : null;
+
+    const instructionsTranslations = {
+      vi: viHtml,
+      th: thHtml,
+      id: idHtml
+    };
 
     // Run background task for DALL-E image generation & update DB
     if (result.thumbnailImagePrompt && assignmentId && assignmentId !== 'new') {
@@ -260,6 +336,7 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
       success: true,
       title: result.title,
       instructions: instructionsHtml,
+      instructionsTranslations,
       shortDescription: result.lessonGoal || "",
       multipleChoice: result.practiceMultipleChoice,
       trueFalse: result.practiceTrueFalse,
@@ -299,25 +376,63 @@ You must return the generated content STRICTLY as a JSON object matching the fol
   "lessonGoal": "string (Goal of the lesson)",
   "grammarFormula": "string (Grammar formula explanation)",
   "examples": ["string (Example 1)", "string (Example 2)", ...],
+  "quickMemoryTip": ["string (Tip 1)", "string (Tip 2)", ...],
+  "finalSummary": "string (Final summary)",
+  "instructionsTranslations": {
+    "vi": {
+      "lessonGoal": "string (Goal in Vietnamese)",
+      "grammarFormula": "string (Grammar formula in Vietnamese)",
+      "examples": ["string (Example 1 with its translation in parentheses, e.g. 'I study in the morning (Tôi học vào buổi sáng)')", ...],
+      "quickMemoryTip": ["string (Tip 1 in Vietnamese)", ...],
+      "finalSummary": "string (Final summary in Vietnamese)"
+    },
+    "th": {
+      "lessonGoal": "string (Goal in Thai)",
+      "grammarFormula": "string (Grammar formula in Thai)",
+      "examples": ["string (Example 1 with its translation in parentheses, e.g. 'I study in the morning (ฉันเรียนในตอนเช้า)')", ...],
+      "quickMemoryTip": ["string (Tip 1 in Thai)", ...],
+      "finalSummary": "string (Final summary in Thai)"
+    },
+    "id": {
+      "lessonGoal": "string (Goal in Indonesian)",
+      "grammarFormula": "string (Grammar formula in Indonesian)",
+      "examples": ["string (Example 1 with its translation in parentheses, e.g. 'I study in the morning (Saya belajar di pagi hari)')", ...],
+      "quickMemoryTip": ["string (Tip 1 in Indonesian)", ...],
+      "finalSummary": "string (Final summary in Indonesian)"
+    }
+  },
   "practiceMultipleChoice": [
     {
       "questionText": "string",
       "options": [
         { "text": "string", "isCorrect": boolean }
       ],
-      "explanation": "string"
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string (Vietnamese translation of explanation, 10-30 words)",
+        "th": "string (Thai translation of explanation, 10-30 words)",
+        "id": "string (Indonesian translation of explanation, 10-30 words)"
+      }
     }
   ],
   "practiceTrueFalse": [
     {
       "statement": "string",
       "isTrue": boolean,
-      "explanation": "string"
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string (Vietnamese translation of explanation, 10-30 words)",
+        "th": "string (Thai translation of explanation, 10-30 words)",
+        "id": "string (Indonesian translation of explanation, 10-30 words)"
+      }
     }
-  ],
-  "quickMemoryTip": ["string (Tip 1)", "string (Tip 2)", ...],
-  "finalSummary": "string (Final summary)"
+  ]
 }
+
+Strict Rules for Translation & Localization (ELT Guidelines):
+1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
+2. Example Sentences: In translations (vi, th, id), keep the example sentences fully in English, but add their translation in parentheses (e.g. "I study in the morning (Tôi học vào buổi sáng)"). Do NOT create mixed hybrid sentences (e.g. do NOT write "Tôi học in buổi sáng").
+3. Explanation length: Keep all question explanations (English and translations) between 10 to 30 words. Focus directly on the grammar logic, explaining why the correct choice is correct. Avoid meta-phrases like "The correct answer is...".
 
 Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. Ensure all questions and options are in English only.`;
 
@@ -361,7 +476,37 @@ Your tasks:
       examples: result.examples || [],
       quickMemoryTip: result.quickMemoryTip || [],
       finalSummary: result.finalSummary || ""
-    });
+    }, 'en');
+
+    const viHtml = result.instructionsTranslations?.vi ? buildInstructionsHtml({
+      lessonGoal: result.instructionsTranslations.vi.lessonGoal || "",
+      grammarFormula: result.instructionsTranslations.vi.grammarFormula || "",
+      examples: result.instructionsTranslations.vi.examples || [],
+      quickMemoryTip: result.instructionsTranslations.vi.quickMemoryTip || [],
+      finalSummary: result.instructionsTranslations.vi.finalSummary || ""
+    }, 'vi') : null;
+
+    const thHtml = result.instructionsTranslations?.th ? buildInstructionsHtml({
+      lessonGoal: result.instructionsTranslations.th.lessonGoal || "",
+      grammarFormula: result.instructionsTranslations.th.grammarFormula || "",
+      examples: result.instructionsTranslations.th.examples || [],
+      quickMemoryTip: result.instructionsTranslations.th.quickMemoryTip || [],
+      finalSummary: result.instructionsTranslations.th.finalSummary || ""
+    }, 'th') : null;
+
+    const idHtml = result.instructionsTranslations?.id ? buildInstructionsHtml({
+      lessonGoal: result.instructionsTranslations.id.lessonGoal || "",
+      grammarFormula: result.instructionsTranslations.id.grammarFormula || "",
+      examples: result.instructionsTranslations.id.examples || [],
+      quickMemoryTip: result.instructionsTranslations.id.quickMemoryTip || [],
+      finalSummary: result.instructionsTranslations.id.finalSummary || ""
+    }, 'id') : null;
+
+    const instructionsTranslations = {
+      vi: viHtml,
+      th: thHtml,
+      id: idHtml
+    };
 
     // Run background task for DALL-E image generation & update DB
     if (result.thumbnailImagePrompt && assignmentId && assignmentId !== 'new') {
@@ -393,6 +538,7 @@ Your tasks:
       success: true,
       title: result.title,
       instructions: instructionsHtml,
+      instructionsTranslations,
       shortDescription: result.lessonGoal || "",
       multipleChoice: result.practiceMultipleChoice,
       trueFalse: result.practiceTrueFalse,

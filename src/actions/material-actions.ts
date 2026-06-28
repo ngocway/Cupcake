@@ -227,6 +227,7 @@ export async function autoSaveMaterial(payload: {
   shortDescription?: string;
   tags?: string;
   instructions?: string;
+  instructionsTranslations?: any;
   categoryIds?: string[];
   targetAudiences?: string[];
   level?: string;
@@ -300,7 +301,7 @@ export async function autoSaveMaterial(payload: {
   }
 
   if (existing) {
-    const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'level', 'audienceLevels', 'shortDescription', 'tags', 'instructions', 'audioMetadata'];
+    const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'level', 'audienceLevels', 'shortDescription', 'tags', 'instructions', 'instructionsTranslations', 'audioMetadata'];
     for (const field of fields) {
       if (payload[field as keyof typeof payload] !== undefined && payload[field as keyof typeof payload] !== existing[field as keyof typeof existing]) {
         updatePayload[field] = payload[field as keyof typeof payload] || null;
@@ -322,6 +323,7 @@ export async function autoSaveMaterial(payload: {
     updatePayload.shortDescription = payload.shortDescription || null;
     updatePayload.tags = payload.tags || "";
     updatePayload.instructions = payload.instructions || null;
+    updatePayload.instructionsTranslations = payload.instructionsTranslations || null;
     updatePayload.audioMetadata = payload.audioMetadata || null;
   }
 
@@ -352,6 +354,7 @@ export async function autoSaveMaterial(payload: {
         shortDescription: payload.shortDescription || null,
         tags: payload.tags || "",
         instructions: payload.instructions || null,
+        instructionsTranslations: payload.instructionsTranslations || null,
         teacherId: session.user.id,
         materialType: 'READING', 
         status: 'DRAFT',
@@ -438,6 +441,7 @@ export async function autoSaveMaterial(payload: {
         orderIndex: idx,
         points: Number(q.points) || 1.0,
         explanation: q.explanation || null,
+        explanationTranslations: q.explanationTranslations || null,
         content: typeof q.content === 'object' ? JSON.stringify(q.content) : q.content || "{}",
         mediaType: q.mediaType || 'NONE',
         mediaUrl: safeMediaUrl || null,

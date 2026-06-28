@@ -225,13 +225,15 @@ ${partPromptText}
             type: 'MULTIPLE_CHOICE' as QuestionType,
             questionText: q.questionText,
             options: q.options,
-            explanation: q.explanation
+            explanation: q.explanation,
+            explanationTranslations: q.explanationTranslations || null
           })),
           ...result.trueFalse.map((q: any) => ({
             type: 'TRUE_FALSE' as QuestionType,
             statement: q.statement,
             isTrue: q.isTrue,
-            explanation: q.explanation
+            explanation: q.explanation,
+            explanationTranslations: q.explanationTranslations || null
           }))
         ];
 
@@ -263,6 +265,7 @@ ${partPromptText}
           metadata: {
             title: result.title,
             instructions: result.instructions,
+            instructionsTranslations: result.instructionsTranslations || null,
             shortDescription: result.shortDescription,
             thumbnailImagePrompt: result.thumbnailImagePrompt,
             subject,
