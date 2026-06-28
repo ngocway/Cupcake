@@ -624,8 +624,8 @@ function StartScreenTeacherAvatar({ promise }: { promise: Promise<any> }) {
 }
 
 function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
-  const extraData = React.use(promise);
-  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) : null;
+  const extraData = React.use(promise) as any;
+  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) as any : null;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
@@ -704,7 +704,7 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
 }
 
 function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }: { promise: Promise<any>, isSidePanelOpen: boolean, setIsSidePanelOpen: (open: boolean) => void }) {
-  const extraData = React.use(promise);
+  const extraData = React.use(promise) as any;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;

@@ -600,7 +600,7 @@ function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
 
 function AssignmentExtraDataConsumer({ promise, translationsPromise, isGuest, handleSafeNavigate, t }: any) {
   const extraData = React.use(promise) as any;
-  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) : null;
+  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) as any : null;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
@@ -716,7 +716,7 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
 }
 
 function SidePanelToggleButton({ promise, isSidebarOpen, setIsSidebarOpen }: { promise: Promise<any>, isSidebarOpen: boolean, setIsSidebarOpen: (open: boolean) => void }) {
-  const extraData = React.use(promise);
+  const extraData = React.use(promise) as any;
   if (!extraData) return null;
 
   const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
