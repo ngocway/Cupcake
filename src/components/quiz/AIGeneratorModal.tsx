@@ -6,7 +6,7 @@ import { generateAIExerciseAction, generateAIExerciseFromUrlAction } from '@/act
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 
-const DEFAULT_PROMPT_TEMPLATE = `You are an expert ESL content creator for young learners (A1 level, kids aged 6–7).
+const DEFAULT_PROMPT_TEMPLATE = `You are an expert ESL content creator for young learners.
 
 Create a complete English learning lesson about the grammar topic: "Present Continuous (e.g. He is playing)".
 
@@ -28,7 +28,7 @@ Create a prompt for an image generator.
 Requirements:
 - A simple 2D cartoon illustration
 - Flat design, colorful, cute
-- A1 kids learning theme
+- Kids learning theme
 - Clean isolated background
 - 16:9 ratio
 - English text only (very few words, max 5 words)
@@ -52,7 +52,7 @@ Explain:
 - When to use
 - One key rule
 
-Use simple English only (A1 level).
+Use simple English only.
 
 ---
 
@@ -62,8 +62,7 @@ Provide 6–8 very simple example sentences.
 ---
 
 ## 6. PRACTICE – MULTIPLE CHOICE
-Create 20 questions:
-- A1 level
+Create 15 questions:
 - Flexible number of options per question (usually 2 to 4 options)
 - Only ONE correct answer
 - Include answer
@@ -89,7 +88,7 @@ Create 5 questions:
 ---
 
 ## 8. QUICK MEMORY TIP
-- 2–3 short bullet points
+- 5–8 short bullet points
 - Very easy to remember
 
 ---
@@ -103,7 +102,6 @@ Create 5 questions:
 RULES:
 - Everything must be in English only
 - No complex grammar
-- A1 level for children
 - Short sentences
 - Friendly tone
 - Focus on clarity and repetition`;
