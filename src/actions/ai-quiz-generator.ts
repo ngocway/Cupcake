@@ -232,6 +232,12 @@ Strict Rules for Question Generation, Difficulty, & Theme Alignment:
 4. Number of Options & Correct Answers:
    - For each multiple-choice question, the number of options is flexible and can be decided by the AI (typically 2 to 4 options).
    - Crucially, there MUST strictly be exactly ONE correct answer per question ("isCorrect": true must appear exactly once in the options array). You must NEVER generate multiple correct answers for a single question.
+5. Selected Learning Goals Alignment: You must tailor the questions, statements, and distractors to align with the provided "Selected Learning Goals":
+   - If "Writing & Grammar" is selected: Focus questions on grammar formulas, syntax, word ordering, tense usage, and correct word forms.
+   - If "Vocabulary" is selected: Focus questions on word meanings, synonyms, antonyms, context clues, and vocabulary usage.
+   - If "Communication" is selected: Focus questions on conversational English, dialogues, responses to questions, situations, greetings, and everyday phrases.
+   - If "Reading" is selected: Focus questions on reading comprehension, identifying correct meanings of short passages or statements, and understanding text context.
+   - If "IELTS & TOEFL" is selected: Focus questions on academic phrasing, complex synonyms, formal register, and advanced sentence transformations.
 
 Strict Rules for Translation & Localization (ELT Guidelines):
 1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
@@ -447,6 +453,12 @@ Strict Rules for Question Generation, Difficulty, & Theme Alignment:
 4. Number of Options & Correct Answers:
    - For each multiple-choice question, the number of options is flexible and can be decided by the AI (typically 2 to 4 options).
    - Crucially, there MUST strictly be exactly ONE correct answer per question ("isCorrect": true must appear exactly once in the options array). You must NEVER generate multiple correct answers for a single question.
+5. Selected Learning Goals Alignment: You must tailor the questions, statements, and distractors to align with the provided "Selected Learning Goals":
+   - If "Writing & Grammar" is selected: Focus questions on grammar formulas, syntax, word ordering, tense usage, and correct word forms.
+   - If "Vocabulary" is selected: Focus questions on word meanings, synonyms, antonyms, context clues, and vocabulary usage.
+   - If "Communication" is selected: Focus questions on conversational English, dialogues, responses to questions, situations, greetings, and everyday phrases.
+   - If "Reading" is selected: Focus questions on reading comprehension, identifying correct meanings of short passages or statements, and understanding text context.
+   - If "IELTS & TOEFL" is selected: Focus questions on academic phrasing, complex synonyms, formal register, and advanced sentence transformations.
 
 Strict Rules for Translation & Localization (ELT Guidelines):
 1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
