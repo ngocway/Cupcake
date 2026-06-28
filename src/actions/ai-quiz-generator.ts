@@ -239,6 +239,13 @@ You must return the generated content STRICTLY as a JSON object matching the fol
   ]
 }
 
+Strict Rules for Question Generation, Difficulty, & Theme Alignment:
+1. Target Grammar Focus: All questions and option choices (correct & incorrect distractors) MUST focus strictly on the target grammar/vocabulary requested (e.g. if the lesson is about "this, that, these, those", the multiple-choice options must only consist of these four words, and the correct option must be one of them. Do not include unrelated distractors like "which", "what", "where", "it", etc. as correct answers).
+2. CEFR Level & Target Audience Alignment: You must strictly align sentence structures and vocabulary complexity with the provided CEFR Level and Target Audience.
+   - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary.
+   - For A2 / B1 level: Use compound/complex sentences, introducing more varied vocabulary.
+3. No Invalid Combinations: Do not generate questions where the correct answer contradicts the target theme. Every question must have one clearly correct choice that tests the target grammar.
+
 Strict Rules for Translation & Localization (ELT Guidelines):
 1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
 2. Example Sentences: In translations (vi, th, id), keep the example sentences fully in English, but add their translation in parentheses (e.g. "I study in the morning (Tôi học vào buổi sáng)"). Do NOT create mixed hybrid sentences (e.g. do NOT write "Tôi học in buổi sáng").
@@ -428,6 +435,13 @@ You must return the generated content STRICTLY as a JSON object matching the fol
     }
   ]
 }
+
+Strict Rules for Question Generation, Difficulty, & Theme Alignment:
+1. Target Grammar Focus: All questions and option choices (correct & incorrect distractors) MUST focus strictly on the target grammar/vocabulary requested (e.g. if the lesson is about "this, that, these, those", the multiple-choice options must only consist of these four words, and the correct option must be one of them. Do not include unrelated distractors like "which", "what", "where", "it", etc. as correct answers).
+2. CEFR Level & Target Audience Alignment: You must strictly align sentence structures and vocabulary complexity with the provided CEFR Level and Target Audience.
+   - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary.
+   - For A2 / B1 level: Use compound/complex sentences, introducing more varied vocabulary.
+3. No Invalid Combinations: Do not generate questions where the correct answer contradicts the target theme. Every question must have one clearly correct choice that tests the target grammar.
 
 Strict Rules for Translation & Localization (ELT Guidelines):
 1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
