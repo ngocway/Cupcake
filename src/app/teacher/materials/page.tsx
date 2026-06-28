@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MaterialListItem } from './_components/MaterialListItem';
 import { MaterialStatus } from '@prisma/client';
-import { createDraftMaterial, bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials, createMaterialWithQuestions } from '@/actions/material-actions';
+import { createDraftMaterial, bulkDeleteMaterials, bulkRestoreMaterials, bulkPermanentlyDeleteMaterials, createMaterialWithQuestions, bulkPublishMaterials } from '@/actions/material-actions';
 import { useSession } from 'next-auth/react';
-import { Plus, Sparkles, ArrowLeft, Trash2, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Sparkles, ArrowLeft, Trash2, RotateCcw, ChevronLeft, ChevronRight, Globe } from 'lucide-react';
 import { AIGeneratorModal } from '@/components/quiz/AIGeneratorModal';
 import { QuestionType } from '@/components/quiz/types';
 
@@ -63,7 +63,7 @@ export default function MaterialLibraryPage() {
   // Custom Confirm Modal State
   const [confirmConfig, setConfirmConfig] = useState<{
     show: boolean;
-    type: 'DELETE' | 'RESTORE' | 'PERMANENT_DELETE';
+    type: 'DELETE' | 'RESTORE' | 'PERMANENT_DELETE' | 'PUBLISH';
     title: string;
     message: string;
   }>({
@@ -229,7 +229,7 @@ export default function MaterialLibraryPage() {
     setCurrentPage(1);
   }, [statusFilter, typeFilter, sortOrder, showTrash]);
 
-  const openConfirm = (type: 'DELETE' | 'RESTORE' | 'PERMANENT_DELETE') => {
+  const openConfirm = (type: 'DELETE' | 'RESTORE' | 'PERMANENT_DELETE' | 'PUBLISH') => {
     let title = '';
     let message = '';
     if (type === 'DELETE') {
@@ -241,6 +241,9 @@ export default function MaterialLibraryPage() {
     } else if (type === 'PERMANENT_DELETE') {
       title = 'Xóa vĩnh viễn?';
       message = `CẢNH BÁO: Hành động này sẽ xóa vĩnh viễn ${selectedIds.length} bài tập đã chọn và KHÔNG THỂ khôi phục.`;
+    } else if (type === 'PUBLISH') {
+      title = 'Công khai đã chọn?';
+      message = `Bạn có chắc chắn muốn công khai ${selectedIds.length} bài tập đã chọn?`;
     }
     setConfirmConfig({ show: true, type, title, message });
   };
@@ -251,12 +254,23 @@ export default function MaterialLibraryPage() {
     setIsBulkProcessing(true);
     
     try {
-      if (type === 'DELETE') await bulkDeleteMaterials(selectedIds);
-      if (type === 'RESTORE') await bulkRestoreMaterials(selectedIds);
-      if (type === 'PERMANENT_DELETE') await bulkPermanentlyDeleteMaterials(selectedIds);
+      if (type === 'DELETE') {
+        await bulkDeleteMaterials(selectedIds);
+        setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
+      }
+      if (type === 'RESTORE') {
+        await bulkRestoreMaterials(selectedIds);
+        setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
+      }
+      if (type === 'PERMANENT_DELETE') {
+        await bulkPermanentlyDeleteMaterials(selectedIds);
+        setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
+      }
+      if (type === 'PUBLISH') {
+        await bulkPublishMaterials(selectedIds);
+        setAssignments(prev => prev.map(a => selectedIds.includes(a.id) ? { ...a, status: 'PUBLIC' as MaterialStatus } : a));
+      }
       
-      // Optimistic UI
-      setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
       setSelectedIds([]);
       fetchAssignments(false);
     } catch (err) {
@@ -493,7 +507,10 @@ export default function MaterialLibraryPage() {
                    <button disabled={isBulkProcessing} onClick={() => openConfirm('PERMANENT_DELETE')} className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2">Xóa vĩnh viễn</button>
                  </>
                ) : (
-                 <button disabled={isBulkProcessing} onClick={() => openConfirm('DELETE')} className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2">Xóa đã chọn</button>
+                 <>
+                   <button disabled={isBulkProcessing} onClick={() => openConfirm('PUBLISH')} className="px-6 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-xs hover:bg-emerald-600 transition-all flex items-center gap-2"><Globe className="w-3.5 h-3.5" /> Công khai</button>
+                   <button disabled={isBulkProcessing} onClick={() => openConfirm('DELETE')} className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 transition-all flex items-center gap-2">Xóa đã chọn</button>
+                 </>
                )}
             </div>
           </div>
@@ -505,14 +522,20 @@ export default function MaterialLibraryPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
           <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-8 flex flex-col items-center text-center">
-              <div className={`size-16 rounded-full flex items-center justify-center mb-6 ${confirmConfig.type === 'RESTORE' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
-                {confirmConfig.type === 'RESTORE' ? <RotateCcw className="w-8 h-8 stroke-[2px]" /> : <Trash2 className="w-8 h-8 stroke-[2px]" />}
+              <div className={`size-16 rounded-full flex items-center justify-center mb-6 ${confirmConfig.type === 'RESTORE' || confirmConfig.type === 'PUBLISH' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
+                {confirmConfig.type === 'RESTORE' ? (
+                  <RotateCcw className="w-8 h-8 stroke-[2px]" />
+                ) : confirmConfig.type === 'PUBLISH' ? (
+                  <Globe className="w-8 h-8 stroke-[2px]" />
+                ) : (
+                  <Trash2 className="w-8 h-8 stroke-[2px]" />
+                )}
               </div>
               <h3 className="text-xl font-bold text-[#111418] dark:text-white mb-2">{confirmConfig.title}</h3>
               <p className="text-[#617589] dark:text-gray-400 text-sm">{confirmConfig.message}</p>
               <div className="flex gap-3 w-full mt-8">
                 <button onClick={() => setConfirmConfig(prev => ({ ...prev, show: false }))} className="flex-1 py-3 bg-slate-100 dark:bg-gray-700 text-slate-700 dark:text-gray-300 font-bold rounded-xl hover:bg-slate-200 transition-all uppercase tracking-wide text-xs">Hủy bỏ</button>
-                <button onClick={executeBulkAction} className={`flex-1 py-3 text-white font-bold rounded-xl transition-all uppercase tracking-wide text-xs shadow-lg ${confirmConfig.type === 'RESTORE' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}`}>Xác nhận</button>
+                <button onClick={executeBulkAction} className={`flex-1 py-3 text-white font-bold rounded-xl transition-all uppercase tracking-wide text-xs shadow-lg ${confirmConfig.type === 'RESTORE' || confirmConfig.type === 'PUBLISH' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-red-500 hover:bg-red-600'}`}>Xác nhận</button>
               </div>
             </div>
           </div>

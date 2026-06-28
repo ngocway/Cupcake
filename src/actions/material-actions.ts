@@ -1059,6 +1059,13 @@ export async function bulkPermanentlyDeleteMaterials(ids: string[]) {
   return { success: true };
 }
 
+export async function bulkPublishMaterials(ids: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  await Promise.all(ids.map(id => updateMaterialStatus(id, 'PUBLIC')));
+  return { success: true };
+}
+
 /**
  * USE CASE: Update Material Status
  * Transitions the material between DRAFT, PRIVATE, and PUBLIC.
