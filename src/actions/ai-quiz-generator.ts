@@ -255,6 +255,21 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
     }
 
     const result = JSON.parse(responseText);
+
+    // Parse topic name from teacher's userPromptText
+    let topicTitle = "";
+    const topicMatch = userPromptText.match(/grammar topic:\s*["']?([^"'\r\n]+)["']?/i);
+    if (topicMatch) {
+      topicTitle = topicMatch[1].replace(/^["']|["']$/g, '').trim();
+      const partMatch = userPromptText.match(/This is Part (\d+) of a/i);
+      if (partMatch) {
+        topicTitle = `${topicTitle} Part ${partMatch[1]}`;
+      }
+    }
+
+    if (topicTitle) {
+      result.title = topicTitle;
+    }
     
     // Validate output structure
     if (!result.title || !result.practiceMultipleChoice || !result.practiceTrueFalse) {

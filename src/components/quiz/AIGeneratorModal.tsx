@@ -14,15 +14,7 @@ The output must include ALL sections below:
 
 ---
 
-## 1. TITLE
-- Short, clear, attractive
-- For kids
-- Only English
-- Example style: "There is / There are – Fun Practice"
-
----
-
-## 2. THUMBNAIL IMAGE PROMPT (FOR AI IMAGE GENERATION)
+## 1. THUMBNAIL IMAGE PROMPT (FOR AI IMAGE GENERATION)
 Create a prompt for an image generator.
 
 Requirements:
@@ -40,13 +32,13 @@ Return ONLY the image prompt.
 
 ---
 
-## 3. LESSON GOAL
+## 2. LESSON GOAL
 - 2–3 simple sentences
 - Explain what students will learn
 
 ---
 
-## 4. GRAMMAR FORMULA (VERY detail)
+## 3. GRAMMAR FORMULA (VERY detail)
 Explain:
 - Structure
 - When to use
@@ -56,12 +48,12 @@ Use simple English only.
 
 ---
 
-## 5. EXAMPLES
+## 4. EXAMPLES
 Provide 6–8 very simple example sentences.
 
 ---
 
-## 6. PRACTICE – MULTIPLE CHOICE
+## 5. PRACTICE – MULTIPLE CHOICE
 Create 15 questions:
 - Flexible number of options per question (usually 2 to 4 options)
 - Only ONE correct answer
@@ -79,7 +71,7 @@ Explanation:
 
 ---
 
-## 7. PRACTICE – TRUE / FALSE
+## 6. PRACTICE – TRUE / FALSE
 Create 5 questions:
 - Simple sentences
 - Mix positive and negative forms
@@ -87,13 +79,13 @@ Create 5 questions:
 
 ---
 
-## 8. QUICK MEMORY TIP
+## 7. QUICK MEMORY TIP
 - 5–8 short bullet points
 - Very easy to remember
 
 ---
 
-## 9. FINAL SUMMARY
+## 8. FINAL SUMMARY
 - 2–3 lines
 - Very simple English recap
 
