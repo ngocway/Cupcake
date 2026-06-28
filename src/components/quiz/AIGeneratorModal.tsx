@@ -64,7 +64,7 @@ Provide 6–8 very simple example sentences.
 ## 6. PRACTICE – MULTIPLE CHOICE
 Create 20 questions:
 - A1 level
-- Each question has 4 options (A, B, C, D)
+- Flexible number of options per question (usually 2 to 4 options)
 - Only ONE correct answer
 - Include answer
 - Include explanation in SIMPLE ENGLISH
@@ -74,8 +74,7 @@ Format:
 Question  
 A.  
 B.  
-C.  
-D.  
+[Other options if any...]
 Answer:  
 Explanation:
 
