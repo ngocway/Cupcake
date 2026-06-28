@@ -126,45 +126,29 @@ function buildInstructionsHtml(data: {
   finalSummary: string;
 }, lang: 'en' | 'vi' | 'th' | 'id' = 'en'): string {
   const headers = {
-    en: { goal: "Lesson Goal", formula: "Grammar Formula", examples: "Examples", tip: "Memory Tip", summary: "Summary" },
-    vi: { goal: "Mục tiêu bài học", formula: "Điểm chính", examples: "Ví dụ", tip: "Mẹo ghi nhớ", summary: "Tóm tắt" },
-    th: { goal: "เป้าหมายการเรียนรู้", formula: "จุดสำคัญ", examples: "ตัวอย่าง", tip: "เคล็ดลับในการจำ", summary: "สรุป" },
-    id: { goal: "Tujuan Pelajaran", formula: "Poin Kunci", examples: "Contoh", tip: "Tips Memori", summary: "Ringkasan" }
+    en: { goal: "Lesson Goal", keyPoints: "Key Points", examples: "Examples", tip: "Memory Tips", summary: "Summary" },
+    vi: { goal: "Mục tiêu bài học", keyPoints: "Điểm chính", examples: "Ví dụ", tip: "Mẹo ghi nhớ", summary: "Tóm tắt" },
+    th: { goal: "เป้าหมายการเรียนรู้", keyPoints: "จุดสำคัญ", examples: "ตัวอย่าง", tip: "เคล็ดลับในการจำ", summary: "สรุป" },
+    id: { goal: "Tujuan Pelajaran", keyPoints: "Poin Kunci", examples: "Contoh", tip: "Tips Memori", summary: "Ringkasan" }
   };
   const h = headers[lang] || headers.en;
 
-  return `
-<div class="esl-lesson-instructions space-y-6">
-  <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.goal}</h3>
-    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.lessonGoal}</p>
-  </section>
-  
-  <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.formula}</h3>
-    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.grammarFormula}</p>
-  </section>
-  
-  <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.examples}</h3>
-    <ul class="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
-      ${data.examples.map(ex => `<li>${ex}</li>`).join('')}
-    </ul>
-  </section>
-  
-  <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.tip}</h3>
-    <ul class="list-disc pl-5 space-y-1 text-slate-600 dark:text-slate-400 text-sm">
-      ${data.quickMemoryTip.map(tip => `<li>${tip}</li>`).join('')}
-    </ul>
-  </section>
-  
-  <section>
-    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">${h.summary}</h3>
-    <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed">${data.finalSummary}</p>
-  </section>
-</div>
-  `.trim();
+  return `<div style="font-family:'Segoe UI',Arial,sans-serif;max-width:720px;line-height:1.75;color:#2d2d2d;padding:4px 0">
+<h2 style="color:#f97316;font-size:1rem;text-transform:uppercase;letter-spacing:1px;margin-top:16px;margin-bottom:4px;font-weight:bold">${h.goal}</h2>
+<p style="margin:0 0 18px">${data.lessonGoal}</p>
+
+<h2 style="color:#f97316;font-size:1rem;text-transform:uppercase;letter-spacing:1px;margin-top:16px;margin-bottom:4px;font-weight:bold">${h.keyPoints}</h2>
+<div style="background:#fff7ed;border-left:4px solid #f97316;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:18px">${data.grammarFormula}</div>
+
+<h2 style="color:#f97316;font-size:1rem;text-transform:uppercase;letter-spacing:1px;margin-top:16px;margin-bottom:4px;font-weight:bold">${h.examples}</h2>
+<ul style="margin:0 0 18px;padding-left:20px">${data.examples.map(e=>`<li style="margin-bottom:6px">${e}</li>`).join('')}</ul>
+
+<h2 style="color:#f97316;font-size:1rem;text-transform:uppercase;letter-spacing:1px;margin-top:16px;margin-bottom:4px;font-weight:bold">${h.tip}</h2>
+<ul style="margin:0 0 18px;padding-left:20px">${data.quickMemoryTip.map(t=>`<li style="margin-bottom:6px">💡 ${t}</li>`).join('')}</ul>
+
+<h2 style="color:#f97316;font-size:1rem;text-transform:uppercase;letter-spacing:1px;margin-top:16px;margin-bottom:4px;font-weight:bold">${h.summary}</h2>
+<p style="margin:0;background:#f0fdf4;padding:12px 16px;border-radius:8px;border-left:4px solid #22c55e">${data.finalSummary}</p>
+</div>`;
 }
 
 export async function generateAIExerciseAction(assignmentId: string, userPromptText: string) {
