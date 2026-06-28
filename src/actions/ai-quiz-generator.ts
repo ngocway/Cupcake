@@ -229,6 +229,9 @@ Strict Rules for Question Generation, Difficulty, & Theme Alignment:
    - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary.
    - For A2 / B1 level: Use compound/complex sentences, introducing more varied vocabulary.
 3. No Invalid Combinations: Do not generate questions where the correct answer contradicts the target theme. Every question must have one clearly correct choice that tests the target grammar.
+4. Number of Options & Correct Answers:
+   - For each multiple-choice question, the number of options is flexible and can be decided by the AI (typically 2 to 4 options).
+   - Crucially, there MUST strictly be exactly ONE correct answer per question ("isCorrect": true must appear exactly once in the options array). You must NEVER generate multiple correct answers for a single question.
 
 Strict Rules for Translation & Localization (ELT Guidelines):
 1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
@@ -426,6 +429,9 @@ Strict Rules for Question Generation, Difficulty, & Theme Alignment:
    - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary.
    - For A2 / B1 level: Use compound/complex sentences, introducing more varied vocabulary.
 3. No Invalid Combinations: Do not generate questions where the correct answer contradicts the target theme. Every question must have one clearly correct choice that tests the target grammar.
+4. Number of Options & Correct Answers:
+   - For each multiple-choice question, the number of options is flexible and can be decided by the AI (typically 2 to 4 options).
+   - Crucially, there MUST strictly be exactly ONE correct answer per question ("isCorrect": true must appear exactly once in the options array). You must NEVER generate multiple correct answers for a single question.
 
 Strict Rules for Translation & Localization (ELT Guidelines):
 1. Target Grammar & Vocabulary: In translations (vi, th, id), DO NOT translate target grammar terms, prepositions, or vocabulary being taught (e.g. keep "am, is, are", "in, on, at", "countable/uncountable", "must, mustn't" exactly as-is in English).
