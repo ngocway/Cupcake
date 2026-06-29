@@ -225,10 +225,15 @@ You must return the generated content STRICTLY as a JSON object matching the fol
 
 Strict Rules for Question Generation, Difficulty, & Theme Alignment:
 1. Target Grammar Focus: All questions and option choices (correct & incorrect distractors) MUST focus strictly on the target grammar/vocabulary requested (e.g. if the lesson is about "this, that, these, those", the multiple-choice options must only consist of these four words, and the correct option must be one of them. Do not include unrelated distractors like "which", "what", "where", "it", etc. as correct answers).
-2. CEFR Level & Target Audience Alignment: You must strictly align sentence structures and vocabulary complexity with the provided CEFR Level and Target Audience.
-   - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary.
-   - For A2 / B1 level: Use compound/complex sentences, introducing more varied vocabulary.
-3. No Invalid Combinations: Do not generate questions where the correct answer contradicts the target theme. Every question must have one clearly correct choice that tests the target grammar.
+2. CEFR Level & Target Audience Alignment: You must strictly align sentence structures and vocabulary complexity of all instructions, examples, questions, and option choices with the provided CEFR Level and Target Audience:
+   - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary. LIMIT vocabulary strictly to extremely basic words (colors, animals, numbers under 10, family members, simple school items, simple adjectives like big, small, happy, sad). Do not use advanced nouns, verbs, or abstract concepts.
+   - For A2 level (Elementary): Use simple, everyday sentences and vocabulary. Avoid complex compound sentences or academic/professional vocabulary.
+   - For B1 / B2 level (Intermediate / Upper-Intermediate): Use compound/complex sentences, introducing more varied, abstract, and academic vocabulary.
+3. No Invalid Combinations & Distractor Ambiguity: Do not generate questions where the correct answer contradicts the target theme. Every question must have a clearly correct choice that tests the target grammar. Ensure that only ONE option is grammatically and logically correct in the context of the question. You must avoid generating "distractor" options that are also grammatically correct, natural, or acceptable alternatives in the sentence, even if they don't test the target concept.
+   - For Multiple Choice (Single-Select): Ensure there is exactly one correct answer. The distractors must be completely incorrect grammatically or semantically in that specific sentence context. Do not write a sentence where another option could also fit naturally (e.g., if testing singular vs plural, don't write "I have ____" and have both "a dog" and "dogs" as choices unless one is specifically marked correct and the other is excluded by context). Ensure that the combination of the sentence and the correct option makes perfect grammatical sense (never create nonsensical sentences like "He is his hat" to fit a grammatical formula).
+   - For Multiple Choice (Multi-Select): If a question has multiple correct answers, "isCorrect" must be true for all of them, and the question text must explicitly instruct the student to select all correct options.
+   - For True/False: Statements must be clear, direct, and factually unambiguous. Avoid double negatives, trick wording, or statements that are open to interpretation.
+   - For Cloze Test (Fill in the blanks): The sentence must have exactly one blank, and the word to fill in must be the only logical, grammatically correct fit. Wrap the blanked word in double curly braces (e.g., {{word}}). Ensure the surrounding context doesn't contain grammatical clues that contradict the correct answer (e.g., matching subject-verb agreement).
 4. Number of Options & Correct Answers:
    - For each multiple-choice question, the number of options is flexible and can be decided by the AI (typically 2 to 4 options).
    - Crucially, there MUST strictly be exactly ONE correct answer per question ("isCorrect": true must appear exactly once in the options array). You must NEVER generate multiple correct answers for a single question.
@@ -363,7 +368,17 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
   }
 }
 
-export async function generateAIExerciseFromUrlAction(assignmentId: string, url: string) {
+export async function generateAIExerciseFromUrlAction(
+  assignmentId: string, 
+  url: string,
+  context?: {
+    subject?: string;
+    targetAudiences?: string[];
+    primaryAudience?: string;
+    primaryLevel?: string;
+    learningGoals?: string[];
+  }
+) {
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, errors: ["Chưa đăng nhập. Vui lòng đăng nhập lại."] };
@@ -447,8 +462,9 @@ You must return the generated content STRICTLY as a JSON object matching the fol
 Strict Rules for Question Generation, Difficulty, & Theme Alignment:
 1. Target Grammar Focus: All questions and option choices (correct & incorrect distractors) MUST focus strictly on the target grammar/vocabulary requested (e.g. if the lesson is about "this, that, these, those", the multiple-choice options must only consist of these four words, and the correct option must be one of them. Do not include unrelated distractors like "which", "what", "where", "it", etc. as correct answers).
 2. CEFR Level & Target Audience Alignment: You must strictly align sentence structures and vocabulary complexity with the provided CEFR Level and Target Audience.
-   - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary.
-   - For A2 / B1 level: Use compound/complex sentences, introducing more varied vocabulary.
+   - For Pre-A1 / A1 level (Beginners / Kids): Use extremely simple, declarative sentences under 6 words (e.g. "_____ is a bird." -> options: This/That/These/Those). Avoid interrogative or complex clauses unless absolutely necessary. LIMIT vocabulary strictly to extremely basic words (colors, animals, numbers under 10, family members, simple school items, simple adjectives like big, small, happy, sad). Do not use advanced nouns, verbs, or abstract concepts.
+   - For A2 level (Elementary): Use simple, everyday sentences and vocabulary. Avoid complex compound sentences or academic/professional vocabulary.
+   - For B1 / B2 level (Intermediate / Upper-Intermediate): Use compound/complex sentences, introducing more varied, abstract, and academic vocabulary.
 3. No Invalid Combinations: Do not generate questions where the correct answer contradicts the target theme. Every question must have one clearly correct choice that tests the target grammar.
 4. Number of Options & Correct Answers:
    - For each multiple-choice question, the number of options is flexible and can be decided by the AI (typically 2 to 4 options).
@@ -467,7 +483,21 @@ Strict Rules for Translation & Localization (ELT Guidelines):
 
 Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. Ensure all questions and options are in English only.`;
 
-    const userPrompt = `Read the following text scraped from an exercise webpage:
+    let contextHeader = "";
+    if (context) {
+      contextHeader = `
+Context Information for AI:
+- Subject: ${context.subject || ""}
+- Target Audiences: ${(context.targetAudiences || []).join(', ')}
+- Primary Audience (Tone): ${context.primaryAudience || ""}
+- CEFR Level: ${context.primaryLevel || ""}
+- Selected Learning Goals: ${(context.learningGoals || []).join(', ')}
+
+==================
+`;
+    }
+
+    const userPrompt = `${contextHeader}Read the following text scraped from an exercise webpage:
 ---
 ${cleanText}
 ---

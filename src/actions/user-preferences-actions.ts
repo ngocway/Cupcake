@@ -137,9 +137,8 @@ const DEFAULT_CONFIG = {
           label: "Kid (6-10 years)",
           avatar: "/images/avatars/kid.png",
           levels: [
-            { id: "beginner", label: "Beginner (Pre-A1, A1)" },
-            { id: "elementary", label: "Elementary (A2)" },
-            { id: "intermediate", label: "Intermediate (B1)" }
+            { id: "pre-a1-a1", label: "Beginner (Pre-A1, A1)" },
+            { id: "a2", label: "Elementary (A2)" }
           ]
         },
         {
@@ -147,9 +146,9 @@ const DEFAULT_CONFIG = {
           label: "Teen (11-16 years)",
           avatar: "/images/avatars/teen.png",
           levels: [
-            { id: "beginner", label: "Beginner (Pre-A1, A1)" },
-            { id: "elementary", label: "Elementary (A2)" },
-            { id: "intermediate", label: "Intermediate (B1, B2)" }
+            { id: "pre-a1-a1", label: "Beginner (Pre-A1, A1)" },
+            { id: "a2", label: "Elementary (A2)" },
+            { id: "b1", label: "Intermediate (B1)" }
           ]
         },
         {
@@ -157,10 +156,10 @@ const DEFAULT_CONFIG = {
           label: "Learner (16+)",
           avatar: "/images/avatars/adult.png",
           levels: [
-            { id: "beginner", label: "Beginner (Pre-A1, A1)" },
-            { id: "elementary", label: "Elementary (A2)" },
-            { id: "intermediate", label: "Intermediate (B1, B2)" },
-            { id: "advanced", label: "Advanced (C1, C2)" }
+            { id: "pre-a1-a1", label: "Beginner (Pre-A1, A1)" },
+            { id: "a2", label: "Elementary (A2)" },
+            { id: "b1", label: "Intermediate (B1)" },
+            { id: "b2", label: "Upper-Intermediate (B2)" }
           ]
         }
       ]

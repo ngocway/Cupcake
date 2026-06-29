@@ -170,21 +170,28 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
         const partNum = idx + 1;
         
         let result;
+        const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
+        const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
+        
+        // Resolve level label dynamically
+        const ageGroupConfig = onboardingConfig?.subjects
+          ?.find((s: any) => s.id === subject)
+          ?.ageGroups?.find((a: any) => a.id === primaryAudience);
+        const selectedLevelId = audienceLevels[primaryAudience];
+        const levelObj = ageGroupConfig?.levels?.find((l: any) => l.id === selectedLevelId);
+        const primaryLevelLabel = levelObj ? levelObj.label : (selectedLevelId || "Pre-A1/A1");
+
         if (generatorMode === 'prompt') {
           const partPromptText = partsToGenerate > 1 
             ? `${questionsText}\n\nIMPORTANT: This is Part ${partNum} of a ${partsToGenerate}-part series. Generate distinct questions and vocabulary for Part ${partNum}. The title of this part MUST end with " Part ${partNum}" (e.g. if the title is "Present Continuous", it must be "Present Continuous Part ${partNum}"). Do not repeat questions or options from other parts.`
             : questionsText;
-
-          const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
-          const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
-          const primaryLevel = audienceLevels[primaryAudience] || "A1";
 
           const enhancedPrompt = `
 Context Information for AI:
 - Subject: ${subject}
 - Target Audiences: ${targetAudiences.join(', ')}
 - Primary Audience (Tone): ${primaryAudience}
-- CEFR Level: ${primaryLevel}
+- CEFR Level: ${primaryLevelLabel}
 - Selected Learning Goals: ${learningGoals.join(', ')}
 
 ==================
@@ -194,7 +201,13 @@ ${partPromptText}
 
           result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
         } else {
-          result = await generateAIExerciseFromUrlAction(assignmentId || 'new', urlInput.trim());
+          result = await generateAIExerciseFromUrlAction(assignmentId || 'new', urlInput.trim(), {
+            subject,
+            targetAudiences,
+            primaryAudience,
+            primaryLevel: primaryLevelLabel,
+            learningGoals
+          });
         }
         
         if (!result.success) {

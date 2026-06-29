@@ -722,21 +722,22 @@ function splitIntoSentences(text: string): string[] {
   return matches.map(s => s.trim()).filter(Boolean);
 }
 
-function chunkSentences(sentences: string[]): string[][] {
+function chunkSentences(sentences: string[], isPreA1A1 = false): string[][] {
   const chunks: string[][] = [];
-  let i = 0;
-  while (i < sentences.length) {
-    const remaining = sentences.length - i;
-    if (remaining >= 5) {
-      chunks.push(sentences.slice(i, i + 3));
-      i += 3;
-    } else if (remaining === 4) {
-      chunks.push(sentences.slice(i, i + 2));
-      chunks.push(sentences.slice(i + 2, i + 4));
-      i += 4;
-    } else {
-      chunks.push(sentences.slice(i));
-      break;
+  if (isPreA1A1) {
+    for (const sentence of sentences) {
+      chunks.push([sentence]);
+    }
+  } else {
+    let i = 0;
+    while (i < sentences.length) {
+      if (i + 1 < sentences.length) {
+        chunks.push([sentences[i], sentences[i + 1]]);
+        i += 2;
+      } else {
+        chunks.push([sentences[i]]);
+        i += 1;
+      }
     }
   }
   return chunks;
@@ -933,55 +934,19 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
   return { url: publicUrl, words };
 }
 
-async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dall-e-2" = "dall-e-2", size: string = "1024x1024", userId: string) {
-  if (!process.env.OPENAI_API_KEY && !process.env.DEEPINFRA_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
-    throw new Error("Missing AI API key environment variables (GEMINI_API_KEY, OPENAI_API_KEY or DEEPINFRA_API_KEY)");
-  }
-
-  // Try gpt-image-2 first since dall-e-2 / dall-e-3 do not exist on this endpoint
-  const modelsToTry = ["gpt-image-2", "chatgpt-image-latest", "gpt-image-1.5", "gpt-image-1", "dall-e-3", "dall-e-2"];
+async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dall-e-2" = "dall-e-3", size: string = "1024x1024", userId: string) {
   let response = null;
-  let lastError = null;
+  let lastError: any = null;
 
-  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (geminiApiKey) {
-    try {
-      console.log(`Generating image using Gemini Imagen for lesson: "${prompt.substring(0, 60)}..."`);
+  // 1. Try OpenAI DALL-E first if key exists
+  if (process.env.OPENAI_API_KEY) {
+    const modelsToTry = [model, "dall-e-3", "dall-e-2"];
+    const uniqueModels = Array.from(new Set(modelsToTry));
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ["IMAGE"]
-          }
-        })
-      });
-
-      const responseData = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
-      }
-
-      const base64Data = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
-      if (base64Data) {
-        response = {
-          data: [{ b64_json: base64Data }]
-        };
-        console.log(`Successfully generated image using Gemini Imagen`);
-      }
-    } catch (err: any) {
-      console.warn(`Failed to generate image with Gemini Imagen:`, err.message);
-      lastError = err;
-    }
-  }
-
-  if (!response && process.env.OPENAI_API_KEY) {
-    for (const m of modelsToTry) {
+    for (const m of uniqueModels) {
       try {
-        console.log(`Generating image using model: ${m}`);
-        const quality = m.startsWith("dall-e") ? "standard" : "auto";
+        console.log(`Generating DALL-E image using model: ${m}`);
+        const quality = m === "dall-e-3" ? "standard" : undefined;
         
         let requestedSize = size;
         if (size === "1024x576" || size === "1792x1024") {
@@ -1000,20 +965,57 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
           quality: quality as any
         });
         if (response?.data?.[0]) {
-          console.log(`Successfully generated image using model: ${m}`);
+          console.log(`Successfully generated image using DALL-E model: ${m}`);
           break;
         }
       } catch (err: any) {
-        console.error(`Failed to generate image with model ${m}:`, err.message);
+        console.error(`Failed to generate DALL-E image with model ${m}:`, err.message);
         lastError = err;
       }
     }
   }
 
+  // 2. Fallback to Gemini Imagen if DALL-E fails
+  if (!response && process.env.GEMINI_API_KEY) {
+    const geminiModels = ["gemini-2.5-flash-image", "gemini-3.1-flash-image"];
+    for (const gModel of geminiModels) {
+      try {
+        console.log(`DALL-E failed. Falling back to Gemini Imagen model: ${gModel}...`);
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseModalities: ["IMAGE"]
+            }
+          })
+        });
+
+        const responseData = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+        }
+
+        const base64Data = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
+        if (base64Data) {
+          response = {
+            data: [{ b64_json: base64Data }]
+          };
+          console.log(`Successfully generated image using Gemini Imagen model: ${gModel}`);
+          break;
+        }
+      } catch (err: any) {
+        console.error(`Gemini Imagen fallback model ${gModel} failed:`, err.message);
+        lastError = err;
+      }
+    }
+  }
+
+  // 3. Fallback to DeepInfra FLUX if Gemini fails
   if (!response && process.env.DEEPINFRA_API_KEY) {
     try {
-      console.log(`Generating image using DeepInfra FLUX.1 Schnell for lesson: "${prompt.substring(0, 60)}..."`);
-      
+      console.log(`Gemini Imagen failed. Falling back to DeepInfra FLUX.1 Schnell...`);
       let fluxSize = size;
       if (size === "1792x1024" || size === "1024x576") {
         fluxSize = "1024x576";
@@ -1044,7 +1046,7 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
         console.log(`Successfully generated image using DeepInfra FLUX.1 Schnell`);
       }
     } catch (err: any) {
-      console.error(`Failed to generate image with DeepInfra FLUX:`, err.message);
+      console.error(`DeepInfra FLUX fallback failed:`, err.message);
       lastError = err;
     }
   }
@@ -1171,6 +1173,7 @@ export async function generateAILessonFully(params: {
   } = params;
 
   try {
+    let lessonWarnings: string[] = [];
     // Parse length parameter to calculate target word count
     let targetWordCount = 400;
     const lenLower = length ? length.toLowerCase() : "";
@@ -1240,7 +1243,7 @@ export async function generateAILessonFully(params: {
         {
           "type": "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CLOZE_TEST",
           "isMultiple": boolean,
-          "questionText": "Question text",
+          "questionText": "Question text. For CLOZE_TEST: The questionText must be a sentence containing exactly one blank word wrapped in double curly braces, for example: 'Nature is a {{magnificent}} part of our world.'. The correctAnswers array must contain the single correct word inside the braces: ['magnificent']. Do not use underscores or empty spaces for the blank.",
           "points": 1.0,
           "correctAnswers": ["Correct answer 1", ...],
           "wrongAnswers": ["Wrong answer 1", ...],
@@ -1248,6 +1251,14 @@ export async function generateAILessonFully(params: {
         }
       ]
     }
+
+    STRICT RULES FOR LESSON QUESTION GENERATION:
+    1. For CLOZE_TEST: You must strictly wrap the blank word inside the sentence with double curly braces (e.g., 'The park is my {{favorite}} place.') and place that word as the first element of correctAnswers. Never use underscores (____) or leave the blank word unbraced in the sentence text.
+    2. No Invalid Combinations & Distractor Ambiguity: Every question must have a clearly correct choice that tests the target grammar/concept. Ensure that only ONE option is grammatically and logically correct in the context of the question. You must avoid generating "distractor" options that are also grammatically correct, natural, or acceptable alternatives in the sentence, even if they don't test the target concept.
+       - For Multiple Choice (Single-Select): Ensure there is exactly one correct answer. The distractors must be completely incorrect grammatically or semantically in that specific sentence context. Do not write a sentence where another option could also fit naturally (e.g., if testing singular vs plural, don't write "I have ____" and have both "a dog" and "dogs" as choices unless one is specifically marked correct and the other is excluded by context). Ensure that the combination of the sentence and the correct option makes perfect grammatical sense (never create nonsensical sentences like "He is his hat" to fit a grammatical formula).
+       - For Multiple Choice (Multi-Select): If a question has multiple correct answers, "isCorrect" must be true for all of them, and the question text must explicitly instruct the student to select all correct options.
+       - For True/False: Statements must be clear, direct, and factually unambiguous. Avoid double negatives, trick wording, or statements that are open to interpretation.
+       - For Cloze Test (Fill in the blanks): The sentence must have exactly one blank, and the word to fill in must be the only logical, grammatically correct fit. Wrap the blanked word in double curly braces (e.g., {{word}}). Ensure the surrounding context doesn't contain grammatical clues that contradict the correct answer (e.g., matching subject-verb agreement).
 
     CRITICAL:
     - All text in title, passage, questions MUST be in ${language}.
@@ -1268,19 +1279,21 @@ export async function generateAILessonFully(params: {
 
     // 2. PREPARE PASSAGE CHUNKS
     const paragraphs = parsedData.passage || [];
-    const styleSuffix = "cute 2D cartoon vector illustration style, clean bold outlines, vibrant colors, friendly character design, isolated on a plain white background, aspect ratio 16:9, no realistic rendering, no 3D shading, no text, no letters";
-    const thumbPrompt = `A 16:9 aspect ratio illustration themed around "${topic}". ${styleSuffix}`;
-    const inLessonPrompt = `A 16:9 aspect ratio illustration of "${topic}". ${styleSuffix}`;
+    const styleSuffix = "2D cartoon illustration, colorful, 16:9 ratio, English text only (very few words, max 5 words)";
+    const thumbPrompt = `An illustration themed around "${topic}". ${styleSuffix}`;
+    const inLessonPrompt = `An illustration of "${topic}". ${styleSuffix}`;
 
     const assignmentId = randomUUID();
     const placeholderThumbUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-thumb")}`;
     const placeholderContentImgUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-content")}`;
 
+    const isPreA1A1 = primaryLevel === "pre-a1-a1" || primaryLevel === "beginner";
+
     const paragraphChunksList: { pIdx: number; chunkText: string }[] = [];
     for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
       const paraText = paragraphs[pIdx];
       const sentences = splitIntoSentences(paraText);
-      const groups = chunkSentences(sentences);
+      const groups = chunkSentences(sentences, isPreA1A1);
       for (const group of groups) {
         paragraphChunksList.push({
           pIdx,
@@ -1334,13 +1347,13 @@ export async function generateAILessonFully(params: {
         }
       })),
       // C. Thumbnail image generation
-      generateDalleImageHelper(thumbPrompt, "dall-e-2", "1024x576", session.user.id)
+      generateDalleImageHelper(thumbPrompt, "dall-e-3", "1024x576", session.user.id)
         .catch(err => {
           console.error("Failed to generate thumbnail image synchronously:", err);
           return "";
         }),
       // D. In-lesson content image generation
-      generateDalleImageHelper(inLessonPrompt, "dall-e-2", "1024x576", session.user.id)
+      generateDalleImageHelper(inLessonPrompt, "dall-e-3", "1024x576", session.user.id)
         .catch(err => {
           console.error("Failed to generate content image synchronously:", err);
           return "";
@@ -1351,6 +1364,21 @@ export async function generateAILessonFully(params: {
     const audioMetadata = globalTtsRes.words;
     const finalThumbnail = actualThumbUrl || placeholderThumbUrl;
     const finalInLessonImageUrl = actualInLessonUrl || placeholderContentImgUrl;
+
+    const failedChunks = chunksTtsRes.filter(c => !c.audioUrl).length;
+    const globalAudioFailed = !wholeAudioUrl;
+    if (globalAudioFailed && failedChunks === paragraphChunksList.length && paragraphChunksList.length > 0) {
+      lessonWarnings.push("Không thể tạo bất kỳ file âm thanh (audio) nào cho bài học do giới hạn API của Google/Gemini.");
+    } else if (globalAudioFailed || failedChunks > 0) {
+      lessonWarnings.push(`Không thể tạo đầy đủ âm thanh cho bài học (thất bại ${failedChunks}/${paragraphChunksList.length} đoạn audio).`);
+    }
+
+    if (!actualThumbUrl) {
+      lessonWarnings.push("Không thể tạo ảnh thu nhỏ (thumbnail) bài học bằng DALL-E.");
+    }
+    if (!actualInLessonUrl) {
+      lessonWarnings.push("Không thể tạo ảnh minh họa nội dung bài học bằng DALL-E.");
+    }
 
     // 4. FORMAT LESSON READING TEXT HTML & INSERT CHUNK AUDIO MARKERS
     setGenProgress(session.user.id, "Đang định dạng văn bản bài học...", 75);
@@ -1413,9 +1441,27 @@ export async function generateAILessonFully(params: {
           isTrue: isTrue
         };
       } else if (qType === "CLOZE_TEST") {
+        let text = q.questionText || "";
+        const correctAnswers = q.correctAnswers || [];
+        const correctWord = correctAnswers[0] || "";
+
+        // Defensive parsing for Cloze: if the text lacks {{ }} but we have the correct answer word
+        if (!text.includes("{{") && correctWord) {
+          if (text.includes("________") || text.includes("_______") || text.includes("____") || text.includes("___")) {
+            text = text.replace(/_{3,}/g, `{{${correctWord}}}`);
+          } else {
+            // Find correctWord in the sentence and wrap it
+            const wordIndex = text.toLowerCase().indexOf(correctWord.toLowerCase());
+            if (wordIndex !== -1) {
+              const originalWord = text.substring(wordIndex, wordIndex + correctWord.length);
+              text = text.substring(0, wordIndex) + `{{${originalWord}}}` + text.substring(wordIndex + correctWord.length);
+            }
+          }
+        }
+
         contentObj = {
-          textWithBlanks: q.questionText,
-          questionText: q.questionText
+          textWithBlanks: text,
+          questionText: text
         };
       }
 
@@ -1613,7 +1659,7 @@ export async function generateAILessonFully(params: {
       );
     });
 
-    return { success: true, id: assignmentId };
+    return { success: true, id: assignmentId, warnings: lessonWarnings.length > 0 ? lessonWarnings : undefined };
   } catch (error: any) {
     console.error("Full automated lesson gen failed:", error);
     if (session?.user?.id) {

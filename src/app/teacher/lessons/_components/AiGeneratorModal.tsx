@@ -7,6 +7,7 @@ import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 import { useLocale } from 'next-intl';
 import { Sparkles, X, RefreshCw, Settings, HelpCircle, Volume2 } from 'lucide-react';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
+import { toast } from 'sonner';
 
 interface AiGeneratorModalProps {
   isOpen?: boolean;
@@ -126,6 +127,14 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
             failures.push({ topic: activeTopic, error: res.error });
           } else if (res.success && res.id) {
             successes.push(res.id);
+            if ((res as any).warnings && (res as any).warnings.length > 0) {
+              (res as any).warnings.forEach((warn: string) => {
+                toast.warning(`[Cảnh báo] Bài học "${activeTopic}": ${warn}`, {
+                  duration: 12000,
+                  position: "top-center"
+                });
+              });
+            }
           }
         } catch (itemErr: any) {
           console.error(`Exception generating topic "${activeTopic}":`, itemErr);

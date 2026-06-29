@@ -1,7 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 async function main() {
-  const feeds = await prisma.$queryRaw`SELECT id, title, "createdAt" FROM "HomepageFeed" WHERE "contentType" = 'LESSON' ORDER BY "createdAt" DESC LIMIT 15`;
-  console.log("Top 15 lessons:", feeds.map(f => f.title));
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: 'onboarding_config' }
+  });
+  console.log("Current onboarding_config setting value:", JSON.stringify(setting?.value, null, 2));
 }
 main().finally(() => prisma.$disconnect());

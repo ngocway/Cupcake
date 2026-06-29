@@ -11,13 +11,18 @@ const getLevelsWithColors = (level: string | null | undefined): { label: string;
   
   return uniqueLevels.map(l => {
     switch (l) {
+      case 'pre-a1-a1':
       case 'beginner':
-        return { label: 'Pre-A1', color: 'bg-emerald-500 text-white' };
+        return { label: 'Pre-A1/A1', color: 'bg-emerald-500 text-white' };
+      case 'a2':
       case 'elementary':
         return { label: 'A2', color: 'bg-sky-500 text-white' };
+      case 'b1':
       case 'intermediate':
         return { label: 'B1', color: 'bg-violet-500 text-white' };
+      case 'b2':
       case 'upper-intermediate':
+      case 'upper_intermediate':
         return { label: 'B2', color: 'bg-amber-500 text-white' };
       case 'advanced':
         return { label: 'C1', color: 'bg-rose-500 text-white' };
