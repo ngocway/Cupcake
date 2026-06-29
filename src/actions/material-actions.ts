@@ -78,6 +78,7 @@ export async function createMaterialWithQuestions(payload: {
   gradeLevel?: string;
   shortDescription?: string;
   instructions?: string;
+  instructionsTranslations?: any;
   targetAudiences?: string[];
   thumbnailImagePrompt?: string;
   level?: string;
@@ -106,6 +107,7 @@ export async function createMaterialWithQuestions(payload: {
       gradeLevel: payload.gradeLevel || null,
       shortDescription: payload.shortDescription || null,
       instructions: payload.instructions || null,
+      instructionsTranslations: payload.instructionsTranslations || null,
       targetAudiences: payload.targetAudiences || [],
       level: payload.level || null,
       audienceLevels: payload.audienceLevels || null,
@@ -117,6 +119,7 @@ export async function createMaterialWithQuestions(payload: {
           orderIndex: idx,
           points: Number(q.points) || 1.0,
           explanation: q.explanation || null,
+          explanationTranslations: q.explanationTranslations || null,
           content: typeof q.content === 'object' ? JSON.stringify(q.content) : q.content || "{}",
           mediaType: q.mediaType || 'NONE',
           mediaUrl: q.mediaUrl || null,

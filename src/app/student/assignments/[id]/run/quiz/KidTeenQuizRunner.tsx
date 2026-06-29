@@ -1728,6 +1728,15 @@ export default function KidTeenQuizRunner({
             </div>
           </div>
         </div>
+
+        {/* Related Content in Review Mode (static, below the sliding card) */}
+        {scoreResult && relatedAssignmentsPromise && (
+          <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
+            <React.Suspense fallback={<div className="h-40 animate-pulse bg-slate-100 rounded-xl w-full"></div>}>
+              <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
+            </React.Suspense>
+          </div>
+        )}
         </>
         )}
       </div>

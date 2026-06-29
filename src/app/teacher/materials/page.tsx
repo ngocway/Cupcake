@@ -142,7 +142,9 @@ export default function MaterialLibraryPage() {
             }
             
             const explanation = content.explanation;
+            const explanationTranslations = content.explanationTranslations || null;
             delete content.explanation;
+            delete content.explanationTranslations;
 
             return {
               type,
@@ -150,6 +152,7 @@ export default function MaterialLibraryPage() {
               isBanked: false,
               isAiGenerated: true,
               explanation: explanation || '',
+              explanationTranslations,
               content
             };
           });
@@ -174,6 +177,7 @@ export default function MaterialLibraryPage() {
           questions: questionsToSave,
           shortDescription: metadata?.shortDescription || '',
           instructions: metadata?.instructions || '',
+          instructionsTranslations: metadata?.instructionsTranslations || null,
           thumbnailImagePrompt: metadata?.thumbnailImagePrompt || '',
           subject: metadata?.subject,
           targetAudiences: metadata?.targetAudiences,

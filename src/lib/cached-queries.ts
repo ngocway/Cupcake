@@ -70,7 +70,7 @@ export const getShuffledIds = unstable_cache(
     studyLevel?: string
   ) => {
     const userType = rawUserType === "adults" ? "learner" : rawUserType;
-    const cacheKey = `feed:shuffledIds:v1:${contentType}:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
+    const cacheKey = `feed:shuffledIds:v2:${contentType}:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
     return fetchWithRedis(cacheKey, 600, async () => {
       const where: any = { status: "PUBLIC", contentType };
 
@@ -81,6 +81,15 @@ export const getShuffledIds = unstable_cache(
 
       if (studySubject) {
         where.subject = studySubject;
+      }
+
+      if (contentType === "EXERCISE") {
+        where.NOT = [
+          { title: { contains: "Part 2", mode: 'insensitive' } },
+          { title: { contains: "Part 3", mode: 'insensitive' } },
+          { title: { contains: "Part 4", mode: 'insensitive' } },
+          { title: { contains: "Part 5", mode: 'insensitive' } }
+        ];
       }
 
       if (userType) {
@@ -113,7 +122,7 @@ export const getShuffledIds = unstable_cache(
       return randomIds;
     });
   },
-  ["homepage-shuffled-ids-v4"],
+  ["homepage-shuffled-ids-v5"],
   { revalidate: 600, tags: ["homepage", "shuffled"] }
 );
 
@@ -121,7 +130,7 @@ export const getShuffledIds = unstable_cache(
 const getAssignmentsInternal = unstable_cache(
   async (goal: string, search: string, rawUserType: string, studySubject: string = '', studyLevel: string = '') => {
     const userType = rawUserType === "adults" ? "learner" : rawUserType;
-    const cacheKey = `feed:assignments:v1:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
+    const cacheKey = `feed:assignments:v2:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
     return fetchWithRedis(cacheKey, 300, async () => {
       const randomIds = await getShuffledIds("EXERCISE", goal, search, userType, studySubject, studyLevel);
       const slicedIds = randomIds.slice(0, 12);
@@ -138,7 +147,7 @@ const getAssignmentsInternal = unstable_cache(
       return { items: items.map(mapFeedItem), total: randomIds.length };
     });
   },
-  ["homepage-assignments-cached-v4"],
+  ["homepage-assignments-cached-v5"],
   { revalidate: 60, tags: ["assignments", "homepage"] }
 );
 
@@ -159,7 +168,7 @@ export const getCachedAssignments = async (params: any) => {
 const getLessonsInternal = unstable_cache(
   async (goal: string, search: string, rawUserType: string, studySubject: string = '', studyLevel: string = '') => {
     const userType = rawUserType === "adults" ? "learner" : rawUserType;
-    const cacheKey = `feed:lessons:v1:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
+    const cacheKey = `feed:lessons:v2:${goal}:${search}:${userType}:${studySubject}:${studyLevel}`;
     return fetchWithRedis(cacheKey, 300, async () => {
       const randomIds = await getShuffledIds("LESSON", goal, search, userType, studySubject, studyLevel);
       const slicedIds = randomIds.slice(0, 12);
@@ -177,7 +186,7 @@ const getLessonsInternal = unstable_cache(
       };
     });
   },
-  ["homepage-lessons-cached-v4"],
+  ["homepage-lessons-cached-v5"],
   { revalidate: 60, tags: ["lessons", "homepage"] }
 );
 
@@ -206,15 +215,17 @@ export async function invalidateMaterialCache(assignmentId: string) {
       `assignment:meta:${assignment.id}`,
       `assignment:instructions:${assignment.id}`,
       `assignment:teacher:${assignment.id}`,
-      `assignment:related:${assignment.id}`,
-      `assignment:public:${assignment.id}`
+      `assignment:related:v2:${assignment.id}`,
+      `assignment:public:${assignment.id}`,
+      `assignment:question-translations:${assignment.id}`,
+      `assignment:translations:${assignment.id}`
     ]);
 
     if (assignment.slug) {
       keysToDelete.add(`assignment:meta:${assignment.slug}`);
       keysToDelete.add(`assignment:instructions:${assignment.slug}`);
       keysToDelete.add(`assignment:teacher:${assignment.slug}`);
-      keysToDelete.add(`assignment:related:${assignment.slug}`);
+      keysToDelete.add(`assignment:related:v2:${assignment.slug}`);
       keysToDelete.add(`assignment:public:${assignment.slug}`);
     }
 

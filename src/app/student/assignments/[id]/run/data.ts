@@ -108,16 +108,53 @@ export const getAssignmentTranslations = async (assignmentId: string) => {
 
 
 export const getRelatedAssignmentsCached = async (assignmentId: string, assignmentTags: string | null, targetAudiences: string[]) => {
-  return fetchWithRedis(`assignment:related:${assignmentId}`, 900, async () => {
-    // 1. Fetch assignment with pre-computed related IDs
+  return fetchWithRedis(`assignment:related:v2:${assignmentId}`, 900, async () => {
+    // 1. Fetch assignment with pre-computed related IDs and title
     const assignment = await prisma.assignment.findFirst({
       where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
-      select: { id: true, relatedAssignmentIds: true }
+      select: { id: true, title: true, relatedAssignmentIds: true }
     });
 
     const actualId = assignment?.id ?? assignmentId;
+    const currentTitle = assignment?.title || "";
 
-    // 2. If AI has pre-computed related IDs, use them directly (fast DB read)
+    // 2. Fetch sibling parts (e.g. Part 2, Part 3) of the same exercise topic
+    const hasPartSuffix = /\s+Part\s+\d+$/i.test(currentTitle);
+    let siblingParts: any[] = [];
+    if (hasPartSuffix) {
+      const baseTitle = currentTitle.replace(/\s+Part\s+\d+$/i, "").trim();
+      const potentialSiblings = await prisma.assignment.findMany({
+        where: {
+          status: 'PUBLIC',
+          id: { not: actualId },
+          deletedAt: null,
+          lesson: null,
+          title: {
+            startsWith: baseTitle,
+            mode: 'insensitive'
+          }
+        },
+        include: { teacher: { select: { name: true, image: true } } }
+      });
+
+      // Filter to keep only those with "Part \d+" at the end
+      siblingParts = potentialSiblings.filter(sibling => {
+        const siblingTitle = sibling.title || "";
+        return /\s+Part\s+\d+$/i.test(siblingTitle);
+      });
+
+      // Sort by part number ascending
+      siblingParts.sort((a, b) => {
+        const matchA = a.title.match(/Part\s+(\d+)$/i);
+        const matchB = b.title.match(/Part\s+(\d+)$/i);
+        const partA = matchA ? parseInt(matchA[1], 10) : 0;
+        const partB = matchB ? parseInt(matchB[1], 10) : 0;
+        return partA - partB;
+      });
+    }
+
+    // 3. Get other related content (AI pre-computed or fallback query)
+    let otherRelated: any[] = [];
     if (assignment?.relatedAssignmentIds && assignment.relatedAssignmentIds.length > 0) {
       const related = await prisma.assignment.findMany({
         where: {
@@ -131,75 +168,78 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       // Preserve AI-ranked order
       const orderMap = new Map(assignment.relatedAssignmentIds.map((id, i) => [id, i]));
       related.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
-      return related;
+      otherRelated = related;
+    } else {
+      // Fallback: tag-matching (for assignments not yet indexed by AI)
+      const popularTags = await prisma.tag.findMany({
+        where: { isPopular: true },
+        select: { name: true }
+      });
+      const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
+
+      const currentTags = assignmentTags
+        ? assignmentTags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const filteredTags = currentTags.filter((tag: string) => !popularTagNames.has(tag));
+      const currentAudiences = targetAudiences || [];
+
+      if (filteredTags.length > 0) {
+        const candidates = await prisma.assignment.findMany({
+          where: {
+            status: 'PUBLIC',
+            id: { not: actualId },
+            deletedAt: null,
+            lesson: null,
+            ...(currentAudiences.length > 0 && {
+              targetAudiences: { hasSome: currentAudiences }
+            }),
+            OR: filteredTags.map((tag: string) => ({
+              tags: { contains: tag, mode: 'insensitive' }
+            }))
+          },
+          take: 100,
+          include: { teacher: { select: { name: true, image: true } } }
+        });
+
+        const getOverlapCount = (tagsStr: string | null | undefined) => {
+          if (!tagsStr) return 0;
+          const tags = tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+          return tags.filter(tag => filteredTags.includes(tag)).length;
+        };
+
+        candidates.sort((a, b) => {
+          const overlapA = getOverlapCount(a.tags);
+          const overlapB = getOverlapCount(b.tags);
+          return overlapB - overlapA;
+        });
+
+        otherRelated = candidates.slice(0, 10);
+      }
+
+      if (otherRelated.length === 0) {
+        otherRelated = await prisma.assignment.findMany({
+          where: {
+            status: 'PUBLIC',
+            id: { not: actualId },
+            deletedAt: null,
+            lesson: null,
+            ...(currentAudiences.length > 0 && {
+              targetAudiences: { hasSome: currentAudiences }
+            })
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { teacher: { select: { name: true, image: true } } }
+        });
+      }
     }
 
-    // 3. Fallback: tag-matching (for assignments not yet indexed by AI)
-    const popularTags = await prisma.tag.findMany({
-      where: { isPopular: true },
-      select: { name: true }
-    });
-    const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
+    // 4. Combine: Put sibling parts first, deduplicate by ID, and limit to 10
+    const siblingIds = new Set(siblingParts.map(s => s.id));
+    const filteredOther = otherRelated.filter(item => !siblingIds.has(item.id));
+    const combined = [...siblingParts, ...filteredOther].slice(0, 10);
 
-    const currentTags = assignmentTags
-      ? assignmentTags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
-      : [];
-    const filteredTags = currentTags.filter((tag: string) => !popularTagNames.has(tag));
-    const currentAudiences = targetAudiences || [];
-
-    let relatedAssignments: any[] = [];
-
-    if (filteredTags.length > 0) {
-      const candidates = await prisma.assignment.findMany({
-        where: {
-          status: 'PUBLIC',
-          id: { not: actualId },
-          deletedAt: null,
-          lesson: null,
-          ...(currentAudiences.length > 0 && {
-            targetAudiences: { hasSome: currentAudiences }
-          }),
-          OR: filteredTags.map((tag: string) => ({
-            tags: { contains: tag, mode: 'insensitive' }
-          }))
-        },
-        take: 100,
-        include: { teacher: { select: { name: true, image: true } } }
-      });
-
-      const getOverlapCount = (tagsStr: string | null | undefined) => {
-        if (!tagsStr) return 0;
-        const tags = tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-        return tags.filter(tag => filteredTags.includes(tag)).length;
-      };
-
-      candidates.sort((a, b) => {
-        const overlapA = getOverlapCount(a.tags);
-        const overlapB = getOverlapCount(b.tags);
-        return overlapB - overlapA;
-      });
-
-      relatedAssignments = candidates.slice(0, 10);
-    }
-
-    if (relatedAssignments.length === 0) {
-      relatedAssignments = await prisma.assignment.findMany({
-        where: {
-          status: 'PUBLIC',
-          id: { not: actualId },
-          deletedAt: null,
-          lesson: null,
-          ...(currentAudiences.length > 0 && {
-            targetAudiences: { hasSome: currentAudiences }
-          })
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: { teacher: { select: { name: true, image: true } } }
-      });
-    }
-
-    return relatedAssignments;
+    return combined;
   });
 };
 

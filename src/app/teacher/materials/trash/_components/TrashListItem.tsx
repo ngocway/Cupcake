@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { restoreMaterial, permanentlyDeleteMaterial } from '@/actions/material-actions';
 import { MaterialStatus, MaterialType } from '@prisma/client';
-import { Image as ImageIcon, HelpCircle, Calendar, RotateCcw, Trash2, AlertTriangle } from 'lucide-react';
+import { Image as ImageIcon, HelpCircle, Calendar, RotateCcw, Trash2, AlertTriangle, Check } from 'lucide-react';
 
 type Assignment = {
   id: string;
@@ -27,7 +27,17 @@ const SUBJECT_CONFIG: Record<string, string> = {
   'Lịch sử': 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400',
 };
 
-export function TrashListItem({ assignment, onAction }: { assignment: Assignment, onAction: () => void }) {
+export function TrashListItem({ 
+  assignment, 
+  onAction,
+  selected,
+  onSelect
+}: { 
+  assignment: Assignment; 
+  onAction: () => void;
+  selected?: boolean;
+  onSelect?: (id: string) => void;
+}) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPermDeleteModal, setShowPermDeleteModal] = useState(false);
 
@@ -61,6 +71,25 @@ export function TrashListItem({ assignment, onAction }: { assignment: Assignment
   return (
     <>
       <div className={`bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 rounded-xl border border-[#f0f2f4] dark:border-gray-700 hover:border-primary/40 transition-all group flex items-center gap-5 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+        {/* Selection Checkbox */}
+        {onSelect && (
+          <div className="shrink-0 mr-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(assignment.id);
+              }}
+              className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                selected
+                  ? 'bg-primary border-primary text-white'
+                  : 'bg-white border-slate-300 dark:bg-slate-700 dark:border-slate-500 text-transparent hover:border-primary'
+              }`}
+            >
+              {selected && <Check className="w-4 h-4 stroke-[3px]" />}
+            </button>
+          </div>
+        )}
+
         {/* Thumbnail */}
         <div 
           className="size-16 rounded-lg bg-cover bg-center shrink-0 border border-gray-100 dark:border-gray-700 bg-[#f0f2f4]"

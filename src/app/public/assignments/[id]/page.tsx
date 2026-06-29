@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import QuizClientRunner from "@/app/student/assignments/[id]/run/quiz/QuizClientRunner";
 import { fetchWithRedis } from "@/lib/cached-queries";
-import { getCachedAssignmentQuestions, getRelatedAssignmentsCached } from "@/app/student/assignments/[id]/run/data";
+import { getCachedAssignmentQuestions, getRelatedAssignmentsCached, getQuestionTranslationMap, getAssignmentTranslations } from "@/app/student/assignments/[id]/run/data";
 
 export default async function PublicAssignmentPage({ 
   params,
@@ -81,6 +81,8 @@ export default async function PublicAssignmentPage({
   }
 
   const relatedAssignments = await getRelatedAssignmentsCached(assignment.id, assignment.tags, assignment.targetAudiences as string[]);
+  const questionTranslationsPromise = getQuestionTranslationMap(assignment.id);
+  const assignmentTranslationsPromise = getAssignmentTranslations(assignment.id);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -90,6 +92,8 @@ export default async function PublicAssignmentPage({
           initialAnswers={{}}
           extraDataPromise={Promise.resolve(assignment)}
           relatedAssignmentsPromise={Promise.resolve(relatedAssignments)}
+          questionTranslationsPromise={questionTranslationsPromise}
+          assignmentTranslationsPromise={assignmentTranslationsPromise}
           isGuest={true}
        />
     </div>
