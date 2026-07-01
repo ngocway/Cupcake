@@ -105,6 +105,7 @@
             z-index: 100;
             pointer-events: none;
             animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: none;
         }
 
         @keyframes bounceIn {
@@ -125,17 +126,22 @@
             transition: border-color 0.3s, background 0.3s;
             overflow: hidden;
             box-sizing: border-box;
-            min-width: 80px;
-            min-height: 80px;
+            /* width & height được gán bằng JS theo kích thước màn hình */
+            min-height: 60px;
+        }
+
+        /* Emoji giữ khung vuông */
+        .game-item-image.is-emoji {
+            height: var(--card-w, 130px);
         }
 
         .game-item-image img {
-            max-width: 140px;
-            max-height: 120px;
-            width: auto;
+            width: 100%;
             height: auto;
-            border-radius: 15px;
             display: block;
+            border-radius: 15px;
+            padding: 6px;
+            box-sizing: border-box;
         }
 
         .game-item-image.matched {
@@ -154,8 +160,8 @@
 
         .game-item-text {
             position: absolute;
-            font-size: 1.8rem;
-            padding: 12px 28px;
+            font-size: 1.1rem;
+            padding: 8px 15px;
             color: #fff;
             border-radius: 50px;
             box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 15px 20px rgba(0,0,0,0.2);
@@ -238,7 +244,7 @@
                 gap: 5px;
             }
             .title { font-size: 2rem; top: 10px; }
-            .game-item-image { width: 90px; height: 90px; font-size: 3.5rem; }
+            .game-item-image { font-size: 3.5rem; }
             .game-item-text { font-size: 1.5rem; padding: 10px 25px; }
         }
 
@@ -480,6 +486,39 @@
             init();
         }
 
+        // Tính chiều rộng đồng bộ cho tất cả thẻ ảnh dựa vào kích thước game area
+        function computeCardWidth() {
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            const W = gameAreaRect.width;
+            const isMobile = W <= 768;
+            const itemsCount = topicsData[currentTopic] ? topicsData[currentTopic].items.length : 6;
+
+            let cardW;
+            if (isMobile) {
+                // Mobile: 3 cột, chiều rộng thẻ ~90% chiều rộng cột
+                cardW = Math.min(160, Math.max(90, Math.floor((W / 3) * 0.9)));
+            } else {
+                // Desktop: chia đều theo số item, lấy ~88% chiều rộng cột
+                const colWidth = W / itemsCount;
+                cardW = Math.min(260, Math.max(130, Math.floor(colWidth * 0.88)));
+            }
+
+            // Áp chiều rộng lên tất cả thẻ ảnh đang tồn tại
+            elements.forEach(obj => {
+                if (obj.type === 'img') {
+                    obj.el.style.width = cardW + 'px';
+                    obj.el.style.setProperty('--card-w', cardW + 'px');
+                    if (obj.el.classList.contains('is-emoji')) {
+                        obj.el.style.height = cardW + 'px';
+                    } else {
+                        obj.el.style.height = 'auto';
+                    }
+                }
+            });
+
+            return cardW;
+        }
+
         // Calculate layout coordinates (used for starting positions and resizing)
         function calculateLayout() {
             const gameAreaRect = gameArea.getBoundingClientRect();
@@ -490,8 +529,8 @@
             const itemsCount = topicsData[currentTopic].items.length;
 
             elements.forEach(obj => {
-                const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
-                const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
+                const elemWidth = obj.el.offsetWidth || 130;
+                const elemHeight = obj.el.offsetHeight || (obj.el.classList.contains('is-emoji') ? elemWidth : 80);
 
                 if (isMobile) {
                     // Mobile grid layout: 3 columns x 2 rows
@@ -590,10 +629,19 @@
                     const imgNode = document.createElement('img');
                     imgNode.src = item.image;
                     imgEl.appendChild(imgNode);
+                    // Khi ảnh tải xong, cập nhật lại radius vật lý theo kích thước thực
+                    imgNode.onload = () => {
+                        const imgObj = elements.find(o => o.el === imgEl);
+                        if (imgObj) {
+                            const w = imgEl.offsetWidth || 130;
+                            const h = imgEl.offsetHeight || 80;
+                            imgObj.radius = Math.max(w, h) / 2 + 35;
+                            if (!imgObj.matched) updatePosition(imgObj);
+                        }
+                    };
                 } else {
                     imgEl.textContent = item.emoji;
-                    imgEl.style.width = '130px';
-                    imgEl.style.height = '130px';
+                    imgEl.classList.add('is-emoji');
                 }
                 imgEl.style.borderColor = item.imgColor || item.color;
                 imgEl.style.backgroundColor = (item.imgColor || item.color) + '22'; // 13% opacity for a nice pastel background tint
@@ -655,11 +703,14 @@
                 setupDrag(txtObj, imgEl, item.word);
             });
 
+            // Áp kích thước đồng bộ trước khi tính layout
+            computeCardWidth();
+
             // Set positions based on initial layout coordinates
             calculateLayout();
             elements.forEach(obj => {
-                const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
-                const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
+                const elemWidth = obj.el.offsetWidth || 130;
+                const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? elemWidth : 70);
                 obj.x = obj.startX + elemWidth / 2;
                 obj.y = obj.startY + elemHeight / 2;
                 obj.radius = Math.max(elemWidth, elemHeight) / 2 + 5;
@@ -677,7 +728,7 @@
             const W = gameAreaRect.width;
             const H = gameAreaRect.height;
             const isMobile = W <= 768;
-            const topMargin = isMobile ? 80 : 130;
+            const topMargin = isMobile ? 15 : 15;
             const padding = 15;
 
             // 1. Update velocities and check boundary bounces
@@ -878,7 +929,9 @@
 
                     // Snap the text elegantly below the image inside the game area
                     txtObj.x = imgObj.x;
-                    txtObj.y = imgObj.y + 65 + 35 - 15; // snapped offset
+                    const _imgH = imgEl.offsetHeight || 80;
+                    const _txtH = txtObj.el.offsetHeight || 55;
+                    txtObj.y = imgObj.y + (_imgH / 2) + (_txtH / 2) - 10; // snapped offset
                     
                     txtObj.el.style.transition = 'left 0.2s ease-out, top 0.2s ease-out';
                     updatePosition(txtObj);
@@ -966,17 +1019,22 @@
 
         // Prevent screen resizing from breaking positions
         window.addEventListener('resize', () => {
+            computeCardWidth();
             calculateLayout();
             elements.forEach(obj => {
                 if (obj.matched) {
                     if (obj.type === 'img') {
-                        obj.x = obj.startX + (obj.el.offsetWidth || 130) / 2;
-                        obj.y = obj.startY + (obj.el.offsetHeight || 130) / 2;
+                        const w = obj.el.offsetWidth || 130;
+                        const h = obj.el.offsetHeight || w;
+                        obj.x = obj.startX + w / 2;
+                        obj.y = obj.startY + h / 2;
                     } else {
                         const imgObj = elements.find(o => o.type === 'img' && o.id === obj.id);
                         if (imgObj) {
                             obj.x = imgObj.x;
-                            obj.y = imgObj.y + 65 + 35 - 15;
+                            const imgH = imgObj.el.offsetHeight || 80;
+                            const txtH = obj.el.offsetHeight || 55;
+                            obj.y = imgObj.y + (imgH / 2) + (txtH / 2) - 10;
                         }
                     }
                     updatePosition(obj);

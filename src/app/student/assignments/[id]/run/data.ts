@@ -137,7 +137,6 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
         relatedLessonsList = await prisma.lesson.findMany({
           where: {
             id: { in: parentLesson.relatedLessonIds },
-            status: 'PUBLIC',
             deletedAt: null
           },
           include: { teacher: { select: { id: true, name: true, image: true } } }
@@ -151,7 +150,6 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
         const currentAudiences = targetAudiences || [];
         relatedLessonsList = await prisma.lesson.findMany({
           where: {
-            status: 'PUBLIC',
             id: { not: parentLesson.id },
             deletedAt: null,
             ...(currentAudiences.length > 0 && {
