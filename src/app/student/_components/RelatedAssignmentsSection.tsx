@@ -5,7 +5,7 @@ import { Play } from "lucide-react";
 import Link from "next/link";
 import { DirectStartLink } from "./DirectStartLink";
 import { useTranslations } from "next-intl";
-import { ExerciseCard } from "@/components/public/ContentCards";
+import { ExerciseCard, LessonCard } from "@/components/public/ContentCards";
 import { LoginPromptModal } from "./LoginPromptModal";
 
 interface RelatedItem {
@@ -19,6 +19,7 @@ interface RelatedItem {
     image?: string | null;
   } | null;
   viewCount?: number | null;
+  type?: "LESSON" | "ASSIGNMENT";
 }
 
 function RelatedItemContent({ item }: { item: RelatedItem }) {
@@ -55,15 +56,24 @@ export function RelatedAssignmentsSection({
   const t = useTranslations("header");
   const [showLoginModal, setShowLoginModal] = useState(false);
 
+  const hasLessons = items.some(item => item.type === "LESSON");
+
   return (
     <div className="glass rounded-3xl p-5 md:p-8 space-y-6 shadow-xl w-full">
-      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{t("relatedContent")}</h4>
+      <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">
+        {hasLessons ? t("relatedLessons") : t("relatedContent")}
+      </h4>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-8 md:gap-y-12">
         {items.map((item) => {
-          const href = isGuest 
-            ? `/public/assignments/${item.slug || item.id}?direct=true`
-            : `/student/assignments/${item.slug || item.id}/run?direct=true`;
+          const isLesson = item.type === "LESSON";
+          const href = isLesson
+            ? (isGuest 
+                ? `/public/lessons/${item.slug || item.id}`
+                : `/student/lessons/${item.slug || item.id}`)
+            : (isGuest 
+                ? `/public/assignments/${item.slug || item.id}?direct=true`
+                : `/student/assignments/${item.slug || item.id}/run?direct=true`);
 
           if (isGuest) {
             return (
@@ -75,13 +85,17 @@ export function RelatedAssignmentsSection({
                 >
                   <RelatedItemContent item={item} />
                 </div>
-                {/* Desktop/Tablet version: Premium ExerciseCard — wrapped to intercept click */}
+                {/* Desktop/Tablet version: Premium Card — wrapped to intercept click */}
                 <div
                   className="hidden md:block w-full cursor-pointer"
                   onClick={() => setShowLoginModal(true)}
                 >
                   <div className="pointer-events-none">
-                    <ExerciseCard item={item as any} isLoggedIn={false} />
+                    {isLesson ? (
+                      <LessonCard item={item as any} isLoggedIn={false} />
+                    ) : (
+                      <ExerciseCard item={item as any} isLoggedIn={false} />
+                    )}
                   </div>
                 </div>
               </React.Fragment>
@@ -91,15 +105,28 @@ export function RelatedAssignmentsSection({
           return (
             <React.Fragment key={item.id}>
               {/* Mobile version: compact row layout */}
-              <DirectStartLink
-                id={item.slug || item.id}
-                className="flex md:hidden items-center gap-4 group relative bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full"
-              >
-                <RelatedItemContent item={item} />
-              </DirectStartLink>
-              {/* Desktop/Tablet version: Premium ExerciseCard */}
+              {isLesson ? (
+                <Link
+                  href={href}
+                  className="flex md:hidden items-center gap-4 group relative bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full"
+                >
+                  <RelatedItemContent item={item} />
+                </Link>
+              ) : (
+                <DirectStartLink
+                  id={item.slug || item.id}
+                  className="flex md:hidden items-center gap-4 group relative bg-white/50 dark:bg-slate-900/50 p-3 rounded-[5px] hover:bg-white dark:hover:bg-slate-900 transition-colors shadow-sm border border-slate-200/50 w-full"
+                >
+                  <RelatedItemContent item={item} />
+                </DirectStartLink>
+              )}
+              {/* Desktop/Tablet version: Premium Card */}
               <div className="hidden md:block w-full text-left">
-                <ExerciseCard item={item as any} isLoggedIn={true} />
+                {isLesson ? (
+                  <LessonCard item={item as any} isLoggedIn={true} />
+                ) : (
+                  <ExerciseCard item={item as any} isLoggedIn={true} />
+                )}
               </div>
             </React.Fragment>
           );

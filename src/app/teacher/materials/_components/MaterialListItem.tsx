@@ -69,9 +69,13 @@ const AUDIENCE_CONFIG: Record<string, { label: string; className: string }> = {
 
 const LEVEL_SHORT_LABELS: Record<string, string> = {
   'pre-a1-a1': 'Pre-A1/A1',
+  'beginner': 'Pre-A1/A1',
   'a2': 'A2',
+  'elementary': 'A2',
   'b1': 'B1',
+  'intermediate': 'B1',
   'b2': 'B2',
+  'upper-intermediate': 'B2',
 };
 
 export function MaterialListItem({ 

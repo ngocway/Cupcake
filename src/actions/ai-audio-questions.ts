@@ -2,6 +2,7 @@
 
 import openai from "@/lib/openai";
 import { QuestionType } from "@/components/quiz/types";
+import { getCefrPedagogicalGuidelines } from "@/lib/cefr-guidelines";
 
 interface AudioChunk {
   text: string;
@@ -31,6 +32,7 @@ export async function generateQuestionsFromAudioChunks(
     const totalQuestions = counts.mcq + counts.tf + counts.cloze + counts.matching;
     
     let taxonomyContext = "";
+    let guidelines = "";
     if (taxonomy) {
       taxonomyContext = `
       - Subject: ${taxonomy.subject}
@@ -38,11 +40,13 @@ export async function generateQuestionsFromAudioChunks(
       - Target Audience: ${taxonomy.audience}
       - Learning Goals: ${taxonomy.learningGoals.join(', ')}
       `;
+      guidelines = getCefrPedagogicalGuidelines(taxonomy.level);
     }
 
     const prompt = `You are an expert educational content creator.
     Your task is to generate EXACTLY ${totalQuestions} questions based on the following text chunks extracted from a reading passage.
     ${taxonomyContext ? `Context for difficulty and tone: ${taxonomyContext}` : ""}
+    ${guidelines ? `\n    CEFR LEVEL PEDAGOGICAL GUIDELINES (YOU MUST STRICTLY COMPLY WITH THESE FOR THE QUESTIONS AND DISTRACTORS):\n    ${guidelines}` : ""}
 
     Here are the chunks:
     ${chunks.map((c, idx) => `[Chunk ID: ${idx}] Text: "${c.text}" | AudioUrl: "${c.audioUrl}"`).join('\n')}

@@ -296,6 +296,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
                   value={length} 
                   onChange={e => setLength(e.target.value)}
                 >
+                  <option value="Siêu ngắn (~100 từ)">Siêu ngắn (~100 từ)</option>
                   <option value="Rất ngắn (~200 từ)">Rất ngắn (~200 từ)</option>
                   <option value="Trung bình (~400 từ)">Trung bình (~400 từ)</option>
                   <option value="Dài (~600 từ)">Dài (~600 từ)</option>

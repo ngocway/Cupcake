@@ -109,14 +109,71 @@ export const getAssignmentTranslations = async (assignmentId: string) => {
 
 export const getRelatedAssignmentsCached = async (assignmentId: string, assignmentTags: string | null, targetAudiences: string[]) => {
   return fetchWithRedis(`assignment:related:v2:${assignmentId}`, 900, async () => {
-    // 1. Fetch assignment with pre-computed related IDs and title
+    // 1. Fetch assignment with pre-computed related IDs, title and lesson relation
     const assignment = await prisma.assignment.findFirst({
       where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
-      select: { id: true, title: true, relatedAssignmentIds: true }
+      select: {
+        id: true,
+        title: true,
+        relatedAssignmentIds: true,
+        lesson: {
+          select: {
+            id: true,
+            relatedLessonIds: true
+          }
+        }
+      }
     });
 
     const actualId = assignment?.id ?? assignmentId;
     const currentTitle = assignment?.title || "";
+
+    // If this assignment is part of a lesson, recommend related lessons instead of exercises
+    if (assignment?.lesson) {
+      const parentLesson = assignment.lesson;
+      let relatedLessonsList: any[] = [];
+      
+      if (parentLesson.relatedLessonIds && parentLesson.relatedLessonIds.length > 0) {
+        relatedLessonsList = await prisma.lesson.findMany({
+          where: {
+            id: { in: parentLesson.relatedLessonIds },
+            status: 'PUBLIC',
+            deletedAt: null
+          },
+          include: { teacher: { select: { id: true, name: true, image: true } } }
+        });
+        
+        // Preserve AI-ranked order
+        const orderMap = new Map(parentLesson.relatedLessonIds.map((id, i) => [id, i]));
+        relatedLessonsList.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
+      } else {
+        // Fallback: fetch latest public lessons of the same level/targetAudience
+        const currentAudiences = targetAudiences || [];
+        relatedLessonsList = await prisma.lesson.findMany({
+          where: {
+            status: 'PUBLIC',
+            id: { not: parentLesson.id },
+            deletedAt: null,
+            ...(currentAudiences.length > 0 && {
+              targetAudiences: { hasSome: currentAudiences }
+            })
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { teacher: { select: { id: true, name: true, image: true } } }
+        });
+      }
+      
+      return relatedLessonsList.map(l => ({
+        id: l.id,
+        slug: l.slug,
+        title: l.title,
+        thumbnail: l.thumbnail,
+        teacher: l.teacher,
+        viewCount: l.viewsCount,
+        type: "LESSON"
+      }));
+    }
 
     // 2. Fetch sibling parts (e.g. Part 2, Part 3) of the same exercise topic
     const hasPartSuffix = /\s+Part\s+\d+$/i.test(currentTitle);

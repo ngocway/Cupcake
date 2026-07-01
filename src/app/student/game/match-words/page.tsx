@@ -31,7 +31,7 @@ function MatchWordsGameContent() {
           </div>
         )}
         <iframe 
-          src={`/games/match-words/index.html?age=${age}${gameId ? `&gameId=${gameId}` : ''}`} 
+          src={`/games/match-words/index.html?v=1.5&age=${age}${gameId ? `&gameId=${gameId}` : ''}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Match the Words Game"
           sandbox="allow-scripts allow-same-origin"

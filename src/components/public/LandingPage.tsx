@@ -117,18 +117,48 @@ const ExerciseList = memo(function ExerciseList({
   const studySubject = useContentStore(s => (s as any).studySubject)
   const studyLevel = useContentStore(s => (s as any).studyLevel)
   
+  const [isLoading, setIsLoading] = useState(false)
   const initializedKey = useRef('')
   const goalParam = searchParams.goal || searchParams.categoryId || ''
   const currentKey = `ex-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
 
   useEffect(() => {
-    if (initializedKey.current !== currentKey) {
+    // 1. Initial page load (use server-side resolved items)
+    if (!initializedKey.current) {
       setExercises(serverItems)
       setHasMoreEx(serverHasMore ?? serverItems.length >= 12)
       setExPage(1)
       initializedKey.current = currentKey
+      return
     }
-  }, [currentKey, serverItems, serverHasMore, setExercises, setHasMoreEx, setExPage])
+
+    // 2. Subsequent client-side filter updates
+    if (initializedKey.current !== currentKey) {
+      setIsLoading(true)
+      
+      const qs = new URLSearchParams()
+      qs.set('type', 'exercises')
+      qs.set('page', '1')
+      if (goalParam) qs.set('goal', goalParam)
+      if (searchKeyword) qs.set('search', searchKeyword)
+      if (userType) qs.set('userType', userType)
+      if (studySubject) qs.set('subject', studySubject)
+      if (studyLevel) qs.set('level', studyLevel)
+
+      fetch(`/api/feed?${qs.toString()}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.items) {
+            setExercises(data.items)
+            setHasMoreEx(data.hasMore ?? data.items.length >= 12)
+            setExPage(1)
+            initializedKey.current = currentKey
+          }
+        })
+        .catch(e => console.error("Failed to fetch client-side exercises:", e))
+        .finally(() => setIsLoading(false))
+    }
+  }, [currentKey, serverItems, serverHasMore, setExercises, setHasMoreEx, setExPage, goalParam, searchKeyword, userType, studySubject, studyLevel])
 
   const displayItems = initializedKey.current === currentKey ? exercises : serverItems
 
@@ -168,6 +198,20 @@ const ExerciseList = memo(function ExerciseList({
     if (bottomRef.current) observer.observe(bottomRef.current)
     return () => observer.disconnect()
   }, [hasMoreEx, isFetchingMore, exPage, searchParams, userType, studySubject, studyLevel, searchKeyword, currentKey, addExercises, setHasMoreEx, setExPage])
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="space-y-4">
+            <div className="aspect-video w-full bg-slate-100 dark:bg-slate-800/80 rounded-2xl animate-pulse" />
+            <div className="h-5 w-3/4 bg-slate-100 dark:bg-slate-800/80 rounded-xl animate-pulse" />
+            <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-800/80 rounded-xl animate-pulse" />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
   if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
@@ -214,18 +258,48 @@ const LessonList = memo(function LessonList({
   const studySubject = useContentStore(s => (s as any).studySubject)
   const studyLevel = useContentStore(s => (s as any).studyLevel)
   
+  const [isLoading, setIsLoading] = useState(false)
   const initializedKey = useRef('')
   const goalParam = searchParams.goal || searchParams.categoryId || ''
   const currentKey = `le-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
 
   useEffect(() => {
-    if (initializedKey.current !== currentKey) {
+    // 1. Initial page load (use server-side resolved items)
+    if (!initializedKey.current) {
       setLessons(serverItems)
       setHasMoreLe(serverHasMore ?? serverItems.length >= 12)
       setLePage(1)
       initializedKey.current = currentKey
+      return
     }
-  }, [currentKey, serverItems, serverHasMore, setLessons, setHasMoreLe, setLePage])
+
+    // 2. Subsequent client-side filter updates
+    if (initializedKey.current !== currentKey) {
+      setIsLoading(true)
+      
+      const qs = new URLSearchParams()
+      qs.set('type', 'lessons')
+      qs.set('page', '1')
+      if (goalParam) qs.set('goal', goalParam)
+      if (searchKeyword) qs.set('search', searchKeyword)
+      if (userType) qs.set('userType', userType)
+      if (studySubject) qs.set('subject', studySubject)
+      if (studyLevel) qs.set('level', studyLevel)
+
+      fetch(`/api/feed?${qs.toString()}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.items) {
+            setLessons(data.items)
+            setHasMoreLe(data.hasMore ?? data.items.length >= 12)
+            setLePage(1)
+            initializedKey.current = currentKey
+          }
+        })
+        .catch(e => console.error("Failed to fetch client-side lessons:", e))
+        .finally(() => setIsLoading(false))
+    }
+  }, [currentKey, serverItems, serverHasMore, setLessons, setHasMoreLe, setLePage, goalParam, searchKeyword, userType, studySubject, studyLevel])
 
   const displayItems = initializedKey.current === currentKey ? lessons : serverItems
 
@@ -265,6 +339,20 @@ const LessonList = memo(function LessonList({
     if (bottomRef.current) observer.observe(bottomRef.current)
     return () => observer.disconnect()
   }, [hasMoreLe, isFetchingMore, lePage, searchParams, userType, studySubject, studyLevel, searchKeyword, currentKey, addLessons, setHasMoreLe, setLePage])
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="space-y-4">
+            <div className="aspect-video w-full bg-slate-100 dark:bg-slate-800/80 rounded-2xl animate-pulse" />
+            <div className="h-5 w-3/4 bg-slate-100 dark:bg-slate-800/80 rounded-xl animate-pulse" />
+            <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-800/80 rounded-xl animate-pulse" />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
   if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
@@ -750,6 +838,24 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       setActiveTab(tabs[0]);
     }
   }, [tabs, activeTab]);
+
+  const [config, setConfig] = useState<any>(null);
+  useEffect(() => {
+    getOnboardingConfig().then(setConfig).catch(console.error);
+  }, []);
+
+  const availableLevels = useMemo(() => {
+    const subjectData = config?.subjects?.find((s: any) => s.id === studySubject);
+    const ageGroupData = subjectData?.ageGroups?.find((a: any) => a.id === studyAgeGroup);
+    return ageGroupData?.levels || [];
+  }, [config, studySubject, studyAgeGroup]);
+
+  const handleSelectLevel = (levelId: string) => {
+    const newLevel = levelId === "all" ? "" : levelId;
+    setStudyLevel(newLevel);
+    document.cookie = `study_level=${newLevel}; path=/; max-age=31536000; samesite=lax`;
+    updateAllPreferences({ studyLevel: newLevel }).catch(console.error);
+  };
 
   // Age group selector filter for Flashcards/Games (only for Kid, Teen, Learner)
   const [selectedAgeFilter, setSelectedAgeFilter] = useState<string>("");
@@ -1340,6 +1446,41 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
                   }`}
                 >
                   {pill.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pill Selector for Levels (Pre-A1/A1, A2, etc.) */}
+        {!isKindergarten && (activeTab === "lessons" || activeTab === "exercises") && availableLevels.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
+              {locale === "vi" ? "Cấp độ:" : "Level:"}
+            </span>
+            <button
+              onClick={() => handleSelectLevel("all")}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
+                !studyLevel
+                  ? "bg-slate-700 text-white border-transparent shadow-md scale-105"
+                  : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
+              }`}
+            >
+              {locale === "vi" ? "Tất cả" : "All"}
+            </button>
+            {availableLevels.map((level: any) => {
+              const isActive = studyLevel === level.id;
+              return (
+                <button
+                  key={level.id}
+                  onClick={() => handleSelectLevel(level.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
+                    isActive
+                      ? "bg-primary text-white border-transparent shadow-md scale-105"
+                      : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {level.label}
                 </button>
               );
             })}

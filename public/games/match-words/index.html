@@ -115,17 +115,27 @@
         .game-item-image {
             position: absolute;
             font-size: 5rem;
-            width: 130px;
-            height: 130px;
             display: flex;
             justify-content: center;
             align-items: center;
             background: rgba(255, 255, 255, 0.7);
             border: 5px dashed #ff9ff3;
-            border-radius: 50%;
+            border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
             transition: border-color 0.3s, background 0.3s;
             overflow: hidden;
+            box-sizing: border-box;
+            min-width: 80px;
+            min-height: 80px;
+        }
+
+        .game-item-image img {
+            max-width: 140px;
+            max-height: 120px;
+            width: auto;
+            height: auto;
+            border-radius: 15px;
+            display: block;
         }
 
         .game-item-image.matched {
@@ -579,12 +589,11 @@
                 if (item.image) {
                     const imgNode = document.createElement('img');
                     imgNode.src = item.image;
-                    imgNode.style.width = '100%';
-                    imgNode.style.height = '100%';
-                    imgNode.style.objectFit = 'cover';
                     imgEl.appendChild(imgNode);
                 } else {
                     imgEl.textContent = item.emoji;
+                    imgEl.style.width = '130px';
+                    imgEl.style.height = '130px';
                 }
                 imgEl.style.borderColor = item.imgColor || item.color;
                 imgEl.style.backgroundColor = (item.imgColor || item.color) + '22'; // 13% opacity for a nice pastel background tint
@@ -709,16 +718,20 @@
             // 2. Resolve element-to-element collisions (bouncing off each other)
             for (let i = 0; i < elements.length; i++) {
                 const obj1 = elements[i];
-                if (obj1.matched) continue;
 
                 for (let j = i + 1; j < elements.length; j++) {
                     const obj2 = elements[j];
-                    if (obj2.matched) continue;
+
+                    // If both are matched, they stay still
+                    if (obj1.matched && obj2.matched) continue;
 
                     // Allow texts and images to float over each other without bouncing
-                    // This prevents overcrowding in the game area
-                    if (!obj1.dragging && !obj2.dragging && obj1.type !== obj2.type) {
-                        continue;
+                    // ONLY if both are NOT matched.
+                    // If one is matched, we want ALL floating items to bounce off it to prevent overlapping matched items.
+                    if (!obj1.matched && !obj2.matched) {
+                        if (!obj1.dragging && !obj2.dragging && obj1.type !== obj2.type) {
+                            continue;
+                        }
                     }
 
                     const dx = obj2.x - obj1.x;
@@ -731,45 +744,66 @@
                         const nx = dx / (dist || 1);
                         const ny = dy / (dist || 1);
 
-                        if (!obj1.dragging && !obj2.dragging) {
-                            // Both are floating: push apart equally
-                            obj1.x -= nx * overlap * 0.5;
-                            obj1.y -= ny * overlap * 0.5;
-                            obj2.x += nx * overlap * 0.5;
-                            obj2.y += ny * overlap * 0.5;
-
-                            // Elastic bounce velocities
-                            const kx = obj1.vx - obj2.vx;
-                            const ky = obj1.vy - obj2.vy;
-                            const p = kx * nx + ky * ny;
-
-                            if (p > 0) {
-                                obj1.vx -= p * nx;
-                                obj1.vy -= p * ny;
-                                obj2.vx += p * nx;
-                                obj2.vy += p * ny;
-                            }
-                        } else if (obj1.dragging) {
-                            // obj1 is dragged. If obj1 is text and obj2 is image, allow overlap.
-                            if (obj1.type === 'txt' && obj2.type === 'img') {
-                                // Allow overlap
-                            } else {
-                                // Push obj2 away
+                        if (obj1.matched) {
+                            // obj1 is static. Push obj2 away.
+                            if (!obj2.dragging) {
                                 obj2.x += nx * overlap;
                                 obj2.y += ny * overlap;
+                                // Reverse velocity (bounce)
                                 obj2.vx = nx * Math.abs(obj2.vx);
                                 obj2.vy = ny * Math.abs(obj2.vy);
                             }
-                        } else if (obj2.dragging) {
-                            // obj2 is dragged. If obj2 is text and obj1 is image, allow overlap.
-                            if (obj2.type === 'txt' && obj1.type === 'img') {
-                                // Allow overlap
-                            } else {
-                                // Push obj1 away
+                        } else if (obj2.matched) {
+                            // obj2 is static. Push obj1 away.
+                            if (!obj1.dragging) {
                                 obj1.x -= nx * overlap;
                                 obj1.y -= ny * overlap;
+                                // Reverse velocity (bounce)
                                 obj1.vx = -nx * Math.abs(obj1.vx);
                                 obj1.vy = -ny * Math.abs(obj1.vy);
+                            }
+                        } else {
+                            // Neither is matched (both are active: dragging or floating)
+                            if (!obj1.dragging && !obj2.dragging) {
+                                // Both are floating: push apart equally
+                                obj1.x -= nx * overlap * 0.5;
+                                obj1.y -= ny * overlap * 0.5;
+                                obj2.x += nx * overlap * 0.5;
+                                obj2.y += ny * overlap * 0.5;
+
+                                // Elastic bounce velocities
+                                const kx = obj1.vx - obj2.vx;
+                                const ky = obj1.vy - obj2.vy;
+                                const p = kx * nx + ky * ny;
+
+                                if (p > 0) {
+                                    obj1.vx -= p * nx;
+                                    obj1.vy -= p * ny;
+                                    obj2.vx += p * nx;
+                                    obj2.vy += p * ny;
+                                }
+                            } else if (obj1.dragging) {
+                                // obj1 is dragged. If obj1 is text and obj2 is image, allow overlap.
+                                if (obj1.type === 'txt' && obj2.type === 'img') {
+                                    // Allow overlap
+                                } else {
+                                    // Push obj2 away
+                                    obj2.x += nx * overlap;
+                                    obj2.y += ny * overlap;
+                                    obj2.vx = nx * Math.abs(obj2.vx);
+                                    obj2.vy = ny * Math.abs(obj2.vy);
+                                }
+                            } else if (obj2.dragging) {
+                                // obj2 is dragged. If obj2 is text and obj1 is image, allow overlap.
+                                if (obj2.type === 'txt' && obj1.type === 'img') {
+                                    // Allow overlap
+                                } else {
+                                    // Push obj1 away
+                                    obj1.x -= nx * overlap;
+                                    obj1.y -= ny * overlap;
+                                    obj1.vx = -nx * Math.abs(obj1.vx);
+                                    obj1.vy = -ny * Math.abs(obj1.vy);
+                                }
                             }
                         }
                     }

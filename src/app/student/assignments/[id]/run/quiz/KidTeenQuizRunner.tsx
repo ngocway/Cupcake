@@ -696,7 +696,7 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
   if (!relatedAssignments || relatedAssignments.length === 0) return null;
   return (
     <RelatedAssignmentsSection 
-      items={relatedAssignments.map((a: any) => ({ ...a, type: "ASSIGNMENT" as const }))} 
+      items={relatedAssignments.map((a: any) => ({ ...a, type: a.type || ("ASSIGNMENT" as const) }))} 
       isGuest={isGuest}
       onNavigate={onNavigate}
     />
@@ -772,7 +772,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.4;
+    bgMusic.volume = isMuted ? 0 : 0.2;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -823,7 +823,7 @@ export default function KidTeenQuizRunner({
   // Update volume when mute state changes or hint audio state changes
   useEffect(() => {
     if (bgMusicRef.current) {
-      bgMusicRef.current.volume = isMuted ? 0 : (isHintPlaying ? 0.08 : 0.4);
+      bgMusicRef.current.volume = isMuted ? 0 : (isHintPlaying ? 0.05 : 0.2);
     }
   }, [isMuted, isHintPlaying]);
 

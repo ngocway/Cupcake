@@ -708,7 +708,7 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
   if (!relatedAssignments || relatedAssignments.length === 0) return null;
   return (
     <RelatedAssignmentsSection 
-      items={relatedAssignments.map((a: any) => ({ ...a, type: "ASSIGNMENT" as const }))} 
+      items={relatedAssignments.map((a: any) => ({ ...a, type: a.type || ("ASSIGNMENT" as const) }))} 
       isGuest={isGuest}
       onNavigate={onNavigate}
     />

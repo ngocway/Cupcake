@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from "react"
 import { toast } from "sonner"
-import { Plus, Edit, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, Folders, ArrowRightLeft, Pencil, Check, Sparkles, X, Wand2, Volume2, Play } from "lucide-react"
+import { Plus, Edit, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, Folders, ArrowRightLeft, Pencil, Check, Sparkles, X, Wand2, Volume2, Play, AlertCircle, Globe } from "lucide-react"
 import { searchImagesAction } from "@/actions/image-search-actions"
 import { uploadUrlMedia } from "@/actions/upload-actions"
 import { useRouter } from "next/navigation"
@@ -25,7 +25,12 @@ import {
   generateSingleMatchWordItem, 
   generateAudioForMatchWordItem,
   generateMatchWordImageAction,
-  generateMatchWordAudioAction 
+  generateMatchWordAudioAction,
+  generateMatchWordGameThumbnailAction,
+  generateMatchWordImagenImageAction,
+  generateMatchWordCombinedAudioAction,
+  createMatchWordGameWithAI,
+  createMatchWordTopicWithAI
 } from "@/actions/admin-match-words-ai"
 
 export function AdminMatchWordsClient({ 
@@ -76,8 +81,16 @@ export function AdminMatchWordsClient({
 
   // --- Modals State ---
   const [showGameModal, setShowGameModal] = useState(false)
-  const [gameForm, setGameForm] = useState({ name: "" })
+  const [gameForm, setGameForm] = useState({ name: "" }) // gameForm.name stores the new Game (MatchWordTopic) name
   const [gameLevel, setGameLevel] = useState<number>(1)
+  const [gameDraftWords, setGameDraftWords] = useState<{ word: string; emoji: string }[]>([])
+  const [isGeneratingGameDraft, setIsGeneratingGameDraft] = useState(false)
+  const [newGameDraftWord, setNewGameDraftWord] = useState("")
+  const [newGameDraftEmoji, setNewGameDraftEmoji] = useState("✨")
+  const [gameTopicEmoji, setGameTopicEmoji] = useState("🎮")
+  const [modalAgeGroup, setModalAgeGroup] = useState<"2-5" | "6-12" | "teen" | "readers">("2-5")
+  const [selectedExistingGameId, setSelectedExistingGameId] = useState<string>("")
+  const [newGameContainerName, setNewGameContainerName] = useState<string>("")
 
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [topicForm, setTopicForm] = useState({ name: "", icon: "🐶" })
@@ -90,12 +103,14 @@ export function AdminMatchWordsClient({
     text: string;
     current: number;
     total: number;
+    error?: string;
   } | null>(null)
 
   const [showMoveTopicModal, setShowMoveTopicModal] = useState(false)
   const [topicToMove, setTopicToMove] = useState<{id: string, name: string} | null>(null)
   const [targetGameId, setTargetGameId] = useState<string>("")
   const [targetLevel, setTargetLevel] = useState<number | null>(null)
+  const [targetAgeGroup, setTargetAgeGroup] = useState<"2-5" | "6-12" | "teen" | "readers">("2-5")
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
   const [editingTopicForm, setEditingTopicForm] = useState({ name: "", icon: "" })
 
@@ -114,23 +129,181 @@ export function AdminMatchWordsClient({
   const [topicAudioProgress, setTopicAudioProgress] = useState<{current: number, total: number} | null>(null)
 
   // --- Game Actions ---
-  const handleSaveGame = () => {
-    if (!gameForm.name) return toast.error("Vui lòng nhập tên Game")
-    startTransition(async () => {
-      const res = await createMatchWordGame({
-        name: gameForm.name,
-        ageGroup: activeTab,
-        level: gameLevel
-      })
-      if (res.success) {
-        toast.success("Tạo Game thành công")
-        setShowGameModal(false)
-        setGameForm({ name: "" })
-        setGameLevel(1)
-        if (!selectedGameId) setSelectedGameId(res.game?.id || null)
-        router.refresh()
+  const handleAIGenerateGameDraft = async () => {
+    if (!gameForm.name.trim()) return toast.error("Vui lòng nhập tên Game trước")
+    setIsGeneratingGameDraft(true)
+    try {
+      const res = await generateMatchWordVocabList(modalAgeGroup, gameForm.name.trim(), gameLevel, 6)
+      if (res.success && res.vocabularies) {
+        setGameDraftWords(res.vocabularies)
+        if (res.topicEmoji) setGameTopicEmoji(res.topicEmoji)
+        toast.success("Đã gợi ý 6 từ tiếng Anh (không trùng lặp với game cũ)!")
       } else {
-        toast.error("Lỗi: " + res.error)
+        toast.error(res.error || "Không thể tạo từ gợi ý.")
+      }
+    } catch (err: any) {
+      toast.error("Lỗi: " + err.message)
+    } finally {
+      setIsGeneratingGameDraft(false)
+    }
+  }
+
+  const handleAddGameDraftWord = () => {
+    if (!newGameDraftWord.trim()) return toast.error("Vui lòng nhập từ vựng")
+    const wordLower = newGameDraftWord.trim().toLowerCase()
+    if (gameDraftWords.some(d => d.word === wordLower)) {
+      return toast.error("Từ này đã có trong danh sách")
+    }
+    setGameDraftWords(prev => [...prev, { word: wordLower, emoji: newGameDraftEmoji }])
+    setNewGameDraftWord("")
+    setNewGameDraftEmoji("✨")
+  }
+
+  const handleRemoveGameDraftWord = (index: number) => {
+    setGameDraftWords(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSaveGame = () => {
+    if (selectedExistingGameId === "NEW_CONTAINER" && !newGameContainerName.trim()) {
+      return toast.error("Vui lòng nhập tên chủ đề mới")
+    }
+    if (!selectedExistingGameId) {
+      return toast.error("Vui lòng chọn một chủ đề")
+    }
+    if (!gameForm.name.trim()) {
+      return toast.error("Vui lòng nhập tên Game")
+    }
+    if (gameDraftWords.length !== 6) {
+      return toast.error("Danh sách từ vựng phải có đúng 6 từ để bắt đầu tạo game.")
+    }
+
+    const isNewContainer = selectedExistingGameId === "NEW_CONTAINER"
+
+    startTransition(async () => {
+      const totalSteps = isNewContainer ? 8 : 7
+      
+      setAiProgress({
+        active: true,
+        text: isNewContainer ? "Đang tạo ảnh đại diện cho chủ đề..." : "Đang tạo âm thanh phát âm cho 6 từ...",
+        current: 0,
+        total: totalSteps
+      })
+
+      try {
+        let thumbnailUrl = ""
+        let currentStep = 0
+
+        if (isNewContainer) {
+          // Step 1: Generate Game Thumbnail
+          const thumbRes = await generateMatchWordGameThumbnailAction(newGameContainerName.trim())
+          if (!thumbRes.success || !thumbRes.thumbnailUrl) {
+            throw new Error(thumbRes.error || "Không tạo được ảnh đại diện chủ đề")
+          }
+          thumbnailUrl = thumbRes.thumbnailUrl
+          currentStep = 1
+          
+          setAiProgress({
+            active: true,
+            text: "Đang tạo âm thanh phát âm cho 6 từ...",
+            current: currentStep,
+            total: totalSteps
+          })
+        }
+
+        // Step 2: Generate Combined Audio & Split
+        const wordsList = gameDraftWords.map(w => w.word)
+        const audioRes = await generateMatchWordCombinedAudioAction(wordsList, modalAgeGroup)
+        if (!audioRes.success || !audioRes.audioUrls || audioRes.audioUrls.length !== 6) {
+          throw new Error(audioRes.error || "Không tạo được âm thanh phát âm")
+        }
+        const audioUrls = audioRes.audioUrls
+        currentStep++
+
+        // Step 3: Loop and generate 6 images
+        const imageUrls: string[] = []
+        for (let i = 0; i < 6; i++) {
+          const wordObj = gameDraftWords[i]
+          setAiProgress({
+            active: true,
+            text: `[${i + 1}/6] Đang sinh ảnh minh họa cho "${wordObj.word}"...`,
+            current: currentStep + i,
+            total: totalSteps
+          })
+
+          const imgRes = await generateMatchWordImagenImageAction(wordObj.word, modalAgeGroup)
+          if (!imgRes.success || !imgRes.imageUrl) {
+            throw new Error(imgRes.error || `Không tạo được ảnh cho từ "${wordObj.word}"`)
+          }
+          imageUrls.push(imgRes.imageUrl)
+        }
+        currentStep += 6
+
+        setAiProgress({
+          active: true,
+          text: "Đang lưu tất cả dữ liệu vào cơ sở dữ liệu...",
+          current: currentStep,
+          total: totalSteps
+        })
+
+        let saveRes: any
+        if (isNewContainer) {
+          // Call backend to create the game, topic, and items
+          saveRes = await createMatchWordGameWithAI({
+            name: newGameContainerName.trim(),
+            ageGroup: modalAgeGroup,
+            level: gameLevel,
+            thumbnailUrl,
+            topicName: gameForm.name.trim(),
+            vocabularies: gameDraftWords,
+            imageUrls,
+            audioUrls
+          })
+        } else {
+          // Call backend to create only the topic and items inside existing game
+          saveRes = await createMatchWordTopicWithAI({
+            gameId: selectedExistingGameId,
+            ageGroup: modalAgeGroup,
+            name: gameForm.name.trim(),
+            vocabularies: gameDraftWords,
+            imageUrls,
+            audioUrls
+          })
+        }
+
+        if (saveRes.success) {
+          toast.success("Tạo game và tài nguyên AI thành công!")
+          setShowGameModal(false)
+          
+          // Switch to target age group tab and filter level
+          setActiveTab(modalAgeGroup)
+          setFilterLevel(gameLevel)
+
+          const targetGameId = isNewContainer
+                             ? (saveRes.game?.id || null)
+                             : selectedExistingGameId
+          if (targetGameId) {
+            setSelectedGameId(targetGameId)
+          }
+
+          setGameForm({ name: "" })
+          setGameLevel(1)
+          setGameDraftWords([])
+          setNewGameContainerName("")
+          setSelectedExistingGameId("")
+          router.refresh()
+          setAiProgress(null) // Only hide on success!
+        } else {
+          throw new Error("Lỗi lưu dữ liệu: " + saveRes.error)
+        }
+      } catch (err: any) {
+        toast.error("Lỗi tiến trình AI: " + err.message)
+        setAiProgress({
+          active: true,
+          text: "Gặp lỗi khi tạo Game bằng AI",
+          current: 0,
+          total: 0,
+          error: err.message || "Đã xảy ra lỗi không xác định"
+        })
       }
     })
   }
@@ -672,23 +845,22 @@ export function AdminMatchWordsClient({
                 </div>
               )}
 
-              <button 
-                onClick={() => setShowGameModal(true)}
-                className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl transition-colors flex items-center gap-2 font-medium border border-neutral-700"
-                title="Thêm Game Mới"
-              >
-                <Plus className="w-4 h-4 text-blue-400" /> <span className="text-sm">Thêm Game</span>
-              </button>
             </div>
 
-            {selectedGame && (
-              <button 
-                onClick={() => setShowTopicModal(true)} 
-                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
-              >
-                <Plus className="w-5 h-5" /> Thêm Chủ Đề
-              </button>
-            )}
+            <button 
+              onClick={() => {
+                setTargetAgeGroup(activeTab);
+                setGameLevel(filterLevel || 1);
+                setSelectedExistingGameId("");
+                setNewGameContainerName("");
+                setGameForm({ name: "" });
+                setGameDraftWords([]);
+                setShowGameModal(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition-colors shadow-lg"
+            >
+              <Plus className="w-5 h-5" /> Thêm Game
+            </button>
           </div>
 
           {selectedGame ? (
@@ -801,6 +973,8 @@ export function AdminMatchWordsClient({
                             <button 
                               onClick={() => {
                                   setTopicToMove({ id: topic.id, name: topic.name })
+                                  setTargetAgeGroup(activeTab)
+                                  setTargetLevel(null)
                                   setTargetGameId("")
                                   setShowMoveTopicModal(true)
                               }}
@@ -819,12 +993,7 @@ export function AdminMatchWordsClient({
                           {topic.items?.map((item: any) => (
                             <div 
                               key={item.id} 
-                              onClick={() => {
-                                setSelectedItemId(item.id);
-                                setItemForm({ word: item.word, emoji: item.emoji || "", imageUrl: item.imageUrl || "" });
-                                handleSearchImage(item.word);
-                              }}
-                              className={`bg-neutral-800 cursor-pointer rounded-xl p-3 flex flex-col items-center relative group border transition-all ${
+                              className={`bg-neutral-800 rounded-xl p-3 flex flex-col items-center relative group border transition-all ${
                                 selectedItemIds.includes(item.id) 
                                   ? "border-indigo-500 ring-2 ring-indigo-500/30" 
                                   : "border-neutral-700 hover:border-indigo-500"
@@ -869,9 +1038,20 @@ export function AdminMatchWordsClient({
                                 )}
                               </div>
                               <span className="font-bold text-neutral-200 text-center text-sm">{item.word}</span>
-                              <div className="absolute inset-0 bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none flex items-center justify-center">
-                                <div className="absolute bottom-2 text-xs font-bold text-indigo-300 bg-black/60 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">Đổi Ảnh</div>
-                              </div>
+                              
+                              {/* Web Image Search Button */}
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItemId(item.id);
+                                  setItemForm({ word: item.word, emoji: item.emoji || "", imageUrl: item.imageUrl || "" });
+                                  handleSearchImage(item.word);
+                                }}
+                                className="absolute bottom-2 right-2 p-1.5 bg-indigo-600/80 hover:bg-indigo-600 text-white border border-indigo-500 rounded-lg shadow-sm transition-all active:scale-95 z-10 opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                                title="Tìm ảnh từ Internet"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           ))}
                           {topic.items?.length === 0 && <p className="text-neutral-500 text-sm col-span-full">Chưa có từ vựng nào.</p>}
@@ -891,42 +1071,213 @@ export function AdminMatchWordsClient({
       </div>
 
       {/* GAME MODAL */}
-      {showGameModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-sm shadow-2xl">
-            <h3 className="text-xl font-bold text-white mb-4">Thêm Bộ Game Mới</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Tên Bộ Game</label>
-                <input value={gameForm.name} onChange={e => setGameForm(p => ({...p, name: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Ví dụ: Game Mức Cơ Bản" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-neutral-400 mb-2">Level</label>
-                <div className="flex gap-2 flex-wrap">
-                  {[1,2,3,4,5].map(lvl => (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() => setGameLevel(lvl)}
-                      className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
-                        gameLevel === lvl
-                          ? "bg-blue-600 text-white"
-                          : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border border-neutral-700"
-                      }`}
-                    >
-                      Level {lvl}
-                    </button>
-                  ))}
+      {showGameModal && (() => {
+        const targetAgeGroupGames = targetAgeGroup === "2-5" ? initialGames2to5
+                                  : targetAgeGroup === "6-12" ? initialGames6to12
+                                  : targetAgeGroup === "teen" ? initialGamesTeen
+                                  : initialGamesReaders;
+        const eligibleGames = targetAgeGroupGames.filter((g: any) => (g.level ?? 1) === gameLevel);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-2xl w-full max-w-md shadow-2xl transition-all">
+              <h3 className="text-xl font-bold text-white mb-4">Thêm Game Mới</h3>
+              <div className="space-y-4">
+                {/* 1. Select Age Group */}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Độ Tuổi</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { key: "2-5", label: "Tuổi 2-5" },
+                      { key: "6-12", label: "Tuổi 6-12" },
+                      { key: "teen", label: "Teenagers" },
+                      { key: "readers", label: "Advanced Readers" }
+                    ].map(item => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          setTargetAgeGroup(item.key as any);
+                          setSelectedExistingGameId("");
+                          setNewGameContainerName("");
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                          targetAgeGroup === item.key
+                            ? "bg-blue-600 text-white border-blue-500 shadow-md"
+                            : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border-neutral-700"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button onClick={() => setShowGameModal(false)} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
-                <button onClick={handleSaveGame} disabled={isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50">Lưu Game</button>
+
+                {/* 2. Select Level */}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-2">Chọn Level</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[1,2,3,4,5].map(lvl => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => {
+                          setGameLevel(lvl);
+                          setSelectedExistingGameId("");
+                          setNewGameContainerName("");
+                        }}
+                        className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+                          gameLevel === lvl
+                            ? "bg-blue-600 text-white"
+                            : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border border-neutral-700"
+                        }`}
+                      >
+                        Level {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Select Topic Container */}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Chủ Đề</label>
+                  <div className="relative">
+                    <select
+                      value={selectedExistingGameId}
+                      onChange={(e) => {
+                        setSelectedExistingGameId(e.target.value);
+                        if (e.target.value !== "NEW_CONTAINER") {
+                          setNewGameContainerName("");
+                        }
+                      }}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                    >
+                      <option value="" disabled>-- Chọn Chủ Đề --</option>
+                      {eligibleGames.map((g: any) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                      <option value="NEW_CONTAINER" className="text-blue-400 font-bold">
+                        + Tạo chủ đề mới
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 4. New Topic Container Name (conditional) */}
+                {selectedExistingGameId === "NEW_CONTAINER" && (
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-400 mb-1.5">Tên chủ đề mới (ví dụ: Colors and Shapes)</label>
+                    <input 
+                      value={newGameContainerName} 
+                      onChange={e => setNewGameContainerName(e.target.value)} 
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all" 
+                      placeholder="Nhập tên chủ đề mới" 
+                    />
+                  </div>
+                )}
+
+                {/* 5. Topic Name (Tên Game) */}
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-neutral-400 mb-1.5">Tên Game (Ví dụ: Colors)</label>
+                    <input 
+                      value={gameForm.name} 
+                      onChange={e => setGameForm(p => ({...p, name: e.target.value}))} 
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-all" 
+                      placeholder="Ví dụ: Colors" 
+                    />
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={handleAIGenerateGameDraft} 
+                    disabled={isGeneratingGameDraft || !gameForm.name.trim()} 
+                    className="px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 hover:border-blue-500/50 rounded-xl flex items-center justify-center gap-1.5 font-bold transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed h-[46px]"
+                    title="Gợi ý 6 từ bằng AI không trùng lặp"
+                  >
+                    {isGeneratingGameDraft ? (
+                      <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    <span>AI Gợi Ý 6 Từ</span>
+                  </button>
+                </div>
+
+                {/* Draft words list */}
+                {gameDraftWords.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-xs font-medium text-neutral-400">Danh sách từ nháp ({gameDraftWords.length}/6)</label>
+                      {gameDraftWords.length !== 6 && <span className="text-xs text-amber-400 font-medium">⚠️ Cần có đúng 6 từ</span>}
+                    </div>
+                    <div className="bg-neutral-950/80 border border-neutral-800 rounded-xl p-3 max-h-40 overflow-y-auto flex flex-wrap gap-2">
+                      {gameDraftWords.map((item, idx) => (
+                        <span 
+                          key={idx} 
+                          className="inline-flex items-center gap-1 bg-neutral-800 text-neutral-200 px-2.5 py-1 rounded-lg text-sm border border-neutral-700 font-medium group"
+                        >
+                          <span>{item.emoji}</span>
+                          <span>{item.word}</span>
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveGameDraftWord(idx)} 
+                            className="text-neutral-500 hover:text-red-400 transition-colors ml-1 focus:outline-none"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add manual draft word */}
+                {gameDraftWords.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-neutral-800/55">
+                    <label className="block text-xs font-medium text-neutral-400 mb-1.5">Thêm nhanh từ vào nháp</label>
+                    <div className="flex gap-2">
+                      <input 
+                        value={newGameDraftEmoji} 
+                        onChange={e => setNewGameDraftEmoji(e.target.value)} 
+                        className="w-12 text-center bg-neutral-950 border border-neutral-800 rounded-xl px-2 py-2 text-white focus:outline-none focus:border-blue-500 transition-all text-lg"
+                        placeholder="🍎"
+                        title="Emoji đại diện"
+                      />
+                      <input 
+                        value={newGameDraftWord} 
+                        onChange={e => setNewGameDraftWord(e.target.value)} 
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddGameDraftWord(); } }}
+                        className="flex-1 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 transition-all text-sm"
+                        placeholder="Nhập từ mới (e.g. orange)"
+                      />
+                      <button 
+                        type="button"
+                        onClick={handleAddGameDraftWord}
+                        className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-xl text-sm font-bold transition-all shadow-md"
+                      >
+                        Thêm từ
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 mt-6 pt-3 border-t border-neutral-800/55">
+                  <button onClick={() => { setShowGameModal(false); setGameForm({ name: "" }); setGameDraftWords([]); setSelectedExistingGameId(""); setNewGameContainerName(""); }} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
+                  <button 
+                    onClick={handleSaveGame} 
+                    disabled={isPending || gameDraftWords.length !== 6 || !selectedExistingGameId || (selectedExistingGameId === "NEW_CONTAINER" && !newGameContainerName.trim()) || !gameForm.name.trim()} 
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                  >
+                    Lưu Game
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* TOPIC MODAL */}
       {showTopicModal && (
@@ -1033,6 +1384,30 @@ export function AdminMatchWordsClient({
               <p className="text-neutral-400 text-sm">
                 Bạn đang chuyển chủ đề <span className="font-bold text-white">{topicToMove?.name}</span> sang Game khác.
               </p>
+              {/* Target Age Group Selector */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Độ Tuổi</label>
+                <div className="flex flex-wrap gap-2">
+                  {(["2-5", "6-12", "teen", "readers"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => {
+                        setTargetAgeGroup(tab);
+                        setTargetLevel(null);
+                        setTargetGameId("");
+                      }}
+                      className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
+                        targetAgeGroup === tab
+                          ? "bg-indigo-600 text-white"
+                          : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-white border border-neutral-700"
+                      }`}
+                    >
+                      {tab === "2-5" ? "Tuổi 2-5" : tab === "6-12" ? "Tuổi 6-12" : tab === "teen" ? "Teenagers" : "Advanced Readers"}
+                    </button>
+                  ))}
+                </div>
+              </div>
               {/* Always show Level 1-5 */}
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5">Chọn Level</label>
@@ -1042,7 +1417,11 @@ export function AdminMatchWordsClient({
                       key={lvl}
                       onClick={() => {
                         setTargetLevel(lvl)
-                        const eligible = currentGames.filter((g: any) => g.id !== selectedGameId && (g.level ?? 1) === lvl)
+                        const targetAgeGroupGames = targetAgeGroup === "2-5" ? initialGames2to5
+                                                  : targetAgeGroup === "6-12" ? initialGames6to12
+                                                  : targetAgeGroup === "teen" ? initialGamesTeen
+                                                  : initialGamesReaders;
+                        const eligible = targetAgeGroupGames.filter((g: any) => g.id !== selectedGameId && (g.level ?? 1) === lvl)
                         setTargetGameId(eligible.length === 1 ? eligible[0].id : "")
                       }}
                       className={`px-4 py-1.5 rounded-full text-sm font-bold transition-all ${
@@ -1058,9 +1437,13 @@ export function AdminMatchWordsClient({
               </div>
               {/* Game dropdown or info for selected level */}
               {targetLevel !== null && (() => {
-                const eligible = currentGames.filter((g: any) => g.id !== selectedGameId && (g.level ?? 1) === targetLevel)
+                const targetAgeGroupGames = targetAgeGroup === "2-5" ? initialGames2to5
+                                          : targetAgeGroup === "6-12" ? initialGames6to12
+                                          : targetAgeGroup === "teen" ? initialGamesTeen
+                                          : initialGamesReaders;
+                const eligible = targetAgeGroupGames.filter((g: any) => g.id !== selectedGameId && (g.level ?? 1) === targetLevel)
                 if (eligible.length === 0) return (
-                  <p className="text-xs text-amber-400">⚠️ Chưa có Game nào ở Level {targetLevel}. Hãy tạo Game mới ở level này trước.</p>
+                  <p className="text-xs text-amber-400">⚠️ Chưa có Game nào ở độ tuổi và Level này. Hãy tạo Game mới trước.</p>
                 )
                 if (eligible.length === 1) return (
                   <p className="text-xs text-green-400">→ Chủ đề sẽ được chuyển vào Game: <span className="font-bold text-white">{eligible[0].name}</span></p>
@@ -1082,7 +1465,7 @@ export function AdminMatchWordsClient({
                 )
               })()}
               <div className="flex justify-end gap-3 mt-6">
-                <button onClick={() => { setShowMoveTopicModal(false); setTopicToMove(null); setTargetGameId(""); setTargetLevel(null); }} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
+                <button onClick={() => { setShowMoveTopicModal(false); setTopicToMove(null); setTargetGameId(""); setTargetLevel(null); setTargetAgeGroup(activeTab); }} className="px-5 py-2.5 text-neutral-400 hover:text-white font-medium transition-colors">Hủy</button>
                 <button 
                   onClick={handleMoveTopic} 
                   disabled={isPending || !targetGameId} 
@@ -1137,83 +1520,142 @@ export function AdminMatchWordsClient({
 
       {/* IMAGE SEARCH DRAWER */}
       {showImageSearch && (
-        <div className="fixed inset-0 z-[60] bg-black/95 flex flex-col p-4 md:p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto w-full bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
-            <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-950 shrink-0">
-              <h2 className="text-2xl font-black text-white flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center">
-                  <Search className="w-5 h-5" />
-                </div>
-                Chọn ảnh cho từ "{itemForm.word}"
-              </h2>
-              <button onClick={() => setShowImageSearch(false)} className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-colors">Đóng</button>
-            </div>
-
-            <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 shrink-0 flex justify-center gap-3">
-              <button onClick={() => { setImageSearchStyle("REALISTIC"); handleSearchImage(undefined, "REALISTIC"); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${imageSearchStyle === "REALISTIC" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>📸 Ảnh thật thực tế</button>
-              <button onClick={() => { setImageSearchStyle("CARTOON"); handleSearchImage(undefined, "CARTOON"); }} className={`px-6 py-2.5 rounded-xl font-bold transition-all ${imageSearchStyle === "CARTOON" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200"}`}>🎨 Hình vẽ (Cartoon)</button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 bg-neutral-950">
-              {isSearchingImage ? (
-                <div className="h-full flex flex-col items-center justify-center text-neutral-400 gap-4">
-                  <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p className="font-medium animate-pulse">Đang tìm kiếm hình ảnh tuyệt đẹp...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                  {imageSearchResults.slice(0, 30).map((img, idx) => (
-                    <button key={idx} onClick={() => handleSelectImage(img.url)} className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all bg-neutral-900 shadow-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/30">
-                      <img src={img.thumb || img.url} alt="result" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ease-out" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 flex flex-col justify-end p-3 transition-opacity">
-                        <div className="bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-lg transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                          <CheckCircle2 className="w-4 h-4" /> Dùng ảnh này
-                        </div>
-                      </div>
+        <div className="fixed top-0 right-0 h-full w-[380px] bg-neutral-900 border-l border-neutral-800 p-6 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
+          
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
+              <h4 className="text-base font-bold text-white flex items-center gap-2">
+                <Globe className="text-indigo-400 w-5 h-5" />
+                Tìm ảnh từ Internet
+              </h4>
+              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1 mb-3">
+                Từ khoá: <span className="text-indigo-400">{itemForm.word}</span>
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-neutral-800 rounded-lg p-1 border border-neutral-700">
+                    <button
+                      type="button"
+                      onClick={() => { setImageSearchStyle("REALISTIC"); handleSearchImage(undefined, "REALISTIC"); }}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "REALISTIC" ? "bg-indigo-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                    >
+                      📷 Thực tế
                     </button>
-                  ))}
-                  {imageSearchResults.length === 0 && !isSearchingImage && (
-                    <div className="col-span-full py-20 text-center text-neutral-500">
-                      <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                      <p>Không tìm thấy hình ảnh nào phù hợp.</p>
-                    </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => { setImageSearchStyle("CARTOON"); handleSearchImage(undefined, "CARTOON"); }}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                    >
+                      🎨 Hoạt hình
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSearchingImage}
+                    onClick={() => handleSearchImage(undefined)}
+                    className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-neutral-700 h-full"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    Tìm
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
+            
+            <button 
+              type="button" 
+              onClick={() => setShowImageSearch(false)} 
+              className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors ml-2 shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+            {isSearchingImage ? (
+              <div className="flex flex-col items-center justify-center h-[50vh] text-neutral-500 gap-3">
+                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-black uppercase tracking-widest animate-pulse">Đang tìm kiếm...</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 pb-6">
+                {imageSearchResults.slice(0, 30).map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectImage(img.url)}
+                    className="relative group aspect-square rounded-xl overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all bg-neutral-950 shadow-sm focus:outline-none"
+                  >
+                    <img src={img.thumb || img.url} alt="result" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-1 rounded-md">Dùng ảnh</span>
+                    </div>
+                  </button>
+                ))}
+                {imageSearchResults.length === 0 && !isSearchingImage && (
+                  <div className="col-span-full py-20 text-center text-neutral-600 flex flex-col items-center justify-center">
+                    <ImageIcon className="w-12 h-12 mb-3 opacity-20" />
+                    <p className="text-xs">Không tìm thấy hình ảnh nào phù hợp.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
       {/* AI PROCESSING OVERLAY */}
       {aiProgress && aiProgress.active && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/85 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm">
           <div className="bg-neutral-900 border border-neutral-800 p-8 rounded-3xl w-full max-w-md shadow-2xl flex flex-col items-center text-center">
-            {/* Spinning glowing gradient ring */}
-            <div className="relative w-24 h-24 flex items-center justify-center mb-6">
-              <div className="absolute inset-0 border-4 border-indigo-500/20 border-t-indigo-500 border-r-indigo-500 rounded-full animate-spin"></div>
-              <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
-            </div>
+            {aiProgress.error ? (
+              <>
+                {/* Error Icon */}
+                <div className="relative w-20 h-20 flex items-center justify-center mb-6 bg-red-500/10 border border-red-500/20 rounded-full shadow-inner animate-pulse">
+                  <AlertCircle className="w-10 h-10 text-red-500" />
+                </div>
 
-            <h3 className="text-xl font-black text-white mb-2">Đang xử lý bằng AI</h3>
-            <p className="text-neutral-400 text-sm mb-6 max-w-xs h-12 flex items-center justify-center">
-              {aiProgress.text}
-            </p>
+                <h3 className="text-xl font-black text-white mb-2">Đã xảy ra lỗi</h3>
+                <p className="text-neutral-400 text-sm mb-6 max-w-xs flex items-center justify-center text-red-400 bg-red-950/20 border border-red-900/30 p-4 rounded-xl leading-relaxed">
+                  {aiProgress.error}
+                </p>
 
-            {/* Custom progress bar */}
-            <div className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-1 mb-3">
-              <div 
-                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-xl transition-all duration-300 shadow-md"
-                style={{ width: `${aiProgress.total > 0 ? (aiProgress.current / aiProgress.total) * 100 : 0}%` }}
-              ></div>
-            </div>
+                <button 
+                  onClick={() => setAiProgress(null)}
+                  className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 hover:text-white text-neutral-200 border border-neutral-700 rounded-xl font-bold transition-all shadow-md"
+                >
+                  Đóng
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Spinning glowing gradient ring */}
+                <div className="relative w-24 h-24 flex items-center justify-center mb-6">
+                  <div className="absolute inset-0 border-4 border-indigo-500/20 border-t-indigo-500 border-r-indigo-500 rounded-full animate-spin"></div>
+                  <Sparkles className="w-10 h-10 text-indigo-400 animate-pulse" />
+                </div>
 
-            {/* Step indicator */}
-            <div className="flex justify-between items-center w-full px-2 text-xs font-bold text-neutral-500">
-              <span>Tiến trình</span>
-              <span className="text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full">
-                {aiProgress.current} / {aiProgress.total} từ
-              </span>
-            </div>
+                <h3 className="text-xl font-black text-white mb-2">Đang xử lý bằng AI</h3>
+                <p className="text-neutral-400 text-sm mb-6 max-w-xs h-12 flex items-center justify-center">
+                  {aiProgress.text}
+                </p>
+
+                {/* Custom progress bar */}
+                <div className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl p-1 mb-3">
+                  <div 
+                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-xl transition-all duration-300 shadow-md"
+                    style={{ width: `${aiProgress.total > 0 ? (aiProgress.current / aiProgress.total) * 100 : 0}%` }}
+                  ></div>
+                </div>
+
+                {/* Step indicator */}
+                <div className="flex justify-between items-center w-full px-2 text-xs font-bold text-neutral-500">
+                  <span>Tiến trình</span>
+                  <span className="text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full">
+                    {aiProgress.current} / {aiProgress.total} từ
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

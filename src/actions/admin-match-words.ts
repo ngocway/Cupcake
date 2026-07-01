@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { toSlug } from "@/lib/slugify"
 
-function safeRevalidatePath(path: string) {
+export async function safeRevalidatePath(path: string) {
   try {
     revalidatePath(path);
   } catch (error) {
@@ -131,11 +131,45 @@ export async function createMatchWordTopic(data: { gameId: string; name: string;
 // MOVE TOPIC
 export async function moveMatchWordTopic(id: string, targetGameId: string) {
   try {
+    // 1. Find target game to get target ageGroup
+    const targetGame = await prisma.matchWordGame.findUnique({
+      where: { id: targetGameId }
+    })
+    if (!targetGame) {
+      return { success: false, error: "Không tìm thấy Game đích" }
+    }
+
+    // 2. Find topic to get its slug
+    const topicToMove = await prisma.matchWordTopic.findUnique({
+      where: { id }
+    })
+    if (!topicToMove) {
+      return { success: false, error: "Không tìm thấy Chủ đề cần di chuyển" }
+    }
+
+    // 3. Check for slug conflict in target age group
+    const duplicate = await prisma.matchWordTopic.findFirst({
+      where: {
+        ageGroup: targetGame.ageGroup,
+        slug: topicToMove.slug,
+        id: { not: id }
+      }
+    })
+    if (duplicate) {
+      return { success: false, error: "Chủ đề này đã tồn tại ở nhóm tuổi đích" }
+    }
+
+    // 4. Update both gameId and ageGroup
     const topic = await prisma.matchWordTopic.update({
       where: { id },
-      data: { gameId: targetGameId }
+      data: { 
+        gameId: targetGameId,
+        ageGroup: targetGame.ageGroup
+      }
     })
+    
     safeRevalidatePath("/admin/games/match-words")
+    safeRevalidatePath("/student/game/match-words/select")
     return { success: true, topic }
   } catch (error: any) {
     console.error("Failed to move topic:", error)

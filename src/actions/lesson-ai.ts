@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto';
 import { generateUniqueSlug } from '@/lib/slugify';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { reindexAssignment, reindexLesson } from '@/lib/ai-embeddings';
+import { getCefrPedagogicalGuidelines } from "@/lib/cefr-guidelines";
 
 
 export interface AILessonResponse {
@@ -77,6 +78,7 @@ export async function generateAILesson({
   try {
     const isVietnamese = language === "Tiếng Việt";
     let prompt = "";
+    const guidelines = getCefrPedagogicalGuidelines(difficulty);
     
     if (providedPassage) {
       // New logic: treat providedPassage as specific content generation instructions
@@ -90,6 +92,9 @@ export async function generateAILesson({
       Subject: ${subject}
       Difficulty level: ${difficulty}
       Target Language for all content (Title, Passage, Questions): ${language}
+
+      CEFR LEVEL PEDAGOGICAL GUIDELINES (YOU MUST STRICTLY COMPLY WITH THESE FOR THE PASSAGE, VOCABULARY AND QUESTIONS):
+      ${guidelines}
       
       YOUR TASKS:
       1. Write a complete reading passage (Body Text) in ${language} following the CONTENT GENERATION INSTRUCTIONS provided above.
@@ -116,6 +121,9 @@ export async function generateAILesson({
       Subject: ${subject}
       Difficulty level: ${difficulty}
       Target Language for all content (Title, Passage, Questions): ${language}
+
+      CEFR LEVEL PEDAGOGICAL GUIDELINES (YOU MUST STRICTLY COMPLY WITH THESE FOR THE PASSAGE, VOCABULARY AND QUESTIONS):
+      ${guidelines}
       
       The lesson MUST include:
       1. An engaging Title written COMPLETELY in ${language}.
@@ -1177,7 +1185,9 @@ export async function generateAILessonFully(params: {
     // Parse length parameter to calculate target word count
     let targetWordCount = 400;
     const lenLower = length ? length.toLowerCase() : "";
-    if (lenLower.includes("200") || lenLower.includes("ngắn") || lenLower.includes("short")) {
+    if (lenLower.includes("100") || lenLower.includes("siêu ngắn") || lenLower.includes("super short")) {
+      targetWordCount = 100;
+    } else if (lenLower.includes("200") || lenLower.includes("ngắn") || lenLower.includes("short")) {
       targetWordCount = 200;
     } else if (lenLower.includes("600") || lenLower.includes("dài") || lenLower.includes("long")) {
       targetWordCount = 600;
@@ -1189,6 +1199,7 @@ export async function generateAILessonFully(params: {
     const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
     const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
     const primaryLevel = audienceLevels[primaryAudience] || "A1";
+    const guidelines = getCefrPedagogicalGuidelines(primaryLevel);
 
     // 1. GENERATE LESSON JSON
     setGenProgress(session.user.id, "Đang soạn thảo nội dung bài học bằng AI (gpt-4o-mini)...", 10);
@@ -1208,13 +1219,20 @@ export async function generateAILessonFully(params: {
     Selected Learning Goals of this lesson: ${learningGoals.join(", ")}
     ${reference ? `Reference material / instructions: "${reference}"` : ""}
 
-    CRITICAL REQUIREMENTS FOR THE READING PASSAGE:
+    CEFR LEVEL PEDAGOGICAL GUIDELINES (YOU MUST STRICTLY COMPLY WITH THESE FOR THE PASSAGE, VOCABULARY AND QUESTIONS):
+    ${guidelines}
+
+    CRITICAL REQUIREMENTS FOR THE READING PASSAGE, VOCABULARY & QUESTIONS:
     - The reading passage MUST contain at least ${targetWordCount - 30} words and be around ${targetWordCount} words in total.
     - Write a detailed, fully-developed text with multiple sentences per paragraph.
     - The passage MUST be structured logically and divided into 3-5 distinct paragraphs.
-    - Tailor the reading passage content, vocabulary selection, and question design to align closely with the selected learning goals: ${learningGoals.join(", ")}.
-
-    IMPORTANT: Tailor the reading passage content, vocabulary selection, and question design to align closely with the selected learning goals: ${learningGoals.join(", ")}.
+    - The "vocabulary" array MUST contain EXACTLY ${vocabCount} key words. No more, no less! This is a strict constraint. All of these ${vocabCount} vocabulary words MUST be extracted directly from the reading passage text.
+    - You MUST generate EXACTLY the requested number of questions of each type:
+      * MULTIPLE_CHOICE (single answer, marked with "isMultiple": false): EXACTLY ${mcqCount} questions.
+      * MULTIPLE_CHOICE (multi-select / multiple correct answers, marked with "isMultiple": true): EXACTLY ${mcqMultiCount} questions.
+      * TRUE_FALSE: EXACTLY ${tfCount} questions.
+      * CLOZE_TEST: EXACTLY ${clozeCount} questions.
+      * Total questions in the "questions" array MUST be EXACTLY ${mcqCount + mcqMultiCount + tfCount + clozeCount}.
 
     Respond STRICTLY with a JSON object matching the following structure:
     {

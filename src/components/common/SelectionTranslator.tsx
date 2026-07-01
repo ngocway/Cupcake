@@ -32,6 +32,11 @@ export function SelectionTranslator() {
     setMounted(true);
   }, []);
 
+  const nativeLanguageRef = useRef(nativeLanguage);
+  useEffect(() => {
+    nativeLanguageRef.current = nativeLanguage;
+  }, [nativeLanguage]);
+
   useEffect(() => {
     const handleMouseUp = (e: MouseEvent) => {
       // Don't trigger if clicking inside the popup
@@ -39,41 +44,77 @@ export function SelectionTranslator() {
         return;
       }
 
+      const target = e.target as HTMLElement;
+      if (
+        !target ||
+        target.closest('.custom-vocab-marker') ||
+        target.closest('.inline-audio-marker') ||
+        target.closest('.inline-audio-wrapper') ||
+        target.closest('button') ||
+        target.closest('a') ||
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+
+      const isInsideReading = !!target.closest('.interactive-reading-content');
+      if (!isInsideReading) {
+        return;
+      }
+
       setTimeout(() => {
         const windowSelection = window.getSelection();
-        if (!windowSelection || windowSelection.isCollapsed) {
-          if (!popupRef.current?.contains(e.target as Node)) {
-             setSelection(null);
-             setShowPopup(false);
-             setTranslationResult(null);
-             setShowLanguageSelect(false);
+        if (!windowSelection) return;
+
+        let isCollapsed = windowSelection.isCollapsed;
+
+        if (isCollapsed) {
+          try {
+            windowSelection.modify('move', 'backward', 'word');
+            windowSelection.modify('extend', 'forward', 'word');
+          } catch (err) {
+            console.error('Failed to expand selection to word:', err);
           }
-          return;
         }
 
         const text = windowSelection.toString().trim();
-        
-        // Only show for reasonable length selections
-        if (text.length > 0 && text.length < 500) {
-          // Verify if selection is inside our reading content area
-          let isInsideReading = false;
-          let node = windowSelection.anchorNode;
-          while (node) {
-            if (node.nodeType === 1 && (node as Element).classList?.contains('interactive-reading-content')) {
-              isInsideReading = true;
-              break;
-            }
-            node = node.parentNode;
+        // Remove trailing and leading punctuation (e.g. "school," -> "school")
+        const cleanText = text.replace(/^[.,\/#!$%\^&\*;:{}=\-_`~()?"'“]+|[.,\/#!$%\^&\*;:{}=\-_`~()?"'”]+$/g, "");
+
+        if (cleanText.length > 0 && cleanText.length < 500) {
+          const range = windowSelection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+
+          let shouldTrigger = true;
+          if (isCollapsed) {
+            // Check if the click was actually on/close to the selected text
+            const clickPadding = 8;
+            shouldTrigger = (
+              e.clientX >= rect.left - clickPadding &&
+              e.clientX <= rect.right + clickPadding &&
+              e.clientY >= rect.top - clickPadding &&
+              e.clientY <= rect.bottom + clickPadding
+            );
           }
 
-          if (isInsideReading) {
-             const range = windowSelection.getRangeAt(0);
-             const rect = range.getBoundingClientRect();
-             setSelection({ text, rect });
-             setShowPopup(true);
-             setTranslationResult(null);
-             setShowLanguageSelect(false);
+          if (shouldTrigger) {
+            setSelection({ text: cleanText, rect });
+            setShowPopup(true);
+
+            if (nativeLanguageRef.current) {
+              performTranslation(cleanText, nativeLanguageRef.current);
+            } else {
+              setTranslationResult(null);
+              setShowLanguageSelect(true);
+            }
+            return;
           }
+        }
+
+        // If selection was collapsed and we didn't trigger, clear it
+        if (isCollapsed) {
+          windowSelection.removeAllRanges();
         }
       }, 10);
     };
@@ -82,6 +123,7 @@ export function SelectionTranslator() {
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
         setShowPopup(false);
         setSelection(null);
+        window.getSelection()?.removeAllRanges();
       }
     };
 

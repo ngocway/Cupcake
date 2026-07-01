@@ -94,13 +94,16 @@ export const getShuffledIds = unstable_cache(
 
       if (userType) {
         if (studyLevel) {
-          const ageAndLevelCondition = {
-            targetAudiences: { has: userType },
-            audienceLevels: { path: [userType], equals: studyLevel }
-          };
+          const mappedLevels = [studyLevel];
+          if (studyLevel === 'pre-a1-a1') mappedLevels.push('beginner');
+          else if (studyLevel === 'a2') mappedLevels.push('elementary');
+          else if (studyLevel === 'b1') mappedLevels.push('intermediate');
+          else if (studyLevel === 'b2') mappedLevels.push('upper-intermediate');
 
-          where.targetAudiences = ageAndLevelCondition.targetAudiences;
-          where.audienceLevels = ageAndLevelCondition.audienceLevels;
+          where.targetAudiences = { has: userType };
+          where.OR = mappedLevels.map(lvl => ({
+            audienceLevels: { path: [userType], equals: lvl }
+          }));
         } else {
           const defaultOR = [
             { targetAudiences: { has: userType } },

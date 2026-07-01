@@ -303,7 +303,16 @@ export default function MaterialLibraryPage() {
 
     const matchesSubject = subjectFilter === 'ALL' || a.subject === subjectFilter;
     const matchesAge = ageGroupFilter === 'ALL' || (a.targetAudiences && a.targetAudiences.includes(ageGroupFilter));
-    const matchesLevel = levelFilter === 'ALL' || a.level === levelFilter;
+    let matchesLevel = levelFilter === 'ALL';
+    if (!matchesLevel) {
+      const mappedLevels = [levelFilter];
+      if (levelFilter === 'pre-a1-a1') mappedLevels.push('beginner');
+      else if (levelFilter === 'a2') mappedLevels.push('elementary');
+      else if (levelFilter === 'b1') mappedLevels.push('intermediate');
+      else if (levelFilter === 'b2') mappedLevels.push('upper-intermediate');
+
+      matchesLevel = mappedLevels.includes(a.level || '');
+    }
     const matchesGoal = learningGoalFilter === 'ALL' || (a.learningGoals && a.learningGoals.includes(learningGoalFilter));
     const matchesTag = tagFilter === 'ALL' || (a.tags && a.tags.some(t => t.trim() === tagFilter));
 

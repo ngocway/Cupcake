@@ -57,6 +57,23 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     }
   }
 
+  // Default to pre-a1-a1 for english if no level is stored in cookie/DB
+  if (studySubject === "english" && (!studyLevel || studyLevel.trim() === "")) {
+    studyLevel = "pre-a1-a1"
+    try {
+      cookieStore.set("study_level", "pre-a1-a1", { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" })
+    } catch (e) {
+      // Safe to ignore in Server Components rendering
+    }
+
+    if (session?.user?.id) {
+      prisma.user.update({
+        where: { id: session.user.id },
+        data: { studyLevel: "pre-a1-a1" }
+      }).catch(e => console.error("Failed to default studyLevel in DB", e))
+    }
+  }
+
   // Resolve matching age group if it is mismatched for the active subject
   const config = await getOnboardingConfig()
   const resolvedAgeGroup = getBestAgeGroupForSubject(studySubject, initialUserType, studyAgeGroup, config)

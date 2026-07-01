@@ -97,7 +97,11 @@ export function TaxonomySelector({
       {targetAudiences.map(audId => {
         const ageGroup = currentSubjectConfig?.ageGroups?.find((a: any) => a.id === audId);
         if (!ageGroup || !ageGroup.levels || ageGroup.levels.length === 0) return null;
-        const selectedLevel = audienceLevels[audId] || '';
+        let selectedLevel = audienceLevels[audId] || '';
+        if (selectedLevel === 'beginner') selectedLevel = 'pre-a1-a1';
+        else if (selectedLevel === 'elementary') selectedLevel = 'a2';
+        else if (selectedLevel === 'intermediate') selectedLevel = 'b1';
+        else if (selectedLevel === 'upper-intermediate') selectedLevel = 'b2';
 
         return (
           <div key={`levels-${audId}`} className="space-y-3 p-4 border rounded-xl bg-slate-50/50 dark:bg-gray-900/20">
