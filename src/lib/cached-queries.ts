@@ -246,6 +246,18 @@ export async function invalidateMaterialCache(assignmentId: string) {
 
     const keys = Array.from(keysToDelete);
     await Promise.all(keys.map(key => redis.del(key)));
+    
+    // Invalidate feed caches
+    try {
+      const feedKeys = await redis.keys("feed:*");
+      if (feedKeys.length > 0) {
+        await Promise.all(feedKeys.map(k => redis.del(k)));
+        console.log(`[Cache Invalidation] Successfully deleted feed keys:`, feedKeys);
+      }
+    } catch (e) {
+      console.error("[Cache Invalidation] Failed to scan/delete feed:* keys:", e);
+    }
+
     console.log(`[Cache Invalidation] Successfully deleted keys:`, keys);
   } catch (e) {
     console.error(`[Cache Invalidation] Error invalidating cache for assignment ${assignmentId}:`, e);

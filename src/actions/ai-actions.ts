@@ -34,6 +34,16 @@ export async function generateVocabularyDetails(word: string, categoryName?: str
     The meaningVi should be a SHORT, direct translation in Vietnamese (1-3 words max, e.g. "Quả chuối", NOT a definition). 
     The meaningTh should be a SHORT, direct translation in Thai (1-3 words max). 
     The meaningId should be a SHORT, direct translation in Indonesian (1-3 words max). 
+    The meaningZh should be a SHORT, direct translation in Mandarin Chinese (1-3 words/characters max).
+    The meaningHi should be a SHORT, direct translation in Hindi (1-3 words max).
+    The meaningJa should be a SHORT, direct translation in Japanese (1-3 words/characters max).
+    The meaningEs should be a SHORT, direct translation in Spanish (1-3 words max).
+    The meaningAr should be a SHORT, direct translation in Arabic (1-3 words max).
+    The meaningFr should be a SHORT, direct translation in French (1-3 words max).
+    The meaningKo should be a SHORT, direct translation in Korean (1-3 words/characters max).
+    The meaningPt should be a SHORT, direct translation in Portuguese (1-3 words max).
+    The meaningRu should be a SHORT, direct translation in Russian (1-3 words max).
+    The meaningDe should be a SHORT, direct translation in German (1-3 words max).
     The explanationEn should be: ${explanationGuideline}. 
     The examples should be: ${examplesGuideline}. 
     The quizQuestion should be: ${quizQuestionGuideline}. 
@@ -46,6 +56,16 @@ export async function generateVocabularyDetails(word: string, categoryName?: str
       "meaningVi": "string",
       "meaningTh": "string",
       "meaningId": "string",
+      "meaningZh": "string",
+      "meaningHi": "string",
+      "meaningJa": "string",
+      "meaningEs": "string",
+      "meaningAr": "string",
+      "meaningFr": "string",
+      "meaningKo": "string",
+      "meaningPt": "string",
+      "meaningRu": "string",
+      "meaningDe": "string",
       "explanationEn": "string",
       "examples": ["string"],
       "quizQuestion": "string",

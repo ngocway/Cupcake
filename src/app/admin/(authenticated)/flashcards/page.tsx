@@ -25,7 +25,8 @@ export default async function AdminFlashcardsPage() {
   // 3. Lấy toàn bộ các thẻ flashcard - Sắp xếp theo ngày tạo mới nhất lên đầu để dễ theo dõi
   const flashcards = await prisma.globalFlashcard.findMany({
     include: {
-      topic: true
+      topic: true,
+      translations: true
     },
     orderBy: {
       createdAt: 'desc'

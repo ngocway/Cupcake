@@ -26,6 +26,16 @@ export interface AILessonResponse {
     meaningVi: string;
     meaningTh: string;
     meaningId: string;
+    meaningZh: string;
+    meaningHi: string;
+    meaningJa: string;
+    meaningEs: string;
+    meaningAr: string;
+    meaningFr: string;
+    meaningKo: string;
+    meaningPt: string;
+    meaningRu: string;
+    meaningDe: string;
     explanationEn: string;
     examples: string[];
   }[];
@@ -103,7 +113,7 @@ export async function generateAILesson({
          - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
          - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
       2. Identify 5-8 key vocabulary words from the passage you just wrote.
-      3. Create a Vocabulary list of those key words with definitions. Provide pronunciation, the English definition, the Vietnamese translation (meaningVi), the Thai translation (meaningTh), and the Indonesian translation (meaningId).
+      3. Create a Vocabulary list of those key words with definitions. Provide pronunciation, the English definition, and translations for these native languages: Vietnamese (meaningVi), Thai (meaningTh), Indonesian (meaningId), Mandarin Chinese (meaningZh), Hindi (meaningHi), Japanese (meaningJa), Spanish (meaningEs), Arabic (meaningAr), French (meaningFr), Korean (meaningKo), Portuguese (meaningPt), Russian (meaningRu), and German (meaningDe).
       4. Create a set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
          For EACH question, you MUST provide a very detailed "explanation" (at least 2-3 sentences). The explanation MUST explicitly state why the correct answer is correct AND explicitly analyze why the other options are incorrect. IMPORTANT: The explanation MUST be written entirely in ENGLISH. DO NOT refer to options by their position (e.g., "the first option", "option A") since options will be shuffled. Always quote the actual text of the option.
          ${additionalInstructions ? `IMPORTANT: Follow these extra instructions for the questions: ${additionalInstructions}` : ""}
@@ -133,7 +143,7 @@ export async function generateAILesson({
          - The passage MUST be structured logically and divided into 3-5 distinct paragraphs. Each paragraph MUST be separated by EXACTLY two newlines (double newlines, e.g., "\n\n") to ensure proper paragraph structure and formatting.
          - You MUST wrap key vocabulary words (the ones in the vocabulary list below) inside the passage using this exact HTML structure: <span class="custom-vocab-marker" data-vocab-id="WORD_LOWERCASE">WORD</span>.
          - Example: If "sustainable" is a vocab word, write <span class="custom-vocab-marker" data-vocab-id="sustainable">sustainable</span> in the passage.
-      4. A Vocabulary list of 5-8 key words from the passage with definitions. Provide pronunciation, the English definition, the Vietnamese translation (meaningVi), the Thai translation (meaningTh), and the Indonesian translation (meaningId).
+      4. A Vocabulary list of 5-8 key words from the passage with definitions. Provide pronunciation, the English definition, and translations for these native languages: Vietnamese (meaningVi), Thai (meaningTh), Indonesian (meaningId), Mandarin Chinese (meaningZh), Hindi (meaningHi), Japanese (meaningJa), Spanish (meaningEs), Arabic (meaningAr), French (meaningFr), Korean (meaningKo), Portuguese (meaningPt), Russian (meaningRu), and German (meaningDe).
       5. A set of ${questionCount} questions based on the passage (mix of MULTIPLE_CHOICE, MULTIPLE_SELECT, and TRUE_FALSE) written COMPLETELY in ${language}.
          For EACH question, you MUST provide a very detailed "explanation" (at least 2-3 sentences). The explanation MUST explicitly state why the correct answer is correct AND explicitly analyze why the other options are incorrect. IMPORTANT: The explanation MUST be written entirely in ENGLISH. DO NOT refer to options by their position (e.g., "the first option", "option A") since options will be shuffled. Always quote the actual text of the option.
       6. Select a high-quality, relevant Unsplash stock photo to serve as a thumbnail image for this lesson. Use a real, valid stock photo URL from the domain https://images.unsplash.com/.
@@ -161,6 +171,16 @@ export async function generateAILesson({
           "meaningVi": "string",
           "meaningTh": "string",
           "meaningId": "string",
+          "meaningZh": "string",
+          "meaningHi": "string",
+          "meaningJa": "string",
+          "meaningEs": "string",
+          "meaningAr": "string",
+          "meaningFr": "string",
+          "meaningKo": "string",
+          "meaningPt": "string",
+          "meaningRu": "string",
+          "meaningDe": "string",
           "explanationEn": "string",
           "examples": ["string"]
         }
@@ -271,6 +291,16 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
             data-meaning-vi="${v.meaningVi}" 
             data-meaning-th="${v.meaningTh || ''}" 
             data-meaning-id="${v.meaningId || ''}" 
+            data-meaning-zh="${v.meaningZh || ''}" 
+            data-meaning-hi="${v.meaningHi || ''}" 
+            data-meaning-ja="${v.meaningJa || ''}" 
+            data-meaning-es="${v.meaningEs || ''}" 
+            data-meaning-ar="${v.meaningAr || ''}" 
+            data-meaning-fr="${v.meaningFr || ''}" 
+            data-meaning-ko="${v.meaningKo || ''}" 
+            data-meaning-pt="${v.meaningPt || ''}" 
+            data-meaning-ru="${v.meaningRu || ''}" 
+            data-meaning-de="${v.meaningDe || ''}" 
             data-explanation-en="${v.explanationEn.replace(/"/g, '&quot;')}" 
             data-examples="${v.examples.join('; ').replace(/"/g, '&quot;')}"
             style="border-bottom: 2px dashed #facc15; cursor: help; color: #854d0e; font-weight: 700;"
@@ -298,6 +328,10 @@ export async function saveAILesson(data: AILessonResponse & { gradeLevel: string
             <div style="margin-top: 5px;">
               <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">ID</span>
               <span>${v.meaningId || 'N/A'}</span>
+            </div>
+            <div style="margin-top: 5px; font-size: 0.95em; color: #475569;">
+              <strong style="margin-right: 8px;">Other:</strong>
+              <span>ZH: ${v.meaningZh || 'N/A'} | HI: ${v.meaningHi || 'N/A'} | JA: ${v.meaningJa || 'N/A'} | ES: ${v.meaningEs || 'N/A'} | AR: ${v.meaningAr || 'N/A'} | FR: ${v.meaningFr || 'N/A'} | KO: ${v.meaningKo || 'N/A'} | PT: ${v.meaningPt || 'N/A'} | RU: ${v.meaningRu || 'N/A'} | DE: ${v.meaningDe || 'N/A'}</span>
             </div>
             <div style="margin-top: 3px; color: #475569;">
               <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; color: #0369a1;">EN</span>
@@ -1253,6 +1287,16 @@ export async function generateAILessonFully(params: {
           "meaningVi": "Vietnamese meaning (SHORT direct translation)",
           "meaningTh": "Thai meaning (SHORT)",
           "meaningId": "Indonesian meaning (SHORT)",
+          "meaningZh": "Mandarin Chinese meaning (SHORT)",
+          "meaningHi": "Hindi meaning (SHORT)",
+          "meaningJa": "Japanese meaning (SHORT)",
+          "meaningEs": "Spanish meaning (SHORT)",
+          "meaningAr": "Arabic meaning (SHORT)",
+          "meaningFr": "French meaning (SHORT)",
+          "meaningKo": "Korean meaning (SHORT)",
+          "meaningPt": "Portuguese meaning (SHORT)",
+          "meaningRu": "Russian meaning (SHORT)",
+          "meaningDe": "German meaning (SHORT)",
           "explanationEn": "English definition",
           "exampleSentence": "Simple English example sentence using the word"
         }
@@ -1555,7 +1599,7 @@ export async function generateAILessonFully(params: {
         if (match) {
           const actualWord = match[1];
           const escapeHtml = (str: string) => (str || '').replace(/"/g, '&quot;');
-          const html = `<span class="relative inline-block custom-vocab-marker group/marker" data-vocab-id="${v.vocabId}" data-word="${escapeHtml(v.word)}" data-pronunciation="${escapeHtml(v.pronunciation)}" data-meaning-vi="${escapeHtml(v.meaningVi)}" data-meaning-th="${escapeHtml(v.meaningTh || '')}" data-meaning-id="${escapeHtml(v.meaningId || '')}" data-explanation-en="${escapeHtml(v.explanationEn)}" data-examples="${escapeHtml(v.exampleSentence)}" data-image="" contenteditable="false"><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">${actualWord}</span></span>`;
+          const html = `<span class="relative inline-block custom-vocab-marker group/marker" data-vocab-id="${v.vocabId}" data-word="${escapeHtml(v.word)}" data-pronunciation="${escapeHtml(v.pronunciation)}" data-meaning-vi="${escapeHtml(v.meaningVi)}" data-meaning-th="${escapeHtml(v.meaningTh || '')}" data-meaning-id="${escapeHtml(v.meaningId || '')}" data-meaning-zh="${escapeHtml(v.meaningZh || '')}" data-meaning-hi="${escapeHtml(v.meaningHi || '')}" data-meaning-ja="${escapeHtml(v.meaningJa || '')}" data-meaning-es="${escapeHtml(v.meaningEs || '')}" data-meaning-ar="${escapeHtml(v.meaningAr || '')}" data-meaning-fr="${escapeHtml(v.meaningFr || '')}" data-meaning-ko="${escapeHtml(v.meaningKo || '')}" data-meaning-pt="${escapeHtml(v.meaningPt || '')}" data-meaning-ru="${escapeHtml(v.meaningRu || '')}" data-meaning-de="${escapeHtml(v.meaningDe || '')}" data-explanation-en="${escapeHtml(v.explanationEn)}" data-examples="${escapeHtml(v.exampleSentence)}" data-image="" contenteditable="false"><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">${actualWord}</span></span>`;
           
           tokens[i] = token.replace(regex, html);
           
@@ -1587,6 +1631,10 @@ export async function generateAILessonFully(params: {
             <div style="margin-top: 5px;">
               <span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px;">ID</span>
               <span>${v.meaningId || 'N/A'}</span>
+            </div>
+            <div style="margin-top: 5px; font-size: 0.95em; color: #475569;">
+              <strong style="margin-right: 8px;">Other:</strong>
+              <span>ZH: ${v.meaningZh || 'N/A'} | HI: ${v.meaningHi || 'N/A'} | JA: ${v.meaningJa || 'N/A'} | ES: ${v.meaningEs || 'N/A'} | AR: ${v.meaningAr || 'N/A'} | FR: ${v.meaningFr || 'N/A'} | KO: ${v.meaningKo || 'N/A'} | PT: ${v.meaningPt || 'N/A'} | RU: ${v.meaningRu || 'N/A'} | DE: ${v.meaningDe || 'N/A'}</span>
             </div>
             <div style="margin-top: 3px; color: #475569;">
               <span style="background: #e0f2fe; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; color: #0369a1;">EN</span>

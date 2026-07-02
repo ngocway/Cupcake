@@ -100,7 +100,8 @@ export function AdminFlashcardsClient({
     definitionVi: "",
     definitionTh: "",
     definitionId: "",
-    exampleSentence: ""
+    exampleSentence: "",
+    translations: {} as Record<string, string>
   })
   
   const [showTopicModal, setShowTopicModal] = useState(false)
@@ -315,6 +316,18 @@ export function AdminFlashcardsClient({
           : (typeof result.examples === "string" ? result.examples : "")
         const generatedQuestion = result.quizQuestion || ""
 
+        const translationsMap: Record<string, string> = {}
+        if (result.meaningZh) translationsMap.zh = result.meaningZh
+        if (result.meaningHi) translationsMap.hi = result.meaningHi
+        if (result.meaningJa) translationsMap.ja = result.meaningJa
+        if (result.meaningEs) translationsMap.es = result.meaningEs
+        if (result.meaningAr) translationsMap.ar = result.meaningAr
+        if (result.meaningFr) translationsMap.fr = result.meaningFr
+        if (result.meaningKo) translationsMap.ko = result.meaningKo
+        if (result.meaningPt) translationsMap.pt = result.meaningPt
+        if (result.meaningRu) translationsMap.ru = result.meaningRu
+        if (result.meaningDe) translationsMap.de = result.meaningDe
+
         setCardForm(prev => ({
           ...prev,
           word: result.word || prev.word,
@@ -324,7 +337,8 @@ export function AdminFlashcardsClient({
           definitionTh: result.meaningTh || prev.definitionTh || "",
           definitionId: result.meaningId || prev.definitionId || "",
           exampleSentence: sentence || prev.exampleSentence || "",
-          quizQuestion: generatedQuestion || prev.quizQuestion || ""
+          quizQuestion: generatedQuestion || prev.quizQuestion || "",
+          translations: translationsMap
         }))
 
         toast.success("AI tự điền thông tin và câu hỏi thành công!")
@@ -590,6 +604,14 @@ export function AdminFlashcardsClient({
       const defaultAudience = targetAudiencesList.some(c => c.id === card.topic?.targetAudience) 
         ? card.topic?.targetAudience 
         : (targetAudiencesList[0]?.id || "");
+      
+      const translationsMap: Record<string, string> = {}
+      if (Array.isArray((card as any).translations)) {
+        (card as any).translations.forEach((t: any) => {
+          translationsMap[t.locale] = t.definition
+        })
+      }
+
       setCardForm({
         targetAudience: defaultAudience,
         topicId: card.topicId,
@@ -604,7 +626,8 @@ export function AdminFlashcardsClient({
         definitionVi: card.definitionVi || "",
         definitionTh: card.definitionTh || "",
         definitionId: card.definitionId || "",
-        exampleSentence: card.exampleSentence || ""
+        exampleSentence: card.exampleSentence || "",
+        translations: translationsMap
       })
     } else {
       setEditingCard(null)
@@ -625,7 +648,8 @@ export function AdminFlashcardsClient({
         definitionVi: "",
         definitionTh: "",
         definitionId: "",
-        exampleSentence: ""
+        exampleSentence: "",
+        translations: {}
       })
     }
     setShowCardModal(true)
@@ -666,7 +690,8 @@ export function AdminFlashcardsClient({
           definitionId: cardForm.definitionId,
           exampleSentence: cardForm.exampleSentence,
           quizQuestion: cardForm.quizQuestion,
-          quizAudioUrl: cardForm.quizAudioUrl
+          quizAudioUrl: cardForm.quizAudioUrl,
+          translations: cardForm.translations
         })
 
         if (res.success && res.card) {
@@ -698,7 +723,8 @@ export function AdminFlashcardsClient({
           definitionId: cardForm.definitionId,
           exampleSentence: cardForm.exampleSentence,
           quizQuestion: cardForm.quizQuestion,
-          quizAudioUrl: cardForm.quizAudioUrl
+          quizAudioUrl: cardForm.quizAudioUrl,
+          translations: cardForm.translations
         })
 
         if (res.success && res.card) {

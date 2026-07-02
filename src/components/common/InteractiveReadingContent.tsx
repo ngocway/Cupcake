@@ -14,15 +14,98 @@ interface VocabularyInfo {
   meaningVi: string;
   meaningTh: string;
   meaningId: string;
+  meaningZh?: string;
+  meaningHi?: string;
+  meaningJa?: string;
+  meaningEs?: string;
+  meaningAr?: string;
+  meaningFr?: string;
+  meaningKo?: string;
+  meaningPt?: string;
+  meaningRu?: string;
+  meaningDe?: string;
   explanationEn: string;
   examples: string[];
   image: string;
 }
 
+const getDefinitionText = (vocab: VocabularyInfo, lang: string) => {
+  if (lang === "en" || lang === "other") return "";
+  if (lang === "vi") return vocab.meaningVi;
+  if (lang === "th") return vocab.meaningTh;
+  if (lang === "id") return vocab.meaningId;
+  
+  const mapping: Record<string, string | undefined> = {
+    zh: vocab.meaningZh,
+    hi: vocab.meaningHi,
+    ja: vocab.meaningJa,
+    es: vocab.meaningEs,
+    ar: vocab.meaningAr,
+    fr: vocab.meaningFr,
+    ko: vocab.meaningKo,
+    pt: vocab.meaningPt,
+    ru: vocab.meaningRu,
+    de: vocab.meaningDe
+  };
+  return mapping[lang] || "";
+};
+
+const getFlagUrl = (lang: string) => {
+  if (lang === "en") return "/flags/flag-en.png";
+  if (lang === "vi") return "/flags/flag-vi.png";
+  if (lang === "th") return "/flags/flag-th.png";
+  if (lang === "id") return "/flags/flag-id.png";
+  
+  const cdnCodes: Record<string, string> = {
+    zh: "cn",
+    hi: "in",
+    ja: "jp",
+    es: "es",
+    ar: "sa",
+    fr: "fr",
+    ko: "kr",
+    pt: "pt",
+    ru: "ru",
+    de: "de",
+    other: "other"
+  };
+  
+  const code = cdnCodes[lang];
+  if (code === "other") return "/globe.svg";
+  if (code) return `https://flagcdn.com/w40/${code}.png`;
+  return "/globe.svg";
+};
+
+const getLangTitle = (lang: string) => {
+  const titles: Record<string, string> = {
+    en: "English",
+    vi: "Vietnamese",
+    th: "Thai",
+    id: "Indonesian",
+    zh: "Mandarin Chinese",
+    hi: "Hindi",
+    ja: "Japanese",
+    es: "Spanish",
+    ar: "Arabic",
+    fr: "French",
+    ko: "Korean",
+    pt: "Portuguese",
+    ru: "Russian",
+    de: "German",
+    other: "Other"
+  };
+  return titles[lang] || lang.toUpperCase();
+};
+
 export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: string; isLoggedIn?: boolean }) {
   const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
   const [mounted, setMounted] = useState(false);
   const currentLang = useContentStore(s => s.nativeLanguage);
+  const [displayLang, setDisplayLang] = useState<string>(currentLang);
+
+  useEffect(() => {
+    setDisplayLang(currentLang);
+  }, [currentLang]);
   const setNativeLanguage = useContentStore(s => s.setNativeLanguage);
   const [activeVocab, setActiveVocab] = useState<VocabularyInfo | null>(null);
   const [imageError, setImageError] = useState(false);
@@ -224,10 +307,22 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
         meaningVi: marker.getAttribute('data-meaning-vi') || '',
         meaningTh: marker.getAttribute('data-meaning-th') || '',
         meaningId: marker.getAttribute('data-meaning-id') || '',
+        meaningZh: marker.getAttribute('data-meaning-zh') || '',
+        meaningHi: marker.getAttribute('data-meaning-hi') || '',
+        meaningJa: marker.getAttribute('data-meaning-ja') || '',
+        meaningEs: marker.getAttribute('data-meaning-es') || '',
+        meaningAr: marker.getAttribute('data-meaning-ar') || '',
+        meaningFr: marker.getAttribute('data-meaning-fr') || '',
+        meaningKo: marker.getAttribute('data-meaning-ko') || '',
+        meaningPt: marker.getAttribute('data-meaning-pt') || '',
+        meaningRu: marker.getAttribute('data-meaning-ru') || '',
+        meaningDe: marker.getAttribute('data-meaning-de') || '',
         explanationEn: marker.getAttribute('data-explanation-en') || '',
         examples: (marker.getAttribute('data-examples') || '').split(';').map(s => s.trim()),
         image: marker.getAttribute('data-image') || '',
       };
+      
+      setDisplayLang(currentLang);
       
       setActiveVocab(info);
       setPosition({ 
@@ -311,44 +406,36 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">TRANSLATION</p>
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => handleLangChange('vi')}
-                      title="Vietnamese"
+                      onClick={() => setDisplayLang('en')}
+                      title="English"
                       className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        currentLang === 'vi'
+                        displayLang === 'en'
                           ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
                           : 'opacity-40 hover:opacity-80'
                       }`}
                     >
-                      <img src="/flags/flag-vi.png" alt="Vietnamese" className="w-full h-full object-cover" />
+                      <img src="/flags/flag-en.png" alt="English" className="w-full h-full object-cover" />
                     </button>
-                    <button
-                      onClick={() => handleLangChange('th')}
-                      title="Thai"
-                      className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        currentLang === 'th'
-                          ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
-                          : 'opacity-40 hover:opacity-80'
-                      }`}
-                    >
-                      <img src="/flags/flag-th.png" alt="Thai" className="w-full h-full object-cover" />
-                    </button>
-                    <button
-                      onClick={() => handleLangChange('id')}
-                      title="Indonesian"
-                      className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        currentLang === 'id'
-                          ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
-                          : 'opacity-40 hover:opacity-80'
-                      }`}
-                    >
-                      <img src="/flags/flag-id.png" alt="Indonesian" className="w-full h-full object-cover" />
-                    </button>
+                    
+                    {currentLang !== 'en' && currentLang !== 'other' && (
+                      <button
+                        onClick={() => setDisplayLang(currentLang)}
+                        title={getLangTitle(currentLang)}
+                        className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
+                          displayLang === currentLang
+                            ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                            : 'opacity-40 hover:opacity-80'
+                        }`}
+                      >
+                        <img src={getFlagUrl(currentLang)} alt={getLangTitle(currentLang)} className="w-full h-full object-cover" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <p className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-tight">
-                  {currentLang === 'vi' ? capitalize(activeVocab.meaningVi)
-                   : currentLang === 'th' ? capitalize(activeVocab.meaningTh)
-                   : capitalize(activeVocab.meaningId)}
+                  {displayLang === 'en' || displayLang === 'other'
+                    ? capitalize(activeVocab.explanationEn)
+                    : capitalize(getDefinitionText(activeVocab, displayLang))}
                 </p>
               </div>
 

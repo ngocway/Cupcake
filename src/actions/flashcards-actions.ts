@@ -43,6 +43,9 @@ const fetchFlashcardsByTopic = async (topicId: string) => {
     where: {
       topicId: topicId
     },
+    include: {
+      translations: true
+    },
     orderBy: {
       orderIndex: 'asc'
     }

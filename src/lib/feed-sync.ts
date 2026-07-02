@@ -130,9 +130,11 @@ export async function syncToHomepageFeed(sourceId: string, type: "EXERCISE" | "L
     }
     console.log(`[FeedSync] Successfully synced ${type} ${sourceId}`);
     try {
-      revalidateTag("home-feed", {});
-      revalidateTag("assignments", {});
-      revalidateTag("lessons", {});
+      revalidateTag("homepage", "max");
+      revalidateTag("home-feed", "max");
+      revalidateTag("assignments", "max");
+      revalidateTag("lessons", "max");
+      revalidateTag("shuffled", "max");
     } catch (e) {
       console.log("[FeedSync] Failed to revalidate tags:", e);
     }

@@ -97,6 +97,67 @@ const cardBackgroundStyles = [
   }
 ];
 
+const getDefinitionText = (card: any, lang: string) => {
+  if (!card) return "";
+  if (lang === "en" || lang === "other") return card.definition || "";
+  if (lang === "vi") return card.definitionVi || card.definition || "";
+  if (lang === "th") return card.definitionTh || card.definition || "";
+  if (lang === "id") return card.definitionId || card.definition || "";
+  
+  if (Array.isArray(card.translations)) {
+    const t = card.translations.find((item: any) => item.locale === lang);
+    if (t) return t.definition;
+  }
+  return card.definition || "";
+};
+
+const getFlagUrl = (lang: string) => {
+  if (lang === "en") return "/flags/flag-en.png";
+  if (lang === "vi") return "/flags/flag-vi.png";
+  if (lang === "th") return "/flags/flag-th.png";
+  if (lang === "id") return "/flags/flag-id.png";
+  
+  const cdnCodes: Record<string, string> = {
+    zh: "cn",
+    hi: "in",
+    ja: "jp",
+    es: "es",
+    ar: "sa",
+    fr: "fr",
+    ko: "kr",
+    pt: "pt",
+    ru: "ru",
+    de: "de",
+    other: "other"
+  };
+  
+  const code = cdnCodes[lang];
+  if (code === "other") return "/globe.svg";
+  if (code) return `https://flagcdn.com/w40/${code}.png`;
+  return "/globe.svg";
+};
+
+const getLangTitle = (lang: string) => {
+  const titles: Record<string, string> = {
+    en: "English",
+    vi: "Vietnamese",
+    th: "Thai",
+    id: "Indonesian",
+    zh: "Mandarin Chinese",
+    hi: "Hindi",
+    ja: "Japanese",
+    es: "Spanish",
+    ar: "Arabic",
+    fr: "French",
+    ko: "Korean",
+    pt: "Portuguese",
+    ru: "Russian",
+    de: "German",
+    other: "Other"
+  };
+  return titles[lang] || lang.toUpperCase();
+};
+
 interface FlashcardsClientProps {
   initialCategories: Category[]
 }
@@ -136,6 +197,11 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
   const currentLang = useContentStore(s => s.nativeLanguage)
   const setNativeLanguage = useContentStore(s => s.setNativeLanguage)
+  const [displayLang, setDisplayLang] = useState<string>(currentLang)
+
+  useEffect(() => {
+    setDisplayLang(currentLang)
+  }, [currentLang])
 
   // Trạng thái load ảnh để hiển thị spinner
   const [isImageLoading, setIsImageLoading] = useState(true)
@@ -273,6 +339,9 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
     setLoading(true)
     setSelectedTopic(topic)
     
+    // Đồng bộ URL query parameter
+    router.replace(`/flashcards?topic=${topic.id}`, { scroll: false })
+    
     try {
       const cards = await getFlashcardsByTopic(topic.id)
       
@@ -322,25 +391,31 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
   // Quay lại màn hình chọn
   const handleBackToSelection = useCallback(() => {
     stopCurrentAudio()
-    setFocusMode(false)
-    setSelectedTopic(null)
-    setFlashcards([])
-    setCurrentIndex(0)
-    setIsFlipped(false)
     router.push("/flashcards", { scroll: false })
   }, [router])
 
   // Initialize selectedCategory based on studyAgeGroup or URL topic
   useEffect(() => {
     const topicId = searchParams.get("topic")
-    if (topicId && !selectedTopic) {
-      for (const cat of categories) {
-        const foundTopic = cat.topics.find(t => t.id === topicId)
-        if (foundTopic) {
-          setSelectedCategory(cat)
-          handleSelectTopic(foundTopic)
-          return
+    if (topicId) {
+      if (!selectedTopic || selectedTopic.id !== topicId) {
+        for (const cat of categories) {
+          const foundTopic = cat.topics.find(t => t.id === topicId)
+          if (foundTopic) {
+            setSelectedCategory(cat)
+            handleSelectTopic(foundTopic)
+            return
+          }
         }
+      }
+    } else {
+      if (selectedTopic || focusMode) {
+        stopCurrentAudio()
+        setFocusMode(false)
+        setSelectedTopic(null)
+        setFlashcards([])
+        setCurrentIndex(0)
+        setIsFlipped(false)
       }
     }
 
@@ -362,7 +437,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       }
       setSelectedCategory(categories[0] || null)
     }
-  }, [categories, studyAgeGroup, searchParams, selectedCategory, selectedTopic, handleSelectTopic])
+  }, [categories, studyAgeGroup, searchParams, selectedCategory, selectedTopic, handleSelectTopic, focusMode])
 
   // Hỗ trợ bấm phím mũi tên & Space để lật/chuyển thẻ
   useEffect(() => {
@@ -905,52 +980,31 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full border ${isKidMode ? "bg-amber-50 border-amber-200/60" : "bg-slate-50 border-slate-200"}`}>
                       {/* US - English */}
                       <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('en'); }}
+                        onClick={(e) => { e.stopPropagation(); setDisplayLang('en'); }}
                         title="English"
                         className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'en'
+                          displayLang === 'en'
                             ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
                             : 'opacity-40'
                         }`}
                       >
                         <img src="/flags/flag-en.png" alt="English" className="w-full h-full object-cover" />
                       </button>
-                      {/* Vietnam - VI */}
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('vi'); }}
-                        title="Vietnamese"
-                        className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'vi'
-                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
-                            : 'opacity-40'
-                        }`}
-                      >
-                        <img src="/flags/flag-vi.png" alt="Vietnamese" className="w-full h-full object-cover" />
-                      </button>
-                      {/* Thai - TH */}
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('th'); }}
-                        title="Thai"
-                        className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'th'
-                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
-                            : 'opacity-40'
-                        }`}
-                      >
-                        <img src="/flags/flag-th.png" alt="Thai" className="w-full h-full object-cover" />
-                      </button>
-                      {/* Indonesian - ID */}
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); handleLangChange('id'); }}
-                        title="Indonesian"
-                        className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
-                          currentLang === 'id'
-                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
-                            : 'opacity-40'
-                        }`}
-                      >
-                        <img src="/flags/flag-id.png" alt="Indonesian" className="w-full h-full object-cover" />
-                      </button>
+                      
+                      {/* Native Language Flag (only if it is not English or other) */}
+                      {currentLang !== 'en' && currentLang !== 'other' && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setDisplayLang(currentLang); }}
+                          title={getLangTitle(currentLang)}
+                          className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 hover:opacity-100 ${
+                            displayLang === currentLang
+                              ? 'ring-2 ring-primary ring-offset-2 ring-offset-white shadow-sm scale-110 opacity-100'
+                              : 'opacity-40'
+                          }`}
+                        >
+                          <img src={getFlagUrl(currentLang)} alt={getLangTitle(currentLang)} className="w-full h-full object-cover" />
+                        </button>
+                      )}
                       </div>
                     </div>
                   </div>
@@ -958,10 +1012,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
                     <p className={`text-center min-h-[40px] flex items-center justify-center px-4 font-black ${
                       isKidMode ? "text-amber-950 text-base md:text-lg" : "text-slate-700 text-sm md:text-base"
                     }`}>
-                      {currentLang === 'vi' ? (activeCard?.definitionVi || activeCard?.definition)
-                       : currentLang === 'th' ? (activeCard?.definitionTh || activeCard?.definition)
-                       : currentLang === 'id' ? (activeCard?.definitionId || activeCard?.definition)
-                       : activeCard?.definition}
+                      {getDefinitionText(activeCard, displayLang)}
                     </p>
                   </div>
 

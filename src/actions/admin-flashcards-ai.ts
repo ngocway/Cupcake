@@ -66,6 +66,16 @@ export async function generateFlashcardVocabularyList(categoryName: string, topi
     - "definitionVi": A SHORT, direct Vietnamese translation (1-3 words max, e.g. "Quả chuối", NOT a definition).
     - "definitionTh": A SHORT, direct Thai translation (1-3 words max).
     - "definitionId": A SHORT, direct Indonesian translation (1-3 words max).
+    - "definitionZh": A SHORT, direct Mandarin Chinese translation (1-3 words/characters max).
+    - "definitionHi": A SHORT, direct Hindi translation (1-3 words max).
+    - "definitionJa": A SHORT, direct Japanese translation (1-3 words/characters max).
+    - "definitionEs": A SHORT, direct Spanish translation (1-3 words max).
+    - "definitionAr": A SHORT, direct Arabic translation (1-3 words max).
+    - "definitionFr": A SHORT, direct French translation (1-3 words max).
+    - "definitionKo": A SHORT, direct Korean translation (1-3 words/characters max).
+    - "definitionPt": A SHORT, direct Portuguese translation (1-3 words max).
+    - "definitionRu": A SHORT, direct Russian translation (1-3 words max).
+    - "definitionDe": A SHORT, direct German translation (1-3 words max).
     - "exampleSentence": A simple English example sentence matching the rules above.
     - "quizQuestion": A simple English quiz question matching the rules above.
     - "imageSearchKeyword": A very descriptive English search keyword for finding a representative image on Google Images (e.g. for "dilemma", use "confused person at crossroads").
@@ -153,6 +163,18 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
     }
 
     // 3. Create flashcard
+    const translations: Record<string, string> = {};
+    if (wordData.definitionZh) translations.zh = wordData.definitionZh;
+    if (wordData.definitionHi) translations.hi = wordData.definitionHi;
+    if (wordData.definitionJa) translations.ja = wordData.definitionJa;
+    if (wordData.definitionEs) translations.es = wordData.definitionEs;
+    if (wordData.definitionAr) translations.ar = wordData.definitionAr;
+    if (wordData.definitionFr) translations.fr = wordData.definitionFr;
+    if (wordData.definitionKo) translations.ko = wordData.definitionKo;
+    if (wordData.definitionPt) translations.pt = wordData.definitionPt;
+    if (wordData.definitionRu) translations.ru = wordData.definitionRu;
+    if (wordData.definitionDe) translations.de = wordData.definitionDe;
+
     const res = await adminCreateFlashcard({
       topicId: topicId,
       word: wordData.word,
@@ -164,6 +186,7 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
       exampleSentence: wordData.exampleSentence,
       imageUrl: imageUrl || undefined,
       audioUrl: audioUrl || undefined,
+      translations: Object.keys(translations).length > 0 ? translations : undefined,
     });
 
     return { success: res.success, error: res.error, card: res.card };

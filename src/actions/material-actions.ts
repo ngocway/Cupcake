@@ -514,41 +514,46 @@ export async function autoSaveMaterial(payload: {
 
   console.log(`[AutoSave] Upserted questions: ${toCreateCount} created, ${toUpdateCount} updated for ${payload.id}`);
 
-  // Sync to Homepage Feed and Tags
-  after(() => {
-    invalidateMaterialCache(payload.id).catch(err => {
-      console.error("[AutoSave] Background cache invalidation failed:", err);
-    });
+  // Sync to Homepage Feed and Tags synchronously to ensure reliability
+  try {
+    await invalidateMaterialCache(payload.id);
+  } catch (err) {
+    console.error("[AutoSave] Cache invalidation failed:", err);
+  }
 
-    syncToHomepageFeed(payload.id, "EXERCISE").catch(err => {
-      console.error("[AutoSave] Background sync feed failed:", err);
-    });
-    
-    if (existing && existing.lesson) {
-      syncToHomepageFeed(existing.lesson.id, "LESSON").catch(err => {
-        console.error("[AutoSave] Background sync feed failed for lesson:", err);
-      });
+  try {
+    await syncToHomepageFeed(payload.id, "EXERCISE");
+  } catch (err) {
+    console.error("[AutoSave] Sync feed failed:", err);
+  }
+  
+  if (existing && existing.lesson) {
+    try {
+      await syncToHomepageFeed(existing.lesson.id, "LESSON");
+    } catch (err) {
+      console.error("[AutoSave] Sync feed failed for lesson:", err);
     }
+  }
 
-    // Sync new tags to the Tag model so they appear in autocomplete
-    if (payload.tags) {
-      const tagArray = payload.tags.split(',').map(t => t.trim()).filter(Boolean);
-      if (tagArray.length > 0) {
-        prisma.tag.findMany({
-          where: { name: { in: tagArray, mode: 'insensitive' } },
-          select: { name: true }
-        }).then(existingTags => {
-          const existingLower = new Set(existingTags.map(t => t.name.toLowerCase()));
-          const toCreate = tagArray.filter(t => !existingLower.has(t.toLowerCase()));
-          if (toCreate.length > 0) {
-            prisma.tag.createMany({
-              data: toCreate.map(t => ({ name: t, isPopular: false })),
-              skipDuplicates: true
-            }).catch(e => console.error("[AutoSave] Failed to create tags:", e));
-          }
-        }).catch(e => console.error("[AutoSave] Failed to fetch tags:", e));
-      }
+  // Sync new tags to the Tag model so they appear in autocomplete
+  if (payload.tags) {
+    const tagArray = payload.tags.split(',').map(t => t.trim()).filter(Boolean);
+    if (tagArray.length > 0) {
+      prisma.tag.findMany({
+        where: { name: { in: tagArray, mode: 'insensitive' } },
+        select: { name: true }
+      }).then(existingTags => {
+        const existingLower = new Set(existingTags.map(t => t.name.toLowerCase()));
+        const toCreate = tagArray.filter(t => !existingLower.has(t.toLowerCase()));
+        if (toCreate.length > 0) {
+          prisma.tag.createMany({
+            data: toCreate.map(t => ({ name: t, isPopular: false })),
+            skipDuplicates: true
+          }).catch(e => console.error("[AutoSave] Failed to create tags:", e));
+        }
+      }).catch(e => console.error("[AutoSave] Failed to fetch tags:", e));
     }
+  }
 
     // AI embedding: re-index when content is PUBLIC, it is NOT an autosave, and core content actually changed
     if (existing?.status === 'PUBLIC' && !payload.isAutoSave) {
@@ -596,7 +601,6 @@ export async function autoSaveMaterial(payload: {
         }
       }
     }
-  });
 
   return { success: true, savedAt: new Date() };
 }
@@ -642,22 +646,26 @@ export async function saveMaterialThumbnail(id: string, thumbnail: string | null
     });
   }
 
-  // Sync to Homepage Feed (Background execution, non-blocking)
-  after(() => {
-    invalidateMaterialCache(id).catch(err => {
-      console.error("[SaveThumbnail] Background cache invalidation failed:", err);
-    });
+  // Sync to Homepage Feed synchronously to ensure reliability
+  try {
+    await invalidateMaterialCache(id);
+  } catch (err) {
+    console.error("[SaveThumbnail] Cache invalidation failed:", err);
+  }
 
-    syncToHomepageFeed(id, "EXERCISE").catch(err => {
-      console.error("[SaveThumbnail] Background sync feed failed:", err);
-    });
-    
-    if (updatedAssignment.lesson) {
-      syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON").catch(err => {
-        console.error("[SaveThumbnail] Background sync feed failed for lesson:", err);
-      });
+  try {
+    await syncToHomepageFeed(id, "EXERCISE");
+  } catch (err) {
+    console.error("[SaveThumbnail] Sync feed failed:", err);
+  }
+  
+  if (updatedAssignment.lesson) {
+    try {
+      await syncToHomepageFeed(updatedAssignment.lesson.id, "LESSON");
+    } catch (err) {
+      console.error("[SaveThumbnail] Sync feed failed for lesson:", err);
     }
-  });
+  }
 
   revalidatePath('/teacher/lessons');
   revalidatePath('/teacher/materials');

@@ -623,10 +623,21 @@ model GlobalFlashcard {
   audioWordUrl    String?
   quizQuestion    String?
   quizAudioUrl    String?
-  topic           FlashcardTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  orderIndex      Int            @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  topic           FlashcardTopic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  orderIndex      Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  translations    FlashcardTranslation[]
+}
+
+model FlashcardTranslation {
+  id         String          @id @default(cuid())
+  cardId     String
+  locale     String          // e.g. "zh", "hi", "ja", "es", "ar", "fr", "ko", "pt", "ru", "de"
+  definition String          // The translated definition
+  card       GlobalFlashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, locale])
 }
 
 model MatchWordGame {

@@ -1277,10 +1277,21 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
                       >
                         <SelectValue placeholder="Select language" />
                       </SelectTrigger>
-                      <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.5rem] border-[3px] border-emerald-200 shadow-xl overflow-hidden font-bold text-emerald-900 p-2">
+                      <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.5rem] border-[3px] border-emerald-200 shadow-xl overflow-hidden font-bold text-emerald-900 p-2 max-h-[300px] overflow-y-auto">
                         <SelectItem value="vi" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇻🇳</span> Tiếng Việt</SelectItem>
                         <SelectItem value="th" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇹🇭</span> Thailand</SelectItem>
                         <SelectItem value="id" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇮🇩</span> Indonesia</SelectItem>
+                        <SelectItem value="zh" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇨🇳</span> Mandarin Chinese</SelectItem>
+                        <SelectItem value="hi" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇮🇳</span> Hindi</SelectItem>
+                        <SelectItem value="ja" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇯🇵</span> Japanese</SelectItem>
+                        <SelectItem value="es" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇪🇸</span> Spanish</SelectItem>
+                        <SelectItem value="ar" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇸🇦</span> Arabic</SelectItem>
+                        <SelectItem value="fr" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇫🇷</span> French</SelectItem>
+                        <SelectItem value="ko" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇰🇷</span> Korean</SelectItem>
+                        <SelectItem value="pt" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇵🇹</span> Portuguese</SelectItem>
+                        <SelectItem value="ru" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇷🇺</span> Russian</SelectItem>
+                        <SelectItem value="de" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇩🇪</span> German</SelectItem>
+                        <SelectItem value="other" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🌐</span> Other language</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

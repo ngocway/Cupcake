@@ -23,6 +23,75 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useScrollDirection } from '@/hooks/useScrollDirection';
+import { useContentStore } from '@/store/useContentStore';
+
+const getDefinitionText = (vocab: any, lang: string) => {
+  if (lang === "en" || lang === "other") return "";
+  if (lang === "vi") return vocab.meaningVi;
+  if (lang === "th") return vocab.meaningTh;
+  if (lang === "id") return vocab.meaningId;
+  
+  const mapping: Record<string, string | undefined> = {
+    zh: vocab.meaningZh,
+    hi: vocab.meaningHi,
+    ja: vocab.meaningJa,
+    es: vocab.meaningEs,
+    ar: vocab.meaningAr,
+    fr: vocab.meaningFr,
+    ko: vocab.meaningKo,
+    pt: vocab.meaningPt,
+    ru: vocab.meaningRu,
+    de: vocab.meaningDe
+  };
+  return mapping[lang] || "";
+};
+
+const getFlagUrl = (lang: string) => {
+  if (lang === "en") return "/flags/flag-en.png";
+  if (lang === "vi") return "/flags/flag-vi.png";
+  if (lang === "th") return "/flags/flag-th.png";
+  if (lang === "id") return "/flags/flag-id.png";
+  
+  const cdnCodes: Record<string, string> = {
+    zh: "cn",
+    hi: "in",
+    ja: "jp",
+    es: "es",
+    ar: "sa",
+    fr: "fr",
+    ko: "kr",
+    pt: "pt",
+    ru: "ru",
+    de: "de",
+    other: "other"
+  };
+  
+  const code = cdnCodes[lang];
+  if (code === "other") return "/globe.svg";
+  if (code) return `https://flagcdn.com/w40/${code}.png`;
+  return "/globe.svg";
+};
+
+const getLangTitle = (lang: string) => {
+  const titles: Record<string, string> = {
+    en: "English",
+    vi: "Vietnamese",
+    th: "Thai",
+    id: "Indonesian",
+    zh: "Mandarin Chinese",
+    hi: "Hindi",
+    ja: "Japanese",
+    es: "Spanish",
+    ar: "Arabic",
+    fr: "French",
+    ko: "Korean",
+    pt: "Portuguese",
+    ru: "Russian",
+    de: "German",
+    other: "Other"
+  };
+  return titles[lang] || lang.toUpperCase();
+};
 
 export default function StudyClient({ assignment }: { assignment: any }) {
   const router = useRouter();
@@ -40,13 +109,28 @@ export default function StudyClient({ assignment }: { assignment: any }) {
     meaningVi: string;
     meaningTh: string;
     meaningId: string;
+    meaningZh?: string;
+    meaningHi?: string;
+    meaningJa?: string;
+    meaningEs?: string;
+    meaningAr?: string;
+    meaningFr?: string;
+    meaningKo?: string;
+    meaningPt?: string;
+    meaningRu?: string;
+    meaningDe?: string;
     explanationEn: string;
     examples: string;
     image: string;
     rect: DOMRect | null;
     side: 'top' | 'bottom' | 'left' | 'right';
   } | null>(null);
-  const [currentLang, setCurrentLang] = useState('VI');
+  const userNativeLang = useContentStore(s => s.nativeLanguage);
+  const [displayLang, setDisplayLang] = useState<string>(userNativeLang);
+
+  useEffect(() => {
+    setDisplayLang(userNativeLang);
+  }, [userNativeLang]);
   // Result message after checking answer
   const [answerResult, setAnswerResult] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -88,24 +172,7 @@ export default function StudyClient({ assignment }: { assignment: any }) {
   // Enter fullscreen automatically on mount
   useEffect(() => { enterFullscreen(); }, [enterFullscreen]);
 
-  // Load saved vocab language preference
-  useEffect(() => {
-    async function loadLang() {
-      const dbPref = await getUserVocabLanguage();
-      if (dbPref) {
-        setCurrentLang(dbPref);
-      } else {
-        setCurrentLang(localStorage.getItem('vocabLang') || 'VI');
-      }
-    }
-    loadLang();
-  }, []);
-
-  const handleLangChange = async (lang: string) => {
-    setCurrentLang(lang);
-    localStorage.setItem('vocabLang', lang);
-    await updateUserVocabLanguage(lang);
-  };
+  // Language preferences handled globally via useContentStore
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -128,12 +195,23 @@ export default function StudyClient({ assignment }: { assignment: any }) {
         meaningVi: marker.getAttribute('data-meaning-vi') || '',
         meaningTh: marker.getAttribute('data-meaning-th') || '',
         meaningId: marker.getAttribute('data-meaning-id') || '',
+        meaningZh: marker.getAttribute('data-meaning-zh') || '',
+        meaningHi: marker.getAttribute('data-meaning-hi') || '',
+        meaningJa: marker.getAttribute('data-meaning-ja') || '',
+        meaningEs: marker.getAttribute('data-meaning-es') || '',
+        meaningAr: marker.getAttribute('data-meaning-ar') || '',
+        meaningFr: marker.getAttribute('data-meaning-fr') || '',
+        meaningKo: marker.getAttribute('data-meaning-ko') || '',
+        meaningPt: marker.getAttribute('data-meaning-pt') || '',
+        meaningRu: marker.getAttribute('data-meaning-ru') || '',
+        meaningDe: marker.getAttribute('data-meaning-de') || '',
         explanationEn: marker.getAttribute('data-explanation-en') || '',
         examples: marker.getAttribute('data-examples') || '',
         image: marker.getAttribute('data-image') || '',
         rect,
         side
       });
+      setDisplayLang(userNativeLang);
     } else {
       if (!hoveredVocab) return;
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -584,44 +662,36 @@ export default function StudyClient({ assignment }: { assignment: any }) {
                 {/* Language Switcher Flags */}
                 <div className="flex items-center gap-3 mb-3">
                   <button
-                    onClick={() => handleLangChange('VI')}
-                    title="Vietnamese"
+                    onClick={() => setDisplayLang('en')}
+                    title="English"
                     className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
-                      currentLang === 'VI'
+                      displayLang === 'en'
                         ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
                         : 'opacity-40 hover:opacity-80'
                     }`}
                   >
-                    <img src="/flags/flag-vi.png" alt="Vietnamese" className="w-full h-full object-cover" />
+                    <img src="/flags/flag-en.png" alt="English" className="w-full h-full object-cover" />
                   </button>
-                  <button
-                    onClick={() => handleLangChange('TH')}
-                    title="Thai"
-                    className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
-                      currentLang === 'TH'
-                        ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
-                        : 'opacity-40 hover:opacity-80'
-                    }`}
-                  >
-                    <img src="/flags/flag-th.png" alt="Thai" className="w-full h-full object-cover" />
-                  </button>
-                  <button
-                    onClick={() => handleLangChange('ID')}
-                    title="Indonesian"
-                    className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
-                      currentLang === 'ID'
-                        ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
-                        : 'opacity-40 hover:opacity-80'
-                    }`}
-                  >
-                    <img src="/flags/flag-id.png" alt="Indonesian" className="w-full h-full object-cover" />
-                  </button>
+                  
+                  {userNativeLang !== 'en' && userNativeLang !== 'other' && (
+                    <button
+                      onClick={() => setDisplayLang(userNativeLang)}
+                      title={getLangTitle(userNativeLang)}
+                      className={`flex items-center justify-center w-[52px] h-[52px] rounded-full transition-all duration-200 hover:scale-110 overflow-hidden ${
+                        displayLang === userNativeLang
+                          ? 'ring-2 ring-offset-1 ring-indigo-500 shadow-md scale-110'
+                          : 'opacity-40 hover:opacity-80'
+                      }`}
+                    >
+                      <img src={getFlagUrl(userNativeLang)} alt={getLangTitle(userNativeLang)} className="w-full h-full object-cover" />
+                    </button>
+                  )}
                 </div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">TRANSLATION</p>
                 <p className="text-xs font-bold text-slate-700 dark:text-gray-200">
-                  {currentLang === 'VI' ? capitalize(hoveredVocab.meaningVi)
-                    : currentLang === 'TH' ? capitalize(hoveredVocab.meaningTh)
-                    : capitalize(hoveredVocab.meaningId)}
+                  {displayLang === 'en' || displayLang === 'other'
+                    ? capitalize(hoveredVocab.explanationEn)
+                    : capitalize(getDefinitionText(hoveredVocab, displayLang))}
                 </p>
               </div>
 

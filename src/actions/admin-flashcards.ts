@@ -48,6 +48,7 @@ interface CreateFlashcardData {
   audioWordUrl?: string
   quizQuestion?: string
   quizAudioUrl?: string
+  translations?: Record<string, string>
 }
 
 export async function adminCreateFlashcard(data: CreateFlashcardData) {
@@ -105,7 +106,18 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
         audioWordUrl: safeAudioWordUrl,
         quizQuestion: data.quizQuestion?.trim() || null,
         quizAudioUrl: safeQuizAudioUrl,
-        orderIndex
+        orderIndex,
+        translations: data.translations ? {
+          createMany: {
+            data: Object.entries(data.translations).map(([locale, definition]) => ({
+              locale,
+              definition: definition.trim()
+            }))
+          }
+        } : undefined
+      },
+      include: {
+        translations: true
       }
     })
 
@@ -133,6 +145,7 @@ interface UpdateFlashcardData {
   audioWordUrl?: string | null
   quizQuestion?: string | null
   quizAudioUrl?: string | null
+  translations?: Record<string, string>
 }
 
 export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData) {
@@ -181,8 +194,24 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
         audioWordUrl: safeAudioWordUrl,
         quizQuestion: data.quizQuestion !== undefined ? (data.quizQuestion?.trim() || null) : undefined,
         quizAudioUrl: safeQuizAudioUrl
+      },
+      include: {
+        translations: true
       }
     })
+
+    if (data.translations) {
+      await prisma.flashcardTranslation.deleteMany({
+        where: { cardId: id }
+      })
+      await prisma.flashcardTranslation.createMany({
+        data: Object.entries(data.translations).map(([locale, definition]) => ({
+          cardId: id,
+          locale,
+          definition: definition.trim()
+        }))
+      })
+    }
 
     await triggerCacheRevalidation()
 

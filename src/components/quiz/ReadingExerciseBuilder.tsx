@@ -560,6 +560,16 @@ export function ReadingExerciseBuilder({
     meaningVi: string;
     meaningTh: string;
     meaningId: string;
+    meaningZh?: string;
+    meaningHi?: string;
+    meaningJa?: string;
+    meaningEs?: string;
+    meaningAr?: string;
+    meaningFr?: string;
+    meaningKo?: string;
+    meaningPt?: string;
+    meaningRu?: string;
+    meaningDe?: string;
     explanationEn: string;
     examples: string;
     image: string;
@@ -729,6 +739,16 @@ export function ReadingExerciseBuilder({
       meaningVi: m.getAttribute('data-meaning-vi') || '',
       meaningTh: m.getAttribute('data-meaning-th') || '',
       meaningId: m.getAttribute('data-meaning-id') || '',
+      meaningZh: m.getAttribute('data-meaning-zh') || '',
+      meaningHi: m.getAttribute('data-meaning-hi') || '',
+      meaningJa: m.getAttribute('data-meaning-ja') || '',
+      meaningEs: m.getAttribute('data-meaning-es') || '',
+      meaningAr: m.getAttribute('data-meaning-ar') || '',
+      meaningFr: m.getAttribute('data-meaning-fr') || '',
+      meaningKo: m.getAttribute('data-meaning-ko') || '',
+      meaningPt: m.getAttribute('data-meaning-pt') || '',
+      meaningRu: m.getAttribute('data-meaning-ru') || '',
+      meaningDe: m.getAttribute('data-meaning-de') || '',
       explanationEn: m.getAttribute('data-explanation-en') || '',
       examples: m.getAttribute('data-examples') || '',
       image: m.getAttribute('data-image') || ''
@@ -1626,6 +1646,34 @@ export function ReadingExerciseBuilder({
     const vocabId = vocabForm.isEdit ? vocabForm.vocabId : 'vocab-' + Date.now();
     const escapeAttr = (str: string) => str ? str.replace(/"/g, '&quot;').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
     
+    let extraAttrs = "";
+    if (vocabForm.isEdit) {
+      const existingElement = document.querySelector(`[data-vocab-id="${vocabId}"]`);
+      if (existingElement) {
+        for (let i = 0; i < existingElement.attributes.length; i++) {
+          const attr = existingElement.attributes[i];
+          if (
+            attr.name.startsWith('data-meaning-') && 
+            attr.name !== 'data-meaning-vi' && 
+            attr.name !== 'data-meaning-th' && 
+            attr.name !== 'data-meaning-id' &&
+            attr.name !== 'data-meaning-zh' &&
+            attr.name !== 'data-meaning-hi' &&
+            attr.name !== 'data-meaning-ja' &&
+            attr.name !== 'data-meaning-es' &&
+            attr.name !== 'data-meaning-ar' &&
+            attr.name !== 'data-meaning-fr' &&
+            attr.name !== 'data-meaning-ko' &&
+            attr.name !== 'data-meaning-pt' &&
+            attr.name !== 'data-meaning-ru' &&
+            attr.name !== 'data-meaning-de'
+          ) {
+            extraAttrs += ` ${attr.name}="${attr.value.replace(/"/g, '&quot;')}"`;
+          }
+        }
+      }
+    }
+    
     const html = `<span 
         class="relative inline-block custom-vocab-marker group/marker" 
         data-vocab-id="${vocabId}" 
@@ -1634,9 +1682,20 @@ export function ReadingExerciseBuilder({
         data-meaning-vi="${escapeAttr(vocabForm.meaningVi || '')}" 
         data-meaning-th="${escapeAttr(vocabForm.meaningTh || '')}" 
         data-meaning-id="${escapeAttr(vocabForm.meaningId || '')}" 
+        data-meaning-zh="${escapeAttr(vocabForm.meaningZh || '')}" 
+        data-meaning-hi="${escapeAttr(vocabForm.meaningHi || '')}" 
+        data-meaning-ja="${escapeAttr(vocabForm.meaningJa || '')}" 
+        data-meaning-es="${escapeAttr(vocabForm.meaningEs || '')}" 
+        data-meaning-ar="${escapeAttr(vocabForm.meaningAr || '')}" 
+        data-meaning-fr="${escapeAttr(vocabForm.meaningFr || '')}" 
+        data-meaning-ko="${escapeAttr(vocabForm.meaningKo || '')}" 
+        data-meaning-pt="${escapeAttr(vocabForm.meaningPt || '')}" 
+        data-meaning-ru="${escapeAttr(vocabForm.meaningRu || '')}" 
+        data-meaning-de="${escapeAttr(vocabForm.meaningDe || '')}" 
         data-explanation-en="${escapeAttr(vocabForm.explanationEn || '')}" 
         data-examples="${escapeAttr(vocabForm.examples || '')}" 
         data-image="${escapeAttr(vocabForm.image || '')}"
+        ${extraAttrs}
         contenteditable="false"
       ><span class="bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-bold px-1.5 py-0.5 rounded-md cursor-help border-b-2 border-emerald-500 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/60 transition-all duration-200">${vocabForm.word}</span></span>&nbsp;`;
 
@@ -1683,6 +1742,16 @@ export function ReadingExerciseBuilder({
             meaningVi: result.meaningVi || `(Nghĩa của từ "${prev.word}")`,
             meaningTh: result.meaningTh || '',
             meaningId: result.meaningId || '',
+            meaningZh: result.meaningZh || '',
+            meaningHi: result.meaningHi || '',
+            meaningJa: result.meaningJa || '',
+            meaningEs: result.meaningEs || '',
+            meaningAr: result.meaningAr || '',
+            meaningFr: result.meaningFr || '',
+            meaningKo: result.meaningKo || '',
+            meaningPt: result.meaningPt || '',
+            meaningRu: result.meaningRu || '',
+            meaningDe: result.meaningDe || '',
             explanationEn: result.explanationEn || '',
             examples: Array.isArray(result.examples) ? result.examples.join('\n') : (result.examples || '')
           };
@@ -1714,10 +1783,29 @@ export function ReadingExerciseBuilder({
       const mVi = transData?.responseData?.translatedText || '';
       setVocabForm(prev => {
         if (!prev) return null;
-        return { ...prev, pronunciation: p || '...', meaningVi: mVi || `(Nghĩa của từ "${prev.word}")`, meaningTh: '', meaningId: '', explanationEn: exEn || `Definition for '${prev.word}' not found.`, examples: exs || `Example of using ${prev.word} in context.`, image: `https://loremflickr.com/400/300/${encodeURIComponent(word)},professional` };
+        return { 
+          ...prev, 
+          pronunciation: p || '...', 
+          meaningVi: mVi || `(Nghĩa của từ "${prev.word}")`, 
+          meaningTh: '', 
+          meaningId: '', 
+          meaningZh: '',
+          meaningHi: '',
+          meaningJa: '',
+          meaningEs: '',
+          meaningAr: '',
+          meaningFr: '',
+          meaningKo: '',
+          meaningPt: '',
+          meaningRu: '',
+          meaningDe: '',
+          explanationEn: exEn || `Definition for '${prev.word}' not found.`, 
+          examples: exs || `Example of using ${prev.word} in context.`, 
+          image: `https://loremflickr.com/400/300/${encodeURIComponent(word)},professional` 
+        };
       });
     } catch (innerError) {
-      setVocabForm(prev => { if (!prev) return null; return { ...prev, pronunciation: `/.../`, meaningVi: `(Lỗi kết nối AI)`, meaningTh: '', meaningId: '', explanationEn: `Could not fetch data for "${prev.word}". Please fill in manually.`, examples: '', image: `https://loremflickr.com/400/300/abstract,academic` }; });
+      setVocabForm(prev => { if (!prev) return null; return { ...prev, pronunciation: `/.../`, meaningVi: `(Lỗi kết nối AI)`, meaningTh: '', meaningId: '', meaningZh: '', meaningHi: '', meaningJa: '', meaningEs: '', meaningAr: '', meaningFr: '', meaningKo: '', meaningPt: '', meaningRu: '', meaningDe: '', explanationEn: `Could not fetch data for "${prev.word}". Please fill in manually.`, examples: '', image: `https://loremflickr.com/400/300/abstract,academic` }; });
     } finally {
       setIsAiLoading(false);
     }
@@ -1915,6 +2003,16 @@ export function ReadingExerciseBuilder({
         meaningVi: vocabMarker.getAttribute('data-meaning-vi') || '',
         meaningTh: vocabMarker.getAttribute('data-meaning-th') || '',
         meaningId: vocabMarker.getAttribute('data-meaning-id') || '',
+        meaningZh: vocabMarker.getAttribute('data-meaning-zh') || '',
+        meaningHi: vocabMarker.getAttribute('data-meaning-hi') || '',
+        meaningJa: vocabMarker.getAttribute('data-meaning-ja') || '',
+        meaningEs: vocabMarker.getAttribute('data-meaning-es') || '',
+        meaningAr: vocabMarker.getAttribute('data-meaning-ar') || '',
+        meaningFr: vocabMarker.getAttribute('data-meaning-fr') || '',
+        meaningKo: vocabMarker.getAttribute('data-meaning-ko') || '',
+        meaningPt: vocabMarker.getAttribute('data-meaning-pt') || '',
+        meaningRu: vocabMarker.getAttribute('data-meaning-ru') || '',
+        meaningDe: vocabMarker.getAttribute('data-meaning-de') || '',
         explanationEn: vocabMarker.getAttribute('data-explanation-en') || '',
         examples: vocabMarker.getAttribute('data-examples') || '',
         image: vocabMarker.getAttribute('data-image') || '',
