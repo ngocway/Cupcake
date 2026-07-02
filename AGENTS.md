@@ -13,3 +13,14 @@ When generating audio using ElevenLabs (e.g. for flashcards, quiz questions, or 
 - **Workaround (Padding)**: Prepend `"... "` to the text to generate natural silence at the beginning.
 - **Processing**: Keep the silence in the output file (**do NOT trim the silence**), as this gives browser/hardware audio output time to initialize and prevents clipping the first word.
 
+# Testing Constraint
+- **Do NOT run tests** (automated tests, unit tests, E2E tests, e.g. `vitest`, `playwright`) unless the user explicitly requests it.
+
+# Git Constraint
+- **Do NOT perform Git operations** (such as commit, checkout, push, merge, create branch, etc.) unless the user explicitly requests it.
+
+# Code Editing Constraint
+- **Do NOT edit or write code** to the codebase (apart from editing configuration files like this AGENTS.md at the user's direction) unless the user explicitly requests it.
+
+
+
