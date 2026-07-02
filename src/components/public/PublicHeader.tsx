@@ -21,7 +21,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const pathname = usePathname()
   
   const isDetailOrRunPage = (pathname?.includes('/lessons/') && pathname !== '/student/lessons') || 
-                            (pathname?.includes('/assignments/') && pathname !== '/student/assignments')
+                            (pathname?.includes('/assignments/') && pathname !== '/student/assignments') ||
+                            (pathname?.includes('/books/') && pathname !== '/student/books')
   
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
   const effectiveAgeGroup = session?.studyAgeGroup || studyAgeGroup || "";
@@ -31,8 +32,6 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
     effectiveAgeGroup === "KINDERGARTEN (< 6 YEARS)" ||
     effectiveAgeGroup === "kids-2-5";
 
-  if (isDetailOrRunPage) return null;
-
   const isAtTop = true
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -41,12 +40,6 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   useEffect(() => {
     setLocalSearch(search || "")
   }, [search])
-
-  const handleTriggerSearch = () => {
-    if (setSearch && localSearch !== (search || "")) {
-      setSearch(localSearch)
-    }
-  }
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,7 +55,16 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
     }
   }, [])
 
+  if (isDetailOrRunPage) return null;
+
+  const handleTriggerSearch = () => {
+    if (setSearch && localSearch !== (search || "")) {
+      setSearch(localSearch)
+    }
+  }
+
   const dashboardHref = session?.role === "TEACHER" ? "/teacher/dashboard" : "/student/dashboard"
+
 
   const isActive = (path: string) => pathname === path
 
@@ -80,13 +82,20 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
             <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
           </div>
         </Link>
-        <div className="hidden lg:flex gap-8 items-center">
+        <div className="hidden lg:flex gap-4 items-center">
           <Link 
             className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
             href="/student/game/robot-chat"
           >
             <span className="material-symbols-outlined text-[14px]">smart_toy</span>
             <span>{t("chatWithDolbot")}</span>
+          </Link>
+          <Link 
+            className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+            href="/student/books"
+          >
+            <span className="material-symbols-outlined text-[14px]">menu_book</span>
+            <span>{t("storyBooks")}</span>
           </Link>
         </div>
       </div>

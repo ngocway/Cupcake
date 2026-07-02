@@ -20,8 +20,10 @@ export function MainContentWrapper({
   }, [])
   
   const isLearningRoute = Boolean(
-    pathname && (
-      pathname.includes('/lessons/') || 
+    pathname &&
+    (
+      pathname.includes('/lessons/') ||
+      pathname.includes('/books') ||   // covers /student/books and /student/books/[id]
       pathname.match(/\/(run|quiz|game)/)
     )
   )

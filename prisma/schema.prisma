@@ -724,3 +724,32 @@ model ContentEmbedding {
   @@unique([contentId, contentType])
   @@index([contentType])
 }
+
+model ReadAlongBook {
+  id          String           @id @default(cuid())
+  bookId      String           @unique // e.g. "sw_103026"
+  title       String
+  description String?
+  mdContent   String           // Stored raw markdown content
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  slides      ReadAlongSlide[]
+}
+
+model ReadAlongSlide {
+  id          String        @id @default(cuid())
+  bookId      String
+  book        ReadAlongBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  slideNumber String        // e.g. "01", "02"
+  imageName   String        // Original filename matching the md file e.g., "slide_01.webp"
+  imageUrl    String        // Cloudflare R2 public URL
+  text        String        // Text content for the slide (1-5 sentences)
+  audioUrl    String?       // Cloudflare R2 public URL for pre-generated TTS audio
+  orderIndex  Int           // For sequence ordering
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([bookId, slideNumber])
+  @@index([orderIndex])
+}
+
