@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Match! 🌟</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            font-family: 'Fredoka One', cursive;
+            user-select: none;
+            touch-action: none;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ── Top HUD ── */
+        #hud {
+            position: relative;
+            z-index: 200;
+            height: 54px;
+            background: rgba(255,255,255,0.45);
+            backdrop-filter: blur(14px);
+            border-bottom: 2px solid rgba(255,255,255,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+
+        #roundLabel {
+            font-size: 1.3rem;
+            color: #ff6b6b;
+            text-shadow: 1px 1px 0 #fff;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        #progressWrap {
+            flex: 1;
+            max-width: 360px;
+            height: 14px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 20px;
+            border: 2px solid rgba(255,107,107,0.25);
+            overflow: hidden;
+        }
+        #progressBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57);
+            border-radius: 20px;
+            transition: width 0.4s ease;
+        }
+
+        #pairCount {
+            font-size: 1.15rem;
+            color: #6c5ce7;
+            text-shadow: 1px 1px 0 #fff;
+            white-space: nowrap;
+        }
+
+        /* ── Game Area ── */
+        #gameArea {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ── Image Cards (drop zones) ── */
+        .game-item-image {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255,255,255,0.75);
+            border: 5px dashed #ff9ff3;
+            border-radius: 22px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+            overflow: hidden;
+            transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+            will-change: left, top;
+        }
+
+        .game-item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            padding: 5px;
+            display: block;
+            pointer-events: none;
+            draggable: false;
+        }
+
+        .game-item-image.drop-hover {
+            border-color: #feca57 !important;
+            background: rgba(254,202,87,0.25) !important;
+            box-shadow: 0 0 0 6px rgba(254,202,87,0.45), 0 10px 24px rgba(0,0,0,0.15) !important;
+        }
+
+        .game-item-image.matched {
+            border: 5px solid #1dd1a1 !important;
+            background: rgba(29,209,161,0.22) !important;
+            box-shadow: 0 0 0 4px rgba(29,209,161,0.35) !important;
+            cursor: default;
+            animation: happyDance 0.5s ease;
+        }
+
+        .game-item-image.wrong-flash {
+            border-color: #ff6b6b !important;
+            background: rgba(255,107,107,0.18) !important;
+            animation: wrongShake 0.35s ease;
+        }
+
+        /* ── Word Chips (draggable) ── */
+        .game-item-text {
+            position: absolute;
+            font-size: 1.05rem;
+            padding: 8px 18px;
+            color: #fff;
+            border-radius: 50px;
+            box-shadow: 0 7px 0 rgba(0,0,0,0.18), 0 12px 18px rgba(0,0,0,0.18);
+            cursor: grab;
+            transition: transform 0.12s, box-shadow 0.12s;
+            z-index: 50;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
+            will-change: left, top;
+            touch-action: none;
+        }
+
+        .game-item-text:hover:not(.matched) {
+            transform: scale(1.08) translateY(-3px);
+            box-shadow: 0 11px 0 rgba(0,0,0,0.18), 0 18px 24px rgba(0,0,0,0.22);
+        }
+
+        .game-item-text.dragging {
+            cursor: grabbing;
+            transform: scale(1.15) translateY(-10px) rotate(-3deg) !important;
+            box-shadow: 0 0 0 rgba(0,0,0,0), 0 20px 28px rgba(0,0,0,0.28) !important;
+            z-index: 1000 !important;
+            transition: none !important;
+        }
+
+        .game-item-text.matched {
+            opacity: 0.6;
+            cursor: default;
+            transform: none !important;
+            box-shadow: 0 3px 0 rgba(0,0,0,0.1) !important;
+            pointer-events: none;
+        }
+
+        .game-item-text.wrong-flash {
+            animation: wrongShake 0.35s ease;
+        }
+
+        /* ── Animations ── */
+        @keyframes happyDance {
+            0%   { transform: scale(1) rotate(0deg); }
+            25%  { transform: scale(1.2) rotate(-12deg); }
+            50%  { transform: scale(1.2) rotate(12deg); }
+            75%  { transform: scale(1.15) rotate(-8deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        @keyframes wrongShake {
+            0%   { transform: translateX(0); }
+            20%  { transform: translateX(-9px) rotate(-3deg); }
+            40%  { transform: translateX(9px) rotate(3deg); }
+            60%  { transform: translateX(-6px) rotate(-2deg); }
+            80%  { transform: translateX(6px) rotate(2deg); }
+            100% { transform: translateX(0); }
+        }
+
+        @keyframes pop {
+            0%   { transform: scale(0.5) translate(0,0); opacity: 1; }
+            100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); }
+        }
+
+        @keyframes bounceIn {
+            0%   { transform: scale(0.5); opacity: 0; }
+            70%  { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            font-size: 2.2rem;
+            animation: pop 0.9s ease-out forwards;
+            z-index: 999;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
+            animation: fall linear forwards;
+            z-index: 9999;
+            border-radius: 3px;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.55;
+            animation: floatCloud linear infinite;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        @keyframes floatCloud {
+            from { transform: translateX(-250px); }
+            to   { transform: translateX(110vw); }
+        }
+
+        /* ── Round Complete Banner ── */
+        #roundBanner {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 500;
+            background: rgba(0,0,0,0.36);
+            backdrop-filter: blur(6px);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #roundBanner.show { display: flex; }
+
+        #roundBannerCard {
+            background: white;
+            border-radius: 40px;
+            padding: 44px 56px;
+            text-align: center;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+            animation: bounceIn 0.5s ease;
+        }
+
+        #roundBannerEmoji  { font-size: 4rem; margin-bottom: 8px; }
+        #roundBannerTitle  { font-size: 2.8rem; color: #1dd1a1; text-shadow: 2px 2px 0 rgba(0,0,0,0.07); margin-bottom: 6px; }
+        #roundBannerSub    { font-size: 1.3rem; color: #636e72; margin-bottom: 24px; }
+
+        #nextRoundBtn {
+            background: #ff6b6b;
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8rem;
+            padding: 14px 44px;
+            border: 6px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #ee5253, 0 16px 24px rgba(0,0,0,0.18);
+            transition: transform 0.18s, box-shadow 0.18s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        #nextRoundBtn:hover  { transform: translateY(-4px); box-shadow: 0 12px 0 #ee5253, 0 22px 28px rgba(0,0,0,0.22); }
+        #nextRoundBtn:active { transform: translateY(4px);  box-shadow: 0 0 0 #ee5253, 0 4px 8px rgba(0,0,0,0.15); }
+
+        /* ── Loading Overlay ── */
+        #loadingOverlay {
+            position: absolute; inset: 0;
+            background: rgba(161,196,253,0.92);
+            z-index: 3000;  /* MUST be above start overlay (2000) to block early PLAY clicks */
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.5s;
+        }
+        #loadingOverlay .spinner {
+            width: 60px; height: 60px;
+            border: 6px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        #loadingOverlay .loadText { color: white; font-size: 1.7rem; margin-top: 18px; letter-spacing: 3px; }
+
+        /* ── Start Overlay ── */
+        #startOverlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            z-index: 2000;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center; gap: 14px;
+            transition: opacity 0.5s ease;
+        }
+        #startOverlay .startTitle {
+            font-size: 3.5rem; color: white;
+            text-shadow: 3px 3px 0 #ff6b6b;
+            text-align: center; margin-bottom: 8px;
+        }
+        .instruction {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,255,255,0.28);
+            border: 2px solid rgba(255,255,255,0.55);
+            border-radius: 20px; padding: 10px 22px;
+            color: white; font-size: 1.15rem;
+        }
+        .play-btn {
+            background: #ff6b6b; color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.5rem; padding: 18px 54px;
+            border: 8px solid white; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase; letter-spacing: 3px; margin-top: 10px;
+        }
+        .play-btn:hover  { transform: translateY(-5px); box-shadow: 0 15px 0 #ee5253, 0 25px 35px rgba(0,0,0,0.25); }
+        .play-btn:active { transform: translateY(5px);  box-shadow: 0 0 0 #ee5253, 0 5px 10px rgba(0,0,0,0.15); }
+
+        @media (max-width: 600px) {
+            #hud { height: 46px; gap: 10px; }
+            #roundLabel, #pairCount { font-size: 1rem; }
+            .game-item-text { font-size: 0.9rem; padding: 6px 12px; }
+            #roundBannerTitle { font-size: 2rem; }
+            #roundBannerCard { padding: 28px 28px; }
+            #nextRoundBtn { font-size: 1.4rem; padding: 12px 30px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HUD -->
+    <div id="hud">
+        <span id="roundLabel">Round 1</span>
+        <div id="progressWrap"><div id="progressBar"></div></div>
+        <span id="pairCount">0 / 7</span>
+    </div>
+
+    <!-- Game Area -->
+    <div id="gameArea">
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay">
+            <div class="spinner"></div>
+            <div class="loadText">LOADING...</div>
+        </div>
+
+        <!-- Start Overlay -->
+        <div id="startOverlay">
+            <div class="startTitle">Flashcard Match!</div>
+            <button class="play-btn" id="startBtn">▶ PLAY</button>
+        </div>
+
+        <!-- Clouds -->
+        <div class="cloud" style="width:150px;height:50px;top:12%;animation-duration:38s;"></div>
+        <div class="cloud" style="width:100px;height:36px;top:45%;animation-duration:26s;animation-delay:6s;"></div>
+        <div class="cloud" style="width:190px;height:68px;top:72%;animation-duration:48s;animation-delay:12s;"></div>
+
+        <!-- Round Complete Banner -->
+        <div id="roundBanner">
+            <div id="roundBannerCard">
+                <div id="roundBannerEmoji">🎉</div>
+                <div id="roundBannerTitle">Amazing!</div>
+                <div id="roundBannerSub">You matched all 7 pairs!</div>
+                <button id="nextRoundBtn">Next Round ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <audio id="bgMusic" loop>
+        <source src="/sounds/bg-music.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+    // ──────────────────────────────────────────────
+    //  Config
+    // ──────────────────────────────────────────────
+    const PAIRS_PER_ROUND = 7;
+
+    const WORD_COLORS = [
+        { bg: '#ff6b6b', border: '#ee5253' },
+        { bg: '#feca57', border: '#f9ca24' },
+        { bg: '#1dd1a1', border: '#10ac84' },
+        { bg: '#54a0ff', border: '#2e86de' },
+        { bg: '#ff9ff3', border: '#f368e0' },
+        { bg: '#ff9f43', border: '#e67e22' },
+        { bg: '#5f27cd', border: '#341f97' },
+    ];
+
+    const BORDER_COLORS = [
+        '#ff9ff3','#54a0ff','#feca57','#1dd1a1','#ff6b6b','#ff9f43','#a29bfe'
+    ];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const topicId   = urlParams.get('topicId');
+
+    // ──────────────────────────────────────────────
+    //  State
+    // ──────────────────────────────────────────────
+    let allCards     = [];
+    let usedIds      = new Set();
+    let roundCards   = [];
+    let roundNumber  = 1;
+    let matchedCount = 0;
+    let elements     = [];   // physics objects
+    let animationId  = null;
+
+    const gameArea    = document.getElementById('gameArea');
+    const roundLabel  = document.getElementById('roundLabel');
+    const progressBar = document.getElementById('progressBar');
+    const pairCountEl = document.getElementById('pairCount');
+    const roundBanner = document.getElementById('roundBanner');
+    const bgMusic     = document.getElementById('bgMusic');
+
+    // ──────────────────────────────────────────────
+    //  Audio
+    // ──────────────────────────────────────────────
+    function playSuccessSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [[523.25,0],[659.25,0.08],[783.99,0.16]].forEach(([freq,delay]) => {
+                const o=ctx.createOscillator(), g=ctx.createGain();
+                o.type='sine'; o.frequency.setValueAtTime(freq, ctx.currentTime+delay);
+                g.gain.setValueAtTime(0.9,ctx.currentTime+delay);
+                g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+0.3);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(ctx.currentTime+delay); o.stop(ctx.currentTime+delay+0.3);
+            });
+        } catch(e){}
+    }
+
+    function playErrorSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const o=ctx.createOscillator(), g=ctx.createGain();
+            o.type='triangle';
+            o.frequency.setValueAtTime(220,ctx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.22);
+            g.gain.setValueAtTime(0.8,ctx.currentTime);
+            g.gain.linearRampToValueAtTime(0.001,ctx.currentTime+0.22);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(); o.stop(ctx.currentTime+0.22);
+        } catch(e){}
+    }
+
+    function playWinSound() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [523.25,659.25,783.99,1046.5].forEach((freq,i) => {
+                const o=ctx.createOscillator(), g=ctx.createGain();
+                o.type='sine'; o.frequency.setValueAtTime(freq,ctx.currentTime+i*0.09);
+                g.gain.setValueAtTime(0.8,ctx.currentTime+i*0.09);
+                g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.09+0.35);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(ctx.currentTime+i*0.09); o.stop(ctx.currentTime+i*0.09+0.35);
+            });
+        } catch(e){}
+    }
+
+    async function speakWord(card) {
+        const url = card.audioWordUrl || card.audioUrl;
+        if (url) {
+            try {
+                // Use Web Audio API with GainNode to boost volume above 1.0
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const res      = await fetch(url);
+                const buf      = await res.arrayBuffer();
+                const decoded  = await audioCtx.decodeAudioData(buf);
+                const source   = audioCtx.createBufferSource();
+                const gain     = audioCtx.createGain();
+                gain.gain.value = 2.0;  // boost 2x
+                source.buffer  = decoded;
+                source.connect(gain);
+                gain.connect(audioCtx.destination);
+                source.start(0);
+                return;
+            } catch(e) {
+                // Fallback: plain Audio element
+                try { const a=new Audio(url); a.volume=1; await a.play(); return; } catch(e2){}
+            }
+        }
+        try {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u=new SpeechSynthesisUtterance(card.word);
+                u.lang='en-US'; u.rate=0.85; u.pitch=1.1;
+                window.speechSynthesis.speak(u);
+            }
+        } catch(e){}
+    }
+
+    // ──────────────────────────────────────────────
+    //  Layout helpers
+    // ──────────────────────────────────────────────
+    function getCardSize() {
+        const W = gameArea.clientWidth;
+        if (W <= 480) return Math.max(80, Math.floor(W / 4.5));
+        if (W <= 768) return Math.max(95, Math.floor(W / 5));
+        return Math.min(170, Math.max(110, Math.floor(W / 7.5)));
+    }
+
+    function updatePosition(obj) {
+        const w = obj.el.offsetWidth  || (obj.type==='img' ? 130 : 120);
+        const h = obj.el.offsetHeight || (obj.type==='img' ? 130 : 50);
+        obj.el.style.left = (obj.x - w/2) + 'px';
+        obj.el.style.top  = (obj.y - h/2) + 'px';
+    }
+
+    // ──────────────────────────────────────────────
+    //  Round card selection
+    // ──────────────────────────────────────────────
+    function pickRoundCards() {
+        let pool = allCards.filter(c => !usedIds.has(c.id));
+        if (pool.length < PAIRS_PER_ROUND) {
+            usedIds.clear();
+            pool = [...allCards];
+        }
+        const shuffled = [...pool];
+        for (let i=shuffled.length-1;i>0;i--) {
+            const j=Math.floor(Math.random()*(i+1));
+            [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+        }
+        roundCards = shuffled.slice(0, PAIRS_PER_ROUND);
+        roundCards.forEach(c => usedIds.add(c.id));
+    }
+
+    // ──────────────────────────────────────────────
+    //  Init Round
+    // ──────────────────────────────────────────────
+    function initRound() {
+        gameArea.querySelectorAll('.game-item-image,.game-item-text,.particle,.confetti')
+                .forEach(el => el.remove());
+
+        elements = [];
+        matchedCount = 0;
+        updateHUD();
+        pickRoundCards();
+
+        const cardSize = getCardSize();
+        const W = gameArea.clientWidth;
+        const H = gameArea.clientHeight;
+
+        // Shuffle word column positions independently
+        const wordCols = roundCards.map((_,i) => i);
+        for (let i=wordCols.length-1;i>0;i--) {
+            const j=Math.floor(Math.random()*(i+1));
+            [wordCols[i],wordCols[j]]=[wordCols[j],wordCols[i]];
+        }
+
+        roundCards.forEach((card, index) => {
+            const wColor  = WORD_COLORS[index % WORD_COLORS.length];
+            const bColor  = BORDER_COLORS[index % BORDER_COLORS.length];
+
+            // ── Image drop zone ──
+            const imgEl = document.createElement('div');
+            imgEl.className = 'game-item-image';
+            imgEl.style.width  = cardSize + 'px';
+            imgEl.style.height = cardSize + 'px';
+            imgEl.style.borderColor = bColor;
+            imgEl.style.backgroundColor = bColor + '22';
+
+            const imgNode = document.createElement('img');
+            imgNode.src = card.imageUrl;
+            imgNode.alt = card.word;
+            imgNode.draggable = false;
+            imgEl.appendChild(imgNode);
+            gameArea.appendChild(imgEl);
+
+            // ── Word chip ──
+            const txtEl = document.createElement('div');
+            txtEl.className = 'game-item-text';
+            txtEl.textContent = card.word;
+            txtEl.style.backgroundColor = wColor.bg;
+            txtEl.style.border = `4px solid ${wColor.border}`;
+            gameArea.appendChild(txtEl);
+
+            // ── Starting positions ──
+            // Images: top 55% zone, distributed in columns
+            const colW = W / roundCards.length;
+            const imgX = colW * index + (colW - cardSize) / 2 + cardSize / 2;
+            const imgY = 55 + Math.random() * (H * 0.50 - cardSize - 10) + cardSize / 2;
+
+            // Words: bottom 38% zone, shuffled columns
+            const wCol  = wordCols[index];
+            const wColW = W / roundCards.length;
+            const txtX  = wColW * wCol + wColW / 2;
+            const txtY  = H * 0.68 + Math.random() * (H * 0.25);
+
+            const rndSpd = () => Math.random() * 0.38 + 0.28;
+            const rndAng = () => Math.random() * Math.PI * 2;
+
+            const imgObj = {
+                id: card.id, card, el: imgEl, type: 'img',
+                matched: false, index,
+                x: imgX, y: imgY,
+                vx: Math.cos(rndAng()) * rndSpd(),
+                vy: Math.sin(rndAng()) * rndSpd(),
+                radius: cardSize / 2 + 22
+            };
+            const txtObj = {
+                id: card.id, card, el: txtEl, type: 'txt',
+                matched: false, index,
+                x: txtX, y: txtY,
+                vx: Math.cos(rndAng()) * rndSpd(),
+                vy: Math.sin(rndAng()) * rndSpd(),
+                radius: 80,
+                dragging: false
+            };
+
+            elements.push(imgObj, txtObj);
+
+            // Setup drag for this word chip
+            setupDrag(txtObj, imgObj, imgEl);
+        });
+
+        if (animationId) cancelAnimationFrame(animationId);
+        animationId = requestAnimationFrame(animate);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Drag-and-drop (pointer events — same as Word Match)
+    // ──────────────────────────────────────────────
+    function setupDrag(txtObj, correctImgObj, correctImgEl) {
+        let startX, startY, initialX, initialY;
+
+        txtObj.el.addEventListener('pointerdown', (e) => {
+            if (txtObj.matched) return;
+            e.preventDefault();
+            txtObj.dragging = true;
+            txtObj.el.classList.add('dragging');
+            txtObj.el.style.zIndex = 1000;
+            startX   = e.clientX;
+            startY   = e.clientY;
+            initialX = txtObj.x;
+            initialY = txtObj.y;
+            txtObj.el.setPointerCapture(e.pointerId);
+        });
+
+        txtObj.el.addEventListener('pointermove', (e) => {
+            if (!txtObj.dragging) return;
+            e.preventDefault();
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            txtObj.x = initialX + dx;
+            txtObj.y = initialY + dy;
+            updatePosition(txtObj);
+
+            // Highlight correct image when dragging near it
+            const txtRect = txtObj.el.getBoundingClientRect();
+            const imgRect = correctImgEl.getBoundingClientRect();
+            const overlapping = rectsOverlap(txtRect, imgRect);
+            if (!correctImgObj.matched) {
+                correctImgEl.classList.toggle('drop-hover', overlapping);
+            }
+        });
+
+        txtObj.el.addEventListener('pointerup', (e) => {
+            if (!txtObj.dragging) return;
+            txtObj.dragging = false;
+            txtObj.el.classList.remove('dragging');
+            txtObj.el.style.zIndex = 50;
+            correctImgEl.classList.remove('drop-hover');
+
+            const txtRect = txtObj.el.getBoundingClientRect();
+            const imgRect = correctImgEl.getBoundingClientRect();
+
+            if (rectsOverlap(txtRect, imgRect)) {
+                // ✅ Correct match!
+                doMatch(txtObj, correctImgObj);
+            } else {
+                // Check if dropped on a WRONG image
+                const hitWrong = elements.some(obj => {
+                    if (obj.type !== 'img' || obj.id === txtObj.id || obj.matched) return false;
+                    const r = obj.el.getBoundingClientRect();
+                    return rectsOverlap(txtRect, r);
+                });
+                if (hitWrong) {
+                    playErrorSound();
+                    txtObj.el.classList.add('wrong-flash');
+                    setTimeout(() => txtObj.el.classList.remove('wrong-flash'), 380);
+                }
+                // Give a gentle bounce-back velocity
+                txtObj.vx = (Math.random() - 0.5) * 1.2;
+                txtObj.vy = (Math.random() - 0.5) * 1.2;
+            }
+        });
+
+        // Cancel drag on pointer cancel
+        txtObj.el.addEventListener('pointercancel', () => {
+            txtObj.dragging = false;
+            txtObj.el.classList.remove('dragging');
+            correctImgEl.classList.remove('drop-hover');
+            txtObj.el.style.zIndex = 50;
+        });
+    }
+
+    function rectsOverlap(a, b) {
+        return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Match confirmed
+    // ──────────────────────────────────────────────
+    function doMatch(txtObj, imgObj) {
+        txtObj.matched = true;
+        imgObj.matched = true;
+        txtObj.vx = txtObj.vy = imgObj.vx = imgObj.vy = 0;
+
+        txtObj.el.classList.add('matched');
+        imgObj.el.classList.add('matched');
+
+        // Snap word just below the image
+        const iH = imgObj.el.offsetHeight || 130;
+        const tH = txtObj.el.offsetHeight || 44;
+        txtObj.x = imgObj.x;
+        txtObj.y = imgObj.y + iH/2 + tH/2 + 4;
+        txtObj.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out';
+        updatePosition(txtObj);
+        setTimeout(() => { txtObj.el.style.transition = ''; }, 260);
+
+        playSuccessSound();
+        speakWord(txtObj.card);
+        createParticles(imgObj.x, imgObj.y - 20);
+
+        matchedCount++;
+        updateHUD();
+
+        if (matchedCount === PAIRS_PER_ROUND) {
+            setTimeout(showRoundComplete, 900);
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  HUD
+    // ──────────────────────────────────────────────
+    function updateHUD() {
+        roundLabel.textContent  = `Round ${roundNumber}`;
+        pairCountEl.textContent = `${matchedCount} / ${PAIRS_PER_ROUND}`;
+        progressBar.style.width = (matchedCount / PAIRS_PER_ROUND * 100) + '%';
+    }
+
+    // ──────────────────────────────────────────────
+    //  Round Complete
+    // ──────────────────────────────────────────────
+    function showRoundComplete() {
+        playWinSound();
+        for (let i=0;i<100;i++) {
+            const c=document.createElement('div');
+            c.className='confetti';
+            c.style.left=Math.random()*100+'%'; c.style.top='-20px';
+            const cols=['#ff6b6b','#feca57','#1dd1a1','#54a0ff','#ff9ff3'];
+            c.style.backgroundColor=cols[Math.floor(Math.random()*cols.length)];
+            if(Math.random()>0.5) c.style.borderRadius='50%';
+            c.style.animationDuration=(Math.random()*2+1.5)+'s';
+            c.style.animationDelay=(Math.random()*1.5)+'s';
+            gameArea.appendChild(c);
+        }
+        const emojis=['🎉','🌟','🏆','🎊','⭐'];
+        const msgs  =['Amazing!','Awesome!','You Rock!','Superstar!','Brilliant!'];
+        const ri = (roundNumber-1) % emojis.length;
+        document.getElementById('roundBannerEmoji').textContent = emojis[ri];
+        document.getElementById('roundBannerTitle').textContent = msgs[ri];
+        document.getElementById('roundBannerSub').textContent   = `Round ${roundNumber} complete! Ready for the next one?`;
+        roundBanner.classList.add('show');
+    }
+
+    document.getElementById('nextRoundBtn').addEventListener('click', () => {
+        roundBanner.classList.remove('show');
+        gameArea.querySelectorAll('.confetti').forEach(el => el.remove());
+        roundNumber++;
+        initRound();
+    });
+
+    // ──────────────────────────────────────────────
+    //  Particles
+    // ──────────────────────────────────────────────
+    function createParticles(cx, cy) {
+        const emojis=['⭐','✨','💖','🌟','🎈'];
+        for(let i=0;i<10;i++) {
+            const p=document.createElement('div');
+            p.className='particle';
+            p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+            p.style.left=cx+'px'; p.style.top=cy+'px';
+            p.style.setProperty('--tx',(Math.random()-0.5)*220+'px');
+            p.style.setProperty('--ty',(Math.random()-0.5)*220+'px');
+            gameArea.appendChild(p);
+            setTimeout(()=>p.remove(),960);
+        }
+    }
+
+    // ──────────────────────────────────────────────
+    //  Physics loop
+    // ──────────────────────────────────────────────
+    function animate() {
+        const W  = gameArea.clientWidth;
+        const H  = gameArea.clientHeight;
+        const pad = 12, topPad = 12;
+
+        elements.forEach(obj => {
+            if (obj.matched || obj.dragging) return;
+
+            const ew = obj.el.offsetWidth  || (obj.type==='img' ? 130 : 120);
+            const eh = obj.el.offsetHeight || (obj.type==='img' ? 130 : 44);
+            const extra = obj.type==='img' ? 28 : 12;
+            obj.radius = Math.max(ew,eh)/2 + extra;
+
+            obj.x += obj.vx;
+            obj.y += obj.vy;
+
+            if (obj.x - obj.radius < pad)       { obj.x = pad + obj.radius;     obj.vx =  Math.abs(obj.vx); }
+            else if (obj.x + obj.radius > W-pad) { obj.x = W - pad - obj.radius; obj.vx = -Math.abs(obj.vx); }
+            if (obj.y - obj.radius < topPad)     { obj.y = topPad + obj.radius;  obj.vy =  Math.abs(obj.vy); }
+            else if (obj.y + obj.radius > H-pad) { obj.y = H - pad - obj.radius; obj.vy = -Math.abs(obj.vy); }
+        });
+
+        // Same-type collisions (img↔img, txt↔txt)
+        for (let i=0;i<elements.length;i++) {
+            const a = elements[i];
+            if (a.matched) continue;
+            for (let j=i+1;j<elements.length;j++) {
+                const b = elements[j];
+                if (b.matched || a.type !== b.type) continue;
+
+                const dx=b.x-a.x, dy=b.y-a.y;
+                const dist=Math.sqrt(dx*dx+dy*dy)||0.01;
+                const minD=a.radius+b.radius;
+                if (dist < minD) {
+                    const overlap=minD-dist, nx=dx/dist, ny=dy/dist;
+                    // If one is being dragged, push the other away
+                    if (a.dragging) {
+                        b.x += nx*overlap; b.y += ny*overlap;
+                    } else if (b.dragging) {
+                        a.x -= nx*overlap; a.y -= ny*overlap;
+                    } else {
+                        a.x -= nx*overlap*0.5; a.y -= ny*overlap*0.5;
+                        b.x += nx*overlap*0.5; b.y += ny*overlap*0.5;
+                        const kx=a.vx-b.vx, ky=a.vy-b.vy;
+                        const p=kx*nx+ky*ny;
+                        if (p>0) { a.vx-=p*nx; a.vy-=p*ny; b.vx+=p*nx; b.vy+=p*ny; }
+                    }
+                }
+            }
+        }
+
+        // Push matched images away from unmatched floating items
+        for (let i=0;i<elements.length;i++) {
+            const a=elements[i];
+            if (!a.matched) continue;
+            for (let j=0;j<elements.length;j++) {
+                const b=elements[j];
+                if (b.matched || b.dragging) continue;
+                const dx=b.x-a.x, dy=b.y-a.y;
+                const dist=Math.sqrt(dx*dx+dy*dy)||0.01;
+                const minD=a.radius+b.radius;
+                if (dist<minD) {
+                    const nx=dx/dist, ny=dy/dist;
+                    b.x += nx*(minD-dist);
+                    b.y += ny*(minD-dist);
+                    b.vx = nx*Math.abs(b.vx||0.3);
+                    b.vy = ny*Math.abs(b.vy||0.3);
+                }
+            }
+        }
+
+        elements.forEach(obj => { if (!obj.dragging) updatePosition(obj); });
+        animationId = requestAnimationFrame(animate);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Start button
+    // ──────────────────────────────────────────────
+    document.getElementById('startBtn').addEventListener('click', () => {
+        bgMusic.volume = 0.15;
+        bgMusic.play().catch(()=>{});
+        const overlay = document.getElementById('startOverlay');
+        overlay.style.opacity = '0';
+        setTimeout(() => { overlay.style.display = 'none'; }, 500);
+        initRound();
+    });
+
+    // ──────────────────────────────────────────────
+    //  Boot: fetch cards from API
+    // ──────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', async () => {
+        const loadingEl = document.getElementById('loadingOverlay');
+        try {
+            const res  = await fetch(`/api/games/flashcard-match/${topicId}`);
+            const data = await res.json();
+
+            if (data.success && data.cards && data.cards.length > 0) {
+                allCards = data.cards;
+                // Nếu ít hơn 7 card, nhân bản đủ
+                if (allCards.length < PAIRS_PER_ROUND) {
+                    const base = [...allCards];
+                    while (allCards.length < PAIRS_PER_ROUND) {
+                        allCards = allCards.concat(base);
+                    }
+                }
+            } else {
+                loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
+                return;
+            }
+        } catch(e) {
+            loadingEl.querySelector('.loadText').textContent = 'Error loading cards';
+            console.error(e);
+            return;
+        }
+
+        loadingEl.style.opacity = '0';
+        setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+    });
+    </script>
+</body>
+</html>
