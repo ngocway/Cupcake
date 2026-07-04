@@ -123,9 +123,8 @@ export default async function FlashcardMatchSelectPage({
   // Fetch topics that have at least 1 card with an image
   const topics = await prisma.flashcardTopic.findMany({
     where: {
-      targetAudience: {
-        equals: levelCfg.audience,
-        mode: "insensitive",
+      targetAudiences: {
+        hasSome: [levelCfg.audience],
       },
       flashcards: {
         some: {

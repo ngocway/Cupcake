@@ -118,6 +118,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       comingSoon: false,
     },
     {
+      id: "flashcard-match",
+      title: "Flashcard Match",
+      href: "/student/game/flashcard-match/select?level=kindergarten",
+      gradient: "from-blue-200 to-indigo-405",
+      thumbnail: "/images/games/flashcard-match.png",
+      emoji: "🎴",
+      tag: "Vocabulary",
+      desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
+      comingSoon: false,
+    },
+    {
       id: "sentence-builder",
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=2-5",

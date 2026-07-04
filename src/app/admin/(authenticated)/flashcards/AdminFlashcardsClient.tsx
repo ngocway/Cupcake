@@ -21,12 +21,12 @@ import {
 } from "@/actions/admin-flashcards-ai"
 
 import { toast } from "sonner"
-import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy } from "lucide-react"
+import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy, Folder, ArrowLeft } from "lucide-react"
 
 // TypeScript interfaces
 interface Topic {
   id: string
-  targetAudience: string
+  targetAudiences: string[]
   name: string
   slug: string
   iconUrl?: string | null
@@ -53,7 +53,7 @@ interface Flashcard {
   topic: {
     id: string
     name: string
-    targetAudience: string
+    targetAudiences: string[]
     iconUrl?: string | null
   }
 }
@@ -70,7 +70,7 @@ export function AdminFlashcardsClient({
   initialFlashcards 
 }: AdminFlashcardsClientProps) {
   // Navigation & Core Lists
-  const [activeTab, setActiveTab] = useState<"cards" | "topics">("cards")
+
   const [targetAudiencesList] = useState<any[]>(targetAudiences)
   const [topics, setTopics] = useState<Topic[]>(initialTopics)
   const [flashcards, setFlashcards] = useState<any[]>(initialFlashcards)
@@ -107,7 +107,7 @@ export function AdminFlashcardsClient({
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
   const [topicForm, setTopicForm] = useState({
-    targetAudience: "kid",
+    targetAudiences: ["kid"],
     name: "",
     sampleCount: "",
     iconUrl: ""
@@ -223,7 +223,7 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const filteredFlashcards = flashcards.filter(card => {
     const matchWord = card.word.toLowerCase().includes(searchWord.toLowerCase())
-    const matchCat = selectedCatFilter === "ALL" || card.topic?.targetAudience === selectedCatFilter
+    const matchCat = selectedCatFilter === "ALL" || card.topic?.targetAudiences.includes(selectedCatFilter)
     const matchTopic = selectedTopicFilter === "ALL" || card.topic?.id === selectedTopicFilter
     return matchWord && matchCat && matchTopic
   })
@@ -231,14 +231,14 @@ export function AdminFlashcardsClient({
   // Dynamic topics under selected Category inside Filters dropdown
   const filteredTopicsForFilter = selectedCatFilter === "ALL" 
     ? topics 
-    : topics.filter(t => t.targetAudience === selectedCatFilter)
+    : topics.filter(t => t.targetAudiences.includes(selectedCatFilter))
 
   // -------------------------------------------------------------
   // TOPIC FILTERING LOGIC
   // -------------------------------------------------------------
   const filteredTopics = topics.filter(topic => {
     const matchName = topic.name.toLowerCase().includes(searchTopicName.toLowerCase())
-    const matchCat = selectedCatTopicFilter === "ALL" || topic.targetAudience === selectedCatTopicFilter
+    const matchCat = selectedCatTopicFilter === "ALL" || topic.targetAudiences.includes(selectedCatTopicFilter)
     return matchName && matchCat
   })
 
@@ -601,8 +601,8 @@ export function AdminFlashcardsClient({
   const openCardModal = (card: Flashcard | null = null) => {
     if (card) {
       setEditingCard(card)
-      const defaultAudience = targetAudiencesList.some(c => c.id === card.topic?.targetAudience) 
-        ? card.topic?.targetAudience 
+      const defaultAudience = card.topic?.targetAudiences.includes(card.topic?.targetAudiences[0]) 
+        ? card.topic?.targetAudiences[0] 
         : (targetAudiencesList[0]?.id || "");
       
       const translationsMap: Record<string, string> = {}
@@ -633,7 +633,7 @@ export function AdminFlashcardsClient({
       setEditingCard(null)
       // Pick first category and its first topic as default
       const defaultCat = targetAudiencesList[0]
-      const defaultTopic = topics.find(t => t.targetAudience === defaultCat?.id)
+      const defaultTopic = topics.find(t => t.targetAudiences.includes(defaultCat?.id))
       setCardForm({
         targetAudience: defaultCat?.id || "",
         topicId: defaultTopic?.id || "",
@@ -657,7 +657,7 @@ export function AdminFlashcardsClient({
 
   // Handle dynamic category change inside Card modal to update topics dropdown
   const handleModalCategoryChange = (catId: string) => {
-    const targetTopic = topics.find(t => t.targetAudience === catId)
+    const targetTopic = topics.find(t => t.targetAudiences.includes(catId))
     setCardForm(prev => ({
       ...prev,
       targetAudience: catId,
@@ -702,7 +702,7 @@ export function AdminFlashcardsClient({
             topic: {
               id: cardForm.topicId,
               name: topics.find(t => t.id === cardForm.topicId)?.name || "",
-              targetAudience: cardForm.targetAudience
+              targetAudiences: topics.find(t => t.id === cardForm.topicId)?.targetAudiences || []
             }
           } : c))
           setShowCardModal(false)
@@ -734,7 +734,7 @@ export function AdminFlashcardsClient({
             topic: {
               id: cardForm.topicId,
               name: topics.find(t => t.id === cardForm.topicId)?.name || "",
-              targetAudience: cardForm.targetAudience
+              targetAudiences: topics.find(t => t.id === cardForm.topicId)?.targetAudiences || []
             }
           }
           setFlashcards(prev => [newLocalCard, ...prev])
@@ -752,11 +752,8 @@ export function AdminFlashcardsClient({
   const openTopicModal = (topic: Topic | null = null) => {
     if (topic) {
       setEditingTopic(topic)
-      const defaultAudience = targetAudiencesList.some(c => c.id === topic.targetAudience) 
-        ? topic.targetAudience 
-        : (targetAudiencesList[0]?.id || "");
       setTopicForm({
-        targetAudience: defaultAudience,
+        targetAudiences: topic.targetAudiences || [],
         name: topic.name,
         sampleCount: "",
         iconUrl: topic.iconUrl || ""
@@ -764,7 +761,7 @@ export function AdminFlashcardsClient({
     } else {
       setEditingTopic(null)
       setTopicForm({
-        targetAudience: targetAudiencesList[0]?.id || "",
+        targetAudiences: [selectedCatFilter !== "ALL" ? selectedCatFilter : "kid"],
         name: "",
         sampleCount: "",
         iconUrl: ""
@@ -778,20 +775,20 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const handleSaveTopic = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!topicForm.name || !topicForm.targetAudience) {
-      alert("Vui lòng nhập tên chủ đề.")
+    if (!topicForm.name || topicForm.targetAudiences.length === 0) {
+      alert("Vui lòng nhập tên chủ đề và chọn ít nhất 1 nhóm tuổi.")
       return
     }
 
     if (editingTopic) {
       startTransition(async () => {
         // UPDATE
-        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.targetAudience, topicForm.iconUrl)
+        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.targetAudiences, topicForm.iconUrl)
         if (res.success && res.topic) {
           const updatedLocalTopic = {
             ...editingTopic,
             ...res.topic,
-            targetAudience: topicForm.targetAudience,
+            targetAudiences: topicForm.targetAudiences,
             iconUrl: topicForm.iconUrl
           }
           setTopics(prev => prev.map(t => t.id === editingTopic.id ? updatedLocalTopic : t))
@@ -815,17 +812,17 @@ export function AdminFlashcardsClient({
     }
 
     try {
-      const createRes = await adminCreateTopic(topicForm.targetAudience, topicForm.name, topicForm.iconUrl)
+      const createRes = await adminCreateTopic(topicForm.targetAudiences, topicForm.name, topicForm.iconUrl)
       if (!createRes.success || !createRes.topic) {
         alert("Lỗi tạo chủ đề: " + createRes.error)
         setIsGeneratingSamples(false)
         return
       }
 
-      const categoryName = targetAudiencesList.find(c => c.id === topicForm.targetAudience)?.name || ""
+      const categoryName = targetAudiencesList.find(c => c.id === topicForm.targetAudiences[0])?.name || ""
       const newLocalTopic = {
         ...createRes.topic,
-        targetAudience: topicForm.targetAudience,
+        targetAudiences: topicForm.targetAudiences,
         iconUrl: topicForm.iconUrl,
         _count: { flashcards: 0 }
       }
@@ -881,7 +878,7 @@ export function AdminFlashcardsClient({
               topic: {
                 id: createRes.topic.id,
                 name: topicForm.name,
-                targetAudience: cardForm.targetAudience
+                targetAudiences: topicForm.targetAudiences
               }
             })
           }
@@ -1020,41 +1017,31 @@ export function AdminFlashcardsClient({
   return (
     <div className="space-y-6">
       
-      {/* 1. Toggle Navigation Tabs */}
+      {/* Header Action Buttons */}
       <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-3xl flex flex-col md:flex-row gap-6 items-center justify-between shadow-xl">
-        <div className="flex gap-1.5 p-1.5 bg-neutral-800 rounded-2xl w-full md:w-auto">
+        <h2 className="text-xl font-black text-white">Quản lý Thẻ học ({flashcards.length})</h2>
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           <button
-            onClick={() => setActiveTab("cards")}
-            className={`px-8 py-2.5 font-bold rounded-xl transition-all text-center flex-grow md:flex-none text-sm ${
-              activeTab === "cards" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10" : "text-neutral-500 hover:text-neutral-300"
-            }`}
+            onClick={() => openTopicModal()}
+            className="w-full md:w-auto px-6 py-2.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all whitespace-nowrap text-sm border border-neutral-700 shadow-md"
           >
-            Quản lý Thẻ học ({flashcards.length})
+            <Plus className="w-5.5 h-5.5" />
+            <span>Thêm chủ đề mới</span>
           </button>
           <button
-            onClick={() => setActiveTab("topics")}
-            className={`px-8 py-2.5 font-bold rounded-xl transition-all text-center flex-grow md:flex-none text-sm ${
-              activeTab === "topics" ? "bg-blue-600 text-white shadow-lg shadow-blue-600/10" : "text-neutral-500 hover:text-neutral-300"
-            }`}
+            onClick={() => openCardModal()}
+            className="w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all whitespace-nowrap text-sm shadow-lg shadow-blue-600/20"
           >
-            Quản lý Chủ đề ({topics.length})
+            <Plus className="w-5.5 h-5.5" />
+            <span>Thêm thẻ mới</span>
           </button>
         </div>
-
-        <button
-          onClick={() => activeTab === "cards" ? openCardModal() : openTopicModal()}
-          className="w-full md:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-2xl flex items-center justify-center gap-2 transition-all whitespace-nowrap text-sm shadow-lg shadow-blue-600/20"
-        >
-          <Plus className="w-5.5 h-5.5" />
-          <span>{activeTab === "cards" ? "Thêm thẻ mới" : "Thêm chủ đề mới"}</span>
-        </button>
       </div>
 
       {/* =======================================================================
-          TAB 1: FLASHCARDS MANAGEMENT
+          FLASHCARDS MANAGEMENT
           ======================================================================= */}
-      {activeTab === "cards" && (
-        <div className="space-y-6">
+      <div className="space-y-6">
           
           {/* Dynamic Filter Row */}
           <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-4 shadow-md">
@@ -1085,20 +1072,46 @@ export function AdminFlashcardsClient({
             {/* Filter Topic */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Chủ đề từ vựng (Topic)</label>
-              <div className="relative">
-                <select
-                  value={selectedTopicFilter}
-                  onChange={(e) => setSelectedTopicFilter(e.target.value)}
-                  className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
-                >
-                  <option value="ALL">Tất cả chủ đề</option>
-                  {filteredTopicsForFilter.map(t => (
-                    <option key={t.id} value={t.id}>{t.name} ({targetAudiencesList.find(c => c.id === t.targetAudience)?.name})</option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
-                  <Filter className="w-4 h-4" />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <select
+                    value={selectedTopicFilter}
+                    onChange={(e) => setSelectedTopicFilter(e.target.value)}
+                    className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
+                  >
+                    <option value="ALL">Tất cả chủ đề</option>
+                    {filteredTopicsForFilter.map(t => (
+                      <option key={t.id} value={t.id}>{t.name} ({targetAudiencesList.find(c => t.targetAudiences.includes(c.id))?.name || "Multiple"})</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+                    <Filter className="w-4 h-4" />
+                  </div>
                 </div>
+                {selectedTopicFilter !== "ALL" && (
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        const t = topics.find(t => t.id === selectedTopicFilter);
+                        if (t) openTopicModal(t);
+                      }}
+                      className="w-[46px] h-[46px] rounded-2xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                      title="Sửa chủ đề"
+                    >
+                      <Edit className="w-4.5 h-4.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const tName = topics.find(t => t.id === selectedTopicFilter)?.name || "";
+                        triggerDelete(selectedTopicFilter, "topic", tName);
+                      }}
+                      className="w-[46px] h-[46px] rounded-2xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                      title="Xóa chủ đề"
+                    >
+                      <Trash2 className="w-4.5 h-4.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1110,8 +1123,9 @@ export function AdminFlashcardsClient({
                   type="text"
                   value={searchWord}
                   onChange={(e) => setSearchWord(e.target.value)}
-                  placeholder="Nhập từ vựng cần tìm..."
-                  className="w-full pl-11 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold"
+                  disabled={selectedTopicFilter === "ALL"}
+                  placeholder={selectedTopicFilter === "ALL" ? "Vui lòng chọn 1 chủ đề..." : "Nhập từ vựng cần tìm..."}
+                  className="w-full pl-11 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
                   <Search className="w-4.5 h-4.5" />
@@ -1121,277 +1135,270 @@ export function AdminFlashcardsClient({
 
           </div>
 
-          {/* Flashcards List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredFlashcards.length === 0 ? (
-              <div className="md:col-span-2 bg-neutral-900 border border-neutral-800 p-16 rounded-[32px] text-center shadow-inner">
-                <div className="w-20 h-20 bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md border border-neutral-700">
-                  <ImageIcon className="text-neutral-500 w-9 h-9" />
-                </div>
-                <p className="text-neutral-400 font-extrabold text-lg">Không tìm thấy thẻ học nào</p>
-                <p className="text-neutral-500 text-sm mt-1">Vui lòng thay đổi bộ lọc hoặc thêm thẻ học mới!</p>
+          {selectedTopicFilter === "ALL" ? (
+            /* GRID OF TOPICS */
+            <div className="space-y-4">
+              <div className="text-xs font-black text-neutral-500 uppercase tracking-widest pl-1">
+                Danh sách chủ đề
               </div>
-            ) : (
-              filteredFlashcards.map((card) => {
-                return (
-                  <div key={card.id} className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex justify-between gap-4 shadow-lg hover:border-neutral-700 transition-all duration-300">
-                    
-                    <div className="flex gap-3.5 min-w-0 flex-1">
-                      {/* Thumbnail frame */}
-                      <div className="w-20 h-20 rounded-none overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0">
-                        {card.imageUrl ? (
-                          <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-600 bg-neutral-900">
-                            <ImageIcon className="w-5 h-5" />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 gap-1">
-                        {/* Tags line */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
-                            {targetAudiencesList.find(c => c.id === card.topic?.targetAudience)?.name || card.topic?.targetAudience || "Kids"}
-                          </span>
-                          <span className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-400 border border-neutral-700">
-                            {card.topic?.name}
-                          </span>
-                        </div>
-
-                        {/* Word & phonetic */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-white font-black text-base truncate leading-none">{card.word}</h3>
-                          {card.phonetic && (
-                            <span className="text-blue-400 font-mono text-[11px] font-bold leading-none">{card.phonetic}</span>
-                          )}
-                          <button 
-                            onClick={(e) => handlePlayAudio(e, card)}
-                            className="p-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-white transition-colors"
-                            title="Nghe phát âm ví dụ"
-                          >
-                            <Volume2 className="w-3.5 h-3.5" />
-                          </button>
-                          {card.audioWordUrl && (
-                            <button 
-                              onClick={(e) => handlePlayWordAudio(e, card)}
-                              className="p-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-white border border-emerald-500/20 transition-colors"
-                              title="Nghe phát âm từ vựng (ElevenLabs)"
-                            >
-                              <Volume2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Vietnamese Meaning */}
-                        {card.definitionVi && (
-                          <p className="text-xs font-black text-emerald-400 leading-tight">
-                            Nghĩa: {card.definitionVi}
-                          </p>
-                        )}
-
-                        {/* Quiz Question */}
-                        {card.quizQuestion && (
-                          <div className="flex items-center gap-1.5 text-xs text-neutral-300 font-bold leading-tight mt-0.5 flex-wrap">
-                            <span className="text-violet-400 font-black">Q:</span>
-                            <span className="italic">{card.quizQuestion}</span>
-                            {card.quizAudioUrl && (
-                              <button 
-                                onClick={(e) => handlePlayQuizAudio(e, card)}
-                                className="p-0.5 rounded bg-violet-950/60 hover:bg-violet-900/80 text-violet-400 hover:text-white border border-violet-500/20 transition-colors"
-                                title="Nghe câu hỏi trắc nghiệm (ElevenLabs)"
-                              >
-                                <Volume2 className="w-3 h-3" />
-                              </button>
+              {filteredTopicsForFilter.length === 0 ? (
+                <div className="bg-neutral-900 border border-neutral-800 p-16 rounded-[32px] text-center shadow-inner">
+                  <div className="w-20 h-20 bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md border border-neutral-700">
+                    <Folder className="text-neutral-500 w-9 h-9" />
+                  </div>
+                  <p className="text-neutral-400 font-extrabold text-lg">Không tìm thấy chủ đề nào</p>
+                  <p className="text-neutral-500 text-sm mt-1">Vui lòng thay đổi bộ lọc hoặc thêm chủ đề mới!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {filteredTopicsForFilter.map((topic) => {
+                    const cardCount = topic._count?.flashcards ?? 0
+                    return (
+                      <div
+                        key={topic.id}
+                        className="flex flex-col justify-between p-5 bg-neutral-900 border border-neutral-800 rounded-3xl hover:border-neutral-700 transition-all duration-300 w-full shadow-lg group"
+                      >
+                        <div 
+                          onClick={() => setSelectedTopicFilter(topic.id)}
+                          className="cursor-pointer space-y-3 flex-1 w-full"
+                        >
+                          {/* Topic Icon/Folder */}
+                          <div className="w-12 h-12 bg-neutral-800 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300 border border-neutral-700 shrink-0 overflow-hidden">
+                            {topic.iconUrl ? (
+                              topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                                <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+                              ) : (
+                                topic.iconUrl
+                              )
+                            ) : (
+                              <Folder className="w-6 h-6 text-neutral-500" />
                             )}
                           </div>
-                        )}
 
-                        {/* Example sentence */}
-                        {card.exampleSentence && (
-                          <p className="text-[11px] italic text-neutral-500 line-clamp-1" title={card.exampleSentence}>
-                            Ex: {card.exampleSentence}
+                          {/* Category Tags */}
+                          <div className="flex flex-wrap gap-1">
+                            {(topic.targetAudiences || []).map(aud => (
+                              <span key={aud} className="inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
+                                {targetAudiencesList.find(c => c.id === aud)?.name || aud}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* Topic Name */}
+                          <h4 className="text-white font-extrabold text-base group-hover:text-blue-400 transition-colors line-clamp-1">
+                            {topic.name}
+                          </h4>
+
+                          {/* Cards count */}
+                          <p className="text-neutral-500 text-xs font-semibold mt-1">
+                            {cardCount} thẻ học
                           </p>
-                        )}
-                        
-                        {/* Translations Badge Row */}
-                        <div className="flex items-center gap-1 opacity-80 mt-0.5">
-                          <span className="text-[8px] font-bold text-neutral-500 mr-1 uppercase">Langs:</span>
-                          <span className="text-xs" title="English default">🇺🇸</span>
-                          <span className={`text-xs ${card.definitionVi ? "opacity-100" : "opacity-20"}`} title="Tiếng Việt">🇻🇳</span>
-                          <span className={`text-xs ${card.definitionTh ? "opacity-100" : "opacity-20"}`} title="Thai">🇹🇭</span>
-                          <span className={`text-xs ${card.definitionId ? "opacity-100" : "opacity-20"}`} title="Indonesian">🇮🇩</span>
+                        </div>
+
+                        {/* Actions at the bottom */}
+                        <div className="flex justify-end gap-2 border-t border-neutral-800/80 pt-3 mt-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openTopicModal(topic);
+                            }}
+                            className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-750 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 active:scale-95"
+                            title="Sửa chủ đề"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerDelete(topic.id, "topic", topic.name);
+                            }}
+                            className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 active:scale-95"
+                            title="Xóa chủ đề"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Right column with checkbox and actions */}
-                    <div className="flex flex-col justify-between items-end shrink-0 pl-1.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedCardIds.includes(card.id)}
-                        onChange={() => toggleSelectCard(card.id)}
-                        className="w-4 h-4 rounded border border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 transition-all hover:scale-110"
-                      />
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => {
-                            setActiveOuterCardForImage(card)
-                            handleGoogleImageSearch(card.word)
-                          }}
-                          className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
-                          title="Tìm ảnh trên Web"
-                        >
-                          <Globe className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openCardModal(card)}
-                          className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
-                          title="Sửa thẻ"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => triggerDelete(card.id, "card", card.word)}
-                          className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
-                          title="Xóa thẻ"
-                        >
-                          <Trash2 className="w-4.5 h-4.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                  </div>
-                )
-              })
-            )}
-          </div>
-
-        </div>
-      )}
-
-      {/* =======================================================================
-          TAB 2: TOPICS MANAGEMENT (Quản lý Chủ đề)
-          ======================================================================= */}
-      {activeTab === "topics" && (
-        <div className="space-y-6">
-          
-          {/* Filters topic row */}
-          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-4 shadow-md">
-            
-            {/* Filter category */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Lọc theo nhóm tuổi (Category)</label>
-              <div className="relative">
-                <select
-                  value={selectedCatTopicFilter}
-                  onChange={(e) => setSelectedCatTopicFilter(e.target.value)}
-                  className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* LIST OF FLASHCARDS UNDER SELECTED TOPIC */
+            <div className="space-y-4">
+              
+              {/* Back Button and Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-neutral-900 border border-neutral-800 p-4 rounded-3xl shadow-sm">
+                <button
+                  onClick={() => {
+                    setSelectedTopicFilter("ALL")
+                    setSearchWord("")
+                    setSelectedCardIds([])
+                  }}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-neutral-850 hover:bg-neutral-800 border border-neutral-750 hover:border-neutral-700 text-neutral-200 rounded-2xl text-xs font-extrabold transition-all shadow-md active:scale-95 whitespace-nowrap"
                 >
-                  <option value="ALL">Tất cả nhóm tuổi</option>
-                  {targetAudiencesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
-                  <Filter className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4" />
+                  Quay lại danh sách chủ đề
+                </button>
+
+                <div className="text-sm font-bold text-neutral-400 text-center sm:text-right">
+                  Đang xem chủ đề: <span className="text-blue-400">{topics.find(t => t.id === selectedTopicFilter)?.name}</span>
                 </div>
+              </div>
+
+              {/* Flashcards List Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredFlashcards.length === 0 ? (
+                  <div className="md:col-span-2 bg-neutral-900 border border-neutral-800 p-16 rounded-[32px] text-center shadow-inner">
+                    <div className="w-20 h-20 bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md border border-neutral-700">
+                      <ImageIcon className="text-neutral-500 w-9 h-9" />
+                    </div>
+                    <p className="text-neutral-400 font-extrabold text-lg">Không tìm thấy thẻ học nào</p>
+                    <p className="text-neutral-500 text-sm mt-1">Vui lòng thay đổi bộ lọc hoặc thêm thẻ học mới!</p>
+                  </div>
+                ) : (
+                  filteredFlashcards.map((card) => {
+                    return (
+                      <div key={card.id} className="bg-neutral-900 border border-neutral-800 p-4 rounded-2xl flex justify-between gap-4 shadow-lg hover:border-neutral-700 transition-all duration-300">
+                        
+                        <div className="flex gap-3.5 min-w-0 flex-1">
+                          {/* Thumbnail frame */}
+                          <div className="w-20 h-20 rounded-none overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0">
+                            {card.imageUrl ? (
+                              <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-neutral-600 bg-neutral-900">
+                                <ImageIcon className="w-5 h-5" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 gap-1">
+                            {/* Tags line */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {(card.topic?.targetAudiences || []).map((aud: string) => (
+                                <span key={aud} className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
+                                  {targetAudiencesList.find(c => c.id === aud)?.name || aud}
+                                </span>
+                              ))}
+                              <span className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-400 border border-neutral-700">
+                                {card.topic?.name}
+                              </span>
+                            </div>
+
+                            {/* Word & phonetic */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-white font-black text-base truncate leading-none">{card.word}</h3>
+                              {card.phonetic && (
+                                <span className="text-blue-400 font-mono text-[11px] font-bold leading-none">{card.phonetic}</span>
+                              )}
+                              <button 
+                                onClick={(e) => handlePlayAudio(e, card)}
+                                className="p-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-white transition-colors"
+                                title="Nghe phát âm ví dụ"
+                              >
+                                <Volume2 className="w-3.5 h-3.5" />
+                              </button>
+                              {card.audioWordUrl && (
+                                <button 
+                                  onClick={(e) => handlePlayWordAudio(e, card)}
+                                  className="p-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-white border border-emerald-500/20 transition-colors"
+                                  title="Nghe phát âm từ vựng (ElevenLabs)"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Vietnamese Meaning */}
+                            {card.definitionVi && (
+                              <p className="text-xs font-black text-emerald-400 leading-tight">
+                                Nghĩa: {card.definitionVi}
+                              </p>
+                            )}
+
+                            {/* Quiz Question */}
+                            {card.quizQuestion && (
+                              <div className="flex items-center gap-1.5 text-xs text-neutral-300 font-bold leading-tight mt-0.5 flex-wrap">
+                                <span className="text-violet-400 font-black">Q:</span>
+                                <span className="italic">{card.quizQuestion}</span>
+                                {card.quizAudioUrl && (
+                                  <button 
+                                    onClick={(e) => handlePlayQuizAudio(e, card)}
+                                    className="p-0.5 rounded bg-violet-950/60 hover:bg-violet-900/80 text-violet-400 hover:text-white border border-violet-500/20 transition-colors"
+                                    title="Nghe câu hỏi trắc nghiệm (ElevenLabs)"
+                                  >
+                                    <Volume2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Example sentence */}
+                            {card.exampleSentence && (
+                              <p className="text-[11px] italic text-neutral-500 line-clamp-1" title={card.exampleSentence}>
+                                Ex: {card.exampleSentence}
+                              </p>
+                            )}
+                            
+                            {/* Translations Badge Row */}
+                            <div className="flex items-center gap-1 opacity-80 mt-0.5">
+                              <span className="text-[8px] font-bold text-neutral-500 mr-1 uppercase">Langs:</span>
+                              <span className="text-xs" title="English default">🇺🇸</span>
+                              <span className={`text-xs ${card.definitionVi ? "opacity-100" : "opacity-20"}`} title="Tiếng Việt">🇻🇳</span>
+                              <span className={`text-xs ${card.definitionTh ? "opacity-100" : "opacity-20"}`} title="Thai">🇹🇭</span>
+                              <span className={`text-xs ${card.definitionId ? "opacity-100" : "opacity-20"}`} title="Indonesian">🇮🇩</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right column with checkbox and actions */}
+                        <div className="flex flex-col justify-between items-end shrink-0 pl-1.5">
+                          <input
+                            type="checkbox"
+                            checked={selectedCardIds.includes(card.id)}
+                            onChange={() => toggleSelectCard(card.id)}
+                            className="w-4 h-4 rounded border border-neutral-700 bg-neutral-800 text-blue-600 focus:ring-0 cursor-pointer accent-blue-600 transition-all hover:scale-110"
+                          />
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setActiveOuterCardForImage(card)
+                                handleGoogleImageSearch(card.word)
+                              }}
+                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                              title="Tìm ảnh trên Web"
+                            >
+                              <Globe className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openCardModal(card)}
+                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                              title="Sửa thẻ"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => triggerDelete(card.id, "card", card.word)}
+                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
+                              title="Xóa thẻ"
+                            >
+                              <Trash2 className="w-4.5 h-4.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
+          )}
 
-            {/* Search topic */}
-            <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Tìm chủ đề (Topic Search)</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTopicName}
-                  onChange={(e) => setSearchTopicName(e.target.value)}
-                  placeholder="Nhập tên chủ đề cần tìm..."
-                  className="w-full pl-11 pr-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold"
-                />
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
-                  <Search className="w-4.5 h-4.5" />
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Topics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredTopics.length === 0 ? (
-              <div className="md:col-span-3 bg-neutral-900 border border-neutral-800 p-16 rounded-[32px] text-center shadow-inner">
-                <div className="w-20 h-20 bg-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md border border-neutral-700">
-                  <AlertCircle className="text-neutral-500 w-9 h-9" />
-                </div>
-                <p className="text-neutral-400 font-extrabold text-lg">Không tìm thấy chủ đề nào</p>
-                <p className="text-neutral-500 text-sm mt-1">Vui lòng thay đổi bộ lọc hoặc thêm chủ đề mới!</p>
-              </div>
-            ) : (
-              filteredTopics.map((topic) => (
-                <div key={topic.id} className="bg-neutral-900 border border-neutral-800 p-6 rounded-[28px] flex flex-col justify-between gap-6 shadow-lg hover:border-neutral-700 transition-all duration-300">
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start gap-4">
-                      <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-500 border border-blue-600/15">
-                        {targetAudiencesList.find(c => c.id === topic.targetAudience)?.name || topic.targetAudience}
-                      </span>
-                      
-                      {topic.iconUrl ? (
-                        <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-xl overflow-hidden shrink-0">
-                          {topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-                            <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
-                          ) : (
-                            topic.iconUrl
-                          )}
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-xl text-neutral-500 shrink-0">
-                          🧸
-                        </div>
-                      )}
-                    </div>
-                    
-                    <h3 className="text-xl font-black text-white leading-tight">{topic.name}</h3>
-                    
-                    <div className="flex flex-col gap-1 text-xs font-semibold text-neutral-500">
-                      <span>URL Slug: <span className="text-neutral-400 font-mono">/flashcards?topic={topic.slug}</span></span>
-                      <span>Ngày tạo: <span className="text-neutral-400">{new Date(topic.createdAt).toLocaleDateString("vi-VN")}</span></span>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-neutral-800/80 pt-4 flex justify-between items-center">
-                    <span className="text-xs font-bold text-neutral-400 bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-700">
-                      📁 <span className="text-white font-black">{topic._count?.flashcards || 0}</span> Thẻ học
-                    </span>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openTopicModal(topic)}
-                        className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 active:scale-95"
-                        title="Sửa chủ đề"
-                      >
-                        <Edit className="w-4.5 h-4.5" />
-                      </button>
-                      <button
-                        onClick={() => triggerDelete(topic.id, "topic", topic.name)}
-                        className="w-9 h-9 rounded-xl bg-neutral-800 hover:bg-rose-500/10 text-neutral-400 hover:text-rose-500 flex items-center justify-center transition-all border border-neutral-700 active:scale-95"
-                        title="Xóa chủ đề"
-                      >
-                        <Trash2 className="w-4.5 h-4.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              ))
-            )}
-          </div>
-
-        </div>
-      )}
+      </div>
 
       {/* =======================================================================
           MODAL 1: CREATE / EDIT FLASHCARD (Thêm & Sửa thẻ học)
@@ -1446,7 +1453,7 @@ export function AdminFlashcardsClient({
                     onChange={(e) => setCardForm(prev => ({ ...prev, topicId: e.target.value }))}
                     className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
                   >
-                    {topics.filter(t => t.targetAudience === cardForm.targetAudience).map(t => (
+                    {topics.filter(t => t.targetAudiences.includes(cardForm.targetAudience)).map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
                     ))}
                   </select>
@@ -1779,15 +1786,25 @@ export function AdminFlashcardsClient({
               
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Chọn nhóm tuổi (Category) <span className="text-red-500">*</span></label>
-                <select
-                  value={topicForm.targetAudience}
-                  onChange={(e) => setTopicForm(prev => ({ ...prev, targetAudience: e.target.value }))}
-                  className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
-                >
+                <div className="flex flex-wrap gap-2 mt-2">
                   {targetAudiencesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <label key={c.id} className="flex items-center gap-2 cursor-pointer bg-neutral-900 border border-neutral-700 hover:border-neutral-500 px-3 py-2 rounded-xl transition-all">
+                      <input 
+                        type="checkbox"
+                        checked={topicForm.targetAudiences.includes(c.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setTopicForm(prev => ({ ...prev, targetAudiences: [...prev.targetAudiences, c.id] }))
+                          } else {
+                            setTopicForm(prev => ({ ...prev, targetAudiences: prev.targetAudiences.filter(id => id !== c.id) }))
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-blue-500 bg-neutral-800 border-neutral-600 focus:ring-0 focus:ring-offset-0"
+                      />
+                      <span className="text-white text-sm font-semibold">{c.name}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -2132,7 +2149,7 @@ export function AdminFlashcardsClient({
       )}
 
       {/* Floating Bulk Action Bar */}
-      {activeTab === "cards" && selectedCardIds.length > 0 && (
+      {selectedCardIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-neutral-900/90 backdrop-blur-md border border-neutral-800 px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-6 animate-in slide-in-from-bottom duration-300">
           <div className="text-sm font-semibold text-neutral-300">
             Đã chọn <strong className="text-white text-base">{selectedCardIds.length}</strong> thẻ học

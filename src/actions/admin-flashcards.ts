@@ -263,7 +263,7 @@ export async function adminDeleteFlashcardsBulk(ids: string[]) {
 // PHÂN HỆ 2: CRUD TOPICS (CHỦ ĐỀ)
 // ============================================================================
 
-export async function adminCreateTopic(targetAudience: string, name: string, iconUrl?: string) {
+export async function adminCreateTopic(targetAudiences: string[], name: string, iconUrl?: string) {
   await checkAdminAuth()
 
   try {
@@ -274,18 +274,17 @@ export async function adminCreateTopic(targetAudience: string, name: string, ico
       return { success: false, error: "Tên chủ đề không hợp lệ." }
     }
 
-    // Kiểm tra trùng lặp slug trong cùng một đối tượng (Target Audience)
+    if (!targetAudiences || targetAudiences.length === 0) {
+      return { success: false, error: "Vui lòng chọn ít nhất 1 nhóm tuổi." }
+    }
+
+    // Kiểm tra trùng lặp slug
     const existing = await prisma.flashcardTopic.findUnique({
-      where: {
-        targetAudience_slug: {
-          targetAudience,
-          slug
-        }
-      }
+      where: { slug }
     })
 
     if (existing) {
-      return { success: false, error: "Chủ đề này đã tồn tại trong nhóm tuổi này." }
+      return { success: false, error: "Chủ đề với tên này đã tồn tại." }
     }
 
     let safeIconUrl = iconUrl?.trim() || null;
@@ -297,7 +296,7 @@ export async function adminCreateTopic(targetAudience: string, name: string, ico
 
     const newTopic = await prisma.flashcardTopic.create({
       data: {
-        targetAudience,
+        targetAudiences,
         name: trimmedName,
         slug,
         iconUrl: safeIconUrl
@@ -313,7 +312,7 @@ export async function adminCreateTopic(targetAudience: string, name: string, ico
   }
 }
 
-export async function adminUpdateTopic(id: string, name: string, targetAudience: string, iconUrl?: string) {
+export async function adminUpdateTopic(id: string, name: string, targetAudiences: string[], iconUrl?: string) {
   await checkAdminAuth()
 
   try {
@@ -324,17 +323,20 @@ export async function adminUpdateTopic(id: string, name: string, targetAudience:
       return { success: false, error: "Tên chủ đề không hợp lệ." }
     }
 
-    // Kiểm tra xem có bị trùng slug với chủ đề khác trong cùng targetAudience không
+    if (!targetAudiences || targetAudiences.length === 0) {
+      return { success: false, error: "Vui lòng chọn ít nhất 1 nhóm tuổi." }
+    }
+
+    // Kiểm tra xem có bị trùng slug với chủ đề khác không
     const existing = await prisma.flashcardTopic.findFirst({
       where: {
-        targetAudience,
         slug,
         id: { not: id }
       }
     })
 
     if (existing) {
-      return { success: false, error: "Tên chủ đề bị trùng với chủ đề khác trong cùng nhóm tuổi." }
+      return { success: false, error: "Tên chủ đề bị trùng với chủ đề khác." }
     }
 
     let safeIconUrl = iconUrl !== undefined ? (iconUrl?.trim() || null) : undefined;
@@ -348,7 +350,7 @@ export async function adminUpdateTopic(id: string, name: string, targetAudience:
       where: { id },
       data: {
         name: trimmedName,
-        targetAudience,
+        targetAudiences,
         slug,
         iconUrl: safeIconUrl
       }

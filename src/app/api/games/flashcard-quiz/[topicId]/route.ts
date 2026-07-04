@@ -20,7 +20,7 @@ export async function GET(
     // Find the topic to check targetAudience (for distractor fallback)
     const topic = await prisma.flashcardTopic.findUnique({
       where: { id: topicId },
-      select: { name: true, targetAudience: true }
+      select: { name: true, targetAudiences: true }
     })
 
     if (!topic) {
@@ -62,7 +62,9 @@ export async function GET(
       const extraCards = await prisma.globalFlashcard.findMany({
         where: {
           topic: {
-            targetAudience: topic.targetAudience
+            targetAudiences: {
+              hasSome: topic.targetAudiences
+            }
           }
         },
         select: { word: true },

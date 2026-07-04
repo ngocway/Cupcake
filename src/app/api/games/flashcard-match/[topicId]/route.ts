@@ -20,7 +20,7 @@ export async function GET(
     // Find the topic
     const topic = await prisma.flashcardTopic.findUnique({
       where: { id: topicId },
-      select: { name: true, targetAudience: true }
+      select: { name: true, targetAudiences: true }
     })
 
     if (!topic) {

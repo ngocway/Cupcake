@@ -79,9 +79,8 @@ export default async function FlashcardQuizSelectPage({
   // Fetch topics for current age group that have at least one card with quizQuestion
   const topics = await prisma.flashcardTopic.findMany({
     where: {
-      targetAudience: {
-        equals: targetAudience,
-        mode: "insensitive"
+      targetAudiences: {
+        hasSome: [targetAudience],
       },
       flashcards: {
         some: {

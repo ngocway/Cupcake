@@ -435,6 +435,17 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       comingSoon: false,
     },
     {
+      id: "flashcard-match",
+      title: "Flashcard Match",
+      href: "/student/game/flashcard-match/select?level=kindergarten",
+      gradient: "from-blue-200 to-indigo-405",
+      thumbnail: "/images/games/flashcard-match.png",
+      emoji: "🎴",
+      tag: "Vocabulary",
+      desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
+      comingSoon: false,
+    },
+    {
       id: "sentence-builder",
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=2-5",
@@ -467,6 +478,17 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       emoji: "🐾",
       tag: "Vocabulary",
       desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-match",
+      title: "Flashcard Match",
+      href: "/student/game/flashcard-match/select?level=kid",
+      gradient: "from-blue-200 to-indigo-405",
+      thumbnail: "/images/games/flashcard-match.png",
+      emoji: "🎴",
+      tag: "Vocabulary",
+      desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
       comingSoon: false,
     },
     {
@@ -515,6 +537,17 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       comingSoon: false,
     },
     {
+      id: "flashcard-match",
+      title: "Flashcard Match",
+      href: "/student/game/flashcard-match/select?level=teen",
+      gradient: "from-blue-200 to-indigo-405",
+      thumbnail: "/images/games/flashcard-match.png",
+      emoji: "🎴",
+      tag: "Vocabulary",
+      desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
+      comingSoon: false,
+    },
+    {
       id: "sentence-builder",
       title: "Sentence Builder",
       href: "/student/game/sentence-builder?age=teen",
@@ -557,6 +590,17 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       emoji: "🐾",
       tag: "Vocabulary",
       desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
+      comingSoon: false,
+    },
+    {
+      id: "flashcard-match",
+      title: "Flashcard Match",
+      href: "/student/game/flashcard-match/select?level=learner",
+      gradient: "from-blue-200 to-indigo-405",
+      thumbnail: "/images/games/flashcard-match.png",
+      emoji: "🎴",
+      tag: "Vocabulary",
+      desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
       comingSoon: false,
     },
     {
@@ -876,11 +920,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
   const filteredFlashcards = useMemo(() => {
     return allFlashcardTopics.filter((t: any) => {
-      const aud = t.targetAudience?.toLowerCase() || "";
+      const audiences = (t.targetAudiences || []).map((a: string) => a.toLowerCase());
       if (selectedAgeFilter === "kindergarten") {
-        return aud === "kindergarten" || aud === "kids-2-5" || aud.includes("kindergarten");
+        return audiences.some((a: string) => a === "kindergarten" || a === "kids-2-5" || a.includes("kindergarten"));
       }
-      return aud === selectedAgeFilter;
+      return audiences.includes(selectedAgeFilter);
     });
   }, [allFlashcardTopics, selectedAgeFilter]);
 

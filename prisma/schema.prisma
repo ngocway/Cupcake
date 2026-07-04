@@ -596,16 +596,14 @@ model MediaAttachment {
 }
 
 model FlashcardTopic {
-  id             String            @id @default(cuid())
-  targetAudience String            @default("KIDS")
-  name           String // e.g. "Animals"
-  slug           String
-  iconUrl        String?
-  flashcards     GlobalFlashcard[]
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-
-  @@unique([targetAudience, slug])
+  id              String            @id @default(cuid())
+  targetAudiences String[]          @default(["kid"])
+  name            String // e.g. "Animals"
+  slug            String            @unique
+  iconUrl         String?
+  flashcards      GlobalFlashcard[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model GlobalFlashcard {

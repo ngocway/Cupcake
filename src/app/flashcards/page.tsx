@@ -20,9 +20,9 @@ export default async function FlashcardsPage() {
     id: ta.id,
     name: ta.label,
     slug: ta.id,
-    topics: topics.filter(t => t.targetAudience === ta.id).map(t => ({
+    topics: topics.filter(t => (t.targetAudiences || []).includes(ta.id)).map(t => ({
       id: t.id,
-      categoryId: t.targetAudience,
+      categoryId: ta.id,
       name: t.name,
       slug: t.slug,
       iconUrl: t.iconUrl,
