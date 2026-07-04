@@ -7,8 +7,8 @@ import { toast } from "sonner";
 interface BookSlide {
   id: string;
   slideNumber: string;
-  imageName: string;
-  imageUrl: string;
+  imageName: string | null;
+  imageUrl: string | null;
   text: string;
   audioUrl: string | null;
   orderIndex: number;
@@ -192,7 +192,8 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
         clean: cleanWord(word),
         isRead: isParentheses
       };
-    });
+    // Filter out pure-punctuation tokens (e.g. standalone "." or ",")
+    }).filter((token) => token.clean !== "");
 
     setWords(tokens);
     setIsPageCompleted(tokens.every((w) => w.isRead));

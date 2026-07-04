@@ -495,7 +495,8 @@ export async function generateMatchWordGameThumbnailAction(gameName: string) {
   try {
     const prompt = `A beautiful and colorful illustration representing the educational topic "${gameName}", 3D cartoon style, bright clean background, fun for kids`;
     console.log(`[Gemini Imagen] Generating game thumbnail for '${gameName}': "${prompt}"`);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+    const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
+    const url = `${baseEndpoint}/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -567,7 +568,8 @@ export async function generateMatchWordImagenImageAction(word: string, ageGroup:
       : `A clean 3D illustration of a ${word}, bright colors, educational style, isolated background`;
 
     console.log(`[Gemini Imagen] Generating image for match-word '${word}': "${prompt}"`);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
+    const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
+    const url = `${baseEndpoint}/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -224,7 +224,8 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
     try {
       console.log(`Generating image using Gemini Imagen: "${prompt.substring(0, 60)}..."`);
 
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiApiKey}`, {
+      const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
+      const res = await fetch(`${baseEndpoint}/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiApiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

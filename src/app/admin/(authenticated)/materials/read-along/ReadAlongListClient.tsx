@@ -3,12 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { CreateBookModal } from "./_components/CreateBookModal";
+
+type BookStatus = "DRAFT" | "PUBLISHED";
 
 interface BookSlide {
   id: string;
   slideNumber: string;
-  imageName: string;
-  imageUrl: string;
+  imageName: string | null;
+  imageUrl: string | null;
   text: string;
   orderIndex: number;
 }
@@ -18,7 +21,8 @@ interface BookWithSlides {
   bookId: string;
   title: string;
   description: string | null;
-  mdContent: string;
+  mdContent: string | null;
+  status: BookStatus;
   createdAt: string | Date;
   updatedAt: string | Date;
   slides: BookSlide[];
@@ -28,29 +32,60 @@ interface ReadAlongListClientProps {
   initialBooks: BookWithSlides[];
 }
 
+type FilterTab = "all" | "draft" | "published";
+
 export default function ReadAlongListClient({ initialBooks }: ReadAlongListClientProps) {
   const [books, setBooks] = useState<BookWithSlides[]>(initialBooks);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const filteredBooks = books.filter((book) =>
-    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    book.bookId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredBooks = books.filter((book) => {
+    const matchesSearch =
+      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.bookId.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const handleDownloadMD = (book: BookWithSlides) => {
+    const matchesFilter =
+      activeFilter === "all" ||
+      (activeFilter === "draft" && book.status === "DRAFT") ||
+      (activeFilter === "published" && book.status === "PUBLISHED");
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const counts = {
+    all: books.length,
+    draft: books.filter((b) => b.status === "DRAFT").length,
+    published: books.filter((b) => b.status === "PUBLISHED").length,
+  };
+
+  const handleToggleStatus = async (id: string, currentStatus: BookStatus) => {
+    const newStatus: BookStatus = currentStatus === "DRAFT" ? "PUBLISHED" : "DRAFT";
+    setTogglingId(id);
     try {
-      const element = document.createElement("a");
-      const file = new Blob([book.mdContent], { type: "text/markdown;charset=utf-8" });
-      element.href = URL.createObjectURL(file);
-      element.download = `${book.bookId}.md`;
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-      toast.success(`Đã xuất file ${book.bookId}.md thành công!`);
-    } catch (err) {
-      toast.error("Không thể xuất file markdown.");
+      const res = await fetch(`/api/admin/read-along/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Có lỗi xảy ra.");
+
+      setBooks((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
+      );
+      toast.success(
+        newStatus === "PUBLISHED"
+          ? "Đã công bố sách — học sinh có thể thấy bài này!"
+          : "Đã chuyển về bản nháp."
+      );
+    } catch (err: any) {
+      toast.error(err.message || "Không thể thay đổi trạng thái.");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -93,13 +128,59 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
           />
         </div>
 
-        <Link
-          href="/admin/materials/read-along/new"
+        <button
+          onClick={() => setCreateModalOpen(true)}
           className="w-full md:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(37,99,235,0.25)] text-sm"
         >
           <span className="material-symbols-outlined text-lg">add</span>
           Thêm Sách Mới
-        </Link>
+        </button>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        {(
+          [
+            { key: "all", label: "Tất cả" },
+            { key: "draft", label: "Bản nháp" },
+            { key: "published", label: "Đã công bố" },
+          ] as { key: FilterTab; label: string }[]
+        ).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setActiveFilter(key)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all border ${
+              activeFilter === key
+                ? key === "published"
+                  ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
+                  : key === "draft"
+                  ? "bg-amber-500/15 border-amber-500/40 text-amber-400"
+                  : "bg-blue-500/15 border-blue-500/40 text-blue-400"
+                : "bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-300"
+            }`}
+          >
+            {key === "published" && (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            )}
+            {key === "draft" && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+            )}
+            {label}
+            <span
+              className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                activeFilter === key
+                  ? key === "published"
+                    ? "bg-emerald-500/20 text-emerald-300"
+                    : key === "draft"
+                    ? "bg-amber-500/20 text-amber-300"
+                    : "bg-blue-500/20 text-blue-300"
+                  : "bg-neutral-800 text-neutral-500"
+              }`}
+            >
+              {counts[key]}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Grid List */}
@@ -112,7 +193,9 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
           <p className="text-neutral-500 max-w-sm mx-auto text-sm">
             {searchQuery
               ? "Không tìm thấy cuốn sách nào khớp với từ khóa tìm kiếm."
-              : "Bấm vào nút 'Thêm Sách Mới' để bắt đầu tải lên file markdown cấu trúc và bộ ảnh sách."}
+              : activeFilter !== "all"
+              ? `Không có sách nào ở trạng thái "${activeFilter === "draft" ? "Bản nháp" : "Đã công bố"}".`
+              : "Bấm vào nút 'Thêm Sách Mới' để tạo sách từ bài học hoặc upload ảnh."}
           </p>
         </div>
       ) : (
@@ -123,14 +206,23 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
               book.slides.find((s) => s.slideNumber === "01" || s.orderIndex === 0) ||
               book.slides[0];
             const coverUrl = coverSlide?.imageUrl || "";
+            const isDraft = book.status === "DRAFT";
+            const isToggling = togglingId === book.id;
 
             return (
               <div
                 key={book.id}
-                className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden hover:border-neutral-700 transition-all flex flex-col group shadow-lg"
+                className={`bg-neutral-900 border rounded-3xl overflow-hidden transition-all flex flex-col group shadow-lg ${
+                  isDraft
+                    ? "border-amber-900/40 opacity-80 hover:opacity-100 hover:border-amber-700/50"
+                    : "border-neutral-800 hover:border-neutral-700"
+                }`}
               >
                 {/* Book Thumbnail */}
-                <Link href={`/admin/materials/read-along/${book.id}`} className="block relative aspect-[16/9] bg-neutral-950 flex items-center justify-center overflow-hidden border-b border-neutral-800 cursor-pointer">
+                <Link
+                  href={`/admin/materials/read-along/${book.id}`}
+                  className="block relative aspect-[16/9] bg-neutral-950 flex items-center justify-center overflow-hidden border-b border-neutral-800 cursor-pointer"
+                >
                   {coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -148,6 +240,21 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
                   )}
                   <div className="absolute top-4 left-4 bg-neutral-950/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-neutral-800 text-[11px] font-bold text-blue-400">
                     ID: {book.bookId}
+                  </div>
+                  {/* Status Badge */}
+                  <div
+                    className={`absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border backdrop-blur-md text-[11px] font-bold ${
+                      isDraft
+                        ? "bg-amber-950/70 border-amber-700/50 text-amber-400"
+                        : "bg-emerald-950/70 border-emerald-700/50 text-emerald-400"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isDraft ? "bg-amber-400" : "bg-emerald-400 animate-pulse"
+                      }`}
+                    />
+                    {isDraft ? "Bản nháp" : "Public"}
                   </div>
                 </Link>
 
@@ -171,23 +278,41 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
                       </span>
                       <span>{book.slides.length} slide trang</span>
                     </div>
-                    <div>
-                      {new Date(book.createdAt).toLocaleDateString("vi-VN")}
-                    </div>
+                    <div>{new Date(book.createdAt).toLocaleDateString("vi-VN")}</div>
                   </div>
 
                   {/* Actions */}
-                  <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="flex gap-3 pt-2">
+                    {/* Toggle Status Button */}
                     <button
-                      onClick={() => handleDownloadMD(book)}
-                      className="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-neutral-700"
+                      onClick={() => handleToggleStatus(book.id, book.status)}
+                      disabled={isToggling}
+                      className={`flex-1 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border disabled:opacity-50 ${
+                        isDraft
+                          ? "bg-emerald-950/20 hover:bg-emerald-900/30 text-emerald-400 hover:text-emerald-300 border-emerald-900/30 hover:border-emerald-800/50"
+                          : "bg-amber-950/20 hover:bg-amber-900/30 text-amber-400 hover:text-amber-300 border-amber-900/30 hover:border-amber-800/50"
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-sm">download</span>
-                      Tải file .md
+                      {isToggling ? (
+                        <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      ) : (
+                        <span className="material-symbols-outlined text-sm">
+                          {isDraft ? "publish" : "unpublished"}
+                        </span>
+                      )}
+                      {isToggling
+                        ? "Đang cập nhật..."
+                        : isDraft
+                        ? "Công bố"
+                        : "Bỏ công bố"}
                     </button>
+
                     <button
                       onClick={() => setIsDeletingId(book.id)}
-                      className="px-4 py-2.5 bg-red-950/20 hover:bg-red-900/20 text-red-400 hover:text-red-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-red-900/30"
+                      className="flex-1 px-4 py-2.5 bg-red-950/20 hover:bg-red-900/20 text-red-400 hover:text-red-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-red-900/30"
                     >
                       <span className="material-symbols-outlined text-sm">delete</span>
                       Xóa sách
@@ -226,24 +351,9 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
               >
                 {isDeleting ? (
                   <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Đang xóa...
                   </>
@@ -255,6 +365,12 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
           </div>
         </div>
       )}
+
+      {/* Create Book Modal */}
+      <CreateBookModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+      />
     </div>
   );
 }

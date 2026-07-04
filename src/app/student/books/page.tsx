@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StudentBooksPage() {
   const books = await prisma.readAlongBook.findMany({
+    where: { status: "PUBLISHED" },
     orderBy: { createdAt: "desc" },
     include: {
       slides: {
@@ -12,6 +13,7 @@ export default async function StudentBooksPage() {
       },
     },
   });
+
 
   return (
     <div className="px-4 py-8 md:px-8 max-w-7xl mx-auto space-y-8">

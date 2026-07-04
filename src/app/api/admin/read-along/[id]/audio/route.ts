@@ -47,28 +47,52 @@ export async function POST(
       return NextResponse.json({ error: "Slide has no text to generate audio for." }, { status: 400 });
     }
 
-    // Generate TTS via Gemini
+    // Try proxy first, fall back to direct Google API if proxy is down
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
 
-    const ai = new GoogleGenAI({ apiKey });
+    const proxyEndpoint = process.env.GEMINI_API_ENDPOINT;
+    const directEndpoint = "https://generativelanguage.googleapis.com";
+    const endpointsToTry = proxyEndpoint
+      ? [proxyEndpoint, directEndpoint]
+      : [directEndpoint];
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: slideText }] }],
-      config: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Leda" },
-          },
-        },
-      } as any,
-    });
+    let audioData: string | null = null;
+    let lastAudioError = "";
 
-    const audioData = (response as any).candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    for (const endpoint of endpointsToTry) {
+      try {
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: { baseUrl: endpoint },
+        });
+
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash-preview-tts",
+          contents: [{ parts: [{ text: `<speak><prosody rate="75%">${slideText.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</prosody></speak>` }] }],
+          config: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: "Aoede" },
+              },
+            },
+          } as any,
+        });
+
+        audioData = (response as any).candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ?? null;
+        if (audioData) {
+          console.log(`[ReadAlong Audio] Success via ${endpoint === proxyEndpoint ? "proxy" : "direct API"}`);
+          break;
+        }
+      } catch (err: any) {
+        lastAudioError = err.message;
+        console.warn(`[ReadAlong Audio] Endpoint ${endpoint} failed: ${err.message}`);
+      }
+    }
+
     if (!audioData) {
-      throw new Error("Gemini TTS returned no audio data");
+      throw new Error(`Gemini TTS failed: ${lastAudioError}`);
     }
 
     // Convert base64 to buffer and add WAV header

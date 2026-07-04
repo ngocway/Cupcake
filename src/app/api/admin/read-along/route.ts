@@ -4,48 +4,78 @@ import prisma from "@/lib/prisma";
 import { uploadBufferToR2 } from "@/actions/upload-actions";
 import { toSlug } from "@/lib/slugify";
 
-export const maxDuration = 60; // Allow up to 60s for bulk image uploads and R2 transfers
+export const maxDuration = 60;
 
-interface ParsedSlide {
-  slideNumber: string;
-  imageName: string;
-  text: string;
-}
+// ─────────────────────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────────────────────
 
-function parseMarkdownSlides(mdContent: string): ParsedSlide[] {
-  const slides: ParsedSlide[] = [];
-  // Split the file using slide headers "## Slide <number>"
-  const slideBlocks = mdContent.split(/##\s*Slide\s+/i);
-  
-  // Skip the first block as it contains the main document header/title
-  for (let i = 1; i < slideBlocks.length; i++) {
-    const block = slideBlocks[i];
-    const lines = block.split("\n");
-    const slideNumber = lines[0].trim();
-    
-    let imageName = "";
-    let text = "";
-    
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (trimmedLine.startsWith("- Image:")) {
-        imageName = trimmedLine.replace("- Image:", "").trim();
-      } else if (trimmedLine.startsWith("- Text:")) {
-        text = trimmedLine.replace("- Text:", "").trim();
-      }
+/**
+ * Parse readingText HTML and extract sentence groups with their audio URLs.
+ * Each group ends at an inline-audio-marker span.
+ * Returns an array of { text, audioUrl } objects.
+ */
+function parseReadingTextSegments(html: string): { text: string; audioUrl: string }[] {
+  // Split on inline-audio-marker spans, capturing the data-audio-url
+  // Pattern: anything up to the marker span → that's the text for this page
+  const markerRegex = /<span[^>]+class="[^"]*inline-audio-marker[^"]*"[^>]+data-audio-url="([^"]+)"[^>]*>.*?<\/span>/gi;
+
+  const segments: { text: string; audioUrl: string }[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = markerRegex.exec(html)) !== null) {
+    const segmentHtml = html.slice(lastIndex, match.index);
+    const audioUrl = match[1];
+    // Strip HTML tags to get plain text
+    const plainText = segmentHtml
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (plainText && audioUrl) {
+      segments.push({ text: plainText, audioUrl });
     }
-    
-    if (slideNumber && imageName) {
-      slides.push({
-        slideNumber,
-        imageName,
-        text
-      });
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Remaining text after last marker (no audio)
+  if (lastIndex < html.length) {
+    const remainingHtml = html.slice(lastIndex);
+    const plainText = remainingHtml
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (plainText) {
+      segments.push({ text: plainText, audioUrl: "" });
     }
   }
-  return slides;
+
+  return segments;
 }
 
+/**
+ * Generate a unique bookId slug, appending a counter if needed.
+ */
+async function generateUniqueBookId(baseSlug: string): Promise<string> {
+  let candidate = baseSlug;
+  let counter = 1;
+  while (true) {
+    const existing = await prisma.readAlongBook.findUnique({ where: { bookId: candidate } });
+    if (!existing) return candidate;
+    candidate = `${baseSlug}-${counter++}`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  GET — list all books
+// ─────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "ADMIN") {
@@ -56,12 +86,9 @@ export async function GET(req: NextRequest) {
     const books = await prisma.readAlongBook.findMany({
       orderBy: { createdAt: "desc" },
       include: {
-        _count: {
-          select: { slides: true }
-        }
+        _count: { select: { slides: true } }
       }
     });
-
     return NextResponse.json({ success: true, books });
   } catch (error: any) {
     console.error("[ReadAlong List API] Error:", error);
@@ -69,6 +96,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────
+//  POST — create book (method: "lesson" | "images")
+// ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== "ADMIN") {
@@ -76,118 +106,135 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const contentType = req.headers.get("content-type") || "";
+
+    // Both methods use FormData
     const formData = await req.formData();
-    const title = formData.get("title") as string;
-    const mdFile = formData.get("mdFile") as File | null;
-    const imageFiles = formData.getAll("images") as File[];
+    const method = formData.get("method") as string | null;
 
-    if (!title || !mdFile) {
-      return NextResponse.json({ error: "Vui lòng nhập đầy đủ Tiêu đề và chọn File Markdown (.md)." }, { status: 400 });
-    }
-
-    // Generate bookId slug automatically from the title
-    const bookId = toSlug(title);
-    if (!bookId) {
-      return NextResponse.json({ error: "Tiêu đề sách không hợp lệ để tự sinh mã định danh (Slug)." }, { status: 400 });
-    }
-
-    // Read and parse markdown content
-    const mdText = await mdFile.text();
-    const parsedSlides = parseMarkdownSlides(mdText);
-
-    if (parsedSlides.length === 0) {
-      return NextResponse.json({ error: "Không tìm thấy trang Slide hợp lệ nào trong file Markdown. Vui lòng kiểm tra lại cấu trúc file." }, { status: 400 });
-    }
-
-    // Map uploaded images by filename
-    const imageMap = new Map<string, File>();
-    for (const file of imageFiles) {
-      imageMap.set(file.name, file);
-    }
-
-    // Validate that all slides defined in MD have corresponding uploaded images
-    const missingImages: string[] = [];
-    for (const slide of parsedSlides) {
-      if (!imageMap.has(slide.imageName)) {
-        missingImages.push(slide.imageName);
+    // ── METHOD: lesson ──────────────────────────────────────
+    if (method === "lesson") {
+      const lessonId = formData.get("lessonId") as string;
+      if (!lessonId) {
+        return NextResponse.json({ error: "lessonId is required." }, { status: 400 });
       }
-    }
 
-    if (missingImages.length > 0) {
-      return NextResponse.json({
-        error: "Validation Failed: Một số hình ảnh được định nghĩa trong file .md nhưng chưa được upload.",
-        missingImages
-      }, { status: 400 });
-    }
-
-    // Upload files to R2 in sequence
-    const slidesToCreate: {
-      slideNumber: string;
-      imageName: string;
-      imageUrl: string;
-      text: string;
-      orderIndex: number;
-    }[] = [];
-
-    for (let i = 0; i < parsedSlides.length; i++) {
-      const slide = parsedSlides[i];
-      const file = imageMap.get(slide.imageName)!;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      
-      const contentType = file.type || "image/webp";
-      const fileName = `read-along/${bookId}/${slide.imageName}`;
-      
-      // Upload to Cloudflare R2
-      const imageUrl = await uploadBufferToR2(buffer, fileName, contentType);
-      
-      slidesToCreate.push({
-        slideNumber: slide.slideNumber,
-        imageName: slide.imageName,
-        imageUrl,
-        text: slide.text,
-        orderIndex: i
-      });
-    }
-
-    // Save transaction in database
-    const book = await prisma.$transaction(async (tx) => {
-      const existingBook = await tx.readAlongBook.findUnique({
-        where: { bookId }
+      // Fetch via Assignment (which holds readingText & audio markers)
+      const assignment = await prisma.assignment.findFirst({
+        where: {
+          lesson: { id: lessonId },
+          deletedAt: null,
+        },
+        select: {
+          readingText: true,
+          lesson: { select: { id: true, title: true } }
+        }
       });
 
-      if (existingBook) {
-        // Cascade delete existing slides to write the updated ones
-        await tx.readAlongSlide.deleteMany({
-          where: { bookId: existingBook.id }
-        });
+      if (!assignment?.lesson) {
+        return NextResponse.json({ error: "Lesson not found." }, { status: 404 });
+      }
+      if (!assignment.readingText) {
+        return NextResponse.json({ error: "Lesson has no reading text with audio segments." }, { status: 400 });
+      }
 
-        return await tx.readAlongBook.update({
-          where: { bookId },
-          data: {
-            title,
-            mdContent: mdText,
-            slides: {
-              create: slidesToCreate
-            }
-          }
-        });
-      } else {
-        return await tx.readAlongBook.create({
-          data: {
-            bookId,
-            title,
-            mdContent: mdText,
-            slides: {
-              create: slidesToCreate
-            }
-          }
+      const segments = parseReadingTextSegments(assignment.readingText);
+      if (segments.length === 0) {
+        return NextResponse.json({ error: "No audio segments found in lesson." }, { status: 400 });
+      }
+
+      const title = assignment.lesson.title;
+      const baseSlug = toSlug(title);
+      if (!baseSlug) {
+        return NextResponse.json({ error: "Cannot generate slug from lesson title." }, { status: 400 });
+      }
+      const bookId = await generateUniqueBookId(baseSlug);
+
+      // Build slides — copy text + audioUrl, no image yet
+      const slidesToCreate = segments.map((seg, i) => ({
+        slideNumber: String(i + 1).padStart(2, "0"),
+        imageName: null,
+        imageUrl: null,
+        text: seg.text,
+        audioUrl: seg.audioUrl || null,
+        orderIndex: i,
+      }));
+
+      const book = await prisma.readAlongBook.create({
+        data: {
+          bookId,
+          title,
+          mdContent: "",
+          slides: { create: slidesToCreate }
+        }
+      });
+
+      return NextResponse.json({ success: true, book });
+    }
+
+    // ── METHOD: images ──────────────────────────────────────
+    if (method === "images") {
+      const title = (formData.get("title") as string)?.trim();
+      if (!title) {
+        return NextResponse.json({ error: "Title is required." }, { status: 400 });
+      }
+
+      const imageFiles = formData.getAll("images") as File[];
+      if (imageFiles.length === 0) {
+        return NextResponse.json({ error: "At least one image is required." }, { status: 400 });
+      }
+
+      const baseSlug = toSlug(title);
+      if (!baseSlug) {
+        return NextResponse.json({ error: "Invalid title for slug generation." }, { status: 400 });
+      }
+      const bookId = await generateUniqueBookId(baseSlug);
+
+      // Upload all images to R2 in order
+      const slidesToCreate: {
+        slideNumber: string;
+        imageName: string;
+        imageUrl: string;
+        text: string;
+        audioUrl: null;
+        orderIndex: number;
+      }[] = [];
+
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const contentType = file.type || "image/jpeg";
+        const ext = file.name.split(".").pop() || "jpg";
+        const imageName = `slide_${String(i + 1).padStart(2, "0")}.${ext}`;
+        const r2Path = `read-along/${bookId}/${imageName}`;
+        const imageUrl = await uploadBufferToR2(buffer, r2Path, contentType);
+
+        slidesToCreate.push({
+          slideNumber: String(i + 1).padStart(2, "0"),
+          imageName,
+          imageUrl,
+          text: "",
+          audioUrl: null,
+          orderIndex: i,
         });
       }
-    });
 
-    return NextResponse.json({ success: true, book });
+      const book = await prisma.readAlongBook.create({
+        data: {
+          bookId,
+          title,
+          mdContent: "",
+          slides: { create: slidesToCreate }
+        }
+      });
+
+      return NextResponse.json({ success: true, book });
+    }
+
+    return NextResponse.json({ error: "Invalid method. Use 'lesson' or 'images'." }, { status: 400 });
+
   } catch (error: any) {
     console.error("[ReadAlong POST API] Error:", error);
-    return NextResponse.json({ error: error.message || "Đã xảy ra lỗi hệ thống khi xử lý upload." }, { status: 500 });
+    return NextResponse.json({ error: error.message || "System error." }, { status: 500 });
   }
 }

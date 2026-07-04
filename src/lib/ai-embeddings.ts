@@ -123,7 +123,10 @@ function buildAssignmentText(assignment: {
 // ---------------------------------------------------------------------------
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const model = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
+  const model = genAI.getGenerativeModel(
+    { model: EMBEDDING_MODEL },
+    process.env.GEMINI_API_ENDPOINT ? { baseUrl: process.env.GEMINI_API_ENDPOINT } : undefined
+  );
   const result = await model.embedContent(text);
   return result.embedding.values;
 }

@@ -814,7 +814,8 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
   for (const modelName of modelsToTry) {
     try {
       console.log(`Trying Gemini TTS with model: ${modelName}`);
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
+      const geminiUrl = `${baseEndpoint}/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
       let rateStr = "100%";
       if (speed !== undefined && speed !== null) {
@@ -1023,7 +1024,8 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
     for (const gModel of geminiModels) {
       try {
         console.log(`DALL-E failed. Falling back to Gemini Imagen model: ${gModel}...`);
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
+        const res = await fetch(`${baseEndpoint}/v1beta/models/${gModel}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

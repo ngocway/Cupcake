@@ -55,7 +55,12 @@ export async function POST(
           return;
         }
 
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: process.env.GEMINI_API_ENDPOINT
+            ? { baseUrl: process.env.GEMINI_API_ENDPOINT }
+            : undefined,
+        });
         const total = book.slides.length;
 
         send({ type: "start", total, bookTitle: book.title });
@@ -69,12 +74,12 @@ export async function POST(
             try {
               const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash-preview-tts",
-                contents: [{ parts: [{ text }] }],
+                contents: [{ parts: [{ text: `<speak><prosody rate="75%">${text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</prosody></speak>` }] }],
                 config: {
                   responseModalities: ["AUDIO"],
                   speechConfig: {
                     voiceConfig: {
-                      prebuiltVoiceConfig: { voiceName: "Leda" },
+                      prebuiltVoiceConfig: { voiceName: "Aoede" },
                     },
                   },
                 } as any,
