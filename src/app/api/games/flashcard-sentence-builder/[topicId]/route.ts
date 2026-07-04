@@ -39,9 +39,11 @@ export async function GET(
       where: {
         topicId,
         imageUrl: { not: null },
-        NOT: { imageUrl: "" },
         exampleSentence: { not: null },
-        NOT: { exampleSentence: "" }
+        AND: [
+          { imageUrl: { not: "" } },
+          { exampleSentence: { not: "" } }
+        ]
       },
       select: {
         id: true,
