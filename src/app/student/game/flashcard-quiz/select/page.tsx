@@ -116,10 +116,10 @@ export default async function FlashcardQuizSelectPage({
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-violet-400/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3"></div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
 
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {topics.length === 0 ? (
             <div className="col-span-full text-center py-20 bg-white dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[40px]">
               <Gamepad2 className="w-16 h-16 mx-auto text-slate-300 dark:text-slate-700 mb-4" />
@@ -143,7 +143,7 @@ export default async function FlashcardQuizSelectPage({
                   </div>
 
                   {/* Thumbnail Half */}
-                  <div className="w-full h-44 relative bg-white/40 dark:bg-slate-900/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <div className="w-full h-32 relative bg-white/40 dark:bg-slate-900/40 overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {topic.iconUrl ? (
                       topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
                         <img 
@@ -164,17 +164,17 @@ export default async function FlashcardQuizSelectPage({
                   </div>
                   
                   {/* Text Half */}
-                  <div className="p-6 flex flex-col flex-1">
+                  <div className="p-4 flex flex-col flex-1">
                     <h2 className={`text-2xl font-black text-slate-800 dark:text-white mb-2 ${theme.titleHover} transition-colors`}>
                       {topic.name}
                     </h2>
-                    <div className="flex items-center gap-2 mb-8">
+                    <div className="flex items-center gap-2 mb-3">
                       <span className="px-3 py-1 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border border-white/50 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-xs font-black uppercase tracking-wider">
                         {questionCount} {questionCount === 1 ? 'Question' : 'Questions'}
                       </span>
                     </div>
                     
-                    <div className="mt-auto flex items-center justify-between border-t border-slate-200/50 dark:border-slate-800 pt-5">
+                    <div className="mt-auto flex items-center justify-between border-t border-slate-200/50 dark:border-slate-800 pt-3">
                       <span className="font-bold text-slate-500 group-hover:text-slate-800 dark:group-hover:text-white transition-colors">
                         Start Quiz
                       </span>

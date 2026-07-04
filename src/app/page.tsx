@@ -107,17 +107,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const kindergartenGamesPromise = Promise.resolve([
     {
-      id: "word-match",
-      title: "Word Match",
-      href: "/student/game/match-words/select?age=2-5",
-      gradient: "from-blue-200 to-sky-400",
-      thumbnail: "/images/games/word-match.png",
-      emoji: "🐾",
-      tag: "Vocabulary",
-      desc: "Drag and drop English words to match the correct illustrations. Exciting vocabulary topics are waiting for you to discover!",
-      comingSoon: false,
-    },
-    {
       id: "flashcard-match",
       title: "Flashcard Match",
       href: "/student/game/flashcard-match/select?level=kindergarten",
@@ -129,14 +118,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       comingSoon: false,
     },
     {
-      id: "sentence-builder",
-      title: "Sentence Builder",
-      href: "/student/game/sentence-builder?age=2-5",
-      gradient: "from-purple-200 to-fuchsia-400",
-      thumbnail: "/images/games/sentence-builder.png",
+      id: "flashcard-sentence-builder",
+      title: "Sentence Builder (Flashcards)",
+      href: "/student/game/flashcard-sentence-builder/select?level=kindergarten",
+      gradient: "from-violet-200 to-purple-400",
+      thumbnail: "/images/games/flashcard-sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
-      desc: "Arrange the given words into a complete sentence describing the image. Practice grammar in a fun way!",
+      desc: "Arrange words to build sentences matching your flashcard images and examples. Practice writing and speaking!",
       comingSoon: false,
     },
     {
