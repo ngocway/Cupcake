@@ -137,9 +137,11 @@ export default async function FlashcardSentenceBuilderSelectPage({
           flashcards: {
             where: {
               imageUrl: { not: null },
-              NOT: { imageUrl: "" },
               exampleSentence: { not: null },
-              NOT: { exampleSentence: "" }
+              AND: [
+                { imageUrl: { not: "" } },
+                { exampleSentence: { not: "" } }
+              ]
             },
           },
         },
@@ -148,9 +150,11 @@ export default async function FlashcardSentenceBuilderSelectPage({
       flashcards: {
         where: {
           imageUrl: { not: null },
-          NOT: { imageUrl: "" },
           exampleSentence: { not: null },
-          NOT: { exampleSentence: "" }
+          AND: [
+            { imageUrl: { not: "" } },
+            { exampleSentence: { not: "" } }
+          ]
         },
         select: { imageUrl: true },
         orderBy: { orderIndex: "asc" },
