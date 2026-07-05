@@ -41,7 +41,8 @@ export async function GET(
         word: true,
         imageUrl: true,
         quizQuestion: true,
-        quizAudioUrl: true
+        quizAudioUrl: true,
+        audioWordUrl: true
       }
     })
 
@@ -105,6 +106,7 @@ export async function GET(
         question: card.quizQuestion,
         audioUrl: card.quizAudioUrl,
         imageUrl: card.imageUrl,
+        wordAudioUrl: card.audioWordUrl,
         options
       }
     })

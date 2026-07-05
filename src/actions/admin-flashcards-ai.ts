@@ -147,7 +147,7 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
         if (categoryName) {
           const cat = categoryName.toLowerCase();
           if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
-            speed = 0.8;
+            speed = 0.75;
           }
         }
 
@@ -372,7 +372,7 @@ export async function generateCardAudioAction(word: string, exampleSentence: str
       if (categoryName) {
         const cat = categoryName.toLowerCase();
         if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
-          speed = 0.8;
+          speed = 0.75;
         }
       }
 

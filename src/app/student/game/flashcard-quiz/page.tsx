@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useContentStore } from "@/store/useContentStore";
 
 
 function FlashcardQuizGameContent() {
   const searchParams = useSearchParams();
   const age = searchParams.get("age") || "2-5";
   const topicId = searchParams.get("topicId");
+  const nativeLanguage = useContentStore((s) => s.nativeLanguage) || "vi";
   const [isLoading, setIsLoading] = useState(true);
 
   return (
@@ -31,7 +33,7 @@ function FlashcardQuizGameContent() {
           </div>
         )}
         <iframe 
-          src={`/games/flashcard-quiz/index.html?age=${age}${topicId ? `&topicId=${topicId}` : ''}`} 
+          src={`/games/flashcard-quiz/index.html?age=${age}&nativeLanguage=${nativeLanguage}${topicId ? `&topicId=${topicId}` : ''}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Flashcard Quiz Game"
           sandbox="allow-scripts allow-same-origin"
