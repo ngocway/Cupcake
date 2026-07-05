@@ -132,6 +132,7 @@
             background-color: #fffdf5;
             box-shadow: inset 0 2px 8px rgba(251, 191, 36, 0.05);
             flex-shrink: 0;
+            position: relative;
         }
 
         .image-container img {
@@ -219,6 +220,60 @@
             text-align: center;
             margin: 0;
             line-height: 1.3;
+        }
+
+        /* Clickable word for translation */
+        .clickable-word {
+            cursor: pointer;
+            transition: color 0.15s ease, transform 0.15s ease;
+            display: inline-block;
+            border-radius: 6px;
+            padding: 0 4px;
+        }
+        .clickable-word:hover {
+            color: #6c5ce7;
+            background-color: rgba(108, 92, 231, 0.08);
+            text-decoration: underline;
+        }
+
+        /* Tooltip styling */
+        .word-tooltip {
+            position: fixed;
+            background: rgba(45, 52, 54, 0.95);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            animation: pop-tooltip 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+        }
+
+        .word-tooltip::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px 6px 0;
+            border-style: solid;
+            border-color: rgba(45, 52, 54, 0.95) transparent;
+            display: block;
+            width: 0;
+        }
+
+        @keyframes pop-tooltip {
+            from { transform: scale(0.8) translateY(10px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        
+        .tooltip-loading {
+            font-style: italic;
+            font-size: 0.85rem;
+            opacity: 0.8;
         }
 
         /* Lưới đáp án */
@@ -576,6 +631,7 @@
             <!-- Image Area -->
             <div class="image-container">
                 <img id="cardImage" src="" style="display:none;" alt="Question illustration">
+                <canvas id="revealCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: none;"></canvas>
                 <div class="image-placeholder" id="placeholder">❓</div>
             </div>
 
@@ -614,6 +670,18 @@
         let currentWord = "";
         let audioUnlocked = false;
         let blockClicks = false;
+
+        // Canvas reveal logic variables
+        const pastels = [
+            '#ffb8b8', '#ffddb8', '#fff3b8', '#d1ffb8', '#b8ffd9',
+            '#b8ffff', '#b8d9ff', '#c8b8ff', '#ffb8ff', '#ffb8d9'
+        ];
+        const numSteps = 15;
+        let tiles = [];
+        let revealTimer = null;
+        let animationFrameId = null;
+        let currentRevealStep = 0;
+        let stepMapping = [];
 
         let audioCtx = null;
         let bgMusic = null;
@@ -655,6 +723,7 @@
         const progressBarFill = document.getElementById('progressBarFill');
         const card = document.getElementById('card');
         const cardImage = document.getElementById('cardImage');
+        const revealCanvas = document.getElementById('revealCanvas');
         const placeholder = document.getElementById('placeholder');
         const questionText = document.getElementById('questionText');
         const optionsGrid = document.getElementById('optionsGrid');
@@ -828,6 +897,10 @@
         // Render current question
         function loadQuestion() {
             stopVoice();
+            if (activeTooltip) {
+                activeTooltip.remove();
+                activeTooltip = null;
+            }
             blockClicks = false;
             card.className = 'question-card';
 
@@ -848,15 +921,44 @@
             if (progressBarFill) {
                 progressBarFill.style.width = `${percent}%`;
             }
-            questionText.textContent = q.question;
+            
+            // Render question as clickable spans for translation
+            questionText.innerHTML = '';
+            const words = q.question.split(' ');
+            words.forEach(word => {
+                const span = document.createElement('span');
+                span.className = 'clickable-word';
+                span.textContent = word;
+                span.onclick = (e) => {
+                    e.stopPropagation();
+                    translateWord(word, span);
+                };
+                questionText.appendChild(span);
+                // Add space after word
+                questionText.appendChild(document.createTextNode(' '));
+            });
 
             if (q.imageUrl) {
                 cardImage.src = q.imageUrl;
                 cardImage.style.display = 'block';
                 placeholder.style.display = 'none';
+                
+                // Initialize reveal canvas
+                revealCanvas.style.display = 'block';
+                initRevealCanvas();
             } else {
                 cardImage.style.display = 'none';
                 placeholder.style.display = 'block';
+                revealCanvas.style.display = 'none';
+                
+                if (revealTimer) {
+                    clearInterval(revealTimer);
+                    revealTimer = null;
+                }
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
             }
 
             // Audio availability
@@ -879,6 +981,9 @@
                         questionAudio = null;
                         // Restore bg music volume to 15%
                         setBgMusicVolume(0.15);
+                        
+                        // Start reveal countdown after audio finishes
+                        startRevealCountdown();
                     };
 
                     questionAudio.addEventListener('ended', onEnded);
@@ -893,6 +998,9 @@
             } else {
                 audioBtn.classList.add('disabled');
                 audioBtn.disabled = true;
+                
+                // No audio, start countdown immediately
+                startRevealCountdown();
             }
 
             // Render option buttons
@@ -904,6 +1012,287 @@
                 btn.onclick = () => selectOption(btn, opt);
                 optionsGrid.appendChild(btn);
             });
+        }
+
+        // Canvas reveal functions
+        function initRevealCanvas() {
+            if (revealTimer) {
+                clearInterval(revealTimer);
+                revealTimer = null;
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            const parent = revealCanvas.parentElement;
+            if (!parent) return;
+            const rect = parent.getBoundingClientRect();
+            
+            revealCanvas.width = (rect.width || 200) * window.devicePixelRatio;
+            revealCanvas.height = (rect.height || 200) * window.devicePixelRatio;
+            
+            const cols = 6;
+            const rows = 6;
+            const tileW = revealCanvas.width / cols;
+            const tileH = revealCanvas.height / rows;
+
+            // Generate horizontal and vertical edge directions randomly (-1 or 1)
+            const horizEdges = Array.from({ length: rows - 1 }, () => 
+                Array.from({ length: cols }, () => Math.random() < 0.5 ? 1 : -1)
+            );
+            const vertEdges = Array.from({ length: rows }, () => 
+                Array.from({ length: cols - 1 }, () => Math.random() < 0.5 ? 1 : -1)
+            );
+            
+            tiles = [];
+            const indices = [];
+            
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const top = r === 0 ? 0 : horizEdges[r - 1][c] * -1;
+                    const bottom = r === rows - 1 ? 0 : horizEdges[r][c];
+                    const left = c === 0 ? 0 : vertEdges[r][c - 1] * -1;
+                    const right = c === cols - 1 ? 0 : vertEdges[r][c];
+
+                    indices.push(tiles.length);
+                    tiles.push({
+                        x: c * tileW,
+                        y: r * tileH,
+                        w: tileW,
+                        h: tileH,
+                        top: top,
+                        right: right,
+                        bottom: bottom,
+                        left: left,
+                        color: pastels[Math.floor(Math.random() * pastels.length)],
+                        state: 'active',
+                        vx: 0,
+                        vy: 0,
+                        rot: 0,
+                        vrot: 0,
+                        opacity: 1,
+                        currentX: c * tileW,
+                        currentY: r * tileH
+                    });
+                }
+            }
+            
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const temp = indices[i];
+                indices[i] = indices[j];
+                indices[j] = temp;
+            }
+            
+            stepMapping = Array.from({ length: numSteps }, () => []);
+            indices.forEach((index, i) => {
+                const stepIdx = i % numSteps;
+                stepMapping[stepIdx].push(index);
+            });
+            
+            currentRevealStep = 0;
+            
+            drawReveal();
+        }
+
+        function startRevealCountdown() {
+            if (revealTimer) return; // Already running
+            
+            revealTimer = setInterval(() => {
+                if (currentRevealStep < numSteps) {
+                    const toReveal = stepMapping[currentRevealStep];
+                    toReveal.forEach(idx => {
+                        const tile = tiles[idx];
+                        if (tile && tile.state === 'active') {
+                            tile.state = 'shattering';
+                            tile.vx = (Math.random() - 0.5) * 5;
+                            tile.vy = -(Math.random() * 5 + 2);
+                            tile.vrot = (Math.random() - 0.5) * 0.15;
+                        }
+                    });
+                    currentRevealStep++;
+                } else {
+                    clearInterval(revealTimer);
+                    revealTimer = null;
+                }
+            }, 1000);
+        }
+
+        // Draw path for a bulbous jigsaw puzzle piece
+        function drawPuzzlePiece(ctx, x, y, w, h, top, right, bottom, left) {
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            
+            // Top edge (left to right)
+            if (top) {
+                ctx.lineTo(x + w * 0.35, y);
+                ctx.bezierCurveTo(x + w * 0.3, y + top * h * 0.1, x + w * 0.4, y + top * h * 0.28, x + w * 0.5, y + top * h * 0.28);
+                ctx.bezierCurveTo(x + w * 0.6, y + top * h * 0.28, x + w * 0.7, y + top * h * 0.1, x + w * 0.65, y);
+            }
+            ctx.lineTo(x + w, y);
+            
+            // Right edge (top to bottom)
+            if (right) {
+                ctx.lineTo(x + w, y + h * 0.35);
+                ctx.bezierCurveTo(x + w + right * w * 0.1, y + h * 0.3, x + w + right * w * 0.28, y + h * 0.4, x + w + right * w * 0.28, y + h * 0.5);
+                ctx.bezierCurveTo(x + w + right * w * 0.28, y + h * 0.6, x + w + right * w * 0.1, y + h * 0.7, x + w, y + h * 0.65);
+            }
+            ctx.lineTo(x + w, y + h);
+            
+            // Bottom edge (right to left)
+            if (bottom) {
+                ctx.lineTo(x + w * 0.65, y + h);
+                ctx.bezierCurveTo(x + w * 0.7, y + h + bottom * h * 0.1, x + w * 0.6, y + h + bottom * h * 0.28, x + w * 0.5, y + h + bottom * h * 0.28);
+                ctx.bezierCurveTo(x + w * 0.4, y + h + bottom * h * 0.28, x + w * 0.3, y + h + bottom * h * 0.1, x + w * 0.35, y + h);
+            }
+            ctx.lineTo(x, y + h);
+            
+            // Left edge (bottom to top)
+            if (left) {
+                ctx.lineTo(x, y + h * 0.65);
+                ctx.bezierCurveTo(x + left * w * 0.1, y + h * 0.7, x + left * w * 0.28, y + h * 0.6, x + left * w * 0.28, y + h * 0.5);
+                ctx.bezierCurveTo(x + left * w * 0.28, y + h * 0.4, x + left * w * 0.1, y + h * 0.3, x, y + h * 0.35);
+            }
+            ctx.lineTo(x, y);
+            
+            ctx.closePath();
+        }
+
+        function drawReveal() {
+            const ctx = revealCanvas.getContext('2d');
+            if (!ctx) return;
+            ctx.clearRect(0, 0, revealCanvas.width, revealCanvas.height);
+            
+            let hasAnimatingTiles = false;
+            
+            tiles.forEach(tile => {
+                if (tile.state === 'active') {
+                    ctx.fillStyle = tile.color;
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth = 2 * window.devicePixelRatio;
+                    drawPuzzlePiece(ctx, tile.x, tile.y, tile.w, tile.h, tile.top, tile.right, tile.bottom, tile.left);
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (tile.state === 'shattering') {
+                    hasAnimatingTiles = true;
+                    tile.vy += 0.4;
+                    tile.currentX += tile.vx;
+                    tile.currentY += tile.vy;
+                    tile.rot += tile.vrot;
+                    tile.opacity -= 0.03;
+                    
+                    if (tile.opacity <= 0) {
+                        tile.state = 'done';
+                    } else {
+                        ctx.save();
+                        ctx.globalAlpha = tile.opacity;
+                        ctx.translate(tile.currentX + tile.w / 2, tile.currentY + tile.h / 2);
+                        ctx.rotate(tile.rot);
+                        ctx.fillStyle = tile.color;
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${tile.opacity * 0.4})`;
+                        ctx.lineWidth = 2 * window.devicePixelRatio;
+                        drawPuzzlePiece(ctx, -tile.w / 2, -tile.h / 2, tile.w, tile.h, tile.top, tile.right, tile.bottom, tile.left);
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            });
+            
+            if (hasAnimatingTiles || tiles.some(t => t.state === 'active')) {
+                animationFrameId = requestAnimationFrame(drawReveal);
+            }
+        }
+
+        function revealAll() {
+            if (revealTimer) {
+                clearInterval(revealTimer);
+                revealTimer = null;
+            }
+            tiles.forEach(tile => {
+                if (tile.state === 'active') {
+                    tile.state = 'shattering';
+                    tile.vx = (Math.random() - 0.5) * 14;
+                    tile.vy = -(Math.random() * 10 + 4);
+                    tile.vrot = (Math.random() - 0.5) * 0.4;
+                }
+            });
+        }
+
+        // Click to translate word translation logic
+        let activeTooltip = null;
+
+        async function translateWord(word, element) {
+            if (activeTooltip) {
+                activeTooltip.remove();
+                activeTooltip = null;
+            }
+
+            // Remove punctuation for clean translation
+            const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").trim();
+            if (!cleanWord) return;
+
+            const tooltip = document.createElement('div');
+            tooltip.className = 'word-tooltip';
+            tooltip.innerHTML = '<span class="tooltip-loading">⏳ Translating...</span>';
+            document.body.appendChild(tooltip);
+            activeTooltip = tooltip;
+
+            // Position tooltip above the word element
+            const rect = element.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            tooltip.style.left = (rect.left + rect.width / 2 - tooltipRect.width / 2) + 'px';
+            tooltip.style.top = (rect.top - 45) + 'px';
+
+            try {
+                const targetLang = urlParams.get('nativeLanguage') || 'vi';
+                const res = await fetch('/api/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: cleanWord, targetLanguage: targetLang })
+                });
+                const data = await res.json();
+                
+                if (data.success && data.translation) {
+                    tooltip.textContent = data.translation;
+                } else {
+                    tooltip.textContent = "Error";
+                }
+            } catch (err) {
+                console.error("Translation API failed:", err);
+                tooltip.textContent = "Error";
+            }
+
+            // Adjust bounds and center
+            const updatedRect = tooltip.getBoundingClientRect();
+            tooltip.style.left = Math.max(10, Math.min(window.innerWidth - updatedRect.width - 10, rect.left + rect.width / 2 - updatedRect.width / 2)) + 'px';
+
+            const dismiss = () => {
+                if (activeTooltip === tooltip) {
+                    tooltip.remove();
+                    activeTooltip = null;
+                }
+                document.removeEventListener('click', dismiss);
+            };
+            setTimeout(() => {
+                document.addEventListener('click', dismiss);
+            }, 100);
+        }
+
+        // Speech synthesis fallback
+        function playSpeechSynthesis(text) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.75;
+                    utterance.lang = 'en-US';
+                    window.speechSynthesis.speak(utterance);
+                }
+            } catch (e) {
+                console.warn("SpeechSynthesis failed:", e);
+            }
         }
 
         // Selection handler
@@ -918,6 +1307,25 @@
                 blockClicks = true;
                 btn.classList.add('correct');
                 card.classList.add('correct-card');
+                
+                // Reveal remaining canvas tiles immediately
+                revealAll();
+                
+                // Stop question voice narration
+                stopVoice();
+
+                // Play the correct answer's word audio
+                const q = questions[currentIndex];
+                if (q && q.wordAudioUrl) {
+                    const wordAudio = new Audio(q.wordAudioUrl);
+                    wordAudio.playbackRate = 0.75;
+                    wordAudio.play().catch(err => {
+                        console.warn("Failed to play word audio file, using fallback:", err);
+                        playSpeechSynthesis(q.word);
+                    });
+                } else if (q) {
+                    playSpeechSynthesis(q.word);
+                }
                 
                 // Disable other buttons
                 Array.from(optionsGrid.children).forEach(child => {
@@ -942,6 +1350,18 @@
         // Complete Screen
         function showLevelComplete() {
             stopVoice();
+            if (activeTooltip) {
+                activeTooltip.remove();
+                activeTooltip = null;
+            }
+            if (revealTimer) {
+                clearInterval(revealTimer);
+                revealTimer = null;
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
             playSfx(true);
             spawnConfetti(120);
 
@@ -956,6 +1376,14 @@
 
         // Back action
         function goBack() {
+            if (revealTimer) {
+                clearInterval(revealTimer);
+                revealTimer = null;
+            }
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
             // Safe redirect via parent location
             window.parent.location.href = `/student/game/flashcard-quiz/select?age=${age}`;
         }
