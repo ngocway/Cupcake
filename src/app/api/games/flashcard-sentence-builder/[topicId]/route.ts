@@ -50,6 +50,7 @@ export async function GET(
         word: true,
         imageUrl: true,
         audioUrl: true,
+        audioSentenceUrl: true,
         exampleSentence: true
       },
       orderBy: { orderIndex: "asc" }
@@ -139,7 +140,7 @@ export async function GET(
         image: card.imageUrl,
         expected,
         pool: shuffleArray(pool),
-        audio: card.audioUrl,
+        audio: card.audioSentenceUrl || card.audioUrl,
         audioRate: 1.0 // Playback rate 1.0 to prevent double slowing down of TTS
       }
     })

@@ -46,6 +46,7 @@ interface CreateFlashcardData {
   imageUrl?: string
   audioUrl?: string
   audioWordUrl?: string
+  audioSentenceUrl?: string
   quizQuestion?: string
   quizAudioUrl?: string
   translations?: Record<string, string>
@@ -67,6 +68,7 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
     let safeImageUrl = data.imageUrl?.trim() || null;
     let safeAudioUrl = data.audioUrl?.trim() || null;
     let safeAudioWordUrl = data.audioWordUrl?.trim() || null;
+    let safeAudioSentenceUrl = data.audioSentenceUrl?.trim() || null;
     let safeQuizAudioUrl = data.quizAudioUrl?.trim() || null;
 
     if (safeImageUrl?.startsWith('data:')) {
@@ -83,6 +85,11 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
       const res = await uploadBase64Image(safeAudioWordUrl, 'flashcard');
       if (res.success && res.url) safeAudioWordUrl = res.url;
+    }
+    if (safeAudioSentenceUrl?.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudioSentenceUrl, 'flashcard');
+      if (res.success && res.url) safeAudioSentenceUrl = res.url;
     }
     if (safeQuizAudioUrl?.startsWith('data:')) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
@@ -104,6 +111,7 @@ export async function adminCreateFlashcard(data: CreateFlashcardData) {
         imageUrl: safeImageUrl,
         audioUrl: safeAudioUrl,
         audioWordUrl: safeAudioWordUrl,
+        audioSentenceUrl: safeAudioSentenceUrl,
         quizQuestion: data.quizQuestion?.trim() || null,
         quizAudioUrl: safeQuizAudioUrl,
         orderIndex,
@@ -143,6 +151,7 @@ interface UpdateFlashcardData {
   imageUrl?: string | null
   audioUrl?: string | null
   audioWordUrl?: string | null
+  audioSentenceUrl?: string | null
   quizQuestion?: string | null
   quizAudioUrl?: string | null
   translations?: Record<string, string>
@@ -155,6 +164,7 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
     let safeImageUrl = data.imageUrl !== undefined ? (data.imageUrl?.trim() || null) : undefined;
     let safeAudioUrl = data.audioUrl !== undefined ? (data.audioUrl?.trim() || null) : undefined;
     let safeAudioWordUrl = data.audioWordUrl !== undefined ? (data.audioWordUrl?.trim() || null) : undefined;
+    let safeAudioSentenceUrl = data.audioSentenceUrl !== undefined ? (data.audioSentenceUrl?.trim() || null) : undefined;
     let safeQuizAudioUrl = data.quizAudioUrl !== undefined ? (data.quizAudioUrl?.trim() || null) : undefined;
 
     if (safeImageUrl && safeImageUrl.startsWith('data:')) {
@@ -171,6 +181,11 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
       const { uploadBase64Image } = await import('@/actions/upload-actions');
       const res = await uploadBase64Image(safeAudioWordUrl, `flashcard-${id}`);
       if (res.success && res.url) safeAudioWordUrl = res.url;
+    }
+    if (safeAudioSentenceUrl && safeAudioSentenceUrl.startsWith('data:')) {
+      const { uploadBase64Image } = await import('@/actions/upload-actions');
+      const res = await uploadBase64Image(safeAudioSentenceUrl, `flashcard-${id}`);
+      if (res.success && res.url) safeAudioSentenceUrl = res.url;
     }
     if (safeQuizAudioUrl && safeQuizAudioUrl.startsWith('data:')) {
       const { uploadBase64Image } = await import('@/actions/upload-actions');
@@ -192,6 +207,7 @@ export async function adminUpdateFlashcard(id: string, data: UpdateFlashcardData
         imageUrl: safeImageUrl,
         audioUrl: safeAudioUrl,
         audioWordUrl: safeAudioWordUrl,
+        audioSentenceUrl: safeAudioSentenceUrl,
         quizQuestion: data.quizQuestion !== undefined ? (data.quizQuestion?.trim() || null) : undefined,
         quizAudioUrl: safeQuizAudioUrl
       },
