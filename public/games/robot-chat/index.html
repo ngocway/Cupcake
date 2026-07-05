@@ -508,12 +508,10 @@ CRITICAL about keywords:
 }
 
 // ═══════════════════ ELEVENLABS TTS ═══════════════════
-let currentAudioSource = null;
-let currentAudioCtx = null;
+let currentAudio = null;
 
 function stopAudio() {
-  try { if(currentAudioSource) { currentAudioSource.stop(); currentAudioSource=null; } } catch{}
-  try { if(currentAudioCtx) { currentAudioCtx.close(); currentAudioCtx=null; } } catch{}
+  try { if(currentAudio) { currentAudio.pause(); currentAudio=null; } } catch{}
 }
 
 async function speakText(text, onStart) {
@@ -525,37 +523,34 @@ async function speakText(text, onStart) {
     voiceId = 'pFZP5JQG7iQjIQuC4Bku'; // Lily (Giọng nữ ngọt ngào, kể chuyện, giống giọng trẻ em nhất)
   }
 
-  try {
-    const res = await fetch('/api/games/robot-chat/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voiceId, speed: state.speechSpeed })
-    });
-    if (!res.ok) {
-      if (onStart) onStart();
-      return browserSpeak(text);
+  return new Promise((resolve) => {
+    try {
+      const audio = new Audio();
+      currentAudio = audio;
+      audio.src = `/api/games/robot-chat/tts?text=${encodeURIComponent(text)}&voiceId=${voiceId}`;
+
+      audio.onplay = () => {
+        if (onStart) onStart();
+      };
+      
+      audio.onended = () => {
+        resolve();
+      };
+
+      audio.onerror = (e) => {
+        console.error("Audio playback error, falling back to browser speak:", e);
+        browserSpeak(text).then(resolve);
+      };
+
+      audio.play().catch(err => {
+        console.error("Audio play call failed, falling back:", err);
+        browserSpeak(text).then(resolve);
+      });
+    } catch (err) {
+      console.error("Audio initialization failed:", err);
+      browserSpeak(text).then(resolve);
     }
-
-    // Pre-decode toàn bộ buffer → không bị cắt đầu câu
-    const arrayBuffer = await res.arrayBuffer();
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    currentAudioCtx = audioCtx;
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-    if (onStart) onStart();
-
-    return new Promise(resolve => {
-      const source = audioCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(audioCtx.destination);
-      source.onended = resolve;
-      currentAudioSource = source;
-      source.start(0); // buffer đã decode xong, phát ngay tức thì
-    });
-  } catch {
-    if (onStart) onStart();
-    return browserSpeak(text);
-  }
+  });
 }
 
 function browserSpeak(text) {

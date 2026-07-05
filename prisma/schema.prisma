@@ -619,6 +619,7 @@ model GlobalFlashcard {
   imageUrl        String?
   audioUrl        String?
   audioWordUrl    String?
+  audioSentenceUrl String?
   quizQuestion    String?
   quizAudioUrl    String?
   topic           FlashcardTopic         @relation(fields: [topicId], references: [id], onDelete: Cascade)

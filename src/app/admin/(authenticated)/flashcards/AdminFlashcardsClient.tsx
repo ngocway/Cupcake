@@ -985,6 +985,17 @@ export function AdminFlashcardsClient({
     }
   }
 
+  const handlePlaySentenceAudio = (e: React.MouseEvent, card: any) => {
+    e.stopPropagation()
+    if (typeof window !== "undefined") {
+      if (card.audioSentenceUrl && card.audioSentenceUrl.trim()) {
+        new Audio(card.audioSentenceUrl).play().catch(() => playSpeechSynthesis(card.exampleSentence))
+      } else {
+        playSpeechSynthesis(card.exampleSentence)
+      }
+    }
+  }
+
   const handlePlayQuizAudio = (e: React.MouseEvent, card: any) => {
     e.stopPropagation()
     if (typeof window !== "undefined") {
@@ -1305,6 +1316,15 @@ export function AdminFlashcardsClient({
                                   onClick={(e) => handlePlayWordAudio(e, card)}
                                   className="p-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 hover:text-white border border-emerald-500/20 transition-colors"
                                   title="Nghe phát âm từ vựng (ElevenLabs)"
+                                >
+                                  <Volume2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {card.audioSentenceUrl && (
+                                <button 
+                                  onClick={(e) => handlePlaySentenceAudio(e, card)}
+                                  className="p-0.5 rounded bg-amber-950/60 hover:bg-amber-900/80 text-amber-400 hover:text-white border border-amber-500/20 transition-colors"
+                                  title="Nghe câu ví dụ đã tách (Whisper)"
                                 >
                                   <Volume2 className="w-3.5 h-3.5" />
                                 </button>
