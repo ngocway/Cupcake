@@ -2,7 +2,7 @@
 import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { ExerciseCard, LessonCard } from "@/components/public/ContentCards"
+import { ExerciseCard, ExerciseCardHorizontal, LessonCard } from "@/components/public/ContentCards"
 import { VisualCategoryMenu } from "@/components/public/VisualCategoryMenu"
 import { LoadingBar } from "@/components/public/TopProgressBar"
 import { useContentStore } from "@/store/useContentStore"
@@ -201,12 +201,15 @@ const ExerciseList = memo(function ExerciseList({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="space-y-4">
-            <div className="aspect-video w-full bg-slate-100 dark:bg-slate-800/80 rounded-2xl animate-pulse" />
-            <div className="h-5 w-3/4 bg-slate-100 dark:bg-slate-800/80 rounded-xl animate-pulse" />
-            <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-800/80 rounded-xl animate-pulse" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex flex-row rounded-xl overflow-hidden border border-primary/5 shadow-sm animate-pulse">
+            <div className="w-[38%] shrink-0"><div className="aspect-video bg-slate-100 dark:bg-slate-800/80" /></div>
+            <div className="flex-1 p-3 space-y-2">
+              <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800/80 rounded-full" />
+              <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/80 rounded-full" />
+              <div className="h-3 w-1/2 bg-slate-100 dark:bg-slate-800/80 rounded-full" />
+            </div>
           </div>
         ))}
       </div>
@@ -214,13 +217,14 @@ const ExerciseList = memo(function ExerciseList({
   }
 
   if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
+
   if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {displayItems.map((ex: any) => (
-          <ExerciseCard key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
+          <ExerciseCardHorizontal key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
         ))}
       </div>
       {hasMoreEx && (
@@ -1425,43 +1429,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
           </div>
         </div>
 
-        {/* Pill Selector for Age Groups (Kid, Teen, Learner) */}
-        {!isKindergarten && (activeTab === "flashcards" || activeTab === "games") && (
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-              {locale === "vi" ? "Độ tuổi:" : "Age Group:"}
-            </span>
-            {[
-              { id: "kid", label: locale === "vi" ? "Kid (6-10 tuổi)" : "Kid (6-10 years)", activeBg: "bg-emerald-500 text-white" },
-              { id: "teen", label: locale === "vi" ? "Teen (11-16 tuổi)" : "Teen (11-16 years)", activeBg: "bg-indigo-500 text-white" },
-              { id: "learner", label: locale === "vi" ? "Người lớn (16+)" : "Learner (16+)", activeBg: "bg-rose-500 text-white" }
-            ].map((pill) => {
-              const isActive = selectedAgeFilter === pill.id;
-              return (
-                <button
-                  key={pill.id}
-                  onPointerDown={(e) => {
-                    if (e.button === 0) {
-                      e.preventDefault();
-                      setSelectedAgeFilter(pill.id);
-                    }
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setSelectedAgeFilter(pill.id);
-                  }}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
-                    isActive 
-                      ? `${pill.activeBg} border-transparent shadow-md scale-105` 
-                      : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {pill.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
+
 
         {/* Pill Selector for Levels (Pre-A1/A1, A2, etc.) */}
         {!isKindergarten && (activeTab === "lessons" || activeTab === "exercises") && availableLevels.length > 0 && (

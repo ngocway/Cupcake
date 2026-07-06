@@ -55,9 +55,10 @@ Provide 6–8 very simple example sentences.
 
 ## 5. PRACTICE – MULTIPLE CHOICE
 Create 15 questions:
-- Flexible number of options per question (usually 2 to 4 options)
-- Only ONE correct answer
-- Include answer
+- Each question has EXACTLY ONE correct answer and 2 to 3 wrong distractor options
+- The wrong options must be clearly incorrect — no ambiguity, no trick questions where multiple answers could be right
+- IMPORTANT: Never create a question where two or more options are both correct or could both be accepted as correct
+- Include answer (e.g. Answer: A)
 - Include explanation in SIMPLE ENGLISH
 
 Format:
@@ -65,9 +66,11 @@ Format:
 Question  
 A.  
 B.  
-[Other options if any...]
+C. [optional, if 3 distractors]  
+D. [optional, if 3 distractors]  
 Answer:  
 Explanation:
+
 
 ---
 
