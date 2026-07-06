@@ -1311,35 +1311,35 @@ export default function KidTeenQuizRunner({
         <div className="w-full max-w-4xl mx-auto z-10 relative">
 
         {isShowingResultScreen && scoreResult ? (
-          <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
-            <div className="bg-white rounded-[2rem] border-4 border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden flex flex-col items-center text-center p-12 relative">
+        <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
+            <div className="bg-white rounded-[2rem] border-4 border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden flex flex-col items-center text-center px-8 py-6 relative">
               {/* Decorative elements */}
               <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-400 via-amber-400 to-primary"></div>
               
-              <div className="text-8xl mb-6 animate-bounce">
+              <div className="text-5xl mb-3 animate-bounce">
                 {getScoreEmoji(scoreResult.correct, scoreResult.total)}
               </div>
-              <h2 className="text-4xl font-black text-slate-800 mb-2">{getScoreMsg(scoreResult.correct, scoreResult.total)}</h2>
-              <p className="text-lg text-slate-500 font-medium mb-10">
-                You answered <span className="text-primary font-black text-3xl px-1">{scoreResult.correct}</span> / {scoreResult.total} questions correctly.
+              <h2 className="text-2xl font-black text-slate-800 mb-1">{getScoreMsg(scoreResult.correct, scoreResult.total)}</h2>
+              <p className="text-sm text-slate-500 font-medium mb-5">
+                You answered <span className="text-primary font-black text-xl px-1">{scoreResult.correct}</span> / {scoreResult.total} questions correctly.
               </p>
               
-              <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
                 <button
                   onClick={() => {
                     setIsShowingResultScreen(false);
                     navigateTo(0);
                   }}
-                  className="px-8 py-4 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-black text-lg transition-all active:scale-95 flex items-center justify-center gap-3 w-full sm:w-auto"
+                  className="px-6 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
-                  <Info className="w-6 h-6" />
+                  <Info className="w-4 h-4" />
                   Review details
                 </button>
                 <button
                   onClick={handleReset}
-                  className="px-8 py-4 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-lg transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-3 w-full sm:w-auto"
+                  className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
-                  <RotateCcw className="w-6 h-6" />
+                  <RotateCcw className="w-4 h-4" />
                   Retry assignment
                 </button>
               </div>
@@ -1347,13 +1347,14 @@ export default function KidTeenQuizRunner({
 
             {/* Related Content */}
             {relatedAssignmentsPromise && (
-              <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
+              <div className="mt-4 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
                 <React.Suspense fallback={<div className="h-40 animate-pulse bg-slate-100 rounded-xl w-full"></div>}>
                   <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
                 </React.Suspense>
               </div>
             )}
           </div>
+
         ) : (
           <>
             {/* Question Card */}
@@ -1366,7 +1367,9 @@ export default function KidTeenQuizRunner({
           } duration-300`}
         >
           {/* Card Wrapper: add top padding to make room for QUESTION pill */}
-          <div className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-colors duration-500 relative border-[6px] flex flex-col max-h-[85dvh] ${
+          <div className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-all duration-500 relative border-[6px] flex flex-col ${
+            isChecked ? "max-h-[60dvh]" : "max-h-[85dvh]"
+          } ${
             isCorrectNow
               ? "border-emerald-400"
               : isWrongNow
@@ -1405,11 +1408,17 @@ export default function KidTeenQuizRunner({
             )}
 
             {/* Card body */}
-            <div className="px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)] flex-1 overflow-y-auto min-h-0 relative">
+            <div className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+              isChecked
+                ? "px-[clamp(0.75rem,3vw,2rem)] py-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
+                : "px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
+            }`}>
               {/* Question text (not for MATCHING as MATCHING has it on the left column) */}
               {qType !== "MATCHING" && questionText && questionText !== "{}" && (
                 <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
-                  <h3 className="text-[clamp(1.25rem,3.5dvh,2rem)] font-[800] text-[#2D366D] leading-tight" style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
+                  <h3 className={`font-[800] text-[#2D366D] leading-tight transition-all duration-500 ${
+                    isChecked ? "text-[clamp(1rem,2dvh,1.25rem)]" : "text-[clamp(1.25rem,3.5dvh,2rem)]"
+                  }`} style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
                     {questionText}
                   </h3>
                   {currentQuestion?.audioUrl && (

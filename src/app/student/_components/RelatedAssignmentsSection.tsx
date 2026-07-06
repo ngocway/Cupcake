@@ -5,7 +5,7 @@ import { Play } from "lucide-react";
 import Link from "next/link";
 import { DirectStartLink } from "./DirectStartLink";
 import { useTranslations } from "next-intl";
-import { ExerciseCard, LessonCard } from "@/components/public/ContentCards";
+import { ExerciseCardHorizontal, LessonCard } from "@/components/public/ContentCards";
 import { LoginPromptModal } from "./LoginPromptModal";
 
 interface RelatedItem {
@@ -64,7 +64,7 @@ export function RelatedAssignmentsSection({
         {hasLessons ? t("relatedLessons") : t("relatedContent")}
       </h4>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-x-8 md:gap-y-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {items.map((item) => {
           const isLesson = item.type === "LESSON";
           const href = isLesson
@@ -94,7 +94,7 @@ export function RelatedAssignmentsSection({
                     {isLesson ? (
                       <LessonCard item={item as any} isLoggedIn={false} />
                     ) : (
-                      <ExerciseCard item={item as any} isLoggedIn={false} />
+                      <ExerciseCardHorizontal item={item as any} isLoggedIn={false} />
                     )}
                   </div>
                 </div>
@@ -125,7 +125,7 @@ export function RelatedAssignmentsSection({
                 {isLesson ? (
                   <LessonCard item={item as any} isLoggedIn={true} />
                 ) : (
-                  <ExerciseCard item={item as any} isLoggedIn={true} />
+                  <ExerciseCardHorizontal item={item as any} isLoggedIn={true} />
                 )}
               </div>
             </React.Fragment>
