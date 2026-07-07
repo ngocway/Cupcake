@@ -981,55 +981,61 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
   let response = null;
   let lastError: any = null;
 
-  // 1. Try OpenAI DALL-E first if key exists
-  if (process.env.OPENAI_API_KEY) {
-    const modelsToTry = [model, "dall-e-3", "dall-e-2"];
-    const uniqueModels = Array.from(new Set(modelsToTry));
+  const enhancedPrompt = `A premium quality, whimsical 2D children's book illustration depicting: ${prompt}.
+Style guidelines: children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design.
+Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark.`;
 
-    for (const m of uniqueModels) {
-      try {
-        console.log(`Generating DALL-E image using model: ${m}`);
-        const quality = m === "dall-e-3" ? "standard" : undefined;
-        
-        let requestedSize = size;
-        if (size === "1024x576" || size === "1792x1024") {
-          if (m === "dall-e-3") {
-            requestedSize = "1792x1024";
-          } else {
-            requestedSize = "1024x1024";
-          }
-        }
-
-        response = await openai.images.generate({
-          model: m as any,
-          prompt,
-          n: 1,
-          size: requestedSize as any,
-          quality: quality as any
-        });
-        if (response?.data?.[0]) {
-          console.log(`Successfully generated image using DALL-E model: ${m}`);
-          break;
-        }
-      } catch (err: any) {
-        console.error(`Failed to generate DALL-E image with model ${m}:`, err.message);
-        lastError = err;
+  // 1. Try DeepInfra FLUX.1 Dev (Priority 1)
+  if (!response && process.env.DEEPINFRA_API_KEY) {
+    try {
+      console.log(`Attempting image generation with DeepInfra FLUX.1 Dev...`);
+      let fluxSize = size;
+      if (size === "1792x1024" || size === "1024x576") {
+        fluxSize = "1024x576";
       }
+
+      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX-1-dev",
+          prompt: enhancedPrompt,
+          n: 1,
+          size: fluxSize,
+          response_format: "b64_json"
+        })
+      });
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+      }
+      if (responseData.data?.[0]?.b64_json) {
+        response = {
+          data: [{ b64_json: responseData.data[0].b64_json }]
+        };
+        console.log(`Successfully generated image using DeepInfra FLUX.1 Dev`);
+      }
+    } catch (err: any) {
+      console.error(`DeepInfra FLUX fallback failed:`, err.message);
+      lastError = err;
     }
   }
 
-  // 2. Fallback to Gemini Imagen if DALL-E fails
+  // 2. Fallback to Gemini Imagen (Priority 2)
   if (!response && process.env.GEMINI_API_KEY) {
     const geminiModels = ["gemini-2.5-flash-image", "gemini-3.1-flash-image"];
     for (const gModel of geminiModels) {
       try {
-        console.log(`DALL-E failed. Falling back to Gemini Imagen model: ${gModel}...`);
+        console.log(`Generating image using Gemini Imagen model: ${gModel}...`);
         const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
         const res = await fetch(`${baseEndpoint}/v1beta/models/${gModel}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts: [{ text: enhancedPrompt }] }],
             generationConfig: {
               responseModalities: ["IMAGE"]
             }
@@ -1050,48 +1056,46 @@ async function generateDalleImageHelper(prompt: string, model: "dall-e-3" | "dal
           break;
         }
       } catch (err: any) {
-        console.error(`Gemini Imagen fallback model ${gModel} failed:`, err.message);
+        console.error(`Gemini Imagen model ${gModel} failed:`, err.message);
         lastError = err;
       }
     }
   }
 
-  // 3. Fallback to DeepInfra FLUX if Gemini fails
-  if (!response && process.env.DEEPINFRA_API_KEY) {
-    try {
-      console.log(`Gemini Imagen failed. Falling back to DeepInfra FLUX.1 Schnell...`);
-      let fluxSize = size;
-      if (size === "1792x1024" || size === "1024x576") {
-        fluxSize = "1024x576";
-      }
+  // 3. Fallback to OpenAI DALL-E (Priority 3)
+  if (!response && process.env.OPENAI_API_KEY) {
+    const modelsToTry = [model, "dall-e-3", "dall-e-2"];
+    const uniqueModels = Array.from(new Set(modelsToTry));
 
-      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "black-forest-labs/FLUX-1-schnell",
-          prompt: prompt,
+    for (const m of uniqueModels) {
+      try {
+        console.log(`Generating DALL-E image using model: ${m}`);
+        const quality = m === "dall-e-3" ? "standard" : undefined;
+        
+        let requestedSize = size;
+        if (size === "1024x576" || size === "1792x1024") {
+          if (m === "dall-e-3") {
+            requestedSize = "1792x1024";
+          } else {
+            requestedSize = "1024x1024";
+          }
+        }
+
+        response = await openai.images.generate({
+          model: m as any,
+          prompt: enhancedPrompt,
           n: 1,
-          size: fluxSize,
-          response_format: "b64_json"
-        })
-      });
-      const responseData = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+          size: requestedSize as any,
+          quality: quality as any
+        });
+        if (response?.data?.[0]) {
+          console.log(`Successfully generated image using DALL-E model: ${m}`);
+          break;
+        }
+      } catch (err: any) {
+        console.error(`Failed to generate DALL-E image with model ${m}:`, err.message);
+        lastError = err;
       }
-      if (responseData.data?.[0]?.b64_json) {
-        response = {
-          data: [{ b64_json: responseData.data[0].b64_json }]
-        };
-        console.log(`Successfully generated image using DeepInfra FLUX.1 Schnell`);
-      }
-    } catch (err: any) {
-      console.error(`DeepInfra FLUX fallback failed:`, err.message);
-      lastError = err;
     }
   }
 
@@ -1313,7 +1317,9 @@ export async function generateAILessonFully(params: {
           "wrongAnswers": ["Wrong answer 1", ...],
           "relevantSentences": "2-3 consecutive sentences extracted verbatim from the passage that support the correct answer of the question. MUST be identical to the sentences in the passage."
         }
-      ]
+      ],
+      "thumbnailImagePrompt": "A highly descriptive English prompt describing a visual scene matching the lesson topic, suitable for generating a beautiful children's book illustration (e.g. 'A cute smiling young student with a backpack walking to school'). Describe a concrete scene with characters, actions, and settings. Keep it under 60 words.",
+      "contentImagePrompt": "A highly descriptive English prompt illustrating a key action or moment described in the passage text, suitable for generating a beautiful children's book illustration (e.g. 'A cute student sitting at a school desk reading a book with a teacher smiling in the background'). Describe a concrete scene with characters, actions, and settings. Keep it under 60 words."
     }
 
     STRICT RULES FOR LESSON QUESTION GENERATION:
@@ -1343,9 +1349,8 @@ export async function generateAILessonFully(params: {
 
     // 2. PREPARE PASSAGE CHUNKS
     const paragraphs = parsedData.passage || [];
-    const styleSuffix = "2D cartoon illustration, colorful, 16:9 ratio, English text only (very few words, max 5 words)";
-    const thumbPrompt = `An illustration themed around "${topic}". ${styleSuffix}`;
-    const inLessonPrompt = `An illustration of "${topic}". ${styleSuffix}`;
+    const thumbPrompt = parsedData.thumbnailImagePrompt || `An illustration themed around "${topic}".`;
+    const inLessonPrompt = parsedData.contentImagePrompt || `An illustration of "${topic}".`;
 
     const assignmentId = randomUUID();
     const placeholderThumbUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(assignmentId + "-thumb")}`;

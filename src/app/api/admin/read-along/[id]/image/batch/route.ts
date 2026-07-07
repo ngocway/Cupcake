@@ -19,6 +19,39 @@ async function generateImageWithGemini(prompt: string, apiKey: string): Promise<
   const baseEndpoint = "https://generativelanguage.googleapis.com";
   let lastError = "";
 
+  // 1. Try DeepInfra FLUX.1 Dev (Priority 1)
+  if (process.env.DEEPINFRA_API_KEY) {
+    try {
+      console.log(`[ImageBatch] Attempting image generation with DeepInfra FLUX.1 Dev...`);
+      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX-1-dev",
+          prompt: prompt,
+          n: 1,
+          size: "768x1024",
+          response_format: "b64_json"
+        })
+      });
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+      }
+      if (responseData.data?.[0]?.b64_json) {
+        console.log(`[ImageBatch] Success with DeepInfra FLUX.1 Dev`);
+        return responseData.data[0].b64_json;
+      }
+    } catch (err: any) {
+      lastError = err.message;
+      console.warn(`[ImageBatch] DeepInfra FLUX.1 Dev failed: ${err.message}`);
+    }
+  }
+
+  // 2. Fallback to Gemini Models (Priority 2)
   for (const modelName of GEMINI_MODELS) {
     try {
       let imageData: string | null = null;
@@ -67,7 +100,39 @@ async function generateImageWithGemini(prompt: string, apiKey: string): Promise<
     }
   }
 
-  throw new Error(lastError || "All Gemini models failed");
+  // 3. Fallback to OpenAI DALL-E (Priority 3)
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      console.log(`[ImageBatch] Falling back to OpenAI DALL-E (dall-e-3)...`);
+      const res = await fetch(`https://api.openai.com/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: prompt,
+          n: 1,
+          size: "1024x1792",
+          response_format: "b64_json"
+        })
+      });
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+      }
+      if (responseData.data?.[0]?.b64_json) {
+        console.log(`[ImageBatch] Success with OpenAI DALL-E`);
+        return responseData.data[0].b64_json;
+      }
+    } catch (err: any) {
+      lastError = err.message;
+      console.warn(`[ImageBatch] OpenAI DALL-E failed: ${err.message}`);
+    }
+  }
+
+  throw new Error(lastError || "All image generation models failed");
 }
 
 export async function POST(
@@ -108,6 +173,8 @@ export async function POST(
     .map((s, i) => `Page ${i + 1}: ${s.text.trim()}`)
     .join("\n");
 
+  const characterProfile = await getCharacterProfile(allTexts, apiKey);
+
   const totalSlides = book.slides.length;
 
   // SSE stream
@@ -139,22 +206,13 @@ export async function POST(
         try {
           const currentPageNumber = book.slides.findIndex(s => s.id === slide.id) + 1;
 
-          const characterContext = `BOOK TITLE: "${book.title}"
-FULL STORY CONTEXT (all pages):
-${allTexts}
+          const fullPrompt = `Children's book illustration. Scene: "${slideText}"
 
-CHARACTER CONSISTENCY RULES (CRITICAL):
-- This is page ${currentPageNumber} of ${totalSlides} in the book "${book.title}"
-- ALL characters must look EXACTLY the same across every page: identical design, colors, proportions, clothing, and style
-- Maintain the same art style, color palette, and visual language throughout this book
-- Do NOT redesign or change any character between pages`;
+IMPORTANT: Illustrate EXACTLY what the sentence says. Focus on the environment, setting, and actions described — do NOT add characters unless the sentence specifically mentions people or animals.
 
-          const fullPrompt = `${characterContext}
 
-NOW ILLUSTRATE THIS PAGE:
-A humorous children's storybook illustration depicting: ${slideText}
-Aspect ratio: 9:16 portrait orientation.
-${STYLE_SUFFIX}`;
+ART STYLE: soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, airy composition, whimsical children's book style, 2D, ultra clean illustration, Adobe Fresco style, 9:16
+No realism, no 3D, no photorealistic, no text, no watermark.`;
 
           const b64 = await generateImageWithGemini(fullPrompt, apiKey);
 
@@ -191,4 +249,28 @@ ${STYLE_SUFFIX}`;
       Connection: "keep-alive",
     },
   });
+}
+
+async function getCharacterProfile(allTexts: string, apiKey: string): Promise<string> {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: `Based on the following children's book story, identify the main character and describe their visual appearance (gender, approximate age, hair style and color, clothing color and type) in 1-2 simple, descriptive sentences so they can be drawn consistently across all pages. Keep it short (max 50 words) as a single paragraph.
+
+Story:
+${allTexts}`
+          }]
+        }]
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+  } catch (err) {
+    console.error("Error generating character profile with Gemini:", err);
+    return "";
+  }
 }

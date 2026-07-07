@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
 import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
+import { SelectionTranslator } from "@/components/common/SelectionTranslator";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
 import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
 import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
@@ -1193,6 +1194,7 @@ export default function KidTeenQuizRunner({
   // ── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen font-body flex flex-col bg-[#8cd2f6]">
+      <SelectionTranslator />
       {/* ── TOP HEADER (Glass) ── */}
       <div className="relative z-30 bg-white/70 backdrop-blur-md px-4 py-3 shadow-sm border-b border-white/20">
         {/* Row 1: Back button + Title */}
@@ -1416,9 +1418,13 @@ export default function KidTeenQuizRunner({
               {/* Question text (not for MATCHING as MATCHING has it on the left column) */}
               {qType !== "MATCHING" && questionText && questionText !== "{}" && (
                 <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
-                  <h3 className={`font-[800] text-[#2D366D] leading-tight transition-all duration-500 ${
-                    isChecked ? "text-[clamp(1rem,2dvh,1.25rem)]" : "text-[clamp(1.25rem,3.5dvh,2rem)]"
-                  }`} style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
+                  <h3
+                    className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
+                      isChecked ? "text-[clamp(1rem,2dvh,1.25rem)]" : "text-[clamp(1.25rem,3.5dvh,2rem)]"
+                    }`}
+                    style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                    title="Tap a word to translate"
+                  >
                     {questionText}
                   </h3>
                   {currentQuestion?.audioUrl && (

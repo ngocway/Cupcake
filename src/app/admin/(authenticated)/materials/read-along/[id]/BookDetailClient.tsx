@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -114,6 +115,7 @@ function SlideCardInner({
   dragHandleProps,
   isDraggingOverlay,
 }: SlideCardProps) {
+
   return (
     <div
       className={`bg-neutral-900 border rounded-2xl overflow-hidden transition-all shadow-md flex flex-col ${
@@ -129,7 +131,7 @@ function SlideCardInner({
       }`}
     >
       {/* Slide image + drag handle */}
-      <div className="relative aspect-[4/3] bg-neutral-950 overflow-hidden shrink-0">
+      <div className="relative aspect-[9/16] bg-neutral-950 overflow-hidden shrink-0">
         {slide.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="w-full h-full object-cover" />
@@ -178,6 +180,7 @@ function SlideCardInner({
           {isGenerating ? "" : hasAudio ? "Audio" : "Chưa"}
         </div>
       </div>
+
 
       {/* Text area */}
       <div className="p-2.5 flex-1 flex flex-col gap-2">
