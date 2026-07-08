@@ -5,6 +5,7 @@ import { SharedBackground } from "@/components/public/SharedBackground";
 import { Providers } from "@/components/Providers";
 import { getLocale, getMessages } from "next-intl/server";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { Analytics } from "@vercel/analytics/next";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -46,6 +47,7 @@ export default async function RootLayout({
         </Providers>
       </body>
       {gaId && <GoogleAnalytics gaId={gaId} />}
+      <Analytics />
     </html>
   );
 }
