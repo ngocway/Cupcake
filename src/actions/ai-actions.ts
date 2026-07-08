@@ -147,7 +147,90 @@ export async function fetchImageAsBase64(url: string) {
 export async function generateDalleImage(prompt: string, size: string = "1024x1024") {
   let lastError = "";
 
-  // 1. Try OpenAI DALL-E first if key is available
+  const enhancedPrompt = `A premium quality, whimsical 2D children's book illustration depicting: ${prompt}.
+Style guidelines: children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design.
+Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark.`;
+
+  // 1. Try DeepInfra FLUX.1 Dev (Priority 1)
+  if (process.env.DEEPINFRA_API_KEY) {
+    try {
+      console.log(`Generating image using DeepInfra FLUX.1 Dev: "${prompt.substring(0, 60)}..."`);
+      
+      let fluxSize = size;
+      if (size === "1792x1024" || size === "1024x576") {
+        fluxSize = "1024x576";
+      }
+
+      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX-1-dev",
+          prompt: enhancedPrompt,
+          n: 1,
+          size: fluxSize,
+          response_format: "b64_json"
+        })
+      });
+      
+      const responseData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const errMsg = responseData.error?.message || `HTTP error! status: ${res.status}`;
+        throw new Error(errMsg);
+      }
+      
+      const b64 = responseData.data?.[0]?.b64_json;
+      if (!b64) throw new Error("Empty b64_json image data from DeepInfra");
+      
+      return { base64: `data:image/png;base64,${b64}` };
+    } catch (error: any) {
+      console.error(`Error with DeepInfra FLUX.1 Dev:`, error);
+      lastError = error.message;
+    }
+  }
+
+  // 2. Fallback to Gemini Imagen (Priority 2)
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (geminiApiKey) {
+    const geminiModels = ["gemini-2.5-flash-image", "gemini-3.1-flash-image"];
+    for (const gModel of geminiModels) {
+      try {
+        console.log(`Generating image using Gemini Imagen model ${gModel}: "${prompt.substring(0, 60)}..."`);
+
+        const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
+        const res = await fetch(`${baseEndpoint}/v1beta/models/${gModel}:generateContent?key=${geminiApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: enhancedPrompt }] }],
+            generationConfig: {
+              responseModalities: ["IMAGE"]
+            }
+          })
+        });
+
+        const responseData = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+        }
+
+        const base64Data = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
+        if (base64Data) {
+          const mimeType = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.mimeType || "image/png";
+          console.log(`Successfully generated image using Gemini Imagen model ${gModel}`);
+          return { base64: `data:${mimeType};base64,${base64Data}` };
+        }
+      } catch (err: any) {
+        console.warn(`Failed to generate image with Gemini Imagen model ${gModel}:`, err.message);
+        lastError = err.message;
+      }
+    }
+  }
+
+  // 3. Fallback to OpenAI DALL-E (Priority 3)
   if (process.env.OPENAI_API_KEY) {
     const apiKey = process.env.OPENAI_API_KEY;
     const baseURL = openai.baseURL || "https://api.openai.com/v1";
@@ -176,7 +259,7 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
           },
           body: JSON.stringify({
             model: model,
-            prompt: prompt,
+            prompt: enhancedPrompt,
             n: 1,
             size: requestedSize
           })
@@ -214,83 +297,6 @@ export async function generateDalleImage(prompt: string, size: string = "1024x10
         console.error(`Error with model ${model}:`, error);
         lastError = error.message;
       }
-    }
-    console.warn("All OpenAI DALL-E attempts failed, falling back to other models...");
-  }
-
-  // 2. Fallback to Gemini Imagen
-  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  if (geminiApiKey) {
-    try {
-      console.log(`Generating image using Gemini Imagen: "${prompt.substring(0, 60)}..."`);
-
-      const baseEndpoint = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com";
-      const res = await fetch(`${baseEndpoint}/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${geminiApiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseModalities: ["IMAGE"]
-          }
-        })
-      });
-
-      const responseData = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
-      }
-
-      const base64Data = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.data;
-      if (base64Data) {
-        const mimeType = responseData.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData?.mimeType || "image/png";
-        console.log(`Successfully generated image using Gemini Imagen`);
-        return { base64: `data:${mimeType};base64,${base64Data}` };
-      }
-    } catch (err: any) {
-      console.warn(`Failed to generate image with Gemini Imagen:`, err.message);
-      lastError = err.message;
-    }
-  }
-
-  // 3. Fallback to DeepInfra FLUX
-  if (process.env.DEEPINFRA_API_KEY) {
-    try {
-      console.log(`Generating image using DeepInfra FLUX.1 Schnell: "${prompt.substring(0, 60)}..."`);
-      
-      let fluxSize = size;
-      if (size === "1792x1024" || size === "1024x576") {
-        fluxSize = "1024x576";
-      }
-
-      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "black-forest-labs/FLUX-1-schnell",
-          prompt: prompt,
-          n: 1,
-          size: fluxSize,
-          response_format: "b64_json"
-        })
-      });
-      
-      const responseData = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const errMsg = responseData.error?.message || `HTTP error! status: ${res.status}`;
-        throw new Error(errMsg);
-      }
-      
-      const b64 = responseData.data?.[0]?.b64_json;
-      if (!b64) throw new Error("Empty b64_json image data from DeepInfra");
-      
-      return { base64: `data:image/png;base64,${b64}` };
-    } catch (error: any) {
-      console.error(`Error with DeepInfra FLUX:`, error);
-      lastError = error.message;
     }
   }
 

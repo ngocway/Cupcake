@@ -1280,18 +1280,36 @@
             }, 100);
         }
 
+        let activeUtterance = null;
+
         // Speech synthesis fallback
-        function playSpeechSynthesis(text) {
+        function playSpeechSynthesis(text, onEnd) {
             try {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(text);
                     utterance.rate = 0.75;
                     utterance.lang = 'en-US';
+                    activeUtterance = utterance;
+                    if (onEnd) {
+                        let called = false;
+                        const callback = () => {
+                            if (called) return;
+                            called = true;
+                            clearTimeout(safety);
+                            onEnd();
+                        };
+                        const safety = setTimeout(callback, 4000); // 4 seconds safety timeout
+                        utterance.onend = callback;
+                        utterance.onerror = callback;
+                    }
                     window.speechSynthesis.speak(utterance);
+                } else if (onEnd) {
+                    onEnd();
                 }
             } catch (e) {
                 console.warn("SpeechSynthesis failed:", e);
+                if (onEnd) onEnd();
             }
         }
 
@@ -1314,19 +1332,6 @@
                 // Stop question voice narration
                 stopVoice();
 
-                // Play the correct answer's word audio
-                const q = questions[currentIndex];
-                if (q && q.wordAudioUrl) {
-                    const wordAudio = new Audio(q.wordAudioUrl);
-                    wordAudio.playbackRate = 0.75;
-                    wordAudio.play().catch(err => {
-                        console.warn("Failed to play word audio file, using fallback:", err);
-                        playSpeechSynthesis(q.word);
-                    });
-                } else if (q) {
-                    playSpeechSynthesis(q.word);
-                }
-                
                 // Disable other buttons
                 Array.from(optionsGrid.children).forEach(child => {
                     if (child !== btn) child.classList.add('disabled');
@@ -1335,11 +1340,53 @@
                 playSfx(true);
                 spawnConfetti(50);
 
-                // Auto-advance after 1.5 seconds
-                setTimeout(() => {
+                const q = questions[currentIndex];
+                
+                const advance = () => {
                     currentIndex++;
                     loadQuestion();
-                }, 1600);
+                };
+
+                let transitionScheduled = false;
+                const scheduleTransition = (delay) => {
+                    if (transitionScheduled) return;
+                    transitionScheduled = true;
+                    setTimeout(advance, delay);
+                };
+
+                if (q && q.wordAudioUrl) {
+                    const wordAudio = new Audio(q.wordAudioUrl);
+                    wordAudio.playbackRate = 0.75;
+                    
+                    let fallbackTriggered = false;
+                    const triggerFallback = (err) => {
+                        if (fallbackTriggered) return;
+                        fallbackTriggered = true;
+                        console.warn("Failed to play word audio file, using fallback:", err);
+                        playSpeechSynthesis(q.word, () => scheduleTransition(800));
+                    };
+
+                    const onAudioEnd = () => {
+                        scheduleTransition(800);
+                    };
+
+                    wordAudio.addEventListener('ended', onAudioEnd);
+                    wordAudio.addEventListener('pause', onAudioEnd);
+                    wordAudio.addEventListener('error', triggerFallback);
+                    
+                    wordAudio.play().then(() => {
+                        // Successfully started playing word audio
+                    }).catch(triggerFallback);
+                } else if (q) {
+                    playSpeechSynthesis(q.word, () => scheduleTransition(800));
+                } else {
+                    scheduleTransition(1600);
+                }
+                
+                // Fallback safety net (6 seconds) to ensure the game doesn't get stuck under any circumstances
+                setTimeout(() => {
+                    scheduleTransition(0);
+                }, 6000);
             } else {
                 // Incorrect
                 btn.classList.add('incorrect');

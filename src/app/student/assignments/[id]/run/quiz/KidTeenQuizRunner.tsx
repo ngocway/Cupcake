@@ -773,7 +773,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.2;
+    bgMusic.volume = isMuted ? 0 : 0.1;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -824,7 +824,7 @@ export default function KidTeenQuizRunner({
   // Update volume when mute state changes or hint audio state changes
   useEffect(() => {
     if (bgMusicRef.current) {
-      bgMusicRef.current.volume = isMuted ? 0 : (isHintPlaying ? 0.05 : 0.2);
+      bgMusicRef.current.volume = isMuted ? 0 : (isHintPlaying ? 0.05 : 0.1);
     }
   }, [isMuted, isHintPlaying]);
 
@@ -1200,6 +1200,23 @@ export default function KidTeenQuizRunner({
         {/* Row 1: Back button + Title */}
         <div className="flex items-center gap-3">
           <div className="shrink-0 flex items-center gap-2">
+
+            {/* Dolcake Logo - về trang chủ */}
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-1.5 group"
+              title="Về trang chủ"
+            >
+              <img
+                src="/images/logo.png"
+                alt="Dolcake"
+                className="w-8 h-8 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
+              />
+              <div className="flex flex-col">
+                <span className="font-headline font-black text-lg tracking-tighter text-primary leading-none">Dolcake</span>
+                <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
+              </div>
+            </button>
 
             <button
               onClick={() => setIsMuted(!isMuted)}
@@ -1591,9 +1608,30 @@ export default function KidTeenQuizRunner({
                         key={i}
                         disabled={isChecked}
                         onClick={() => handleAnswerChange(currentQuestion, opt.value)}
-                        className={`group flex flex-col items-center justify-center py-6 px-4 rounded-[2.5rem] border-[3px] font-extrabold text-xl sm:text-2xl transition-all duration-350 ${btnStyle} ${!isChecked ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "cursor-default"}`}
+                        className={`relative group flex flex-col items-center justify-center py-6 px-4 rounded-[2.5rem] border-[3px] font-extrabold text-xl sm:text-2xl transition-all duration-350 ${btnStyle} ${!isChecked ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "cursor-default"}`}
                         style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
                       >
+                        {/* Badge góc trên phải khi review */}
+                        {isChecked && (isCorrectOpt || isSelected) && (
+                          <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+                            {isCorrectOpt && (
+                              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-400">
+                                <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> Correct
+                              </span>
+                            )}
+                            {isSelected && !isCorrectOpt && (
+                              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-rose-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-rose-400">
+                                <User className="w-2.5 h-2.5 shrink-0" /> Yours
+                              </span>
+                            )}
+                            {isSelected && isCorrectOpt && (
+                              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-700 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-600">
+                                <User className="w-2.5 h-2.5 shrink-0" /> Yours ✓
+                              </span>
+                            )}
+                          </div>
+                        )}
+
                         {opt.icon(iconBgColor)}
                         <span>{opt.label}</span>
                       </button>

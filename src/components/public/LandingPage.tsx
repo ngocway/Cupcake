@@ -1334,51 +1334,24 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Background content wrapped for blurring during first time setup */}
       <div className={`transition-all duration-700 ${isFirstTimeSetup ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
 
-      {/* Mobile Subject Selector — visible only when sidebar is hidden */}
-      {onboardingConfig && (
-        <div className="lg:hidden mb-6">
-          <MobileSubjectBar
-            subjects={onboardingConfig.subjects}
-            activeSubject={studySubject}
-            isPending={isPending}
-            onSelect={(subjectId: string) => {
-              if (subjectId === studySubject) return;
+      {/* Mobile Quick Actions — replaces subject selector on mobile */}
+      <div className="lg:hidden mb-6 flex gap-3">
+        <a
+          href="/student/game/robot-chat"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border-2 bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100 hover:border-violet-400 hover:scale-105 transition-all duration-200 shadow-sm"
+        >
+          <img src="/images/robot-chat.png" alt="" className="w-5 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <span>Chat Dolbot</span>
+        </a>
+        <a
+          href="/student/books"
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border-2 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 hover:scale-105 transition-all duration-200 shadow-sm"
+        >
+          <img src="/images/books.png" alt="" className="w-5 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          <span>Read Stories</span>
+        </a>
+      </div>
 
-              // Resolve matching age group for the new subject
-              const newAgeGroup = getBestAgeGroupForSubject(subjectId, userType, studyAgeGroup, onboardingConfig);
-
-              // 1. Update store instantly
-              setStudySubject(subjectId);
-              setStudyAgeGroup(newAgeGroup);
-              setStudyLevel("");
-
-              // 2. Set cookies client-side
-              document.cookie = `study_subject=${subjectId}; path=/; max-age=31536000; samesite=lax`;
-              document.cookie = `study_age_group=${newAgeGroup}; path=/; max-age=31536000; samesite=lax`;
-              document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
-
-              // 3. Fire-and-forget DB update
-              updateAllPreferences({ 
-                studySubject: subjectId, 
-                studyAgeGroup: newAgeGroup,
-                studyLevel: "" 
-              }).catch(console.error);
-
-              // 4. Clear goal and refresh
-              const qs = new URLSearchParams(window.location.search);
-              qs.delete("goal");
-              qs.delete("categoryId");
-              localStorage.removeItem("cupcakes_preferred_goal_id");
-              localStorage.removeItem("cupcakes_preferred_category_id");
-
-              startTransition(() => {
-                router.push(`/?${qs.toString()}`, { scroll: false });
-                router.refresh();
-              });
-            }}
-          />
-        </div>
-      )}
 
       <div 
         id="content-tabs" 

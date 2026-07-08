@@ -22,5 +22,10 @@ When generating audio using ElevenLabs (e.g. for flashcards, quiz questions, or 
 # Code Editing Constraint
 - **Do NOT edit or write code** to the codebase (apart from editing configuration files like this AGENTS.md at the user's direction) unless the user explicitly requests it.
 
+# Default AI Image Generation Style
+When the user requests you to generate any image (e.g. mockups, assets, UI designs, or example illustrations) in the chat, always default to using the FLUX model style with the following prompt:
+"children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design, no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark"
+
+
 
 

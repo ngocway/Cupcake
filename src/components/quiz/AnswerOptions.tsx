@@ -2,7 +2,8 @@
 
 import { useQuizRunnerStore } from "@/store/useQuizRunnerStore";
 import { cn } from "@/lib/utils";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, User } from "lucide-react";
+
 
 type Props = {
   question: any;
@@ -98,11 +99,15 @@ export default function AnswerOptions({ question, idx, showCorrect }: Props) {
                 "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left group relative outline-none",
                 showCorrect && isCorrect
                    ? "bg-emerald-50 border-emerald-500 ring-4 ring-emerald-500/10"
-                   : isSelected
-                     ? "bg-indigo-50/50 border-indigo-500 shadow-md ring-4 ring-indigo-500/10"
-                     : "bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/80 shadow-sm"
+                   : showCorrect && isSelected && !isCorrect
+                     ? "bg-rose-50 border-rose-400 ring-4 ring-rose-400/10"
+                     : isSelected
+                       ? "bg-indigo-50/50 border-indigo-500 shadow-md ring-4 ring-indigo-500/10"
+                       : "bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50/80 shadow-sm"
               )}
+
             >
+
               {!isTrueFalse && (
                 <div
                   className={cn(
@@ -151,6 +156,28 @@ export default function AnswerOptions({ question, idx, showCorrect }: Props) {
                     <CheckCircle2 className="w-4 h-4 text-white" />
                  </div>
               )}
+
+              {/* True/False: badge góc trên phải khi review đáp án */}
+              {isTrueFalse && showCorrect && (isCorrect || isSelected) && (
+                <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+                  {isCorrect && (
+                    <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-400 animate-in zoom-in duration-300">
+                      <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> Correct
+                    </span>
+                  )}
+                  {isSelected && !isCorrect && (
+                    <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-rose-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-rose-400 animate-in zoom-in duration-300">
+                      <User className="w-2.5 h-2.5 shrink-0" /> Yours
+                    </span>
+                  )}
+                  {isSelected && isCorrect && (
+                    <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-700 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-600 animate-in zoom-in duration-300">
+                      <User className="w-2.5 h-2.5 shrink-0" /> Yours ✓
+                    </span>
+                  )}
+                </div>
+              )}
+
             </button>
           );
         })}
