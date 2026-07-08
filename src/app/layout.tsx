@@ -18,8 +18,69 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dolcake - Student Portal",
-  description: "Dolcake - Interactive English Learning Portal for Students.",
+  title: {
+    default: "Dolcake – Learn English with Fun Lessons & Games",
+    template: "%s | Dolcake",
+  },
+  description:
+    "Dolcake is an interactive English learning platform for kids, teens, and learners of all ages. Enjoy engaging lessons, flashcards, quizzes, and games designed to make English fun and effective.",
+  keywords: [
+    "dolcake",
+    "dolcake.com",
+    "learn english online",
+    "english for kids",
+    "english learning platform",
+    "interactive english lessons",
+    "english flashcards",
+    "english quiz for kids",
+    "english games for students",
+    "english for kindergarten",
+    "english learning app",
+  ],
+  authors: [{ name: "Dolcake", url: "https://dolcake.com" }],
+  creator: "Dolcake",
+  publisher: "Dolcake",
+  metadataBase: new URL("https://dolcake.com"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://dolcake.com",
+    siteName: "Dolcake",
+    title: "Dolcake – Learn English with Fun Lessons & Games",
+    description:
+      "Interactive English learning for kids and teens. Explore lessons, flashcards, quizzes, and games on Dolcake.",
+    images: [
+      {
+        url: "/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Dolcake – Interactive English Learning Platform",
+      },
+    ],
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dolcake – Learn English with Fun Lessons & Games",
+    description:
+      "Interactive English learning for kids and teens. Explore lessons, flashcards, quizzes, and games on Dolcake.",
+    images: ["/images/og-image.png"],
+    site: "@dolcake",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  category: "education",
 };
 
 export default async function RootLayout({
