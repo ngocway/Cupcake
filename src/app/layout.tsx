@@ -4,6 +4,7 @@ import "./globals.css";
 import { SharedBackground } from "@/components/public/SharedBackground";
 import { Providers } from "@/components/Providers";
 import { getLocale, getMessages } from "next-intl/server";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -27,6 +28,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
   return (
     <html
@@ -43,6 +45,7 @@ export default async function RootLayout({
           {children}
         </Providers>
       </body>
+      {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }
