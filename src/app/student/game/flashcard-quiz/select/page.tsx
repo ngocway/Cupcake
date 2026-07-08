@@ -4,7 +4,8 @@ import prisma from "@/lib/prisma";
 
 
 export const metadata = {
-  title: "Flashcard Quiz Topics",
+  title: "Flashcard Quiz – Select Topic | Dolcake",
+  description: "Pick a topic and test your English vocabulary with interactive flashcard quizzes on Dolcake. Listen, look, and choose the correct answer — great for kids and teens.",
 };
 
 const CARD_COLORS = [

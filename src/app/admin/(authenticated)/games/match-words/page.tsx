@@ -2,7 +2,7 @@ import { getMatchWordGames } from "@/actions/admin-match-words"
 import { AdminMatchWordsClient } from "./AdminMatchWordsClient"
 
 export const metadata = {
-  title: "Quản lý Game Nối Từ (Match Words)",
+  title: "Match Words Game Management | Dolcake Admin",
 }
 
 export default async function AdminMatchWordsPage() {

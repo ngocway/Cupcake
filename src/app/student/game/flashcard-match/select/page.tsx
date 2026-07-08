@@ -3,7 +3,8 @@ import { Gamepad2, Play } from "lucide-react";
 import prisma from "@/lib/prisma";
 
 export const metadata = {
-  title: "Flashcard Match – Select Topic",
+  title: "Flashcard Match – Select Topic | Dolcake",
+  description: "Choose a flashcard topic and play Flashcard Match — flip cards, match English words with images, and build vocabulary in a fun memory game on Dolcake.",
 };
 
 // ─── Card color themes ────────────────────────────────────────────────────────

@@ -4,7 +4,8 @@ import { ArrowLeft, Gamepad2, Play } from "lucide-react"
 import prisma from "@/lib/prisma"
 
 export const metadata = {
-  title: "Sentence Builder Games",
+  title: "Sentence Builder Games | Dolcake",
+  description: "Practice English grammar by arranging words into correct sentences. Play Sentence Builder games on Dolcake — fun and educational for kids and teens.",
 }
 
 const CARD_COLORS = [

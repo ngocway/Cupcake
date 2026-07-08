@@ -3,7 +3,8 @@ import { Gamepad2, Play } from "lucide-react";
 import prisma from "@/lib/prisma";
 
 export const metadata = {
-  title: "Sentence Builder (Flashcards) – Select Topic",
+  title: "Sentence Builder (Flashcards) – Select Topic | Dolcake",
+  description: "Select a flashcard topic and build English sentences from scrambled words on Dolcake. Improve grammar and writing skills with fun flashcard sentence games.",
 };
 
 // ─── Card color themes ────────────────────────────────────────────────────────

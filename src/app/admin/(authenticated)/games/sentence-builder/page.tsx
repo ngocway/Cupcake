@@ -2,7 +2,7 @@ import { getSentenceBuilderGames } from "@/actions/admin-sentence-builder"
 import { AdminSentenceBuilderClient } from "./AdminSentenceBuilderClient"
 
 export const metadata = {
-  title: "Quản lý Game Nối Câu (Sentence Builder)",
+  title: "Sentence Builder Game Management | Dolcake Admin",
 }
 
 export default async function AdminSentenceBuilderPage() {
