@@ -10,6 +10,18 @@ export default function RobotChatGamePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const nativeLanguage = useContentStore((s) => s.nativeLanguage);
+  const studyAgeGroup = useContentStore((s) => s.studyAgeGroup);
+
+  // Helper to read cookie on the client side
+  const getCookie = (name: string) => {
+    if (typeof window === "undefined") return "";
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(";").shift() || "";
+    return "";
+  };
+
+  const effectiveLevel = studyAgeGroup || getCookie("study_age_group") || "learner";
 
   useEffect(() => {
     setMounted(true);
@@ -36,7 +48,7 @@ export default function RobotChatGamePage() {
           </div>
         )}
         <iframe 
-          src={`/games/robot-chat/index.html?nativeLang=${nativeLanguage || "vi"}`} 
+          src={`/games/robot-chat/index.html?nativeLang=${nativeLanguage || "vi"}&level=${effectiveLevel}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Chat with Dolbot"
           allow="microphone"

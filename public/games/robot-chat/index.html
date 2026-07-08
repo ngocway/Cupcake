@@ -186,10 +186,10 @@
 <div class="screen" id="screenWelcome">
   <div style="max-width:700px;width:100%">
     <div class="welcome-title">Chat with ROBO 🤖</div>
-    <div class="welcome-sub">Choose your level and a topic — then <b>speak</b> your answers!</div>
+    <div class="welcome-sub" id="welcomeSub">Choose a topic — then <b>speak</b> your answers!</div>
 
-    <div class="section-label" style="text-align:center">Your Level</div>
-    <div class="level-grid" id="levelGrid">
+    <div class="section-label" style="text-align:center; display:none;">Your Level</div>
+    <div class="level-grid" id="levelGrid" style="display:none;">
       <button class="level-btn" data-level="kindergarten">🧒 Kindergarten</button>
       <button class="level-btn" data-level="kid">👦 Kid</button>
       <button class="level-btn" data-level="teen">🧑 Teen</button>
@@ -325,7 +325,20 @@ if (window.speechSynthesis) { speechSynthesis.getVoices(); }
 (()=>{ const c=document.getElementById('stars'); for(let i=0;i<120;i++){const s=document.createElement('div'),sz=Math.random()*2.5+.5;s.className='star';s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;animation-delay:${Math.random()*5}s`;c.appendChild(s);}})();
 
 // ═══════════════════ STATE ════════════════════
-let selectedLevel = null;
+const urlParams = new URLSearchParams(window.location.search);
+let rawLevel = urlParams.get('level') || 'learner';
+rawLevel = rawLevel.toLowerCase();
+
+let selectedLevel = 'learner';
+if (rawLevel.includes('kindergarten') || rawLevel.includes('kindergarden') || rawLevel.includes('kids-2-5')) {
+  selectedLevel = 'kindergarten';
+} else if (rawLevel.includes('kid') || rawLevel.includes('primary') || rawLevel.includes('grade')) {
+  selectedLevel = 'kid';
+} else if (rawLevel.includes('teen')) {
+  selectedLevel = 'teen';
+} else {
+  selectedLevel = 'learner';
+}
 let initialSpeed = localStorage.getItem('cupcakes_speech_speed');
 if (initialSpeed !== '0.75' && initialSpeed !== '0.85' && initialSpeed !== '0.95') {
   initialSpeed = '0.75';
