@@ -100,7 +100,43 @@ export default async function RootLayout({
       <head>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" precedence="default" />
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Lexend:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" precedence="default" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "EducationalOrganization",
+                  "@id": "https://dolcake.com/#organization",
+                  "name": "Dolcake",
+                  "url": "https://dolcake.com",
+                  "logo": "https://dolcake.com/images/og-image.png",
+                  "description":
+                    "Interactive English learning platform for kids, teens, and learners of all ages. Lessons, flashcards, quizzes, and games.",
+                  "knowsAbout": ["English Language Learning", "Educational Games", "Flashcards", "Quizzes"],
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": "https://dolcake.com/#website",
+                  "url": "https://dolcake.com",
+                  "name": "Dolcake",
+                  "publisher": { "@id": "https://dolcake.com/#organization" },
+                  "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                      "@type": "EntryPoint",
+                      "urlTemplate": "https://dolcake.com/?q={search_term_string}",
+                    },
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+              ],
+            }),
+          }}
+        />
       </head>
+
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers locale={locale} messages={messages}>
           <SharedBackground />

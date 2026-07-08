@@ -30,8 +30,52 @@ import { InteractiveReadingContent } from "@/components/common/InteractiveReadin
 
 import { Suspense } from "react";
 
+import type { Metadata } from "next";
+
 // Reuse data fetching from student page
 import { getLessonBasic, getLessonExtra, getTeacherBasic, getLessonReviews, getRelatedLessons, getLessonReadingText } from "@/app/student/lessons/[id]/data";
+
+// --- Per-lesson SEO Metadata ---
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params;
+  const lesson = await getLessonBasic(id);
+
+  if (!lesson) {
+    return { title: "Lesson Not Found | Dolcake" };
+  }
+
+  const title = `${lesson.title} | Dolcake`;
+  const description =
+    lesson.description ||
+    `Learn English with "${lesson.title}" — an interactive lesson on Dolcake, the fun English learning platform for kids and teens.`;
+  const thumbnail = lesson.assignment?.thumbnail ?? "/images/og-image.png";
+  const canonicalPath = `/public/lessons/${lesson.slug ?? lesson.id}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: canonicalPath },
+    openGraph: {
+      title,
+      description,
+      url: `https://dolcake.com${canonicalPath}`,
+      siteName: "Dolcake",
+      images: [{ url: thumbnail, width: 1200, height: 630, alt: lesson.title }],
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [thumbnail],
+    },
+  };
+}
+
+
 
 // --- Sub-components for Streaming ---
 
