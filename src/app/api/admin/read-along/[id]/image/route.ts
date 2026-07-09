@@ -102,6 +102,7 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
 
     let b64: string | null = null;
     let lastError = "";
+    let modelUsed = "";
 
     // 1. Try DeepInfra FLUX.1 Dev (Priority 1)
     if (!b64 && process.env.DEEPINFRA_API_KEY) {
@@ -127,6 +128,7 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
         }
         if (responseData.data?.[0]?.b64_json) {
           b64 = responseData.data[0].b64_json;
+          modelUsed = "FLUX.1 Dev (DeepInfra)";
           console.log(`[ReadAlong Image] Success with DeepInfra FLUX.1 Dev`);
         }
       } catch (err: any) {
@@ -180,6 +182,7 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
 
           if (imageData) {
             b64 = imageData;
+            modelUsed = `Gemini (${modelName})`;
             console.log(`[ReadAlong Image] Success with ${modelName}`);
             break;
           }
@@ -214,6 +217,7 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
         }
         if (responseData.data?.[0]?.b64_json) {
           b64 = responseData.data[0].b64_json;
+          modelUsed = "DALL-E 3 (OpenAI)";
           console.log(`[ReadAlong Image] Success with OpenAI DALL-E`);
         }
       } catch (err: any) {
@@ -241,8 +245,8 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
       data: { imageUrl: publicUrl, imageName },
     });
 
-    console.log(`[ReadAlong Image] Done: ${publicUrl}`);
-    return NextResponse.json({ success: true, imageUrl: publicUrl, imageName });
+    console.log(`[ReadAlong Image] Done: ${publicUrl} (model: ${modelUsed})`);
+    return NextResponse.json({ success: true, imageUrl: publicUrl, imageName, model: modelUsed });
   } catch (error: any) {
     console.error("[ReadAlong Image API] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

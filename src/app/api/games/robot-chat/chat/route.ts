@@ -10,27 +10,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 })
     }
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: "gpt-4o-mini",
         temperature: 0.85,
         max_tokens: 200,
-        response_format: { type: 'json_object' },
+        response_format: { type: "json_object" },
         messages: [
-          { role: 'system', content: systemPrompt },
-          ...historyMsgs,
-          { role: 'user', content: userMsg }
-        ]
-      })
+          { role: "system", content: systemPrompt },
+          ...(historyMsgs || []),
+          { role: "user", content: userMsg },
+        ],
+      }),
     })
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}))
+      console.error("[RobotChat] OpenAI error:", errorData)
       return NextResponse.json(errorData, { status: res.status })
     }
 
@@ -41,3 +42,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }
+

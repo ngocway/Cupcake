@@ -1,0 +1,139 @@
+﻿============================================================
+   DOLCAKE - CAC CHUC NANG DANH CHO HOC SINH
+============================================================
+Phien ban tai lieu: 1.0
+Ngay xuat: 2026-07-08
+------------------------------------------------------------
+
+1. DANG NHAP & TAO TAI KHOAN
+   - Dang ky / Dang nhap bang Email & Mat khau.
+   - Dang nhap nhanh bang Google (OAuth).
+   - Chon vai tro "Hoc sinh" (STUDENT) khi dang nhap lan dau.
+   - Sau khi dang nhap, tu dong chuyen den trang Bai tap (/student/assignments).
+
+------------------------------------------------------------
+
+2. THAM GIA LOP HOC
+   - Nhap ma lop (class_code) do giao vien cung cap de tham gia lop hoc.
+   - Xem danh sach tat ca cac lop dang tham gia.
+
+------------------------------------------------------------
+
+3. BANG DIEU KHIEN (DASHBOARD)
+   - Xem tong quan tien do hoc tap ca nhan.
+   - Theo doi cac bai tap sap den han.
+   - Xem diem so gan nhat va lich su hoat dong.
+
+------------------------------------------------------------
+
+4. LAM BAI TAP (QUIZ RUNNER)
+   Hoc sinh duoc giao bai tap tu giao vien va lam bai truc tiep tren ung dung.
+   Cac dang cau hoi bao gom:
+
+   a) Trac nghiem (Multiple Choice)
+      - Chon 1 dap an dung trong so nhieu lua chon (A, B, C, D...).
+
+   b) Dien vao cho trong (Cloze Test)
+      - Go tu/cum tu thich hop vao o trong trong cau.
+      - Ho tro khong phan biet chu hoa/thuong.
+
+   c) Noi cap (Matching)
+      - Cham chon The A roi cham The B de noi cap dung.
+      - Moi cap dung duoc to mau rieng de de phan biet.
+
+   d) Dung / Sai (True / False)
+      - Chon TRUE hoac FALSE (hoac Yes/No, Right/Wrong) cho moi cau.
+
+   e) Sap xep cau (Reorder / Word Ordering)
+      - Keo tha cac khoi tu de sap xep thanh cau dung.
+      - Su dung thu vien keo tha (dnd-kit) than thien ca dien thoai lan may tinh.
+
+   Tinh nang trong khi lam bai:
+   - Dong ho dem nguoc (doi mau do khi con <= 5 phut).
+   - Thanh tien do hien thi so cau da lam / tong so cau.
+   - Ban do cau hoi (Question Map) de chuyen nhanh giua cac cau.
+   - Nut Truoc / Tiep theo; cau cuoi doi thanh "Nop bai".
+   - Tu dong luu dap an vao bo nho cuc bo (localStorage) de khong mat bai khi mat mang.
+
+   Che do chong gian lan (Focus Mode - neu giao vien bat):
+   - Canh bao khi roi khoi tab trinh duyet hoac thu nho ung dung.
+   - Tu dong nop bai sau 3 lan vi pham.
+
+------------------------------------------------------------
+
+5. XEM KET QUA & DAP AN
+   - Xem diem so sau khi nop bai (neu giao vien cho phep).
+   - Xem chi tiet tung cau: dap an da chon, dap an dung (danh dau mau).
+   - Xem loi giai thich cua giao vien cho tung cau.
+   - Nhan email thong bao diem + nhan xet tu giao vien (neu giao vien gui).
+
+------------------------------------------------------------
+
+6. HOC QUA THE GHI NHO (FLASHCARDS)
+   - Luyen tu vung va kien thuc qua he thong the ghi nho.
+   - Lat the de xem nghia / dap an.
+   - Hoc cung am thanh phat am (TTS - Text-to-Speech).
+   - Co the on tap theo bo the cua cac bai hoc.
+
+------------------------------------------------------------
+
+7. TRO CHOI HOC TAP (LEARNING GAMES)
+   Hoc sinh co the hoc thong qua cac tro choi tuong tac:
+
+   a) Flashcard Quiz
+      - Kiem tra nhanh kien thuc qua dang cau hoi the flashcard.
+
+   b) Flashcard Match (Noi the)
+      - Noi the tu vung voi nghia tuong ung.
+
+   c) Flashcard Sentence Builder (Xay dung cau)
+      - Sap xep cac the de tao thanh cau hoan chinh tu bo flashcard.
+
+   d) Match Words (Ghep tu)
+      - Tro choi ghep tu voi hinh anh hoac dinh nghia.
+
+   e) Sentence Builder (Sap xep cau)
+      - Keo tha cac tu de xay dung cau co nghia dung.
+
+   f) Robot Chat (Luyen hoi thoai voi AI)
+      - Tro chuyen voi tro ly AI (Robot) de luyen ky nang ngon ngu.
+      - Phan hoi tuc thi va tuong tac nhu hoi thoai that.
+
+------------------------------------------------------------
+
+8. HOC THEO BAI HOC & BAI DOC (LESSONS & BOOKS)
+   - Xem danh sach bai hoc duoc to chuc theo chu de.
+   - Doc noi dung bai hoc, nghe audio di kem.
+   - Truy cap thu vien sach / doc theo (Read-Along Books).
+   - Hoc ket hop chu va hinh anh minh hoa sinh dong.
+
+------------------------------------------------------------
+
+9. THEO DOI TIEN DO HOC TAP (MY LEARNING)
+   - Xem lich su cac bai tap da hoan thanh.
+   - Theo doi diem so qua tung lan lam bai.
+   - Xem bao cao tien do ca nhan theo thoi gian.
+
+------------------------------------------------------------
+
+10. ON TAP & DANH DAU (BOOKMARKS & MY REVIEWS)
+    - Danh dau (bookmark) cac bai hoc / the tu vung yeu thich de on lai sau.
+    - Xem lai danh sach nhung noi dung da danh dau.
+    - On tap theo lich trinh ca nhan hoa.
+
+------------------------------------------------------------
+
+11. CAI DAT TAI KHOAN (SETTINGS)
+    - Chinh sua thong tin ca nhan (ten, anh dai dien).
+    - Thay doi mat khau.
+    - Tuy chinh thong bao.
+
+------------------------------------------------------------
+
+12. HO SO CA NHAN (PROFILE)
+    - Xem thong tin ca nhan va thanh tich hoc tap.
+    - Theo doi huy hieu / cot moc da dat duoc (neu co).
+
+============================================================
+               (c) DolCake - Nen tang hoc tap thong minh
+============================================================

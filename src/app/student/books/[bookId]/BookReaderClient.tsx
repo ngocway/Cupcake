@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -29,6 +29,7 @@ interface WordToken {
   original: string;
   clean: string;
   isRead: boolean;
+  newLineBefore?: boolean;
 }
 
 interface FloatingStar {
@@ -57,6 +58,11 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
   // Mode: "reading" = listen only; "shadowing" = listen + record + grade
   const [mode, setMode] = useState<"reading" | "shadowing">("shadowing");
+
+  // Translation
+  const [isTranslateOn, setIsTranslateOn] = useState(false);
+  const [slideTranslations, setSlideTranslations] = useState<Record<string, string[]>>({});
+  const [isFetchingTranslation, setIsFetchingTranslation] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -185,15 +191,22 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
     const slideText = currentSlide.text;
     
-    const tokens = slideText.split(/\s+/).filter(Boolean).map((word) => {
-      const isParentheses = word.startsWith("(") && word.endsWith(")");
-      return {
-        original: word,
-        clean: cleanWord(word),
-        isRead: isParentheses
-      };
-    // Filter out pure-punctuation tokens (e.g. standalone "." or ",")
-    }).filter((token) => token.clean !== "");
+    // Split by lines first to preserve newlines, then by words within each line
+    const lines = slideText.split(/\n/);
+    const tokens: WordToken[] = [];
+    lines.forEach((line, lineIdx) => {
+      const lineWords = line.split(/\s+/).filter(Boolean);
+      lineWords.forEach((word, wordIdx) => {
+        const isParentheses = word.startsWith("(") && word.endsWith(")");
+        const token: WordToken = {
+          original: word,
+          clean: cleanWord(word),
+          isRead: isParentheses,
+          newLineBefore: lineIdx > 0 && wordIdx === 0,
+        };
+        if (token.clean !== "") tokens.push(token);
+      });
+    });
 
     setWords(tokens);
     setIsPageCompleted(tokens.every((w) => w.isRead));
@@ -212,6 +225,14 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       setScoreResult(null);
     };
   }, [currentPageIndex]);
+
+  // Auto-fetch translation when translate is on and page changes
+  useEffect(() => {
+    if (isTranslateOn && currentSlide?.text && currentSlide?.id) {
+      fetchSlideTranslations(currentSlide.id, currentSlide.text);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPageIndex, isTranslateOn]);
 
   useEffect(() => {
     return () => {
@@ -337,10 +358,8 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
         setIsTtsSpeaking(false);
         setTtsActiveWordIndex(-1);
         r2AudioRef.current = null;
-        // Fallback to Web Speech API
-        if (isSpeechSynthesisSupported) {
-          useSpeechSynthesisFallback(currentSlide.text, currentTokens);
-        }
+        // Fallback to Edge TTS
+        useEdgeTTSFallback(currentSlide.text, currentTokens);
       };
 
       audio.play().catch(() => {
@@ -350,9 +369,81 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       return;
     }
 
-    // --- Priority 2: Web Speech API fallback ---
-    if (!isSpeechSynthesisSupported) return;
-    useSpeechSynthesisFallback(currentSlide.text, currentTokens);
+    // --- Priority 2: Edge TTS real-time fallback ---
+    useEdgeTTSFallback(currentSlide.text, currentTokens);
+  };
+
+  const useEdgeTTSFallback = async (slideText: string, currentTokens: WordToken[]) => {
+    isTtsSpeakingRef.current = true;
+    setIsTtsSpeaking(true);
+    setTtsActiveWordIndex(-1);
+
+    try {
+      const res = await fetch("/api/tts/edge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: slideText }),
+      });
+
+      if (!res.ok) throw new Error("Edge TTS failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.playbackRate = 0.85;
+      r2AudioRef.current = audio;
+
+      const nonParenWords = currentTokens.filter(w => !w.isRead);
+      let wordTimer: ReturnType<typeof setInterval> | null = null;
+
+      audio.onloadedmetadata = () => {
+        const totalDuration = audio.duration;
+        if (nonParenWords.length === 0 || !totalDuration) return;
+        const msPerWord = (totalDuration * 1000) / nonParenWords.length;
+        let wordIdx = 0;
+        const nonParenIndices = currentTokens
+          .map((w, i) => (!w.isRead ? i : -1))
+          .filter(i => i !== -1);
+        wordTimer = setInterval(() => {
+          if (wordIdx < nonParenIndices.length) {
+            setTtsActiveWordIndex(nonParenIndices[wordIdx]);
+            wordIdx++;
+          } else {
+            if (wordTimer) clearInterval(wordTimer);
+          }
+        }, msPerWord);
+      };
+
+      audio.onended = () => {
+        if (wordTimer) clearInterval(wordTimer);
+        isTtsSpeakingRef.current = false;
+        setIsTtsSpeaking(false);
+        setTtsActiveWordIndex(-1);
+        r2AudioRef.current = null;
+        URL.revokeObjectURL(url);
+        if (mode === "shadowing") startListening();
+      };
+
+      audio.onerror = () => {
+        if (wordTimer) clearInterval(wordTimer);
+        isTtsSpeakingRef.current = false;
+        setIsTtsSpeaking(false);
+        setTtsActiveWordIndex(-1);
+        r2AudioRef.current = null;
+        URL.revokeObjectURL(url);
+        // Final fallback: Web Speech API
+        if (isSpeechSynthesisSupported) useSpeechSynthesisFallback(slideText, currentTokens);
+      };
+
+      await audio.play();
+    } catch {
+      // Edge TTS failed — fall back to Web Speech API
+      isTtsSpeakingRef.current = false;
+      setIsTtsSpeaking(false);
+      if (isSpeechSynthesisSupported) {
+        useSpeechSynthesisFallback(slideText, currentTokens);
+      }
+    }
   };
 
   const useSpeechSynthesisFallback = (slideText: string, currentTokens: WordToken[]) => {
@@ -558,6 +649,45 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [words, isListening]);
 
+  // ---- Translation ----
+  const fetchSlideTranslations = async (slideId: string, slideText: string) => {
+    if (slideTranslations[slideId]) return; // already cached in session
+    setIsFetchingTranslation(true);
+    try {
+      // Prefer native_language cookie (user's selected native language from onboarding)
+      // over navigator.language (browser UI language, often 'en' even for non-English speakers)
+      const getCookieLang = () => {
+        try {
+          const match = document.cookie.match(/(?:^|;\s*)native_language=([^;]+)/);
+          return match ? decodeURIComponent(match[1]) : null;
+        } catch { return null; }
+      };
+      const targetLang = getCookieLang() || navigator.language || "vi"; // e.g. "de", "vi", "zh"
+      const res = await fetch("/api/translate/slide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Send slideId so server can query DB (no Google API cost when pre-generated)
+        body: JSON.stringify({ slideId, targetLang }),
+      });
+      const data = await res.json();
+      if (data.translations) {
+        setSlideTranslations(prev => ({ ...prev, [slideId]: data.translations }));
+      }
+    } catch (e) {
+      console.error("Translation fetch failed:", e);
+    } finally {
+      setIsFetchingTranslation(false);
+    }
+  };
+
+  const toggleTranslate = () => {
+    const next = !isTranslateOn;
+    setIsTranslateOn(next);
+    if (next && currentSlide?.text) {
+      fetchSlideTranslations(currentSlide.id, currentSlide.text);
+    }
+  };
+
   const handleNextPage = () => {
     if (currentPageIndex < book.slides.length - 1) {
       setCurrentPageIndex((prev) => prev + 1);
@@ -612,6 +742,34 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
           
           {/* Read Aloud sample / Page Count indicator */}
           <div className="flex items-center gap-3">
+            {/* Translate toggle */}
+            <button
+              onClick={toggleTranslate}
+              title={isTranslateOn ? "Tắt dịch" : "Bật dịch"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border-2 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm ${
+                isTranslateOn
+                  ? "bg-emerald-100 border-emerald-400 text-emerald-800"
+                  : "bg-amber-100 border-amber-300 text-amber-700"
+              }`}
+            >
+              {isFetchingTranslation ? (
+                <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <span className="material-symbols-outlined text-[14px]">translate</span>
+              )}
+              <span>Translate</span>
+              <span className={`w-7 h-4 rounded-full flex items-center transition-all duration-200 ${
+                isTranslateOn ? "bg-emerald-400" : "bg-amber-300"
+              }`}>
+                <span className={`w-3 h-3 rounded-full bg-white shadow transition-all duration-200 mx-0.5 ${
+                  isTranslateOn ? "translate-x-3" : "translate-x-0"
+                }`} />
+              </span>
+            </button>
+
             <button
               onClick={() => handleReadSlide()}
               className="w-9 h-9 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-800 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
@@ -690,27 +848,51 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
           {/* Right Column: Sentence Reader Block */}
           <div className="flex-1 h-1/2 md:h-full flex flex-col justify-center overflow-y-auto custom-scrollbar pr-2 py-4">
-            <div className="flex flex-wrap gap-x-3 gap-y-4 font-headline font-black leading-snug text-amber-950" style={{ fontSize: 'clamp(1.1rem, 2.2vw, 2.2rem)' }}>
-              {words.map((word, idx) => {
-                const isSpoken = idx === ttsActiveWordIndex;
-                const isRead = word.isRead;
-                
-                return (
-                  <span
-                    key={idx}
-                    onClick={() => handleWordClick(word)}
-                    className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
-                      isRead
-                        ? "text-blue-500 dark:text-blue-400 scale-[1.02]"
-                        : isSpoken
-                        ? "bg-yellow-100 text-yellow-900 dark:bg-yellow-500/20 dark:text-yellow-300 ring-2 ring-yellow-400/40"
-                        : "text-slate-800 hover:text-blue-450 hover:scale-[1.02]"
-                    }`}
-                  >
-                    {word.original}
-                  </span>
-                );
-              })}
+            <div className="flex flex-col gap-2 font-headline font-black leading-snug text-amber-950" style={{ fontSize: 'clamp(1.1rem, 2.2vw, 2.2rem)' }}>
+              {(() => {
+                // Group words into lines
+                const lineGroups: { words: WordToken[]; indices: number[] }[] = [];
+                words.forEach((word, idx) => {
+                  if (word.newLineBefore || lineGroups.length === 0) {
+                    lineGroups.push({ words: [word], indices: [idx] });
+                  } else {
+                    lineGroups[lineGroups.length - 1].words.push(word);
+                    lineGroups[lineGroups.length - 1].indices.push(idx);
+                  }
+                });
+                const currentTranslations = currentSlide ? slideTranslations[currentSlide.id] : undefined;
+                return lineGroups.map((group, lineIdx) => (
+                  <div key={lineIdx} className="flex flex-col">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                      {group.words.map((word, wi) => {
+                        const idx = group.indices[wi];
+                        const isSpoken = idx === ttsActiveWordIndex;
+                        const isRead = word.isRead;
+                        return (
+                          <span
+                            key={wi}
+                            onClick={() => handleWordClick(word)}
+                            className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
+                              isRead
+                                ? "text-blue-500 dark:text-blue-400 scale-[1.02]"
+                                : isSpoken
+                                ? "bg-yellow-100 text-yellow-900 dark:bg-yellow-500/20 dark:text-yellow-300 ring-2 ring-yellow-400/40"
+                                : "text-slate-800 hover:text-blue-450 hover:scale-[1.02]"
+                            }`}
+                          >
+                            {word.original}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {isTranslateOn && currentTranslations?.[lineIdx] && (
+                      <p className="text-[0.55em] font-medium text-slate-400 italic mt-0.5 leading-tight pl-1">
+                        {currentTranslations[lineIdx]}
+                      </p>
+                    )}
+                  </div>
+                ));
+              })()}
 
               {/* Replay audio button — inline at end of sentence */}
               {words.length > 0 && (

@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { uploadBufferToR2 } from "@/actions/upload-actions";
 import { GoogleGenAI } from "@google/genai";
+import { translateSlideToAllLangs } from "@/lib/translate-slide";
 
 export const maxDuration = 300; // 5 minutes for batch generation
 
@@ -162,6 +163,16 @@ export async function POST(
               where: { id: slide.id },
               data: { audioUrl },
             });
+
+            // Fire-and-forget translation (non-blocking — won't delay audio generation)
+            translateSlideToAllLangs(slide.text).then((translations) => {
+              if (Object.keys(translations).length > 0) {
+                prisma.readAlongSlide.update({
+                  where: { id: slide.id },
+                  data: { translations },
+                }).catch((e) => console.error(`[TTS Batch] Translation save failed slide ${slide.slideNumber}:`, e));
+              }
+            }).catch((e) => console.error(`[TTS Batch] Translation error slide ${slide.slideNumber}:`, e));
 
             successCount++;
             send({

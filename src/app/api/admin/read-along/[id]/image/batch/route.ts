@@ -15,7 +15,7 @@ const GEMINI_MODELS = [
   "imagen-3.0-generate-002",
 ];
 
-async function generateImageWithGemini(prompt: string, apiKey: string): Promise<string | null> {
+async function generateImageWithGemini(prompt: string, apiKey: string): Promise<{ b64: string; model: string }> {
   const baseEndpoint = "https://generativelanguage.googleapis.com";
   let lastError = "";
 
@@ -43,7 +43,7 @@ async function generateImageWithGemini(prompt: string, apiKey: string): Promise<
       }
       if (responseData.data?.[0]?.b64_json) {
         console.log(`[ImageBatch] Success with DeepInfra FLUX.1 Dev`);
-        return responseData.data[0].b64_json;
+        return { b64: responseData.data[0].b64_json, model: "FLUX.1 Dev (DeepInfra)" };
       }
     } catch (err: any) {
       lastError = err.message;
@@ -92,7 +92,7 @@ async function generateImageWithGemini(prompt: string, apiKey: string): Promise<
 
       if (imageData) {
         console.log(`[ImageBatch] Success with ${modelName}`);
-        return imageData;
+        return { b64: imageData, model: `Gemini (${modelName})` };
       }
     } catch (err: any) {
       lastError = err.message;
@@ -124,7 +124,7 @@ async function generateImageWithGemini(prompt: string, apiKey: string): Promise<
       }
       if (responseData.data?.[0]?.b64_json) {
         console.log(`[ImageBatch] Success with OpenAI DALL-E`);
-        return responseData.data[0].b64_json;
+        return { b64: responseData.data[0].b64_json, model: "DALL-E 3 (OpenAI)" };
       }
     } catch (err: any) {
       lastError = err.message;
@@ -189,6 +189,7 @@ export async function POST(
       let successCount = 0;
       let skipCount = 0;
       let current = 0;
+      const modelCounts: Record<string, number> = {};
 
       for (const slide of slideQueue) {
         current++;
@@ -214,12 +215,12 @@ IMPORTANT: Illustrate EXACTLY what the sentence says. Focus on the environment, 
 ART STYLE: soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, airy composition, whimsical children's book style, 2D, ultra clean illustration, Adobe Fresco style, 9:16
 No realism, no 3D, no photorealistic, no text, no watermark.`;
 
-          const b64 = await generateImageWithGemini(fullPrompt, apiKey);
+          const result = await generateImageWithGemini(fullPrompt, apiKey);
 
-          if (!b64) throw new Error("No image data returned");
+          if (!result) throw new Error("No image data returned");
 
           // Upload to R2
-          const buffer = Buffer.from(b64, "base64");
+          const buffer = Buffer.from(result.b64, "base64");
           const fileName = `read-along-${bookId}-${slide.id}-${Date.now()}.png`;
           const publicUrl = await uploadBufferToR2(buffer, fileName, "image/png");
 
@@ -230,6 +231,7 @@ No realism, no 3D, no photorealistic, no text, no watermark.`;
           });
 
           successCount++;
+          modelCounts[result.model] = (modelCounts[result.model] || 0) + 1;
           send({ type: "progress", slideId: slide.id, current, status: "done", imageUrl: publicUrl });
         } catch (err: any) {
           console.error(`[ImageBatch] Slide ${slide.slideNumber} error:`, err.message);
@@ -237,7 +239,7 @@ No realism, no 3D, no photorealistic, no text, no watermark.`;
         }
       }
 
-      send({ type: "complete", successCount, skipCount, total: slideQueue.length });
+      send({ type: "complete", successCount, skipCount, total: slideQueue.length, modelCounts });
       controller.close();
     },
   });

@@ -65,6 +65,8 @@ interface SlideCardProps {
   batchStatus?: "pending" | "generating" | "done" | "error" | "skip";
   isGenerating: boolean;
   isGeneratingImage: boolean;
+  isExtractingText: boolean;
+  isUploadingImage: boolean;
   isPlaying: boolean;
   hasAudio: boolean;
   isEditing: boolean;
@@ -79,6 +81,8 @@ interface SlideCardProps {
   onPlayAudio: (slide: Slide) => void;
   onGenerateAudio: (slideId: string) => void;
   onGenerateImage: (slideId: string) => void;
+  onExtractText: (slideId: string) => void;
+  onImageDrop: (slideId: string, file: File) => void;
   onClone: (slideId: string) => void;
   /** If provided, renders with dnd drag handle */
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -97,6 +101,8 @@ function SlideCardInner({
   batchStatus,
   isGenerating,
   isGeneratingImage,
+  isExtractingText,
+  isUploadingImage,
   isPlaying,
   hasAudio,
   isEditing,
@@ -111,10 +117,13 @@ function SlideCardInner({
   onPlayAudio,
   onGenerateAudio,
   onGenerateImage,
+  onExtractText,
+  onImageDrop,
   onClone,
   dragHandleProps,
   isDraggingOverlay,
 }: SlideCardProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
 
   return (
     <div
@@ -131,13 +140,57 @@ function SlideCardInner({
       }`}
     >
       {/* Slide image + drag handle */}
-      <div className="relative aspect-[9/16] bg-neutral-950 overflow-hidden shrink-0">
+      <div
+        className={`relative bg-neutral-950 overflow-hidden shrink-0 transition-all ${
+          isDragOver ? "ring-2 ring-cyan-500 ring-inset" : ""
+        }`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!isBatchRunning && !isUploadingImage) setIsDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragOver(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragOver(false);
+          if (isBatchRunning || isUploadingImage) return;
+          const file = e.dataTransfer.files[0];
+          if (file && file.type.startsWith("image/")) {
+            onImageDrop(slide.id, file);
+          } else if (file) {
+            // Non-image dropped — ignore silently (toast handled in parent)
+          }
+        }}
+      >
+        {/* Drop overlay */}
+        {isDragOver && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-cyan-950/80 backdrop-blur-sm pointer-events-none">
+            <span className="material-symbols-outlined text-4xl text-cyan-400">upload</span>
+            <span className="text-cyan-300 text-xs font-bold mt-1">Thả ảnh vào đây</span>
+          </div>
+        )}
+        {/* Upload loading overlay */}
+        {isUploadingImage && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-neutral-950/80 backdrop-blur-sm pointer-events-none">
+            <svg className="animate-spin h-6 w-6 text-cyan-400" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-neutral-300 text-xs mt-1">Đang tải lên...</span>
+          </div>
+        )}
         {slide.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="w-full h-full object-cover" />
+          <img src={slide.imageUrl} alt={`Slide ${slide.slideNumber}`} className="w-full h-auto block" />
         ) : (
-          <div className="flex items-center justify-center h-full text-neutral-700">
+          <div className="flex flex-col items-center justify-center min-h-[160px] text-neutral-700 gap-1">
             <span className="material-symbols-outlined text-3xl">image</span>
+            <span className="text-[10px] text-neutral-600">Kéo thả ảnh vào đây</span>
           </div>
         )}
 
@@ -179,6 +232,25 @@ function SlideCardInner({
           )}
           {isGenerating ? "" : hasAudio ? "Audio" : "Chưa"}
         </div>
+
+        {/* Extract Text (OCR) button */}
+        {slide.imageUrl && (
+          <button
+            onClick={() => onExtractText(slide.id)}
+            disabled={isExtractingText || isBatchRunning}
+            title={isExtractingText ? "Đang trích xuất..." : "Trích xuất text từ ảnh"}
+            className="absolute bottom-1.5 right-1.5 z-10 p-1 rounded-lg bg-cyan-950/80 border border-cyan-900/50 text-cyan-400 hover:bg-cyan-900/80 disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur-sm transition-all"
+          >
+            {isExtractingText ? (
+              <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <span className="material-symbols-outlined text-[13px]">text_fields</span>
+            )}
+          </button>
+        )}
       </div>
 
 
@@ -223,7 +295,7 @@ function SlideCardInner({
             onClick={() => onStartEditing(slide)}
             title="Nhấn để chỉnh sửa"
           >
-            <p className="text-neutral-300 text-[11px] leading-relaxed line-clamp-3 min-h-[3rem] select-none">
+            <p className="text-neutral-300 text-[11px] leading-relaxed whitespace-pre-wrap select-none">
               {slide.text || <span className="text-neutral-600 italic">Nhấn để thêm text...</span>}
             </p>
           </div>
@@ -363,8 +435,11 @@ export function BookDetailClient({ bookId }: Props) {
   const [sortedSlides, setSortedSlides] = useState<Slide[]>([]);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [isAddingSlide, setIsAddingSlide] = useState(false);
+  const [addSlideCount, setAddSlideCount] = useState(1);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [generatingImageSlideId, setGeneratingImageSlideId] = useState<string | null>(null);
+  const [extractingTextSlideId, setExtractingTextSlideId] = useState<string | null>(null);
+  const [uploadingImageSlideId, setUploadingImageSlideId] = useState<string | null>(null);
 
   // Single slide audio generation state
   const [generatingSlideId, setGeneratingSlideId] = useState<string | null>(null);
@@ -418,6 +493,24 @@ export function BookDetailClient({ bookId }: Props) {
     skipCount: 0,
   });
   const [confirmImageModal, setConfirmImageModal] = useState(false);
+
+  // Batch OCR state
+  const [batchOcrProgress, setBatchOcrProgress] = useState<{
+    current: number;
+    total: number;
+    status: "idle" | "running" | "complete" | "error";
+    slideStatuses: Record<string, "generating" | "done" | "error" | "skip">;
+    successCount: number;
+    skipCount: number;
+  }>({
+    current: 0,
+    total: 0,
+    status: "idle",
+    slideStatuses: {},
+    successCount: 0,
+    skipCount: 0,
+  });
+  const [confirmOcrModal, setConfirmOcrModal] = useState(false);
 
   // DnD sensors
   const sensors = useSensors(
@@ -489,15 +582,17 @@ export function BookDetailClient({ bookId }: Props) {
   const addEmptySlide = async () => {
     if (!book) return;
     setIsAddingSlide(true);
+    const count = Math.min(Math.max(1, addSlideCount), 50);
     try {
       const res = await fetch(`/api/admin/read-along/${bookId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ count }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Tạo trang thất bại.");
-      toast.success("Đã thêm trang mới!");
+      toast.success(`Đã thêm ${data.count ?? count} trang mới!`);
+      setAddSlideCount(1);
       await fetchBook();
     } catch (err: any) {
       toast.error(err.message || "Tạo trang thất bại.");
@@ -522,11 +617,66 @@ export function BookDetailClient({ bookId }: Props) {
         prev.map(s => s.id === slideId ? { ...s, imageUrl: data.imageUrl, imageName: data.imageName } : s);
       setSortedSlides(updateSlides);
       setBook(prev => prev ? { ...prev, slides: updateSlides(prev.slides) } : prev);
-      toast.success("✅ Đã tạo ảnh cho trang!");
+      toast.success(`✅ Đã tạo ảnh${data.model ? ` · ${data.model}` : ""}`);
     } catch (err: any) {
       toast.error(err.message || "Tạo ảnh thất bại.");
     } finally {
       setGeneratingImageSlideId(null);
+    }
+  };
+
+  // ── Upload image from file (drag-drop) ───────────────────
+
+  const uploadImageForSlide = async (slideId: string, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Chỉ cho phép file ảnh.");
+      return;
+    }
+    setUploadingImageSlideId(slideId);
+    try {
+      const formData = new FormData();
+      formData.append("slideId", slideId);
+      formData.append("file", file);
+      const res = await fetch(`/api/admin/read-along/${bookId}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload ảnh thất bại.");
+      const updateSlides = (prev: Slide[]) =>
+        prev.map(s => s.id === slideId ? { ...s, imageUrl: data.imageUrl, imageName: data.imageName } : s);
+      setSortedSlides(updateSlides);
+      setBook(prev => prev ? { ...prev, slides: updateSlides(prev.slides) } : prev);
+      toast.success("✅ Đã tải ảnh lên thành công!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload ảnh thất bại.");
+    } finally {
+      setUploadingImageSlideId(null);
+    }
+  };
+
+  // ── Extract text from image (OCR) ─────────────────────────
+
+  const extractTextFromImage = async (slideId: string) => {
+    setExtractingTextSlideId(slideId);
+    try {
+      const res = await fetch(`/api/admin/read-along/${bookId}/ocr`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slideId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Trích xuất thất bại.");
+      const extractedText: string = data.text ?? "";
+      const updateSlides = (prev: Slide[]) =>
+        prev.map(s => s.id === slideId ? { ...s, text: extractedText } : s);
+      setSortedSlides(updateSlides);
+      setBook(prev => prev ? { ...prev, slides: updateSlides(prev.slides) } : prev);
+      toast.success("✅ Đã trích xuất text từ ảnh!");
+    } catch (err: any) {
+      toast.error(err.message || "Trích xuất text thất bại.");
+    } finally {
+      setExtractingTextSlideId(null);
     }
   };
 
@@ -773,10 +923,20 @@ export function BookDetailClient({ bookId }: Props) {
           skipCount: p.skipCount + 1,
         }));
         break;
-      case "complete":
+      case "complete": {
         setBatchImageProgress(p => ({ ...p, status: "complete", successCount: event.successCount, skipCount: event.skipCount }));
-        toast.success(`🎨 Xong! Đã tạo ${event.successCount} ảnh, bỏ qua ${event.skipCount} trang.`);
+        const modelCounts: Record<string, number> = event.modelCounts || {};
+        const modelSummary = Object.entries(modelCounts)
+          .map(([model, count]) => `${count} ảnh · ${model}`)
+          .join(", ");
+        toast.success(
+          `🎨 Xong! Đã tạo ${event.successCount} ảnh, bỏ qua ${event.skipCount} trang.${
+            modelSummary ? `\n${modelSummary}` : ""
+          }`,
+          { duration: 6000 }
+        );
         break;
+      }
       case "error":
         toast.error("Lỗi tạo ảnh: " + event.message);
         setBatchImageProgress(p => ({ ...p, status: "error" }));
@@ -786,10 +946,87 @@ export function BookDetailClient({ bookId }: Props) {
 
   const slidesWithAudio = sortedSlides.filter(s => s.audioUrl).length;
   const slidesWithImages = sortedSlides.filter(s => s.imageUrl).length;
+  const slidesWithText = sortedSlides.filter(s => s.text?.trim()).length;
   const totalSlides = sortedSlides.length;
   const isBatchRunning = batchProgress.status === "running";
   const isBatchImageRunning = batchImageProgress.status === "running";
+  const isBatchOcrRunning = batchOcrProgress.status === "running";
   const activeSlide = activeId ? sortedSlides.find(s => s.id === activeId) : null;
+
+  // ── Batch OCR ─────────────────────────────────────────────
+
+  const startBatchOcr = async (overwrite = false, confirmed = false) => {
+    setConfirmOcrModal(false);
+    const hasExistingText = sortedSlides.some(s => s.imageUrl && s.text?.trim());
+    if (hasExistingText && !overwrite && !confirmed) {
+      setConfirmOcrModal(true);
+      return;
+    }
+
+    setBatchOcrProgress({ current: 0, total: 0, status: "running", slideStatuses: {}, successCount: 0, skipCount: 0 });
+
+    try {
+      const res = await fetch(`/api/admin/read-along/${bookId}/ocr/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overwrite }),
+      });
+      if (!res.body) throw new Error("No response body");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try { handleBatchOcrEvent(JSON.parse(line.slice(6))); } catch {}
+          }
+        }
+      }
+    } catch {
+      setBatchOcrProgress(p => ({ ...p, status: "error" }));
+    }
+  };
+
+  const handleBatchOcrEvent = (event: any) => {
+    switch (event.type) {
+      case "start":
+        setBatchOcrProgress(p => ({ ...p, total: event.total, status: "running" }));
+        break;
+      case "progress":
+        setBatchOcrProgress(p => ({
+          ...p,
+          current: event.current,
+          slideStatuses: { ...p.slideStatuses, [event.slideId]: event.status },
+        }));
+        if (event.status === "done" && event.text !== undefined) {
+          const txt = event.text;
+          const sid = event.slideId;
+          setSortedSlides(prev => prev.map(s => s.id === sid ? { ...s, text: txt } : s));
+          setBook(prev => prev ? { ...prev, slides: prev.slides.map(s => s.id === sid ? { ...s, text: txt } : s) } : prev);
+        }
+        break;
+      case "skip":
+        setBatchOcrProgress(p => ({
+          ...p, current: p.current + 1,
+          slideStatuses: { ...p.slideStatuses, [event.slideId]: "skip" },
+          skipCount: p.skipCount + 1,
+        }));
+        break;
+      case "complete":
+        setBatchOcrProgress(p => ({ ...p, status: "complete", successCount: event.successCount, skipCount: event.skipCount }));
+        toast.success(`📝 Xong! Đã lấy text ${event.successCount} trang, bỏ qua ${event.skipCount} trang.`);
+        break;
+      case "error":
+        toast.error("Lỗi OCR: " + event.message);
+        setBatchOcrProgress(p => ({ ...p, status: "error" }));
+        break;
+    }
+  };
 
   // ── Render ────────────────────────────────────────────────
 
@@ -889,6 +1126,27 @@ export function BookDetailClient({ bookId }: Props) {
             </button>
 
             <button
+              onClick={() => startBatchOcr(false)}
+              disabled={isBatchOcrRunning || isBatchRunning || isBatchImageRunning}
+              className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_4px_20px_rgba(6,182,212,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isBatchOcrRunning ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Đang lấy text...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-base">text_fields</span>
+                  Lấy text tất cả ảnh
+                </>
+              )}
+            </button>
+
+            <button
               onClick={() => startBatchGeneration(false)}
               disabled={isBatchRunning}
               className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_4px_20px_rgba(139,92,246,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -964,6 +1222,33 @@ export function BookDetailClient({ bookId }: Props) {
             </div>
           </div>
         )}
+
+        {/* OCR batch progress bar */}
+        {(isBatchOcrRunning || batchOcrProgress.status === "complete") && (
+          <div className="mt-3 pt-3 border-t border-neutral-800">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="text-neutral-300 font-medium">
+                {isBatchOcrRunning
+                  ? `📝 Đang lấy text: ${batchOcrProgress.current}/${batchOcrProgress.total}`
+                  : `✅ OCR xong: ${batchOcrProgress.successCount} trang, bỏ qua ${batchOcrProgress.skipCount}`}
+              </span>
+              <span className="text-neutral-500 tabular-nums">
+                {batchOcrProgress.total > 0 ? Math.round((batchOcrProgress.current / batchOcrProgress.total) * 100) : 0}%
+              </span>
+            </div>
+            <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: batchOcrProgress.total > 0 ? `${(batchOcrProgress.current / batchOcrProgress.total) * 100}%` : "0%",
+                  background: batchOcrProgress.status === "complete"
+                    ? "linear-gradient(90deg, #22c55e, #16a34a)"
+                    : "linear-gradient(90deg, #06b6d4, #0d9488)",
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Slides Grid with DnD */}
@@ -988,6 +1273,7 @@ export function BookDetailClient({ bookId }: Props) {
                   batchStatus={batchStatus}
                   isGenerating={isGenerating}
                   isGeneratingImage={generatingImageSlideId === slide.id}
+                  isExtractingText={extractingTextSlideId === slide.id}
                   isPlaying={playingSlideId === slide.id}
                   hasAudio={!!slide.audioUrl}
                   isEditing={editingSlideId === slide.id}
@@ -1006,6 +1292,9 @@ export function BookDetailClient({ bookId }: Props) {
                     else generateSingleAudio(id, false);
                   }}
                   onGenerateImage={generateSlideImage}
+                  onExtractText={extractTextFromImage}
+                  isUploadingImage={uploadingImageSlideId === slide.id}
+                  onImageDrop={uploadImageForSlide}
                   onClone={(id) => setCloneConfirmSlideId(id)}
                   isLastSlide={isLast}
                   isMerging={mergingSlideAId === slide.id}
@@ -1016,24 +1305,42 @@ export function BookDetailClient({ bookId }: Props) {
               );
             })}
 
-            {/* Add New Slide button */}
-            <button
-              onClick={addEmptySlide}
-              disabled={isAddingSlide || isBatchRunning}
-              className="bg-neutral-900/50 border-2 border-dashed border-neutral-700 hover:border-blue-500/60 hover:bg-blue-950/10 rounded-2xl aspect-[4/3] flex flex-col items-center justify-center gap-2 transition-all group disabled:opacity-40 disabled:cursor-not-allowed min-h-[120px]"
-            >
+            {/* Add New Slide card */}
+            <div className="bg-neutral-900/50 border-2 border-dashed border-neutral-700 hover:border-blue-500/60 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all min-h-[120px] p-3">
               {isAddingSlide ? (
-                <svg className="animate-spin h-6 w-6 text-neutral-400" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+                <>
+                  <svg className="animate-spin h-6 w-6 text-neutral-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-xs text-neutral-500">Đang tạo...</span>
+                </>
               ) : (
-                <span className="material-symbols-outlined text-3xl text-neutral-600 group-hover:text-blue-400 transition-colors">add_circle</span>
+                <>
+                  <span className="material-symbols-outlined text-3xl text-neutral-600">add_circle</span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={addSlideCount}
+                      onChange={(e) => setAddSlideCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                      onClick={(e) => e.stopPropagation()}
+                      disabled={isBatchRunning}
+                      className="w-12 text-center text-xs font-bold text-white bg-neutral-800 border border-neutral-600 rounded-lg px-1 py-0.5 outline-none focus:border-blue-500 disabled:opacity-40"
+                    />
+                    <span className="text-xs text-neutral-500">trang</span>
+                  </div>
+                  <button
+                    onClick={addEmptySlide}
+                    disabled={isBatchRunning}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Thêm
+                  </button>
+                </>
               )}
-              <span className="text-xs font-bold text-neutral-600 group-hover:text-blue-400 transition-colors">
-                {isAddingSlide ? "Đang tạo..." : "Thêm trang"}
-              </span>
-            </button>
+            </div>
           </div>
         </SortableContext>
 
@@ -1060,6 +1367,10 @@ export function BookDetailClient({ bookId }: Props) {
                 onPlayAudio={() => {}}
                 onGenerateAudio={() => {}}
                 onGenerateImage={() => {}}
+                onExtractText={() => {}}
+                isExtractingText={false}
+                isUploadingImage={false}
+                onImageDrop={() => {}}
                 onClone={() => {}}
                 isDraggingOverlay
               />
@@ -1156,6 +1467,41 @@ export function BookDetailClient({ bookId }: Props) {
               </button>
               <button
                 onClick={() => setConfirmImageModal(false)}
+                className="py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl text-sm font-bold transition-all border border-neutral-700"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm OCR Overwrite Modal */}
+      {confirmOcrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-3xl p-8 max-w-sm w-full shadow-2xl">
+            <div className="text-center mb-4">
+              <span className="material-symbols-outlined text-5xl text-cyan-400">text_fields</span>
+            </div>
+            <h3 className="text-white font-bold text-center text-lg mb-2">Đã có text sẵn</h3>
+            <p className="text-neutral-400 text-sm text-center mb-6 leading-relaxed">
+              Một số trang đã có text. Bạn muốn xử lý thế nào?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => startBatchOcr(false, true)}
+                className="py-3 bg-blue-700 hover:bg-blue-600 text-white rounded-2xl text-sm font-bold transition-all"
+              >
+                Chỉ lấy text trang chưa có
+              </button>
+              <button
+                onClick={() => startBatchOcr(true, true)}
+                className="py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-2xl text-sm font-bold transition-all"
+              >
+                Lấy lại tất cả (ghi đè)
+              </button>
+              <button
+                onClick={() => setConfirmOcrModal(false)}
                 className="py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl text-sm font-bold transition-all border border-neutral-700"
               >
                 Hủy

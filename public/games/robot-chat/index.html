@@ -76,7 +76,7 @@
   @keyframes antBlink { from{fill:#7c5cfc} to{fill:#22d3ee} }
 
   /* ── CHAT AREA ── */
-  .chat-area { display:flex; flex-direction:column; gap:10px; min-height:80px; flex:1; overflow-y:auto; padding-right:6px; scrollbar-width: none; -ms-overflow-style: none; }
+  .chat-area { display:flex; flex-direction:column; gap:10px; min-height:80px; flex:1; overflow-y:auto; padding-right:6px; padding-bottom: 24px; scrollbar-width: none; -ms-overflow-style: none; }
   .chat-area::-webkit-scrollbar { display: none; }
 
   /* Robot bubble */
@@ -97,12 +97,12 @@
 
   /* ── HINT CHIPS ── */
   .hint-section { width:100%; margin-bottom:14px; }
-  .hint-label { font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; text-align:center; }
-  .hint-chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
-  .hint-chip { padding:7px 16px; border-radius:100px; border:1.5px dashed var(--accent); background:#7c5cfc0d;
-    color:var(--accent2); font-family:inherit; font-size:.9rem; font-weight:700;
+  .hint-label { font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; text-align:center; }
+  .hint-chips { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; width:100%; max-width:760px; margin:0 auto; }
+  .hint-chip { flex:1 1 280px; max-width:100%; padding:12px 20px; border-radius:16px; border:1.5px dashed var(--accent); background:#7c5cfc0d;
+    color:var(--accent2); font-family:inherit; font-size:.95rem; font-weight:700; text-align:center;
     animation:chipIn .3s cubic-bezier(.17,.67,.35,1.3) both; cursor:pointer; transition:all 0.2s; }
-  .hint-chip:hover { transform:scale(1.05); background:#7c5cfc1a; border-style:solid; }
+  .hint-chip:hover { transform:scale(1.02); background:#7c5cfc1a; border-style:solid; }
   @keyframes chipIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
   .hint-chips.loading .hint-chip { animation:shimmer 1.4s infinite; background:var(--card2); border-color:var(--border); color:var(--muted); pointer-events: none; }
   @keyframes shimmer { 0%,100%{opacity:.3} 50%{opacity:.7} }
@@ -112,11 +112,32 @@
 
   /* Mic icon (small, decorative when listening) */
   .mic-icon { width:44px; height:44px; border-radius:50%; background:var(--card2); border:2px solid var(--border);
-    display:flex; align-items:center; justify-content:center; }
+    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform 0.2s, border-color 0.2s; }
+  .mic-icon:hover { border-color:var(--accent2); transform:scale(1.06); }
   .mic-icon svg { width:20px; height:20px; fill:var(--muted); }
   .mic-icon.active { background:#f8717122; border-color:var(--red); animation:micPulse .8s ease-in-out infinite; }
   .mic-icon.active svg { fill:var(--red); }
   @keyframes micPulse { 0%{box-shadow:0 0 0 0 #f8717166} 70%{box-shadow:0 0 0 16px #f8717100} 100%{box-shadow:0 0 0 0 #f8717100} }
+
+  /* ── WAVEFORM RECORDING INDICATOR ── */
+  .waveform-bars { display:none; align-items:center; justify-content:center; gap:5px;
+    width:56px; height:44px; }
+  .waveform-bars.active { display:flex; }
+  .waveform-bars span { display:block; width:4px; border-radius:4px; background:var(--red);
+    height:4px;
+    animation: waveBar 0s ease-in-out infinite alternate;
+    animation-play-state: paused; }
+  .waveform-bars.active span { animation-duration: 0.6s; animation-play-state: running; }
+  .waveform-bars span:nth-child(1){animation-delay:0s;}
+  .waveform-bars span:nth-child(2){animation-delay:0.1s;}
+  .waveform-bars span:nth-child(3){animation-delay:0.2s;}
+  .waveform-bars span:nth-child(4){animation-delay:0.3s;}
+  .waveform-bars span:nth-child(5){animation-delay:0.4s;}
+  @keyframes waveBar {
+    0%   { height: 4px; opacity: 0.5; }
+    50%  { height: 28px; opacity: 1; }
+    100% { height: 4px; opacity: 0.5; }
+  }
 
   .mic-row { display: flex; align-items: center; justify-content: center; gap: 16px; position: relative; }
 
@@ -184,29 +205,10 @@
 
 <!-- ══ WELCOME ══ -->
 <div class="screen" id="screenWelcome">
-  <div style="max-width:700px;width:100%">
+  <div style="max-width:480px;width:100%;text-align:center">
     <div class="welcome-title">Chat with ROBO 🤖</div>
-    <div class="welcome-sub" id="welcomeSub">Choose a topic — then <b>speak</b> your answers!</div>
-
-    <div class="section-label" style="text-align:center; display:none;">Your Level</div>
-    <div class="level-grid" id="levelGrid" style="display:none;">
-      <button class="level-btn" data-level="kindergarten">🧒 Kindergarten</button>
-      <button class="level-btn" data-level="kid">👦 Kid</button>
-      <button class="level-btn" data-level="teen">🧑 Teen</button>
-      <button class="level-btn" data-level="learner">📖 Learner A2</button>
-    </div>
-
-    <div class="section-label" style="text-align:center">Choose a Topic</div>
-    <div class="topic-grid">
-      <div class="topic-card" data-topic="Animals">  <div class="icon">🐾</div><div class="name">Animals</div></div>
-      <div class="topic-card" data-topic="Food">     <div class="icon">🍎</div><div class="name">Food</div></div>
-      <div class="topic-card" data-topic="Colors">   <div class="icon">🎨</div><div class="name">Colors</div></div>
-      <div class="topic-card" data-topic="Family">   <div class="icon">👨‍👩‍👧</div><div class="name">Family</div></div>
-      <div class="topic-card" data-topic="School">   <div class="icon">🏫</div><div class="name">School</div></div>
-      <div class="topic-card" data-topic="Sports">   <div class="icon">⚽</div><div class="name">Sports</div></div>
-      <div class="topic-card" data-topic="Nature">   <div class="icon">🌿</div><div class="name">Nature</div></div>
-      <div class="topic-card" data-topic="Daily Life"><div class="icon">🌅</div><div class="name">Daily Life</div></div>
-    </div>
+    <div class="welcome-sub" id="welcomeSub">Press start and <b>speak</b> your answers!</div>
+    <button class="done-btn" id="btnStart" style="margin-top:32px;padding:0 48px;height:52px;font-size:1.1rem">▶ Start Chatting</button>
   </div>
 </div>
 
@@ -217,7 +219,6 @@
     <!-- Header -->
     <div class="game-header">
       <div class="game-meta">
-        <span class="badge badge-topic" id="badgeTopic"></span>
         <span class="badge badge-level" id="badgeLevel"></span>
       </div>
       <div style="display: flex; gap: 16px; align-items: center;">
@@ -227,7 +228,7 @@
           <span class="toggle-text" id="toggleTranslateText">Translate</span>
         </label>
         
-        <div class="speed-control">
+        <div class="speed-control" style="display: none !important;">
           <select id="speedSelect" class="speed-select" title="Speech Speed">
             <option value="0.75">🐢 0.75x</option>
             <option value="0.85">🤖 0.85x</option>
@@ -235,7 +236,7 @@
           </select>
         </div>
 
-        <button class="btn-new" id="btnNew">✕ New Topic</button>
+        <button class="btn-new" id="btnNew" style="display: none !important;">↩ Restart</button>
       </div>
     </div>
 
@@ -280,12 +281,10 @@
       ⚠️ Your browser doesn't support speech recognition. Please use Chrome or Edge.
     </div>
 
-    <!-- Hint keywords (visual only, not clickable) -->
+    <!-- Hint suggested answers -->
     <div class="hint-section" id="hintSection" style="display:none">
-      <div class="hint-label">💡 Hint — try saying one of these words:</div>
+      <div class="hint-label">💡 Hint — Try saying one of these answers:</div>
       <div class="hint-chips loading" id="hintChips">
-        <div class="hint-chip">···</div>
-        <div class="hint-chip">···</div>
         <div class="hint-chip">···</div>
         <div class="hint-chip">···</div>
       </div>
@@ -293,7 +292,7 @@
 
     <!-- Mic indicator + Done button -->
     <div class="mic-section">
-      <div class="live-text-wrap">
+      <div class="live-text-wrap" style="display:none">
         <div class="live-text" id="liveText"></div>
         <button class="btn-clear-text" id="btnClearText" title="Clear and speak again">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -302,6 +301,9 @@
         </button>
       </div>
       <div class="mic-row">
+        <div class="waveform-bars" id="waveformBars">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
         <div class="mic-icon" id="micIcon">
           <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 18.93V21H9v2h6v-2h-2v-1.07A7 7 0 0 0 19 13h-2a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93z"/></svg>
         </div>
@@ -354,52 +356,38 @@ const LEVEL_CONFIG = {
 };
 
 // ═══════════════════ WELCOME EVENTS ═══════════════════
-document.querySelectorAll('.level-btn').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('.level-btn').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active'); selectedLevel=b.dataset.level;
-}));
-document.querySelectorAll('.topic-card').forEach(c=>c.addEventListener('click', async ()=>{
-  if(!selectedLevel){showToast('Choose your level first! 👆');return;}
-  const topic = c.dataset.topic;
-  
-  // Request microphone permission on user interaction to prevent browser gesture blocks
+document.getElementById('btnStart').addEventListener('click', async () => {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Release microphone immediately after permission is granted
       stream.getTracks().forEach(track => track.stop());
-      startGame(selectedLevel, topic);
     } catch (err) {
       console.warn("Microphone permission denied or error:", err);
       showToast("Please allow microphone access (click the 🔒 lock icon in the address bar) to talk! 🎙️");
-      startGame(selectedLevel, topic);
     }
-  } else {
-    startGame(selectedLevel, topic);
   }
-}));
+  startGame(selectedLevel);
+});
 document.getElementById('btnNew').addEventListener('click',()=>{ stopAudio(); stopListening(); showScreen('welcome'); });
 
 // ═══════════════════ GAME START ═══════════════════
-function startGame(level,topic){
+const TOPICS = ['Animals', 'Food', 'Colors', 'Family', 'School', 'Sports', 'Nature', 'Daily Life', 'Hobbies', 'Weather', 'Toys', 'Travel'];
+
+function pickRandomTopic() {
+  return TOPICS[Math.floor(Math.random() * TOPICS.length)];
+}
+
+function startGame(level){
   const isChecked = document.getElementById('toggleTranslate')?.checked || false;
   
-  // Set default speed based on level if no custom preference is saved in localStorage
   let speedVal = localStorage.getItem('cupcakes_speech_speed');
-  if (speedVal !== '0.75' && speedVal !== '0.85' && speedVal !== '0.95') {
-    speedVal = null;
-  }
-  if (!speedVal) {
-    speedVal = '0.75';
-  }
+  if (speedVal !== '0.75' && speedVal !== '0.85' && speedVal !== '0.95') speedVal = '0.75';
   
   const selectEl = document.getElementById('speedSelect');
-  if (selectEl) {
-    selectEl.value = speedVal;
-  }
-  
+  if (selectEl) selectEl.value = speedVal;
+
+  const topic = pickRandomTopic();
   state={topic,level,history:[],turn:0,phase:'idle',isClearing:false,showTranslation:isChecked,currentTranslation:'',speechSpeed:parseFloat(speedVal),keywords:[]};
-  document.getElementById('badgeTopic').textContent=topicIcon(topic)+' '+topic;
   document.getElementById('badgeLevel').textContent=LEVEL_CONFIG[level].label;
   document.getElementById('chatArea').innerHTML='';
   document.getElementById('hintSection').style.display='none';
@@ -467,40 +455,46 @@ async function callOpenAI(studentSpeech){
 
   const lc=LEVEL_CONFIG[state.level];
   const historyMsgs=state.history.map(h=>({role:h.role==='robot'?'assistant':'user',content:h.text}));
-  const userMsg=studentSpeech
+  const userMsg = studentSpeech
     ? studentSpeech
-    : `[CONVERSATION START] Begin talking about ${state.topic}.`;
+    : `[CONVERSATION START]`;
 
   const keywordsStr = state.keywords && state.keywords.length > 0
     ? `\n- The student was shown these keywords as answer hints: ${state.keywords.join(', ')}. If their spoken input looks phonetically similar to one of these hints, they most likely intended to say that. Please respond to the intended meaning.`
     : '';
 
-  const systemPrompt=`You are ROBO, a friendly English-speaking robot teacher.
-Student level: ${state.level}. Topic: ${state.topic}.
-Rules:
-- Robot sentence: ${lc.words} words MAX, ${lc.vocab}, ${lc.style}
-- FORCE/CRITICAL RULE: Your response (the 'robotSays' text) MUST ALWAYS end with a direct question to the student. The absolute last character of the English text MUST be a question mark (?).
-- NEVER output a response that ends with a period, exclamation mark, or anything other than a question mark.
-- For example: instead of "I love sports too! Tell me about your favorite player.", you MUST ask: "I love sports too! Who is your favorite player?"
-- React briefly to what the student said (1 short sentence), then immediately ask a new question.
-- Be warm, encouraging, fun.
-- Ask ONE question per turn — keep the conversation going naturally.
-- Translate the robot's generated English response (the 'robotSays' text) into ${targetLangName} and put it in the 'translatedSays' field.
+  const systemPrompt=`You are ROBO, a friendly English-speaking robot teacher chatting with a student.
+Student level: ${state.level}.
+
+TOPIC RULES:
+- The opening topic for this session is: **${state.topic}**. Start the conversation with this topic.
+- For the first 3-4 turns, stay on that opening topic to build vocabulary depth.
+- After that, follow the conversation naturally — transition to related topics as they come up organically. Do NOT force staying on one topic forever.
+- Always use vocabulary and sentence complexity appropriate for level: ${state.level} (${lc.vocab}, ${lc.style}).
+
+CONVERSATION RULES:
+- Robot sentence: ${lc.words} words MAX.
+- CRITICAL: Your response (the 'robotSays' text) MUST ALWAYS end with a direct question (?). The last character of 'robotSays' MUST be a question mark. Statements are forbidden. You must ask a question in EVERY turn.
+- CRITICAL: The text in 'robotSays' MUST be 100% in English. Absolutely NO Vietnamese, Thai, Indonesian, or other non-English words are allowed in 'robotSays'.
+- React briefly to what the student said (1 short sentence), then ask a new question.
+- Be warm, encouraging, and fun.
+- Ask ONE question per turn — keep the conversation flowing.
+- Translate your English response into ${targetLangName} and put it in 'translatedSays'.
 
 CRITICAL about Student Spoken Input:
-- The student's input is recognized by a Speech-to-Text browser engine, which might contain transcription errors (e.g. "banned" instead of "banana", "cold" instead of "gold", "choose" instead of "juice").
-- Auto-correct phonetic or spelling mismatches mentally based on the topic (${state.topic}) and level (${state.level}) context. Respond to the INTENDED meaning of what the student said. Do NOT point out their mistakes or grammar errors.${keywordsStr}
+- Input comes from Speech-to-Text and may contain transcription errors.
+- Auto-correct phonetic/spelling mismatches based on context and level. Respond to the INTENDED meaning. Do NOT point out their mistakes.${keywordsStr}
 
-Respond ONLY with valid JSON:
-{"robotSays":"your reaction + question","translatedSays":"translation in ${targetLangName}","keywords":["hint1","hint2","hint3","hint4"]}
+Respond ONLY with valid JSON format:
+{
+  "robotSays": "Your short reaction (in 100% English only). Followed by a direct question (in 100% English only) ending with '?'",
+  "translatedSays": "Translation of robotSays in ${targetLangName}",
+  "suggestedAnswers": ["Sample answer 1 in English answering your question", "Sample answer 2 in English answering your question"]
+}
 
-CRITICAL about keywords:
-- They are HINT WORDS to help the student build their spoken answer
-- Example: Robot says "Cool! What animal do you like?" → keywords: ["Dog","Cat","Fish","Bird"]
-- Example: Robot says "Nice! Do you like ice cream?" → keywords: ["Yes I do","No I don't","I love it","Sometimes"]
-- Keywords should be what the STUDENT would say as an answer
-- NEVER repeat words from the robot's question as keywords
-- 1-3 words each, level-appropriate`;
+CRITICAL about suggestedAnswers:
+- Exactly 2 complete, natural answers the STUDENT could say to reply to your question.
+- Full sentences, grammatically correct, appropriate for level ${state.level}.`;
 
   const res=await fetch('/api/games/robot-chat/chat',{
     method:'POST',
@@ -509,14 +503,36 @@ CRITICAL about keywords:
   });
   if(!res.ok){
     const d=await res.json().catch(()=>({}));
-    throw new Error(`OpenAI HTTP ${res.status}: ${d?.error?.message||JSON.stringify(d)}`);
+    throw new Error(`API HTTP ${res.status}: ${d?.error?.message||JSON.stringify(d)}`);
   }
   const data=await res.json();
   const parsed=JSON.parse(data.choices[0].message.content||'{}');
+  let robotSays = (parsed.robotSays || '...').trim();
+  let translatedSays = (parsed.translatedSays || '').trim();
+
+  // Programmatic fallback: Ensure robotSays ends with a question mark
+  if (robotSays && !robotSays.endsWith('?')) {
+    console.warn("[RobotChat] Bot response did not end with a question mark. Appending fallback question.");
+    const langFallbacks = {
+      vi: { en: " What do you think?", trans: " Bạn nghĩ sao?" },
+      th: { en: " What do you think?", trans: " คุณคิดอย่างไร?" },
+      id: { en: " What do you think?", trans: " Bagaimana menurutmu?" },
+      en: { en: " What do you think?", trans: "" }
+    };
+    const selectFallback = langFallbacks[nativeLang] || langFallbacks.vi;
+    
+    robotSays += selectFallback.en;
+    if (translatedSays && selectFallback.trans) {
+      translatedSays += selectFallback.trans;
+    }
+  }
+
+  const rawList = parsed.suggestedAnswers || parsed.keywords || [];
+  const answersList = rawList.map(w => w.replace(/^[^a-zA-Z0-9\s]+/, '').trim()); // Strip leading dots, dashes, etc.
   return {
-    robotSays: parsed.robotSays || '...',
-    translatedSays: parsed.translatedSays || '',
-    keywords: (parsed.keywords || []).slice(0,4)
+    robotSays,
+    translatedSays,
+    keywords: answersList.slice(0, 2)
   };
 }
 
@@ -599,11 +615,13 @@ function browserSpeak(text) {
   });
 }
 
-// ═══════════════════ SPEECH RECOGNITION ═══════════════════
 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+
 let recognition = null;
 let isListening = false;
 let fullTranscript = '';
+let lastStudentBubbleEl = null; // reference to the most recent student bubble
 
 if (!SpeechRec) {
   document.getElementById('nospeechBanner').style.display = 'block';
@@ -659,7 +677,8 @@ function initRecognition() {
     isListening = true;
     fullTranscript = '';
     document.getElementById('liveText').textContent = '';
-    document.getElementById('micIcon').classList.add('active');
+    document.getElementById('micIcon').style.display = 'none';
+    document.getElementById('waveformBars').classList.add('active');
     document.getElementById('doneBtn').classList.remove('hidden');
     
     const clearBtn = document.getElementById('btnClearText');
@@ -688,7 +707,8 @@ function initRecognition() {
 
   r.onend = () => {
     isListening = false;
-    document.getElementById('micIcon').classList.remove('active');
+    document.getElementById('micIcon').style.display = '';
+    document.getElementById('waveformBars').classList.remove('active');
     document.getElementById('doneBtn').classList.add('hidden');
     
     const clearBtn = document.getElementById('btnClearText');
@@ -728,10 +748,9 @@ function initRecognition() {
         }
       }
 
-      showStudentBubble(spoken);
-      setMicStatus('processing', '⏳ Processing...');
       state.phase = 'processing';
-      setTimeout(() => robotTurn(spoken), 400);
+      setMicStatus('processing', '⏳ Processing...');
+      submitSpeech(spoken);
     } else if (state.phase === 'listening') {
       // Nothing heard — restart
       setMicStatus('listening', '🎤 Nothing heard, try again...');
@@ -741,10 +760,15 @@ function initRecognition() {
 
   r.onerror = (e) => {
     isListening = false;
-    document.getElementById('micIcon').classList.remove('active');
+    document.getElementById('micIcon').style.display = '';
+    document.getElementById('waveformBars').classList.remove('active');
     document.getElementById('doneBtn').classList.add('hidden');
     if (e.error !== 'no-speech' && e.error !== 'aborted') {
-      showToast('Mic error: ' + e.error);
+      if (e.error === 'not-allowed') {
+        showToast('Microphone access denied. Please enable it in browser settings. 🎙️');
+      } else {
+        showToast('Mic error: ' + e.error);
+      }
     }
     if (state.phase === 'listening') {
       setMicStatus('listening', '🎤 Ready to listen...');
@@ -753,6 +777,51 @@ function initRecognition() {
 
   return r;
 }
+
+// ═══════════════════ ASR CORRECTION ═══════════════════
+async function correctSpeechWithAI(rawTranscript) {
+  try {
+    const lastRobotQuestion = state.history.filter(h => h.role === 'robot').pop()?.text || '';
+    if (!lastRobotQuestion || !rawTranscript?.trim()) return rawTranscript;
+
+    const res = await fetch('/api/games/robot-chat/correct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rawTranscript,
+        robotQuestion: lastRobotQuestion,
+        suggestedAnswers: state.keywords || [],
+      }),
+    });
+    if (!res.ok) return rawTranscript;
+    const data = await res.json();
+    return data.corrected?.trim() || rawTranscript;
+  } catch (err) {
+    console.warn('[ASR Correct] Failed, using raw:', err.message);
+    return rawTranscript;
+  }
+}
+
+async function submitSpeech(rawSpoken) {
+  // Step 1: show raw transcript immediately so there's no blank wait
+  showStudentBubble(rawSpoken);
+
+  // Step 2: correct ASR errors in background
+  const corrected = await correctSpeechWithAI(rawSpoken);
+
+  // Step 3: if corrected, update the bubble text
+  if (corrected && corrected !== rawSpoken) {
+    console.log(`[ASR] Corrected: "${rawSpoken}" → "${corrected}"`);
+    if (lastStudentBubbleEl) {
+      const textNode = lastStudentBubbleEl.querySelector('.bubble-text');
+      if (textNode) textNode.textContent = corrected;
+    }
+  }
+
+  // Step 4: send (corrected) text to robot
+  robotTurn(corrected || rawSpoken);
+}
+
 
 function autoStartListening() {
   if (state.phase !== 'listening') return;
@@ -774,6 +843,17 @@ document.getElementById('doneBtn').addEventListener('click', () => {
   if (!isListening) return;
   try { recognition.stop(); }  // triggers onend → submits
   catch (e) { showToast('Error: ' + e.message); }
+});
+
+// Mic button -> manually start recording
+document.getElementById('micIcon').addEventListener('click', () => {
+  if (state.phase !== 'listening') {
+    showToast("Please wait for ROBO to finish talking! 🤖");
+    return;
+  }
+  if (!isListening) {
+    autoStartListening();
+  }
 });
 
 // Clear/Reset button -> clear transcript and restart listening
@@ -926,7 +1006,8 @@ function showStudentBubble(text){
   const area=document.getElementById('chatArea');
   const d=document.createElement('div');
   d.className='student-bubble';
-  d.innerHTML=`<div class="label">You said</div>${escHtml(text)}`;
+  d.innerHTML=`<div class="label">You said</div><span class="bubble-text">${escHtml(text)}</span>`;
+  lastStudentBubbleEl = d; // keep reference for ASR correction update
   area.appendChild(d);
   limitBubbles();
   d.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -938,7 +1019,7 @@ function showHintChips(words,loading){
   sec.style.display='block';
   if(loading){
     chips.className='hint-chips loading';
-    chips.innerHTML='<div class="hint-chip">···</div>'.repeat(4);
+    chips.innerHTML='<div class="hint-chip">···</div>'.repeat(2);
     return;
   }
   chips.className='hint-chips';
@@ -994,21 +1075,21 @@ function fuzzyCorrectSpeech(spoken, keywords) {
   
   const cleanSpoken = spoken.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '');
   
-  // 1. Try matching the whole phrase against keywords
+  // 1. Try matching the whole phrase against keywords (allow 40% difference)
   for (const kw of keywords) {
     const cleanKw = kw.toLowerCase().trim().replace(/[^a-z0-9\s]/g, '');
     const dist = levenshteinDistance(cleanSpoken, cleanKw);
-    if (dist <= Math.max(1, Math.floor(cleanKw.length * 0.25))) {
+    if (dist <= Math.max(1, Math.floor(cleanKw.length * 0.40))) {
       console.log(`[Fuzzy] Matched entire phrase: "${spoken}" -> "${kw}"`);
       return kw;
     }
   }
   
-  // 2. Try word-by-word matching
+  // 2. Try word-by-word matching (allow 50% difference for words longer than 1 character)
   const words = spoken.split(/\s+/);
   const correctedWords = words.map(word => {
     const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (cleanWord.length < 3) return word;
+    if (cleanWord.length < 2) return word;
     
     let bestMatch = word;
     let minDistance = 999;
@@ -1017,10 +1098,10 @@ function fuzzyCorrectSpeech(spoken, keywords) {
       const kwWords = kw.split(/\s+/);
       for (const kwWord of kwWords) {
         const cleanKwWord = kwWord.toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (cleanKwWord.length < 3) continue;
+        if (cleanKwWord.length < 2) continue;
         
         const dist = levenshteinDistance(cleanWord, cleanKwWord);
-        if (dist < minDistance && dist <= Math.max(1, Math.floor(cleanKwWord.length * 0.35))) {
+        if (dist < minDistance && dist <= Math.max(1, Math.floor(cleanKwWord.length * 0.50))) {
           minDistance = dist;
           bestMatch = kwWord;
         }

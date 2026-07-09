@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { uploadBufferToR2 } from "@/actions/upload-actions";
 import { GoogleGenAI } from "@google/genai";
+import { translateSlideToAllLangs } from "@/lib/translate-slide";
 
 export const maxDuration = 120;
 
@@ -103,11 +104,21 @@ export async function POST(
     const r2Path = `read-along/${slide.book.bookId}/audio/slide_${slide.slideNumber}.wav`;
     const audioUrl = await uploadBufferToR2(wavBuffer, r2Path, "audio/wav");
 
-    // Save to DB
+    // Save audioUrl to DB
     await prisma.readAlongSlide.update({
       where: { id: slideId },
       data: { audioUrl },
     });
+
+    // Generate translations for all supported languages (non-blocking — errors won't fail audio)
+    translateSlideToAllLangs(slide.text).then((translations) => {
+      if (Object.keys(translations).length > 0) {
+        prisma.readAlongSlide.update({
+          where: { id: slideId },
+          data: { translations },
+        }).catch((e) => console.error("[ReadAlong] Failed to save translations:", e));
+      }
+    }).catch((e) => console.error("[ReadAlong] Translation error:", e));
 
     return NextResponse.json({ success: true, audioUrl, slideId });
   } catch (error: any) {

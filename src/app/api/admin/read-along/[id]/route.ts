@@ -112,29 +112,35 @@ export async function POST(
   try {
     const { id: bookId } = await params;
     const body = await req.json();
-    const { slideId } = body;
+    const { slideId, count } = body;
 
-    // ── CREATE EMPTY SLIDE at end (no slideId provided) ──
+    // ── CREATE EMPTY SLIDES at end (no slideId provided) ──
     if (!slideId) {
+      const numToCreate = Math.min(Math.max(1, parseInt(count) || 1), 50);
+
       const lastSlide = await prisma.readAlongSlide.findFirst({
         where: { bookId },
         orderBy: { orderIndex: "desc" },
       });
-      const nextIndex = lastSlide ? lastSlide.orderIndex + 1 : 0;
-      const slideNumber = String(nextIndex + 1).padStart(2, "0");
+      const startIndex = lastSlide ? lastSlide.orderIndex + 1 : 0;
 
-      const newSlide = await prisma.readAlongSlide.create({
-        data: {
-          bookId,
-          slideNumber,
-          imageName: null,
-          imageUrl: null,
-          text: "",
-          audioUrl: null,
-          orderIndex: nextIndex,
-        },
-      });
-      return NextResponse.json({ success: true, slide: newSlide });
+      const newSlides = await prisma.$transaction(
+        Array.from({ length: numToCreate }, (_, i) => {
+          const orderIndex = startIndex + i;
+          return prisma.readAlongSlide.create({
+            data: {
+              bookId,
+              slideNumber: String(orderIndex + 1).padStart(2, "0"),
+              imageName: null,
+              imageUrl: null,
+              text: "",
+              audioUrl: null,
+              orderIndex,
+            },
+          });
+        })
+      );
+      return NextResponse.json({ success: true, slides: newSlides, count: newSlides.length });
     }
 
     // ── CLONE SLIDE (slideId provided) ──

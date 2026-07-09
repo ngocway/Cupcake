@@ -750,6 +750,7 @@ model ReadAlongSlide {
   imageUrl    String?       // Cloudflare R2 public URL (nullable when created from lesson)
   text        String        // Text content for the slide (1-5 sentences)
   audioUrl    String?       // Cloudflare R2 public URL for pre-generated TTS audio
+  translations Json?        // Pre-generated translations: { "vi": ["line1","line2"], "zh": [...], ... }
   orderIndex  Int           // For sequence ordering
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
