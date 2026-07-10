@@ -34,6 +34,7 @@ interface Slide {
   text: string;
   audioUrl: string | null;
   orderIndex: number;
+  translations?: any;
 }
 
 interface Book {
