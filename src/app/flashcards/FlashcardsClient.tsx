@@ -15,7 +15,8 @@ import {
   Award, 
   HelpCircle,
   Play,
-  Loader2
+  Loader2,
+  Languages
 } from "lucide-react"
 
 // Định nghĩa kiểu dữ liệu
@@ -207,7 +208,55 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   // Trạng thái load ảnh để hiển thị spinner
   const [isImageLoading, setIsImageLoading] = useState(true)
 
+  // Trạng thái hiển thị từng chữ cái lần lượt ngẫu nhiên
+  const [revealedIndices, setRevealedIndices] = useState<number[]>([])
+  const [wordAudioEnded, setWordAudioEnded] = useState<boolean>(false)
+
+  // Trạng thái cho chế độ Thử thách từ vựng (Gợi ý, Ghép chữ, Tự gõ)
+  const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>('hint')
+  const [scrambledLetters, setScrambledLetters] = useState<{ id: number, letter: string, index: number, used: boolean }[]>([])
+  const [shakeItemId, setShakeItemId] = useState<number | null>(null)
+  const [wrongTypedIndex, setWrongTypedIndex] = useState<number | null>(null)
+  const [showCelebration, setShowCelebration] = useState<boolean>(false)
+  const [confettiParticles, setConfettiParticles] = useState<{
+    id: number
+    x: number
+    y: number
+    color: string
+    size: number
+    delay: number
+    duration: number
+    angle: number
+  }[]>([])
+
+  const hiddenInputRef = useRef<HTMLInputElement | null>(null)
+
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Swipe gesture state
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    touchStartX.current = null
+    touchStartY.current = null
+    // Only treat as horizontal swipe if dx dominant and > 50px threshold
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) {
+        handleNext()
+      } else {
+        handlePrev()
+      }
+    }
+  }
 
   const stopCurrentAudio = () => {
     if (currentAudioRef.current) {
@@ -257,7 +306,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   }, [])
 
   // Hàm phát âm từ vựng tiếng Anh
-  const handleSpeak = (text: string) => {
+  const handleSpeak = (text: string, onEnded?: () => void) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel() // Dừng giọng nói hiện tại (nếu có)
       const utterance = new SpeechSynthesisUtterance(text)
@@ -276,64 +325,366 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         utterance.voice = premiumVoice
       }
       
+      if (onEnded) {
+        utterance.onend = () => {
+          onEnded()
+        }
+      }
+      
       window.speechSynthesis.speak(utterance)
     }
   }
 
   // Hàm phát âm từ vựng (Ưu tiên dùng audio lồng tiếng tải lên nếu có, nếu không thì dùng Web Speech API)
-  const handlePlayAudio = (card: any) => {
+  const handlePlayAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
     if (card.audioUrl && card.audioUrl.trim()) {
       const audio = new Audio(card.audioUrl)
       currentAudioRef.current = audio
+      if (onEnded) {
+        audio.onended = onEnded
+      }
       audio.play().catch(err => {
         console.error("Lỗi phát audio tùy chỉnh:", err)
         // Fallback to speech synthesis
-        handleSpeak(card.word)
+        handleSpeak(card.word, onEnded)
       })
     } else {
-      handleSpeak(card.word)
+      handleSpeak(card.word, onEnded)
     }
   }
 
   // Hàm phát âm chỉ từ vựng (không kèm câu ví dụ)
-  const handlePlayWordAudio = (card: any) => {
+  const handlePlayWordAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
     if (card.audioWordUrl && card.audioWordUrl.trim()) {
       const audio = new Audio(card.audioWordUrl)
       currentAudioRef.current = audio
+      if (onEnded) {
+        audio.onended = onEnded
+      }
       audio.play().catch(err => {
         console.error("Lỗi phát audio từ vựng tùy chỉnh:", err)
         // Fallback to speech synthesis
-        handleSpeak(card.word)
+        handleSpeak(card.word, onEnded)
       })
     } else {
-      handleSpeak(card.word)
+      handleSpeak(card.word, onEnded)
     }
   }
 
-  // Tự động phát âm chỉ từ vựng khi học sinh xem mặt trước thẻ mới
-  useEffect(() => {
-    if (!isFlipped && selectedCategory && flashcards[currentIndex]) {
-      const timer = setTimeout(() => {
-        handlePlayWordAudio(flashcards[currentIndex])
-      }, 300) // Delay nhẹ để tránh chồng chéo âm thanh khi chuyển thẻ
-      return () => clearTimeout(timer)
+  // Âm thanh chúc mừng tự tổng hợp bằng Web Audio API
+  const playSuccessSound = () => {
+    if (typeof window === 'undefined') return
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContext) return
+    try {
+      const ctx = new AudioContext()
+      const playTone = (freq: number, startTime: number, duration: number) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(freq, startTime)
+        gain.gain.setValueAtTime(0, startTime)
+        gain.gain.linearRampToValueAtTime(0.15, startTime + 0.05)
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(startTime)
+        osc.stop(startTime + duration)
+      }
+      const now = ctx.currentTime
+      playTone(523.25, now, 0.25) // C5
+      playTone(659.25, now + 0.08, 0.25) // E5
+      playTone(783.99, now + 0.16, 0.25) // G5
+      playTone(1046.50, now + 0.24, 0.4) // C6
+    } catch (e) {
+      console.error(e)
     }
-  }, [currentIndex, isFlipped, selectedCategory, flashcards])
+  }
 
-  // Tự động phát âm đầy đủ (từ + ví dụ) khi lật sang mặt sau (áp dụng cho mọi nhóm tuổi)
+  // Kích hoạt hiệu ứng chúc mừng khi hoàn thành từ vựng
+  const triggerSuccessCelebration = (card: any) => {
+    playSuccessSound()
+    setShowCelebration(true)
+
+    const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#ef4444']
+    const newParticles = Array.from({ length: 60 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: -10 - Math.random() * 15,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 8 + 6,
+      delay: Math.random() * 0.4,
+      duration: Math.random() * 1.5 + 1.5,
+      angle: Math.random() * 360
+    }))
+    setConfettiParticles(newParticles)
+
+    // Đợi 1.8 giây hiển thị hiệu ứng chúc mừng rồi mới tự động lật thẻ
+    setTimeout(() => {
+      setShowCelebration(false)
+      setIsFlipped(true)
+      handlePlayAudio(card)
+    }, 1800)
+  }
+
+  // Xử lý chuyển đổi chế độ học (Gợi ý, Ghép chữ, Tự gõ)
+  const handleModeChange = (newMode: 'hint' | 'scramble' | 'type') => {
+    setChallengeMode(newMode)
+    setWordAudioEnded(false)
+    setShakeItemId(null)
+    setWrongTypedIndex(null)
+    
+    const card = flashcards[currentIndex]
+    if (card) {
+      const initialIndices: number[] = []
+      for (let i = 0; i < card.word.length; i++) {
+        if (!/[a-zA-Z]/.test(card.word[i])) {
+          initialIndices.push(i)
+        }
+      }
+      setRevealedIndices(initialIndices)
+
+      if (newMode === 'scramble') {
+        generateScrambledLetters(card.word)
+      }
+
+      if (newMode === 'hint') {
+        handlePlayWordAudio(card, () => {
+          setWordAudioEnded(true)
+        })
+      }
+    }
+  }
+
+  // Tạo bong bóng chữ cái xáo trộn (Chế độ Ghép chữ)
+  const generateScrambledLetters = useCallback((word: string) => {
+    const items: { id: number, letter: string, index: number, used: boolean }[] = []
+    for (let i = 0; i < word.length; i++) {
+      const char = word[i]
+      if (/[a-zA-Z]/.test(char)) {
+        items.push({
+          id: i,
+          letter: char,
+          index: i,
+          used: false
+        })
+      }
+    }
+    // Trộn ngẫu nhiên
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    setScrambledLetters(items)
+  }, [])
+
+  // Tìm vị trí chữ cái chưa được lật tiếp theo
+  const getNextUnrevealedIndex = (word: string, currentRevealed: number[]) => {
+    for (let i = 0; i < word.length; i++) {
+      if (/[a-zA-Z]/.test(word[i]) && !currentRevealed.includes(i)) {
+        return i
+      }
+    }
+    return -1
+  }
+
+  // Click chọn chữ cái xáo trộn
+  const handleScrambleClick = (item: { id: number, letter: string, index: number, used: boolean }) => {
+    const card = flashcards[currentIndex]
+    if (!card) return
+
+    const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
+    if (nextIdx !== -1) {
+      if (card.word[nextIdx].toLowerCase() === item.letter.toLowerCase()) {
+        const nextRevealed = [...revealedIndices, nextIdx]
+        setRevealedIndices(nextRevealed)
+        setScrambledLetters(prev => prev.map(l => l.id === item.id ? { ...l, used: true } : l))
+
+        const checkNext = getNextUnrevealedIndex(card.word, nextRevealed)
+        if (checkNext === -1) {
+          // Hoàn thành từ -> Kích hoạt hiệu ứng chúc mừng
+          triggerSuccessCelebration(card)
+        }
+      } else {
+        // Sai chữ -> Rung lắc bong bóng chữ cái
+        setShakeItemId(item.id)
+        setTimeout(() => setShakeItemId(null), 500)
+      }
+    }
+  }
+
+  // Đọc chữ từ Input ẩn (Cho bàn phím ảo trên Điện thoại/iPad ở chế độ Tự gõ)
+  const handleHiddenInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    if (!val) return
+    const key = val[val.length - 1]
+    e.target.value = ""
+
+    if (!/[a-zA-Z]/.test(key)) return
+
+    const card = flashcards[currentIndex]
+    if (!card) return
+
+    const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
+    if (nextIdx !== -1) {
+      if (card.word[nextIdx].toLowerCase() === key.toLowerCase()) {
+        const nextRevealed = [...revealedIndices, nextIdx]
+        setRevealedIndices(nextRevealed)
+
+        const checkNext = getNextUnrevealedIndex(card.word, nextRevealed)
+        if (checkNext === -1) {
+          triggerSuccessCelebration(card)
+        }
+      } else {
+        setWrongTypedIndex(nextIdx)
+        setTimeout(() => setWrongTypedIndex(null), 500)
+      }
+    }
+  }
+
+  // 1. Reset card, đặt lại chữ cái đã lật và tự động phát âm khi chuyển thẻ, đổi chế độ hoặc đổi topic
+  useEffect(() => {
+    if (isFlipped) return
+
+    const card = flashcards[currentIndex]
+    if (!card) return
+
+    setWordAudioEnded(false)
+    setShakeItemId(null)
+    setWrongTypedIndex(null)
+
+    // Khởi tạo các ký tự không phải chữ cái (khoảng trắng, gạch ngang) được hiển thị sẵn
+    const initialIndices: number[] = []
+    for (let i = 0; i < card.word.length; i++) {
+      if (!/[a-zA-Z]/.test(card.word[i])) {
+        initialIndices.push(i)
+      }
+    }
+    setRevealedIndices(initialIndices)
+
+    if (challengeMode === 'scramble') {
+      generateScrambledLetters(card.word)
+    }
+
+    const timer = setTimeout(() => {
+      const isHint = challengeMode === 'hint'
+      handlePlayWordAudio(card, isHint ? () => {
+        setWordAudioEnded(true)
+      } : undefined)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [currentIndex, selectedTopic, challengeMode, isFlipped, flashcards])
+
+  // 2. Tự động phát âm đầy đủ khi lật sang mặt sau
   useEffect(() => {
     if (isFlipped && selectedCategory && flashcards[currentIndex]) {
-      // Delay nhẹ để âm thanh phát ra đồng thời cùng lúc xoay mặt thẻ xong
       const timer = setTimeout(() => {
         handlePlayAudio(flashcards[currentIndex])
       }, 150)
       return () => clearTimeout(timer)
     }
   }, [isFlipped, currentIndex, selectedCategory, flashcards])
+
+  // 3. Tự động hiển thị gợi ý từng chữ cái ngẫu nhiên (Chỉ hoạt động ở chế độ Gợi ý)
+  useEffect(() => {
+    const card = flashcards[currentIndex]
+    if (!wordAudioEnded || !card || isFlipped || challengeMode !== 'hint') return
+
+    const word = card.word
+    const initialIndices: number[] = []
+    for (let i = 0; i < word.length; i++) {
+      if (!/[a-zA-Z]/.test(word[i])) {
+        initialIndices.push(i)
+      }
+    }
+    
+    setRevealedIndices(initialIndices)
+
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const revealNext = (currentRevealed: number[]) => {
+      const unrevealed: number[] = []
+      for (let i = 0; i < word.length; i++) {
+        if (/[a-zA-Z]/.test(word[i]) && !currentRevealed.includes(i)) {
+          unrevealed.push(i)
+        }
+      }
+
+      if (unrevealed.length === 0) return
+
+      timeoutId = setTimeout(() => {
+        const randomIndex = unrevealed[Math.floor(Math.random() * unrevealed.length)]
+        const nextRevealed = [...currentRevealed, randomIndex]
+        setRevealedIndices(nextRevealed)
+        
+        handlePlayWordAudio(card)
+
+        revealNext(nextRevealed)
+      }, 4500)
+    }
+
+    revealNext(initialIndices)
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [wordAudioEnded, currentIndex, flashcards, isFlipped, challengeMode])
+
+  // 4. Lắng nghe phím gõ từ bàn phím cứng (Chế độ Tự gõ)
+  useEffect(() => {
+    if (challengeMode !== 'type' || isFlipped) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Nếu đang focus vào input ẩn thì để onChange xử lý, tránh trùng lặp sự kiện
+      if (document.activeElement === hiddenInputRef.current) return
+
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      
+      const key = e.key
+      if (key.length !== 1 || !/[a-zA-Z]/.test(key)) return
+
+      const card = flashcards[currentIndex]
+      if (!card) return
+
+      // Tự động focus lại vào input ẩn để các phím sau đi vào onChange
+      hiddenInputRef.current?.focus()
+
+      const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
+      if (nextIdx !== -1) {
+        if (card.word[nextIdx].toLowerCase() === key.toLowerCase()) {
+          const nextRevealed = [...revealedIndices, nextIdx]
+          setRevealedIndices(nextRevealed)
+
+          const checkNext = getNextUnrevealedIndex(card.word, nextRevealed)
+          if (checkNext === -1) {
+            triggerSuccessCelebration(card)
+          }
+        } else {
+          setWrongTypedIndex(nextIdx)
+          setTimeout(() => setWrongTypedIndex(null), 500)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [challengeMode, isFlipped, currentIndex, flashcards, revealedIndices])
+
+  // 5. Tự động hiển thị bàn phím ảo trên Mobile khi ở chế độ Tự gõ
+  useEffect(() => {
+    if (challengeMode === 'type' && !isFlipped) {
+      setTimeout(() => {
+        hiddenInputRef.current?.focus()
+      }, 300)
+    }
+  }, [challengeMode, isFlipped, currentIndex])
 
   // Xử lý nạp Flashcards khi chọn xong Topic
   const handleSelectTopic = useCallback(async (topic: Topic) => {
@@ -368,7 +719,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     }
   }, [router])
 
-  const handleNext = (e?: React.MouseEvent) => {
+  const handleNext = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation()
     stopCurrentAudio()
     setIsFlipped(false)
@@ -377,9 +728,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       setIsImageLoading(true)
       setCurrentIndex((prev) => (prev + 1) % flashcards.length)
     }, 200)
-  }
+  }, [flashcards.length])
 
-  const handlePrev = (e?: React.MouseEvent) => {
+  const handlePrev = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation()
     stopCurrentAudio()
     setIsFlipped(false)
@@ -387,7 +738,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       setIsImageLoading(true)
       setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
     }, 200)
-  }
+  }, [flashcards.length])
 
   // Quay lại màn hình chọn
   const handleBackToSelection = useCallback(() => {
@@ -448,7 +799,11 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault()
-        setIsFlipped(prev => !prev)
+        if (isFlipped) {
+          handleNext()
+        } else {
+          setIsFlipped(true)
+        }
       } else if (e.key === "ArrowRight") {
         handleNext()
       } else if (e.key === "ArrowLeft") {
@@ -460,7 +815,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [focusMode, flashcards, currentIndex])
+  }, [focusMode, flashcards, currentIndex, isFlipped, handleNext, handlePrev, handleBackToSelection])
 
   const activeCard = flashcards[currentIndex]
   const progressPercent = flashcards.length > 0 ? ((currentIndex + 1) / flashcards.length) * 100 : 0
@@ -732,37 +1087,134 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     : "absolute inset-0 w-full h-full rounded-[36px] bg-white border border-slate-200/80 flex flex-col justify-between overflow-hidden shadow-[0_20px_50px_rgba(15,23,42,0.05)]"
 
   return (
-    <div className={`fixed inset-0 z-[100] ${pageBg} flex flex-col justify-between overflow-hidden font-body animate-in fade-in zoom-in-95 duration-500`}>
+    <div
+      className={`fixed inset-0 z-[100] ${pageBg} flex flex-col justify-between overflow-hidden font-body animate-in fade-in zoom-in-95 duration-500`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       
-      {/* 1. Header Toolbar */}
-      <header className={`px-6 md:px-12 py-4 flex justify-between items-center shrink-0 ${headerBg}`}>
+      {/* Floating Header Actions (Transparent) */}
+      <div className="absolute top-[max(16px,env(safe-area-inset-top,16px))] left-4 right-4 md:top-6 md:left-8 md:right-8 z-50 flex justify-between items-center pointer-events-none">
         <button 
           onClick={handleBackToSelection}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold ${backButtonClass}`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto ${backButtonClass}`}
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Topics</span>
         </button>
-        
-        <div className="text-center hidden sm:block">
-          <p className={categoryTextClass}>{selectedCategory.name}</p>
-          <p className={topicTextClass}>{selectedTopic?.name}</p>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {/* Card Count Indicator */}
-          <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${cardCountClass}`}>
-            {currentIndex + 1} / {flashcards.length}
+        {/* Mode Switcher Segmented Control (Top Right) */}
+        <div className="pointer-events-auto">
+          <div className={`flex items-center gap-1 p-1 rounded-2xl border shadow-sm transition-all duration-300 ${
+            isKidMode 
+              ? "bg-amber-50/90 border-amber-200/60" 
+              : "bg-slate-50 border-slate-200"
+          }`}>
+            <button 
+              onClick={() => handleModeChange('hint')} 
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                challengeMode === 'hint' 
+                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+              }`}
+            >
+              Hint
+            </button>
+            <button 
+              onClick={() => handleModeChange('scramble')} 
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                challengeMode === 'scramble' 
+                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+              }`}
+            >
+              Scramble
+            </button>
+            <button 
+              onClick={() => handleModeChange('type')} 
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                challengeMode === 'type' 
+                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+              }`}
+            >
+              Type
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Native Language Definition (Top Center on Desktop, pushed down on Mobile to avoid overlapping) */}
+      {activeCard && !isFlipped && (
+        <div className="absolute left-1/2 -translate-x-1/2 top-[88px] md:top-[28px] z-40 pointer-events-none animate-in fade-in zoom-in-95 duration-300 text-center w-full max-w-[90%] px-4">
+          <span className={`font-black tracking-wide text-2xl md:text-3xl lg:text-4xl ${
+            isKidMode ? "text-amber-900" : "text-slate-800"
+          }`}>
+            {getDefinitionText(activeCard, currentLang)}
           </span>
         </div>
-      </header>
+      )}
 
       {/* 2. Central Content: 3D Flip Card */}
-      <main className="flex-1 flex flex-col justify-center items-center px-4 md:px-6 relative max-w-4xl mx-auto w-full">
+      <main className="flex-1 flex flex-col justify-center items-center px-4 md:px-6 pt-28 sm:pt-28 md:pt-24 relative max-w-4xl mx-auto w-full">
+
+        {/* Hidden input for mobile keyboard support */}
+        <input 
+          ref={hiddenInputRef}
+          type="text"
+          className="opacity-0 absolute pointer-events-none w-0 h-0"
+          value=""
+          onChange={handleHiddenInputChange}
+          aria-hidden="true"
+        />
+
+        {/* Custom keyframe styles for shake, fall and flyIn animation */}
+        <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+          }
+          .animate-shake {
+            animation: shake 0.2s ease-in-out 0s 2;
+          }
+          @keyframes fall {
+            0% {
+              transform: translateY(0) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(115vh) rotate(720deg);
+              opacity: 0;
+            }
+          }
+          .animate-fall {
+            animation: fall var(--duration) linear var(--delay) infinite;
+          }
+          @keyframes flyIn {
+            0% {
+              transform: translateY(24px) scale(0.3);
+              opacity: 0;
+            }
+            60% {
+              transform: translateY(-4px) scale(1.1);
+              opacity: 0.8;
+            }
+            100% {
+              transform: translateY(0) scale(1);
+              opacity: 1;
+            }
+          }
+          .animate-fly-in {
+            animation: flyIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          }
+        `}</style>
+
+
 
         {/* 3D Depth Container */}
         <div 
-          className="w-full max-w-[480px] h-[360px] md:h-[420px]"
+          className="w-[min(85vw,260px)] h-[min(85vw,260px)] sm:w-[320px] sm:h-[320px] md:w-[380px] md:h-[380px] transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]"
           style={{ perspective: "1200px" }}
         >
           {/* Card Inner wrapper */}
@@ -784,9 +1236,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               {/* Soft interior background gradient */}
               <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none" />
 
+
               {isKidMode ? (
                 // KIDS & KID: Bubbly preschool cartoon style image container
-                <div className="w-full h-full rounded-[32px] overflow-hidden relative border-4 border-amber-100 bg-amber-50/20">
+                <div className="w-full h-full rounded-[32px] overflow-hidden relative bg-white">
                   {activeCard?.imageUrl ? (
                     <>
                       {isImageLoading && (
@@ -798,7 +1251,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                         key={activeCard?.id}
                         src={activeCard.imageUrl} 
                         alt="Flashcard illustration"
-                        className={`w-full h-full object-cover transition-all duration-700 hover:scale-105 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                        className={`w-full h-full object-contain transition-all duration-700 hover:scale-105 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
                         onLoad={() => setIsImageLoading(false)}
                       />
                     </>
@@ -834,9 +1287,15 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                     )}
                   </div>
                   <div className="flex-1 flex flex-col justify-center items-center pt-4">
-                    <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none text-center">
-                      {activeCard?.word}
-                    </h3>
+                    {challengeMode === 'hint' ? (
+                      <h3 className="text-3xl font-black text-slate-800 tracking-tight leading-none text-center">
+                        {activeCard?.word}
+                      </h3>
+                    ) : (
+                      <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                        Spell the word below
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -846,7 +1305,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                 B. BACK SIDE
                 ======================================================== */}
             <div 
-              className={`${cardContainerClass} ${isKidMode ? 'p-5 md:p-6' : 'p-6'}`}
+              className={`${cardContainerClass} ${isKidMode ? 'pt-3 pb-2 px-4 md:pt-4 md:pb-3 md:px-5' : 'p-6'}`}
               style={{ 
                 backfaceVisibility: "hidden", 
                 transform: "rotateY(180deg)"
@@ -856,8 +1315,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none" />
 
               {/* 2. Central Area */}
-              <div className="flex-1 flex flex-col justify-start px-2 overflow-y-auto max-h-full no-scrollbar pb-4">
-                <div className="w-full my-auto flex flex-col gap-3 md:gap-4">
+              <div className="flex-1 flex flex-col justify-start px-2 overflow-y-auto max-h-full no-scrollbar pb-1">
+                <div className="w-full my-auto flex flex-col gap-2 md:gap-2.5">
                   
                   {/* Word, Phonetic & Audio */}
                   <div className="flex flex-col items-center text-center space-y-1.5 md:space-y-2 shrink-0">
@@ -959,20 +1418,115 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           </div>
         </div>
 
+        {/* Random letter-by-letter reveal area (outside card container) */}
+        {!isFlipped && (isKidMode || challengeMode !== 'hint') && activeCard && (
+          <div className="mt-3 flex flex-wrap justify-center items-center gap-1.5 md:gap-2 max-w-[480px] w-full select-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {activeCard.word.split("").map((char, index) => {
+              const isSpace = char === " ";
+              const isLetterChar = /[a-zA-Z]/.test(char);
+              const isRevealed = !isLetterChar || revealedIndices.includes(index);
+              
+              // Hiệu ứng rung đỏ khi gõ sai chữ cái
+              const isWrong = wrongTypedIndex === index;
+
+              if (isSpace) {
+                return (
+                  <span key={index} className="w-3.5 md:w-5" />
+                );
+              }
+              
+              // Xác định kích thước động cho từ dài ngắn khác nhau
+              const wordLength = activeCard.word.replace(/\s/g, '').length;
+              let sizeClass = "w-9 h-9 md:w-11 md:h-11 text-lg md:text-xl rounded-xl";
+              if (wordLength > 12) {
+                sizeClass = "w-5 h-5 md:w-7 md:h-7 text-[10px] md:text-xs rounded-md";
+              } else if (wordLength > 9) {
+                sizeClass = "w-6 h-6 md:w-8 md:h-8 text-xs md:text-sm rounded-md";
+              } else if (wordLength > 6) {
+                sizeClass = "w-7 h-7 md:w-9 md:h-9 text-sm md:text-base rounded-lg";
+              }
+              
+              return (
+                <span 
+                  key={index} 
+                  className={`${sizeClass} flex items-center justify-center font-black border-2 transition-all duration-300 ${
+                    isWrong
+                      ? "animate-shake border-red-500 bg-red-50 text-red-600"
+                      : isRevealed 
+                      ? `${challengeMode === 'scramble' ? 'animate-fly-in' : ''} ${
+                          isKidMode 
+                            ? "bg-amber-100 border-amber-300 text-amber-950" 
+                            : "bg-indigo-50 border-indigo-200 text-indigo-950"
+                        } scale-100 shadow-sm` 
+                      : (challengeMode === 'scramble'
+                          ? "border-transparent bg-transparent text-transparent opacity-0 pointer-events-none scale-50"
+                          : `${isKidMode ? "bg-slate-50/80 border-slate-200 text-slate-300" : "bg-slate-50/60 border-slate-200/80 text-slate-300"} border-dashed scale-95`)
+                  }`}
+                >
+                  {isRevealed ? char.toUpperCase() : ""}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
         {/* Sequential Action Button */}
-        <div className="mt-8 shrink-0 flex justify-center w-full">
+        <div className={`shrink-0 flex justify-center w-full ${!isFlipped && (isKidMode || challengeMode !== 'hint') ? 'mt-4' : 'mt-4 md:mt-8'}`}>
           {!isFlipped ? (
-            <button
-              onClick={() => setIsFlipped(true)}
-              className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
-                isKidMode
-                  ? `px-12 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`
-                  : `px-8 py-3.5 rounded-full shadow-md hover:scale-105 text-sm bg-gradient-to-r ${themeConfig.revealBg}`
-              }`}
-            >
-              <span>Reveal Details</span>
-              <Sparkles className="w-5 h-5 group-hover:animate-pulse text-white" />
-            </button>
+            challengeMode === 'hint' ? (
+              <button
+                onClick={() => setIsFlipped(true)}
+                className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
+                  isKidMode
+                    ? `px-12 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`
+                    : `px-8 py-3.5 rounded-full shadow-md hover:scale-105 text-sm bg-gradient-to-r ${themeConfig.revealBg}`
+                }`}
+              >
+                <span>Reveal Details</span>
+                <Sparkles className="w-5 h-5 group-hover:animate-pulse text-white" />
+              </button>
+            ) : challengeMode === 'scramble' ? (
+              /* Bong bóng chữ cái xáo trộn */
+              <div className="flex items-center justify-center gap-3 md:gap-3.5 shrink-0 flex-wrap min-h-[52px] w-full max-w-[480px] animate-in fade-in zoom-in-95 duration-300">
+                {scrambledLetters.map((item) => {
+                  const isShaking = shakeItemId === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      disabled={item.used}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleScrambleClick(item)
+                      }}
+                      className={`w-11 h-11 md:w-13 md:h-13 rounded-full font-black text-lg md:text-xl border-3 flex items-center justify-center shadow-md transition-all duration-300 ${
+                        item.used
+                          ? "opacity-0 scale-50 pointer-events-none"
+                          : isShaking
+                          ? "animate-shake border-red-500 bg-red-100 text-red-600"
+                          : (isKidMode 
+                              ? "bg-amber-100 hover:bg-amber-200 border-amber-300 text-amber-900 active:scale-90 hover:scale-105" 
+                              : "bg-white hover:bg-primary/5 border-primary text-primary active:scale-90 hover:scale-105")
+                      }`}
+                    >
+                      {item.letter.toUpperCase()}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              /* Khung hướng dẫn Tự Gõ */
+              <div 
+                onClick={() => hiddenInputRef.current?.focus()}
+                className={`cursor-pointer px-6 py-3 rounded-2xl border text-center transition-all duration-200 hover:scale-102 active:scale-98 max-w-[360px] w-full animate-in fade-in zoom-in-95 duration-300 shadow-sm ${
+                  isKidMode 
+                    ? "bg-amber-50/50 border-amber-200/40 text-amber-800 text-xs md:text-sm font-extrabold animate-pulse" 
+                    : "bg-slate-50 border-slate-200/60 text-slate-500 text-xs md:text-sm font-medium animate-pulse"
+                }`}
+              >
+                <span className="hidden md:inline">⌨️ Type any key to spell the word</span>
+                <span className="md:hidden">📱 Tap here to open the keyboard</span>
+              </div>
+            )
           ) : (
             <button
               onClick={handleNext}
@@ -991,7 +1545,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       </main>
 
       {/* 3. Footer Controls */}
-      <footer className={`px-6 md:px-12 py-6 border-t flex flex-col items-center gap-4 shrink-0 ${
+      <footer className={`px-6 md:px-12 py-3 md:py-6 pb-[max(12px,env(safe-area-inset-bottom,12px))] border-t flex flex-col items-center gap-3 md:gap-4 shrink-0 ${
         isKidMode ? "bg-white/90 border-amber-200/50" : "bg-white/95 border-slate-200/80"
       }`}>
         
@@ -1008,9 +1562,27 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         <div className={`text-center text-[10px] font-black uppercase tracking-widest hidden sm:block select-none ${
           isKidMode ? "text-amber-500/80" : "text-slate-400"
         }`}>
-          Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> to flip, use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch cards
+          Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> to flip / next card, use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch cards
         </div>
       </footer>
+
+      {/* Hiệu ứng pháo hoa giấy chúc mừng rơi toàn màn hình */}
+      {showCelebration && confettiParticles.map((p) => (
+        <span
+          key={p.id}
+          className="fixed z-[150] rounded-sm animate-fall pointer-events-none"
+          style={{
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            backgroundColor: p.color,
+            transform: `rotate(${p.angle}deg)`,
+            '--duration': `${p.duration}s`,
+            '--delay': `${p.delay}s`,
+          } as any}
+        />
+      ))}
 
     </div>
   )
