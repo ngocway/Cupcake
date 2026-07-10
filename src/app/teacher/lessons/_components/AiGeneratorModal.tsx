@@ -33,6 +33,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
   // Form states
   const [topic, setTopic] = useState("");
   const [reference, setReference] = useState("");
+  const [generateSentenceAudio, setGenerateSentenceAudio] = useState(false);
   
   // Taxonomy states
   const [subject, setSubject] = useState("english");
@@ -119,7 +120,8 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
             clozeCount,
             reference: reference.trim() || undefined,
             ttsVoice,
-            ttsSpeed
+            ttsSpeed,
+            generateSentenceAudio
           });
 
           if (res.error) {
@@ -268,6 +270,27 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
                 value={reference} 
                 onChange={e => setReference(e.target.value)} 
               />
+            </div>
+
+            {/* Toggle sentence audio */}
+            <div className="flex items-center gap-4 pt-3.5 border-t border-gray-150 dark:border-slate-800 mt-1">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Tạo audio từng câu
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                  Tạo âm thanh đọc cho mỗi câu/đoạn ngắn trong bài đọc
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={generateSentenceAudio}
+                  onChange={(e) => setGenerateSentenceAudio(e.target.checked)}
+                />
+                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-650 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </div>
 

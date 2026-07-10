@@ -161,7 +161,7 @@ export function CustomAudioPlayer({
 
             
             {/* Speed buttons */}
-            {([1, 1.5, 2] as const).map((speed) => (
+            {([0.7, 0.9, 1, 1.5, 2] as const).map((speed) => (
               <button
                 key={speed}
                 onClick={() => changeSpeed(speed)}

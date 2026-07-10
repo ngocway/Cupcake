@@ -512,6 +512,24 @@ export function BookDetailClient({ bookId }: Props) {
   });
   const [confirmOcrModal, setConfirmOcrModal] = useState(false);
 
+  // Batch translation state
+  const [batchTranslateProgress, setBatchTranslateProgress] = useState<{
+    current: number;
+    total: number;
+    status: "idle" | "running" | "complete" | "error";
+    slideStatuses: Record<string, "generating" | "done" | "error" | "skip">;
+    successCount: number;
+    skipCount: number;
+  }>({
+    current: 0,
+    total: 0,
+    status: "idle",
+    slideStatuses: {},
+    successCount: 0,
+    skipCount: 0,
+  });
+  const [confirmTranslateModal, setConfirmTranslateModal] = useState(false);
+
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -944,13 +962,95 @@ export function BookDetailClient({ bookId }: Props) {
     }
   };
 
+  // ── Batch Translation ─────────────────────────────────────
+
+  const startBatchTranslation = async (overwrite = false, confirmed = false) => {
+    setConfirmTranslateModal(false);
+    const hasExistingTranslation = sortedSlides.some(s => s.translations && Object.keys(s.translations as object).length > 0);
+    if (hasExistingTranslation && !overwrite && !confirmed) {
+      setConfirmTranslateModal(true);
+      return;
+    }
+
+    setBatchTranslateProgress({
+      current: 0,
+      total: sortedSlides.length,
+      status: "running",
+      slideStatuses: {},
+      successCount: 0,
+      skipCount: 0,
+    });
+
+    try {
+      const res = await fetch(`/api/admin/read-along/${bookId}/translate/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overwrite }),
+      });
+      if (!res.body) throw new Error("No response stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try { handleBatchTranslateEvent(JSON.parse(line.slice(6))); } catch {}
+          }
+        }
+      }
+    } catch (err: any) {
+      toast.error("Dịch hàng loạt thất bại: " + err.message);
+      setBatchTranslateProgress(p => ({ ...p, status: "error" }));
+    }
+  };
+
+  const handleBatchTranslateEvent = (event: any) => {
+    switch (event.type) {
+      case "start":
+        setBatchTranslateProgress(p => ({ ...p, total: event.total, status: "running" }));
+        break;
+      case "progress":
+        setBatchTranslateProgress(p => ({
+          ...p,
+          current: event.current,
+          slideStatuses: { ...p.slideStatuses, [event.slideId]: event.status },
+          successCount: event.status === "done" ? p.successCount + 1 : p.successCount,
+        }));
+        break;
+      case "skip":
+        setBatchTranslateProgress(p => ({
+          ...p,
+          current: event.current,
+          slideStatuses: { ...p.slideStatuses, [event.slideId]: "skip" },
+          skipCount: p.skipCount + 1,
+        }));
+        break;
+      case "complete":
+        setBatchTranslateProgress(p => ({ ...p, status: "complete", successCount: event.successCount, skipCount: event.skipCount }));
+        toast.success(`🌐 Xong! Đã dịch ${event.successCount} trang, bỏ qua ${event.skipCount} trang.`);
+        fetchBook();
+        break;
+      case "error":
+        toast.error("Lỗi dịch: " + event.message);
+        setBatchTranslateProgress(p => ({ ...p, status: "error" }));
+        break;
+    }
+  };
+
   const slidesWithAudio = sortedSlides.filter(s => s.audioUrl).length;
   const slidesWithImages = sortedSlides.filter(s => s.imageUrl).length;
   const slidesWithText = sortedSlides.filter(s => s.text?.trim()).length;
+  const slidesWithTranslations = sortedSlides.filter(s => s.translations && Object.keys(s.translations as object).length > 0).length;
   const totalSlides = sortedSlides.length;
   const isBatchRunning = batchProgress.status === "running";
   const isBatchImageRunning = batchImageProgress.status === "running";
   const isBatchOcrRunning = batchOcrProgress.status === "running";
+  const isBatchTranslateRunning = batchTranslateProgress.status === "running";
   const activeSlide = activeId ? sortedSlides.find(s => s.id === activeId) : null;
 
   // ── Batch OCR ─────────────────────────────────────────────
@@ -1104,9 +1204,17 @@ export function BookDetailClient({ bookId }: Props) {
               <span className="text-xs text-neutral-500">ảnh</span>
             </div>
 
+            <div className="flex items-center gap-2 bg-neutral-800 border border-neutral-700 px-3 py-1.5 rounded-xl" title="Bản dịch các ngôn ngữ bản địa">
+              <span className="material-symbols-outlined text-sm text-sky-400">translate</span>
+              <span className="text-sm font-bold text-white">
+                {slidesWithTranslations}<span className="text-neutral-500 font-normal">/{totalSlides}</span>
+              </span>
+              <span className="text-xs text-neutral-500">dịch</span>
+            </div>
+
             <button
               onClick={() => startBatchImageGeneration(false)}
-              disabled={isBatchImageRunning || isBatchRunning}
+              disabled={isBatchImageRunning || isBatchRunning || isBatchOcrRunning || isBatchTranslateRunning}
               className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_4px_20px_rgba(245,158,11,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isBatchImageRunning ? (
@@ -1127,7 +1235,7 @@ export function BookDetailClient({ bookId }: Props) {
 
             <button
               onClick={() => startBatchOcr(false)}
-              disabled={isBatchOcrRunning || isBatchRunning || isBatchImageRunning}
+              disabled={isBatchOcrRunning || isBatchRunning || isBatchImageRunning || isBatchTranslateRunning}
               className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_4px_20px_rgba(6,182,212,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isBatchOcrRunning ? (
@@ -1147,8 +1255,29 @@ export function BookDetailClient({ bookId }: Props) {
             </button>
 
             <button
+              onClick={() => startBatchTranslation(false)}
+              disabled={isBatchTranslateRunning || isBatchRunning || isBatchImageRunning || isBatchOcrRunning}
+              className="px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_4px_20px_rgba(14,165,233,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isBatchTranslateRunning ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Đang dịch...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-base">translate</span>
+                  Dịch tất cả
+                </>
+              )}
+            </button>
+
+            <button
               onClick={() => startBatchGeneration(false)}
-              disabled={isBatchRunning}
+              disabled={isBatchRunning || isBatchImageRunning || isBatchOcrRunning || isBatchTranslateRunning}
               className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_4px_20px_rgba(139,92,246,0.3)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isBatchRunning ? (
@@ -1244,6 +1373,33 @@ export function BookDetailClient({ bookId }: Props) {
                   background: batchOcrProgress.status === "complete"
                     ? "linear-gradient(90deg, #22c55e, #16a34a)"
                     : "linear-gradient(90deg, #06b6d4, #0d9488)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Translation batch progress bar */}
+        {(isBatchTranslateRunning || batchTranslateProgress.status === "complete") && (
+          <div className="mt-3 pt-3 border-t border-neutral-800">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="text-neutral-300 font-medium">
+                {isBatchTranslateRunning
+                  ? `🌐 Đang dịch: ${batchTranslateProgress.current}/${batchTranslateProgress.total}`
+                  : `✅ Dịch xong: ${batchTranslateProgress.successCount} trang, ${batchTranslateProgress.skipCount} bỏ qua`}
+              </span>
+              <span className="text-neutral-500 tabular-nums">
+                {batchTranslateProgress.total > 0 ? Math.round((batchTranslateProgress.current / batchTranslateProgress.total) * 100) : 0}%
+              </span>
+            </div>
+            <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: batchTranslateProgress.total > 0 ? `${(batchTranslateProgress.current / batchTranslateProgress.total) * 100}%` : "0%",
+                  background: batchTranslateProgress.status === "complete"
+                    ? "linear-gradient(90deg, #22c55e, #16a34a)"
+                    : "linear-gradient(90deg, #0ea5e9, #2563eb)",
                 }}
               />
             </div>
@@ -1502,6 +1658,40 @@ export function BookDetailClient({ bookId }: Props) {
               </button>
               <button
                 onClick={() => setConfirmOcrModal(false)}
+                className="py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl text-sm font-bold transition-all border border-neutral-700"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Confirm Translate Overwrite Modal */}
+      {confirmTranslateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-700 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center mb-4">
+              <span className="material-symbols-outlined text-5xl text-blue-400">translate</span>
+            </div>
+            <h3 className="text-white font-bold text-center text-lg mb-2">Đã có bản dịch</h3>
+            <p className="text-neutral-400 text-sm text-center mb-6 leading-relaxed">
+              Một số trang đã có bản dịch. Bạn muốn xử lý thế nào?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => startBatchTranslation(false, true)}
+                className="py-3 bg-blue-700 hover:bg-blue-600 text-white rounded-2xl text-sm font-bold transition-all"
+              >
+                Chỉ dịch trang chưa có
+              </button>
+              <button
+                onClick={() => startBatchTranslation(true, true)}
+                className="py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-sm font-bold transition-all"
+              >
+                Dịch lại tất cả (ghi đè)
+              </button>
+              <button
+                onClick={() => setConfirmTranslateModal(false)}
                 className="py-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-2xl text-sm font-bold transition-all border border-neutral-700"
               >
                 Hủy

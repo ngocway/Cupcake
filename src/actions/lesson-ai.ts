@@ -1206,6 +1206,7 @@ export async function generateAILessonFully(params: {
   reference?: string;
   ttsVoice?: string;
   ttsSpeed?: number;
+  generateSentenceAudio?: boolean;
 }) {
   const session = await auth();
   if (!session?.user?.id || (session.user.role !== 'ADMIN' && session.user.role !== 'TEACHER')) {
@@ -1217,7 +1218,8 @@ export async function generateAILessonFully(params: {
   const {
     topic, learningGoals, subject, targetAudiences, audienceLevels, language, length,
     vocabCount, mcqCount, mcqMultiCount, tfCount, clozeCount,
-    reference, ttsVoice = "Aoede", ttsSpeed = 1.0
+    reference, ttsVoice = "Aoede", ttsSpeed = 1.0,
+    generateSentenceAudio = false
   } = params;
 
   try {
@@ -1395,26 +1397,35 @@ export async function generateAILessonFully(params: {
         return { url: "", words: null };
       })(),
       // B. Chunk audios generation
-      Promise.all(paragraphChunksList.map(async (item, index) => {
-        try {
-          // Stagger calls by (index + 1) * 300ms to avoid Gemini concurrent rate limits and RPM limits
-          await new Promise(resolve => setTimeout(resolve, (index + 1) * 300));
-          console.log(`Generating passage chunk TTS staggered (index ${index}): "${item.chunkText}"`);
-          const ttsRes = await generateTTSHelper(item.chunkText, ttsVoice, ttsSpeed, session.user.id, "inline");
-          return {
-            pIdx: item.pIdx,
-            chunkText: item.chunkText,
-            audioUrl: ttsRes.url
-          };
-        } catch (err) {
-          console.error(`Failed to generate TTS for chunk "${item.chunkText}":`, err);
-          return {
+      (async () => {
+        if (!generateSentenceAudio) {
+          return paragraphChunksList.map(item => ({
             pIdx: item.pIdx,
             chunkText: item.chunkText,
             audioUrl: ""
-          };
+          }));
         }
-      })),
+        return Promise.all(paragraphChunksList.map(async (item, index) => {
+          try {
+            // Stagger calls by (index + 1) * 300ms to avoid Gemini concurrent rate limits and RPM limits
+            await new Promise(resolve => setTimeout(resolve, (index + 1) * 300));
+            console.log(`Generating passage chunk TTS staggered (index ${index}): "${item.chunkText}"`);
+            const ttsRes = await generateTTSHelper(item.chunkText, ttsVoice, ttsSpeed, session.user.id, "inline");
+            return {
+              pIdx: item.pIdx,
+              chunkText: item.chunkText,
+              audioUrl: ttsRes.url
+            };
+          } catch (err) {
+            console.error(`Failed to generate TTS for chunk "${item.chunkText}":`, err);
+            return {
+              pIdx: item.pIdx,
+              chunkText: item.chunkText,
+              audioUrl: ""
+            };
+          }
+        }));
+      })(),
       // C. Thumbnail image generation
       generateDalleImageHelper(thumbPrompt, "dall-e-3", "1024x576", session.user.id)
         .catch(err => {
@@ -1434,12 +1445,16 @@ export async function generateAILessonFully(params: {
     const finalThumbnail = actualThumbUrl || placeholderThumbUrl;
     const finalInLessonImageUrl = actualInLessonUrl || placeholderContentImgUrl;
 
-    const failedChunks = chunksTtsRes.filter(c => !c.audioUrl).length;
+    const failedChunks = generateSentenceAudio ? chunksTtsRes.filter(c => !c.audioUrl).length : 0;
     const globalAudioFailed = !wholeAudioUrl;
-    if (globalAudioFailed && failedChunks === paragraphChunksList.length && paragraphChunksList.length > 0) {
-      lessonWarnings.push("Không thể tạo bất kỳ file âm thanh (audio) nào cho bài học do giới hạn API của Google/Gemini.");
-    } else if (globalAudioFailed || failedChunks > 0) {
-      lessonWarnings.push(`Không thể tạo đầy đủ âm thanh cho bài học (thất bại ${failedChunks}/${paragraphChunksList.length} đoạn audio).`);
+    if (globalAudioFailed) {
+      if (generateSentenceAudio && paragraphChunksList.length > 0 && failedChunks === paragraphChunksList.length) {
+        lessonWarnings.push("Không thể tạo bất kỳ file âm thanh (audio) nào cho bài học do giới hạn API của Google/Gemini.");
+      } else {
+        lessonWarnings.push("Không thể tạo âm thanh (audio) toàn bài học.");
+      }
+    } else if (generateSentenceAudio && failedChunks > 0) {
+      lessonWarnings.push(`Không thể tạo đầy đủ âm thanh từng câu cho bài học (thất bại ${failedChunks}/${paragraphChunksList.length} đoạn audio).`);
     }
 
     if (!actualThumbUrl) {

@@ -3,6 +3,9 @@ import { HomeShell } from "../_components/HomeShell"
 import { getFlashcardTopics } from "@/actions/flashcards-actions"
 import { getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { FlashcardsClient } from "./FlashcardsClient"
+import { cookies } from "next/headers"
+import { auth } from "@/auth"
+import prisma from "@/lib/prisma"
 
 export const metadata = {
   title: "English Flashcards for Kids & Teens | Dolcake",
@@ -13,6 +16,20 @@ export default async function FlashcardsPage() {
   const config = await getOnboardingConfig()
   const englishSubject = (config as any)?.subjects?.find((s: any) => s.id === 'english');
   const targetAudiences = englishSubject?.ageGroups || [];
+  
+  const session = await auth()
+  const cookieStore = await cookies()
+
+  let studyAgeGroup = cookieStore.get("study_age_group")?.value || null
+  if (session?.user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { studyAgeGroup: true }
+    })
+    if (dbUser?.studyAgeGroup) {
+      studyAgeGroup = dbUser.studyAgeGroup
+    }
+  }
   
   const topics = await getFlashcardTopics()
   
@@ -53,7 +70,7 @@ export default async function FlashcardsPage() {
             </div>
           </div>
         }>
-          <FlashcardsClient initialCategories={categories as any} />
+          <FlashcardsClient initialCategories={categories as any} studyAgeGroup={studyAgeGroup} />
         </Suspense>
       </main>
     </HomeShell>

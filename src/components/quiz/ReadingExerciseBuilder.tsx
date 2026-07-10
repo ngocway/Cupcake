@@ -191,6 +191,91 @@ function SortableQuestionItem({
                 </button>
               )}
             </div>
+
+            {/* Options / Answers display */}
+            {q.type === 'MULTIPLE_CHOICE' && q.options && q.options.length > 0 && (
+              <div className="mt-2.5 mb-2 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-2xl">
+                {q.options.map((opt: any, oIdx: number) => (
+                  <div 
+                    key={opt.id || oIdx} 
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-semibold ${
+                      opt.isCorrect 
+                        ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400' 
+                        : 'bg-slate-50/40 border-slate-100/70 dark:bg-gray-800/20 dark:border-gray-800 text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${opt.isCorrect ? 'bg-emerald-500 animate-pulse' : 'bg-slate-350 dark:bg-slate-650'}`}></span>
+                    <span className="truncate">{opt.text || '(Không có nội dung)'}</span>
+                    {opt.isCorrect && (
+                      <span className="material-symbols-outlined text-[14px] text-emerald-600 dark:text-emerald-400 ml-auto shrink-0">check</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {q.type === 'TRUE_FALSE' && (
+              <div className="mt-2.5 mb-2 flex gap-2">
+                <span className={`px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+                  q.correctAnswer === 'true'
+                    ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400' 
+                    : 'bg-slate-50/40 border-slate-100/70 dark:bg-gray-800/20 dark:border-gray-800 text-slate-400 dark:text-slate-500'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${q.correctAnswer === 'true' ? 'bg-emerald-500' : 'bg-slate-350 dark:bg-slate-650'}`}></span>
+                  Đúng (True)
+                </span>
+                <span className={`px-4 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+                  q.correctAnswer === 'false'
+                    ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-400' 
+                    : 'bg-slate-50/40 border-slate-100/70 dark:bg-gray-800/20 dark:border-gray-800 text-slate-400 dark:text-slate-500'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${q.correctAnswer === 'false' ? 'bg-emerald-500' : 'bg-slate-350 dark:bg-slate-650'}`}></span>
+                  Sai (False)
+                </span>
+              </div>
+            )}
+
+            {q.type === 'CLOZE_TEST' && (
+              <div className="mt-2.5 mb-2 flex flex-wrap gap-2">
+                {(() => {
+                  const qText = q.questionText || q.textWithBlanks || '';
+                  const regex = /\{\{([^}]+)\}\}/g;
+                  const matches = [];
+                  let match;
+                  while ((match = regex.exec(qText)) !== null) {
+                    matches.push(match[1]);
+                  }
+                  if (matches.length > 0) {
+                    return matches.map((ans, aIdx) => (
+                      <span 
+                        key={aIdx} 
+                        className="px-4 py-2 rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center gap-1.5"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                        Ô trống {aIdx + 1}: {ans}
+                      </span>
+                    ));
+                  }
+                  return <span className="text-xs text-slate-450 dark:text-slate-500 italic">Không tìm thấy từ khoá điền từ trong dấu ngoặc kép kép {"{{...}}"}</span>;
+                })()}
+              </div>
+            )}
+
+            {q.type === 'MATCHING' && q.pairs && q.pairs.length > 0 && (
+              <div className="mt-2.5 mb-2 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-2xl">
+                {q.pairs.map((pair: any, pIdx: number) => (
+                  <div 
+                    key={pair.id || pIdx} 
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-100/70 dark:border-gray-800 bg-slate-50/40 dark:bg-gray-800/20 text-xs font-semibold text-slate-600 dark:text-slate-350"
+                  >
+                    <span className="text-slate-800 dark:text-slate-200">{pair.leftText || '(Trống)'}</span>
+                    <span className="material-symbols-outlined text-[14px] text-slate-400 shrink-0">arrow_right_alt</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{pair.rightText || '(Trống)'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               <span className="px-2 py-1 bg-slate-100 dark:bg-gray-700 rounded text-[10px] font-bold text-slate-500 uppercase">
                 {q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 

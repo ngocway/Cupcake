@@ -10,6 +10,7 @@ interface TaxonomySelectorProps {
   setAudienceLevels: (levels: Record<string, string>) => void;
   learningGoals: string[];
   setLearningGoals: (goals: string[]) => void;
+  hideSubject?: boolean;
 }
 
 export function TaxonomySelector({
@@ -21,14 +22,30 @@ export function TaxonomySelector({
   audienceLevels,
   setAudienceLevels,
   learningGoals,
-  setLearningGoals
+  setLearningGoals,
+  hideSubject = true
 }: TaxonomySelectorProps) {
   const currentSubjectConfig = config?.subjects?.find((s: any) => s.id === subject);
+
+  React.useEffect(() => {
+    if (config?.subjects) {
+      const hasSubject = config.subjects.some((s: any) => s.id === subject);
+      if (!hasSubject) {
+        const hasEnglish = config.subjects.some((s: any) => s.id === 'english');
+        if (hasEnglish) {
+          setSubject('english');
+        } else if (config.subjects.length > 0) {
+          setSubject(config.subjects[0].id);
+        }
+      }
+    }
+  }, [config, subject, setSubject]);
 
   return (
     <>
       {/* Subject */}
-      <div className="space-y-2">
+      {!hideSubject && (
+        <div className="space-y-2">
         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Môn học (Subject)</label>
         <div className="flex flex-wrap gap-2">
           {config?.subjects?.filter((s:any) => !s.isHidden).map((s: any) => (
@@ -51,6 +68,7 @@ export function TaxonomySelector({
           ))}
         </div>
       </div>
+      )}
 
       {/* Target Audiences */}
       <div className="space-y-4">

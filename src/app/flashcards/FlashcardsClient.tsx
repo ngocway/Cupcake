@@ -160,9 +160,10 @@ const getLangTitle = (lang: string) => {
 
 interface FlashcardsClientProps {
   initialCategories: Category[]
+  studyAgeGroup?: string | null
 }
 
-export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
+export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudyAgeGroup }: FlashcardsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
@@ -421,8 +422,9 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
 
     // Fallback: match category with studyAgeGroup if no selectedCategory set yet
     if (!selectedCategory) {
-      if (studyAgeGroup) {
-        const cleanAge = studyAgeGroup.toLowerCase()
+      const activeAgeGroup = serverStudyAgeGroup || studyAgeGroup
+      if (activeAgeGroup) {
+        const cleanAge = activeAgeGroup.toLowerCase()
         const found = categories.find(c => {
           const slug = c.slug.toLowerCase()
           if (cleanAge.includes("kindergarten") || cleanAge.includes("kindergarden") || cleanAge === "kids-2-5") {
@@ -437,7 +439,7 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
       }
       setSelectedCategory(categories[0] || null)
     }
-  }, [categories, studyAgeGroup, searchParams, selectedCategory, selectedTopic, handleSelectTopic, focusMode])
+  }, [categories, studyAgeGroup, serverStudyAgeGroup, searchParams, selectedCategory, selectedTopic, handleSelectTopic, focusMode])
 
   // Hỗ trợ bấm phím mũi tên & Space để lật/chuyển thẻ
   useEffect(() => {
@@ -519,95 +521,11 @@ export function FlashcardsClient({ initialCategories }: FlashcardsClientProps) {
         {/* Selection Area (Category & Topic on the same page) */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-[40px] p-6 md:p-8 shadow-xl shadow-slate-100/50 dark:shadow-none space-y-10">
           
-          {/* A. Category Selector */}
-          <div className="space-y-5">
-            <h2 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <Layers className="w-4.5 h-4.5 text-primary" />
-              <span>Step 1: Select Age Category</span>
-            </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-              {categories.map((cat) => {
-                const isActive = selectedCategory?.id === cat.id
-                
-                // Dynamic style and emoji mapping for categories
-                let catIcon = "🧸"
-                let catBg = "bg-amber-100/80 border-amber-200 text-amber-600"
-                let bgGradient = "from-amber-400 to-orange-500"
-                let ageRange = "2-5 Years"
-                let glowShadow = "shadow-amber-100/60"
-
-                if (cat.slug === "kindergarten" || cat.slug === "kindergarden" || cat.slug === "kids-2-5") {
-                  catIcon = "🧸"
-                  catBg = "bg-amber-100/80 border-amber-200 text-amber-600"
-                  bgGradient = "from-amber-400 to-orange-500"
-                  ageRange = "2-5 Years"
-                  glowShadow = "shadow-amber-100/60"
-                } else if (cat.slug === "kid-6-12" || cat.slug === "kids" || cat.slug === "kid") {
-                  catIcon = "🎒"
-                  catBg = "bg-emerald-100/80 border-emerald-200 text-emerald-600"
-                  bgGradient = "from-emerald-400 to-teal-500"
-                  ageRange = "6-12 Years"
-                  glowShadow = "shadow-emerald-100/60"
-                } else if (cat.slug === "teen" || cat.slug === "teens") {
-                  catIcon = "🎧"
-                  catBg = "bg-indigo-100/80 border-indigo-200 text-indigo-600"
-                  bgGradient = "from-indigo-450 to-violet-500"
-                  ageRange = "Teenagers"
-                  glowShadow = "shadow-indigo-100/60"
-                } else if (cat.slug === "readers" || cat.slug === "adults" || cat.slug === "adult" || cat.slug === "learner") {
-                  catIcon = "🚀"
-                  catBg = "bg-pink-100/80 border-pink-200 text-pink-600"
-                  bgGradient = "from-pink-400 to-rose-500"
-                  ageRange = "Advanced"
-                  glowShadow = "shadow-pink-100/60"
-                }
-
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setSelectedCategory(cat)
-                      setSelectedTopic(null) // Reset old topic
-                    }}
-                    className={`relative overflow-hidden p-6 rounded-[32px] border-4 transition-all duration-500 flex flex-col text-left group active:scale-95 ${
-                      isActive 
-                        ? `border-primary bg-white shadow-2xl ${glowShadow} scale-[1.03]` 
-                        : "border-slate-100 dark:border-slate-800 bg-slate-50/50 hover:bg-white hover:border-primary/30 hover:scale-[1.01] hover:shadow-xl hover:shadow-slate-100"
-                    }`}
-                  >
-                    {/* Background Glow */}
-                    {isActive && (
-                      <span className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${bgGradient} opacity-[0.08] rounded-full blur-2xl -translate-y-8 translate-x-8`} />
-                    )}
-                    
-                    {/* Category circular icon box */}
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mb-4 transition-transform duration-500 group-hover:scale-110 shadow-sm border ${catBg}`}>
-                      {catIcon}
-                    </div>
-
-                    <span className="font-black text-xl text-slate-800 dark:text-slate-200 leading-tight group-hover:text-primary transition-colors">
-                      {cat.name}
-                    </span>
-                    
-                    {/* Active indicator bar */}
-                    <span className={`h-2 rounded-full mt-5 transition-all duration-500 ${
-                      isActive 
-                        ? `w-14 bg-gradient-to-r ${bgGradient}` 
-                        : "w-0 bg-slate-200 dark:bg-slate-700"
-                    }`} />
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <hr className="border-slate-100 dark:border-slate-800/50" />
-
           {/* B. Choose Topic */}
           <div className="space-y-5">
             <h2 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <Award className="w-4.5 h-4.5 text-emerald-500" />
-              <span>Step 2: Select Vocabulary Topic</span>
+              <span>Select Vocabulary Topic</span>
             </h2>
             {selectedCategory ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
