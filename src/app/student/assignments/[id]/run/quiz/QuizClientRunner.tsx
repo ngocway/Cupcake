@@ -737,7 +737,11 @@ function SidePanelToggleButton({ promise, isSidebarOpen, setIsSidebarOpen }: { p
   return (
     <button
       onClick={() => setIsSidebarOpen(true)}
-      className={`fixed top-1/2 right-0 -translate-y-1/2 z-[90] px-4 py-3 bg-primary text-white rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.15)] flex items-center justify-center hover:pr-6 active:scale-95 transition-all duration-300 ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100 translate-x-0'}`}
+      className={`fixed right-0 z-[90] px-4 py-3 bg-blue-500 border-2 border-green-400 text-white font-bold rounded-l-2xl shadow-[-4px_0_20px_rgba(0,0,0,0.15)] flex items-center justify-center hover:bg-blue-600 active:scale-95 transition-all duration-300
+        top-1/2 [@media(max-width:800px)]:top-auto
+        -translate-y-1/2 [@media(max-width:800px)]:translate-y-0
+        [@media(max-width:800px)]:bottom-24
+        ${isSidebarOpen ? 'opacity-0 pointer-events-none translate-x-10' : 'opacity-100 translate-x-0'}`}
     >
       <span className="font-black text-xs uppercase tracking-widest">View lesson</span>
     </button>
