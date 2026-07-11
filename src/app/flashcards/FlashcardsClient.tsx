@@ -217,6 +217,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const [scrambledLetters, setScrambledLetters] = useState<{ id: number, letter: string, index: number, used: boolean }[]>([])
   const [shakeItemId, setShakeItemId] = useState<number | null>(null)
   const [wrongTypedIndex, setWrongTypedIndex] = useState<number | null>(null)
+  const [wrongTypedLetter, setWrongTypedLetter] = useState<string | null>(null)
+  const [wrongFading, setWrongFading] = useState<boolean>(false)
   const [showCelebration, setShowCelebration] = useState<boolean>(false)
   const [confettiParticles, setConfettiParticles] = useState<{
     id: number
@@ -230,6 +232,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   }[]>([])
 
   const hiddenInputRef = useRef<HTMLInputElement | null>(null)
+  // Timestamp của lần cuối physical keydown xử lý — dùng để tránh onChange xử lý trùng
+  const lastPhysicalKeyTimeRef = useRef<number>(0)
 
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -521,17 +525,23 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const handleHiddenInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (!val) return
-    const key = val[val.length - 1]
+    // Strip diacritics (NFD normalization) để xử lý bàn phím Telex/VNI trên mobile
+    // e.g. "ỏ" → "o", "ở" → "o"
+    const rawChar = val[val.length - 1]
+    const key = rawChar.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     e.target.value = ""
 
-    if (!/[a-zA-Z]/.test(key)) return
+    // Nếu physical keydown vừa xử lý rồi (trong vòng 100ms) → bỏ qua để tránh trùng lặp
+    if (Date.now() - lastPhysicalKeyTimeRef.current < 100) return
+
+    if (!/[a-z]/.test(key)) return
 
     const card = flashcards[currentIndex]
     if (!card) return
 
     const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
     if (nextIdx !== -1) {
-      if (card.word[nextIdx].toLowerCase() === key.toLowerCase()) {
+      if (card.word[nextIdx].toLowerCase() === key) {
         const nextRevealed = [...revealedIndices, nextIdx]
         setRevealedIndices(nextRevealed)
 
@@ -541,7 +551,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         }
       } else {
         setWrongTypedIndex(nextIdx)
-        setTimeout(() => setWrongTypedIndex(null), 500)
+        setWrongTypedLetter(key.toUpperCase())
+        setWrongFading(false)
+        setTimeout(() => setWrongFading(true), 700)
+        setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
       }
     }
   }
@@ -640,23 +653,25 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     if (challengeMode !== 'type' || isFlipped) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Nếu đang focus vào input ẩn thì để onChange xử lý, tránh trùng lặp sự kiện
-      if (document.activeElement === hiddenInputRef.current) return
-
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      
-      const key = e.key
-      if (key.length !== 1 || !/[a-zA-Z]/.test(key)) return
+
+      // Dùng e.code (phím vật lý) thay vì e.key để bypass IME Telex/VNI hoàn toàn
+      const codeMatch = e.code.match(/^Key([A-Z])$/)
+      if (!codeMatch) return
+      const key = codeMatch[1].toLowerCase()
 
       const card = flashcards[currentIndex]
       if (!card) return
 
-      // Tự động focus lại vào input ẩn để các phím sau đi vào onChange
-      hiddenInputRef.current?.focus()
+      // Chặn ký tự đi vào hiddenInput, sau đó blur hoàn toàn để Unikey không inject vào input
+      // Mobile không fire keydown qua window listener → không bị ảnh hưởng
+      e.preventDefault()
+      lastPhysicalKeyTimeRef.current = Date.now()
+      hiddenInputRef.current?.blur()  // ← Unikey không còn target nào để compose vào
 
       const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
       if (nextIdx !== -1) {
-        if (card.word[nextIdx].toLowerCase() === key.toLowerCase()) {
+        if (card.word[nextIdx].toLowerCase() === key) {
           const nextRevealed = [...revealedIndices, nextIdx]
           setRevealedIndices(nextRevealed)
 
@@ -666,7 +681,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           }
         } else {
           setWrongTypedIndex(nextIdx)
-          setTimeout(() => setWrongTypedIndex(null), 500)
+          setWrongTypedLetter(key.toUpperCase())
+          setWrongFading(false)
+          setTimeout(() => setWrongFading(true), 700)
+          setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
         }
       }
     }
@@ -1150,7 +1168,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           <span className={`font-black tracking-wide text-2xl md:text-3xl lg:text-4xl ${
             isKidMode ? "text-amber-900" : "text-slate-800"
           }`}>
-            {getDefinitionText(activeCard, currentLang)}
+            {challengeMode === 'hint'
+              ? activeCard.word
+              : getDefinitionText(activeCard, currentLang)}
           </span>
         </div>
       )}
@@ -1449,9 +1469,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               return (
                 <span 
                   key={index} 
-                  className={`${sizeClass} flex items-center justify-center font-black border-2 transition-all duration-300 ${
+                  className={`${sizeClass} flex items-center justify-center font-black border-2 transition-all duration-500 ${
                     isWrong
-                      ? "animate-shake border-red-500 bg-red-50 text-red-600"
+                      ? `animate-shake border-red-500 bg-red-100 text-red-600 ${wrongFading ? 'opacity-0 scale-90' : 'opacity-100'}`
                       : isRevealed 
                       ? `${challengeMode === 'scramble' ? 'animate-fly-in' : ''} ${
                           isKidMode 
@@ -1463,7 +1483,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                           : `${isKidMode ? "bg-slate-50/80 border-slate-200 text-slate-300" : "bg-slate-50/60 border-slate-200/80 text-slate-300"} border-dashed scale-95`)
                   }`}
                 >
-                  {isRevealed ? char.toUpperCase() : ""}
+                  {isWrong && wrongTypedLetter
+                    ? wrongTypedLetter
+                    : isRevealed ? char.toUpperCase() : ""}
                 </span>
               );
             })}
@@ -1514,17 +1536,59 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                 })}
               </div>
             ) : (
-              /* Khung hướng dẫn Tự Gõ */
-              <div 
-                onClick={() => hiddenInputRef.current?.focus()}
-                className={`cursor-pointer px-6 py-3 rounded-2xl border text-center transition-all duration-200 hover:scale-102 active:scale-98 max-w-[360px] w-full animate-in fade-in zoom-in-95 duration-300 shadow-sm ${
-                  isKidMode 
-                    ? "bg-amber-50/50 border-amber-200/40 text-amber-800 text-xs md:text-sm font-extrabold animate-pulse" 
-                    : "bg-slate-50 border-slate-200/60 text-slate-500 text-xs md:text-sm font-medium animate-pulse"
-                }`}
-              >
-                <span className="hidden md:inline">⌨️ Type any key to spell the word</span>
-                <span className="md:hidden">📱 Tap here to open the keyboard</span>
+              /* Khung hướng dẫn Tự Gõ + nút Hint & Reveal */
+              <div className="flex flex-col items-center gap-3 w-full animate-in fade-in zoom-in-95 duration-300">
+                <div 
+                  onClick={() => hiddenInputRef.current?.focus()}
+                  className={`cursor-pointer px-6 py-3 rounded-2xl border text-center transition-all duration-200 hover:scale-102 active:scale-98 max-w-[360px] w-full shadow-sm ${
+                    isKidMode 
+                      ? "bg-amber-50/50 border-amber-200/40 text-amber-800 text-xs md:text-sm font-extrabold animate-pulse" 
+                      : "bg-slate-50 border-slate-200/60 text-slate-500 text-xs md:text-sm font-medium animate-pulse"
+                  }`}
+                >
+                  <span className="hidden md:inline">⌨️ Type any key to spell the word</span>
+                  <span className="md:hidden">📱 Tap here to open the keyboard</span>
+                </div>
+
+                {/* Hint + Reveal buttons row */}
+                <div className="flex items-center gap-3">
+                  {/* Hint button — reveals next letter */}
+                  {(() => {
+                    const card = flashcards[currentIndex]
+                    const nextIdx = card ? getNextUnrevealedIndex(card.word, revealedIndices) : -1
+                    const allRevealed = nextIdx === -1
+                    return (
+                      <button
+                        disabled={allRevealed}
+                        onClick={() => {
+                          if (!card || allRevealed) return
+                          setRevealedIndices(prev => [...prev, nextIdx])
+                        }}
+                        className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100 ${
+                          isKidMode
+                            ? `px-8 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r from-sky-400 to-blue-500 text-white border-sky-300`
+                            : `px-6 py-3.5 rounded-full shadow-md hover:scale-105 text-sm bg-gradient-to-r from-sky-400 to-blue-500 text-white`
+                        }`}
+                      >
+                        <HelpCircle className="w-5 h-5" />
+                        <span>Hint</span>
+                      </button>
+                    )
+                  })()}
+
+                  {/* Reveal Details button */}
+                  <button
+                    onClick={() => setIsFlipped(true)}
+                    className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
+                      isKidMode
+                        ? `px-8 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`
+                        : `px-6 py-3.5 rounded-full shadow-md hover:scale-105 text-sm bg-gradient-to-r ${themeConfig.revealBg}`
+                    }`}
+                  >
+                    <span>Reveal</span>
+                    <Sparkles className="w-5 h-5 group-hover:animate-pulse text-white" />
+                  </button>
+                </div>
               </div>
             )
           ) : (
