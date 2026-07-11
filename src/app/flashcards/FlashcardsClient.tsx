@@ -47,6 +47,11 @@ interface Flashcard {
   definitionId: string | null
   exampleSentence: string | null
   imageUrl: string | null
+  audioUrl: string | null
+  audioWordUrl: string | null
+  audioSentenceUrl: string | null
+  quizQuestion: string | null
+  quizAudioUrl: string | null
   orderIndex: number
 }
 
