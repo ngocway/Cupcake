@@ -716,9 +716,10 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   return (
     <div className="h-screen w-screen bg-gradient-to-tr from-amber-100 via-pink-50 to-sky-100 text-slate-800 flex flex-col justify-between select-none relative overflow-hidden font-body">
       
-      {/* 1. Header Toolbar (Kid Style - Matches Flashcards Header) */}
-      <div className="w-full h-16 flex flex-col justify-between shrink-0 bg-white/90 border-b-4 border-amber-200/50 backdrop-blur-md z-10 relative">
-        <div className="flex-1 flex items-center justify-between px-6 md:px-12">
+      {/* 1. Header Toolbar */}
+      <div className="w-full shrink-0 bg-white/90 border-b-4 border-amber-200/50 backdrop-blur-md z-10 relative">
+        {/* Single row: Back | Title | Translate toggle (mobile) / Page counter (desktop) */}
+        <div className="flex items-center justify-between px-3 md:px-6 py-2">
           {/* Back Button */}
           <Link
             href="/student/books"
@@ -726,27 +727,26 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
               stopListening();
               if (isSpeechSynthesisSupported) window.speechSynthesis.cancel();
             }}
-            className="flex items-center gap-2 px-4 py-1.5 text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-800 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-800 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm shrink-0"
           >
             <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-            <span>Back to Stories</span>
           </Link>
-          
-          {/* Book Title */}
-          <div className="text-center">
-            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none">Read Along Book</p>
-            <h2 className="font-extrabold text-base md:text-lg text-amber-900 line-clamp-1 max-w-sm md:max-w-md mt-0.5">
+
+          {/* Book Title — centered */}
+          <div className="flex-1 text-center px-2 min-w-0">
+            <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Read Along Book</p>
+            <h2 className="font-extrabold text-sm md:text-base text-amber-900 line-clamp-1 mt-0.5">
               {book.title}
             </h2>
           </div>
-          
-          {/* Read Aloud sample / Page Count indicator */}
-          <div className="flex items-center gap-3">
+
+          {/* Right side: Translate toggle (all screens) + Page counter (desktop only) */}
+          <div className="flex items-center gap-2 shrink-0">
             {/* Translate toggle */}
             <button
               onClick={toggleTranslate}
               title={isTranslateOn ? "Tắt dịch" : "Bật dịch"}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black border-2 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-black border-2 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm ${
                 isTranslateOn
                   ? "bg-emerald-100 border-emerald-400 text-emerald-800"
                   : "bg-amber-100 border-amber-300 text-amber-700"
@@ -760,7 +760,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
               ) : (
                 <span className="material-symbols-outlined text-[14px]">translate</span>
               )}
-              <span>Translate</span>
+              <span className="hidden md:inline">Translate</span>
               <span className={`w-7 h-4 rounded-full flex items-center transition-all duration-200 ${
                 isTranslateOn ? "bg-emerald-400" : "bg-amber-300"
               }`}>
@@ -770,42 +770,36 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
               </span>
             </button>
 
-            <button
-              onClick={() => handleReadSlide()}
-              className="w-9 h-9 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-800 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
-              title="Đọc mẫu"
-            >
-              <span className="material-symbols-outlined text-lg">volume_up</span>
-            </button>
-            <span className="px-4 py-1.5 rounded-full text-xs font-black bg-amber-100 border-2 border-amber-300 text-amber-800">
+            {/* Page counter — desktop only */}
+            <span className="hidden md:inline px-3 py-1.5 rounded-full text-xs font-black bg-amber-100 border-2 border-amber-300 text-amber-800">
               {currentPageIndex + 1} / {book.slides.length}
             </span>
           </div>
         </div>
 
-        {/* Dynamic Progress Bar directly below Header */}
+        {/* Dynamic Progress Bar */}
         <div className="w-full h-1 bg-amber-100">
-          <div 
+          <div
             style={{ width: `${progressPercent}%` }}
             className="h-full bg-gradient-to-r from-emerald-450 to-teal-500 transition-all duration-300 ease-out"
           />
         </div>
       </div>
 
-      {/* 2. Central Content Area: Card Layout */}
-      <div className="flex-grow w-full max-w-6xl mx-auto flex items-center justify-center px-12 md:px-20 relative overflow-hidden">
+      {/* 2. Central Content Area */}
+      <div className="flex-1 min-h-0 w-full max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-center md:px-20 relative overflow-hidden">
         
-        {/* Left Floating Arrow */}
+        {/* Left Floating Arrow — desktop only */}
         <button
           onClick={handlePrevPage}
           disabled={currentPageIndex === 0}
-          className="absolute left-3 md:left-6 w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 hover:scale-105 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none z-20 shadow-md"
+          className="hidden md:flex absolute left-6 w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 hover:scale-105 active:scale-95 items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none z-20 shadow-md"
         >
           <span className="material-symbols-outlined text-2xl font-bold">navigate_before</span>
         </button>
 
-        {/* Central Book Card (Kid-styled card like flashcards) */}
-        <div className="w-full h-[90%] max-h-[calc(100vh-210px)] rounded-[40px] md:rounded-[48px] bg-white border-8 border-emerald-300 flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden shadow-[0_24px_50px_rgba(16,185,129,0.18)] relative items-center justify-center">
+        {/* Central Book Card */}
+        <div className="w-full flex-1 min-h-0 md:h-[90%] md:max-h-[calc(100vh-210px)] md:rounded-[48px] md:bg-white md:border-8 md:border-emerald-300 flex flex-col md:flex-row md:gap-6 md:p-6 overflow-hidden md:shadow-[0_24px_50px_rgba(16,185,129,0.18)] relative">
           
           {/* Card internal gradient */}
           <span className="absolute inset-0 bg-gradient-to-b from-slate-50/10 via-transparent to-transparent pointer-events-none rounded-[40px]" />
@@ -830,24 +824,47 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
             </div>
           )}
 
-          {/* Left Column: Image — border follows natural image dimensions */}
-          <div className="flex-shrink-0 flex items-center justify-center md:w-[48%]">
+          {/* Image Column */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center w-full md:w-[48%]">
             {currentSlide?.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={currentSlide.imageUrl}
                 alt=""
-                className="max-h-[calc(100vh-280px)] w-auto max-w-full rounded-[20px] object-contain transition-all duration-700 hover:scale-105 animate-in fade-in zoom-in-95 duration-350 border-4 border-amber-200 shadow-md"
+                className="w-full h-auto md:w-auto md:max-h-[calc(100vh-280px)] md:object-contain transition-all duration-700 md:rounded-[20px] md:border-4 md:border-amber-200 md:shadow-md animate-in fade-in zoom-in-95 duration-350"
               />
             ) : (
               <div className="w-48 h-48 flex items-center justify-center">
                 <span className="text-6xl opacity-30">✨</span>
               </div>
             )}
+
+            {/* Mobile-only: Prev / Next row below image */}
+            <div className="flex md:hidden items-center justify-between w-full px-4 py-2 shrink-0">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPageIndex === 0}
+                className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none shadow-md"
+              >
+                <span className="material-symbols-outlined text-2xl font-bold">navigate_before</span>
+              </button>
+
+              <span className="text-xs font-black text-amber-700">
+                {currentPageIndex + 1} / {book.slides.length}
+              </span>
+
+              <button
+                onClick={handleNextPage}
+                disabled={currentPageIndex === book.slides.length - 1}
+                className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none shadow-md"
+              >
+                <span className="material-symbols-outlined text-2xl font-bold">navigate_next</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right Column: Sentence Reader Block */}
-          <div className="flex-1 h-1/2 md:h-full flex flex-col justify-center overflow-y-auto custom-scrollbar pr-2 py-4">
+          {/* Text / Sentence Reader Block */}
+          <div className="flex-1 min-h-0 md:h-full flex flex-col justify-start md:justify-center overflow-y-auto custom-scrollbar px-5 md:px-0 md:pr-2 pt-1 pb-24 md:py-3 md:pb-3">
             <div className="flex flex-col gap-2 font-headline font-black leading-snug text-amber-950" style={{ fontSize: 'clamp(1.1rem, 2.2vw, 2.2rem)' }}>
               {(() => {
                 // Group words into lines
@@ -861,9 +878,10 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
                   }
                 });
                 const currentTranslations = currentSlide ? slideTranslations[currentSlide.id] : undefined;
+                const isLastGroup = (lineIdx: number) => lineIdx === lineGroups.length - 1;
                 return lineGroups.map((group, lineIdx) => (
                   <div key={lineIdx} className="flex flex-col">
-                    <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
                       {group.words.map((word, wi) => {
                         const idx = group.indices[wi];
                         const isSpoken = idx === ttsActiveWordIndex;
@@ -884,6 +902,17 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
                           </span>
                         );
                       })}
+                      {/* Replay button inline after last word of last line */}
+                      {isLastGroup(lineIdx) && words.length > 0 && (
+                        <button
+                          onClick={handleReplaySlide}
+                          disabled={isTtsSpeaking}
+                          title="Replay audio"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95 shrink-0"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>volume_up</span>
+                        </button>
+                      )}
                     </div>
                     {isTranslateOn && currentTranslations?.[lineIdx] && (
                       <p className="text-[0.55em] font-medium text-slate-400 italic mt-0.5 leading-tight pl-1">
@@ -893,27 +922,15 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
                   </div>
                 ));
               })()}
-
-              {/* Replay audio button — inline at end of sentence */}
-              {words.length > 0 && (
-                <button
-                  onClick={handleReplaySlide}
-                  disabled={isTtsSpeaking}
-                  title="Replay audio"
-                  className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95 self-center ml-1 shrink-0"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>volume_up</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Right Floating Arrow */}
+        {/* Right Floating Arrow — desktop only */}
         <button
           onClick={handleNextPage}
           disabled={currentPageIndex === book.slides.length - 1}
-          className="absolute right-3 md:right-6 w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 hover:scale-105 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none z-20 shadow-md"
+          className="hidden md:flex absolute right-6 w-11 h-11 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 hover:scale-105 active:scale-95 items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none z-20 shadow-md"
         >
           <span className="material-symbols-outlined text-2xl font-bold">navigate_next</span>
         </button>
@@ -937,7 +954,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       </div>
 
       {/* 3. Control & Mic Bar */}
-      <div className="w-full h-20 flex flex-col items-center justify-center shrink-0 bg-white/95 border-t border-amber-200/50 z-10 relative">
+      <div className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto w-full h-20 flex flex-col items-center justify-center shrink-0 bg-white/95 backdrop-blur-md border-t border-amber-200/50 z-50 pb-safe">
 
         {/* Status label */}
         <p className={`text-[10px] font-bold mb-1.5 transition-colors duration-300 ${

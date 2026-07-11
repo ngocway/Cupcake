@@ -19,11 +19,9 @@ interface BottomNavProps {
 export function BottomNav({ labels }: BottomNavProps) {
   const pathname = usePathname()
 
-  // Hide on auth pages and game/run pages (fullscreen)
-  const isAuthPage = AUTH_PATHS.some(p => pathname?.startsWith(p))
-  const isFullscreenPage = pathname?.includes('/run') || pathname?.includes('/game/match-words') || pathname?.includes('/game/sentence-builder')
-
-  if (isAuthPage || isFullscreenPage) return null
+  // Only show BottomNav on the student dashboard (home) page
+  const isDashboard = pathname === '/student/dashboard' || pathname === '/student'
+  if (!isDashboard) return null
 
   const navItems = [
     { href: '/student/dashboard', icon: LayoutDashboard, label: labels.dash, strokeWidth: 2.5 },
