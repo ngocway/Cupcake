@@ -219,6 +219,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const [wrongTypedIndex, setWrongTypedIndex] = useState<number | null>(null)
   const [wrongTypedLetter, setWrongTypedLetter] = useState<string | null>(null)
   const [wrongFading, setWrongFading] = useState<boolean>(false)
+  const [imeWarning, setImeWarning] = useState<string | null>(null)
+  const [unikeyDetected, setUnikeyDetected] = useState<boolean>(false)
   const [showCelebration, setShowCelebration] = useState<boolean>(false)
   const [confettiParticles, setConfettiParticles] = useState<{
     id: number
@@ -236,6 +238,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const lastPhysicalKeyTimeRef = useRef<number>(0)
 
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
+  const currentPlayPromiseRef = useRef<Promise<void> | null>(null)
 
   // Swipe gesture state
   const touchStartX = useRef<number | null>(null)
@@ -264,9 +267,22 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   const stopCurrentAudio = () => {
     if (currentAudioRef.current) {
-      currentAudioRef.current.pause()
-      currentAudioRef.current.currentTime = 0
+      const audio = currentAudioRef.current
+      const promise = currentPlayPromiseRef.current
       currentAudioRef.current = null
+      currentPlayPromiseRef.current = null
+      if (promise) {
+        // Đợi play() promise settle trước khi pause() để tránh AbortError
+        promise.then(() => {
+          audio.pause()
+          audio.currentTime = 0
+        }).catch(() => {})
+      } else {
+        try {
+          audio.pause()
+          audio.currentTime = 0
+        } catch (_) {}
+      }
     }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel()
@@ -343,13 +359,22 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const handlePlayAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
-    if (card.audioUrl && card.audioUrl.trim()) {
-      const audio = new Audio(card.audioUrl)
+    // Ưu tiên: audioUrl (full word + sentence) → audioWordUrl → TTS fallback
+    const urlToPlay = (card.audioUrl && card.audioUrl.trim())
+      ? card.audioUrl
+      : (card.audioWordUrl && card.audioWordUrl.trim())
+      ? card.audioWordUrl
+      : null
+    if (urlToPlay) {
+      const audio = new Audio(urlToPlay)
       currentAudioRef.current = audio
       if (onEnded) {
         audio.onended = onEnded
       }
-      audio.play().catch(err => {
+      const promise = audio.play()
+      currentPlayPromiseRef.current = promise
+      promise.catch(err => {
+        if (err?.name === 'AbortError') return // bị dừng chủ động, bỏ qua
         console.error("Lỗi phát audio tùy chỉnh:", err)
         // Fallback to speech synthesis
         handleSpeak(card.word, onEnded)
@@ -369,7 +394,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       if (onEnded) {
         audio.onended = onEnded
       }
-      audio.play().catch(err => {
+      const promise = audio.play()
+      currentPlayPromiseRef.current = promise
+      promise.catch(err => {
+        if (err?.name === 'AbortError') return // bị dừng chủ động, bỏ qua
         console.error("Lỗi phát audio từ vựng tùy chỉnh:", err)
         // Fallback to speech synthesis
         handleSpeak(card.word, onEnded)
@@ -428,10 +456,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     setConfettiParticles(newParticles)
 
     // Đợi 1.8 giây hiển thị hiệu ứng chúc mừng rồi mới tự động lật thẻ
+    // Không gọi handlePlayAudio trực tiếp tại đây — Effect #2 sẽ xử lý sau khi isFlipped = true
     setTimeout(() => {
       setShowCelebration(false)
       setIsFlipped(true)
-      handlePlayAudio(card)
     }, 1800)
   }
 
@@ -525,21 +553,37 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const handleHiddenInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (!val) return
-    // Strip diacritics (NFD normalization) để xử lý bàn phím Telex/VNI trên mobile
-    // e.g. "ỏ" → "o", "ở" → "o"
     const rawChar = val[val.length - 1]
-    const key = rawChar.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
     e.target.value = ""
 
     // Nếu physical keydown vừa xử lý rồi (trong vòng 100ms) → bỏ qua để tránh trùng lặp
     if (Date.now() - lastPhysicalKeyTimeRef.current < 100) return
 
-    if (!/[a-z]/.test(key)) return
-
     const card = flashcards[currentIndex]
     if (!card) return
-
     const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
+
+    // Phát hiện IME (Unikey/bộ gõ tiếng Việt) đang chuyển đổi ký tự
+    // e.g. gõ "ow" → Unikey tạo ra "ơ" (không phải ASCII thuần)
+    if (!/^[a-zA-Z]$/.test(rawChar)) {
+      setImeWarning(rawChar)
+      setUnikeyDetected(true)   // bật banner cố định
+      // Hiện ký tự tiếng Việt trong bong bóng để học sinh thấy rõ mình đã gõ gì
+      if (nextIdx !== -1) {
+        setWrongTypedIndex(nextIdx)
+        setWrongTypedLetter(rawChar)   // hiện đúng ký tự IME, không uppercase
+        setWrongFading(false)
+        setTimeout(() => setWrongFading(true), 700)
+        setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
+      }
+      return
+    }
+
+    // Gõ ký tự ASCII bình thường → xoá cảnh báo IME
+    setImeWarning(null)
+
+    const key = rawChar.toLowerCase()
+
     if (nextIdx !== -1) {
       if (card.word[nextIdx].toLowerCase() === key) {
         const nextRevealed = [...revealedIndices, nextIdx]
@@ -569,6 +613,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     setWordAudioEnded(false)
     setShakeItemId(null)
     setWrongTypedIndex(null)
+    setImeWarning(null)
 
     // Khởi tạo các ký tự không phải chữ cái (khoảng trắng, gạch ngang) được hiển thị sẵn
     const initialIndices: number[] = []
@@ -596,8 +641,13 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   // 2. Tự động phát âm đầy đủ khi lật sang mặt sau
   useEffect(() => {
     if (isFlipped && selectedCategory && flashcards[currentIndex]) {
+      const card = flashcards[currentIndex]
+      // Chỉ auto-play nếu có audio file thực sự — không dùng TTS cho auto-play
+      const hasAudio = (card.audioUrl && card.audioUrl.trim()) || (card.audioWordUrl && card.audioWordUrl.trim())
+      if (!hasAudio) return
+
       const timer = setTimeout(() => {
-        handlePlayAudio(flashcards[currentIndex])
+        handlePlayAudio(card)
       }, 150)
       return () => clearTimeout(timer)
     }
@@ -681,7 +731,14 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           }
         } else {
           setWrongTypedIndex(nextIdx)
-          setWrongTypedLetter(key.toUpperCase())
+          // Hiện ký tự thực tế học sinh đã gõ (bao gồm ký tự Unikey như Ỉ, ơ, ...)
+          // e.key phản ánh những gì browser/OS nhận được sau khi Unikey convert
+          const displayChar = e.key.length === 1 ? e.key : key.toUpperCase()
+          setWrongTypedLetter(displayChar)
+          // Phát hiện Unikey: e.key khác với phím vật lý
+          if (e.key.length === 1 && e.key.toLowerCase() !== key) {
+            setUnikeyDetected(true)
+          }
           setWrongFading(false)
           setTimeout(() => setWrongFading(true), 700)
           setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
@@ -1438,6 +1495,24 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           </div>
         </div>
 
+        {/* Banner cố định cảnh báo Unikey (chỉ hiện ở chế độ Tự Gõ, sau khi phát hiện lần đầu) */}
+        {challengeMode === 'type' && !isFlipped && unikeyDetected && (
+          <div className="w-full max-w-[480px] flex items-start gap-2.5 px-4 py-3 rounded-2xl border-2 border-orange-300 bg-orange-50 text-orange-800 text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm mt-3">
+            <span className="text-base shrink-0">⚠️</span>
+            <span className="flex-1 leading-relaxed">
+              Có vẻ bạn đang bật <strong>Unikey</strong> (bộ gõ tiếng Việt).
+              {' '}Hãy tắt để gõ chữ tiếng Anh chính xác nhé! (⌨️ Alt + Shift hoặc click Unikey → OFF)
+            </span>
+            <button
+              onClick={() => setUnikeyDetected(false)}
+              className="shrink-0 text-orange-400 hover:text-orange-700 transition-colors p-0.5 rounded"
+              title="Đóng"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Random letter-by-letter reveal area (outside card container) */}
         {!isFlipped && (isKidMode || challengeMode !== 'hint') && activeCard && (
           <div className="mt-3 flex flex-wrap justify-center items-center gap-1.5 md:gap-2 max-w-[480px] w-full select-none animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1549,6 +1624,19 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   <span className="hidden md:inline">⌨️ Type any key to spell the word</span>
                   <span className="md:hidden">📱 Tap here to open the keyboard</span>
                 </div>
+
+                {/* Cảnh báo IME / Unikey: hiện mỗi lần phát hiện ký tự tiếng Việt */}
+                {imeWarning && (
+                  <div className="flex items-start gap-2 px-4 py-2.5 rounded-2xl border border-orange-300 bg-orange-50 text-orange-800 text-xs font-semibold w-full max-w-[360px] animate-in fade-in slide-in-from-top-1 duration-200 shadow-sm">
+                    <span className="text-base shrink-0 mt-0.5">⚠️</span>
+                    <span className="leading-relaxed">
+                      Bạn đã gõ:{' '}
+                      <strong className="text-orange-900 font-black text-sm">&ldquo;{imeWarning}&rdquo;</strong>
+                      {' '}→ đây là ký tự tiếng Việt.{' '}
+                      Hãy tắt <strong>Unikey</strong> và thử lại!
+                    </span>
+                  </div>
+                )}
 
                 {/* Hint + Reveal buttons row */}
                 <div className="flex items-center gap-3">
