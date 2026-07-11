@@ -726,8 +726,11 @@ function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }:
   return (
     <button
       onClick={() => setIsSidePanelOpen(true)}
-      className={`fixed top-1/2 right-0 z-30 w-auto py-3 pl-2 pr-4 bg-primary text-white flex items-center justify-center gap-1 rounded-l-2xl shadow-xl hover:bg-primary/90 transition-all duration-500 ease-in-out ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
-      style={{ transform: 'translateY(-50%)' }}
+      className={`fixed right-0 z-30 w-auto py-3 pl-2 pr-4 bg-blue-500 border-2 border-green-400 text-white font-bold flex items-center justify-center gap-1 rounded-l-2xl shadow-xl hover:bg-blue-600 transition-all duration-500 ease-in-out
+        top-1/2 [@media(max-width:800px)]:top-auto
+        -translate-y-1/2 [@media(max-width:800px)]:translate-y-0
+        [@media(max-width:800px)]:bottom-24
+        ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
       title="Open panel"
     >
       <ChevronLeft className="w-5 h-5 shrink-0" />
