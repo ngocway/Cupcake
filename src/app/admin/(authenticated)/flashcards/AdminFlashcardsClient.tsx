@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useTransition, useRef } from "react"
+import { useState, useTransition, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { BatchCreateFlashcardModal } from "@/components/admin/BatchCreateFlashcardModal"
 import { uploadMedia, uploadUrlMedia } from "@/actions/upload-actions"
 import { 
   adminCreateFlashcard, 
@@ -69,11 +71,17 @@ export function AdminFlashcardsClient({
   initialTopics, 
   initialFlashcards 
 }: AdminFlashcardsClientProps) {
+  const router = useRouter()
+
   // Navigation & Core Lists
 
   const [targetAudiencesList] = useState<any[]>(targetAudiences)
   const [topics, setTopics] = useState<Topic[]>(initialTopics)
   const [flashcards, setFlashcards] = useState<any[]>(initialFlashcards)
+
+  // Sync server-fetched data into local state when router.refresh() runs
+  useEffect(() => { setFlashcards(initialFlashcards) }, [initialFlashcards])
+  useEffect(() => { setTopics(initialTopics) }, [initialTopics])
 
   // Filters
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>("ALL")
@@ -85,6 +93,7 @@ export function AdminFlashcardsClient({
 
   // Modals & Pending Actions
   const [showCardModal, setShowCardModal] = useState(false)
+  const [showBatchCreateModal, setShowBatchCreateModal] = useState(false)
   const [editingCard, setEditingCard] = useState<Flashcard | null>(null)
   const [cardForm, setCardForm] = useState({
     targetAudience: "kid",
@@ -600,6 +609,7 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const openCardModal = (card: Flashcard | null = null) => {
     if (card) {
+      // EDIT: open the existing manual form modal
       setEditingCard(card)
       const defaultAudience = card.topic?.targetAudiences.includes(card.topic?.targetAudiences[0]) 
         ? card.topic?.targetAudiences[0] 
@@ -629,30 +639,11 @@ export function AdminFlashcardsClient({
         exampleSentence: card.exampleSentence || "",
         translations: translationsMap
       })
+      setShowCardModal(true)
     } else {
-      setEditingCard(null)
-      // Pick first category and its first topic as default
-      const defaultCat = targetAudiencesList[0]
-      const defaultTopic = topics.find(t => t.targetAudiences.includes(defaultCat?.id))
-      setCardForm({
-        targetAudience: defaultCat?.id || "",
-        topicId: defaultTopic?.id || "",
-        word: "",
-        phonetic: "",
-        imageUrl: "",
-        audioUrl: "",
-        audioWordUrl: "",
-        quizQuestion: "",
-        quizAudioUrl: "",
-        definition: "",
-        definitionVi: "",
-        definitionTh: "",
-        definitionId: "",
-        exampleSentence: "",
-        translations: {}
-      })
+      // CREATE: open the new AI batch create modal
+      setShowBatchCreateModal(true)
     }
-    setShowCardModal(true)
   }
 
   // Handle dynamic category change inside Card modal to update topics dropdown
@@ -1016,13 +1007,16 @@ export function AdminFlashcardsClient({
     }
   }
 
-  // Help calculate translations done status
+  // Count all translated languages: EN + Vi + Th + Id + translations table (zh/ja/ko/hi/ar/fr/de/es/pt/ru)
   const getLangsDoneCount = (card: any) => {
-    let count = 1 // English default
+    let count = 1 // English always
     if (card.definitionVi) count++
     if (card.definitionTh) count++
     if (card.definitionId) count++
-    return count
+    if (Array.isArray(card.translations)) {
+      count += card.translations.filter((t: any) => t.definition?.trim()).length
+    }
+    return count // max = 14 (EN + Vi + Th + Id + 10 locales)
   }
 
   return (
@@ -1363,12 +1357,31 @@ export function AdminFlashcardsClient({
                             )}
                             
                             {/* Translations Badge Row */}
-                            <div className="flex items-center gap-1 opacity-80 mt-0.5">
+                            <div className="flex items-center gap-0.5 opacity-80 mt-0.5 flex-wrap">
                               <span className="text-[8px] font-bold text-neutral-500 mr-1 uppercase">Langs:</span>
-                              <span className="text-xs" title="English default">🇺🇸</span>
+                              <span className="text-xs" title="English">🇺🇸</span>
                               <span className={`text-xs ${card.definitionVi ? "opacity-100" : "opacity-20"}`} title="Tiếng Việt">🇻🇳</span>
                               <span className={`text-xs ${card.definitionTh ? "opacity-100" : "opacity-20"}`} title="Thai">🇹🇭</span>
                               <span className={`text-xs ${card.definitionId ? "opacity-100" : "opacity-20"}`} title="Indonesian">🇮🇩</span>
+                              {(() => {
+                                const tMap = Array.isArray(card.translations)
+                                  ? Object.fromEntries(card.translations.map((t: any) => [t.locale, t.definition]))
+                                  : {}
+                                return (
+                                  <>
+                                    <span className={`text-xs ${tMap.zh ? "opacity-100" : "opacity-20"}`} title="Chinese">🇨🇳</span>
+                                    <span className={`text-xs ${tMap.ja ? "opacity-100" : "opacity-20"}`} title="Japanese">🇯🇵</span>
+                                    <span className={`text-xs ${tMap.ko ? "opacity-100" : "opacity-20"}`} title="Korean">🇰🇷</span>
+                                    <span className={`text-xs ${tMap.hi ? "opacity-100" : "opacity-20"}`} title="Hindi">🇮🇳</span>
+                                    <span className={`text-xs ${tMap.ar ? "opacity-100" : "opacity-20"}`} title="Arabic">🇸🇦</span>
+                                    <span className={`text-xs ${tMap.fr ? "opacity-100" : "opacity-20"}`} title="French">🇫🇷</span>
+                                    <span className={`text-xs ${tMap.de ? "opacity-100" : "opacity-20"}`} title="German">🇩🇪</span>
+                                    <span className={`text-xs ${tMap.es ? "opacity-100" : "opacity-20"}`} title="Spanish">🇪🇸</span>
+                                    <span className={`text-xs ${tMap.pt ? "opacity-100" : "opacity-20"}`} title="Portuguese">🇧🇷</span>
+                                    <span className={`text-xs ${tMap.ru ? "opacity-100" : "opacity-20"}`} title="Russian">🇷🇺</span>
+                                  </>
+                                )
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -1421,7 +1434,49 @@ export function AdminFlashcardsClient({
       </div>
 
       {/* =======================================================================
-          MODAL 1: CREATE / EDIT FLASHCARD (Thêm & Sửa thẻ học)
+          BATCH CREATE MODAL (AI-powered, replaces old create form)
+          ======================================================================= */}
+      {showBatchCreateModal && (
+        <BatchCreateFlashcardModal
+          topics={topics}
+          targetAudiences={targetAudiencesList}
+          allFlashcards={flashcards}
+          onClose={() => setShowBatchCreateModal(false)}
+          onCardsCreated={(newCards, topicId, audienceId) => {
+            // Attach topic object so the filter works immediately
+            const topicObj = topics.find(t => t.id === topicId)
+            const cardsWithTopic = newCards.map((c: any) => ({
+              ...c,
+              topicId,
+              topic: topicObj ? {
+                id: topicObj.id,
+                name: topicObj.name,
+                targetAudiences: topicObj.targetAudiences,
+                iconUrl: topicObj.iconUrl ?? null,
+              } : undefined,
+            }))
+            setFlashcards(prev => [...cardsWithTopic, ...prev])
+            setShowBatchCreateModal(false)
+            // Navigate to the topic view so admin can review the new cards
+            setSelectedCatFilter(audienceId)
+            setSelectedTopicFilter(topicId)
+            setSearchWord("")
+            toast.success(`Đã tạo thành công ${newCards.length} thẻ học mới!`)
+            router.refresh()
+          }}
+          defaultAudience={
+            selectedCatFilter !== "ALL"
+              ? selectedCatFilter
+              : selectedTopicFilter !== "ALL"
+                ? topics.find(t => t.id === selectedTopicFilter)?.targetAudiences[0]
+                : undefined
+          }
+          defaultTopicId={selectedTopicFilter !== "ALL" ? selectedTopicFilter : undefined}
+        />
+      )}
+
+      {/* =======================================================================
+          MODAL 1: EDIT FLASHCARD (Sửa thẻ học)
           ======================================================================= */}
       {showCardModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">

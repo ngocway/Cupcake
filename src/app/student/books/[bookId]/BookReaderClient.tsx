@@ -109,10 +109,9 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
   };
 
-  const isSpeechSynthesisSupported = typeof window !== "undefined" && !!window.speechSynthesis;
-  const isSpeechRecognitionSupported =
-    typeof window !== "undefined" &&
-    (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
+  const [isSpeechSynthesisSupported, setIsSpeechSynthesisSupported] = useState(false);
+  const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
+
 
   const playWordSuccessSound = () => {
     try {
@@ -233,6 +232,14 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPageIndex, isTranslateOn]);
+
+  useEffect(() => {
+    setIsSpeechSynthesisSupported(typeof window !== "undefined" && !!window.speechSynthesis);
+    setIsSpeechRecognitionSupported(
+      typeof window !== "undefined" &&
+      (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition)
+    );
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -864,8 +871,8 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
           </div>
 
           {/* Text / Sentence Reader Block */}
-          <div className="flex-1 min-h-0 md:h-full flex flex-col justify-start md:justify-center overflow-y-auto custom-scrollbar px-5 md:px-0 md:pr-2 pt-1 pb-24 md:py-3 md:pb-3">
-            <div className="flex flex-col gap-2 font-headline font-black leading-snug text-amber-950" style={{ fontSize: 'clamp(1.1rem, 2.2vw, 2.2rem)' }}>
+          <div className="fixed top-[25%] left-1/2 -translate-x-1/2 z-20 w-[94vw] rounded-md px-5 py-3 flex flex-col items-center md:static md:top-auto md:left-auto md:translate-x-0 md:bg-transparent md:rounded-none md:w-auto md:items-start md:flex-1 md:min-h-0 md:h-full md:justify-center md:overflow-y-auto custom-scrollbar md:px-0 md:pr-2 md:py-3" style={{ background: 'linear-gradient(135deg, rgba(21,101,192,0.4), rgba(13,71,161,0.4))' }}>
+            <div className="flex flex-col gap-2 font-headline font-black leading-snug text-white md:text-amber-950 text-center md:text-left" style={{ fontSize: 'clamp(1.65rem, 3.3vw, 3.3rem)', textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000' }}>
               {(() => {
                 // Group words into lines
                 const lineGroups: { words: WordToken[]; indices: number[] }[] = [];
@@ -892,10 +899,10 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
                             onClick={() => handleWordClick(word)}
                             className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
                               isRead
-                                ? "text-blue-500 dark:text-blue-400 scale-[1.02]"
+                                ? "text-emerald-300 scale-[1.02]"
                                 : isSpoken
-                                ? "bg-yellow-100 text-yellow-900 dark:bg-yellow-500/20 dark:text-yellow-300 ring-2 ring-yellow-400/40"
-                                : "text-slate-800 hover:text-blue-450 hover:scale-[1.02]"
+                                ? "bg-yellow-400/70 text-white ring-2 ring-yellow-300/60"
+                                : "text-white hover:scale-[1.02]"
                             }`}
                           >
                             {word.original}

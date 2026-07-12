@@ -7,6 +7,19 @@ import { adminCreateFlashcard } from "@/actions/admin-flashcards";
 import { generateTTSHelper } from "@/actions/lesson-ai";
 import { auth } from "@/auth";
 
+// Gemini API routing: use 9Router proxy (Bearer auth) when GEMINI_API_ENDPOINT is set,
+// otherwise call googleapis.com directly with ?key= query param.
+const IS_PROXY = !!process.env.GEMINI_API_ENDPOINT;
+const GEMINI_BASE = (process.env.GEMINI_API_ENDPOINT ?? "https://generativelanguage.googleapis.com").replace(/\/$/, "");
+
+const geminiUrl = (model: string) => IS_PROXY
+  ? `${GEMINI_BASE}/v1beta/models/${model}:generateContent`
+  : `${GEMINI_BASE}/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
+const geminiHeaders = (): Record<string, string> => IS_PROXY
+  ? { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.GEMINI_API_KEY}` }
+  : { "Content-Type": "application/json" };
+
 function getAgeGroupGuidelines(categoryName: string) {
   const cat = categoryName.toLowerCase();
   
@@ -415,3 +428,307 @@ export async function generateCardAudioAction(word: string, exampleSentence: str
   return { success: true, audioUrl, audioWordUrl, quizAudioUrl };
 }
 
+// ============================================================================
+// NEW BATCH CREATE PIPELINE (SKILL.md compliant)
+// Uses Gemini 2.5 Flash text + DeepInfra FLUX image + Gemini TTS x-slow
+// ============================================================================
+
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import prisma from "@/lib/prisma";
+
+function getFlashcardR2Client() {
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+    forcePathStyle: true,
+  });
+}
+
+async function uploadToFlashcardR2(buffer: Buffer, fileName: string, contentType: string): Promise<string> {
+  const key = `flashcards/global/${fileName}`;
+  await getFlashcardR2Client().send(new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+  }));
+  return `${process.env.NEXT_PUBLIC_R2_URL!.replace(/\/$/, "")}/${key}`;
+}
+
+// WAV utilities (24kHz 16-bit mono)
+const SR = 24000;
+const BPS = 2;
+const HDR = 44;
+
+function mkWavHeader(dataSize: number): Buffer {
+  const h = Buffer.alloc(HDR);
+  h.write("RIFF", 0); h.writeUInt32LE(36 + dataSize, 4);
+  h.write("WAVE", 8); h.write("fmt ", 12);
+  h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22);
+  h.writeUInt32LE(SR, 24); h.writeUInt32LE(SR * BPS, 28);
+  h.writeUInt16LE(BPS, 32); h.writeUInt16LE(16, 34);
+  h.write("data", 36); h.writeUInt32LE(dataSize, 40);
+  return h;
+}
+function wavWrap(pcm: Buffer): Buffer { return Buffer.concat([mkWavHeader(pcm.length), pcm]); }
+function wavPcm(wav: Buffer): Buffer { return wav.subarray(HDR); }
+function wavSlice(wav: Buffer, s: number, e: number): Buffer {
+  return wavWrap(wavPcm(wav).subarray(s * BPS, e * BPS));
+}
+
+function detectSilence(pcm: Buffer): Array<{ start: number; end: number }> {
+  const THRESH = 100;
+  const MIN_SAMP = Math.floor(SR * 0.3);
+  const WIN = Math.floor(SR / 100);
+  const n = Math.floor(pcm.length / BPS);
+  const regions: Array<{ start: number; end: number }> = [];
+  let ss = -1;
+  for (let w = 0; w * WIN < n; w++) {
+    const ws = w * WIN, we = Math.min((w + 1) * WIN, n);
+    let sq = 0;
+    for (let i = ws; i < we; i++) { const v = pcm.readInt16LE(i * BPS); sq += v * v; }
+    const rms = Math.sqrt(sq / (we - ws));
+    if (rms < THRESH) { if (ss === -1) ss = ws; }
+    else { if (ss !== -1) { if (ws - ss >= MIN_SAMP) regions.push({ start: ss, end: ws }); ss = -1; } }
+  }
+  if (ss !== -1 && n - ss >= MIN_SAMP) regions.push({ start: ss, end: n });
+  return regions;
+}
+
+const TTS_MODELS_BATCH = [
+  "gemini-2.5-flash-preview-tts",
+  "gemini-3.1-flash-tts-preview",
+  "gemini-2.5-pro-preview-tts",
+];
+
+async function geminiTTSBatch(ssml: string): Promise<Buffer> {
+  for (const model of TTS_MODELS_BATCH) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(
+          geminiUrl(model),
+          {
+            method: "POST",
+            headers: geminiHeaders(),
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: ssml }] }],
+              generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } },
+              },
+            }),
+          }
+        );
+        if (res.status === 429) {
+          console.warn(`TTS ${model} attempt ${attempt + 1} → 429, waiting 5s...`);
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+        if (!res.ok) throw new Error(`TTS ${model} error ${res.status}`);
+        const data = await res.json();
+        const inlineData = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)?.inlineData;
+        if (!inlineData?.data) throw new Error("No audio data returned");
+        return wavWrap(Buffer.from(inlineData.data, "base64"));
+      } catch (e: any) {
+        if (e.message?.includes("429") || e.message?.includes("RESOURCE_EXHAUSTED")) {
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+        throw e;
+      }
+    }
+  }
+  // All models rate-limited — throw so the batch stops and reports to user
+  throw new Error("TTS không khả dụng (rate limit). Vui lòng thử lại sau vài phút.");
+}
+
+/**
+ * Suggest vocabulary words for a topic using Gemini 2.5 Flash.
+ * Excludes words already existing in the topic.
+ */
+export async function suggestWordsForTopic(
+  categoryName: string,
+  topicName: string,
+  existingWords: string[],
+  count: number
+): Promise<{ success: boolean; words?: string[]; error?: string }> {
+  try {
+    const excludeClause = existingWords.length > 0
+      ? `\nDo NOT include any of these existing words: ${existingWords.map(w => `"${w}"`).join(", ")}.`
+      : "";
+
+    const prompt = `You are an expert educational content designer. Suggest exactly ${count} English vocabulary words for the topic "${topicName}", appropriate for the age group "${categoryName}".${excludeClause}
+
+Rules:
+- Words must clearly relate to the topic "${topicName}"
+- Use vocabulary level appropriate for "${categoryName}"
+- Prefer concrete, visual, easy-to-illustrate concepts
+- Each suggestion must be unique
+- Return a JSON object with key "words" containing an array of strings, e.g. {"words": ["word1", "word two", "word3"]}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+    });
+    const raw = completion.choices[0].message.content?.trim() ?? "";
+    const parsed = JSON.parse(raw);
+    const words: string[] = Array.isArray(parsed) ? parsed : (parsed.words ?? parsed.vocabulary ?? Object.values(parsed)[0] as string[]);
+
+    if (!Array.isArray(words)) throw new Error("Expected JSON array");
+    const existingSet = new Set(existingWords.map(w => w.toLowerCase()));
+    const filtered = words
+      .filter(w => typeof w === "string" && w.trim() && !existingSet.has(w.toLowerCase().trim()))
+      .map(w => w.trim())
+      .slice(0, count);
+    return { success: true, words: filtered };
+  } catch (e: any) {
+    console.error("suggestWordsForTopic:", e);
+    return { success: false, error: e.message || "Failed to suggest words" };
+  }
+}
+
+/**
+ * Full SKILL.md pipeline for a single GlobalFlashcard:
+ * Gemini text → FLUX image → Gemini TTS x-slow (1 call) →
+ * windowed RMS silence detection → 3 segments → reconstruct audioUrl →
+ * upload 4 WAV files → Prisma INSERT
+ */
+export async function createCompleteFlashcardFull(
+  word: string,
+  topicId: string,
+  categoryName: string
+): Promise<{ success: boolean; card?: any; error?: string }> {
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== "ADMIN") throw new Error("Unauthorized");
+
+    const slug = word.toLowerCase().replace(/\s+/g, "-");
+    const ts = Date.now();
+
+    // Step 1: Text content
+    const textPrompt = `Create flashcard data for the English word/phrase: "${word}" for age group "${categoryName}". Return ONLY raw JSON (no markdown fences, no extra text):
+{
+  "phonetic": "/IPA/",
+  "definition": "max 10 words simple English definition",
+  "definitionVi": "SHORT direct Vietnamese word/name (1-3 words max, e.g. 'Lạc đà', 'Con mèo' — NOT a description or sentence)",
+  "definitionTh": "SHORT direct Thai word/name (1-3 words max — NOT a description)",
+  "definitionId": "SHORT direct Indonesian word/name (1-3 words max — NOT a description)",
+  "exampleSentence": "max 8 words age-appropriate example sentence",
+  "quizQuestion": "max 7 words simple quiz question",
+  "translations": {
+    "zh": "SHORT direct Chinese word/name (1-3 characters/words)",
+    "ja": "SHORT direct Japanese word/name (1-3 words)",
+    "ko": "SHORT direct Korean word/name (1-3 words)",
+    "hi": "SHORT direct Hindi word/name (1-3 words)",
+    "ar": "SHORT direct Arabic word/name (1-3 words)",
+    "fr": "SHORT direct French word/name (1-3 words)",
+    "de": "SHORT direct German word/name (1-3 words)",
+    "es": "SHORT direct Spanish word/name (1-3 words)",
+    "pt": "SHORT direct Portuguese word/name (1-3 words)",
+    "ru": "SHORT direct Russian word/name (1-3 words)"
+  }
+}`;
+    // Step 1: OpenAI text generation (translations + definition + example + quiz)
+    const oaiPrompt = textPrompt + "\n\nIMPORTANT: Return ONLY valid JSON matching the schema above, no markdown.";
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: oaiPrompt }],
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+    });
+    const td = JSON.parse(completion.choices[0].message.content?.trim() ?? "");
+
+    // Step 2: FLUX image
+    const fluxRes = await fetch("https://api.deepinfra.com/v1/openai/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "black-forest-labs/FLUX-1-dev",
+        prompt: `A simple 2D cartoon illustration of ${word}. Flat design, colorful, cute, child-friendly. No text. Clean white isolated background.`,
+        n: 1,
+        size: "1024x1024",
+        response_format: "b64_json",
+      }),
+    });
+    if (!fluxRes.ok) throw new Error(`FLUX error ${fluxRes.status}`);
+    const fluxJson = await fluxRes.json();
+    const imgBuffer = Buffer.from(fluxJson.data?.[0]?.b64_json ?? "", "base64");
+    const imageUrl = await uploadToFlashcardR2(imgBuffer, `${slug}-${ts}.png`, "image/png");
+
+    // Step 3: Gemini TTS — x-slow, 1 call, no break tags
+    const ssml = `<speak><prosody rate="x-slow">${word}. ${td.exampleSentence} ${td.quizQuestion}</prosody></speak>`;
+    const fullWav = await geminiTTSBatch(ssml);
+
+    if (!fullWav) {
+      throw new Error("TTS không khả dụng — không thể tạo audio cho card này.");
+    }
+
+    // Step 4: Windowed RMS silence detection
+    const pcm = wavPcm(fullWav);
+    const silenceRegions = detectSilence(pcm);
+    if (silenceRegions.length < 2) {
+      throw new Error(`Silence detection thất bại cho "${word}": tìm thấy ${silenceRegions.length} vùng (cần ≥2)`);
+    }
+    const [sep1, sep2] = [...silenceRegions]
+      .sort((a, b) => (b.end - b.start) - (a.end - a.start))
+      .slice(0, 2)
+      .sort((a, b) => a.start - b.start);
+
+    // Step 5: Slice 3 segments
+    const totalSamples = Math.floor(pcm.length / BPS);
+    const seg1 = wavSlice(fullWav, 0,        sep1.start); // word
+    const seg2 = wavSlice(fullWav, sep1.end, sep2.start); // sentence
+    const seg3 = wavSlice(fullWav, sep2.end, totalSamples); // quiz
+
+    // Step 6: Reconstruct audioUrl = word + word + sentence + word
+    const pad = Buffer.alloc(Math.floor(SR * 0.4) * BPS, 0);
+    const audioUrlWav = wavWrap(Buffer.concat([
+      wavPcm(seg1), pad,
+      wavPcm(seg1), pad,
+      wavPcm(seg2), pad,
+      wavPcm(seg1),
+    ]));
+
+    // Step 7: Upload 4 audio files to R2
+    const [audioUrl, audioWordUrl, audioSentenceUrl, quizAudioUrl] = await Promise.all([
+      uploadToFlashcardR2(audioUrlWav, `${slug}-full-${ts}.wav`,     "audio/wav"),
+      uploadToFlashcardR2(seg1,        `${slug}-word-${ts}.wav`,     "audio/wav"),
+      uploadToFlashcardR2(seg2,        `${slug}-sentence-${ts}.wav`, "audio/wav"),
+      uploadToFlashcardR2(seg3,        `${slug}-quiz-${ts}.wav`,     "audio/wav"),
+    ]);
+
+    // Step 8 & 9: DB insert via existing adminCreateFlashcard
+    const res = await adminCreateFlashcard({
+      topicId,
+      word,
+      phonetic:        td.phonetic?.trim() || undefined,
+      definition:      td.definition?.trim() || undefined,
+      definitionVi:    td.definitionVi?.trim() || undefined,
+      definitionTh:    td.definitionTh?.trim() || undefined,
+      definitionId:    td.definitionId?.trim() || undefined,
+      exampleSentence: td.exampleSentence?.trim() || undefined,
+      imageUrl,
+      audioUrl,
+      audioWordUrl,
+      audioSentenceUrl,
+      quizQuestion:    td.quizQuestion?.trim() || undefined,
+      quizAudioUrl,
+      translations:    td.translations || undefined,
+    });
+
+    if (!res.success) throw new Error(res.error || "DB insert failed");
+    return { success: true, card: res.card };
+  } catch (e: any) {
+    console.error(`createCompleteFlashcardFull("${word}"):`, e);
+    return { success: false, error: e.message || "Unknown error" };
+  }
+}
