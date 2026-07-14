@@ -30,6 +30,10 @@ const isSpeechRecognitionSupported =
   typeof window !== "undefined" &&
   (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
 
+const isMobile =
+  typeof window !== "undefined" &&
+  /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 interface WordToken {
   original: string;
   clean: string;
@@ -94,6 +98,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   const recognitionRef = useRef<any>(null);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const r2AudioRef = useRef<HTMLAudioElement | null>(null);
+  const persistentAudioRef = useRef<HTMLAudioElement | null>(null);
   // Refs for immediate reads inside async callbacks (updated alongside state, not via useEffect)
   const isListeningRef = useRef(false);
   const isTtsSpeakingRef = useRef(false);
@@ -266,6 +271,9 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   }, [currentPageIndex, isTranslateOn]);
 
   useEffect(() => {
+    if (isMobile && typeof window !== "undefined") {
+      persistentAudioRef.current = new Audio();
+    }
     return () => {
       if (isSpeechSynthesisSupported) {
         window.speechSynthesis.cancel();
@@ -273,6 +281,10 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       if (r2AudioRef.current) {
         r2AudioRef.current.pause();
         r2AudioRef.current = null;
+      }
+      if (persistentAudioRef.current) {
+        persistentAudioRef.current.pause();
+        persistentAudioRef.current = null;
       }
       if (recognitionRef.current) {
         recognitionRef.current.abort();
@@ -347,7 +359,17 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
     if (currentSlide.audioUrl) {
       isTtsSpeakingRef.current = true;
       setIsTtsSpeaking(true);
-      const audio = new Audio(currentSlide.audioUrl);
+      let audio: HTMLAudioElement;
+      if (isMobile) {
+        if (!persistentAudioRef.current) {
+          persistentAudioRef.current = new Audio();
+        }
+        audio = persistentAudioRef.current;
+        audio.src = currentSlide.audioUrl;
+        audio.load();
+      } else {
+        audio = new Audio(currentSlide.audioUrl);
+      }
       audio.playbackRate = 0.75;
       r2AudioRef.current = audio;
 
@@ -432,7 +454,17 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      let audio: HTMLAudioElement;
+      if (isMobile) {
+        if (!persistentAudioRef.current) {
+          persistentAudioRef.current = new Audio();
+        }
+        audio = persistentAudioRef.current;
+        audio.src = url;
+        audio.load();
+      } else {
+        audio = new Audio(url);
+      }
       audio.playbackRate = 0.85;
       r2AudioRef.current = audio;
 
@@ -623,6 +655,15 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       recognitionRef.current.abort();
       isListeningRef.current = false;  // update ref immediately
       setIsListening(false);
+    }
+
+    // Reset Audio Session on mobile devices (e.g. iOS Safari) to release the mic audio route
+    if (isMobile && typeof navigator !== "undefined" && (navigator as any).audioSession) {
+      try {
+        (navigator as any).audioSession.type = "playback";
+      } catch (e) {
+        console.warn("Failed to reset audio session type:", e);
+      }
     }
   };
 
