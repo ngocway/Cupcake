@@ -936,7 +936,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
           {/* Text / Sentence Reader Block */}
           <div className="fixed top-[25%] left-1/2 -translate-x-1/2 z-20 w-[94vw] flex flex-col items-center md:static md:top-auto md:left-auto md:translate-x-0 md:w-auto md:items-start md:flex-1 md:min-h-0 md:h-full md:justify-center md:overflow-y-auto custom-scrollbar md:px-0 md:pr-2 md:py-3">
-            <div className="w-full bg-[linear-gradient(135deg,rgba(21,101,192,0.4),rgba(13,71,161,0.4))] rounded-2xl px-5 py-3 md:bg-transparent md:p-0">
+            <div className="w-full bg-[linear-gradient(135deg,rgba(21,101,192,0.4),rgba(13,71,161,0.4))] backdrop-blur-md rounded-2xl px-5 py-3 md:bg-transparent md:p-0 md:backdrop-blur-none">
               <div className="flex flex-col gap-2 font-headline font-black leading-snug text-white md:text-amber-950 text-center md:text-left text-[clamp(1.65rem,3.3vw,3.3rem)] md:text-[clamp(1.1rem,2.2vw,2.2rem)] [text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000] md:[text-shadow:none]">
                 {(() => {
                   // Group words into lines
