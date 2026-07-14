@@ -720,7 +720,31 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
     if (mode !== "shadowing") return;  // Reading mode: no auto-grading
     if (!isListening || words.length === 0 || isPageCompleted) return;
 
-    const unread = words.filter((w) => !w.isRead).length;
+    // Group words into sentences based on punctuation (. ! ?)
+    const sentences: WordToken[][] = [];
+    let currentSentence: WordToken[] = [];
+    words.forEach((w) => {
+      currentSentence.push(w);
+      const isSentenceEnd = /[.!?]$/.test(w.original.trim());
+      if (isSentenceEnd) {
+        sentences.push(currentSentence);
+        currentSentence = [];
+      }
+    });
+    if (currentSentence.length > 0) {
+      sentences.push(currentSentence);
+    }
+
+    // For each sentence, count the number of unread (incorrect) words
+    const sentenceUnreadCounts = sentences.map(
+      (s) => s.filter((w) => !w.isRead).length
+    );
+
+    // Page is eligible for "Excellent" if all sentences have 0 unread words
+    const isExcellentEligible = sentenceUnreadCounts.every((count) => count === 0);
+
+    // Page is eligible for "Good" if every sentence has at most 1 unread word (but not Excellent)
+    const isGoodEligible = sentenceUnreadCounts.every((count) => count <= 1) && !isExcellentEligible;
 
     // Clear any pending grade timer
     if (gradeTimerRef.current) {
@@ -728,16 +752,16 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       gradeTimerRef.current = null;
     }
 
-    if (unread === 0) {
+    if (isExcellentEligible) {
       // All words correct → Excellent!
       triggerPageResult("excellent");
-    } else if (unread === 1) {
-      // 1 word missing → wait 2s, then Good!
+    } else if (isGoodEligible) {
+      // Every sentence has <= 1 error → wait 2s, then Good!
       gradeTimerRef.current = setTimeout(() => {
         triggerPageResult("good");
       }, 2000);
     }
-    // More than 1 word missing → keep listening
+    // More than 1 word missing in any sentence → keep listening
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [words, isListening]);
 
