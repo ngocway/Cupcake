@@ -931,91 +931,95 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
               </div>
             )}
 
-            {/* Mobile-only: Prev / Next row below image */}
-            <div className="flex md:hidden items-center justify-between w-full px-4 py-2 shrink-0">
+
+          </div>
+
+          {/* Text / Sentence Reader Block */}
+          <div className="fixed top-[25%] left-1/2 -translate-x-1/2 z-20 w-[94vw] flex flex-col items-center md:static md:top-auto md:left-auto md:translate-x-0 md:w-auto md:items-start md:flex-1 md:min-h-0 md:h-full md:justify-center md:overflow-y-auto custom-scrollbar md:px-0 md:pr-2 md:py-3">
+            <div className="w-full bg-[linear-gradient(135deg,rgba(21,101,192,0.4),rgba(13,71,161,0.4))] rounded-2xl px-5 py-3 md:bg-transparent md:p-0">
+              <div className="flex flex-col gap-2 font-headline font-black leading-snug text-white md:text-amber-950 text-center md:text-left text-[clamp(1.65rem,3.3vw,3.3rem)] md:text-[clamp(1.1rem,2.2vw,2.2rem)] [text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000] md:[text-shadow:none]">
+                {(() => {
+                  // Group words into lines
+                  const lineGroups: { words: WordToken[]; indices: number[] }[] = [];
+                  words.forEach((word, idx) => {
+                    if (word.newLineBefore || lineGroups.length === 0) {
+                      lineGroups.push({ words: [word], indices: [idx] });
+                    } else {
+                      lineGroups[lineGroups.length - 1].words.push(word);
+                      lineGroups[lineGroups.length - 1].indices.push(idx);
+                    }
+                  });
+                  const currentTranslations = currentSlide ? slideTranslations[currentSlide.id] : undefined;
+                  const isLastGroup = (lineIdx: number) => lineIdx === lineGroups.length - 1;
+                  return lineGroups.map((group, lineIdx) => {
+                    return (
+                      <div key={lineIdx} className="flex flex-col">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
+                          {group.words.map((word, wi) => {
+                            const idx = group.indices[wi];
+                            const isSpoken = idx === ttsActiveWordIndex;
+                            const isRead = word.isRead;
+                            return (
+                              <span
+                                key={wi}
+                                onClick={() => handleWordClick(word)}
+                                className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
+                                  isRead
+                                    ? "text-emerald-300 md:text-emerald-600 scale-[1.02]"
+                                    : isSpoken
+                                    ? "bg-yellow-400/70 text-white ring-2 ring-yellow-300/60 md:bg-yellow-100 md:text-yellow-900 md:ring-2 md:ring-yellow-400/40"
+                                    : "text-white md:text-slate-800 hover:md:text-blue-500 hover:scale-[1.02]"
+                                }`}
+                              >
+                                {word.original}
+                              </span>
+                            );
+                          })}
+                          {/* Replay button inline after last word of last line */}
+                          {isLastGroup(lineIdx) && words.length > 0 && (
+                            <button
+                              onClick={handleReplaySlide}
+                              disabled={isTtsSpeaking}
+                              title="Replay audio"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95 shrink-0"
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>volume_up</span>
+                            </button>
+                          )}
+                        </div>
+                        {isTranslateOn && currentTranslations?.[lineIdx] && (
+                          <p className="font-sans text-base md:text-sm font-semibold text-slate-100 md:text-slate-600 italic mt-1.5 leading-relaxed pl-1 [text-shadow:none]">
+                            {currentTranslations[lineIdx]}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+
+            {/* Mobile Navigation Buttons (under the blue box) */}
+            <div className="flex md:hidden items-center justify-between w-[240px] px-3 py-1.5 mt-3 bg-white/90 backdrop-blur-md rounded-full border-2 border-amber-200 shadow-md z-30 animate-in fade-in slide-in-from-top-2 duration-300">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPageIndex === 0}
-                className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none shadow-md"
+                className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none shadow-sm"
               >
                 <span className="material-symbols-outlined text-2xl font-bold">navigate_before</span>
               </button>
 
-              <span className="text-xs font-black text-amber-700">
+              <span className="text-xs font-black text-amber-900">
                 {currentPageIndex + 1} / {book.slides.length}
               </span>
 
               <button
                 onClick={handleNextPage}
                 disabled={currentPageIndex === book.slides.length - 1}
-                className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none shadow-md"
+                className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-300 text-emerald-800 hover:bg-emerald-200 active:scale-95 flex items-center justify-center transition-all disabled:opacity-20 disabled:pointer-events-none shadow-sm"
               >
                 <span className="material-symbols-outlined text-2xl font-bold">navigate_next</span>
               </button>
-            </div>
-          </div>
-
-          {/* Text / Sentence Reader Block */}
-          <div className="fixed top-[25%] left-1/2 -translate-x-1/2 z-20 w-[94vw] rounded-md px-5 py-3 flex flex-col items-center bg-[linear-gradient(135deg,rgba(21,101,192,0.4),rgba(13,71,161,0.4))] md:static md:top-auto md:left-auto md:translate-x-0 md:bg-none md:bg-transparent md:rounded-none md:w-auto md:items-start md:flex-1 md:min-h-0 md:h-full md:justify-center md:overflow-y-auto custom-scrollbar md:px-0 md:pr-2 md:py-3">
-            <div className="flex flex-col gap-2 font-headline font-black leading-snug text-white md:text-amber-950 text-center md:text-left text-[clamp(1.65rem,3.3vw,3.3rem)] md:text-[clamp(1.1rem,2.2vw,2.2rem)] [text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000] md:[text-shadow:none]">
-              {(() => {
-                // Group words into lines
-                const lineGroups: { words: WordToken[]; indices: number[] }[] = [];
-                words.forEach((word, idx) => {
-                  if (word.newLineBefore || lineGroups.length === 0) {
-                    lineGroups.push({ words: [word], indices: [idx] });
-                  } else {
-                    lineGroups[lineGroups.length - 1].words.push(word);
-                    lineGroups[lineGroups.length - 1].indices.push(idx);
-                  }
-                });
-                const currentTranslations = currentSlide ? slideTranslations[currentSlide.id] : undefined;
-                const isLastGroup = (lineIdx: number) => lineIdx === lineGroups.length - 1;
-                return lineGroups.map((group, lineIdx) => {
-                  return (
-                    <div key={lineIdx} className="flex flex-col">
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
-                        {group.words.map((word, wi) => {
-                          const idx = group.indices[wi];
-                          const isSpoken = idx === ttsActiveWordIndex;
-                          const isRead = word.isRead;
-                          return (
-                            <span
-                              key={wi}
-                              onClick={() => handleWordClick(word)}
-                              className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
-                                isRead
-                                  ? "text-emerald-300 md:text-emerald-600 scale-[1.02]"
-                                  : isSpoken
-                                  ? "bg-yellow-400/70 text-white ring-2 ring-yellow-300/60 md:bg-yellow-100 md:text-yellow-900 md:ring-2 md:ring-yellow-400/40"
-                                  : "text-white md:text-slate-800 hover:md:text-blue-500 hover:scale-[1.02]"
-                              }`}
-                            >
-                              {word.original}
-                            </span>
-                          );
-                        })}
-                        {/* Replay button inline after last word of last line */}
-                        {isLastGroup(lineIdx) && words.length > 0 && (
-                          <button
-                            onClick={handleReplaySlide}
-                            disabled={isTtsSpeaking}
-                            title="Replay audio"
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95 shrink-0"
-                          >
-                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>volume_up</span>
-                          </button>
-                        )}
-                      </div>
-                      {isTranslateOn && currentTranslations?.[lineIdx] && (
-                        <p className="font-sans text-base md:text-sm font-semibold text-slate-100 md:text-slate-600 italic mt-1.5 leading-relaxed pl-1 [text-shadow:none]">
-                          {currentTranslations[lineIdx]}
-                        </p>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
             </div>
           </div>
         </div>
