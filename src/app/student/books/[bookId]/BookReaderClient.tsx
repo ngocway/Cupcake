@@ -25,6 +25,11 @@ interface BookReaderClientProps {
   book: BookWithSlides;
 }
 
+const isSpeechSynthesisSupported = typeof window !== "undefined" && !!window.speechSynthesis;
+const isSpeechRecognitionSupported =
+  typeof window !== "undefined" &&
+  (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition);
+
 interface WordToken {
   original: string;
   clean: string;
@@ -58,6 +63,28 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
   // Mode: "reading" = listen only; "shadowing" = listen + record + grade
   const [mode, setMode] = useState<"reading" | "shadowing">("shadowing");
+
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  const [showModeSelector, setShowModeSelector] = useState(true);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerAutoAdvance = () => {
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+    }
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      setCurrentPageIndex((prev) => {
+        if (prev < book.slides.length - 1) {
+          return prev + 1;
+        }
+        return prev;
+      });
+    }, 2000);
+  };
 
   // Translation
   const [isTranslateOn, setIsTranslateOn] = useState(false);
@@ -108,10 +135,6 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       .trim()
       .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, "");
   };
-
-  const [isSpeechSynthesisSupported, setIsSpeechSynthesisSupported] = useState(false);
-  const [isSpeechRecognitionSupported, setIsSpeechRecognitionSupported] = useState(false);
-
 
   const playWordSuccessSound = () => {
     try {
@@ -210,12 +233,21 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
     setWords(tokens);
     setIsPageCompleted(tokens.every((w) => w.isRead));
 
-    const timer = setTimeout(() => {
-      handleReadSlide(tokens);
-    }, 400);
+    // Clear any pending auto-advance timer when page index changes
+    if (autoAdvanceTimerRef.current) {
+      clearTimeout(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    if (!showModeSelector) {
+      timer = setTimeout(() => {
+        handleReadSlide(tokens);
+      }, 400);
+    }
 
     return () => {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       // Clear any pending grade timer when changing page
       if (gradeTimerRef.current) {
         clearTimeout(gradeTimerRef.current);
@@ -223,7 +255,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       }
       setScoreResult(null);
     };
-  }, [currentPageIndex]);
+  }, [currentPageIndex, currentSlide, showModeSelector]);
 
   // Auto-fetch translation when translate is on and page changes
   useEffect(() => {
@@ -232,14 +264,6 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPageIndex, isTranslateOn]);
-
-  useEffect(() => {
-    setIsSpeechSynthesisSupported(typeof window !== "undefined" && !!window.speechSynthesis);
-    setIsSpeechRecognitionSupported(
-      typeof window !== "undefined" &&
-      (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition)
-    );
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -252,6 +276,9 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       }
       if (recognitionRef.current) {
         recognitionRef.current.abort();
+      }
+      if (autoAdvanceTimerRef.current) {
+        clearTimeout(autoAdvanceTimerRef.current);
       }
     };
   }, []);
@@ -356,7 +383,11 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
         setTtsActiveWordIndex(-1);
         r2AudioRef.current = null;
         // Only start listening in shadowing mode
-        if (mode === "shadowing") startListening();
+        if (modeRef.current === "shadowing") {
+          startListening();
+        } else {
+          triggerAutoAdvance();
+        }
       };
 
       audio.onerror = () => {
@@ -369,9 +400,14 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
         useEdgeTTSFallback(currentSlide.text, currentTokens);
       };
 
-      audio.play().catch(() => {
+      audio.play().catch((err) => {
+        console.warn("Audio autoplay blocked or failed:", err);
         setIsTtsSpeaking(false);
+        isTtsSpeakingRef.current = false;
         r2AudioRef.current = null;
+        if (modeRef.current === "shadowing") {
+          startListening();
+        }
       });
       return;
     }
@@ -428,7 +464,11 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
         setTtsActiveWordIndex(-1);
         r2AudioRef.current = null;
         URL.revokeObjectURL(url);
-        if (mode === "shadowing") startListening();
+        if (modeRef.current === "shadowing") {
+          startListening();
+        } else {
+          triggerAutoAdvance();
+        }
       };
 
       audio.onerror = () => {
@@ -486,7 +526,11 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       setIsTtsSpeaking(false);
       setTtsActiveWordIndex(-1);
       // Only start listening in shadowing mode
-      if (mode === "shadowing") startListening();
+      if (modeRef.current === "shadowing") {
+        startListening();
+      } else {
+        triggerAutoAdvance();
+      }
     };
 
     utterance.onerror = () => {
@@ -871,8 +915,8 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
           </div>
 
           {/* Text / Sentence Reader Block */}
-          <div className="fixed top-[25%] left-1/2 -translate-x-1/2 z-20 w-[94vw] rounded-md px-5 py-3 flex flex-col items-center md:static md:top-auto md:left-auto md:translate-x-0 md:bg-transparent md:rounded-none md:w-auto md:items-start md:flex-1 md:min-h-0 md:h-full md:justify-center md:overflow-y-auto custom-scrollbar md:px-0 md:pr-2 md:py-3" style={{ background: 'linear-gradient(135deg, rgba(21,101,192,0.4), rgba(13,71,161,0.4))' }}>
-            <div className="flex flex-col gap-2 font-headline font-black leading-snug text-white md:text-amber-950 text-center md:text-left" style={{ fontSize: 'clamp(1.65rem, 3.3vw, 3.3rem)', textShadow: '-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000' }}>
+          <div className="fixed top-[25%] left-1/2 -translate-x-1/2 z-20 w-[94vw] rounded-md px-5 py-3 flex flex-col items-center bg-[linear-gradient(135deg,rgba(21,101,192,0.4),rgba(13,71,161,0.4))] md:static md:top-auto md:left-auto md:translate-x-0 md:bg-none md:bg-transparent md:rounded-none md:w-auto md:items-start md:flex-1 md:min-h-0 md:h-full md:justify-center md:overflow-y-auto custom-scrollbar md:px-0 md:pr-2 md:py-3">
+            <div className="flex flex-col gap-2 font-headline font-black leading-snug text-white md:text-amber-950 text-center md:text-left text-[clamp(1.65rem,3.3vw,3.3rem)] md:text-[clamp(1.1rem,2.2vw,2.2rem)] [text-shadow:-2px_-2px_0_#000,2px_-2px_0_#000,-2px_2px_0_#000,2px_2px_0_#000] md:[text-shadow:none]">
               {(() => {
                 // Group words into lines
                 const lineGroups: { words: WordToken[]; indices: number[] }[] = [];
@@ -886,48 +930,50 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
                 });
                 const currentTranslations = currentSlide ? slideTranslations[currentSlide.id] : undefined;
                 const isLastGroup = (lineIdx: number) => lineIdx === lineGroups.length - 1;
-                return lineGroups.map((group, lineIdx) => (
-                  <div key={lineIdx} className="flex flex-col">
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
-                      {group.words.map((word, wi) => {
-                        const idx = group.indices[wi];
-                        const isSpoken = idx === ttsActiveWordIndex;
-                        const isRead = word.isRead;
-                        return (
-                          <span
-                            key={wi}
-                            onClick={() => handleWordClick(word)}
-                            className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
-                              isRead
-                                ? "text-emerald-300 scale-[1.02]"
-                                : isSpoken
-                                ? "bg-yellow-400/70 text-white ring-2 ring-yellow-300/60"
-                                : "text-white hover:scale-[1.02]"
-                            }`}
+                return lineGroups.map((group, lineIdx) => {
+                  return (
+                    <div key={lineIdx} className="flex flex-col">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 items-center">
+                        {group.words.map((word, wi) => {
+                          const idx = group.indices[wi];
+                          const isSpoken = idx === ttsActiveWordIndex;
+                          const isRead = word.isRead;
+                          return (
+                            <span
+                              key={wi}
+                              onClick={() => handleWordClick(word)}
+                              className={`cursor-pointer transition-all rounded-xl duration-200 px-1 py-0.5 hover:scale-[1.08] active:scale-95 ${
+                                isRead
+                                  ? "text-emerald-300 md:text-emerald-600 scale-[1.02]"
+                                  : isSpoken
+                                  ? "bg-yellow-400/70 text-white ring-2 ring-yellow-300/60 md:bg-yellow-100 md:text-yellow-900 md:ring-2 md:ring-yellow-400/40"
+                                  : "text-white md:text-slate-800 hover:md:text-blue-500 hover:scale-[1.02]"
+                              }`}
+                            >
+                              {word.original}
+                            </span>
+                          );
+                        })}
+                        {/* Replay button inline after last word of last line */}
+                        {isLastGroup(lineIdx) && words.length > 0 && (
+                          <button
+                            onClick={handleReplaySlide}
+                            disabled={isTtsSpeaking}
+                            title="Replay audio"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95 shrink-0"
                           >
-                            {word.original}
-                          </span>
-                        );
-                      })}
-                      {/* Replay button inline after last word of last line */}
-                      {isLastGroup(lineIdx) && words.length > 0 && (
-                        <button
-                          onClick={handleReplaySlide}
-                          disabled={isTtsSpeaking}
-                          title="Replay audio"
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95 shrink-0"
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>volume_up</span>
-                        </button>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>volume_up</span>
+                          </button>
+                        )}
+                      </div>
+                      {isTranslateOn && currentTranslations?.[lineIdx] && (
+                        <p className="font-sans text-base md:text-sm font-semibold text-slate-100 md:text-slate-600 italic mt-1.5 leading-relaxed pl-1 [text-shadow:none]">
+                          {currentTranslations[lineIdx]}
+                        </p>
                       )}
                     </div>
-                    {isTranslateOn && currentTranslations?.[lineIdx] && (
-                      <p className="text-[0.55em] font-medium text-slate-400 italic mt-0.5 leading-tight pl-1">
-                        {currentTranslations[lineIdx]}
-                      </p>
-                    )}
-                  </div>
-                ));
+                  );
+                });
               })()}
             </div>
           </div>
@@ -1094,6 +1140,40 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
           border-radius: 4px;
         }
       `}</style>
+
+      {showModeSelector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md">
+          <div className="bg-white/90 border border-white/20 shadow-2xl rounded-3xl p-6 max-w-xs w-[90%] text-center transform scale-100 transition-all duration-300">
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={() => {
+                  setMode("reading");
+                  setShowModeSelector(false);
+                }}
+                className="w-full py-4 px-6 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 hover:bg-amber-200 font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined">menu_book</span>
+                Listen to Story
+              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setMode("shadowing");
+                    setShowModeSelector(false);
+                  }}
+                  className="w-full py-4 px-6 rounded-2xl bg-blue-600 text-white hover:bg-blue-700 font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25"
+                >
+                  <span className="material-symbols-outlined">mic</span>
+                  Practice Shadowing
+                </button>
+                <p className="text-xs text-slate-500 font-medium leading-normal px-2 text-center">
+                  Turn on your microphone to practice shadowing after the audio finishes on each page.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
