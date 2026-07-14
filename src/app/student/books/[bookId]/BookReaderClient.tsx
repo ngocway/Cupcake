@@ -1000,7 +1000,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
             </div>
 
             {/* Mobile Navigation Buttons (under the blue box) */}
-            <div className="flex md:hidden items-center justify-between w-[240px] px-3 py-1.5 mt-3 bg-white/90 backdrop-blur-md rounded-full border-2 border-amber-200 shadow-md z-30 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex md:hidden items-center justify-between w-[240px] px-3 py-1.5 mt-3 bg-[linear-gradient(135deg,rgba(255,255,255,0.3),rgba(255,255,255,0.15))] backdrop-blur-md rounded-full border-2 border-white/30 shadow-md z-30 animate-in fade-in slide-in-from-top-2 duration-300">
               <button
                 onClick={handlePrevPage}
                 disabled={currentPageIndex === 0}
