@@ -15,120 +15,155 @@ const GEMINI_MODELS = [
   "imagen-3.0-generate-002",
 ];
 
-async function generateImageWithGemini(prompt: string, apiKey: string): Promise<{ b64: string; model: string }> {
+async function generateImageWithGemini(
+  prompt: string,
+  apiKey: string,
+  aspectRatio: "portrait" | "landscape" = "portrait",
+  isThumbnail: boolean = false
+): Promise<{ b64: string; model: string }> {
   const baseEndpoint = "https://generativelanguage.googleapis.com";
   let lastError = "";
 
-  // 1. Try DeepInfra FLUX.1 Dev (Priority 1)
-  if (process.env.DEEPINFRA_API_KEY) {
-    try {
-      console.log(`[ImageBatch] Attempting image generation with DeepInfra FLUX.1 Dev...`);
-      const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "black-forest-labs/FLUX-1-dev",
-          prompt: prompt,
-          n: 1,
-          size: "768x1024",
-          response_format: "b64_json"
-        })
-      });
-      const responseData = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+  const fluxSize = aspectRatio === "landscape" ? "1024x576" : "768x1024";
+  const dalleSize = aspectRatio === "landscape" ? "1792x1024" : "1024x1792";
+
+  const priorities = isThumbnail
+    ? ["gemini", "dalle", "flux"]
+    : ["flux", "gemini", "dalle"];
+
+  for (const step of priorities) {
+    // 1. FLUX
+    if (step === "flux" && process.env.DEEPINFRA_API_KEY) {
+      try {
+        console.log(`[ImageBatch] Attempting image generation with DeepInfra FLUX.1 Dev (${fluxSize})...`);
+        const res = await fetch(`https://api.deepinfra.com/v1/openai/images/generations`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.DEEPINFRA_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "black-forest-labs/FLUX-1-dev",
+            prompt: prompt,
+            n: 1,
+            size: fluxSize,
+            response_format: "b64_json"
+          })
+        });
+        const responseData = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+        }
+        if (responseData.data?.[0]?.b64_json) {
+          console.log(`[ImageBatch] Success with DeepInfra FLUX.1 Dev`);
+          return { b64: responseData.data[0].b64_json, model: "FLUX.1 Dev (DeepInfra)" };
+        }
+      } catch (err: any) {
+        lastError = err.message;
+        console.warn(`[ImageBatch] DeepInfra FLUX.1 Dev failed: ${err.message}`);
       }
-      if (responseData.data?.[0]?.b64_json) {
-        console.log(`[ImageBatch] Success with DeepInfra FLUX.1 Dev`);
-        return { b64: responseData.data[0].b64_json, model: "FLUX.1 Dev (DeepInfra)" };
-      }
-    } catch (err: any) {
-      lastError = err.message;
-      console.warn(`[ImageBatch] DeepInfra FLUX.1 Dev failed: ${err.message}`);
     }
-  }
 
-  // 2. Fallback to Gemini Models (Priority 2)
-  for (const modelName of GEMINI_MODELS) {
-    try {
-      let imageData: string | null = null;
+    // 2. Gemini
+    if (step === "gemini" && apiKey) {
+      for (const modelName of GEMINI_MODELS) {
+        try {
+          console.log(`[ImageBatch] Trying Gemini model: ${modelName}...`);
+          let imageData: string | null = null;
 
-      if (modelName.startsWith("imagen-")) {
-        const res = await fetch(
-          `${baseEndpoint}/v1beta/models/${modelName}:predict?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              instances: [{ prompt }],
-              parameters: { sampleCount: 1 },
-            }),
+          if (modelName.startsWith("imagen-")) {
+            const res = await fetch(
+              `${baseEndpoint}/v1beta/models/${modelName}:predict?key=${apiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  instances: [{ prompt }],
+                  parameters: { sampleCount: 1 },
+                }),
+              }
+            );
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+            imageData = data.predictions?.[0]?.bytesBase64Encoded ?? null;
+          } else {
+            const res = await fetch(
+              `${baseEndpoint}/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: { responseModalities: ["IMAGE"] },
+                }),
+              }
+            );
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+            imageData =
+              data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)
+                ?.inlineData?.data ?? null;
           }
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-        imageData = data.predictions?.[0]?.bytesBase64Encoded ?? null;
-      } else {
-        const res = await fetch(
-          `${baseEndpoint}/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseModalities: ["IMAGE"] },
-            }),
-          }
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
-        imageData =
-          data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData)
-            ?.inlineData?.data ?? null;
-      }
 
-      if (imageData) {
-        console.log(`[ImageBatch] Success with ${modelName}`);
-        return { b64: imageData, model: `Gemini (${modelName})` };
+          if (imageData) {
+            console.log(`[ImageBatch] Success with ${modelName}`);
+            return { b64: imageData, model: `Gemini (${modelName})` };
+          }
+        } catch (err: any) {
+          lastError = err.message;
+          console.warn(`[ImageBatch] ${modelName} failed: ${err.message}`);
+        }
       }
-    } catch (err: any) {
-      lastError = err.message;
-      console.warn(`[ImageBatch] ${modelName} failed: ${err.message}`);
     }
-  }
 
-  // 3. Fallback to OpenAI DALL-E (Priority 3)
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      console.log(`[ImageBatch] Falling back to OpenAI DALL-E (dall-e-3)...`);
-      const res = await fetch(`https://api.openai.com/v1/images/generations`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1792",
-          response_format: "b64_json"
-        })
-      });
-      const responseData = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+    // 3. DALL-E
+    if (step === "dalle" && process.env.OPENAI_API_KEY) {
+      const baseURL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+      const models = ["gpt-image-2", "dall-e-3", "dall-e-2"];
+      for (const model of models) {
+        try {
+          console.log(`[ImageBatch] Attempting image generation with OpenAI model ${model}...`);
+          let size = dalleSize;
+          if (model !== "dall-e-3") {
+            size = "1024x1024";
+          }
+          const res = await fetch(`${baseURL}/images/generations`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+              model: model,
+              prompt: prompt,
+              n: 1,
+              size: size
+            })
+          });
+          const responseData = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(responseData.error?.message || `HTTP status: ${res.status}`);
+          }
+          const imgData = responseData.data?.[0];
+          if (imgData) {
+            if (imgData.b64_json) {
+              console.log(`[ImageBatch] Success with OpenAI DALL-E (${model})`);
+              return { b64: imgData.b64_json, model: `${model} (OpenAI)` };
+            } else if (imgData.url) {
+              console.log(`[ImageBatch] Success with OpenAI DALL-E (${model}, url). Downloading...`);
+              const imgRes = await fetch(imgData.url);
+              if (imgRes.ok) {
+                const arrayBuffer = await imgRes.arrayBuffer();
+                const b64 = Buffer.from(arrayBuffer).toString("base64");
+                return { b64, model: `${model} (OpenAI)` };
+              }
+            }
+          }
+        } catch (err: any) {
+          lastError = err.message;
+          console.warn(`[ImageBatch] OpenAI DALL-E ${model} failed: ${err.message}`);
+        }
       }
-      if (responseData.data?.[0]?.b64_json) {
-        console.log(`[ImageBatch] Success with OpenAI DALL-E`);
-        return { b64: responseData.data[0].b64_json, model: "DALL-E 3 (OpenAI)" };
-      }
-    } catch (err: any) {
-      lastError = err.message;
-      console.warn(`[ImageBatch] OpenAI DALL-E failed: ${err.message}`);
     }
   }
 
@@ -190,6 +225,36 @@ export async function POST(
       let skipCount = 0;
       let current = 0;
       const modelCounts: Record<string, number> = {};
+
+      // Generate thumbnail if missing or overwrite is true
+      if (!book.thumbnailUrl || overwrite) {
+        send({ type: "progress", slideId: "thumbnail", current: 0, status: "generating" });
+        try {
+          const firstPageText = book.slides[0]?.text?.trim() || "";
+          const thumbPrompt = `A premium quality, whimsical 2D children's book cover illustration for a story titled "${book.title}". Scene: "${firstPageText}".
+Style guidelines: children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design.
+Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark.`;
+
+          const result = await generateImageWithGemini(thumbPrompt, apiKey, "landscape", true);
+          if (result && result.b64) {
+            const buffer = Buffer.from(result.b64, "base64");
+            const fileName = `read-along-${bookId}-thumbnail-${Date.now()}.png`;
+            const publicUrl = await uploadBufferToR2(buffer, fileName, "image/png");
+
+            await prisma.readAlongBook.update({
+              where: { id: bookId },
+              data: { thumbnailUrl: publicUrl },
+            });
+            modelCounts[result.model] = (modelCounts[result.model] || 0) + 1;
+            send({ type: "progress", slideId: "thumbnail", current: 0, status: "done", imageUrl: publicUrl });
+          } else {
+            throw new Error("No image data returned for thumbnail");
+          }
+        } catch (err: any) {
+          console.error(`[ImageBatch] Thumbnail error:`, err.message);
+          send({ type: "progress", slideId: "thumbnail", current: 0, status: "error", error: err.message });
+        }
+      }
 
       for (const slide of slideQueue) {
         current++;

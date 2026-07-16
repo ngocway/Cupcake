@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QuestionType } from './types';
 import { generateAIExerciseAction, generateAIExerciseFromUrlAction } from '@/actions/ai-quiz-generator';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
@@ -8,9 +8,7 @@ import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 
 const DEFAULT_PROMPT_TEMPLATE = `You are an expert ESL content creator for young learners.
 
-Create a complete English learning lesson about the grammar topic: "Present Continuous (e.g. He is playing)".
-
-The output must include ALL sections below:
+Generate content for an English learning lesson about the grammar topic: "{topic}".
 
 ---
 
@@ -32,65 +30,82 @@ Return ONLY the image prompt.
 
 ---
 
-## 2. LESSON GOAL
-- 2–3 simple sentences
-- Explain what students will learn
-
----
-
-## 3. GRAMMAR FORMULA (VERY detail)
-Explain:
-- Structure
-- When to use
-- One key rule
-
-Use simple English only.
-
----
-
-## 4. EXAMPLES
-Provide 6–8 very simple example sentences.
-
----
-
-## 5. PRACTICE – MULTIPLE CHOICE
+## 2. PRACTICE – MULTIPLE CHOICE
 Create 15 questions:
-- Each question has EXACTLY ONE correct answer and 2 to 3 wrong distractor options
-- The wrong options must be clearly incorrect — no ambiguity, no trick questions where multiple answers could be right
+- Each question must have EXACTLY ONE correct answer and 2 to 3 wrong distractor options. Vary the number of distractors across the questions (some should have 2 distractors/3 choices total, others should have 3 distractors/4 choices total).
+- Distractors must be plausible, common student errors or nearly-correct options. Vary the distractor choices.
+- Avoid obvious correct answers (e.g. options like "none of the above", "all of the above" or "I don't know").
+- Keep vocabulary simple, tailored to the target audience age group.
+- Focus on natural, everyday conversational language.
+- Include answer (e.g. Answer: A)
+- Include explanation in SIMPLE ENGLISH
+
+Format:
+
+Question
+A.
+B.
+C. [optional, if 2 distractors]
+D. [optional, if 3 distractors]
+Answer:
+Explanation:
+
+
+---
+
+## 3. PRACTICE – FILL IN BLANK
+Create 10 questions:
+- Use blank spaces in sentences, represented as "_____" (5 underscores)
+- Include the correct word for the blank
+- Distractors are not needed
+- Include explanation in SIMPLE ENGLISH
+
+Format:
+
+Question
+Answer:
+Explanation:
+
+
+---
+
+## 4. PRACTICE – MATCHING
+Create 5 pairs of related items:
+- Left Column: word/phrase
+- Right Column: matching definition/picture description/synonym/translation
+- Make them clear and distinct
+
+Format:
+
+Pair 1: left | right
+Pair 2: left | right
+Pair 3: left | right
+Pair 4: left | right
+Pair 5: left | right
+Explanation:
+
+
+---
+
+## 5. PRACTICE – REORDER SENTENCE
+Create 5 scrambled sentences:
+- Provide the scrambled words (comma-separated, random order)
+- Provide the correct full sentence
+- Keep sentences short and correct grammar
 - IMPORTANT: Never create a question where two or more options are both correct or could both be accepted as correct
 - Include answer (e.g. Answer: A)
 - Include explanation in SIMPLE ENGLISH
 
 Format:
 
-Question  
-A.  
-B.  
-C. [optional, if 3 distractors]  
-D. [optional, if 3 distractors]  
-Answer:  
+Question
+A.
+B.
+C. [optional, if 3 distractors]
+D. [optional, if 3 distractors]
+Answer:
 Explanation:
 
-
----
-
-## 6. PRACTICE – TRUE / FALSE
-Create 5 questions:
-- Simple sentences
-- Mix positive and negative forms
-- Include answer + explanation (English)
-
----
-
-## 7. QUICK MEMORY TIP
-- 5–8 short bullet points
-- Very easy to remember
-
----
-
-## 8. FINAL SUMMARY
-- 2–3 lines
-- Very simple English recap
 
 ---
 
@@ -115,11 +130,17 @@ interface AIGeneratorModalProps {
 export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }: AIGeneratorModalProps) {
   const [questionsText, setQuestionsText] = useState(DEFAULT_PROMPT_TEMPLATE);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [topic, setTopic] = useState("Present Continuous (e.g. He is playing)");
   const [errors, setErrors] = useState<string[]>([]);
   
   // Custom mode or URL mode switcher
   const [generatorMode, setGeneratorMode] = useState<'prompt' | 'url'>('prompt');
   const [urlInput, setUrlInput] = useState('');
+
+  // Instructions Image Upload States
+  const [instructionsImageUrl, setInstructionsImageUrl] = useState<string | null>(null);
+  const [isUploadingInstImage, setIsUploadingInstImage] = useState(false);
+  const instFileInputRef = useRef<HTMLInputElement>(null);
 
   // Taxonomy states
   const [subject, setSubject] = useState("english");
@@ -185,9 +206,11 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
         const primaryLevelLabel = levelObj ? levelObj.label : (selectedLevelId || "Pre-A1/A1");
 
         if (generatorMode === 'prompt') {
-          const partPromptText = partsToGenerate > 1 
-            ? `${questionsText}\n\nIMPORTANT: This is Part ${partNum} of a ${partsToGenerate}-part series. Generate distinct questions and vocabulary for Part ${partNum}. The title of this part MUST end with " Part ${partNum}" (e.g. if the title is "Present Continuous", it must be "Present Continuous Part ${partNum}"). Do not repeat questions or options from other parts.`
+          let partPromptText = partsToGenerate > 1 
+            ? `${questionsText}\n\nIMPORTANT: This is Part ${partNum} of a ${partsToGenerate}-part series. Generate distinct questions and vocabulary for Part ${partNum}. The title of this part MUST end with " Part ${partNum}" (e.g. if the title is "${topic}", it must be "${topic} Part ${partNum}"). Do not repeat questions or options from other parts.`
             : questionsText;
+
+          partPromptText = partPromptText.replace(/{topic}/g, topic);
 
           const enhancedPrompt = `
 Context Information for AI:
@@ -271,6 +294,7 @@ ${partPromptText}
             title: result.title,
             instructions: result.instructions,
             instructionsTranslations: result.instructionsTranslations || null,
+            instructionsImageUrl: instructionsImageUrl || null,
             shortDescription: result.shortDescription,
             thumbnailImagePrompt: result.thumbnailImagePrompt,
             subject,
@@ -291,11 +315,11 @@ ${partPromptText}
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-gray-800 flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl border border-slate-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="flex items-center gap-4 p-6 border-b border-slate-100 dark:border-gray-800 bg-indigo-50/50 dark:bg-indigo-900/10">
+        <div className="flex items-center gap-4 p-6 border-b border-slate-100 dark:border-gray-800 bg-indigo-50/50 dark:bg-indigo-900/10 shrink-0">
           <div className="size-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <span className="material-symbols-outlined text-[28px]">auto_awesome</span>
           </div>
@@ -305,16 +329,16 @@ ${partPromptText}
           </div>
           <button 
             onClick={onClose}
-            className="size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 transition-colors shrink-0"
+            className="size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 transition-colors shrink-0 cursor-pointer"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 md:p-8 flex flex-col gap-6 overflow-y-auto max-h-[70vh] custom-scrollbar">
+        <div className="p-6 md:p-8 flex flex-col gap-6 overflow-y-auto flex-1 custom-scrollbar">
           {errors.length > 0 && (
-            <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-900/30 flex flex-col gap-2">
+            <div className="p-4 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-sm font-medium border border-red-100 dark:border-red-900/30 flex flex-col gap-2 shrink-0">
               <div className="flex items-start gap-3">
                 <span className="material-symbols-outlined shrink-0 text-[20px] text-red-500">error</span>
                 <p className="font-bold">Đã phát hiện lỗi:</p>
@@ -327,124 +351,257 @@ ${partPromptText}
             </div>
           )}
 
-          {/* Tab Switcher */}
-          <div className="flex border-b border-slate-200 dark:border-gray-800">
-            <button
-              type="button"
-              onClick={() => setGeneratorMode('prompt')}
-              className={`flex-1 py-3 text-center text-sm font-bold border-b-2 transition-all ${
-                generatorMode === 'prompt'
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Tự nhập prompt tùy chỉnh
-            </button>
-            <button
-              type="button"
-              onClick={() => setGeneratorMode('url')}
-              className={`flex-1 py-3 text-center text-sm font-bold border-b-2 transition-all ${
-                generatorMode === 'url'
-                  ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              Từ link bài tập có sẵn
-            </button>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Left Column: Context Configuration */}
+            <div className="flex flex-col gap-5">
+              {/* Taxonomy Config */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">Cấu hình đối tượng & mục tiêu</label>
+                <div className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/40 dark:bg-slate-800/20">
+                  <TaxonomySelector
+                    config={onboardingConfig}
+                    subject={subject}
+                    setSubject={setSubject}
+                    targetAudiences={targetAudiences}
+                    setTargetAudiences={setTargetAudiences}
+                    audienceLevels={audienceLevels}
+                    setAudienceLevels={setAudienceLevels}
+                    learningGoals={learningGoals}
+                    setLearningGoals={setLearningGoals}
+                  />
+                </div>
+              </div>
 
-          {/* Taxonomy Config */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Cấu hình đối tượng & mục tiêu (AI tham khảo ngữ cảnh)</label>
-            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4.5 bg-slate-50/40 dark:bg-slate-800/20">
-              <TaxonomySelector
-                config={onboardingConfig}
-                subject={subject}
-                setSubject={setSubject}
-                targetAudiences={targetAudiences}
-                setTargetAudiences={setTargetAudiences}
-                audienceLevels={audienceLevels}
-                setAudienceLevels={setAudienceLevels}
-                learningGoals={learningGoals}
-                setLearningGoals={setLearningGoals}
-              />
-            </div>
-          </div>
-
-          {/* Parts Count Config (Only show in custom prompt mode) */}
-          {isCreationMode && generatorMode === 'prompt' && (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Số lượng phần bài tập (Parts) muốn tạo</label>
-              <div className="flex items-center gap-3">
-                <select
-                  value={partsCount ?? ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPartsCount(val === "" ? null : Number(val));
-                  }}
-                  className={`px-4 py-2.5 rounded-xl border bg-slate-50 dark:bg-gray-800 text-sm font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 text-[#111418] dark:text-white transition-all ${
-                    errors.includes('Vui lòng chọn số lượng phần bài tập (Parts) muốn tạo.')
-                      ? 'border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50'
-                      : 'border-slate-200 dark:border-gray-700'
-                  }`}
+              {/* Instructions Image Upload (Global) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-350 font-headline flex items-center gap-1.5 uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[18px] text-blue-500 font-bold">photo_library</span>
+                  Ảnh minh họa Hướng dẫn bài tập
+                </label>
+                <div
+                  onClick={() => !isUploadingInstImage && instFileInputRef.current?.click()}
+                  className={`relative border border-dashed rounded-xl p-3.5 transition-all cursor-pointer flex items-center justify-between bg-slate-50/50 dark:bg-gray-800/30 ${
+                    instructionsImageUrl
+                      ? 'border-blue-500 bg-blue-50/5 dark:bg-blue-950/5'
+                      : 'border-slate-200 dark:border-gray-700 hover:border-slate-350 dark:hover:border-gray-600'
+                  } ${isUploadingInstImage ? 'pointer-events-none opacity-70' : ''}`}
                 >
-                  <option value="">-- Chọn số lượng Part --</option>
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <option key={num} value={num}>
-                      Tạo {num} bài tập ({num} Parts)
-                    </option>
-                  ))}
-                </select>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  Hệ thống sẽ tạo ra các phần bài tập riêng biệt (ví dụ: Part 1, Part 2...) với các câu hỏi khác nhau.
-                </span>
+                  {instructionsImageUrl ? (
+                    <div className="flex items-center gap-3 w-full justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-12 aspect-video rounded-lg overflow-hidden border border-blue-100 dark:border-blue-900/50 shadow-sm shrink-0">
+                          <img
+                            src={instructionsImageUrl}
+                            alt="Instructions image"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-blue-600 dark:text-blue-400">Đã tải ảnh hướng dẫn lên</p>
+                          <p className="text-[10px] text-slate-400">Bấm để thay đổi ảnh khác</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInstructionsImageUrl(null);
+                          if (instFileInputRef.current) instFileInputRef.current.value = '';
+                        }}
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                        Xóa ảnh
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 text-slate-450 dark:text-slate-500">
+                      {isUploadingInstImage ? (
+                        <>
+                          <span className="material-symbols-outlined text-[20px] text-blue-500 animate-spin shrink-0">sync</span>
+                          <div className="text-left">
+                            <p className="text-xs font-bold text-blue-600 dark:text-blue-400 font-headline">Đang tải ảnh hướng dẫn...</p>
+                            <p className="text-[10px] text-slate-400">Vui lòng đợi giây lát</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[20px] text-blue-500 shrink-0">upload_file</span>
+                          <div className="text-left">
+                            <p className="text-xs font-bold text-slate-600 dark:text-slate-350 font-headline">Tải ảnh hướng dẫn chung cho bài tập (PNG, JPG, WEBP...)</p>
+                            <p className="text-[10px] text-slate-455">Hiển thị ở cuối hướng dẫn của tất cả các ngôn ngữ</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={instFileInputRef}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (!file.type.startsWith('image/')) {
+                          alert('Vui lòng chọn một tệp hình ảnh hợp lệ.');
+                          return;
+                        }
+                        setIsUploadingInstImage(true);
+                        try {
+                          const { uploadMedia } = await import('@/actions/upload-actions');
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          const res = await uploadMedia(formData);
+                          if (res.success && res.url) {
+                            setInstructionsImageUrl(res.url);
+                          } else {
+                            alert('Tải ảnh thất bại: ' + res.error);
+                          }
+                        } catch (err: any) {
+                          console.error(err);
+                          alert('Có lỗi xảy ra khi tải ảnh.');
+                        } finally {
+                          setIsUploadingInstImage(false);
+                        }
+                      }
+                    }}
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploadingInstImage}
+                  />
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Mode inputs */}
-          {generatorMode === 'prompt' ? (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">Nội dung Prompt tùy chỉnh <span className="text-red-500">*</span></label>
-              <textarea 
-                value={questionsText}
-                onChange={(e) => setQuestionsText(e.target.value)}
-                className="resize-none h-96 p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-mono font-medium"
-              />
+            {/* Right Column: Source & Inputs */}
+            <div className="flex flex-col gap-5">
+              {/* Tab Switcher */}
+              <div className="flex border-b border-slate-200 dark:border-gray-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setGeneratorMode('prompt')}
+                  className={`flex-1 py-2.5 text-center text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                    generatorMode === 'prompt'
+                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Tự nhập prompt tùy chỉnh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGeneratorMode('url')}
+                  className={`flex-1 py-2.5 text-center text-xs font-bold border-b-2 transition-all cursor-pointer ${
+                    generatorMode === 'url'
+                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Từ link bài tập có sẵn
+                </button>
+              </div>
+
+              {generatorMode === 'prompt' ? (
+                <div className="flex flex-col gap-4">
+                  {/* Parts Count Config */}
+                  {isCreationMode && (
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">Số lượng phần bài tập (Parts) muốn tạo</label>
+                      <div className="flex flex-col md:flex-row md:items-center gap-3">
+                        <select
+                          value={partsCount ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPartsCount(val === "" ? null : Number(val));
+                          }}
+                          className={`w-full md:w-auto px-4 py-2.5 rounded-xl border bg-slate-50 dark:bg-gray-800 text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500/20 text-[#111418] dark:text-white transition-all ${
+                            errors.includes('Vui lòng chọn số lượng phần bài tập (Parts) muốn tạo.')
+                              ? 'border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50'
+                              : 'border-slate-200 dark:border-gray-700'
+                          }`}
+                        >
+                          <option value="">-- Chọn số lượng Part --</option>
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <option key={num} value={num}>
+                              Tạo {num} bài tập ({num} Parts)
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                          Hệ thống sẽ tạo ra các phần bài tập (Part 1, Part 2...) riêng biệt.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Topic Title Input */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">
+                      Chủ đề bài học (Topic Title) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      placeholder="Ví dụ: Present Continuous (e.g. He is playing)"
+                      className={`px-4 py-3 rounded-xl border bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-xs font-semibold text-[#111418] dark:text-white ${
+                        errors.includes('Vui lòng nhập tên chủ đề bài học (Topic Title).')
+                          ? 'border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50'
+                          : 'border-slate-200 dark:border-gray-700'
+                      }`}
+                    />
+                    <p className="text-[10px] text-slate-400 dark:text-slate-550 -mt-1">
+                      Chủ đề này thay thế cho <code className="px-1 py-0.5 bg-slate-100 dark:bg-gray-800 rounded font-mono text-indigo-650 dark:text-indigo-400 font-bold">{`{topic}`}</code> trong Prompt bên dưới.
+                    </p>
+                  </div>
+
+                  {/* Prompt input */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">Nội dung Prompt tùy chỉnh <span className="text-red-500">*</span></label>
+                    <textarea 
+                      value={questionsText}
+                      onChange={(e) => setQuestionsText(e.target.value)}
+                      className="resize-none h-[220px] lg:h-[260px] p-3.5 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-xs font-mono font-medium"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {/* URL Input */}
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">
+                      Đường dẫn (URL) bài tập gốc <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                      type="text"
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      placeholder="Dán link chứa bài tập tại đây (ví dụ: https://preply.com/...)"
+                      className="p-3.5 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-xs font-medium"
+                    />
+                    <span className="text-[10px] text-slate-400 dark:text-slate-550">
+                      AI sẽ tự động cào và trích xuất tối đa 30 câu hỏi từ link này để thiết lập bài tập. Cam kết không tự sáng tạo câu hỏi ngoài.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 font-headline">
-                Đường dẫn (URL) bài tập gốc <span className="text-red-500">*</span>
-              </label>
-              <input 
-                type="text"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Dán link chứa bài tập tại đây (ví dụ: https://preply.com/...)"
-                className="p-4 rounded-xl border border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
-              />
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                AI sẽ tự động cào và trích xuất tối đa 30 câu hỏi từ link này để thiết lập bài tập. Cam kết không tự sáng tạo câu hỏi ngoài.
-              </span>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-100 dark:border-gray-800 flex justify-end gap-3 bg-slate-50 dark:bg-gray-800/50">
+        <div className="p-6 border-t border-slate-100 dark:border-gray-800 flex justify-end gap-3 bg-slate-50 dark:bg-gray-800/50 shrink-0">
           <button 
             type="button"
             onClick={onClose}
             disabled={isGenerating}
-            className="px-6 py-3 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50"
+            className="px-6 py-3 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-200 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer"
           >
             Hủy bỏ
           </button>
           <button 
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="px-8 py-3 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
+            className="px-8 py-3 rounded-xl font-bold text-sm bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer"
           >
             {isGenerating ? (
               <>

@@ -634,7 +634,7 @@ function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
   const youtubeId = getYoutubeVideoId(videoUrl);
 
   const hasMaterialSection = videoUrl || audioUrl || extraData.readingText;
-  const hasInstructionText = !!extraData.instructions;
+  const hasInstructionText = !!extraData.instructions || !!extraData.instructionsImageUrl;
 
   return (
     <>
@@ -673,6 +673,7 @@ function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
           <InstructionsBlock
             instructions={extraData.instructions}
             instructionsTranslations={instructionsTranslations}
+            instructionsImageUrl={extraData.instructionsImageUrl}
             isLoggedIn={!isGuest}
             proseClassName="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10"
           />
@@ -1814,7 +1815,7 @@ export default function KidTeenQuizRunner({
 
       {/* ── RIGHT SLIDE PANEL ── */}
       <div
-        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden w-[80vw] max-w-none"
+        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden w-[80vw] md:w-1/2 max-w-none"
         style={{ transform: isSidePanelOpen ? "translateX(0)" : "translateX(100%)" }}
       >
         {/* Panel header */}

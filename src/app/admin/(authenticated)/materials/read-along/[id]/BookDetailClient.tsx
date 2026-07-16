@@ -42,6 +42,7 @@ interface Book {
   bookId: string;
   title: string;
   description: string | null;
+  thumbnailUrl?: string | null;
   slides: Slide[];
 }
 
@@ -495,6 +496,48 @@ export function BookDetailClient({ bookId }: Props) {
   });
   const [confirmImageModal, setConfirmImageModal] = useState(false);
 
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+
+  const handleGenerateThumbnail = async () => {
+    setIsGeneratingThumbnail(true);
+    try {
+      const res = await fetch(`/api/admin/read-along/${bookId}/image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isThumbnail: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Tạo thumbnail thất bại.");
+      setBook(prev => prev ? { ...prev, thumbnailUrl: data.imageUrl } : prev);
+      toast.success("✅ Đã tạo ảnh bìa thumbnail 16:9!");
+    } catch (err: any) {
+      toast.error(err.message || "Tạo thumbnail thất bại.");
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
+  };
+
+  const handleUploadThumbnail = async (file: File) => {
+    setIsGeneratingThumbnail(true);
+    try {
+      const formData = new FormData();
+      formData.append("isThumbnail", "true");
+      formData.append("file", file);
+      const res = await fetch(`/api/admin/read-along/${bookId}/image/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload thumbnail thất bại.");
+      setBook(prev => prev ? { ...prev, thumbnailUrl: data.imageUrl } : prev);
+      toast.success("✅ Đã tải lên ảnh bìa thumbnail 16:9!");
+    } catch (err: any) {
+      toast.error(err.message || "Upload thumbnail thất bại.");
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
+  };
+
   // Batch OCR state
   const [batchOcrProgress, setBatchOcrProgress] = useState<{
     current: number;
@@ -922,19 +965,26 @@ export function BookDetailClient({ bookId }: Props) {
       case "start":
         setBatchImageProgress(p => ({ ...p, total: event.total, status: "running" }));
         break;
-      case "progress":
+      case "progress": {
+        const isThumb = event.slideId === "thumbnail";
         setBatchImageProgress(p => ({
-          ...p, current: event.current,
+          ...p,
+          current: isThumb ? p.current : event.current,
           slideStatuses: { ...p.slideStatuses, [event.slideId]: event.status },
-          successCount: event.status === "done" ? p.successCount + 1 : p.successCount,
+          successCount: event.status === "done" && !isThumb ? p.successCount + 1 : p.successCount,
         }));
         if (event.status === "done" && event.imageUrl) {
-          const updateSlides = (prev: Slide[]) =>
-            prev.map(s => s.id === event.slideId ? { ...s, imageUrl: event.imageUrl } : s);
-          setSortedSlides(updateSlides);
-          setBook(prev => prev ? { ...prev, slides: updateSlides(prev.slides) } : prev);
+          if (isThumb) {
+            setBook(prev => prev ? { ...prev, thumbnailUrl: event.imageUrl } : prev);
+          } else {
+            const updateSlides = (prev: Slide[]) =>
+              prev.map(s => s.id === event.slideId ? { ...s, imageUrl: event.imageUrl } : s);
+            setSortedSlides(updateSlides);
+            setBook(prev => prev ? { ...prev, slides: updateSlides(prev.slides) } : prev);
+          }
         }
         break;
+      }
       case "skip":
         setBatchImageProgress(p => ({
           ...p, current: p.current + 1,
@@ -1164,13 +1214,68 @@ export function BookDetailClient({ bookId }: Props) {
       {/* Header */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-5 shadow-xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Link
               href="/admin/materials/read-along"
-              className="w-9 h-9 bg-neutral-800 hover:bg-neutral-700 rounded-xl flex items-center justify-center transition-all border border-neutral-700 shrink-0"
+              className="w-9 h-9 bg-neutral-800 hover:bg-neutral-700 rounded-xl flex items-center justify-center transition-all border border-neutral-700 shrink-0 self-center"
             >
               <span className="material-symbols-outlined text-neutral-400 text-lg">arrow_back</span>
             </Link>
+
+            {/* 16:9 Thumbnail Management Container */}
+            <div className="relative w-32 aspect-[16/9] rounded-xl overflow-hidden bg-neutral-800 border border-neutral-700 shrink-0 flex items-center justify-center group/thumb">
+              {book.thumbnailUrl ? (
+                <img
+                  src={book.thumbnailUrl}
+                  alt="Thumbnail"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="material-symbols-outlined text-neutral-500 text-xl">image</span>
+              )}
+
+              {/* Overlay Actions on Hover */}
+              <div className="absolute inset-0 bg-black/70 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handleGenerateThumbnail()}
+                  disabled={isGeneratingThumbnail}
+                  title="Tạo thumbnail bằng AI"
+                  className="w-7 h-7 bg-amber-500 hover:bg-amber-400 text-white rounded-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  {isGeneratingThumbnail ? (
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                  )}
+                </button>
+                <label className="w-7 h-7 bg-blue-500 hover:bg-blue-400 text-white rounded-lg flex items-center justify-center cursor-pointer transition-all">
+                  <span className="material-symbols-outlined text-sm">upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadThumbnail(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Generating overlay spinner */}
+              {isGeneratingThumbnail && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                </div>
+              )}
+            </div>
+
             <div>
               <div className="text-xs text-neutral-500 font-mono mb-0.5">ID: {book.bookId}</div>
               <h1 className="text-xl font-bold text-white">{book.title}</h1>

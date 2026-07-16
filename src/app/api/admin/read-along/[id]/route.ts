@@ -59,6 +59,15 @@ export async function PATCH(
       return NextResponse.json({ success: true, book: updated });
     }
 
+    // --- Update book thumbnail: { thumbnailUrl: string | null } ---
+    if (body.thumbnailUrl !== undefined) {
+      const updated = await prisma.readAlongBook.update({
+        where: { id: bookId },
+        data: { thumbnailUrl: body.thumbnailUrl },
+      });
+      return NextResponse.json({ success: true, book: updated });
+    }
+
     // --- Reorder slides: { order: string[] } ---
     if (body.order && Array.isArray(body.order)) {
       const order: string[] = body.order;

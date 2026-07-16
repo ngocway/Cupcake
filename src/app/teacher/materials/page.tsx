@@ -178,6 +178,7 @@ export default function MaterialLibraryPage() {
           shortDescription: metadata?.shortDescription || '',
           instructions: metadata?.instructions || '',
           instructionsTranslations: metadata?.instructionsTranslations || null,
+          instructionsImageUrl: metadata?.instructionsImageUrl || null,
           thumbnailImagePrompt: metadata?.thumbnailImagePrompt || '',
           subject: metadata?.subject,
           targetAudiences: metadata?.targetAudiences,

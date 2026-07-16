@@ -22,6 +22,7 @@ interface BookWithSlides {
   title: string;
   description: string | null;
   mdContent: string | null;
+  thumbnailUrl?: string | null;
   status: BookStatus;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -205,7 +206,7 @@ export default function ReadAlongListClient({ initialBooks }: ReadAlongListClien
             const coverSlide =
               book.slides.find((s) => s.slideNumber === "01" || s.orderIndex === 0) ||
               book.slides[0];
-            const coverUrl = coverSlide?.imageUrl || "";
+            const coverUrl = book.thumbnailUrl || coverSlide?.imageUrl || "";
             const isDraft = book.status === "DRAFT";
             const isToggling = togglingId === book.id;
 

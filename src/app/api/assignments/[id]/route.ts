@@ -42,6 +42,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         tags: baseAssignment.tags || "",
         instructions: baseAssignment.instructions || null,
         instructionsTranslations: baseAssignment.instructionsTranslations || null,
+        instructionsImageUrl: baseAssignment.instructionsImageUrl || null,
         categories: [],
         targetAudiences: baseAssignment.targetAudiences || [],
         learningGoals: baseAssignment.learningGoals || [],

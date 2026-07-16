@@ -608,9 +608,10 @@ function AssignmentExtraDataConsumer({ promise, translationsPromise, isGuest, ha
   const youtubeId = getYoutubeVideoId(videoUrl);
 
   const hasMaterialSection = videoUrl || audioUrl || extraData.readingText;
-  const hasInstructionText = extraData.instructions &&
-    (String(extraData.instructions).replace(/<[^>]*>/g, "").trim().length > 0 ||
-     /<(img|video|audio|iframe|embed)\b/i.test(String(extraData.instructions)));
+  const hasInstructionText = !!extraData.instructionsImageUrl ||
+    (extraData.instructions &&
+      (String(extraData.instructions).replace(/<[^>]*>/g, "").trim().length > 0 ||
+       /<(img|video|audio|iframe|embed)\b/i.test(String(extraData.instructions))));
 
   return (
     <>
@@ -687,6 +688,7 @@ function AssignmentExtraDataConsumer({ promise, translationsPromise, isGuest, ha
             <InstructionsBlock
               instructions={extraData.instructions}
               instructionsTranslations={instructionsTranslations}
+              instructionsImageUrl={extraData.instructionsImageUrl}
               isLoggedIn={!isGuest}
             />
           </div>
@@ -1567,7 +1569,7 @@ export default function QuizClientRunner({
       )}
 
       {/* Sliding Right Column / Drawer */}
-      <div className={`fixed top-0 right-0 h-full w-full md:w-2/3 z-[110] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-full w-full md:w-1/2 z-[110] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-500 ease-out flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <button 
           onClick={() => setIsSidebarOpen(false)} 
           className={`absolute top-6 right-6 md:right-full md:mr-0 z-50 p-2.5 text-white bg-primary hover:bg-primary/90 rounded-full shadow-lg shadow-primary/30 transition-all duration-500 hover:scale-110 active:scale-95 ${isSidebarOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-50 pointer-events-none'}`}

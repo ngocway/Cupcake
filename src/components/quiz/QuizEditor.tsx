@@ -8,6 +8,7 @@ import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
 import type { MaterialType } from './types';
 import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveManyToQuestionBank, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
+import { saveInstructionsTranslationAction } from '@/actions/ai-quiz-generator';
 import { getPopularTags } from '@/actions/tag-actions';
 import { generateNewUniqueSlugAction, updateMaterialSlugAction } from '@/actions/update-slug-action';
 import { MultipleChoiceBuilder } from './MultipleChoiceBuilder';
@@ -193,6 +194,7 @@ export function QuizEditor() {
       shortDescription,
       instructions,
       instructionsTranslations,
+      instructionsImageUrl,
       tags,
       targetAudiences,
       audienceLevels,
@@ -293,6 +295,7 @@ export function QuizEditor() {
   const [showAIModal, setShowAIModal] = useState(searchParams.get('ai') === 'true');
   const [instructions, setInstructions] = useState('');
   const [instructionsTranslations, setInstructionsTranslations] = useState<any>(null);
+  const [instructionsImageUrl, setInstructionsImageUrl] = useState<string | null>(null);
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [loading, setLoading] = useState(id !== 'new');
   const [fetchError, setFetchError] = useState(false);
@@ -336,7 +339,7 @@ export function QuizEditor() {
 
     const fetchAssignment = async () => {
       try {
-        const res = await fetch(`/api/assignments/${id}`);
+        const res = await fetch(`/api/assignments/${id}?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.assignment) {
           setTitle(data.assignment.title);
@@ -356,6 +359,7 @@ export function QuizEditor() {
           setShortDescription(data.assignment.shortDescription || '');
           setInstructions(data.assignment.instructions || '');
           setInstructionsTranslations(data.assignment.instructionsTranslations || null);
+          setInstructionsImageUrl(data.assignment.instructionsImageUrl || null);
           setTags(data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : []);
           if (data.assignment.targetAudiences) {
             setTargetAudiences((data.assignment.targetAudiences || []).map((t: string) => t.toLowerCase()));
@@ -388,6 +392,7 @@ export function QuizEditor() {
             shortDescription: data.assignment.shortDescription || '',
             instructions: data.assignment.instructions || '',
             instructionsTranslations: data.assignment.instructionsTranslations || null,
+            instructionsImageUrl: data.assignment.instructionsImageUrl || null,
             tags: data.assignment.tags ? data.assignment.tags.split(',').filter(Boolean) : [],
             targetAudiences: data.assignment.targetAudiences ? data.assignment.targetAudiences.map((t: string) => t.toLowerCase()) : [],
             audienceLevels: data.assignment.audienceLevels || {},
@@ -433,6 +438,7 @@ export function QuizEditor() {
         shortDescription,
         instructions,
         instructionsTranslations,
+        instructionsImageUrl,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
         audienceLevels,
@@ -444,6 +450,55 @@ export function QuizEditor() {
     } catch (err) {
       console.error('Save failed:', err);
       setSaveStatus('ERROR');
+    }
+  };
+
+  const handleSaveInstructions = async (val: string, trans: Record<string, string> | null | undefined, imageUrl: string | null | undefined) => {
+    setInstructions(val);
+    if (trans) setInstructionsTranslations(trans);
+    setInstructionsImageUrl(imageUrl || null);
+    
+    if (loading || fetchError) return;
+    setSaveStatus('SAVING');
+    try {
+      const realId = await getOrCreateRealId();
+      await autoSaveMaterial({
+        id: realId,
+        title,
+        questions,
+        subject,
+        gradeLevel,
+        shortDescription,
+        instructions: val,
+        instructionsTranslations: trans,
+        instructionsImageUrl: imageUrl || null,
+        tags: tags.join(','),
+        targetAudiences: targetAudiences,
+        audienceLevels,
+        learningGoals,
+        thumbnail
+      });
+      setSaveStatus('SAVED');
+      lastSavedStateRef.current = JSON.stringify({
+        title,
+        questions,
+        subject,
+        gradeLevel,
+        shortDescription,
+        instructions: val,
+        instructionsTranslations: trans,
+        instructionsImageUrl: imageUrl || null,
+        tags,
+        targetAudiences,
+        audienceLevels,
+        learningGoals,
+        thumbnail
+      });
+      toast.success("Đã lưu hướng dẫn làm bài thành công!");
+    } catch (err) {
+      console.error('Save instructions failed:', err);
+      setSaveStatus('ERROR');
+      toast.error("Lưu hướng dẫn làm bài thất bại!");
     }
   };
 
@@ -479,6 +534,7 @@ export function QuizEditor() {
         shortDescription,
         instructions,
         instructionsTranslations,
+        instructionsImageUrl,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
         audienceLevels,
@@ -547,6 +603,7 @@ export function QuizEditor() {
         shortDescription,
         instructions,
         instructionsTranslations,
+        instructionsImageUrl,
         tags: tags.join(','),
         targetAudiences: targetAudiences,
         audienceLevels,
@@ -615,6 +672,7 @@ export function QuizEditor() {
       }
       if (metadata.instructions) setInstructions(metadata.instructions);
       if (metadata.instructionsTranslations) setInstructionsTranslations(metadata.instructionsTranslations);
+      if (metadata.instructionsImageUrl) setInstructionsImageUrl(metadata.instructionsImageUrl);
       if (metadata.shortDescription) setShortDescription(metadata.shortDescription);
       if (metadata.subject) setSubject(metadata.subject);
       if (metadata.targetAudiences && Array.isArray(metadata.targetAudiences)) {
@@ -700,25 +758,38 @@ export function QuizEditor() {
     setActiveId(aiQuestions[0].id);
     setShowAIModal(false);
 
-    // Auto-save to database immediately
-    if (id && id !== 'new' && !loading && !fetchError) {
+    // Auto-save to database immediately (including when id='new' — create a real record first)
+    if (!fetchError) {
       setSaveStatus('SAVING');
-      autoSaveMaterial({
-        id,
-        title: metadata?.title || title,
-        questions: updatedQuestions,
-        subject,
-        gradeLevel,
-        shortDescription: metadata?.shortDescription || shortDescription,
-        instructions: metadata?.instructions || instructions,
-        instructionsTranslations: metadata?.instructionsTranslations || instructionsTranslations,
-        tags: tags.join(','),
-        targetAudiences: metadata?.targetAudiences || targetAudiences,
-        audienceLevels: metadata?.audienceLevels || audienceLevels,
-        learningGoals,
-        thumbnail: metadata?.thumbnail || thumbnail
-      }).then(() => {
+      const instructionsToTranslate = metadata?.instructions || instructions;
+      getOrCreateRealId().then((realId) => {
+        return autoSaveMaterial({
+          id: realId,
+          title: metadata?.title || title,
+          questions: updatedQuestions,
+          subject,
+          gradeLevel,
+          shortDescription: metadata?.shortDescription || shortDescription,
+          instructions: metadata?.instructions || instructions,
+          instructionsTranslations: metadata?.instructionsTranslations || instructionsTranslations,
+          instructionsImageUrl: metadata?.instructionsImageUrl || instructionsImageUrl,
+          tags: tags.join(','),
+          targetAudiences: metadata?.targetAudiences || targetAudiences,
+          audienceLevels: metadata?.audienceLevels || audienceLevels,
+          learningGoals,
+          thumbnail: metadata?.thumbnail || thumbnail
+        }).then(() => realId);
+      }).then((realId) => {
         setSaveStatus('SAVED');
+        // Fire-and-forget: translate instructionsHtml to Vietnamese in background only if not already translated
+        const hasTranslations = 
+          (metadata?.instructionsTranslations && Object.keys(metadata.instructionsTranslations).length > 0) ||
+          (instructionsTranslations && Object.keys(instructionsTranslations).length > 0);
+        if (instructionsToTranslate && !hasTranslations) {
+          saveInstructionsTranslationAction(realId, instructionsToTranslate).catch(
+            (err) => console.warn('[QuizEditor] Background translation trigger failed:', err)
+          );
+        }
       }).catch((err) => {
         console.error('Autosave after AI generation failed:', err);
         setSaveStatus('ERROR');
@@ -1004,8 +1075,11 @@ export function QuizEditor() {
       {showInstructionsModal && (
         <InstructionsModal 
           initialValue={instructions}
+          initialTranslations={instructionsTranslations}
+          initialInstructionsImageUrl={instructionsImageUrl}
+          topicTitle={title}
           onClose={() => setShowInstructionsModal(false)}
-          onSave={(val) => setInstructions(val)}
+          onSave={handleSaveInstructions}
         />
       )}
       {/* Header */}
@@ -1697,8 +1771,11 @@ export function QuizEditor() {
       {showInstructionsModal && (
         <InstructionsModal 
           initialValue={instructions}
+          initialTranslations={instructionsTranslations}
+          initialInstructionsImageUrl={instructionsImageUrl}
+          topicTitle={title}
           onClose={() => setShowInstructionsModal(false)}
-          onSave={(val) => setInstructions(val)}
+          onSave={handleSaveInstructions}
         />
       )}
     </div>

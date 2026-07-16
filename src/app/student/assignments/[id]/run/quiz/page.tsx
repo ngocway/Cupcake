@@ -59,6 +59,7 @@ export default async function StudentQuizPage({
     select: {
       readingText: true,
       instructions: true,
+      instructionsImageUrl: true,
       videoUrl: true,
       audioUrl: true,
       teacher: {

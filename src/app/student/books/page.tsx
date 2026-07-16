@@ -46,7 +46,7 @@ export default async function StudentBooksPage() {
             const coverSlide =
               book.slides.find((s) => s.slideNumber === "01" || s.orderIndex === 0) ||
               book.slides[0];
-            const coverUrl = coverSlide?.imageUrl || "";
+            const coverUrl = book.thumbnailUrl || coverSlide?.imageUrl || "";
 
             return (
               <Link
@@ -55,7 +55,7 @@ export default async function StudentBooksPage() {
                 className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/55 rounded-3xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group shadow-md"
               >
                 {/* Book Thumbnail */}
-                <div className="relative aspect-[4/3] bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden border-b border-slate-100 dark:border-slate-800">
+                <div className="relative aspect-[16/9] bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden border-b border-slate-100 dark:border-slate-800">
                   {coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

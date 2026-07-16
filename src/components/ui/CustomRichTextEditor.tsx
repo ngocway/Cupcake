@@ -12,6 +12,7 @@ interface CustomRichTextEditorProps extends Omit<React.HTMLAttributes<HTMLDivEle
   onImageUploadClick?: () => void;
   onVideoUploadClick?: () => void;
   onAudioUploadClick?: () => void;
+  customToolbarElements?: React.ReactNode;
   // Events needed by ReadingExerciseBuilder
   onEditorClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onEditorDrop?: (e: React.DragEvent<HTMLDivElement>) => void;
@@ -51,6 +52,7 @@ export const CustomRichTextEditor = forwardRef<HTMLDivElement, CustomRichTextEdi
       onImageUploadClick,
       onVideoUploadClick,
       onAudioUploadClick,
+      customToolbarElements,
       onEditorClick,
       onEditorDrop,
       onEditorDragOver,
@@ -163,6 +165,12 @@ export const CustomRichTextEditor = forwardRef<HTMLDivElement, CustomRichTextEdi
               {onImageUploadClick && <ToolbarButton icon="image" onClick={onImageUploadClick} color="text-blue-500" tooltip="Thêm ảnh" disabled={isHtmlMode} />}
               {onVideoUploadClick && <ToolbarButton icon="videocam" onClick={onVideoUploadClick} color="text-purple-500" tooltip="Thêm video" disabled={isHtmlMode} />}
               {onAudioUploadClick && <ToolbarButton icon="audio_file" onClick={onAudioUploadClick} color="text-emerald-500" tooltip="Thêm âm thanh" disabled={isHtmlMode} />}
+            </div>
+          )}
+
+          {customToolbarElements && (
+            <div className="flex items-center gap-1.5 p-0.5">
+              {customToolbarElements}
             </div>
           )}
 

@@ -53,6 +53,7 @@ interface InstructionsBlockProps {
   instructions: string;
   /** The plain-text translations: { vi: "...", th: "...", id: "..." } */
   instructionsTranslations?: Record<string, string> | null;
+  instructionsImageUrl?: string | null;
   isLoggedIn: boolean;
   /** CSS class for the prose wrapper */
   proseClassName?: string;
@@ -61,6 +62,7 @@ interface InstructionsBlockProps {
 export function InstructionsBlock({
   instructions,
   instructionsTranslations,
+  instructionsImageUrl,
   isLoggedIn,
   proseClassName = "prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10",
 }: InstructionsBlockProps) {
@@ -93,17 +95,26 @@ export function InstructionsBlock({
       )}
 
       {/* Content */}
-      {showTranslated && translatedText ? (
-        // Native translation (HTML rendered with InteractiveReadingContent)
-        <div className={proseClassName}>
+      <div className={proseClassName}>
+        {showTranslated && translatedText ? (
+          // Native translation (HTML rendered with InteractiveReadingContent)
           <InteractiveReadingContent html={translatedText} isLoggedIn={isLoggedIn} />
-        </div>
-      ) : (
-        // English HTML (original, with InteractiveReadingContent)
-        <div className={proseClassName}>
+        ) : (
+          // English HTML (original, with InteractiveReadingContent)
           <InteractiveReadingContent html={instructions} isLoggedIn={isLoggedIn} />
-        </div>
-      )}
+        )}
+
+        {/* Global instructions image, rendered at the bottom of the instruction flow */}
+        {instructionsImageUrl && (
+          <div className="mt-6 border-t border-slate-200/50 dark:border-slate-800/50 pt-6 flex justify-center">
+            <img 
+              src={instructionsImageUrl} 
+              alt="Assignment Instructions Illustration" 
+              className="max-w-full h-auto rounded-2xl border border-slate-200/50 dark:border-gray-800 shadow-md"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

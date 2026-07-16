@@ -20,16 +20,33 @@ export async function POST(
     const { id: bookId } = await params;
     const formData = await req.formData();
     const slideId = formData.get("slideId") as string;
+    const isThumbnail = formData.get("isThumbnail") === "true";
     const file = formData.get("file") as File | null;
 
-    if (!slideId) {
-      return NextResponse.json({ error: "slideId is required" }, { status: 400 });
+    if (!isThumbnail && !slideId) {
+      return NextResponse.json({ error: "slideId or isThumbnail is required" }, { status: 400 });
     }
     if (!file) {
       return NextResponse.json({ error: "file is required" }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
       return NextResponse.json({ error: "Chỉ cho phép file ảnh (JPEG, PNG, WebP, GIF)." }, { status: 400 });
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const ext = file.name.split(".").pop() || "jpg";
+
+    if (isThumbnail) {
+      const imageName = `thumbnail-${Date.now()}.${ext}`;
+      const r2Path = `read-along/${bookId}/${imageName}`;
+      const imageUrl = await uploadBufferToR2(buffer, r2Path, file.type);
+
+      await prisma.readAlongBook.update({
+        where: { id: bookId },
+        data: { thumbnailUrl: imageUrl },
+      });
+
+      return NextResponse.json({ success: true, imageUrl, imageName });
     }
 
     const slide = await prisma.readAlongSlide.findFirst({
@@ -39,8 +56,6 @@ export async function POST(
       return NextResponse.json({ error: "Slide not found" }, { status: 404 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split(".").pop() || "jpg";
     const imageName = `slide-${slideId}-${Date.now()}.${ext}`;
     const r2Path = `read-along/${bookId}/${imageName}`;
     const imageUrl = await uploadBufferToR2(buffer, r2Path, file.type);

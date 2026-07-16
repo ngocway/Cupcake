@@ -937,7 +937,7 @@ export function ReadingExerciseBuilder({
       }
 
       try {
-        const res = await fetch(`/api/assignments/${targetId}`);
+        const res = await fetch(`/api/assignments/${targetId}?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.assignment) {
           setTitle(data.assignment.title);

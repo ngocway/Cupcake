@@ -79,6 +79,7 @@ export async function createMaterialWithQuestions(payload: {
   shortDescription?: string;
   instructions?: string;
   instructionsTranslations?: any;
+  instructionsImageUrl?: string | null;
   targetAudiences?: string[];
   thumbnailImagePrompt?: string;
   level?: string;
@@ -108,6 +109,7 @@ export async function createMaterialWithQuestions(payload: {
       shortDescription: payload.shortDescription || null,
       instructions: payload.instructions || null,
       instructionsTranslations: payload.instructionsTranslations || null,
+      instructionsImageUrl: payload.instructionsImageUrl || null,
       targetAudiences: payload.targetAudiences || [],
       level: payload.level || null,
       audienceLevels: payload.audienceLevels || null,
@@ -156,6 +158,17 @@ export async function createMaterialWithQuestions(payload: {
       } catch (err) {
         console.error(`[Background] Error in DALL-E generation task:`, err);
       }
+    });
+  }
+
+  // Trigger background instructions translation if instructions are provided
+  if (payload.instructions && newAss.id) {
+    import('@/actions/ai-quiz-generator').then(({ saveInstructionsTranslationAction }) => {
+      saveInstructionsTranslationAction(newAss.id, payload.instructions!).catch((err) => {
+        console.error(`[Background] Failed to trigger instructions translation for ${newAss.id}:`, err);
+      });
+    }).catch(err => {
+      console.error(`[Background] Failed to import translation action for ${newAss.id}:`, err);
     });
   }
 
@@ -231,6 +244,7 @@ export async function autoSaveMaterial(payload: {
   tags?: string;
   instructions?: string;
   instructionsTranslations?: any;
+  instructionsImageUrl?: string | null;
   categoryIds?: string[];
   targetAudiences?: string[];
   level?: string;
@@ -289,7 +303,7 @@ export async function autoSaveMaterial(payload: {
     }
   }
 
-  console.log(`[AutoSave] Starting update for assignment: ${payload.id}`);
+  console.log(`[AutoSave] Starting update for assignment: ${payload.id} | instructionsImageUrl=${JSON.stringify(payload.instructionsImageUrl)}`);
 
   const updatePayload: any = { 
     updatedAt: new Date(),
@@ -310,7 +324,15 @@ export async function autoSaveMaterial(payload: {
         updatePayload[field] = payload[field as keyof typeof payload] || null;
       }
     }
+    // Always force-save instructionsImageUrl if provided — bypass comparison to avoid any edge case
+    if (payload.instructionsImageUrl !== undefined) {
+      updatePayload.instructionsImageUrl = payload.instructionsImageUrl || null;
+    }
+    // [DEBUG] Log instructionsImageUrl save path
+    console.log(`[AutoSave DEBUG] payload.instructionsImageUrl=${JSON.stringify(payload.instructionsImageUrl)}, existing.instructionsImageUrl=${JSON.stringify((existing as any).instructionsImageUrl)}, in updatePayload=${JSON.stringify(updatePayload.instructionsImageUrl)}`);
+
     if (thumbnail !== undefined && thumbnail !== existing.thumbnail) updatePayload.thumbnail = thumbnail;
+
   } else {
     updatePayload.title = payload.title;
     updatePayload.thumbnail = thumbnail;
@@ -327,6 +349,7 @@ export async function autoSaveMaterial(payload: {
     updatePayload.tags = payload.tags || "";
     updatePayload.instructions = payload.instructions || null;
     updatePayload.instructionsTranslations = payload.instructionsTranslations || null;
+    updatePayload.instructionsImageUrl = payload.instructionsImageUrl || null;
     updatePayload.audioMetadata = payload.audioMetadata || null;
   }
 
@@ -358,6 +381,7 @@ export async function autoSaveMaterial(payload: {
         tags: payload.tags || "",
         instructions: payload.instructions || null,
         instructionsTranslations: payload.instructionsTranslations || null,
+        instructionsImageUrl: payload.instructionsImageUrl || null,
         teacherId: session.user.id,
         materialType: 'READING', 
         status: 'DRAFT',

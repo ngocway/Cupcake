@@ -169,6 +169,7 @@ model Assignment {
   subject               String?
   instructions              String?
   instructionsTranslations  Json?
+  instructionsImageUrl      String?
   shortDescription          String?
   tags                  String?              @default("")
   targetAudiences       String[]             @default([])
@@ -730,15 +731,16 @@ enum BookStatus {
 }
 
 model ReadAlongBook {
-  id          String           @id @default(cuid())
-  bookId      String           @unique // e.g. "sw_103026"
-  title       String
-  description String?
-  mdContent   String?          // Stored raw markdown content (nullable for non-md books)
-  status      BookStatus       @default(DRAFT)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  slides      ReadAlongSlide[]
+  id           String           @id @default(cuid())
+  bookId       String           @unique // e.g. "sw_103026"
+  title        String
+  description  String?
+  mdContent    String?          // Stored raw markdown content (nullable for non-md books)
+  thumbnailUrl String?          // 16:9 cover image URL
+  status       BookStatus       @default(DRAFT)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  slides       ReadAlongSlide[]
 }
 
 model ReadAlongSlide {
