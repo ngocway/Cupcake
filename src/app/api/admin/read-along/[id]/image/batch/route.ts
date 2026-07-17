@@ -272,13 +272,17 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
         try {
           const currentPageNumber = book.slides.findIndex(s => s.id === slide.id) + 1;
 
+          const lowerSlideText = slideText.toLowerCase();
+          const mentionsAnimals = /(dog|cat|bird|rabbit|bear|fox|animal|squirrel|mouse|lion|tiger|deer|sheep|cow|chicken|duck|monkey|pig|elephant|giraffe|horse)/.test(lowerSlideText);
+          const animalNegativeDirective = mentionsAnimals ? "" : ", no animals, no dogs, no cats, no birds, no wildlife";
+
           const fullPrompt = `Children's book illustration. Scene: "${slideText}"
 
 IMPORTANT: Illustrate EXACTLY what the sentence says. Focus on the environment, setting, and actions described — do NOT add characters unless the sentence specifically mentions people or animals.
 
 
 ART STYLE: soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, airy composition, whimsical children's book style, 2D, ultra clean illustration, Adobe Fresco style, 9:16
-No realism, no 3D, no photorealistic, no text, no watermark.`;
+No realism, no 3D, no photorealistic, no text, no watermark${animalNegativeDirective}.`;
 
           const result = await generateImageWithGemini(fullPrompt, apiKey);
 

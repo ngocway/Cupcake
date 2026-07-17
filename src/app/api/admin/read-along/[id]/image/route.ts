@@ -101,10 +101,14 @@ CHARACTER CONSISTENCY RULES (CRITICAL):
 `.trim();
 
       // Build full prompt optimized for FLUX combining user's specific style and slide text
+      const lowerSlideText = slideText.toLowerCase();
+      const mentionsAnimals = /(dog|cat|bird|rabbit|bear|fox|animal|squirrel|mouse|lion|tiger|deer|sheep|cow|chicken|duck|monkey|pig|elephant|giraffe|horse)/.test(lowerSlideText);
+      const animalNegativeDirective = mentionsAnimals ? "" : ", no animals, no dogs, no cats, no birds, no wildlife";
+
       fullPrompt = `A premium quality, whimsical 2D children's book illustration depicting: ${slideText}.
 Style guidelines: children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design.
 Character appearance rules: ${characterContext}
-Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark.`;
+Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark${animalNegativeDirective}.`;
 
       console.log(`[ReadAlong Image] Generating page ${currentPageNumber}/${book.slides.length} for "${book.title}": "${slideText.substring(0, 60)}..."`);
     }
