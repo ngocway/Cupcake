@@ -655,10 +655,10 @@ function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
               </div>
             )}
              {audioUrl && (
-               <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={assignment.ttsSpeed || 1.0} />
+               <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={extraData.ttsSpeed || 1.0} />
              )}
              <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
-               <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={assignment.ttsSpeed || 1.0} />
+               <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={extraData.ttsSpeed || 1.0} />
              </div>
           </div>
         </div>

@@ -653,11 +653,11 @@ function AssignmentExtraDataConsumer({ promise, translationsPromise, isGuest, ha
 
               {/* Audio Player */}
               {audioUrl && (
-                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={assignment.ttsSpeed || 1.0} />
+                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={extraData.ttsSpeed || 1.0} />
               )}
 
               <div className="prose prose-slate prose-lg dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-xl text-lg leading-loose">
-                <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={assignment.ttsSpeed || 1.0} />
+                <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={extraData.ttsSpeed || 1.0} />
               </div>
             </div>
           </div>
