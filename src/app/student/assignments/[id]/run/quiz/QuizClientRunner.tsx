@@ -653,11 +653,11 @@ function AssignmentExtraDataConsumer({ promise, translationsPromise, isGuest, ha
 
               {/* Audio Player */}
               {audioUrl && (
-                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} />
+                <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={assignment.ttsSpeed || 1.0} />
               )}
 
               <div className="prose prose-slate prose-lg dark:prose-invert max-w-none prose-headings:font-black prose-p:leading-loose prose-p:text-xl text-lg leading-loose">
-                <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} />
+                <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={assignment.ttsSpeed || 1.0} />
               </div>
             </div>
           </div>
@@ -1231,7 +1231,7 @@ export default function QuizClientRunner({
                             {questionText}
                           </h3>
                           {q.audioUrl && (
-                             <QuestionAudioPlayButton src={q.audioUrl} />
+                             <QuestionAudioPlayButton src={q.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
                           )}
                         </div>
                       )}
@@ -1408,7 +1408,7 @@ export default function QuizClientRunner({
                                   {questionText}
                                 </h3>
                                 {q.audioUrl && (
-                                  <QuestionAudioPlayButton src={q.audioUrl} />
+                                  <QuestionAudioPlayButton src={q.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
                                 )}
                               </div>
                             )}

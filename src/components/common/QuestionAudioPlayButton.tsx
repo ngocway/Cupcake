@@ -6,12 +6,19 @@ import { Pause, Lightbulb } from 'lucide-react';
 interface QuestionAudioPlayButtonProps {
   src: string;
   className?: string;
+  playbackRate?: number;
 }
 
-export function QuestionAudioPlayButton({ src, className = "" }: QuestionAudioPlayButtonProps) {
+export function QuestionAudioPlayButton({ src, className = "", playbackRate = 1.0 }: QuestionAudioPlayButtonProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
 
   useEffect(() => {
     return () => {
@@ -38,6 +45,8 @@ export function QuestionAudioPlayButton({ src, className = "" }: QuestionAudioPl
     if (!audioRef.current) {
       setIsLoading(true);
       const audio = new Audio(src);
+      audio.defaultPlaybackRate = playbackRate;
+      audio.playbackRate = playbackRate;
       audioRef.current = audio;
 
       audio.addEventListener('canplaythrough', () => setIsLoading(false));
@@ -50,8 +59,12 @@ export function QuestionAudioPlayButton({ src, className = "" }: QuestionAudioPl
         window.dispatchEvent(new CustomEvent('hintAudioPause'));
       });
       audio.addEventListener('play', () => {
+        audio.playbackRate = playbackRate;
         setIsPlaying(true);
         window.dispatchEvent(new CustomEvent('hintAudioPlay'));
+      });
+      audio.addEventListener('playing', () => {
+        audio.playbackRate = playbackRate;
       });
       audio.addEventListener('error', () => {
         setIsLoading(false);
@@ -59,7 +72,11 @@ export function QuestionAudioPlayButton({ src, className = "" }: QuestionAudioPl
       });
     }
 
-    audioRef.current.play().catch(() => {
+    audioRef.current.play().then(() => {
+      if (audioRef.current) {
+        audioRef.current.playbackRate = playbackRate;
+      }
+    }).catch(() => {
       setIsLoading(false);
       setIsPlaying(false);
     });

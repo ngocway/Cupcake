@@ -97,7 +97,7 @@ const getLangTitle = (lang: string) => {
   return titles[lang] || lang.toUpperCase();
 };
 
-export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: string; isLoggedIn?: boolean }) {
+export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRate = 1.0 }: { html: string; isLoggedIn?: boolean; playbackRate?: number }) {
   const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
   const [mounted, setMounted] = useState(false);
   const currentLang = useContentStore(s => s.nativeLanguage);
@@ -120,6 +120,12 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const playingAudioRef = useRef<HTMLAudioElement | null>(null);
   const [playingAudioUrl, setPlayingAudioUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (playingAudioRef.current) {
+      playingAudioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
 
   useEffect(() => {
     setMounted(true);
@@ -263,9 +269,21 @@ export function InteractiveReadingContent({ html, isLoggedIn = false }: { html: 
         window.dispatchEvent(new CustomEvent('pauseAllAudio', { detail: { source: 'InteractiveReadingContent' } }));
         
         const audio = new Audio(url);
+        audio.defaultPlaybackRate = playbackRate;
+        audio.playbackRate = playbackRate;
+        
+        audio.addEventListener('play', () => {
+          audio.playbackRate = playbackRate;
+        });
+        audio.addEventListener('playing', () => {
+          audio.playbackRate = playbackRate;
+        });
+        
         playingAudioRef.current = audio;
         setPlayingAudioUrl(url);
-        audio.play().catch(e => console.error("Audio playback failed", e));
+        audio.play().then(() => {
+          audio.playbackRate = playbackRate;
+        }).catch(e => console.error("Audio playback failed", e));
         
         audio.onended = () => {
           setPlayingAudioUrl(null);

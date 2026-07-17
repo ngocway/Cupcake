@@ -654,12 +654,12 @@ function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
                 )}
               </div>
             )}
-            {audioUrl && (
-              <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} />
-            )}
-            <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
-              <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} />
-            </div>
+             {audioUrl && (
+               <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={assignment.ttsSpeed || 1.0} />
+             )}
+             <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
+               <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={assignment.ttsSpeed || 1.0} />
+             </div>
           </div>
         </div>
       )}
@@ -1469,7 +1469,7 @@ export default function KidTeenQuizRunner({
                     {questionText}
                   </h3>
                   {currentQuestion?.audioUrl && (
-                    <QuestionAudioPlayButton src={currentQuestion.audioUrl} />
+                    <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
                   )}
                 </div>
               )}
@@ -1675,7 +1675,7 @@ export default function KidTeenQuizRunner({
                           {questionText}
                         </h3>
                         {currentQuestion?.audioUrl && (
-                          <QuestionAudioPlayButton src={currentQuestion.audioUrl} />
+                          <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
                         )}
                       </div>
                     )}

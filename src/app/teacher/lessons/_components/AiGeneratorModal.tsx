@@ -175,7 +175,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[32px] w-full max-w-2xl shadow-2xl border border-white/20 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] relative">
+      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[32px] w-full max-w-2xl md:max-w-5xl shadow-2xl border border-white/20 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] relative">
         
         {/* Loading Overlay */}
         {loading && (
@@ -228,11 +228,11 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-6">
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 flex flex-col md:grid md:grid-cols-2 gap-6 min-h-0">
           
           {/* Errors view */}
           {errors.length > 0 && (
-            <div className="w-full bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-4 rounded-2xl text-xs border border-red-100 dark:border-red-900/40 shrink-0">
+            <div className="md:col-span-2 w-full bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 p-4 rounded-2xl text-xs border border-red-100 dark:border-red-900/40 shrink-0">
               <p className="font-bold mb-1 flex items-center gap-1.5">
                 <X className="w-4 h-4" /> Đã xảy ra lỗi:
               </p>
@@ -242,204 +242,212 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({ isOpen, onCl
             </div>
           )}
 
-          {/* SECTION 1: TOPIC INPUT */}
-          <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="ai-topic-input" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Chủ đề bài học <span className="text-red-500">*</span>
-              </label>
-              <input 
-                id="ai-topic-input"
-                type="text" 
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-                placeholder='VD: "Space Exploration", "Artificial Intelligence", "Thì Hiện Tại Đơn" hoặc "Environmental Protection"' 
-                value={topic} 
-                onChange={e => setTopic(e.target.value)} 
+          {/* Left Column */}
+          <div className="flex flex-col gap-6">
+            {/* SECTION 1: TOPIC INPUT */}
+            <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-5 rounded-2xl flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="ai-topic-input" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Chủ đề bài học <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  id="ai-topic-input"
+                  type="text" 
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                  placeholder='VD: "Space Exploration", "Artificial Intelligence", "Thì Hiện Tại Đơn" hoặc "Environmental Protection"' 
+                  value={topic} 
+                  onChange={e => setTopic(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="ai-reference-input" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Tài liệu tham khảo / Yêu cầu chi tiết (Tùy chọn)
+                </label>
+                <textarea 
+                  id="ai-reference-input"
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
+                  placeholder='Nhập link tài liệu tham khảo hoặc các hướng dẫn chi tiết cho bài đọc/câu hỏi...'
+                  value={reference} 
+                  onChange={e => setReference(e.target.value)} 
+                />
+              </div>
+
+              {/* Toggle sentence audio */}
+              <div className="flex items-center gap-4 pt-3.5 border-t border-gray-150 dark:border-slate-800 mt-1">
+                <div className="flex flex-col gap-0.5 flex-1">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Tạo audio từng câu
+                  </span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                    Tạo âm thanh đọc cho mỗi câu/đoạn ngắn trong bài đọc
+                  </span>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={generateSentenceAudio}
+                    onChange={(e) => setGenerateSentenceAudio(e.target.checked)}
+                  />
+                  <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-650 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* SECTION 3: QUESTION MATRIX */}
+            <div className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4.5 bg-slate-50/40 dark:bg-slate-800/20">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-3.5">
+                Cấu hình số câu hỏi trắc nghiệm & bài tập
+              </span>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Trắc nghiệm MC</span>
+                  <input 
+                    id="ai-mcq-count"
+                    type="number" 
+                    min="0" 
+                    max="15" 
+                    className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
+                    value={mcqCount} 
+                    onChange={e => setMcqCount(parseInt(e.target.value) || 0)} 
+                  />
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Nhiều đáp án</span>
+                  <input 
+                    id="ai-mcq-multi-count"
+                    type="number" 
+                    min="0" 
+                    max="15" 
+                    className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
+                    value={mcqMultiCount} 
+                    onChange={e => setMcqMultiCount(parseInt(e.target.value) || 0)} 
+                  />
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Đúng / Sai</span>
+                  <input 
+                    id="ai-tf-count"
+                    type="number" 
+                    min="0" 
+                    max="15" 
+                    className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
+                    value={tfCount} 
+                    onChange={e => setTfCount(parseInt(e.target.value) || 0)} 
+                  />
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
+                  <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Điền từ</span>
+                  <input 
+                    id="ai-cloze-count"
+                    type="number" 
+                    min="0" 
+                    max="15" 
+                    className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
+                    value={clozeCount} 
+                    onChange={e => setClozeCount(parseInt(e.target.value) || 0)} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 4: AI VOICE CONFIG (TTS) */}
+            <div className="border border-indigo-100/60 dark:border-slate-850 rounded-2xl p-4.5 bg-indigo-50/15 dark:bg-slate-850/10">
+              <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 mb-3.5">
+                <Volume2 className="w-4.5 h-4.5" /> Tùy chỉnh giọng nói bài đọc (TTS)
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="ai-voice-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Giọng đọc</label>
+                  <select 
+                    id="ai-voice-select"
+                    className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                    value={ttsVoice} 
+                    onChange={e => setTtsVoice(e.target.value)}
+                  >
+                    <option value="Aoede">Aoede (Nữ - Truyền cảm)</option>
+                    <option value="Kore">Kore (Nữ - Trong trẻo)</option>
+                    <option value="Charon">Charon (Nam - Điềm đạm)</option>
+                    <option value="Fenrir">Fenrir (Nam - Trầm ấm)</option>
+                    <option value="Puck">Puck (Nam - Vui tươi)</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="ai-speed-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tốc độ đọc</label>
+                  <select 
+                    id="ai-speed-select"
+                    className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                    value={ttsSpeed} 
+                    onChange={e => setTtsSpeed(parseFloat(e.target.value))}
+                  >
+                    <option value="0.65">0.65x (Siêu chậm)</option>
+                    <option value="0.75">0.75x (Rất chậm)</option>
+                    <option value="0.8">0.8x (Chậm)</option>
+                    <option value="0.9">0.9x (Hơi chậm)</option>
+                    <option value="1.0">1.0x (Bình thường - Mặc định)</option>
+                    <option value="1.2">1.2x (Nhanh)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="flex flex-col gap-6">
+            {/* SECTION 2: CONFIGURATION GRID */}
+            <div className="grid grid-cols-1 gap-4">
+              
+              <TaxonomySelector
+                config={onboardingConfig}
+                subject={subject}
+                setSubject={setSubject}
+                targetAudiences={targetAudiences}
+                setTargetAudiences={setTargetAudiences}
+                audienceLevels={audienceLevels}
+                setAudienceLevels={setAudienceLevels}
+                learningGoals={learningGoals}
+                setLearningGoals={setLearningGoals}
               />
-            </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="ai-reference-input" className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Tài liệu tham khảo / Yêu cầu chi tiết (Tùy chọn)
-              </label>
-              <textarea 
-                id="ai-reference-input"
-                rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
-                placeholder='Nhập link tài liệu tham khảo hoặc các hướng dẫn chi tiết cho bài đọc/câu hỏi...'
-                value={reference} 
-                onChange={e => setReference(e.target.value)} 
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                {/* Reading passage length */}
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="ai-length-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Độ dài bài đọc</label>
+                  <select 
+                    id="ai-length-select"
+                    className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+                    value={length} 
+                    onChange={e => setLength(e.target.value)}
+                  >
+                    <option value="Siêu ngắn (~100 từ)">Siêu ngắn (~100 từ)</option>
+                    <option value="Rất ngắn (~200 từ)">Rất ngắn (~200 từ)</option>
+                    <option value="Trung bình (~400 từ)">Trung bình (~400 từ)</option>
+                    <option value="Dài (~600 từ)">Dài (~600 từ)</option>
+                    <option value="Rất dài (>800 từ)">Rất dài (&gt;800 từ)</option>
+                  </select>
+                </div>
 
-            {/* Toggle sentence audio */}
-            <div className="flex items-center gap-4 pt-3.5 border-t border-gray-150 dark:border-slate-800 mt-1">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Tạo audio từng câu
-                </span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                  Tạo âm thanh đọc cho mỗi câu/đoạn ngắn trong bài đọc
-                </span>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={generateSentenceAudio}
-                  onChange={(e) => setGenerateSentenceAudio(e.target.checked)}
-                />
-                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-650 peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-          </div>
-
-          {/* SECTION 2: CONFIGURATION GRID */}
-          <div className="grid grid-cols-1 gap-4">
-            
-            <TaxonomySelector
-              config={onboardingConfig}
-              subject={subject}
-              setSubject={setSubject}
-              targetAudiences={targetAudiences}
-              setTargetAudiences={setTargetAudiences}
-              audienceLevels={audienceLevels}
-              setAudienceLevels={setAudienceLevels}
-              learningGoals={learningGoals}
-              setLearningGoals={setLearningGoals}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-              {/* Reading passage length */}
-              <div className="flex flex-col gap-1">
-                <label htmlFor="ai-length-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Độ dài bài đọc</label>
-                <select 
-                  id="ai-length-select"
-                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={length} 
-                  onChange={e => setLength(e.target.value)}
-                >
-                  <option value="Siêu ngắn (~100 từ)">Siêu ngắn (~100 từ)</option>
-                  <option value="Rất ngắn (~200 từ)">Rất ngắn (~200 từ)</option>
-                  <option value="Trung bình (~400 từ)">Trung bình (~400 từ)</option>
-                  <option value="Dài (~600 từ)">Dài (~600 từ)</option>
-                  <option value="Rất dài (>800 từ)">Rất dài (&gt;800 từ)</option>
-                </select>
-              </div>
-
-              {/* Vocab count */}
-              <div className="flex flex-col gap-1">
-                <label htmlFor="ai-vocab-input" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Số từ vựng nổi bật cần trích xuất</label>
-                <input
-                  id="ai-vocab-input"
-                  type="number"
-                  min="0"
-                  max="20"
-                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={vocabCount}
-                  onChange={e => setVocabCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 3: QUESTION MATRIX */}
-          <div className="border border-slate-100 dark:border-slate-800 rounded-2xl p-4.5 bg-slate-50/40 dark:bg-slate-800/20">
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block mb-3.5">
-              Cấu hình số câu hỏi trắc nghiệm & bài tập
-            </span>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
-                <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Trắc nghiệm MC</span>
-                <input 
-                  id="ai-mcq-count"
-                  type="number" 
-                  min="0" 
-                  max="15" 
-                  className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
-                  value={mcqCount} 
-                  onChange={e => setMcqCount(parseInt(e.target.value) || 0)} 
-                />
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
-                <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Nhiều đáp án</span>
-                <input 
-                  id="ai-mcq-multi-count"
-                  type="number" 
-                  min="0" 
-                  max="15" 
-                  className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
-                  value={mcqMultiCount} 
-                  onChange={e => setMcqMultiCount(parseInt(e.target.value) || 0)} 
-                />
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
-                <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Đúng / Sai</span>
-                <input 
-                  id="ai-tf-count"
-                  type="number" 
-                  min="0" 
-                  max="15" 
-                  className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
-                  value={tfCount} 
-                  onChange={e => setTfCount(parseInt(e.target.value) || 0)} 
-                />
-              </div>
-
-              <div className="bg-white dark:bg-gray-800 border border-slate-150 dark:border-slate-700 rounded-xl p-3 flex flex-col items-center justify-center gap-1">
-                <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Điền từ</span>
-                <input 
-                  id="ai-cloze-count"
-                  type="number" 
-                  min="0" 
-                  max="15" 
-                  className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-sm" 
-                  value={clozeCount} 
-                  onChange={e => setClozeCount(parseInt(e.target.value) || 0)} 
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 4: AI VOICE CONFIG (TTS) */}
-          <div className="border border-indigo-100/60 dark:border-slate-850 rounded-2xl p-4.5 bg-indigo-50/15 dark:bg-slate-850/10">
-            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 mb-3.5">
-              <Volume2 className="w-4.5 h-4.5" /> Tùy chỉnh giọng nói bài đọc (TTS)
-            </span>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="ai-voice-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Giọng đọc</label>
-                <select 
-                  id="ai-voice-select"
-                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={ttsVoice} 
-                  onChange={e => setTtsVoice(e.target.value)}
-                >
-                  <option value="Aoede">Aoede (Nữ - Truyền cảm)</option>
-                  <option value="Kore">Kore (Nữ - Trong trẻo)</option>
-                  <option value="Charon">Charon (Nam - Điềm đạm)</option>
-                  <option value="Fenrir">Fenrir (Nam - Trầm ấm)</option>
-                  <option value="Puck">Puck (Nam - Vui tươi)</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="ai-speed-select" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tốc độ đọc</label>
-                <select 
-                  id="ai-speed-select"
-                  className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
-                  value={ttsSpeed} 
-                  onChange={e => setTtsSpeed(parseFloat(e.target.value))}
-                >
-                  <option value="0.8">0.8x (Chậm)</option>
-                  <option value="0.9">0.9x (Hơi chậm)</option>
-                  <option value="1.0">1.0x (Bình thường - Mặc định)</option>
-                  <option value="1.2">1.2x (Nhanh)</option>
-                </select>
+                {/* Vocab count */}
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="ai-vocab-input" className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Số từ vựng nổi bật cần trích xuất</label>
+                  <input
+                    id="ai-vocab-input"
+                    type="number"
+                    min="0"
+                    max="20"
+                    className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-slate-800 dark:text-slate-100 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={vocabCount}
+                    onChange={e => setVocabCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))}
+                  />
+                </div>
               </div>
             </div>
           </div>

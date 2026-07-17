@@ -513,9 +513,21 @@ export function ReadingExerciseBuilder({
         audioRef.current.pause();
       }
       const audio = new Audio(url);
+      audio.defaultPlaybackRate = ttsSpeed;
+      audio.playbackRate = ttsSpeed;
+      
+      audio.addEventListener('play', () => {
+        audio.playbackRate = ttsSpeed;
+      });
+      audio.addEventListener('playing', () => {
+        audio.playbackRate = ttsSpeed;
+      });
+      
       audioRef.current = audio;
       setPlayingAudioUrl(url);
-      audio.play().catch(err => {
+      audio.play().then(() => {
+        audio.playbackRate = ttsSpeed;
+      }).catch(err => {
         console.error("Failed to play audio:", err);
         setPlayingAudioUrl(null);
       });
@@ -572,6 +584,12 @@ export function ReadingExerciseBuilder({
   const [materialType, setMaterialType] = useState<string>('READING');
   const [ttsVoice, setTtsVoice] = useState<string>('Aoede');
   const [ttsSpeed, setTtsSpeed] = useState<number>(1.0);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = ttsSpeed;
+    }
+  }, [ttsSpeed]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [audioMetadata, setAudioMetadata] = useState<any>(null);
   const [lastSavedAudioMetadataHash, setLastSavedAudioMetadataHash] = useState<string | null>(null);
@@ -2319,6 +2337,23 @@ export function ReadingExerciseBuilder({
                           </span>
                         </button>
                         <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate flex-1" title={audioUrl.split('/').pop()}>{audioUrl.split('/').pop()}</span>
+                        
+                        {/* Playback speed select */}
+                        <select
+                          value={ttsSpeed}
+                          onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
+                          className="text-[10px] bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded px-1.5 py-0.5 outline-none font-bold text-slate-600 dark:text-slate-350 cursor-pointer shrink-0"
+                          title="Tốc độ đọc mặc định cho học sinh"
+                        >
+                          <option value="0.65">0.65x</option>
+                          <option value="0.75">0.75x</option>
+                          <option value="0.8">0.8x</option>
+                          <option value="0.9">0.9x</option>
+                          <option value="1.0">1.0x</option>
+                          <option value="1.1">1.1x</option>
+                          <option value="1.2">1.2x</option>
+                        </select>
+
                         <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setAudioUrl(''); }} className="text-red-400 hover:text-red-600 p-1 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0">
                           <span className="material-symbols-outlined text-[14px]">delete</span>
                         </button>
@@ -3086,6 +3121,8 @@ export function ReadingExerciseBuilder({
                           onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
                           className="w-full px-5 py-3 rounded-2xl bg-slate-50 dark:bg-gray-800 border-2 border-transparent focus:border-primary focus:bg-white transition-all outline-none font-bold text-sm text-slate-700 dark:text-slate-200 appearance-none"
                         >
+                          <option value="0.65">0.65x (Siêu chậm)</option>
+                          <option value="0.75">0.75x (Rất chậm)</option>
                           <option value="0.8">0.8x (Chậm)</option>
                           <option value="0.9">0.9x (Hơi chậm)</option>
                           <option value="1.0">1.0x (Bình thường - Mặc định)</option>

@@ -6,19 +6,33 @@ import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 interface GlobalAudioPlayerProps {
   audioUrl: string;
   autoPlay?: boolean;
+  defaultPlaybackRate?: number;
 }
 
-export function GlobalAudioPlayer({ audioUrl, autoPlay = false }: GlobalAudioPlayerProps) {
+export function GlobalAudioPlayer({ audioUrl, autoPlay = false, defaultPlaybackRate = 1.0 }: GlobalAudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState(defaultPlaybackRate);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
-  const speeds = [0.8, 0.9, 1, 1.2, 1.5];
+  const speeds = [0.65, 0.75, 0.8, 0.9, 1, 1.2, 1.5];
+
+  useEffect(() => {
+    setPlaybackSpeed(defaultPlaybackRate);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = defaultPlaybackRate;
+    }
+  }, [defaultPlaybackRate]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -26,6 +40,8 @@ export function GlobalAudioPlayer({ audioUrl, autoPlay = false }: GlobalAudioPla
 
     const setAudioData = () => {
       setDuration(audio.duration);
+      audio.defaultPlaybackRate = playbackSpeed;
+      audio.playbackRate = playbackSpeed;
     };
 
     const setAudioTime = () => {
@@ -47,7 +63,12 @@ export function GlobalAudioPlayer({ audioUrl, autoPlay = false }: GlobalAudioPla
 
     const handlePlayEvent = () => {
       setIsPlaying(true);
+      audio.playbackRate = playbackSpeed;
       window.dispatchEvent(new CustomEvent('materialAudioPlay'));
+    };
+
+    const handlePlayingEvent = () => {
+      audio.playbackRate = playbackSpeed;
     };
 
     audio.addEventListener('loadedmetadata', setAudioData);
@@ -55,6 +76,7 @@ export function GlobalAudioPlayer({ audioUrl, autoPlay = false }: GlobalAudioPla
     audio.addEventListener('ended', handleAudioEnd);
     audio.addEventListener('pause', handlePauseEvent);
     audio.addEventListener('play', handlePlayEvent);
+    audio.addEventListener('playing', handlePlayingEvent);
 
     return () => {
       audio.removeEventListener('loadedmetadata', setAudioData);
@@ -62,6 +84,7 @@ export function GlobalAudioPlayer({ audioUrl, autoPlay = false }: GlobalAudioPla
       audio.removeEventListener('ended', handleAudioEnd);
       audio.removeEventListener('pause', handlePauseEvent);
       audio.removeEventListener('play', handlePlayEvent);
+      audio.removeEventListener('playing', handlePlayingEvent);
       window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
     };
   }, []);
