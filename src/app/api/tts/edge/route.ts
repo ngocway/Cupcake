@@ -31,6 +31,59 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 1. Try ElevenLabs TTS if API key is configured (Primary)
+    const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
+    if (elevenLabsApiKey) {
+      try {
+        const voiceId = process.env.ELEVENLABS_VOICE_ID || "Xb7hH8MSUJpSbSDYk0k2"; // Alice
+        const stability = parseFloat(process.env.ELEVENLABS_STABILITY || "0.80");
+        const speed = parseFloat(process.env.ELEVENLABS_SPEED || "0.7");
+        const useSpeakerBoost = process.env.ELEVENLABS_USE_SPEAKER_BOOST !== "false";
+
+        const speechText = cleanText;
+        const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_flash_v2";
+
+        console.log(`[Edge TTS Route -> ElevenLabs] Synthesizing: "${cleanText.substring(0, 30)}..."`);
+
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: "POST",
+          headers: {
+            "xi-api-key": elevenLabsApiKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            text: speechText,
+            model_id: modelId,
+            voice_settings: {
+              stability,
+              similarity_boost: 0.75,
+              use_speaker_boost: useSpeakerBoost,
+              speed
+            }
+          })
+        });
+
+        if (response.ok) {
+          const audioBuffer = Buffer.from(await response.arrayBuffer());
+          return new Response(audioBuffer, {
+            status: 200,
+            headers: {
+              "Content-Type": "audio/mpeg",
+              "Content-Length": audioBuffer.length.toString(),
+              "Cache-Control": "no-store",
+            },
+          });
+        } else {
+          const errorText = await response.text();
+          console.warn(`[Edge TTS Route] ElevenLabs API failed, falling back to MsEdgeTTS:`, errorText);
+        }
+      } catch (err: any) {
+        console.warn(`[Edge TTS Route] ElevenLabs synthesis failed, falling back to MsEdgeTTS:`, err.message);
+      }
+    }
+
+    // 2. Fallback to MsEdgeTTS
+    console.log(`[Edge TTS Route -> MsEdgeTTS Fallback] Synthesizing: "${cleanText.substring(0, 30)}..."`);
     const tts = new MsEdgeTTS();
     await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
 
@@ -38,12 +91,9 @@ export async function POST(req: NextRequest) {
 
     // Collect audio chunks then send as one response
     const chunks: Buffer[] = [];
-
-    await new Promise<void>((resolve, reject) => {
-      audioStream.on("data", (chunk: Buffer) => chunks.push(chunk));
-      audioStream.on("end", resolve);
-      audioStream.on("error", reject);
-    });
+    for await (const chunk of audioStream) {
+      chunks.push(chunk as Buffer);
+    }
 
     tts.close();
 

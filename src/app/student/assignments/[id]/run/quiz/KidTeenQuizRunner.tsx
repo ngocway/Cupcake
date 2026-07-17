@@ -579,12 +579,14 @@ function ExplanationResolver({
   explanation,
   isExpanded,
   onToggleExpand,
+  hideHeader,
 }: {
   promise: Promise<Record<string, any>> | undefined;
   questionId: string;
   explanation: string;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  hideHeader?: boolean;
 }) {
   const translationMap = promise ? React.use(promise) : null;
   const translations = translationMap?.[questionId] ?? null;
@@ -595,6 +597,7 @@ function ExplanationResolver({
       explanationTranslations={translations}
       isExpanded={isExpanded}
       onToggleExpand={onToggleExpand}
+      hideHeader={hideHeader}
     />
   );
 }
@@ -758,14 +761,24 @@ export default function KidTeenQuizRunner({
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const isMutedRef = useRef(isMuted);
+  const isAutoReadEnabled = true;
+  const autoReadAudioRef = useRef<HTMLAudioElement | null>(null);
+  const segmentsRef = useRef<any[]>([]);
+  const currentSegmentIndexRef = useRef<number>(0);
   const [hasStarted, setHasStarted] = useState(false);
   const [isHintPlaying, setIsHintPlaying] = useState(false);
+  const [isTtsPlaying, setIsTtsPlaying] = useState(false);
+  const [quizMode, setQuizMode] = useState<"practice" | "autoplay">("practice");
+  const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
+  const [nextQuestionCountdown, setNextQuestionCountdown] = useState<number | null>(null);
+  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
 
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
-  const handleStartQuiz = () => {
+  const handleStartQuiz = (mode: "practice" | "autoplay") => {
+    setQuizMode(mode);
     setHasStarted(true);
     if (bgMusicRef.current && !isMuted) {
       bgMusicRef.current.play().catch((e) => console.error("Error playing background music on start click", e));
@@ -778,7 +791,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.1;
+    bgMusic.volume = isMuted ? 0 : 0.05;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -828,7 +841,7 @@ export default function KidTeenQuizRunner({
     };
   }, []);
 
-  // Update volume when mute state changes or hint audio state changes
+  // Update volume when mute state changes, hint audio state changes, or TTS playing state changes
   useEffect(() => {
     if (bgMusicRef.current) {
       if (isMuted) {
@@ -836,10 +849,10 @@ export default function KidTeenQuizRunner({
         window.dispatchEvent(new CustomEvent('pauseAllAudio'));
       } else {
         bgMusicRef.current.play().catch(() => {});
-        bgMusicRef.current.volume = isHintPlaying ? 0.05 : 0.1;
+        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.02 : 0.05;
       }
     }
-  }, [isMuted, isHintPlaying]);
+  }, [isMuted, isHintPlaying, isTtsPlaying]);
 
   // Update background music playback based on material audio
   useEffect(() => {
@@ -864,6 +877,8 @@ export default function KidTeenQuizRunner({
     };
   }, [isMuted]);
 
+
+
   // ── Core quiz state ──────────────────────────────────────
   const [answers, setAnswers] = useState(initialAnswers);
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
@@ -885,6 +900,15 @@ export default function KidTeenQuizRunner({
   const [hoverRating, setHoverRating] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  // Warm up the Edge TTS API route in the background on mount
+  useEffect(() => {
+    fetch("/api/tts/edge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "warmup" }),
+    }).catch(() => {});
+  }, []);
 
   // ── Nav guard ────────────────────────────────────────────
   const [navGuard, setNavGuard] = useState<{ isOpen: boolean; targetUrl: string; targetTitle: string }>({
@@ -956,6 +980,11 @@ export default function KidTeenQuizRunner({
     if (newIndex === currentIndex && !isShowingResultScreen) return;
     if (isAutoRevealing) return;
     if (isShowingResultScreen) setIsShowingResultScreen(false);
+
+    setAutoplayCountdown(null);
+    setNextQuestionCountdown(null);
+    setIsAnswerRevealed(false);
+
     setSlideDirection(newIndex > currentIndex ? "left" : "right");
     setCurrentIndex(newIndex);
   };
@@ -1119,6 +1148,283 @@ export default function KidTeenQuizRunner({
     questionText = currentQuestionData.instruction || t("clozeTest") || "Fill in the blank";
   }
 
+  // ── Autoplay Mode logic ──────────────────────────────────
+  useEffect(() => {
+    if (quizMode !== "autoplay" || autoplayCountdown === null) return;
+
+    if (autoplayCountdown > 0) {
+      const timer = setTimeout(() => {
+        setAutoplayCountdown(autoplayCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Countdown reached 0: Reveal the correct answer!
+      setCheckedQuestions((prev) => ({ ...prev, [currentQuestion?.id]: true }));
+      setIsAnswerRevealed(true);
+      setNextQuestionCountdown(5);
+    }
+  }, [autoplayCountdown, quizMode, currentQuestion?.id]);
+
+  useEffect(() => {
+    if (quizMode !== "autoplay" || nextQuestionCountdown === null) return;
+
+    if (nextQuestionCountdown > 0) {
+      const timer = setTimeout(() => {
+        setNextQuestionCountdown(nextQuestionCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Transition countdown reached 0: Go to next question!
+      setNextQuestionCountdown(null);
+      setIsAnswerRevealed(false);
+      if (currentIndex < questions.length - 1) {
+        navigateTo(currentIndex + 1);
+      }
+    }
+  }, [nextQuestionCountdown, quizMode, currentIndex, questions.length]);
+
+  // ── Auto-Read text clean and builder ──────────────────────
+  // ── Auto-Read text clean and builder ──────────────────────
+  const cleanTextForTTS = (text: string) => {
+    if (!text) return "";
+    return text
+      .replace(/\s+/g, " ")             // Collapse multiple spaces
+      .trim();
+  };
+
+  const getQuestionSpeed = () => {
+    const audiences = assignment.targetAudiences || [];
+    const lessonAudiences = assignment.lesson?.targetAudiences || [];
+    const combined = [...audiences, ...lessonAudiences];
+    const isLearner = combined.some(aud => String(aud).toLowerCase() === "learner");
+    return isLearner ? 1.0 : 0.6;
+  };
+
+  interface AudioSegment {
+    type: 'tts' | 'sound';
+    text?: string;
+    src?: string;
+  }
+
+  const buildAutoReadSegments = (question: any) => {
+    const list: AudioSegment[] = [];
+    if (!question) return list;
+    
+    let questionData: any;
+    try {
+      questionData = typeof question.content === "string" 
+        ? JSON.parse(question.content) 
+        : question.content;
+    } catch {
+      questionData = {};
+    }
+    const qType = questionData.type || question.type;
+
+    let textStr =
+      questionData.instruction ??
+      questionData.questionText ??
+      questionData.statement ??
+      questionData.textWithBlanks ??
+      question.content;
+      
+    if (textStr?.startsWith("{") && textStr?.endsWith("}")) textStr = "";
+    if (qType === "CLOZE_TEST" && textStr && textStr.includes("{{")) {
+      textStr = questionData.instruction || t("clozeTest") || "Fill in the blank";
+    }
+
+    if (!textStr) return list;
+
+    // Check if the text contains a blank (e.g. ______ or {{...}})
+    const hasBlank = /_+/.test(textStr) || /\{\{.*?\}\}/.test(textStr);
+
+    if (hasBlank) {
+      // Split the text by blank placeholders
+      const parts = textStr.split(/_+|\{\{.*?\}\}/g);
+      
+      parts.forEach((part: string, idx: number) => {
+        const cleanPart = cleanTextForTTS(part);
+        if (cleanPart) {
+          // If this is the last part, append options to it
+          if (idx === parts.length - 1) {
+            let lastPartWithChoices = cleanPart;
+            if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
+              const options = questionData.options || [];
+              options.forEach((opt: any, index: number) => {
+                const letter = String.fromCharCode(65 + index);
+                const optionText = cleanTextForTTS(opt.text);
+                if (optionText) {
+                  lastPartWithChoices += `, ${letter}. ${optionText}`;
+                }
+              });
+            } else if (qType === "TRUE_FALSE") {
+              lastPartWithChoices += `, A. True, B. False`;
+            }
+            list.push({ type: 'tts', text: lastPartWithChoices });
+          } else {
+            list.push({ type: 'tts', text: cleanPart });
+          }
+        }
+        
+        // Add chime sound if not the last part
+        if (idx < parts.length - 1) {
+          list.push({ type: 'sound', src: "/sounds/ting_chime.wav" });
+        }
+      });
+    } else {
+      let combinedText = cleanTextForTTS(textStr);
+      if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
+        const options = questionData.options || [];
+        options.forEach((opt: any, index: number) => {
+          const letter = String.fromCharCode(65 + index);
+          const optionText = cleanTextForTTS(opt.text);
+          if (optionText) {
+            combinedText += `, ${letter}. ${optionText}`;
+          }
+        });
+      } else if (qType === "TRUE_FALSE") {
+        combinedText += `, A. True, B. False`;
+      }
+      list.push({ type: 'tts', text: combinedText });
+    }
+
+    return list;
+  };
+
+  const stopAutoRead = () => {
+    if (autoReadAudioRef.current) {
+      autoReadAudioRef.current.pause();
+      autoReadAudioRef.current = null;
+    }
+    segmentsRef.current = [];
+    currentSegmentIndexRef.current = 0;
+    setIsTtsPlaying(false);
+    setAutoplayCountdown(null);
+    setNextQuestionCountdown(null);
+    setIsAnswerRevealed(false);
+  };
+
+  const playNextSegment = async () => {
+    if (!isAutoReadEnabled || currentSegmentIndexRef.current >= segmentsRef.current.length) {
+      stopAutoRead();
+      if (quizMode === "autoplay") {
+        setAutoplayCountdown(10);
+        setIsAnswerRevealed(false);
+      }
+      return;
+    }
+
+    setIsTtsPlaying(true);
+    const segment = segmentsRef.current[currentSegmentIndexRef.current];
+    currentSegmentIndexRef.current++;
+
+    if (segment.type === 'sound') {
+      try {
+        const audio = new Audio(segment.src);
+        autoReadAudioRef.current = audio;
+        
+        audio.addEventListener('ended', () => {
+          playNextSegment();
+        });
+        
+        audio.play().catch(err => {
+          console.error("Failed to play sound segment:", err);
+          playNextSegment();
+        });
+      } catch (err) {
+        console.error("Sound segment error:", err);
+        playNextSegment();
+      }
+    } else if (segment.type === 'tts') {
+      try {
+        const response = await fetch("/api/tts/edge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: segment.text })
+        });
+        if (!response.ok) throw new Error("TTS request failed");
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        
+        const playSpeed = getQuestionSpeed();
+        audio.defaultPlaybackRate = playSpeed;
+        audio.playbackRate = playSpeed;
+        
+        audio.addEventListener('play', () => {
+          audio.playbackRate = playSpeed;
+        });
+        audio.addEventListener('playing', () => {
+          audio.playbackRate = playSpeed;
+        });
+        audio.addEventListener('ended', () => {
+          playNextSegment();
+        });
+        
+        autoReadAudioRef.current = audio;
+        audio.play().then(() => {
+          audio.playbackRate = playSpeed;
+        }).catch(err => {
+          console.error("TTS segment play error:", err);
+          playNextSegment();
+        });
+      } catch (err) {
+        console.error("TTS segment error:", err);
+        playNextSegment();
+      }
+    }
+  };
+
+  const startAutoReadQueue = (question: any) => {
+    stopAutoRead();
+    if (!question) return;
+
+    setIsTtsPlaying(true);
+    const queue = buildAutoReadSegments(question);
+    segmentsRef.current = queue;
+    currentSegmentIndexRef.current = 0;
+    playNextSegment();
+  };
+
+  // Trigger Auto-read when current question or auto-read enabled changes
+  useEffect(() => {
+    if (!hasStarted || isShowingResultScreen) {
+      stopAutoRead();
+      return;
+    }
+    
+    if (isAutoReadEnabled && currentQuestion) {
+      startAutoReadQueue(currentQuestion);
+    } else {
+      stopAutoRead();
+    }
+    
+    return () => {
+      stopAutoRead();
+    };
+  }, [currentIndex, isAutoReadEnabled, hasStarted, isShowingResultScreen]);
+
+  // Listen to other audio events to stop auto-reading
+  useEffect(() => {
+    const handleOtherAudioPlay = () => {
+      stopAutoRead();
+    };
+    window.addEventListener('materialAudioPlay', handleOtherAudioPlay);
+    window.addEventListener('hintAudioPlay', handleOtherAudioPlay);
+    window.addEventListener('pauseAllAudio', handleOtherAudioPlay);
+    return () => {
+      window.removeEventListener('materialAudioPlay', handleOtherAudioPlay);
+      window.removeEventListener('hintAudioPlay', handleOtherAudioPlay);
+      window.removeEventListener('pauseAllAudio', handleOtherAudioPlay);
+    };
+  }, []);
+
+  // Save isAutoReadEnabled to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("quiz_auto_read_enabled", String(isAutoReadEnabled));
+    }
+  }, [isAutoReadEnabled]);
+
   const userAnswer = answers[currentQuestion?.id];
   const isChecked = checkedQuestions[currentQuestion?.id] || false;
 
@@ -1188,16 +1494,29 @@ export default function KidTeenQuizRunner({
             )}
           </div>
 
-          {/* PLAY Button */}
-          <button
-            onClick={handleStartQuiz}
-            className="group relative px-12 py-6 rounded-full bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-2xl tracking-widest uppercase italic shadow-xl shadow-orange-500/40 hover:scale-105 active:scale-95 transition-all duration-300"
-          >
-            <span className="flex items-center gap-3">
-              <Play className="w-7 h-7 fill-current text-white animate-pulse" />
-              LET'S GO!
-            </span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center mt-4">
+            {/* Practice Mode Button */}
+            <button
+              onClick={() => handleStartQuiz("practice")}
+              className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Play className="w-5 h-5 fill-current text-purple-600" />
+                Practice Mode
+              </span>
+            </button>
+
+            {/* Autoplay Mode Button */}
+            <button
+              onClick={() => handleStartQuiz("autoplay")}
+              className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Play className="w-5 h-5 fill-current text-white animate-pulse" />
+                Autoplay Mode
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1251,7 +1570,7 @@ export default function KidTeenQuizRunner({
               <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
             </React.Suspense>
           </div>
-          <h2 className="flex-1 text-sm font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight pr-2">
+          <h2 className="flex-1 text-sm font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight pr-2 hidden md:block">
             {assignment.title || "FUN WITH SCHOOL TOOLS: QUIZ FOR LITTLE LEARNERS"}
           </h2>
         </div>
@@ -1349,7 +1668,7 @@ export default function KidTeenQuizRunner({
       >
       {questions.length > 0 && (
         <>
-        <div className="w-full max-w-4xl mx-auto z-10 relative">
+        <div className="w-full max-w-4xl mx-auto z-10 relative -top-[100px]">
 
         {isShowingResultScreen && scoreResult ? (
         <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
@@ -1409,7 +1728,7 @@ export default function KidTeenQuizRunner({
         >
           {/* Card Wrapper */}
           <div className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-all duration-500 relative border-[6px] flex flex-col ${
-            isChecked ? "max-h-[60dvh]" : "max-h-[85dvh]"
+            (isChecked && quizMode !== "autoplay") ? "max-h-[60dvh]" : "max-h-[85dvh]"
           } ${
             isCorrectNow
               ? "border-emerald-400"
@@ -1440,7 +1759,9 @@ export default function KidTeenQuizRunner({
               </span>
             </div>
 
-            {isChecked && (
+
+
+            {isChecked && quizMode !== "autoplay" && (
               <div className="absolute -top-6 right-10 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-20">
                 <div className={`flex items-center gap-2 text-white font-black text-sm whitespace-nowrap px-5 py-2 rounded-full shadow-md ${isCorrectNow ? "bg-emerald-500" : "bg-rose-500"}`}>
                   {isCorrectNow
@@ -1452,7 +1773,7 @@ export default function KidTeenQuizRunner({
 
             {/* Card body */}
             <div className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
-              isChecked
+              (isChecked && quizMode !== "autoplay")
                 ? "px-[clamp(0.75rem,3vw,2rem)] py-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
                 : "px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
             }`}>
@@ -1461,7 +1782,7 @@ export default function KidTeenQuizRunner({
                 <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
                   <h3
                     className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
-                      isChecked ? "text-[clamp(1rem,2dvh,1.25rem)]" : "text-[clamp(1.25rem,3.5dvh,2rem)]"
+                      (isChecked && quizMode !== "autoplay") ? "text-[clamp(1rem,2dvh,1.25rem)]" : "text-[clamp(1.25rem,3.5dvh,2rem)]"
                     }`}
                     style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
                     title="Tap a word to translate"
@@ -1469,7 +1790,7 @@ export default function KidTeenQuizRunner({
                     {questionText}
                   </h3>
                   {currentQuestion?.audioUrl && (
-                    <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
+                    <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={getQuestionSpeed()} />
                   )}
                 </div>
               )}
@@ -1523,7 +1844,7 @@ export default function KidTeenQuizRunner({
 
                     if (isChecked) {
                       if (isCorrectOpt) {
-                        containerClass = "bg-emerald-100 border-emerald-400 shadow-emerald-900/10 scale-[1.02]";
+                        containerClass = `bg-emerald-100 border-emerald-400 shadow-emerald-900/10 ${quizMode === "autoplay" ? "" : "scale-[1.02]"}`;
                         textClass = "text-emerald-900";
                         iconClass = "bg-emerald-500 text-white";
                       } else if (isSelected) {
@@ -1556,13 +1877,11 @@ export default function KidTeenQuizRunner({
                             : String.fromCharCode(65 + i)}
                         </div>
 
-                        <span className={`relative z-10 font-[800] text-[clamp(1rem,2.5dvh,1.25rem)] tracking-tight transition-all duration-500 ${textClass} text-center`}>
+                        <span className={`relative z-10 font-[800] text-[clamp(1rem,2.5dvh,1.25rem)] tracking-tight transition-all duration-500 ${textClass} text-center flex items-center justify-center gap-1.5`}>
                           {option.text}
+                          {isChecked && isCorrectOpt && <CheckCircle2 className="w-[1.25em] h-[1.25em] text-emerald-600 shrink-0 ml-1" />}
+                          {isChecked && isSelected && !isCorrectOpt && <XCircle className="w-[1.25em] h-[1.25em] text-rose-600 shrink-0 ml-1" />}
                         </span>
-
-                        {/* Status Icons */}
-                        {isChecked && isCorrectOpt && <CheckCircle2 className="absolute top-4 right-4 w-8 h-8 text-emerald-600 shrink-0" />}
-                        {isChecked && isSelected && !isCorrectOpt && <XCircle className="absolute top-4 right-4 w-8 h-8 text-rose-600 shrink-0" />}
                       </button>
                     );
                   })}
@@ -1675,7 +1994,7 @@ export default function KidTeenQuizRunner({
                           {questionText}
                         </h3>
                         {currentQuestion?.audioUrl && (
-                          <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
+                          <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={getQuestionSpeed()} />
                         )}
                       </div>
                     )}
@@ -1720,8 +2039,9 @@ export default function KidTeenQuizRunner({
                         questionId={currentQuestion.id}
                         explanation={currentQuestion.explanation}
                         explanationTranslations={null}
-                        isExpanded={!!expandedExplanations[currentQuestion.id]}
+                        isExpanded={quizMode === "autoplay" ? true : !!expandedExplanations[currentQuestion.id]}
                         onToggleExpand={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
+                        hideHeader={quizMode === "autoplay"}
                       />
                     }
                   >
@@ -1729,8 +2049,9 @@ export default function KidTeenQuizRunner({
                       promise={questionTranslationsPromise}
                       questionId={currentQuestion.id}
                       explanation={currentQuestion.explanation}
-                      isExpanded={!!expandedExplanations[currentQuestion.id]}
+                      isExpanded={quizMode === "autoplay" ? true : !!expandedExplanations[currentQuestion.id]}
                       onToggleExpand={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
+                      hideHeader={quizMode === "autoplay"}
                     />
                   </React.Suspense>
                 </div>
@@ -1754,8 +2075,14 @@ export default function KidTeenQuizRunner({
                 <span className="hidden sm:inline">Previous</span>
               </button>
 
-              {/* Progress Dots removed by user request, keeping flex-1 for spacing */}
-              <div className="flex-1" />
+              {/* Autoplay countdown number centered in footer */}
+              <div className="flex-1 flex justify-center items-center">
+                {quizMode === "autoplay" && autoplayCountdown !== null && !isAnswerRevealed && (
+                  <div className="text-4xl font-[900] text-amber-500 animate-bounce select-none">
+                    {autoplayCountdown}
+                  </div>
+                )}
+              </div>
 
               {/* Next / Check / Reset */}
               {currentIndex < questions.length - 1 ? (

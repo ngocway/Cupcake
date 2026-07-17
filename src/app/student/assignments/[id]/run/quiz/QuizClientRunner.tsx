@@ -775,6 +775,14 @@ export default function QuizClientRunner({
     return isKidOrTeen;
   }, [assignment.targetAudiences, assignment.lesson?.targetAudiences]);
 
+  const getQuestionSpeed = () => {
+    const audiences = assignment.targetAudiences || [];
+    const lessonAudiences = assignment.lesson?.targetAudiences || [];
+    const combined = [...audiences, ...lessonAudiences];
+    const isLearner = combined.some(aud => String(aud).toLowerCase() === "learner");
+    return isLearner ? 1.0 : 0.6;
+  };
+
   // ────────────────────────────────────────────────────────
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [answers, setAnswers] = useState(initialAnswers);
@@ -783,6 +791,15 @@ export default function QuizClientRunner({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // Warm up the Edge TTS API route in the background on mount
+  useEffect(() => {
+    fetch("/api/tts/edge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "warmup" }),
+    }).catch(() => {});
+  }, []);
 
   const videoUrl = assignment.videoUrl || assignment.lesson?.videoUrl;
   const audioUrl = assignment.audioUrl || assignment.lesson?.audioUrl;
@@ -1231,7 +1248,7 @@ export default function QuizClientRunner({
                             {questionText}
                           </h3>
                           {q.audioUrl && (
-                             <QuestionAudioPlayButton src={q.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
+                             <QuestionAudioPlayButton src={q.audioUrl} playbackRate={getQuestionSpeed()} />
                           )}
                         </div>
                       )}
@@ -1408,7 +1425,7 @@ export default function QuizClientRunner({
                                   {questionText}
                                 </h3>
                                 {q.audioUrl && (
-                                  <QuestionAudioPlayButton src={q.audioUrl} playbackRate={assignment.ttsSpeed || 1.0} />
+                                  <QuestionAudioPlayButton src={q.audioUrl} playbackRate={getQuestionSpeed()} />
                                 )}
                               </div>
                             )}

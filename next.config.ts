@@ -5,6 +5,15 @@ const withNextIntl = createNextIntlPlugin("./src/i18n.ts");
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.6", "localhost", "127.0.0.1"],
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = [...(config.externals || []), {
+        bufferutil: "commonjs bufferutil",
+        "utf-8-validate": "commonjs utf-8-validate",
+      }];
+    }
+    return config;
+  },
   experimental: {
     serverActions: {
       bodySizeLimit: '100mb',

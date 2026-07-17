@@ -60,6 +60,7 @@ interface ExplanationBlockProps {
   /** Whether the accordion is already expanded (controlled externally) */
   isExpanded: boolean;
   onToggleExpand: () => void;
+  hideHeader?: boolean;
 }
 
 export function ExplanationBlock({
@@ -68,6 +69,7 @@ export function ExplanationBlock({
   explanationTranslations,
   isExpanded,
   onToggleExpand,
+  hideHeader = false,
 }: ExplanationBlockProps) {
   const nativeLanguage = useContentStore((s) => s.nativeLanguage);
   const showNativeLang = useContentStore((s) => s.showNativeLang);
@@ -86,6 +88,36 @@ export function ExplanationBlock({
       : explanation;
 
   const nativeLabel = LANG_LABELS[nativeLanguage] ?? nativeLanguage.toUpperCase();
+
+  if (hideHeader) {
+    return (
+      <div className="space-y-3 mt-2">
+        <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl space-y-3">
+          {/* Lang toggle pill — only when native ≠ English */}
+          {hasTranslation && (
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
+                <Globe className="w-3.5 h-3.5" />
+                {showNativeLang && translatedText
+                  ? nativeLabel
+                  : "English"}
+              </span>
+              <LangTogglePill
+                showNative={showNativeLang}
+                onToggle={setShowNativeLang}
+                nativeLabel={nativeLabel}
+              />
+            </div>
+          )}
+
+          {/* Explanation text */}
+          <p className="text-slate-700 leading-relaxed text-base whitespace-pre-wrap">
+            {displayText}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 mt-2">
