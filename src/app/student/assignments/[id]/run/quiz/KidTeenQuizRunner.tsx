@@ -727,15 +727,11 @@ function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }:
   return (
     <button
       onClick={() => setIsSidePanelOpen(true)}
-      className={`fixed right-0 z-30 w-auto py-3 pl-2 pr-4 bg-blue-500 border-2 border-green-400 text-white font-bold flex items-center justify-center gap-1 rounded-l-2xl shadow-xl hover:bg-blue-600 transition-all duration-500 ease-in-out
-        top-1/2 [@media(max-width:800px)]:top-auto
-        -translate-y-1/2 [@media(max-width:800px)]:translate-y-0
-        [@media(max-width:800px)]:bottom-24
-        ${isSidePanelOpen ? 'opacity-0 translate-x-full pointer-events-none' : 'opacity-100 translate-x-0'}`}
-      title="Open panel"
+      className={`flex items-center justify-center p-2 bg-white text-purple-600 rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm hover:scale-105 duration-200
+        ${isSidePanelOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
+      title="View lesson"
     >
-      <ChevronLeft className="w-5 h-5 shrink-0" />
-      <span className="font-bold text-sm whitespace-nowrap">View lesson</span>
+      <BookOpen className="w-5 h-5 text-purple-500" />
     </button>
   );
 }
@@ -761,8 +757,13 @@ export default function KidTeenQuizRunner({
   // ── Music references ─────────────────────────────────────
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const isMutedRef = useRef(isMuted);
   const [hasStarted, setHasStarted] = useState(false);
   const [isHintPlaying, setIsHintPlaying] = useState(false);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   const handleStartQuiz = () => {
     setHasStarted(true);
@@ -781,7 +782,9 @@ export default function KidTeenQuizRunner({
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
-      bgMusic.play().catch(() => {});
+      if (!isMutedRef.current) {
+        bgMusic.play().catch(() => {});
+      }
       window.removeEventListener("click", playMusic);
       window.removeEventListener("touchstart", playMusic);
       window.removeEventListener("mousedown", playMusic);
@@ -828,7 +831,13 @@ export default function KidTeenQuizRunner({
   // Update volume when mute state changes or hint audio state changes
   useEffect(() => {
     if (bgMusicRef.current) {
-      bgMusicRef.current.volume = isMuted ? 0 : (isHintPlaying ? 0.05 : 0.1);
+      if (isMuted) {
+        bgMusicRef.current.pause();
+        window.dispatchEvent(new CustomEvent('pauseAllAudio'));
+      } else {
+        bgMusicRef.current.play().catch(() => {});
+        bgMusicRef.current.volume = isHintPlaying ? 0.05 : 0.1;
+      }
     }
   }, [isMuted, isHintPlaying]);
 
@@ -955,9 +964,8 @@ export default function KidTeenQuizRunner({
   const handleAnswerChange = (q: any, value: any) => {
     if (checkedQuestions[q.id]) return;
 
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !isMuted) {
       const snd = new Audio("/sounds/click.wav");
-      snd.volume = isMuted ? 0 : 1.0;
       snd.play().catch(() => {});
     }
 
@@ -1040,10 +1048,12 @@ export default function KidTeenQuizRunner({
       newChecked[q.id] = true;
       
       const isCorrect = getQuestionStatus(q, answers[q.id]) === "correct";
-      if (isCorrect) {
-        playCorrectSound();
-      } else {
-        playIncorrectSound();
+      if (!isMuted) {
+        if (isCorrect) {
+          playCorrectSound();
+        } else {
+          playIncorrectSound();
+        }
       }
 
       if (!isCorrect && q.explanation) {
@@ -1195,6 +1205,8 @@ export default function KidTeenQuizRunner({
 
   if (!currentQuestion) return null;
 
+  const cols = Math.ceil(questions.length / 2);
+
   // ── Render ───────────────────────────────────────────────
   return (
     <div className="min-h-screen font-body flex flex-col bg-[#8cd2f6]">
@@ -1245,7 +1257,10 @@ export default function KidTeenQuizRunner({
         </div>
 
         {/* Question Map */}
-        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-3 max-w-6xl mx-auto px-2">
+        <div 
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+          className="grid sm:flex sm:flex-wrap sm:items-center sm:justify-center gap-[2vw] sm:gap-2 justify-items-center mt-3 max-w-6xl mx-auto px-2 w-full"
+        >
           {questions.map((q, i) => {
             const active = i === currentIndex;
             
@@ -1303,17 +1318,20 @@ export default function KidTeenQuizRunner({
                 key={q.id}
                 onClick={() => navigateTo(i)}
                 disabled={isAutoRevealing}
-                className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full font-black text-sm sm:text-base transition-all duration-300 shrink-0 flex items-center justify-center ${btnClass}`}
+                style={{ containerType: 'inline-size' }}
+                className={`relative w-full max-w-[40px] aspect-square sm:w-10 sm:h-10 rounded-full transition-all duration-300 shrink-0 flex items-center justify-center ${btnClass}`}
               >
-                {i + 1}
+                <span className="font-black text-[38cqw] sm:text-base leading-none">
+                  {i + 1}
+                </span>
                 {isGraded && !active && status === "correct" && (
-                   <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
-                     <Check className="w-2.5 h-2.5 text-emerald-600" strokeWidth={4} />
+                   <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
+                     <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
                    </div>
                 )}
                 {isGraded && !active && status === "incorrect" && (
-                   <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
-                     <X className="w-2.5 h-2.5 text-rose-600" strokeWidth={4} />
+                   <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
+                     <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
                    </div>
                 )}
               </button>
@@ -1326,7 +1344,7 @@ export default function KidTeenQuizRunner({
 
       {/* ── MAIN CONTENT (Image Background) ── */}
       <div 
-        className="flex-1 flex flex-col items-center justify-start sm:justify-center p-2 pt-4 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        className="flex-1 flex flex-col items-center justify-center p-2 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
       {questions.length > 0 && (
@@ -1389,7 +1407,7 @@ export default function KidTeenQuizRunner({
               : "animate-in slide-in-from-left-16 fade-in-0"
           } duration-300`}
         >
-          {/* Card Wrapper: add top padding to make room for QUESTION pill */}
+          {/* Card Wrapper */}
           <div className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-all duration-500 relative border-[6px] flex flex-col ${
             isChecked ? "max-h-[60dvh]" : "max-h-[85dvh]"
           } ${
@@ -1400,13 +1418,15 @@ export default function KidTeenQuizRunner({
               : "border-[#9A89FF]"
           }`}>
 
-            {/* Header Label - inside card at top, no negative absolute, no clipping */}
-            <div className="flex justify-start px-4 pt-4 pb-1 relative z-20">
-              <div className="bg-[#7C66FF] rounded-full px-5 py-2 flex items-center shadow-md">
-                <span className="text-white font-black text-sm tracking-widest uppercase">
-                  QUESTION {currentIndex + 1} / {questions.length}
-                </span>
-              </div>
+            {/* View Lesson Button (Top Left) */}
+            <div className="absolute top-4 left-4 z-20">
+              <React.Suspense fallback={null}>
+                <SidePanelToggleButton 
+                  promise={extraDataPromise} 
+                  isSidePanelOpen={isSidePanelOpen} 
+                  setIsSidePanelOpen={setIsSidePanelOpen} 
+                />
+              </React.Suspense>
             </div>
 
             {/* Optional Type Label (moved to top right) */}
@@ -1807,11 +1827,6 @@ export default function KidTeenQuizRunner({
           onClick={() => setIsSidePanelOpen(false)}
         />
       )}
-
-    {/* ── SIDE PANEL TOGGLE BUTTON ── */}
-      <React.Suspense fallback={null}>
-        <SidePanelToggleButton promise={extraDataPromise} isSidePanelOpen={isSidePanelOpen} setIsSidePanelOpen={setIsSidePanelOpen} />
-      </React.Suspense>
 
       {/* ── RIGHT SLIDE PANEL ── */}
       <div
