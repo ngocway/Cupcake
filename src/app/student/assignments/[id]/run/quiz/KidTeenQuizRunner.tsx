@@ -1575,10 +1575,12 @@ export default function KidTeenQuizRunner({
           </h2>
         </div>
 
+
+
         {/* Question Map */}
         <div 
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-          className="grid sm:flex sm:flex-wrap sm:items-center sm:justify-center gap-[2vw] sm:gap-2 justify-items-center mt-3 max-w-6xl mx-auto px-2 w-full"
+          className={`${quizMode === "autoplay" ? "hidden sm:flex" : "grid sm:flex"} sm:flex-wrap sm:items-center sm:justify-center gap-[2vw] sm:gap-2 justify-items-center mt-3 max-w-6xl mx-auto px-2 w-full`}
         >
           {questions.map((q, i) => {
             const active = i === currentIndex;
@@ -1737,15 +1739,30 @@ export default function KidTeenQuizRunner({
               : "border-[#9A89FF]"
           }`}>
 
-            {/* View Lesson Button (Top Left) */}
-            <div className="absolute top-4 left-4 z-20">
-              <React.Suspense fallback={null}>
-                <SidePanelToggleButton 
-                  promise={extraDataPromise} 
-                  isSidePanelOpen={isSidePanelOpen} 
-                  setIsSidePanelOpen={setIsSidePanelOpen} 
-                />
-              </React.Suspense>
+            {/* Card Header Row */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-1 z-20">
+              <div className="flex items-center gap-2">
+                <React.Suspense fallback={null}>
+                  <SidePanelToggleButton 
+                    promise={extraDataPromise} 
+                    isSidePanelOpen={isSidePanelOpen} 
+                    setIsSidePanelOpen={setIsSidePanelOpen} 
+                  />
+                </React.Suspense>
+              </div>
+              
+              {/* Autoplay mobile progress indicator inside the header */}
+              {quizMode === "autoplay" ? (
+                <div className="flex sm:hidden items-center">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 border border-purple-200 text-purple-700 rounded-full font-black text-xs tracking-wider shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                    <span>{currentIndex + 1} / {questions.length}</span>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Spacing alignment */}
+              <div className={`w-9 h-9 ${quizMode === "autoplay" ? "hidden sm:block" : "block"}`} />
             </div>
 
             {/* Optional Type Label (moved to top right) */}
@@ -1774,8 +1791,8 @@ export default function KidTeenQuizRunner({
             {/* Card body */}
             <div className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
               (isChecked && quizMode !== "autoplay")
-                ? "px-[clamp(0.75rem,3vw,2rem)] py-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
-                : "px-[clamp(1rem,4vw,3rem)] py-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
+                ? "px-[clamp(0.75rem,3vw,2rem)] pt-1 pb-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
+                : "px-[clamp(1rem,4vw,3rem)] pt-2 pb-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
             }`}>
               {/* Question text (not for MATCHING as MATCHING has it on the left column) */}
               {qType !== "MATCHING" && questionText && questionText !== "{}" && (
@@ -1957,7 +1974,7 @@ export default function KidTeenQuizRunner({
                         {/* Badge góc trên phải khi review */}
                         {isChecked && (isCorrectOpt || isSelected) && (
                           <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
-                            {isCorrectOpt && (
+                            {isCorrectOpt && quizMode !== "autoplay" && (
                               <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-400">
                                 <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> Correct
                               </span>
@@ -2075,10 +2092,9 @@ export default function KidTeenQuizRunner({
                 <span className="hidden sm:inline">Previous</span>
               </button>
 
-              {/* Autoplay countdown number centered in footer */}
               <div className="flex-1 flex justify-center items-center">
                 {quizMode === "autoplay" && autoplayCountdown !== null && !isAnswerRevealed && (
-                  <div className="text-4xl font-[900] text-amber-500 animate-bounce select-none">
+                  <div className="w-12 h-12 rounded-full bg-amber-50/90 border-2 border-amber-200/80 shadow-[0_4px_10px_rgba(245,158,11,0.12),inset_0_2px_4px_rgba(255,255,255,0.9)] flex items-center justify-center text-2xl font-[900] text-amber-500 animate-bounce select-none">
                     {autoplayCountdown}
                   </div>
                 )}

@@ -95,13 +95,7 @@ export function ExplanationBlock({
         <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl space-y-3">
           {/* Lang toggle pill — only when native ≠ English */}
           {hasTranslation && (
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
-                <Globe className="w-3.5 h-3.5" />
-                {showNativeLang && translatedText
-                  ? nativeLabel
-                  : "English"}
-              </span>
+            <div className="flex items-center justify-end">
               <LangTogglePill
                 showNative={showNativeLang}
                 onToggle={setShowNativeLang}
@@ -146,13 +140,7 @@ export function ExplanationBlock({
         <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl space-y-3">
           {/* Lang toggle pill — only when native ≠ English */}
           {hasTranslation && (
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs text-amber-600 font-semibold">
-                <Globe className="w-3.5 h-3.5" />
-                {showNativeLang && translatedText
-                  ? nativeLabel
-                  : "English"}
-              </span>
+            <div className="flex items-center justify-end">
               <LangTogglePill
                 showNative={showNativeLang}
                 onToggle={setShowNativeLang}
