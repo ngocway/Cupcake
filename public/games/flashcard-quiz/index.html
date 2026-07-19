@@ -700,7 +700,7 @@
         // Initialize and play background music
         function initBgMusic() {
             if (bgMusic) return;
-            bgMusic = new Audio('/sounds/bg-music.mp3');
+            bgMusic = new Audio('/sounds/bg-music.mp3?v=2');
             bgMusic.loop = true;
             bgMusic.volume = 0.15; // Default volume 15%
             bgMusic.play().then(() => {

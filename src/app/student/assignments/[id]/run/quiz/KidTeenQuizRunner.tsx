@@ -789,7 +789,7 @@ export default function KidTeenQuizRunner({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const bgMusic = new Audio("/sounds/bg-music.mp3");
+    const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
     bgMusic.loop = true;
     bgMusic.volume = isMuted ? 0 : 0.05;
     bgMusicRef.current = bgMusic;
