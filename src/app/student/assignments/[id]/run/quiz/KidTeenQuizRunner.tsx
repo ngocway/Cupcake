@@ -791,7 +791,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.05;
+    bgMusic.volume = isMuted ? 0 : 0.25;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -849,7 +849,7 @@ export default function KidTeenQuizRunner({
         window.dispatchEvent(new CustomEvent('pauseAllAudio'));
       } else {
         bgMusicRef.current.play().catch(() => {});
-        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.02 : 0.05;
+        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.08 : 0.25;
       }
     }
   }, [isMuted, isHintPlaying, isTtsPlaying]);
