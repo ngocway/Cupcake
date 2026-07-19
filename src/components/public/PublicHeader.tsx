@@ -84,18 +84,20 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         </Link>
         <div className="flex gap-1.5 sm:gap-4 items-center">
           <Link 
-            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
+            className="p-2 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
             href="/student/game/robot-chat"
+            title={t("chatWithDolbot")}
           >
-            <span className="material-symbols-outlined text-[11px] sm:text-[14px]">smart_toy</span>
-            <span>{t("chatWithDolbot")}</span>
+            <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+            <span className="hidden sm:inline">{t("chatWithDolbot")}</span>
           </Link>
           <Link 
-            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
+            className="p-2 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
             href="/student/books"
+            title={t("storyBooks")}
           >
-            <span className="material-symbols-outlined text-[11px] sm:text-[14px]">menu_book</span>
-            <span>{t("storyBooks")}</span>
+            <span className="material-symbols-outlined text-[14px]">menu_book</span>
+            <span className="hidden sm:inline">{t("storyBooks")}</span>
           </Link>
         </div>
       </div>
