@@ -765,6 +765,8 @@ export default function KidTeenQuizRunner({
   const autoReadAudioRef = useRef<HTMLAudioElement | null>(null);
   const segmentsRef = useRef<any[]>([]);
   const currentSegmentIndexRef = useRef<number>(0);
+  const preloadedUrlsRef = useRef<string[]>([]);
+  const preloadRequestIdRef = useRef<number>(0);
   const [hasStarted, setHasStarted] = useState(false);
   const [isHintPlaying, setIsHintPlaying] = useState(false);
   const [isTtsPlaying, setIsTtsPlaying] = useState(false);
@@ -791,7 +793,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.35;
+    bgMusic.volume = isMuted ? 0 : 0.2;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -849,7 +851,7 @@ export default function KidTeenQuizRunner({
         window.dispatchEvent(new CustomEvent('pauseAllAudio'));
       } else {
         bgMusicRef.current.play().catch(() => {});
-        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.10 : 0.35;
+        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.05 : 0.2;
       }
     }
   }, [isMuted, isHintPlaying, isTtsPlaying]);
@@ -1290,13 +1292,36 @@ export default function KidTeenQuizRunner({
     return list;
   };
 
+  const revokePreloadedUrls = () => {
+    preloadedUrlsRef.current.forEach((url) => {
+      if (url.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error("Error revoking blob URL:", e);
+        }
+      }
+    });
+    preloadedUrlsRef.current = [];
+  };
+
   const stopAutoRead = () => {
     if (autoReadAudioRef.current) {
-      autoReadAudioRef.current.pause();
-      autoReadAudioRef.current = null;
+      try {
+        autoReadAudioRef.current.pause();
+        autoReadAudioRef.current.src = "";
+        autoReadAudioRef.current.onended = null;
+        autoReadAudioRef.current.onplay = null;
+        autoReadAudioRef.current.onplaying = null;
+        autoReadAudioRef.current.onerror = null;
+      } catch (e) {
+        console.error("Error stopping autoReadAudio:", e);
+      }
     }
     segmentsRef.current = [];
     currentSegmentIndexRef.current = 0;
+    revokePreloadedUrls();
+
     setIsTtsPlaying(false);
     setAutoplayCountdown(null);
     setNextQuestionCountdown(null);
@@ -1317,69 +1342,109 @@ export default function KidTeenQuizRunner({
     const segment = segmentsRef.current[currentSegmentIndexRef.current];
     currentSegmentIndexRef.current++;
 
-    if (segment.type === 'sound') {
-      try {
-        const audio = new Audio(segment.src);
-        autoReadAudioRef.current = audio;
-        
-        audio.addEventListener('ended', () => {
-          playNextSegment();
-        });
-        
-        audio.play().catch(err => {
-          console.error("Failed to play sound segment:", err);
-          playNextSegment();
-        });
-      } catch (err) {
-        console.error("Sound segment error:", err);
-        playNextSegment();
-      }
-    } else if (segment.type === 'tts') {
+    const playSpeed = getQuestionSpeed();
+    let audio = autoReadAudioRef.current;
+    if (!audio) {
+      audio = new Audio();
+      autoReadAudioRef.current = audio;
+    }
+
+    let src = segment.preloadedUrl;
+    if (!src && segment.type === 'tts' && segment.text) {
+      // Fallback live fetch if preload failed or was not ready
       try {
         const response = await fetch("/api/tts/edge", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: segment.text })
         });
-        if (!response.ok) throw new Error("TTS request failed");
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        
-        const playSpeed = getQuestionSpeed();
-        audio.defaultPlaybackRate = playSpeed;
-        audio.playbackRate = playSpeed;
-        
-        audio.addEventListener('play', () => {
-          audio.playbackRate = playSpeed;
-        });
-        audio.addEventListener('playing', () => {
-          audio.playbackRate = playSpeed;
-        });
-        audio.addEventListener('ended', () => {
-          playNextSegment();
-        });
-        
-        autoReadAudioRef.current = audio;
-        audio.play().then(() => {
-          audio.playbackRate = playSpeed;
-        }).catch(err => {
-          console.error("TTS segment play error:", err);
-          playNextSegment();
-        });
+        if (response.ok) {
+          const blob = await response.blob();
+          src = URL.createObjectURL(blob);
+          preloadedUrlsRef.current.push(src);
+        }
       } catch (err) {
-        console.error("TTS segment error:", err);
-        playNextSegment();
+        console.error("Fallback live TTS fetch failed:", err);
       }
+    }
+
+    if (!src) {
+      playNextSegment();
+      return;
+    }
+
+    try {
+      audio.onplay = () => {
+        if (audio) audio.playbackRate = playSpeed;
+      };
+      audio.onplaying = () => {
+        if (audio) audio.playbackRate = playSpeed;
+      };
+      audio.onended = () => {
+        playNextSegment();
+      };
+      audio.onerror = (e) => {
+        console.error("Audio player error event:", e);
+        playNextSegment();
+      };
+
+      audio.src = src;
+      audio.defaultPlaybackRate = playSpeed;
+      audio.playbackRate = playSpeed;
+
+      audio.play().then(() => {
+        if (audio) audio.playbackRate = playSpeed;
+      }).catch(err => {
+        console.error("Failed to play audio segment:", err);
+        playNextSegment();
+      });
+    } catch (err) {
+      console.error("Error setting up audio playback:", err);
+      playNextSegment();
     }
   };
 
-  const startAutoReadQueue = (question: any) => {
+  const startAutoReadQueue = async (question: any) => {
     stopAutoRead();
     if (!question) return;
 
     setIsTtsPlaying(true);
     const queue = buildAutoReadSegments(question);
+    const requestId = ++preloadRequestIdRef.current;
+
+    // Preload all TTS segments for this question
+    const promises = queue.map(async (segment: any) => {
+      if (segment.type === 'tts' && segment.text) {
+        try {
+          const response = await fetch("/api/tts/edge", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: segment.text })
+          });
+          if (!response.ok) throw new Error("Preload fetch failed");
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          segment.preloadedUrl = url;
+          preloadedUrlsRef.current.push(url);
+        } catch (err) {
+          console.error("Failed to preload segment:", segment.text, err);
+        }
+      } else if (segment.type === 'sound' && segment.src) {
+        segment.preloadedUrl = segment.src;
+      }
+    });
+
+    try {
+      await Promise.all(promises);
+    } catch (err) {
+      console.error("Error in Promise.all for preloading:", err);
+    }
+
+    // Cancel if request ID is no longer current (e.g. user moved to another slide)
+    if (requestId !== preloadRequestIdRef.current) {
+      return;
+    }
+
     segmentsRef.current = queue;
     currentSegmentIndexRef.current = 0;
     playNextSegment();
@@ -1665,12 +1730,12 @@ export default function KidTeenQuizRunner({
 
       {/* ── MAIN CONTENT (Image Background) ── */}
       <div 
-        className="flex-1 flex flex-col items-center justify-center p-2 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        className="flex-1 flex flex-col items-center justify-start pt-6 sm:justify-center sm:pt-6 p-2 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
       {questions.length > 0 && (
         <>
-        <div className="w-full max-w-4xl mx-auto z-10 relative -top-[100px]">
+        <div className="w-full max-w-4xl mx-auto z-10 relative top-0 sm:-top-[100px]">
 
         {isShowingResultScreen && scoreResult ? (
         <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
