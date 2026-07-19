@@ -70,31 +70,31 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
 
   return (
     <nav className="relative mt-6 mx-auto z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/95 border border-primary/10 rounded-full shadow-2xl">
-      <div className="flex items-center gap-10">
+      <div className="flex items-center gap-2 sm:gap-10">
         <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
           <img 
             src="/images/logo.png" 
             alt="Dolcake" 
             className="w-9 h-9 sm:w-12 sm:h-12 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0" 
           />
-          <div className="flex flex-col">
+          <div className="flex-col hidden sm:flex">
             <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Dolcake</span>
             <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
           </div>
         </Link>
-        <div className="hidden lg:flex gap-4 items-center">
+        <div className="flex gap-1.5 sm:gap-4 items-center">
           <Link 
-            className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
             href="/student/game/robot-chat"
           >
-            <span className="material-symbols-outlined text-[14px]">smart_toy</span>
+            <span className="material-symbols-outlined text-[11px] sm:text-[14px]">smart_toy</span>
             <span>{t("chatWithDolbot")}</span>
           </Link>
           <Link 
-            className="px-4 py-2 rounded-full font-black uppercase tracking-[0.1em] text-[10px] text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1.5 shrink-0" 
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
             href="/student/books"
           >
-            <span className="material-symbols-outlined text-[14px]">menu_book</span>
+            <span className="material-symbols-outlined text-[11px] sm:text-[14px]">menu_book</span>
             <span>{t("storyBooks")}</span>
           </Link>
         </div>

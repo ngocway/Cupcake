@@ -1334,23 +1334,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Background content wrapped for blurring during first time setup */}
       <div className={`transition-all duration-700 ${isFirstTimeSetup ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
 
-      {/* Mobile Quick Actions — replaces subject selector on mobile */}
-      <div className="lg:hidden mb-6 flex gap-3">
-        <a
-          href="/student/game/robot-chat"
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border-2 bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100 hover:border-violet-400 hover:scale-105 transition-all duration-200 shadow-sm"
-        >
-          <img src="/images/robot-chat.png" alt="" className="w-5 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          <span>Chat Dolbot</span>
-        </a>
-        <a
-          href="/student/books"
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide border-2 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 hover:border-emerald-400 hover:scale-105 transition-all duration-200 shadow-sm"
-        >
-          <img src="/images/books.png" alt="" className="w-5 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          <span>Read Stories</span>
-        </a>
-      </div>
 
 
       <div 
