@@ -471,6 +471,11 @@
 
     async function speakWord(card) {
         const url = card.audioWordUrl || card.audioUrl;
+        if (bgMusic) bgMusic.volume = 0.05;
+        const restoreVolume = () => {
+            if (bgMusic) bgMusic.volume = 0.2;
+        };
+
         if (url) {
             try {
                 // Use Web Audio API with GainNode to boost volume above 1.0
@@ -484,11 +489,21 @@
                 source.buffer  = decoded;
                 source.connect(gain);
                 gain.connect(audioCtx.destination);
+                source.onended = restoreVolume;
                 source.start(0);
                 return;
             } catch(e) {
                 // Fallback: plain Audio element
-                try { const a=new Audio(url); a.volume=1; await a.play(); return; } catch(e2){}
+                try {
+                    const a=new Audio(url);
+                    a.volume=1;
+                    a.addEventListener('ended', restoreVolume);
+                    a.addEventListener('error', restoreVolume);
+                    await a.play();
+                    return;
+                } catch(e2){
+                    restoreVolume();
+                }
             }
         }
         try {
@@ -496,9 +511,15 @@
                 window.speechSynthesis.cancel();
                 const u=new SpeechSynthesisUtterance(card.word);
                 u.lang='en-US'; u.rate=0.85; u.pitch=1.1;
+                u.onend = restoreVolume;
+                u.onerror = restoreVolume;
                 window.speechSynthesis.speak(u);
+            } else {
+                restoreVolume();
             }
-        } catch(e){}
+        } catch(e){
+            restoreVolume();
+        }
     }
 
     // ──────────────────────────────────────────────
@@ -882,7 +903,7 @@
     //  Start button
     // ──────────────────────────────────────────────
     document.getElementById('startBtn').addEventListener('click', () => {
-        bgMusic.volume = 0.15;
+        bgMusic.volume = 0.2;
         bgMusic.play().catch(()=>{});
         const overlay = document.getElementById('startOverlay');
         overlay.style.opacity = '0';

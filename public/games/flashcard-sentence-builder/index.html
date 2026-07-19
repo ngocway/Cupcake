@@ -505,7 +505,7 @@
             if (bgMusic) return;
             bgMusic = new Audio('/sounds/bg-music.mp3?v=2');
             bgMusic.loop = true;
-            bgMusic.volume = 0.15; // Default volume 15%
+            bgMusic.volume = 0.2; // Default volume 20%
             bgMusic.play().then(() => {
                 isMusicPlaying = true;
             }).catch(err => {
@@ -603,7 +603,7 @@
                 btn.classList.remove('playing', 'loading');
                 if (iconSpan) iconSpan.innerHTML = svgLightbulb;
                 if (textSpan) textSpan.textContent = 'Hint';
-                setBgMusicVolume(0.15); // Restore background music volume to 15%
+                setBgMusicVolume(0.2); // Restore background music volume to 20%
                 return;
             }
 
@@ -640,7 +640,7 @@
                 if (iconSpan) iconSpan.innerHTML = svgLightbulb;
                 if (textSpan) textSpan.textContent = 'Hint';
                 hintAudio = null;
-                setBgMusicVolume(0.15); // Restore background music volume to 15%
+                setBgMusicVolume(0.2); // Restore background music volume to 20%
             };
 
             hintAudio.addEventListener('play', onPlay);
@@ -674,7 +674,7 @@
                 currentVoiceAudio.pause();
                 currentVoiceAudio = null;
             }
-            setBgMusicVolume(0.15); // Restore background music volume to 15%
+            setBgMusicVolume(0.2); // Restore background music volume to 20%
             const btn = document.getElementById('hintBtn');
             const iconSpan = document.getElementById('hintIcon');
             const textSpan = document.getElementById('hintText');
@@ -758,7 +758,7 @@
                     setBgMusicVolume(0.05); // Reduce bg music volume to 5%
                     
                     const restoreVol = () => {
-                        setBgMusicVolume(0.15); // Restore bg music volume to 15%
+                        setBgMusicVolume(0.2); // Restore bg music volume to 20%
                         if (currentVoiceAudio === autoAudio) {
                             currentVoiceAudio = null;
                         }
@@ -849,7 +849,7 @@
                 setBgMusicVolume(0.05); // Reduce bg music volume to 5%
                 
                 const restoreVol = () => {
-                    setBgMusicVolume(0.15); // Restore bg music volume to 15%
+                    setBgMusicVolume(0.2); // Restore bg music volume to 20%
                     if (currentVoiceAudio === sentenceAudio) {
                         currentVoiceAudio = null;
                     }

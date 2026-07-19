@@ -324,7 +324,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const bgMusic = document.getElementById('bgMusic');
-            bgMusic.volume = 0.3;
+            bgMusic.volume = 0.2;
             
             const startOverlay = document.getElementById('startOverlay');
             const startBtn = document.getElementById('startBtn');
@@ -415,18 +415,24 @@
 
         async function speakWord(wordText) {
             let spoken = false;
+            const bgMusic = document.getElementById('bgMusic');
+            if (bgMusic) bgMusic.volume = 0.05;
+
+            const restoreVolume = () => {
+                if (bgMusic) bgMusic.volume = 0.2;
+            };
+
             try {
                 // Check if audio is already preloaded
                 if (preloadedAudio[wordText]) {
                     const audio = new Audio(preloadedAudio[wordText]);
                     audio.volume = 1.0;
+                    audio.addEventListener('ended', restoreVolume);
+                    audio.addEventListener('error', restoreVolume);
                     await audio.play();
+                    spoken = true;
                     return;
                 }
-
-                // Try using Google AI Studio Gemini API is temporarily disabled 
-                // due to exhausted quota to prevent 15-second timeout delays.
-                
             } catch (err) {
                 console.error("Audio playback error", err);
             }
@@ -441,10 +447,16 @@
                         utterance.rate = 0.85;
                         utterance.pitch = 1.15;
                         utterance.volume = 1.0;
+                        utterance.onend = restoreVolume;
+                        utterance.onerror = restoreVolume;
                         window.speechSynthesis.speak(utterance);
+                        spoken = true;
+                    } else {
+                        restoreVolume();
                     }
                 } catch (e) {
                     console.log("SpeechSynthesis error", e);
+                    restoreVolume();
                 }
             }
         }

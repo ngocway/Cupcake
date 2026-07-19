@@ -702,7 +702,7 @@
             if (bgMusic) return;
             bgMusic = new Audio('/sounds/bg-music.mp3?v=2');
             bgMusic.loop = true;
-            bgMusic.volume = 0.15; // Default volume 15%
+            bgMusic.volume = 0.2; // Default volume 20%
             bgMusic.play().then(() => {
                 isMusicPlaying = true;
             }).catch(err => {
@@ -855,7 +855,7 @@
                 questionAudio = null;
             }
             audioBtn.classList.remove('playing');
-            setBgMusicVolume(0.15); // Restore background music volume
+            setBgMusicVolume(0.2); // Restore background music volume
         }
 
         // Play current audio hint
@@ -880,8 +880,8 @@
             const onEnded = () => {
                 audioBtn.classList.remove('playing');
                 questionAudio = null;
-                // Restore background music volume to 15%
-                setBgMusicVolume(0.15);
+                // Restore background music volume to 20%
+                setBgMusicVolume(0.2);
             };
 
             questionAudio.addEventListener('ended', onEnded);
@@ -979,8 +979,8 @@
                     const onEnded = () => {
                         audioBtn.classList.remove('playing');
                         questionAudio = null;
-                        // Restore bg music volume to 15%
-                        setBgMusicVolume(0.15);
+                        // Restore bg music volume to 20%
+                        setBgMusicVolume(0.2);
                         
                         // Start reveal countdown after audio finishes
                         startRevealCountdown();
