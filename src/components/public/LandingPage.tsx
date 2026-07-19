@@ -1390,7 +1390,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         {/* Pill Selector for Levels (Pre-A1/A1, A2, etc.) */}
         {!isKindergarten && (activeTab === "lessons" || activeTab === "exercises") && availableLevels.length > 0 && (
           <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline-block">
               {locale === "vi" ? "Cấp độ:" : "Level:"}
             </span>
             <button
@@ -1405,6 +1405,19 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
             </button>
             {availableLevels.map((level: any) => {
               const isActive = studyLevel === level.id;
+
+              // Helper to get short CEFR code for mobile
+              const getShortLevelLabel = (id: string, defaultLabel: string) => {
+                const normalizedId = id.toLowerCase();
+                if (normalizedId === "pre-a1-a1") return "Pre-A1/A1";
+                if (normalizedId === "a2") return "A2";
+                const match = defaultLabel.match(/\(([^)]+)\)/);
+                if (match && match[1]) {
+                  return match[1].replace(", ", "/");
+                }
+                return defaultLabel;
+              };
+
               return (
                 <button
                   key={level.id}
@@ -1415,7 +1428,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
                       : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
                   }`}
                 >
-                  {level.label}
+                  <span className="hidden sm:inline">{level.label}</span>
+                  <span className="sm:hidden">{getShortLevelLabel(level.id, level.label)}</span>
                 </button>
               );
             })}
