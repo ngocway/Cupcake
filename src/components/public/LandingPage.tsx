@@ -1338,7 +1338,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
       <div 
         id="content-tabs" 
-        className="flex flex-col items-center justify-center lg:items-start gap-4 pt-0 pb-3 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-[40] touch-manipulation"
+        className="flex flex-col items-center justify-center lg:items-start gap-1.5 sm:gap-4 pt-0 pb-3 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-[40] touch-manipulation"
       >
         {/* Background gradient decorator with pointer-events-none (bypasses iOS Webkit touch bugs) */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none h-[calc(100%+32px)] z-0" />
@@ -1389,7 +1389,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
         {/* Pill Selector for Levels (Pre-A1/A1, A2, etc.) */}
         {!isKindergarten && (activeTab === "lessons" || activeTab === "exercises") && availableLevels.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
+          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-0.5 sm:mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline-block">
               {locale === "vi" ? "Cấp độ:" : "Level:"}
             </span>
