@@ -18,7 +18,8 @@ import {
   BookOpenCheck as AssignmentIcon,
   CheckCircle,
   Star,
-  ThumbsUp
+  ThumbsUp,
+  Globe
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi, enUS } from "date-fns/locale";
@@ -192,6 +193,10 @@ async function LessonActionsWrapper({ lessonId }: { lessonId: string }) {
   return (
     <div className="flex items-center justify-end">
       <div className="flex items-center gap-3">
+         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-900/30 text-[10px] font-black uppercase tracking-wider mr-2 select-none shadow-sm animate-pulse-subtle">
+           <Globe className="w-3.5 h-3.5 text-blue-500" />
+           Select any word to translate
+         </div>
          <BookmarkButton 
              id={lessonId}
              type="LESSON"
