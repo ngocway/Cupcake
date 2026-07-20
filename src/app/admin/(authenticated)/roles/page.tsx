@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma"
 import RolesClient from "./RolesClient"
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminRolesPage() {
   const roles = await prisma.adminRole.findMany({
     orderBy: { createdAt: "desc" },
