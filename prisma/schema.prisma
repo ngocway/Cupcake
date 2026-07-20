@@ -761,3 +761,16 @@ model ReadAlongSlide {
   @@index([orderIndex])
 }
 
+model PageViewLog {
+  id        String   @id @default(cuid())
+  path      String
+  userId    String?
+  ipHash    String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+}
+

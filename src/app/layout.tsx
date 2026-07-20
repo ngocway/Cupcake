@@ -6,6 +6,8 @@ import { Providers } from "@/components/Providers";
 import { getLocale, getMessages } from "next-intl/server";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Suspense } from "react";
+import PageViewTracker from "@/components/common/PageViewTracker";
 
 const nunito = Nunito({
   variable: "--font-nunito",
@@ -140,6 +142,9 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Providers locale={locale} messages={messages}>
           <SharedBackground />
+          <Suspense fallback={null}>
+            <PageViewTracker />
+          </Suspense>
           {children}
         </Providers>
       </body>

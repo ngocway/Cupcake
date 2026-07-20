@@ -761,7 +761,6 @@ export default function KidTeenQuizRunner({
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const isMutedRef = useRef(isMuted);
-  const isAutoReadEnabled = true;
   const autoReadAudioRef = useRef<HTMLAudioElement | null>(null);
   const segmentsRef = useRef<any[]>([]);
   const currentSegmentIndexRef = useRef<number>(0);
@@ -771,6 +770,7 @@ export default function KidTeenQuizRunner({
   const [isHintPlaying, setIsHintPlaying] = useState(false);
   const [isTtsPlaying, setIsTtsPlaying] = useState(false);
   const [quizMode, setQuizMode] = useState<"practice" | "autoplay">("practice");
+  const isAutoReadEnabled = quizMode === "autoplay";
   const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
   const [nextQuestionCountdown, setNextQuestionCountdown] = useState<number | null>(null);
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
@@ -1563,24 +1563,28 @@ export default function KidTeenQuizRunner({
             {/* Practice Mode Button */}
             <button
               onClick={() => handleStartQuiz("practice")}
-              className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200"
+              className={`group relative px-8 py-4 w-full ${
+                assignment.lesson ? "sm:w-2/3" : "sm:w-1/2"
+              } rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200`}
             >
               <span className="flex items-center justify-center gap-2">
                 <Play className="w-5 h-5 fill-current text-purple-600" />
-                Practice Mode
+                {assignment.lesson ? "Practice now" : "Practice Mode"}
               </span>
             </button>
 
-            {/* Autoplay Mode Button */}
-            <button
-              onClick={() => handleStartQuiz("autoplay")}
-              className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
-            >
-              <span className="flex items-center justify-center gap-2">
-                <Play className="w-5 h-5 fill-current text-white animate-pulse" />
-                Autoplay Mode
-              </span>
-            </button>
+            {/* Autoplay Mode Button (Only show if not linked to a lesson) */}
+            {!assignment.lesson && (
+              <button
+                onClick={() => handleStartQuiz("autoplay")}
+                className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Play className="w-5 h-5 fill-current text-white animate-pulse" />
+                  Autoplay Mode
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </div>

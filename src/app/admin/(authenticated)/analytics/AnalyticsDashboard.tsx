@@ -4,6 +4,7 @@ import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Cell
 } from 'recharts'
+import PageTrafficAnalytics from "@/components/admin/PageTrafficAnalytics"
 
 export default function AnalyticsDashboard({ growthData, topLessons, topAssignments }: any) {
   return (
@@ -156,6 +157,11 @@ export default function AnalyticsDashboard({ growthData, topLessons, topAssignme
                ))}
             </div>
          </div>
+      </div>
+
+      {/* Page Traffic Analytics (Ahrefs-style) */}
+      <div className="border-t border-neutral-800/80 pt-8 mt-8">
+        <PageTrafficAnalytics />
       </div>
     </div>
   )

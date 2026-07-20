@@ -17,25 +17,37 @@ export default async function AdminAnalyticsPage() {
     select: { createdAt: true, role: true }
   })
 
-  // Fetch Content growth
+  // Fetch Content growth (only non-deleted content)
   const lessons = await prisma.lesson.findMany({
-    where: { createdAt: { gte: thirtyDaysAgo } },
+    where: {
+      createdAt: { gte: thirtyDaysAgo },
+      deletedAt: null
+    },
     select: { createdAt: true }
   })
 
   const assignments = await prisma.assignment.findMany({
-    where: { createdAt: { gte: thirtyDaysAgo } },
+    where: {
+      createdAt: { gte: thirtyDaysAgo },
+      deletedAt: null,
+      materialType: "EXERCISE"
+    },
     select: { createdAt: true }
   })
 
-  // Top content
+  // Top content (only non-deleted content)
   const [topLessons, topAssignments] = await Promise.all([
     prisma.lesson.findMany({
+      where: { deletedAt: null },
       orderBy: { viewsCount: 'desc' },
       take: 5,
       include: { teacher: { select: { name: true } } }
     }),
     prisma.assignment.findMany({
+      where: { 
+        deletedAt: null,
+        materialType: "EXERCISE"
+      },
       orderBy: { viewCount: 'desc' }, // Use viewCount for assignments too
       take: 5,
       include: { teacher: { select: { name: true } } }
