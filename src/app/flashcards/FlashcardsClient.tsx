@@ -1116,10 +1116,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   </div>
                   <div className="space-y-1.5">
                     <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
-                      Scramble
+                      Word Puzzle
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                      Drag or click scrambled letters in the correct order to spell the word.
+                      Solve the puzzle by putting mixed-up letters in the correct order.
                     </p>
                   </div>
                 </button>
@@ -1295,7 +1295,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
               }`}
             >
-              Scramble
+              Word Puzzle
             </button>
             <button 
               onClick={() => handleModeChange('type')} 
