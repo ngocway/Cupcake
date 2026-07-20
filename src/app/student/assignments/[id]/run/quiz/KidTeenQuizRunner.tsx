@@ -48,6 +48,28 @@ import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
 // HELPERS (duplicated from QuizClientRunner to avoid coupling)
 // ============================================================
 
+function seedShuffle<T>(array: T[], seed: string): T[] {
+  if (!array || array.length === 0) return [];
+  const shuffled = [...array];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  }
+  
+  const random = () => {
+    let x = Math.sin(h++) * 10000;
+    return x - Math.floor(x);
+  };
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+  return shuffled;
+}
+
 const getQuestionStatus = (q: any, answer: any) => {
   if (answer === undefined || answer === null) return "pending";
   let questionData: any;
@@ -63,14 +85,17 @@ const getQuestionStatus = (q: any, answer: any) => {
     if (qType === "MULTIPLE_SELECT") {
       const answersArray = Array.isArray(answer) ? answer : [];
       const correctIndices = options
-        .map((opt: any, i: number) => (opt.isCorrect ? i : -1))
+        .map((opt: any, i: number) => opt.isCorrect ? (opt.originalIndex !== undefined ? opt.originalIndex : i) : -1)
         .filter((i: number) => i !== -1);
       if (answersArray.length === 0) return "pending";
       if (answersArray.length !== correctIndices.length) return "incorrect";
       return answersArray.every((v: number) => correctIndices.includes(v)) ? "correct" : "incorrect";
     } else {
-      const correctIndex = options.findIndex((opt: any) => opt.isCorrect);
-      return answer === correctIndex ? "correct" : "incorrect";
+      const selectedOption = options.find((opt: any, idx: number) => {
+        const origIdx = opt.originalIndex !== undefined ? opt.originalIndex : idx;
+        return origIdx === answer;
+      });
+      return selectedOption?.isCorrect ? "correct" : "incorrect";
     }
   }
   if (qType === "TRUE_FALSE") {
@@ -1885,9 +1910,10 @@ export default function KidTeenQuizRunner({
               {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
                 <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-8 gap-y-[clamp(1rem,4dvh,2rem)] pt-[clamp(0.5rem,1.5dvh,1rem)] w-full">
                   {(currentQuestionData.options || []).map((option: any, i: number) => {
+                    const optionVal = option.originalIndex !== undefined ? option.originalIndex : i;
                     const isSelected = isMultiSelect
-                      ? Array.isArray(userAnswer) && userAnswer.includes(i)
-                      : userAnswer === i;
+                      ? Array.isArray(userAnswer) && userAnswer.includes(optionVal)
+                      : userAnswer === optionVal;
                     const isCorrectOpt = option.isCorrect;
 
                     const solarpunkStyles = [
@@ -1952,7 +1978,7 @@ export default function KidTeenQuizRunner({
                       <button
                         key={i}
                         disabled={isChecked}
-                        onClick={() => handleAnswerChange(currentQuestion, i)}
+                        onClick={() => handleAnswerChange(currentQuestion, optionVal)}
                         className={`group relative min-h-[clamp(4.5rem,9dvh,6rem)] w-auto flex-auto min-w-[140px] max-w-full ${blobShape} py-[clamp(0.75rem,2dvh,1.25rem)] px-[clamp(1rem,3vw,1.5rem)] transition-all duration-700 flex flex-col items-center justify-center border-[3px] shadow-lg ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.03]" : ""}`}
                         style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
                       >

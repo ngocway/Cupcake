@@ -180,8 +180,22 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
   return (
     <Link
       href={href}
-      className="group flex flex-row rounded-[10px] overflow-hidden bg-white dark:bg-slate-900 border border-primary/5 hover:border-primary/20 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer min-h-[120px]"
+      className="group flex flex-row relative rounded-[10px] overflow-hidden bg-white dark:bg-slate-900 border border-primary/5 hover:border-primary/20 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer min-h-[120px]"
     >
+      {/* Level Badges in top-right of the card */}
+      {item.level && (
+        <div className="absolute top-2.5 right-2.5 z-10 flex flex-wrap gap-1">
+          {getLevelsWithColors(item.level).map((lvl, index) => (
+            <span
+              key={index}
+              className={`${lvl.color} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shadow-sm`}
+            >
+              {lvl.label}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Thumbnail — left */}
       <div className="relative w-[36%] shrink-0 aspect-video overflow-hidden self-center bg-slate-100 dark:bg-slate-800 rounded-[6px] ml-2.5">
         <Image
@@ -192,19 +206,6 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
           className="object-cover transition-transform duration-700 group-hover:scale-105"
           priority={false}
         />
-        {/* Level Badges overlaid on top of the thumbnail */}
-        {item.level && (
-          <div className="absolute bottom-2 left-2 z-10 flex flex-wrap gap-1">
-            {getLevelsWithColors(item.level).map((lvl, index) => (
-              <span
-                key={index}
-                className={`${lvl.color} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shadow-sm`}
-              >
-                {lvl.label}
-              </span>
-            ))}
-          </div>
-        )}
         {/* Media icons */}
         {(item.videoUrl || item.audioUrl) && (
           <div className="absolute top-2 right-2 z-10 flex gap-1">
@@ -225,7 +226,7 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
 
       {/* Content — right */}
       <div className="flex-1 p-3.5 flex flex-col justify-between min-w-0">
-        <div>
+        <div className="pr-16">
           {/* Teacher Info */}
           <div className="flex items-center gap-1.5 mb-1.5">
             <div className="w-4 h-4 rounded-full overflow-hidden border border-primary/10 relative shrink-0">

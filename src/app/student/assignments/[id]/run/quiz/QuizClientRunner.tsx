@@ -46,6 +46,29 @@ import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
 
 
+// Helper to shuffle array deterministically using a seed string
+function seedShuffle<T>(array: T[], seed: string): T[] {
+  if (!array || array.length === 0) return [];
+  const shuffled = [...array];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  }
+  
+  const random = () => {
+    let x = Math.sin(h++) * 10000;
+    return x - Math.floor(x);
+  };
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+  return shuffled;
+}
+
 // Helper to determine question correctness
 const getQuestionStatus = (q: any, answer: any) => {
   if (answer === undefined || answer === null) return 'pending';
@@ -64,15 +87,18 @@ const getQuestionStatus = (q: any, answer: any) => {
     if (qType === "MULTIPLE_SELECT") {
       const answersArray = Array.isArray(answer) ? answer : [];
       const correctIndices = options
-        .map((opt: any, i: number) => opt.isCorrect ? i : -1)
+        .map((opt: any, i: number) => opt.isCorrect ? (opt.originalIndex !== undefined ? opt.originalIndex : i) : -1)
         .filter((i: number) => i !== -1);
       
       if (answersArray.length === 0) return 'pending';
       if (answersArray.length !== correctIndices.length) return 'incorrect';
       return answersArray.every(v => correctIndices.includes(v)) ? 'correct' : 'incorrect';
     } else {
-      const correctIndex = options.findIndex((opt: any) => opt.isCorrect);
-      return answer === correctIndex ? 'correct' : 'incorrect';
+      const selectedOption = options.find((opt: any, idx: number) => {
+        const origIdx = opt.originalIndex !== undefined ? opt.originalIndex : idx;
+        return origIdx === answer;
+      });
+      return selectedOption?.isCorrect ? 'correct' : 'incorrect';
     }
   }
 
@@ -753,7 +779,7 @@ function SidePanelToggleButton({ promise, isSidebarOpen, setIsSidebarOpen }: { p
 export default function QuizClientRunner({ 
   assignment, 
   submissionId, 
-  questions, 
+  questions: rawQuestions, 
   initialAnswers,
   extraDataPromise,
   relatedAssignmentsPromise,
@@ -763,6 +789,36 @@ export default function QuizClientRunner({
 }: Props) {
   const t = useTranslations("student.quiz");
   const { isHidden } = useScrollDirection();
+
+  const questions = useMemo(() => {
+    // 1. Shuffle the questions list
+    const shuffledList = seedShuffle(rawQuestions, submissionId);
+    // 2. For each question, shuffle its options if they exist
+    return shuffledList.map((q) => {
+      let parsedContent: any;
+      try {
+        parsedContent = typeof q.content === 'string' ? JSON.parse(q.content) : q.content;
+      } catch (e) {
+        parsedContent = q.content;
+      }
+
+      if (parsedContent && Array.isArray(parsedContent.options)) {
+        const optionsWithIndex = parsedContent.options.map((opt: any, idx: number) => ({
+          ...opt,
+          originalIndex: idx
+        }));
+        const shuffledOptions = seedShuffle(optionsWithIndex, `${submissionId}-${q.id}`);
+        return {
+          ...q,
+          content: JSON.stringify({
+            ...parsedContent,
+            options: shuffledOptions
+          })
+        };
+      }
+      return q;
+    });
+  }, [rawQuestions, submissionId]);
 
   const isKidTeenMode = useMemo(() => {
     const audiences: string[] = assignment.targetAudiences || [];
@@ -1267,42 +1323,43 @@ export default function QuizClientRunner({
                            ];
                            return (questionData.options || []).map((option: any, i: number) => {
                              const blobShape = blobShapes[i % blobShapes.length];
-                           const isSelected = isMultiSelect 
-                             ? (Array.isArray(userAnswer) && userAnswer.includes(i))
-                             : userAnswer === i;
-                           const isCorrect = option.isCorrect;
-                           
-                           let borderClass = 'border-outline-variant/30';
-                           let bgClass = 'bg-white dark:bg-slate-900';
-                           let textClass = 'text-on-surface-variant';
-                           let iconClass = 'bg-surface-container text-on-surface-variant';
+                             const optionVal = option.originalIndex !== undefined ? option.originalIndex : i;
+                             const isSelected = isMultiSelect 
+                               ? (Array.isArray(userAnswer) && userAnswer.includes(optionVal))
+                               : userAnswer === optionVal;
+                             const isCorrect = option.isCorrect;
+                             
+                             let borderClass = 'border-outline-variant/30';
+                             let bgClass = 'bg-white dark:bg-slate-900';
+                             let textClass = 'text-on-surface-variant';
+                             let iconClass = 'bg-surface-container text-on-surface-variant';
 
-                           if (isSelected) {
-                             borderClass = 'border-amber-500';
-                             bgClass = 'bg-amber-50 dark:bg-amber-900/20';
-                             textClass = 'text-amber-700 dark:text-amber-400';
-                             iconClass = 'bg-amber-500 text-white';
-                           }
-
-                           if (isChecked) {
-                             if (isCorrect) {
-                               borderClass = 'border-emerald-500';
-                               bgClass = 'bg-emerald-500/10';
-                               textClass = 'text-emerald-700';
-                               iconClass = 'bg-emerald-500 text-white';
-                             } else if (isSelected && !isCorrect) {
-                               borderClass = 'border-rose-500';
-                               bgClass = 'bg-rose-500/10';
-                               textClass = 'text-rose-700';
-                               iconClass = 'bg-rose-500 text-white';
+                             if (isSelected) {
+                               borderClass = 'border-amber-500';
+                               bgClass = 'bg-amber-50 dark:bg-amber-900/20';
+                               textClass = 'text-amber-700 dark:text-amber-400';
+                               iconClass = 'bg-amber-500 text-white';
                              }
-                           }
 
-                            return (
-                             <button 
-                               key={i}
-                               disabled={isChecked}
-                               onClick={() => handleAnswerChange(q, i)}
+                             if (isChecked) {
+                               if (isCorrect) {
+                                 borderClass = 'border-emerald-500';
+                                 bgClass = 'bg-emerald-500/10';
+                                 textClass = 'text-emerald-700';
+                                 iconClass = 'bg-emerald-500 text-white';
+                               } else if (isSelected && !isCorrect) {
+                                 borderClass = 'border-rose-500';
+                                 bgClass = 'bg-rose-500/10';
+                                 textClass = 'text-rose-700';
+                                 iconClass = 'bg-rose-500 text-white';
+                               }
+                             }
+
+                             return (
+                               <button 
+                                 key={i}
+                                 disabled={isChecked}
+                                 onClick={() => handleAnswerChange(q, optionVal)}
                                className={`px-6 py-4 ${blobShape} border-2 text-left font-bold transition-all duration-300 relative inline-flex items-center gap-4 ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'}`}
                              >
                                <div className={`w-6 h-6 flex items-center justify-center text-xs font-black shrink-0 transition-all shadow-sm ${isMultiSelect ? 'rounded-md border-2' : 'rounded-full'} ${!isSelected && isMultiSelect ? 'border-primary/20 bg-white/50 dark:bg-slate-800/50' : 'border-transparent'} ${iconClass}`}>
