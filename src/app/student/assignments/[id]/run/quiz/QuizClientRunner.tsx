@@ -792,7 +792,7 @@ export default function QuizClientRunner({
 
   const questions = useMemo(() => {
     // 1. Shuffle the questions list
-    const shuffledList = seedShuffle(rawQuestions, submissionId);
+    const shuffledList = seedShuffle(rawQuestions, submissionId || assignment?.id || "");
     // 2. For each question, shuffle its options if they exist
     return shuffledList.map((q) => {
       let parsedContent: any;
@@ -807,7 +807,7 @@ export default function QuizClientRunner({
           ...opt,
           originalIndex: idx
         }));
-        const shuffledOptions = seedShuffle(optionsWithIndex, `${submissionId}-${q.id}`);
+        const shuffledOptions = seedShuffle(optionsWithIndex, `${submissionId || assignment?.id || ""}-${q.id}`);
         return {
           ...q,
           content: JSON.stringify({
@@ -818,7 +818,7 @@ export default function QuizClientRunner({
       }
       return q;
     });
-  }, [rawQuestions, submissionId]);
+  }, [rawQuestions, submissionId, assignment?.id]);
 
   const isKidTeenMode = useMemo(() => {
     const audiences: string[] = assignment.targetAudiences || [];
