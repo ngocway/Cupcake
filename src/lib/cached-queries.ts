@@ -83,14 +83,8 @@ export const getShuffledIds = unstable_cache(
         where.subject = studySubject;
       }
 
-      if (contentType === "EXERCISE") {
-        where.NOT = [
-          { title: { contains: "Part 2", mode: 'insensitive' } },
-          { title: { contains: "Part 3", mode: 'insensitive' } },
-          { title: { contains: "Part 4", mode: 'insensitive' } },
-          { title: { contains: "Part 5", mode: 'insensitive' } }
-        ];
-      }
+      // We no longer filter out Part 2-5 here because we will fetch all parts
+      // and randomly choose one part per base title group below.
 
       if (userType) {
         if (studyLevel) {
@@ -115,12 +109,33 @@ export const getShuffledIds = unstable_cache(
 
       const idRows = await prisma.homepageFeed.findMany({
         where,
-        select: { id: true }
+        select: { id: true, title: true }
       });
 
-      const randomIds = idRows
-        .map(row => row.id)
-        .sort(() => 0.5 - Math.random());
+      let selectedIds: string[] = [];
+
+      if (contentType === "EXERCISE") {
+        // Group exercises by base title (ignoring "Part <Number>" suffix)
+        const groups: Record<string, { id: string; title: string }[]> = {};
+        for (const row of idRows) {
+          const baseTitle = row.title.replace(/\s*\.?\s*Part\s+\d+/i, '').trim().toLowerCase();
+          if (!groups[baseTitle]) {
+            groups[baseTitle] = [];
+          }
+          groups[baseTitle].push(row);
+        }
+
+        // For each base title group, randomly select exactly one part to display
+        for (const baseTitle of Object.keys(groups)) {
+          const group = groups[baseTitle];
+          const randomIndex = Math.floor(Math.random() * group.length);
+          selectedIds.push(group[randomIndex].id);
+        }
+      } else {
+        selectedIds = idRows.map(row => row.id);
+      }
+
+      const randomIds = selectedIds.sort(() => 0.5 - Math.random());
 
       return randomIds;
     });

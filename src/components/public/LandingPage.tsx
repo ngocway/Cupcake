@@ -201,10 +201,10 @@ const ExerciseList = memo(function ExerciseList({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex flex-row rounded-xl overflow-hidden border border-primary/5 shadow-sm animate-pulse">
-            <div className="w-[38%] shrink-0"><div className="aspect-video bg-slate-100 dark:bg-slate-800/80" /></div>
+          <div key={i} className="flex flex-row rounded-[10px] overflow-hidden border border-primary/5 shadow-sm animate-pulse min-h-[120px]">
+            <div className="w-[36%] shrink-0 self-center ml-2.5 rounded-[6px] overflow-hidden"><div className="aspect-video bg-slate-100 dark:bg-slate-800/80" /></div>
             <div className="flex-1 p-3 space-y-2">
               <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800/80 rounded-full" />
               <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/80 rounded-full" />
@@ -222,7 +222,7 @@ const ExerciseList = memo(function ExerciseList({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-6">
         {displayItems.map((ex: any) => (
           <ExerciseCardHorizontal key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
         ))}

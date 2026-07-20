@@ -180,90 +180,89 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
   return (
     <Link
       href={href}
-      className="group flex flex-row rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-primary/10 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+      className="group flex flex-row rounded-[10px] overflow-hidden bg-white dark:bg-slate-900 border border-primary/5 hover:border-primary/20 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer min-h-[120px]"
     >
-      {/* Thumbnail — left, 16:9 */}
-      <div className="self-start w-[38%] shrink-0 overflow-hidden">
-        <div className="relative aspect-video overflow-hidden">
-          <Image
-            src={thumbnailSrc}
-            alt={item.title}
-            fill
-            sizes="(max-width: 768px) 38vw, 20vw"
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
-            priority={false}
-          />
-          {/* Media icons */}
-          {(item.videoUrl || item.audioUrl) && (
-            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-              {item.videoUrl && (
-                <div className="bg-black/60 text-white p-1 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
-                </div>
-              )}
-              {item.audioUrl && (
-                <div className="bg-black/60 text-white p-1 rounded-full flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
-                </div>
-              )}
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent to-primary/10 pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Content — 70% */}
-      <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
-        {/* Teacher Info */}
-        <div className="flex items-center gap-2 mb-1.5">
-          <div className="w-5 h-5 rounded-full overflow-hidden border border-primary/20 relative shrink-0">
-            <Image
-              src={item.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.teacher?.id}`}
-              alt="Teacher"
-              fill
-              sizes="20px"
-              className="object-cover"
-            />
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-widest text-primary/50 truncate">
-            {item.teacher?.name || t("instructor")}
-          </span>
-        </div>
-
-        {/* Title */}
-        <h3 className="text-foreground text-sm font-black leading-snug mb-1.5 tracking-tight line-clamp-2 group-hover:text-primary transition-colors">
-          {item.title}
-        </h3>
-
-        {/* Level Badges */}
+      {/* Thumbnail — left */}
+      <div className="relative w-[36%] shrink-0 aspect-video overflow-hidden self-center bg-slate-100 dark:bg-slate-800 rounded-[6px] ml-2.5">
+        <Image
+          src={thumbnailSrc}
+          alt={item.title}
+          fill
+          sizes="(max-width: 768px) 36vw, 15vw"
+          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          priority={false}
+        />
+        {/* Level Badges overlaid on top of the thumbnail */}
         {item.level && (
-          <div className="flex flex-wrap gap-1 mb-1.5">
+          <div className="absolute bottom-2 left-2 z-10 flex flex-wrap gap-1">
             {getLevelsWithColors(item.level).map((lvl, index) => (
               <span
                 key={index}
-                className={`${lvl.color} px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider`}
+                className={`${lvl.color} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shadow-sm`}
               >
                 {lvl.label}
               </span>
             ))}
           </div>
         )}
+        {/* Media icons */}
+        {(item.videoUrl || item.audioUrl) && (
+          <div className="absolute top-2 right-2 z-10 flex gap-1">
+            {item.videoUrl && (
+              <div className="bg-black/60 backdrop-blur-sm text-white p-1 rounded-full flex items-center justify-center border border-white/10">
+                <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
+              </div>
+            )}
+            {item.audioUrl && (
+              <div className="bg-black/60 backdrop-blur-sm text-white p-1 rounded-full flex items-center justify-center border border-white/10">
+                <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-primary/5 pointer-events-none" />
+      </div>
+
+      {/* Content — right */}
+      <div className="flex-1 p-3.5 flex flex-col justify-between min-w-0">
+        <div>
+          {/* Teacher Info */}
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="w-4 h-4 rounded-full overflow-hidden border border-primary/10 relative shrink-0">
+              <Image
+                src={item.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.teacher?.id}`}
+                alt="Teacher"
+                fill
+                sizes="16px"
+                className="object-cover"
+              />
+            </div>
+            <span className="text-[9px] font-medium tracking-wide text-primary/60 truncate">
+              {item.teacher?.name || t("instructor")}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-foreground text-sm font-black leading-snug tracking-tight line-clamp-2 group-hover:text-primary transition-colors">
+            {item.title}
+          </h3>
+        </div>
 
         {/* Stats Row */}
-        <div className="flex items-center justify-between pt-1.5 border-t border-primary/5 mt-auto">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between pt-2 border-t border-primary/5 mt-3">
+          <div className="flex items-center gap-3">
             {item._count?.questions !== undefined && (
               <div className="flex items-center gap-1 text-primary/40">
                 <span className="material-symbols-outlined !text-[13px]">help</span>
-                <span className="text-[9px] font-black">{item._count.questions} Qs</span>
+                <span className="text-[9px] font-bold">{item._count.questions} Qs</span>
               </div>
             )}
             <div className="flex items-center gap-1 text-primary/40">
               <span className="material-symbols-outlined !text-[13px]">visibility</span>
-              <span className="text-[9px] font-black">{views}</span>
+              <span className="text-[9px] font-bold">{views}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-secondary/10 px-2 py-0.5 rounded-full">
+          <div className="flex items-center gap-1 bg-secondary/10 px-2 py-0.5 rounded-full border border-secondary/5">
             <span className="material-symbols-outlined !text-[11px] text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
             <span className="text-secondary text-[9px] font-black">{rating}</span>
           </div>

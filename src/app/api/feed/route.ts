@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       name:  item.teacherName,
       image: item.teacherImage
     },
-    _count: { reviews: item.reviewCount },
+    _count: { reviews: item.reviewCount, questions: item.questionCount },
     ...(type === 'lessons' ? { type: 'VIDEO_LESSON' } : {})
   }))
 
