@@ -1255,7 +1255,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   return (
     <div
-      className={`fixed inset-0 z-[100] ${pageBg} flex flex-col justify-between overflow-hidden font-body animate-in fade-in zoom-in-95 duration-500`}
+      className={`fixed inset-0 z-[100] ${pageBg} flex flex-col overflow-y-auto md:overflow-hidden font-body animate-in fade-in zoom-in-95 duration-500`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -1323,7 +1323,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       )}
 
       {/* 2. Central Content: 3D Flip Card */}
-      <main className="flex-1 flex flex-col justify-center items-center px-4 md:px-6 pt-28 sm:pt-28 md:pt-24 relative max-w-4xl mx-auto w-full">
+      <main className="flex-1 flex flex-col justify-start md:justify-center items-center px-4 md:px-6 pt-24 sm:pt-24 md:pt-16 pb-4 md:pb-0 relative max-w-4xl mx-auto w-full">
 
         {/* Hidden input for mobile keyboard support */}
         <input 
@@ -1381,7 +1381,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
         {/* 3D Depth Container */}
         <div 
-          className="w-[min(85vw,260px)] h-[min(85vw,260px)] sm:w-[320px] sm:h-[320px] md:w-[380px] md:h-[380px] transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          className={`w-[min(85vw,280px)] sm:w-[320px] md:w-[380px] md:h-[380px] sm:h-[320px] transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            isFlipped ? 'h-[380px]' : 'h-[min(85vw,280px)]'
+          }`}
           style={{ perspective: "1200px" }}
         >
           {/* Card Inner wrapper */}
