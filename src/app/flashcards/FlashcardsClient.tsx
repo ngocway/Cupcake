@@ -1311,16 +1311,6 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         </div>
       </div>
 
-      {/* Native Language Definition (Top Center on Desktop, pushed down on Mobile to avoid overlapping) */}
-      {activeCard && !isFlipped && challengeMode !== 'hint' && (
-        <div className="absolute left-1/2 -translate-x-1/2 top-[88px] md:top-[28px] z-40 pointer-events-none animate-in fade-in zoom-in-95 duration-300 text-center w-full max-w-[90%] px-4">
-          <span className={`font-black tracking-wide text-2xl md:text-3xl lg:text-4xl ${
-            isKidMode ? "text-amber-900" : "text-slate-800"
-          }`}>
-            {getDefinitionText(activeCard, currentLang)}
-          </span>
-        </div>
-      )}
 
       {/* 2. Central Content: 3D Flip Card */}
       <main className="flex-1 flex flex-col justify-start md:justify-center items-center px-4 md:px-6 pt-24 sm:pt-24 md:pt-16 pb-4 md:pb-0 relative max-w-4xl mx-auto w-full">
@@ -1587,7 +1577,17 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           </div>
         </div>
 
-        {/* Banner cố định cảnh báo Unikey (chỉ hiện ở chế độ Tự Gõ, sau khi phát hiện lần đầu) */}
+        {/* Native Language Definition — below card, in flow (no overlap) */}
+        {activeCard && !isFlipped && challengeMode !== 'hint' && (
+          <div className="mt-4 text-center animate-in fade-in zoom-in-95 duration-300 px-4">
+            <span className={`font-black tracking-wide text-xl md:text-2xl lg:text-3xl ${
+              isKidMode ? "text-amber-900" : "text-slate-800"
+            }`}>
+              {getDefinitionText(activeCard, currentLang)}
+            </span>
+          </div>
+        )}
+
         {challengeMode === 'type' && !isFlipped && unikeyDetected && (
           <div className="w-full max-w-[480px] flex items-start gap-2.5 px-4 py-3 rounded-2xl border-2 border-orange-300 bg-orange-50 text-orange-800 text-xs font-semibold animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm mt-3">
             <span className="text-base shrink-0">⚠️</span>
