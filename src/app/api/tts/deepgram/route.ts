@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       model: model || "aura-asteria-en",
     });
 
-    return new Response(audioBuffer, {
+    return new Response(new Uint8Array(audioBuffer), {
       status: 200,
       headers: {
         "Content-Type": "audio/mpeg",
