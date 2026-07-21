@@ -1312,14 +1312,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       </div>
 
       {/* Native Language Definition (Top Center on Desktop, pushed down on Mobile to avoid overlapping) */}
-      {activeCard && !isFlipped && (
+      {activeCard && !isFlipped && challengeMode !== 'hint' && (
         <div className="absolute left-1/2 -translate-x-1/2 top-[88px] md:top-[28px] z-40 pointer-events-none animate-in fade-in zoom-in-95 duration-300 text-center w-full max-w-[90%] px-4">
           <span className={`font-black tracking-wide text-2xl md:text-3xl lg:text-4xl ${
             isKidMode ? "text-amber-900" : "text-slate-800"
           }`}>
-            {challengeMode === 'hint'
-              ? activeCard.word
-              : getDefinitionText(activeCard, currentLang)}
+            {getDefinitionText(activeCard, currentLang)}
           </span>
         </div>
       )}
