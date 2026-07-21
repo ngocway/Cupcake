@@ -802,7 +802,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const allFlashcardTopics = promises.flashcards ? (use(promises.flashcards) || []) : [];
 
   // Local states — switching tab never triggers server roundtrip
-  const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "lessons")
+  const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "flashcards")
 
 
   // Store states and actions
