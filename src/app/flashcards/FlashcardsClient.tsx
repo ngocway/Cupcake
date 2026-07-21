@@ -220,7 +220,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const [wordAudioEnded, setWordAudioEnded] = useState<boolean>(false)
 
   // Trạng thái cho chế độ Thử thách từ vựng (Gợi ý, Ghép chữ, Tự gõ)
-  const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>('hint')
+  const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>('scramble')
   const [scrambledLetters, setScrambledLetters] = useState<{ id: number, letter: string, index: number, used: boolean }[]>([])
   const [shakeItemId, setShakeItemId] = useState<number | null>(null)
   const [wrongTypedIndex, setWrongTypedIndex] = useState<number | null>(null)
@@ -1085,37 +1085,23 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                 </p>
               </div>
 
-              {/* Grid of 3 modes */}
+              {/* Grid of 3 modes — Word Puzzle first (recommended) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                
-                {/* Hint Card */}
-                <button
-                  onClick={() => handleChooseMode('hint')}
-                  className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-amber-50/45 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
-                >
-                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
-                    <Sparkles className="w-7 h-7" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
-                      Hint Mode
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
-                      Flip the card, listen to audio, and learn with automatic letter suggestions.
-                    </p>
-                  </div>
-                </button>
 
-                {/* Scramble Card */}
+                {/* ⭐ Word Puzzle Card — RECOMMENDED, highlighted */}
                 <button
                   onClick={() => handleChooseMode('scramble')}
-                  className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-emerald-50/45 dark:bg-emerald-950/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                  className="group relative p-4 md:p-6 rounded-[32px] border-4 border-emerald-400 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-lg shadow-emerald-200/60 hover:shadow-xl hover:shadow-emerald-300/60 hover:-translate-y-1 ring-2 ring-emerald-300/50"
                 >
+                  {/* Recommended badge */}
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow-md whitespace-nowrap">
+                    ⭐ Recommended
+                  </span>
                   <div className="w-14 h-14 shrink-0 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Layers className="w-7 h-7" />
                   </div>
                   <div className="space-y-1.5">
-                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
+                    <h3 className="text-lg font-black text-emerald-700 dark:text-emerald-300">
                       Word Puzzle
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
@@ -1138,6 +1124,24 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
                       Spell the word by typing manually using your physical or virtual keyboard.
+                    </p>
+                  </div>
+                </button>
+
+                {/* Hint Card */}
+                <button
+                  onClick={() => handleChooseMode('hint')}
+                  className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-amber-50/45 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                >
+                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">
+                      Hint Mode
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                      Flip the card, listen to audio, and learn with automatic letter suggestions.
                     </p>
                   </div>
                 </button>
@@ -1277,16 +1281,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               ? "bg-amber-50/90 border-amber-200/60" 
               : "bg-slate-50 border-slate-200"
           }`}>
-            <button 
-              onClick={() => handleModeChange('hint')} 
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
-                challengeMode === 'hint' 
-                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
-                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
-              }`}
-            >
-              Hint
-            </button>
+            {/* Mode Switcher — order: Word Puzzle | Type | Hint */}
             <button 
               onClick={() => handleModeChange('scramble')} 
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
@@ -1306,6 +1301,16 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               }`}
             >
               Type
+            </button>
+            <button 
+              onClick={() => handleModeChange('hint')} 
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                challengeMode === 'hint' 
+                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+              }`}
+            >
+              Hint
             </button>
           </div>
         </div>
