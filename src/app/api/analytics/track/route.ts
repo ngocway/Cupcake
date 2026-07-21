@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const session = await auth();
     const userId = session?.user?.id || null;
 
-    const ip = req.headers.get("x-forwarded-for") || req.ip || "127.0.0.1";
+    const ip = req.headers.get("x-forwarded-for") || (req as any).ip || "127.0.0.1";
     const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
     const userAgent = req.headers.get("user-agent") || "";
 
