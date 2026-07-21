@@ -1093,7 +1093,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   onClick={() => handleChooseMode('hint')}
                   className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-amber-50/45 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Sparkles className="w-7 h-7" />
                   </div>
                   <div className="space-y-1.5">
@@ -1111,7 +1111,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   onClick={() => handleChooseMode('scramble')}
                   className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-emerald-50/45 dark:bg-emerald-950/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Layers className="w-7 h-7" />
                   </div>
                   <div className="space-y-1.5">
@@ -1129,7 +1129,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   onClick={() => handleChooseMode('type')}
                   className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-indigo-50/45 dark:bg-indigo-950/10 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-14 h-14 shrink-0 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Keyboard className="w-7 h-7" />
                   </div>
                   <div className="space-y-1.5">
