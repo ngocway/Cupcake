@@ -1073,7 +1073,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         {/* Study Mode Selection Modal */}
         {topicToSelect && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[40px] border-4 border-slate-100 dark:border-slate-800 p-8 shadow-2xl space-y-8 animate-in zoom-in-95 duration-300">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-[40px] border-4 border-slate-100 dark:border-slate-800 p-6 md:p-8 shadow-2xl space-y-5 md:space-y-8 animate-in zoom-in-95 duration-300 max-h-[90dvh] overflow-y-auto">
               
               {/* Header */}
               <div className="text-center space-y-2">
@@ -1086,12 +1086,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               </div>
 
               {/* Grid of 3 modes */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 
                 {/* Hint Card */}
                 <button
                   onClick={() => handleChooseMode('hint')}
-                  className="group p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-amber-50/45 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 flex flex-col items-center text-center space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                  className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-amber-50/45 dark:bg-amber-950/10 hover:border-amber-400 dark:hover:border-amber-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-amber-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Sparkles className="w-7 h-7" />
@@ -1109,7 +1109,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                 {/* Scramble Card */}
                 <button
                   onClick={() => handleChooseMode('scramble')}
-                  className="group p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-emerald-50/45 dark:bg-emerald-950/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 flex flex-col items-center text-center space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                  className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-emerald-50/45 dark:bg-emerald-950/10 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Layers className="w-7 h-7" />
@@ -1127,7 +1127,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                 {/* Type Card */}
                 <button
                   onClick={() => handleChooseMode('type')}
-                  className="group p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-indigo-50/45 dark:bg-indigo-950/10 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-300 flex flex-col items-center text-center space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                  className="group p-4 md:p-6 rounded-[32px] border-4 border-slate-200 dark:border-slate-800 bg-indigo-50/45 dark:bg-indigo-950/10 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-sm hover:shadow-xl hover:-translate-y-1"
                 >
                   <div className="w-14 h-14 rounded-2xl bg-indigo-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Keyboard className="w-7 h-7" />
