@@ -8,8 +8,8 @@ const VOICE = "en-US-AnaNeural"; // Microsoft's child voice
 
 /**
  * POST /api/tts/edge
- * Real-time Edge TTS synthesis — returns audio/mp3 stream.
- * Used as fallback when a slide has no pre-generated audio.
+ * Real-time TTS synthesis — returns audio/mp3 stream.
+ * Priority: Deepgram → ElevenLabs → MsEdgeTTS (fallback)
  * No auth required (student-facing).
  */
 export async function POST(req: NextRequest) {
@@ -31,7 +31,46 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 1. Try ElevenLabs TTS if API key is configured (Primary)
+    // 1. Try Deepgram TTS if API key is configured (Primary — fastest, cheapest)
+    const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+    if (deepgramApiKey) {
+      try {
+        // Aura-2 supports speed param (range 0.7–1.5). Aura-1 does not.
+        const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
+        const speed = process.env.DEEPGRAM_TTS_SPEED || "0.7";
+        console.log(`[Edge TTS Route -> Deepgram] Synthesizing with model=${model} speed=${speed}: "${cleanText.substring(0, 30)}..."`);
+
+        const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&speed=${speed}`, {
+
+          method: "POST",
+          headers: {
+            "Authorization": `Token ${deepgramApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text: cleanText }),
+        });
+
+        if (response.ok) {
+          const audioBuffer = Buffer.from(await response.arrayBuffer());
+          return new Response(audioBuffer, {
+            status: 200,
+            headers: {
+              "Content-Type": "audio/mpeg",
+              "Content-Length": audioBuffer.length.toString(),
+              "Cache-Control": "no-store",
+              "X-TTS-Provider": "deepgram",
+            },
+          });
+        } else {
+          const errorText = await response.text();
+          console.warn(`[Edge TTS Route] Deepgram API failed (${response.status}), falling back to ElevenLabs:`, errorText);
+        }
+      } catch (err: any) {
+        console.warn(`[Edge TTS Route] Deepgram synthesis failed, falling back to ElevenLabs:`, err.message);
+      }
+    }
+
+    // 2. Try ElevenLabs TTS if API key is configured (Secondary)
     const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
     if (elevenLabsApiKey) {
       try {
@@ -39,8 +78,6 @@ export async function POST(req: NextRequest) {
         const stability = parseFloat(process.env.ELEVENLABS_STABILITY || "0.80");
         const speed = parseFloat(process.env.ELEVENLABS_SPEED || "0.7");
         const useSpeakerBoost = process.env.ELEVENLABS_USE_SPEAKER_BOOST !== "false";
-
-        const speechText = cleanText;
         const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_flash_v2";
 
         console.log(`[Edge TTS Route -> ElevenLabs] Synthesizing: "${cleanText.substring(0, 30)}..."`);
@@ -52,7 +89,7 @@ export async function POST(req: NextRequest) {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            text: speechText,
+            text: cleanText,
             model_id: modelId,
             voice_settings: {
               stability,
@@ -71,6 +108,7 @@ export async function POST(req: NextRequest) {
               "Content-Type": "audio/mpeg",
               "Content-Length": audioBuffer.length.toString(),
               "Cache-Control": "no-store",
+              "X-TTS-Provider": "elevenlabs",
             },
           });
         } else {
@@ -82,7 +120,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Fallback to MsEdgeTTS
+    // 3. Fallback to MsEdgeTTS
     console.log(`[Edge TTS Route -> MsEdgeTTS Fallback] Synthesizing: "${cleanText.substring(0, 30)}..."`);
     const tts = new MsEdgeTTS();
     await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
@@ -105,6 +143,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "audio/mpeg",
         "Content-Length": audioBuffer.length.toString(),
         "Cache-Control": "no-store",
+        "X-TTS-Provider": "msedge",
       },
     });
   } catch (error: any) {

@@ -1224,7 +1224,9 @@ export default function KidTeenQuizRunner({
     const lessonAudiences = assignment.lesson?.targetAudiences || [];
     const combined = [...audiences, ...lessonAudiences];
     const isLearner = combined.some(aud => String(aud).toLowerCase() === "learner");
-    return isLearner ? 1.0 : 0.6;
+    // Speed is configurable via NEXT_PUBLIC_TTS_PLAYBACK_SPEED in .env (requires server restart)
+    const configuredSpeed = parseFloat(process.env.NEXT_PUBLIC_TTS_PLAYBACK_SPEED || "0.6");
+    return isLearner ? 1.0 : configuredSpeed;
   };
 
   interface AudioSegment {
@@ -1353,6 +1355,39 @@ export default function KidTeenQuizRunner({
     setIsAnswerRevealed(false);
   };
 
+  // Helper: fetch one TTS segment and store result on the segment object
+  const fetchTtsSegment = async (segment: any) => {
+    if (segment.preloadedUrl || segment.type !== 'tts' || !segment.text) return;
+    try {
+      const response = await fetch("/api/tts/edge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: segment.text })
+      });
+      if (!response.ok) throw new Error(`TTS fetch failed: ${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      segment.preloadedUrl = url;
+      preloadedUrlsRef.current.push(url);
+    } catch (err) {
+      console.error("[TTS] Failed to fetch segment:", segment.text, err);
+    }
+  };
+
+  // Helper: wait for a segment to have preloadedUrl (poll every 30ms, max 5s)
+  const waitForSegment = (segment: any): Promise<void> => {
+    return new Promise((resolve) => {
+      if (segment.preloadedUrl || segment.type === 'sound') { resolve(); return; }
+      const start = Date.now();
+      const interval = setInterval(() => {
+        if (segment.preloadedUrl || Date.now() - start > 5000) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 30);
+    });
+  };
+
   const playNextSegment = async () => {
     if (!isAutoReadEnabled || currentSegmentIndexRef.current >= segmentsRef.current.length) {
       stopAutoRead();
@@ -1374,26 +1409,12 @@ export default function KidTeenQuizRunner({
       autoReadAudioRef.current = audio;
     }
 
-    let src = segment.preloadedUrl;
-    if (!src && segment.type === 'tts' && segment.text) {
-      // Fallback live fetch if preload failed or was not ready
-      try {
-        const response = await fetch("/api/tts/edge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: segment.text })
-        });
-        if (response.ok) {
-          const blob = await response.blob();
-          src = URL.createObjectURL(blob);
-          preloadedUrlsRef.current.push(src);
-        }
-      } catch (err) {
-        console.error("Fallback live TTS fetch failed:", err);
-      }
-    }
+    // Wait until this segment is ready (polling, max 5s)
+    await waitForSegment(segment);
 
+    const src = segment.preloadedUrl;
     if (!src) {
+      // Skip this segment if still not ready after timeout
       playNextSegment();
       return;
     }
@@ -1437,41 +1458,26 @@ export default function KidTeenQuizRunner({
     const queue = buildAutoReadSegments(question);
     const requestId = ++preloadRequestIdRef.current;
 
-    // Preload all TTS segments for this question
-    const promises = queue.map(async (segment: any) => {
-      if (segment.type === 'tts' && segment.text) {
-        try {
-          const response = await fetch("/api/tts/edge", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: segment.text })
-          });
-          if (!response.ok) throw new Error("Preload fetch failed");
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          segment.preloadedUrl = url;
-          preloadedUrlsRef.current.push(url);
-        } catch (err) {
-          console.error("Failed to preload segment:", segment.text, err);
-        }
-      } else if (segment.type === 'sound' && segment.src) {
+    if (queue.length === 0) return;
+
+    // Mark sound segments as ready immediately
+    queue.forEach((segment: any) => {
+      if (segment.type === 'sound' && segment.src) {
         segment.preloadedUrl = segment.src;
       }
     });
 
-    try {
-      await Promise.all(promises);
-    } catch (err) {
-      console.error("Error in Promise.all for preloading:", err);
-    }
+    // Kick off ALL TTS fetches in parallel right now
+    const ttsSegments = queue.filter((s: any) => s.type === 'tts' && s.text);
+    ttsSegments.forEach((segment: any) => fetchTtsSegment(segment));
 
-    // Cancel if request ID is no longer current (e.g. user moved to another slide)
-    if (requestId !== preloadRequestIdRef.current) {
-      return;
-    }
-
+    // Set queue so playNextSegment can start
     segmentsRef.current = queue;
     currentSegmentIndexRef.current = 0;
+
+    if (requestId !== preloadRequestIdRef.current) return;
+
+    // Start playing — playNextSegment will poll-wait for each segment to be ready
     playNextSegment();
   };
 

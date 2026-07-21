@@ -156,6 +156,22 @@
   .btn-clear-text:hover { opacity: 1; background: rgba(248, 113, 113, 0.15); transform: rotate(-45deg); }
   .btn-clear-text svg { display: block; }
 
+  /* Confirm panel */
+  .confirm-wrap { display: flex; align-items: center; justify-content: center; padding: 10px 16px;
+    background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 16px; max-width: 480px; margin: 0 auto 8px;
+    animation: fadeInUp .25s ease; }
+  .confirm-wrap.hidden { display: none !important; }
+  .confirm-inline { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .confirm-text { font-size: 1.05rem; font-weight: 700; color: #fff; line-height: 1.4; }
+  .confirm-icon-btn { width: 32px; height: 32px; border-radius: 50%; border: none; display: inline-flex;
+    align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; }
+  .rerecord-btn { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+  .rerecord-btn:hover { background: rgba(255,255,255,0.22); transform: scale(1.1) rotate(-20deg); }
+  .submit-btn { background: var(--green); color: #0a1f12; }
+  .submit-btn:hover { transform: scale(1.15); box-shadow: 0 6px 20px #4ade8066; }
+  @keyframes fadeInUp { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+
   .mic-status { display: none !important; }
 
   /* Turn info */
@@ -292,7 +308,8 @@
 
     <!-- Mic indicator + Done button -->
     <div class="mic-section">
-      <div class="live-text-wrap" style="display:none">
+      <!-- Live transcript shown while mic is active -->
+      <div class="live-text-wrap" id="liveTextWrap" style="display:none">
         <div class="live-text" id="liveText"></div>
         <button class="btn-clear-text" id="btnClearText" title="Clear and speak again">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -300,6 +317,20 @@
           </svg>
         </button>
       </div>
+
+      <!-- Confirm panel: shown after Done is pressed, before submitting -->
+      <div class="confirm-wrap hidden" id="confirmWrap">
+        <div class="confirm-inline">
+          <span class="confirm-text" id="confirmText"></span>
+          <button class="confirm-icon-btn rerecord-btn" id="rerecordBtn" title="Re-record">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          </button>
+          <button class="confirm-icon-btn submit-btn" id="confirmBtn" title="Confirm">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+          </button>
+        </div>
+      </div>
+
       <div class="mic-row">
         <div class="waveform-bars" id="waveformBars">
           <span></span><span></span><span></span><span></span><span></span>
@@ -415,10 +446,12 @@ async function robotTurn(studentSpeech){
     state.history.push({role:'robot',text:robotSays});
     if(state.history.length>14) state.history=state.history.slice(-14);
 
+    // Kick off TTS fetch IMMEDIATELY — parallel with all UI rendering below
+    const ttsPromise = prefetchTTS(robotSays);
+
     state.currentTranslation = translatedSays || '';
     state.keywords = keywords || [];
     showRobotBubble(robotSays, state.currentTranslation);
-    // Keep robot in thinking state while loading/decoding TTS audio
     setMicStatus('loading', 'ROBO is thinking...');
     showHintChips([],true);
 
@@ -427,7 +460,7 @@ async function robotTurn(studentSpeech){
       setRobotState('speaking');
       state.phase='robot-speaking';
       setMicStatus('loading','ROBO is talking...');
-    });
+    }, ttsPromise);
     setRobotState('idle');
 
     showHintChips(keywords, false);
@@ -536,38 +569,58 @@ CRITICAL about suggestedAnswers:
   };
 }
 
-// ═══════════════════ ELEVENLABS TTS ═══════════════════
+// ═══════════════════ DEEPGRAM TTS ═══════════════════
 let currentAudio = null;
 
 function stopAudio() {
   try { if(currentAudio) { currentAudio.pause(); currentAudio=null; } } catch{}
 }
 
-async function speakText(text, onStart) {
-  stopAudio();
-  
-  // Lựa chọn giọng nói ElevenLabs theo cấp độ
-  let voiceId = ELEVEN_VOICE; // Mặc định Bella (Giọng nữ trẻ trung)
-  if (state.level === 'kindergarten' || state.level === 'kid') {
-    voiceId = 'pFZP5JQG7iQjIQuC4Bku'; // Lily (Giọng nữ ngọt ngào, kể chuyện, giống giọng trẻ em nhất)
+// Pre-fetch TTS audio and return a Promise<string> (blob URL)
+async function prefetchTTS(text) {
+  try {
+    const url = `/api/games/robot-chat/tts?text=${encodeURIComponent(text)}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`TTS prefetch failed: ${response.status}`);
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+  } catch (err) {
+    console.error('[RobotChat] TTS prefetch failed:', err);
+    return null;
   }
+}
 
-  return new Promise((resolve) => {
+// Speak text — accepts optional pre-fetched blob URL promise to avoid delay
+async function speakText(text, onStart, blobUrlPromise) {
+  stopAudio();
+
+  return new Promise(async (resolve) => {
     try {
+      // Await the pre-fetched blob URL (should already be ready or nearly ready)
+      const blobUrl = blobUrlPromise ? await blobUrlPromise : await prefetchTTS(text);
+
+      if (!blobUrl) {
+        // Fallback to browser speech synthesis
+        browserSpeak(text).then(resolve);
+        return;
+      }
+
       const audio = new Audio();
       currentAudio = audio;
-      audio.src = `/api/games/robot-chat/tts?text=${encodeURIComponent(text)}&voiceId=${voiceId}`;
+      audio.src = blobUrl;
 
       audio.onplay = () => {
         if (onStart) onStart();
       };
-      
+
       audio.onended = () => {
+        URL.revokeObjectURL(blobUrl);
         resolve();
       };
 
       audio.onerror = (e) => {
         console.error("Audio playback error, falling back to browser speak:", e);
+        URL.revokeObjectURL(blobUrl);
         browserSpeak(text).then(resolve);
       };
 
@@ -576,7 +629,7 @@ async function speakText(text, onStart) {
         browserSpeak(text).then(resolve);
       });
     } catch (err) {
-      console.error("Audio initialization failed:", err);
+      console.error("speakText failed:", err);
       browserSpeak(text).then(resolve);
     }
   });
@@ -617,11 +670,74 @@ function browserSpeak(text) {
 
 const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-
 let recognition = null;
 let isListening = false;
 let fullTranscript = '';
-let lastStudentBubbleEl = null; // reference to the most recent student bubble
+let lastStudentBubbleEl = null;
+
+// MediaRecorder for Deepgram STT
+let mediaRecorder = null;
+let audioChunks = [];
+let micStream = null;
+
+async function startMediaRecorder() {
+  try {
+    if (micStream) {
+      micStream.getTracks().forEach(t => t.stop());
+    }
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/ogg';
+    mediaRecorder = new MediaRecorder(micStream, { mimeType });
+    audioChunks = [];
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunks.push(e.data);
+    };
+    mediaRecorder.start(100); // collect chunks every 100ms
+    console.log('[STT] MediaRecorder started, mimeType:', mimeType);
+  } catch (err) {
+    console.warn('[STT] MediaRecorder unavailable:', err.message);
+    mediaRecorder = null;
+  }
+}
+
+function stopMediaRecorder() {
+  return new Promise((resolve) => {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+      resolve(null);
+      return;
+    }
+    mediaRecorder.onstop = () => {
+      const mimeType = mediaRecorder.mimeType || 'audio/webm';
+      const blob = new Blob(audioChunks, { type: mimeType });
+      audioChunks = [];
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      resolve(blob);
+    };
+    mediaRecorder.stop();
+  });
+}
+
+async function transcribeWithDeepgram(audioBlob) {
+  if (!audioBlob || audioBlob.size < 1000) return null;
+  try {
+    const res = await fetch('/api/games/robot-chat/stt', {
+      method: 'POST',
+      headers: { 'Content-Type': audioBlob.type },
+      body: audioBlob,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.transcript || null;
+  } catch (err) {
+    console.warn('[STT] Deepgram transcription failed:', err.message);
+    return null;
+  }
+}
 
 if (!SpeechRec) {
   document.getElementById('nospeechBanner').style.display = 'block';
@@ -713,6 +829,7 @@ function initRecognition() {
     
     const clearBtn = document.getElementById('btnClearText');
     if (clearBtn) clearBtn.style.display = 'none';
+    document.getElementById('liveTextWrap').style.display = 'none';
 
     let spoken = fullTranscript.trim() || document.getElementById('liveText').textContent.trim();
     document.getElementById('liveText').textContent = '';
@@ -748,9 +865,23 @@ function initRecognition() {
         }
       }
 
-      state.phase = 'processing';
-      setMicStatus('processing', '⏳ Processing...');
-      submitSpeech(spoken);
+      // Show loading state while waiting for Deepgram
+      setMicStatus('loading', '⏳ Processing...');
+
+      // Stop MediaRecorder and wait for Deepgram — show confirm only when ready
+      stopMediaRecorder().then(async (audioBlob) => {
+        let finalText = spoken; // fallback to browser STT
+        if (audioBlob) {
+          const deepgramText = await transcribeWithDeepgram(audioBlob);
+          if (deepgramText && deepgramText.trim()) {
+            console.log(`[STT] Deepgram: "${deepgramText}"`);
+            finalText = deepgramText;
+          } else {
+            console.warn('[STT] Deepgram failed, using browser STT:', spoken);
+          }
+        }
+        showConfirmPanel(finalText);
+      });
     } else if (state.phase === 'listening') {
       // Nothing heard — restart
       setMicStatus('listening', '🎤 Nothing heard, try again...');
@@ -828,6 +959,8 @@ function autoStartListening() {
   stopListening();
   recognition = initRecognition();
   if (!recognition) { showToast('Speech recognition not supported — use Chrome/Edge'); return; }
+  // Start MediaRecorder in parallel for Deepgram STT
+  startMediaRecorder();
   try { recognition.start(); }
   catch (e) { console.warn('Mic start error:', e.message); }
 }
@@ -838,10 +971,44 @@ function stopListening() {
   }
 }
 
-// Done button → submit transcript
+// ═══════════════════ CONFIRM PANEL ═══════════════════
+let pendingSpoken = '';
+
+function showConfirmPanel(spoken) {
+  pendingSpoken = spoken;
+  document.getElementById('confirmText').textContent = spoken;
+  document.getElementById('confirmWrap').classList.remove('hidden');
+  document.getElementById('micIcon').style.display = 'none';
+  setMicStatus('idle', '👆 Is this what you said?');
+}
+
+function hideConfirmPanel() {
+  pendingSpoken = '';
+  document.getElementById('confirmWrap').classList.add('hidden');
+  document.getElementById('micIcon').style.display = '';
+}
+
+// Confirm → submit the recognized speech
+document.getElementById('confirmBtn').addEventListener('click', () => {
+  if (!pendingSpoken) return;
+  const spoken = pendingSpoken;
+  hideConfirmPanel();
+  state.phase = 'processing';
+  setMicStatus('processing', '⏳ Processing...');
+  submitSpeech(spoken);
+});
+
+// Re-record → hide panel and start mic again
+document.getElementById('rerecordBtn').addEventListener('click', () => {
+  hideConfirmPanel();
+  setMicStatus('listening', '🎤 Ready — speak again!');
+  setTimeout(() => autoStartListening(), 300);
+});
+
+// Done button → stop mic, show confirm panel
 document.getElementById('doneBtn').addEventListener('click', () => {
   if (!isListening) return;
-  try { recognition.stop(); }  // triggers onend → submits
+  try { recognition.stop(); }  // triggers onend → shows confirm panel
   catch (e) { showToast('Error: ' + e.message); }
 });
 
