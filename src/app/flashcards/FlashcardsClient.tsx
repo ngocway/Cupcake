@@ -1267,7 +1267,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto ${backButtonClass}`}
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Topics</span>
+          <span className="hidden md:inline">Back to Topics</span>
         </button>
 
         {/* Mode Switcher Segmented Control (Top Right) */}
