@@ -1093,10 +1093,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   onClick={() => handleChooseMode('scramble')}
                   className="group relative p-4 md:p-6 rounded-[32px] border-4 border-emerald-400 dark:border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20 transition-all duration-300 flex flex-row md:flex-col items-center md:text-center gap-4 md:gap-0 md:space-y-4 shadow-lg shadow-emerald-200/60 hover:shadow-xl hover:shadow-emerald-300/60 hover:-translate-y-1 ring-2 ring-emerald-300/50"
                 >
-                  {/* Recommended badge */}
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full shadow-md whitespace-nowrap">
-                    ⭐ Recommended
-                  </span>
+
                   <div className="w-14 h-14 shrink-0 rounded-2xl bg-emerald-500 text-white flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-300">
                     <Layers className="w-7 h-7" />
                   </div>
