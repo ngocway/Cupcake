@@ -61,7 +61,7 @@ export default async function ExercisesLessonPage({ params }: Props) {
         {totalCount > 0 && (
           <div className={`text-right shrink-0 px-4 py-2 rounded-2xl ${lvlCfg.bg} ${lvlCfg.border} border`}>
             <p className={`text-2xl font-black ${lvlCfg.color}`}>{completedCount}/{totalCount}</p>
-            <p className="text-xs text-slate-500 font-medium">hoàn thành</p>
+            <p className="text-xs text-slate-500 font-medium">completed</p>
           </div>
         )}
       </div>
@@ -88,7 +88,7 @@ export default async function ExercisesLessonPage({ params }: Props) {
       {exercises.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <p className="text-4xl mb-4">📭</p>
-          <p className="font-bold">Chưa có bài tập nào cho bài học này.</p>
+          <p className="font-bold">No exercises for this lesson yet.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -134,10 +134,10 @@ export default async function ExercisesLessonPage({ params }: Props) {
                     {ex.title}
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {ex.questionCount} câu hỏi
+                     {ex.questionCount} {ex.questionCount === 1 ? "question" : "questions"}
                     {ex.score !== null && (
                       <span className="ml-2 font-bold text-emerald-600">
-                        · Điểm: {typeof ex.score === "number" ? ex.score.toFixed(1) : ex.score}
+                        · Score: {typeof ex.score === "number" ? ex.score.toFixed(1) : ex.score}
                       </span>
                     )}
                   </p>

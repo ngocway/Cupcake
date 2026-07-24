@@ -22,7 +22,7 @@ export default async function StudentBooksPage() {
         <div>
           <h1 className="text-3xl font-black font-display text-slate-800 dark:text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-3xl text-orange-500">auto_stories</span>
-            Story Books
+            Shadowing by Books
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 font-medium">
             Pick a story to practise reading aloud with Dolbot!

@@ -632,7 +632,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
 
     rec.onerror = (e: any) => {
       if (e.error !== "no-speech") {
-        setSpeechError("Không nghe rõ giọng đọc, hãy bấm thử lại.");
+        setSpeechError("Could not hear clearly, please try again.");
         isListeningRef.current = false;
         setIsListening(false);
       }
@@ -710,7 +710,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       if (currentPageIndex < book.slides.length - 1) {
         setCurrentPageIndex((prev) => prev + 1);
       } else {
-        toast.success("Chúc mừng con đã hoàn thành cuốn sách! 🎉");
+        toast.success("Congratulations! You have finished the book! 🎉");
       }
     }, 1800);
   };

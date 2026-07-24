@@ -42,7 +42,7 @@ export default async function ExercisesPage({
           📚 Grammar Exercises
         </h1>
         <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-          Chọn level → chủ đề → bài học để luyện tập ngữ pháp
+          Select a level → topic → lesson to practice grammar
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export default async function ExercisesPage({
           type="text"
           name="q"
           defaultValue={q}
-          placeholder="Tìm bài học... (e.g. Past Simple, Present Perfect)"
+          placeholder="Search lessons... (e.g. Past Simple, Present Perfect)"
           className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm font-medium shadow-sm"
         />
       </form>
@@ -62,10 +62,10 @@ export default async function ExercisesPage({
       {q && q.length >= 2 && (
         <div className="space-y-3">
           <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-            Kết quả tìm kiếm cho &ldquo;{q}&rdquo;
+            Search results for &ldquo;{q}&rdquo;
           </h2>
           {searchResults.length === 0 ? (
-            <p className="text-sm text-slate-400">Không tìm thấy bài học nào.</p>
+            <p className="text-sm text-slate-400">No lessons found.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {searchResults.map((lesson) => (
@@ -94,7 +94,7 @@ export default async function ExercisesPage({
         <div className="space-y-3">
           <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
             <Clock className="w-3.5 h-3.5" />
-            Tiếp tục học
+            Continue learning
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {resumeItems.map((item) => {
@@ -112,7 +112,7 @@ export default async function ExercisesPage({
                       {item.title}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                      Đang làm dở...
+                      In progress...
                     </p>
                   </div>
                   <LevelBadge level={normalLevel} />
@@ -127,7 +127,7 @@ export default async function ExercisesPage({
       {!q && (
         <div className="space-y-4">
           <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-            Chọn trình độ
+            Select your level
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CEFR_LEVELS.map((lvl) => {
@@ -164,7 +164,7 @@ export default async function ExercisesPage({
                   <div className="flex-1 min-w-0">
                     <p className={`font-extrabold text-base ${lvl.color}`}>{lvl.label}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                      {count > 0 ? `${count} bài tập` : "Chưa có bài tập"}
+                      {count > 0 ? `${count} ${count === 1 ? "exercise" : "exercises"}` : "No exercises yet"}
                     </p>
                   </div>
                   {hasContent && (

@@ -10,6 +10,7 @@ import { useTranslations, useLocale } from "next-intl"
 import { TypingText } from "@/components/public/TypingText"
 import { updateAllPreferences, getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
+import { getFlashcardTopics } from "@/actions/flashcards-actions"
 import { X, SlidersHorizontal } from "lucide-react"
 import {
   Select,
@@ -18,10 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { GrammarTopicBrowser } from "@/components/public/exercises/GrammarTopicBrowser"
-import { FlashcardTopicBrowser } from "@/components/public/flashcards/FlashcardTopicBrowser"
-import { LessonAccordionBrowser } from "@/components/public/lessons/LessonAccordionBrowser"
+import dynamic from "next/dynamic"
 import { LevelPillSelector } from "@/components/public/LevelPillSelector"
+
+const GrammarTopicBrowser = dynamic(() => import("@/components/public/exercises/GrammarTopicBrowser").then(m => m.GrammarTopicBrowser), { ssr: false })
+const FlashcardTopicBrowser = dynamic(() => import("@/components/public/flashcards/FlashcardTopicBrowser").then(m => m.FlashcardTopicBrowser), { ssr: false })
+const LessonAccordionBrowser = dynamic(() => import("@/components/public/lessons/LessonAccordionBrowser").then(m => m.LessonAccordionBrowser), { ssr: false })
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -40,6 +43,7 @@ interface Props {
   initialStudySubject?: string
   initialStudyAgeGroup?: string
   initialStudyLevel?: string
+  onboardingConfig?: any
 }
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -74,6 +78,90 @@ function SectionSkeleton() {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function FlashcardSkeleton() {
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* 3 accordion-like level rows */}
+      {[1, 2, 3].map(i => (
+        <div key={i} className="rounded-[28px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm animate-pulse">
+          <div className="flex items-center gap-3.5 px-6 py-4">
+            <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0" />
+            <div className="h-5 w-28 bg-slate-200 dark:bg-slate-700 rounded-md" />
+            <div className="flex-1" />
+            <div className="h-6 w-20 bg-slate-100 dark:bg-slate-700 rounded-full" />
+            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full" />
+          </div>
+          {/* Only expand first row */}
+          {i === 1 && (
+            <div className="px-6 pb-6 border-t border-slate-100 dark:border-slate-700">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-5">
+                {[1, 2, 3].map(j => (
+                  <div key={j} className="h-40 rounded-[36px] border-4 border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function LessonSkeleton() {
+  return (
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* CEFR accordion rows */}
+      {[1, 2, 3].map(i => (
+        <div key={i} className="rounded-[28px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm animate-pulse">
+          <div className="flex items-center gap-3.5 px-6 py-4">
+            <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 shrink-0" />
+            <div className="flex flex-col gap-1.5">
+              <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded-md" />
+              <div className="h-3 w-20 bg-slate-100 dark:bg-slate-700 rounded-md" />
+            </div>
+            <div className="flex-1" />
+            <div className="h-6 w-20 bg-slate-100 dark:bg-slate-700 rounded-full" />
+            <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full" />
+          </div>
+          {/* Expand first row */}
+          {i === 1 && (
+            <div className="px-6 pb-6 border-t border-slate-100 dark:border-slate-700">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 pt-5">
+                {[1, 2, 3].map(j => (
+                  <div key={j} className="space-y-3">
+                    <div className="aspect-video w-full bg-slate-100 dark:bg-slate-700 rounded-2xl" />
+                    <div className="h-5 w-3/4 bg-slate-100 dark:bg-slate-700 rounded-xl" />
+                    <div className="h-4 w-1/2 bg-slate-100 dark:bg-slate-700 rounded-xl" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ExerciseSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-6 animate-in fade-in duration-300">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="flex flex-row rounded-[10px] overflow-hidden border border-primary/5 shadow-sm animate-pulse min-h-[120px]">
+          <div className="w-[36%] shrink-0 self-center ml-2.5 rounded-[6px] overflow-hidden">
+            <div className="aspect-video bg-slate-100 dark:bg-slate-800/80" />
+          </div>
+          <div className="flex-1 p-3 space-y-2">
+            <div className="h-3 w-2/3 bg-slate-100 dark:bg-slate-800/80 rounded-full" />
+            <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/80 rounded-full" />
+            <div className="h-3 w-1/2 bg-slate-100 dark:bg-slate-800/80 rounded-full" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -128,8 +216,8 @@ const ExerciseList = memo(function ExerciseList({
   const currentKey = `ex-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
 
   useEffect(() => {
-    // 1. Initial page load (use server-side resolved items)
-    if (!initializedKey.current) {
+    // 1. Initial page load (use server-side resolved items if available)
+    if (!initializedKey.current && serverItems && serverItems.length > 0) {
       setExercises(serverItems)
       setHasMoreEx(serverHasMore ?? serverItems.length >= 12)
       setExPage(1)
@@ -137,8 +225,8 @@ const ExerciseList = memo(function ExerciseList({
       return
     }
 
-    // 2. Subsequent client-side filter updates
-    if (initializedKey.current !== currentKey) {
+    // 2. Subsequent client-side filter updates or initial client load if serverItems is empty
+    if (initializedKey.current !== currentKey || (!initializedKey.current && (!serverItems || serverItems.length === 0))) {
       setIsLoading(true)
       
       const qs = new URLSearchParams()
@@ -227,7 +315,7 @@ const ExerciseList = memo(function ExerciseList({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-6">
         {displayItems.map((ex: any) => (
           <ExerciseCardHorizontal key={ex.id} item={ex} isLoggedIn={isLoggedIn} />
         ))}
@@ -270,11 +358,11 @@ const LessonList = memo(function LessonList({
   const [isLoading, setIsLoading] = useState(false)
   const initializedKey = useRef('')
   const goalParam = searchParams.goal || searchParams.categoryId || ''
-  const currentKey = `le-${goalParam}-${userType}-${studySubject}-${searchKeyword || ''}`
+  const currentKey = `le-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
 
   useEffect(() => {
-    // 1. Initial page load (use server-side resolved items)
-    if (!initializedKey.current) {
+    // 1. Initial page load (use server-side resolved items if available)
+    if (!initializedKey.current && serverItems && serverItems.length > 0) {
       setLessons(serverItems)
       setHasMoreLe(serverHasMore ?? serverItems.length >= 12)
       setLePage(1)
@@ -282,8 +370,8 @@ const LessonList = memo(function LessonList({
       return
     }
 
-    // 2. Subsequent client-side filter updates
-    if (initializedKey.current !== currentKey) {
+    // 2. Subsequent client-side filter updates or initial client load if serverItems is empty
+    if (initializedKey.current !== currentKey || (!initializedKey.current && (!serverItems || serverItems.length === 0))) {
       setIsLoading(true)
       
       const qs = new URLSearchParams()
@@ -293,9 +381,9 @@ const LessonList = memo(function LessonList({
       if (searchKeyword) qs.set('search', searchKeyword)
       if (userType) qs.set('userType', userType)
       if (studySubject) qs.set('subject', studySubject)
+      if (studyLevel) qs.set('level', studyLevel)
 
       fetch(`/api/feed?${qs.toString()}`)
-
         .then(r => r.json())
         .then(data => {
           if (data.items) {
@@ -789,7 +877,7 @@ function MobileSubjectBar({ subjects, activeSubject, onSelect, isPending }: { su
   );
 }
 
-export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "" }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "", onboardingConfig: serverOnboardingConfig }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
@@ -799,11 +887,22 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const nt = useTranslations("nav")
   const locale = useLocale()
 
-  // Resolve flashcard topics promise
-  const allFlashcardTopics = promises.flashcards ? (use(promises.flashcards) || []) : [];
+  // Resolve flashcard topics promise (now fetched client-side on-demand)
+  const [allFlashcardTopics, setAllFlashcardTopics] = useState<any[]>([]);
+  const [isFlashcardsLoading, setIsFlashcardsLoading] = useState(false);
 
   // Local states — switching tab never triggers server roundtrip
   const [activeTab,  setActiveTab]  = useState<string>(searchParams.tab  || "flashcards")
+
+  useEffect(() => {
+    if (activeTab === "flashcards") {
+      setIsFlashcardsLoading(true);
+      getFlashcardTopics()
+        .then(setAllFlashcardTopics)
+        .catch(console.error)
+        .finally(() => setIsFlashcardsLoading(false));
+    }
+  }, [activeTab]);
 
 
   // Store states and actions
@@ -844,10 +943,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
   }, [tabs, activeTab]);
 
-  const [config, setConfig] = useState<any>(null);
-  useEffect(() => {
-    getOnboardingConfig().then(setConfig).catch(console.error);
-  }, []);
+  const config = serverOnboardingConfig;
 
   const availableLevels = useMemo(() => {
     const subjectData = config?.subjects?.find((s: any) => s.id === studySubject);
@@ -943,14 +1039,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
   }, [currentParams, router]);
 
-  // Local config state populated in useEffect
-  const [onboardingConfig, setOnboardingConfig] = useState<any>(null)
-
-  useEffect(() => {
-    getOnboardingConfig().then(config => {
-      if (config) setOnboardingConfig(config)
-    })
-  }, [])
+  const onboardingConfig = serverOnboardingConfig;
 
   useEffect(() => {
     setSelectedCategoryId(urlGoal);
@@ -1344,8 +1433,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
       {/* Lists */}
       <div className="relative">
-        {/* CEFR Level Pill Selector Bar (Lessons, Exercises, Flashcards) */}
-        {!isKindergarten && activeTab !== "games" && (
+        {studySubject === "english" && !isKindergarten && activeTab !== "games" && (
           <LevelPillSelector activeTab={activeTab} />
         )}
 
@@ -1356,7 +1444,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         )}
         <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
           {activeTab === "flashcards" ? (
-            <FlashcardTopicBrowser topics={filteredFlashcards} />
+            isFlashcardsLoading
+              ? <FlashcardSkeleton />
+              : <FlashcardTopicBrowser topics={filteredFlashcards} />
           ) : activeTab === "games" ? (
             <Suspense fallback={<SectionSkeleton />}>
               <GameList games={filteredGames} locale={locale} />
@@ -1364,10 +1454,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
           ) : activeTab === "exercises" ? (
             <GrammarTopicBrowser />
           ) : (
-            <Suspense fallback={<SectionSkeleton />}>
+            <Suspense fallback={<LessonSkeleton />}>
               <LessonList key={`ls-${feedKey}`} promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
             </Suspense>
           )}
+
         </div>
       </div>
 

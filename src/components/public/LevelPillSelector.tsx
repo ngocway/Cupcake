@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useLocale } from "next-intl";
+import { useContentStore } from "@/store/useContentStore";
+import { updateAllPreferences } from "@/actions/user-preferences-actions";
 
 interface LevelPillConfig {
   id: string;
@@ -85,11 +87,16 @@ interface Props {
 }
 
 export function LevelPillSelector({ counts }: Props) {
-  const [selectedLevel, setSelectedLevel] = useState<string>("a1");
+  const studyLevel = useContentStore((s) => (s as any).studyLevel);
+  const setStudyLevel = useContentStore((s) => (s as any).setStudyLevel);
+
+  const selectedLevel = studyLevel === "pre-a1-a1" || studyLevel === "beginner" ? "a1" : (studyLevel || "a1");
   const locale = useLocale();
 
   const handleSelect = (levelId: string) => {
-    setSelectedLevel(levelId);
+    const dbLevel = levelId === "a1" ? "pre-a1-a1" : levelId;
+    setStudyLevel(dbLevel);
+    updateAllPreferences({ studyLevel: dbLevel }).catch(console.error);
 
     // 1. Dispatch custom event so browser components expand the targeted level accordion
     window.dispatchEvent(

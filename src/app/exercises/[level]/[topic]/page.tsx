@@ -152,15 +152,15 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
           {exercises.length === 0 && (
             <div className="text-center py-24 text-slate-400">
               <p className="text-5xl mb-4">📭</p>
-              <p className="font-bold text-lg">Chưa có bài tập nào.</p>
+              <p className="font-bold text-lg">No exercises yet.</p>
               <p className="text-sm mt-2">
-                Chủ đề <strong>{topicCfg.label}</strong> chưa có bài tập ở trình độ {lvlCfg.label}.
+                Topic <strong>{topicCfg.label}</strong> has no exercises at {lvlCfg.label} level.
               </p>
               <Link
                 href="/?tab=exercises"
                 className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:opacity-90 transition-opacity"
               >
-                ← Chọn chủ đề khác
+                ← Choose another topic
               </Link>
             </div>
           )}

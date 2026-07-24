@@ -97,13 +97,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     studySubject,
     studyLevel
   };
-  const assignmentsPromise  = getCachedAssignments(queryParams);
-  const lessonsPromise      = getCachedLessons({ ...queryParams, studyLevel: "" });
-
-
-  // Fetch all flashcard topics for dynamic age group filtering on the home page
-  const { getFlashcardTopics } = await import('@/actions/flashcards-actions');
-  const flashcardsPromise = getFlashcardTopics();
+  const assignmentsPromise  = Promise.resolve({ items: [], total: 0 });
+  const lessonsPromise      = Promise.resolve({ items: [], total: 0 });
+  const flashcardsPromise   = Promise.resolve([]);
 
 
   const kindergartenGamesPromise = Promise.resolve([
@@ -172,6 +168,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
               initialStudySubject={studySubject}
               initialStudyAgeGroup={studyAgeGroup}
               initialStudyLevel={studyLevel}
+              onboardingConfig={config}
             />
           </Suspense>
         </main>

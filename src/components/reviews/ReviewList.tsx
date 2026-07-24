@@ -21,7 +21,7 @@ export function ReviewList({ reviews }: ReviewListProps) {
     if (reviews.length === 0) return (
         <div className="py-20 text-center space-y-4 opacity-50">
             <MessageCircle className="w-16 h-16 mx-auto text-slate-200" />
-            <p className="font-bold text-slate-400 uppercase tracking-widest">Chưa có đánh giá nào cho nội dung này.</p>
+            <p className="font-bold text-slate-400 uppercase tracking-widest">No reviews yet for this content.</p>
         </div>
     );
 

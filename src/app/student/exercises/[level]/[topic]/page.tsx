@@ -86,7 +86,7 @@ export default async function ExercisesTopicPage({ params }: Props) {
         {totalCount > 0 && (
           <div className={`shrink-0 text-right px-5 py-3 rounded-2xl ${lvlCfg.bg} ${lvlCfg.border} border`}>
             <p className={`text-2xl font-black ${lvlCfg.color}`}>{completedCount}/{totalCount}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">bài tập hoàn thành</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">exercises completed</p>
           </div>
         )}
       </div>
@@ -100,7 +100,7 @@ export default async function ExercisesTopicPage({ params }: Props) {
               style={{ width: `${pct}%` }}
             />
           </div>
-          <p className="text-xs text-slate-400 font-medium text-right">{pct}% hoàn thành</p>
+          <p className="text-xs text-slate-400 font-medium text-right">{pct}% completed</p>
         </div>
       )}
 
@@ -108,8 +108,8 @@ export default async function ExercisesTopicPage({ params }: Props) {
       {totalCount === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <p className="text-5xl mb-4">📭</p>
-          <p className="font-bold text-lg">Chưa có bài tập nào.</p>
-          <p className="text-sm mt-2">Chủ đề này chưa có bài tập ở trình độ {lvlCfg.label}.</p>
+          <p className="font-bold text-lg">No exercises yet.</p>
+          <p className="text-sm mt-2">This topic has no exercises at {lvlCfg.label} level.</p>
         </div>
       ) : (
         <div className="space-y-8">
