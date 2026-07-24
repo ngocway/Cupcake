@@ -1,7 +1,7 @@
 "use client";
 
 import { useContentStore } from "@/store/useContentStore";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
@@ -47,8 +47,15 @@ export function SidebarContentTypeMenu() {
 
   const activeTab = searchParams.get("tab") || availableTabIds[0];
 
+  const pathname = usePathname();
+
   const handleSelectTab = (tabId: string) => {
-    if (tabId === activeTab) return;
+    if (tabId === activeTab && pathname === "/") return;
+    // If not on home page, always navigate home with the selected tab
+    if (pathname !== "/") {
+      router.push(`/?tab=${tabId}`, { scroll: false });
+      return;
+    }
     const p = new URLSearchParams(window.location.search);
     p.set("tab", tabId);
     router.push(`?${p.toString()}`, { scroll: false });
@@ -357,7 +364,7 @@ export function SidebarContentTypeMenu() {
               </div>
             )}
 
-            {/* Story Books */}
+            {/* Shadowing by Books */}
             <Link
               href="/student/books"
               className="cefr-redesign-tile story decoration-transparent text-inherit"
@@ -368,7 +375,7 @@ export function SidebarContentTypeMenu() {
                 </div>
               </div>
               <p className="cefr-redesign-tile-label">
-                {locale === "vi" ? "Story Books" : "Story Books"}
+                {locale === "vi" ? "Shadowing by Books" : "Shadowing by Books"}
               </p>
             </Link>
           </div>

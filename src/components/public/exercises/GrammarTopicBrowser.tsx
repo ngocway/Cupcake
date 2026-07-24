@@ -243,7 +243,7 @@ export function GrammarTopicBrowser() {
                   <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
                     <span>Click to expand</span>
                     <span>•</span>
-                    <span>{topics.length} chủ đề</span>
+                    <span>{topics.length} {topics.length === 1 ? "topic" : "topics"}</span>
                   </span>
                 )}
               </div>
@@ -252,7 +252,7 @@ export function GrammarTopicBrowser() {
 
               {!isOpen && (
                 <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg}`}>
-                  {topics.length} chủ đề{totalExercises > 0 && ` · ${totalExercises} bài`}
+                  {topics.length} {topics.length === 1 ? "topic" : "topics"}{totalExercises > 0 && ` · ${totalExercises} exercises`}
                 </span>
               )}
 

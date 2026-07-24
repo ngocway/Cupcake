@@ -59,10 +59,10 @@ export default async function ExercisesLevelPage({ params }: Props) {
         </div>
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">
-            Trình độ {lvlCfg.label}
+            Level {lvlCfg.label}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-            {topicsAtLevel.length} chủ đề · Chọn chủ đề để xem bài học
+            {topicsAtLevel.length} {topicsAtLevel.length === 1 ? "topic" : "topics"} · Select a topic to view lessons
           </p>
         </div>
       </div>
@@ -71,7 +71,7 @@ export default async function ExercisesLevelPage({ params }: Props) {
       {topicsAtLevel.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <p className="text-4xl mb-4">📭</p>
-          <p className="font-bold">Chưa có bài tập ở trình độ này.</p>
+          <p className="font-bold">No exercises available at this level.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -103,9 +103,9 @@ export default async function ExercisesLevelPage({ params }: Props) {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-bold text-slate-500">{lessonCount} bài học</p>
+                    <p className="text-xs font-bold text-slate-500">{lessonCount} {lessonCount === 1 ? "lesson" : "lessons"}</p>
                     {total > 0 && (
-                      <p className="text-xs text-slate-400">{total} bài tập</p>
+                      <p className="text-xs text-slate-400">{total} {total === 1 ? "exercise" : "exercises"}</p>
                     )}
                   </div>
                 </div>
@@ -115,7 +115,7 @@ export default async function ExercisesLevelPage({ params }: Props) {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs font-bold">
                       <span className="text-slate-400">
-                        {completed}/{total} hoàn thành
+                        {completed}/{total} completed
                       </span>
                       <span
                         className={pct === 100 ? "text-emerald-500" : "text-slate-400"}
@@ -139,7 +139,7 @@ export default async function ExercisesLevelPage({ params }: Props) {
                   </div>
                 ) : (
                   <p className="text-xs text-slate-300 dark:text-slate-600 italic">
-                    Chưa có bài tập
+                    No exercises yet
                   </p>
                 )}
               </Link>

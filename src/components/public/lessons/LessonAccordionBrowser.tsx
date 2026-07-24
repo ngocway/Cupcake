@@ -184,7 +184,7 @@ export function LessonAccordionBrowser({ items, isLoggedIn, initialLevel }: Less
                   <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
                     <span>Click to expand</span>
                     <span>•</span>
-                    <span>{levelLessons.length} bài học</span>
+                    <span>{levelLessons.length} {levelLessons.length === 1 ? "lesson" : "lessons"}</span>
                   </span>
                 )}
               </div>
@@ -193,7 +193,7 @@ export function LessonAccordionBrowser({ items, isLoggedIn, initialLevel }: Less
 
               {!isOpen && (
                 <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg}`}>
-                  {levelLessons.length} bài học
+                  {levelLessons.length} {levelLessons.length === 1 ? "lesson" : "lessons"}
                 </span>
               )}
 
@@ -220,14 +220,14 @@ export function LessonAccordionBrowser({ items, isLoggedIn, initialLevel }: Less
                           onClick={() => handleViewMore(levelId)}
                           className="px-8 py-3 rounded-full text-xs font-black uppercase tracking-wider bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-primary text-slate-700 dark:text-slate-200 hover:text-primary shadow-sm hover:shadow-md transition-all cursor-pointer hover:scale-[1.03] active:scale-95"
                         >
-                          View more ({levelLessons.length - currentVisibleCount} bài nữa)
+                          View more ({levelLessons.length - currentVisibleCount} more)
                         </button>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="py-8 text-center text-sm font-bold text-slate-400 dark:text-slate-500">
-                    Chưa có bài học nào cho trình độ này.
+                    No lessons available for this level.
                   </div>
                 )}
               </div>

@@ -179,24 +179,22 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
   return (
     <Link
       href={href}
-      className="group flex flex-row relative rounded-[10px] overflow-hidden bg-white dark:bg-slate-900 border border-primary/5 hover:border-primary/20 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer min-h-[120px]"
+      className="group flex flex-row relative rounded-[6px] overflow-hidden
+        bg-white/80 dark:bg-slate-800/70
+        backdrop-blur-md
+        border border-white/70 dark:border-white/10
+        shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.3)]
+        hover:shadow-[0_8px_32px_rgba(var(--color-primary-rgb,79,70,229),0.18)] dark:hover:shadow-[0_8px_32px_rgba(var(--color-primary-rgb,79,70,229),0.25)]
+        hover:border-primary/30 dark:hover:border-primary/40
+        hover:-translate-y-0.5
+        transition-all duration-300 cursor-pointer"
     >
-      {/* Level Badges in top-right of the card */}
-      {item.level && (
-        <div className="absolute top-2.5 right-2.5 z-10 flex flex-wrap gap-1">
-          {getLevelsWithColors(item.level).map((lvl, index) => (
-            <span
-              key={index}
-              className={`${lvl.color} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shadow-sm`}
-            >
-              {lvl.label}
-            </span>
-          ))}
-        </div>
-      )}
+      {/* Glass inner shine overlay */}
+      <div className="pointer-events-none absolute inset-0 z-10 rounded-[6px] bg-gradient-to-br from-white/30 via-transparent to-transparent dark:from-white/5 dark:via-transparent" />
+
 
       {/* Thumbnail — left */}
-      <div className="relative w-[36%] shrink-0 aspect-video overflow-hidden self-center bg-slate-100 dark:bg-slate-800 rounded-[6px] ml-2.5">
+      <div className="relative w-[42%] shrink-0 aspect-video overflow-hidden self-center bg-slate-100 dark:bg-slate-800 rounded-[6px] ml-2 shadow-sm">
         <Image
           src={thumbnailSrc}
           alt={item.title}
@@ -220,14 +218,15 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
             )}
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-primary/5 pointer-events-none" />
+        {/* Gradient edge fade into card */}
+        <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-white/40 dark:to-slate-800/40 pointer-events-none" />
       </div>
 
       {/* Content — right */}
-      <div className="flex-1 p-3.5 flex flex-col justify-between min-w-0">
-        <div className="pr-16">
+      <div className="flex-1 p-2.5 flex flex-col justify-between min-w-0 relative z-10">
+        <div>
           {/* Teacher Info */}
-          <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="flex items-center gap-1.5 mb-1">
             <div className="w-4 h-4 rounded-full overflow-hidden border border-primary/10 relative shrink-0">
               <Image
                 src={item.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.teacher?.id}`}
@@ -249,8 +248,17 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
         </div>
 
         {/* Stats Row */}
-        <div className="flex items-center justify-between pt-2 border-t border-primary/5 mt-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between pt-1.5 border-t border-primary/5 mt-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Level Badges */}
+            {item.level && getLevelsWithColors(item.level).map((lvl, index) => (
+              <span
+                key={index}
+                className={`${lvl.color} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shadow-sm`}
+              >
+                {lvl.label}
+              </span>
+            ))}
             {item._count?.questions !== undefined && (
               <div className="flex items-center gap-1 text-primary/40">
                 <span className="material-symbols-outlined !text-[13px]">help</span>
@@ -262,7 +270,7 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
               <span className="text-[9px] font-bold">{views}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-secondary/10 px-2 py-0.5 rounded-full border border-secondary/5">
+          <div className="flex items-center gap-1 bg-secondary/10 backdrop-blur-sm px-2 py-0.5 rounded-full border border-secondary/10">
             <span className="material-symbols-outlined !text-[11px] text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
             <span className="text-secondary text-[9px] font-black">{rating}</span>
           </div>
@@ -271,6 +279,7 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
     </Link>
   )
 }
+
 
 
 export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boolean }) {
