@@ -7,7 +7,7 @@ import { cookies } from "next/headers";
 
 export async function SidebarContent({ searchParams, initialUserType, studySubject, studyAgeGroup }: { searchParams: any, initialUserType: string, studySubject?: string, studyAgeGroup?: string }) {
   const t = await getTranslations("home");
-  const config = await getOnboardingConfig();
+  const config = await getOnboardingConfig() as any;
   const locale = await getLocale();
   const session = await auth();
 
