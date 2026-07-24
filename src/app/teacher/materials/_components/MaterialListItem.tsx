@@ -47,6 +47,7 @@ type Assignment = {
   audioMetadata?: any;
   grammarTopic?: string | null;
   grammarLesson?: string | null;
+  level?: string | null;
 };
 
 const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: any; className: string }> = {
