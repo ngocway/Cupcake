@@ -9,11 +9,9 @@ import { useEffect, useState } from "react"
  * Matches the -translate-y-40 hide animation in PublicHeader.
  */
 export function StickySidebarWrapper({ children }: { children: React.ReactNode }) {
-  const headerVisible = true
-
   return (
     <aside
-      className="hidden lg:flex w-80 flex-col p-10 gap-10 bg-white/95 border border-primary/5 rounded-[2.5rem] h-fit overflow-y-auto no-scrollbar sticky top-6 max-h-[calc(100vh-4rem)] shadow-2xl shadow-primary/5 transition-all duration-700 ease-in-out z-[45] touch-manipulation"
+      className="hidden lg:flex w-[296px] flex-col p-[18px_16px_16px] bg-[#FBF3DF]/65 backdrop-blur-md border border-white/50 shadow-sm rounded-[20px] h-fit overflow-y-auto no-scrollbar sticky top-6 max-h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out z-[45] touch-manipulation gap-4"
     >
       {children}
     </aside>

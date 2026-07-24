@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { MaterialStatus, MaterialType } from '@prisma/client';
 import { duplicateMaterial, deleteMaterial, syncAssignmentClasses, getTeacherClasses, updateMaterialStatus, unassignMaterialFromClass, restoreMaterial, permanentlyDeleteMaterial, alignMaterialWhisper, autoSaveMaterial } from '@/actions/material-actions';
 import { useRouter } from 'next/navigation';
+import { GrammarClassifier } from '@/components/common/GrammarClassifier';
 import { AssignModal, ClassOption } from '@/components/quiz/AssignModal';
 import { MaterialAnalyticsModal } from './MaterialAnalyticsModal';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
@@ -44,6 +45,8 @@ type Assignment = {
   learningGoals?: string[];
   audioUrl?: string | null;
   audioMetadata?: any;
+  grammarTopic?: string | null;
+  grammarLesson?: string | null;
 };
 
 const STATUS_CONFIG: Record<MaterialStatus, { label: string; icon: any; className: string }> = {
@@ -113,6 +116,9 @@ export function MaterialListItem({
   const [tempLevels, setTempLevels] = useState<Record<string, string>>({});
   const [tempGoals, setTempGoals] = useState<string[]>([]);
   const [config, setConfig] = useState<any>(null);
+  const [tempGrammarLevel, setTempGrammarLevel] = useState<string>('');
+  const [tempGrammarTopic, setTempGrammarTopic] = useState<string>('');
+  const [tempGrammarLesson, setTempGrammarLesson] = useState<string>('');
 
   useEffect(() => {
     if (isQuickSettingsOpen && !config) {
@@ -125,6 +131,9 @@ export function MaterialListItem({
     setTempAudiences(assignment.targetAudiences || []);
     setTempLevels(assignment.audienceLevels || {});
     setTempGoals(assignment.learningGoals || []);
+    setTempGrammarLevel(assignment.level || '');
+    setTempGrammarTopic(assignment.grammarTopic || '');
+    setTempGrammarLesson(assignment.grammarLesson || '');
     setIsQuickSettingsOpen(true);
   };
 
@@ -138,7 +147,10 @@ export function MaterialListItem({
         subject: tempSubject || null,
         targetAudiences: tempAudiences,
         audienceLevels: tempLevels,
-        learningGoals: tempGoals
+        learningGoals: tempGoals,
+        grammarTopic: tempGrammarTopic || null,
+        grammarLesson: tempGrammarLesson || null,
+        level: tempGrammarLevel || null,
       };
       
       const res = await autoSaveMaterial(payload);
@@ -907,7 +919,25 @@ export function MaterialListItem({
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+              {/* Grammar Classification */}
+              {assignment.materialType === 'EXERCISE' && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                    <span className="text-base">📚</span> Phân loại ngữ pháp
+                  </h3>
+                  <GrammarClassifier
+                    level={tempGrammarLevel}
+                    setLevel={setTempGrammarLevel}
+                    grammarTopic={tempGrammarTopic}
+                    setGrammarTopic={setTempGrammarTopic}
+                    grammarLesson={tempGrammarLesson}
+                    setGrammarLesson={setTempGrammarLesson}
+                  />
+                  <div className="border-t border-slate-100 dark:border-gray-700" />
+                </div>
+              )}
+
               {config ? (
                 <TaxonomySelector
                   config={config}
@@ -919,6 +949,8 @@ export function MaterialListItem({
                   setAudienceLevels={setTempLevels}
                   learningGoals={tempGoals}
                   setLearningGoals={setTempGoals}
+                  hideLevels={assignment.materialType === 'EXERCISE'}
+                  hideGoals={assignment.materialType === 'EXERCISE'}
                 />
               ) : (
                 <div className="flex items-center justify-center py-12">

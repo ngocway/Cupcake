@@ -98,7 +98,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     studyLevel
   };
   const assignmentsPromise  = getCachedAssignments(queryParams);
-  const lessonsPromise      = getCachedLessons(queryParams);
+  const lessonsPromise      = getCachedLessons({ ...queryParams, studyLevel: "" });
+
 
   // Fetch all flashcard topics for dynamic age group filtering on the home page
   const { getFlashcardTopics } = await import('@/actions/flashcards-actions');

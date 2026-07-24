@@ -85,6 +85,8 @@ export async function createMaterialWithQuestions(payload: {
   level?: string;
   audienceLevels?: any;
   learningGoals?: string[];
+  grammarTopic?: string | null;
+  grammarLesson?: string | null;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -114,6 +116,8 @@ export async function createMaterialWithQuestions(payload: {
       level: payload.level || null,
       audienceLevels: payload.audienceLevels || null,
       learningGoals: payload.learningGoals || [],
+      grammarTopic: payload.grammarTopic || null,
+      grammarLesson: payload.grammarLesson || null,
       thumbnail,
       questions: {
         create: payload.questions.map((q, idx) => ({
@@ -255,6 +259,8 @@ export async function autoSaveMaterial(payload: {
   ttsSpeed?: number;
   audioMetadata?: any;
   isAutoSave?: boolean;
+  grammarTopic?: string | null;
+  grammarLesson?: string | null;
 }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -318,7 +324,7 @@ export async function autoSaveMaterial(payload: {
   }
 
   if (existing) {
-    const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'level', 'audienceLevels', 'shortDescription', 'tags', 'instructions', 'instructionsTranslations', 'audioMetadata'];
+    const fields = ['title', 'readingText', 'videoUrl', 'audioUrl', 'ttsVoice', 'ttsSpeed', 'subject', 'gradeLevel', 'level', 'audienceLevels', 'shortDescription', 'tags', 'instructions', 'instructionsTranslations', 'audioMetadata', 'grammarTopic', 'grammarLesson'];
     for (const field of fields) {
       if (payload[field as keyof typeof payload] !== undefined && payload[field as keyof typeof payload] !== existing[field as keyof typeof existing]) {
         updatePayload[field] = payload[field as keyof typeof payload] || null;

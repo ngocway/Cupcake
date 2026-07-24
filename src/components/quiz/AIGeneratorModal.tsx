@@ -4,7 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { QuestionType } from './types';
 import { generateAIExerciseAction, generateAIExerciseFromUrlAction } from '@/actions/ai-quiz-generator';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
+import { GrammarClassifier } from '@/components/common/GrammarClassifier';
 import { getOnboardingConfig } from '@/actions/user-preferences-actions';
+import { detectGrammarFromTitle, generateTitleFromGrammar } from '@/actions/grammar-detect';
 
 const DEFAULT_PROMPT_TEMPLATE = `You are an expert ESL content creator for young learners.
 
@@ -149,6 +151,60 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
   const [onboardingConfig, setOnboardingConfig] = useState<any>(null);
 
+  // Grammar classification states
+  const [grammarLevel, setGrammarLevel] = useState("");
+  const [grammarTopic, setGrammarTopic] = useState("");
+  const [grammarLesson, setGrammarLesson] = useState("");
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [highlightedFields, setHighlightedFields] = useState<("level" | "grammarTopic" | "grammarLesson")[]>([]);
+  const [isGeneratingTitle, setIsGeneratingTitle] = useState(false);
+  // Track generated titles per lesson to avoid repetition
+  const generatedTitlesRef = useRef<string[]>([]);
+  const lastLessonRef = useRef<string>("");
+
+  const handleAutoDetect = async () => {
+    if (!topic.trim() || isDetecting) return;
+    setIsDetecting(true);
+    try {
+      const result = await detectGrammarFromTitle(topic);
+      if (result) {
+        const fields: ("level" | "grammarTopic" | "grammarLesson")[] = [];
+        if (result.level) { setGrammarLevel(result.level); fields.push("level"); }
+        if (result.grammarTopic) { setGrammarTopic(result.grammarTopic); fields.push("grammarTopic"); }
+        if (result.grammarLesson) { setGrammarLesson(result.grammarLesson); fields.push("grammarLesson"); }
+        setHighlightedFields(fields);
+        setTimeout(() => setHighlightedFields([]), 2000);
+      }
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
+  const handleGenerateTitle = async () => {
+    if (!grammarLevel || !grammarTopic || isGeneratingTitle) return;
+    // Reset history when lesson changes
+    const lessonKey = `${grammarLevel}|${grammarTopic}|${grammarLesson}`;
+    if (lastLessonRef.current !== lessonKey) {
+      generatedTitlesRef.current = [];
+      lastLessonRef.current = lessonKey;
+    }
+    setIsGeneratingTitle(true);
+    try {
+      const generated = await generateTitleFromGrammar({
+        level: grammarLevel,
+        grammarTopic,
+        grammarLesson,
+        exclude: generatedTitlesRef.current,
+      });
+      if (generated) {
+        setTopic(generated);
+        generatedTitlesRef.current = [...generatedTitlesRef.current, generated].slice(-5);
+      }
+    } finally {
+      setIsGeneratingTitle(false);
+    }
+  };
+
   // Part configuration state
   const [partsCount, setPartsCount] = useState<number | null>(null);
   const isCreationMode = !assignmentId || assignmentId === 'new';
@@ -197,13 +253,8 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
         const audienceOrder = ["kindergarten", "kid", "teen", "learner"];
         const primaryAudience = audienceOrder.find(a => targetAudiences.includes(a)) || "kid";
         
-        // Resolve level label dynamically
-        const ageGroupConfig = onboardingConfig?.subjects
-          ?.find((s: any) => s.id === subject)
-          ?.ageGroups?.find((a: any) => a.id === primaryAudience);
-        const selectedLevelId = audienceLevels[primaryAudience];
-        const levelObj = ageGroupConfig?.levels?.find((l: any) => l.id === selectedLevelId);
-        const primaryLevelLabel = levelObj ? levelObj.label : (selectedLevelId || "Pre-A1/A1");
+        // Use grammarLevel as the primary CEFR level
+        const primaryLevelLabel = grammarLevel ? grammarLevel.toUpperCase() : "A1";
 
         if (generatorMode === 'prompt') {
           let partPromptText = partsToGenerate > 1 
@@ -300,7 +351,10 @@ ${partPromptText}
             subject,
             targetAudiences,
             audienceLevels,
-            learningGoals
+            learningGoals,
+            grammarLevel: grammarLevel || null,
+            grammarTopic: grammarTopic || null,
+            grammarLesson: grammarLesson || null,
           }
         };
       });
@@ -368,7 +422,22 @@ ${partPromptText}
                     setAudienceLevels={setAudienceLevels}
                     learningGoals={learningGoals}
                     setLearningGoals={setLearningGoals}
+                    hideLevels
+                    hideGoals
                   />
+
+                  {/* Grammar Classification — 3-step */}
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <GrammarClassifier
+                      level={grammarLevel}
+                      setLevel={setGrammarLevel}
+                      grammarTopic={grammarTopic}
+                      setGrammarTopic={setGrammarTopic}
+                      grammarLesson={grammarLesson}
+                      setGrammarLesson={setGrammarLesson}
+                      highlightedFields={highlightedFields}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -538,17 +607,46 @@ ${partPromptText}
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">
                       Chủ đề bài học (Topic Title) <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                      placeholder="Ví dụ: Present Continuous (e.g. He is playing)"
-                      className={`px-4 py-3 rounded-xl border bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-xs font-semibold text-[#111418] dark:text-white ${
-                        errors.includes('Vui lòng nhập tên chủ đề bài học (Topic Title).')
-                          ? 'border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50'
-                          : 'border-slate-200 dark:border-gray-700'
-                      }`}
-                    />
+                    <div className="relative flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={topic}
+                        onChange={(e) => setTopic(e.target.value)}
+                        placeholder="Ví dụ: Present Continuous (e.g. He is playing)"
+                        className={`flex-1 px-4 py-3 rounded-xl border bg-slate-50 dark:bg-gray-800/50 focus:bg-white dark:focus:bg-gray-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-xs font-semibold text-[#111418] dark:text-white ${
+                          errors.includes('Vui lòng nhập tên chủ đề bài học (Topic Title).')
+                            ? 'border-red-500 ring-2 ring-red-500/20 dark:border-red-500/50'
+                            : 'border-slate-200 dark:border-gray-700'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAutoDetect}
+                        disabled={!topic.trim() || isDetecting}
+                        title="Tự động phát hiện Level & Topic từ tiêu đề"
+                        className="shrink-0 w-9 h-9 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-700 flex items-center justify-center text-indigo-500 dark:text-indigo-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                      >
+                        {isDetecting ? (
+                          <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                        )}
+                      </button>
+                      {/* Generate title from grammar → overwrites title */}
+                      <button
+                        type="button"
+                        onClick={handleGenerateTitle}
+                        disabled={!grammarLevel || !grammarTopic || isGeneratingTitle}
+                        title="Sinh tiêu đề từ Level & Topic đã chọn (bấm lại để tạo gợi ý khác)"
+                        className="shrink-0 w-9 h-9 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-700 flex items-center justify-center text-emerald-600 dark:text-emerald-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
+                      >
+                        {isGeneratingTitle ? (
+                          <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                        ) : (
+                          <span className="material-symbols-outlined text-[16px]">title</span>
+                        )}
+                      </button>
+                    </div>
                     <p className="text-[10px] text-slate-400 dark:text-slate-550 -mt-1">
                       Chủ đề này thay thế cho <code className="px-1 py-0.5 bg-slate-100 dark:bg-gray-800 rounded font-mono text-indigo-650 dark:text-indigo-400 font-bold">{`{topic}`}</code> trong Prompt bên dưới.
                     </p>

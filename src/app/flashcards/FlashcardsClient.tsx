@@ -246,6 +246,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const currentPlayPromiseRef = useRef<Promise<void> | null>(null)
+  // Flag để tránh useEffect URL re-trigger handleSelectTopic khi chính handleSelectTopic đã gọi router.replace
+  const programmaticNavRef = useRef<boolean>(false)
 
   // Swipe gesture state
   const touchStartX = useRef<number | null>(null)
@@ -773,7 +775,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     setLoading(true)
     setSelectedTopic(topic)
     
-    // Đồng bộ URL query parameter
+    // Đánh dấu đây là navigation do code gọi (không phải user nhập URL)
+    // để useEffect URL không re-trigger handleSelectTopic lần 2
+    programmaticNavRef.current = true
     router.replace(`/flashcards?topic=${topic.id}`, { scroll: false })
     
     try {
@@ -840,12 +844,19 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   useEffect(() => {
     const topicId = searchParams.get("topic")
     if (topicId) {
-      if (!selectedTopic || selectedTopic.id !== topicId) {
+      // Nếu URL thay đổi do chính handleSelectTopic gọi router.replace → bỏ qua để tránh double-call
+      if (programmaticNavRef.current) {
+        programmaticNavRef.current = false
+        return
+      }
+      // URL có topic (deep link / reload / back button) nhưng chưa vào focusMode
+      // → Hiện popup chọn mode thay vì vào thẳng, đảm bảo user luôn chọn được mode
+      if (!focusMode && (!selectedTopic || selectedTopic.id !== topicId)) {
         for (const cat of categories) {
           const foundTopic = cat.topics.find(t => t.id === topicId)
           if (foundTopic) {
             setSelectedCategory(cat)
-            handleSelectTopic(foundTopic)
+            setTopicToSelect(foundTopic)   // ← Hiện popup thay vì gọi handleSelectTopic trực tiếp
             return
           }
         }
@@ -950,10 +961,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     }
 
     return (
-      <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-500">
+      <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
         
         {/* Title & Introduction */}
-        <div className="text-center space-y-5 relative py-6">
+        <div className="text-center space-y-5 relative py-3">
           {/* Floating subtle pastel colorful blur spots in background */}
           <div className="absolute top-0 left-1/4 w-16 h-16 bg-yellow-400/20 rounded-full blur-xl animate-pulse" />
           <div className="absolute bottom-0 right-1/4 w-20 h-20 bg-pink-400/20 rounded-full blur-xl animate-pulse" />
@@ -968,10 +979,6 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
           
           {/* B. Choose Topic */}
           <div className="space-y-5">
-            <h2 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-              <Award className="w-4.5 h-4.5 text-emerald-500" />
-              <span>Select Vocabulary Topic</span>
-            </h2>
             {selectedCategory ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {selectedCategory.topics.map((topic, idx) => {

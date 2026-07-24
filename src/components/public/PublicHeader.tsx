@@ -9,6 +9,13 @@ import { usePathname } from "next/navigation"
 import { useTranslations } from "next-intl"
 import { useContentStore } from "@/store/useContentStore"
 
+const LANG_LABELS: Record<string, string> = {
+  vi: "Tiếng Việt", th: "ภาษาไทย", id: "Bahasa Indonesia",
+  zh: "Mandarin Chinese", hi: "Hindi", ja: "Japanese",
+  es: "Spanish", ar: "Arabic", fr: "French", ko: "Korean",
+  pt: "Portuguese", ru: "Russian", de: "German", other: "Other language",
+}
+
 interface PublicHeaderProps {
   session: { id: string; name: string | null; image: string | null; role: string | null; studyAgeGroup?: string | null } | null
   search?: string
@@ -25,6 +32,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                             (pathname?.includes('/books/') && pathname !== '/student/books')
   
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
+  const nativeLanguage = useContentStore(s => s.nativeLanguage)
+  const setFilterModalOpen = useContentStore(s => (s as any).setFilterModalOpen)
   const effectiveAgeGroup = session?.studyAgeGroup || studyAgeGroup || "";
   const isKindergarten = 
     effectiveAgeGroup.toLowerCase().includes("kindergarten") || 
@@ -82,24 +91,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
             <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
           </div>
         </Link>
-        <div className="flex gap-1.5 sm:gap-4 items-center">
-          <Link 
-            className="p-2 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-primary to-primary-container shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
-            href="/student/game/robot-chat"
-            title={t("chatWithDolbot")}
-          >
-            <span className="material-symbols-outlined text-[14px]">smart_toy</span>
-            <span className="hidden sm:inline">{t("chatWithDolbot")}</span>
-          </Link>
-          <Link 
-            className="p-2 sm:px-4 sm:py-2 rounded-full font-black uppercase tracking-[0.02em] sm:tracking-[0.1em] text-[8px] sm:text-[10px] text-white bg-gradient-to-r from-amber-500 to-orange-500 shadow-md shadow-orange-500/20 hover:shadow-lg hover:shadow-orange-500/40 hover:scale-[1.05] active:scale-95 transition-all duration-300 flex items-center gap-1 shrink-0" 
-            href="/student/books"
-            title={t("storyBooks")}
-          >
-            <span className="material-symbols-outlined text-[14px]">menu_book</span>
-            <span className="hidden sm:inline">{t("storyBooks")}</span>
-          </Link>
-        </div>
+        {/* Removed top header buttons — moved to sidebar */}
       </div>
 
       <div className="flex items-center gap-6">
@@ -231,7 +223,28 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                     </Link>
                     
                     <div className="h-px bg-primary/5 mt-2 mb-1" />
-                    
+
+                    {/* Age group + native language — click to open preferences modal */}
+                    <button
+                      onClick={() => { setFilterModalOpen(true); setIsMenuOpen(false); }}
+                      className="w-full text-left px-5 py-3 transition-colors group hover:bg-surface-container-low"
+                    >
+                      <div className="flex flex-wrap items-center gap-1 text-[11px] font-bold">
+                        <span className="text-primary/40 group-hover:text-primary/60">I&apos;m a</span>
+                        <span className="border border-sky-300 px-1.5 py-0.5 bg-sky-50 text-sky-800 rounded-full">
+                          {(effectiveAgeGroup === "kindergarten" || effectiveAgeGroup === "kindergarden") ? "< 6 years"
+                            : effectiveAgeGroup || "Learner"}
+                        </span>
+                        <span className="text-primary/40 group-hover:text-primary/60">speaking</span>
+                        <span className="border border-amber-300 px-1.5 py-0.5 bg-amber-50 text-amber-800 rounded-full">
+                          {LANG_LABELS[nativeLanguage] || "English"}
+                        </span>
+                        <span className="material-symbols-outlined text-[13px] text-primary/30 group-hover:text-primary ml-0.5">settings</span>
+                      </div>
+                    </button>
+
+                    <div className="h-px bg-primary/5 mt-1 mb-1" />
+
                     <button 
                       onClick={() => signOut({ callbackUrl: "/" })}
                       className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"

@@ -18,6 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { GrammarTopicBrowser } from "@/components/public/exercises/GrammarTopicBrowser"
+import { FlashcardTopicBrowser } from "@/components/public/flashcards/FlashcardTopicBrowser"
+import { LessonAccordionBrowser } from "@/components/public/lessons/LessonAccordionBrowser"
+import { LevelPillSelector } from "@/components/public/LevelPillSelector"
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -265,7 +270,7 @@ const LessonList = memo(function LessonList({
   const [isLoading, setIsLoading] = useState(false)
   const initializedKey = useRef('')
   const goalParam = searchParams.goal || searchParams.categoryId || ''
-  const currentKey = `le-${goalParam}-${userType}-${studySubject}-${studyLevel}-${searchKeyword || ''}`
+  const currentKey = `le-${goalParam}-${userType}-${studySubject}-${searchKeyword || ''}`
 
   useEffect(() => {
     // 1. Initial page load (use server-side resolved items)
@@ -288,9 +293,9 @@ const LessonList = memo(function LessonList({
       if (searchKeyword) qs.set('search', searchKeyword)
       if (userType) qs.set('userType', userType)
       if (studySubject) qs.set('subject', studySubject)
-      if (studyLevel) qs.set('level', studyLevel)
 
       fetch(`/api/feed?${qs.toString()}`)
+
         .then(r => r.json())
         .then(data => {
           if (data.items) {
@@ -363,11 +368,7 @@ const LessonList = memo(function LessonList({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-        {displayItems.map((le: any) => (
-          <LessonCard key={le.id} item={le} isLoggedIn={isLoggedIn} />
-        ))}
-      </div>
+      <LessonAccordionBrowser items={displayItems} isLoggedIn={isLoggedIn} initialLevel={studyLevel} />
       {hasMoreLe && (
         <div ref={bottomRef} className="w-full flex justify-center py-10">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -1252,7 +1253,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
                             </div>
                             <span className={`text-sm font-black uppercase tracking-[0.1em] transition-all duration-300 ${
                               isActive ? "text-primary scale-110" : "text-primary/50 group-hover:text-primary"
-                            }`}>{age.label}</span>
+                            }`}>{(age.id === "kindergarten" || age.id === "kindergarden") ? "< 6 years" : age.label}</span>
                          </button>
                       )
                     })}
@@ -1336,112 +1337,18 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
 
 
-      <div 
-        id="content-tabs" 
-        className="flex flex-col items-center justify-center lg:items-start gap-1.5 sm:gap-4 pt-0 pb-3 px-6 md:px-10 -mx-6 md:-mx-10 sticky top-0 z-[40] touch-manipulation"
-      >
-        {/* Background gradient decorator with pointer-events-none (bypasses iOS Webkit touch bugs) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background via-70% to-transparent pointer-events-none h-[calc(100%+32px)] z-0" />
-        
-        <div className="inline-flex items-center gap-4 relative z-10">
-          <div className="relative inline-flex items-center bg-white/95 border-2 border-primary/10 rounded-[2rem] shadow-md p-1.5">
-            {/* Sliding indicator */}
-            <div
-              className="absolute top-1.5 bottom-1.5 rounded-[1.5rem] bg-primary shadow-lg shadow-primary/30 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] pointer-events-none"
-              style={{
-                width: `calc((100% - 12px) / ${tabs.length})`,
-                transform: `translateX(calc(${tabs.indexOf(activeTab)} * 100%))`,
-                left: "6px",
-              }}
-            />
-            {tabs.map((tab) => {
-              const label = 
-                tab === "lessons" ? nt("lessons").toUpperCase() :
-                tab === "exercises" ? (locale === "vi" ? "BÀI TẬP" : "EXERCISES") :
-                tab === "flashcards" ? (locale === "vi" ? "THẺ TỪ VỰNG" : "FLASHCARDS") :
-                (locale === "vi" ? "TRÒ CHƠI" : "GAMES");
-              return (
-                <button
-                  key={tab}
-                  onPointerDown={(e) => {
-                    if (e.button === 0) {
-                      e.preventDefault();
-                      handleTabChange(tab);
-                    }
-                  }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleTabChange(tab);
-                  }}
-                  className="relative z-10 px-2 sm:px-10 py-2.5 sm:py-3.5 min-w-[65px] sm:min-w-[130px] rounded-[1.5rem] text-[10px] sm:text-sm font-black transition-colors duration-300 cursor-pointer text-center text-slate-400 hover:text-primary active:text-white touch-manipulation"
-                  style={{
-                    color: activeTab === tab ? '#ffffff' : undefined
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
-
-
-        {/* Pill Selector for Levels (Pre-A1/A1, A2, etc.) */}
-        {!isKindergarten && (activeTab === "lessons" || activeTab === "exercises") && availableLevels.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-0.5 sm:mt-1.5 relative z-10 animate-in fade-in slide-in-from-top-2 duration-350">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1 hidden sm:inline-block">
-              {locale === "vi" ? "Cấp độ:" : "Level:"}
-            </span>
-            <button
-              onClick={() => handleSelectLevel("all")}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
-                !studyLevel
-                  ? "bg-slate-700 text-white border-transparent shadow-md scale-105"
-                  : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
-              }`}
-            >
-              {locale === "vi" ? "Tất cả" : "All"}
-            </button>
-            {availableLevels.map((level: any) => {
-              const isActive = studyLevel === level.id;
-
-              // Helper to get short CEFR code for mobile
-              const getShortLevelLabel = (id: string, defaultLabel: string) => {
-                const normalizedId = id.toLowerCase();
-                if (normalizedId === "pre-a1-a1") return "Pre-A1/A1";
-                if (normalizedId === "a2") return "A2";
-                const match = defaultLabel.match(/\(([^)]+)\)/);
-                if (match && match[1]) {
-                  return match[1].replace(", ", "/");
-                }
-                return defaultLabel;
-              };
-
-              return (
-                <button
-                  key={level.id}
-                  onClick={() => handleSelectLevel(level.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-300 cursor-pointer border ${
-                    isActive
-                      ? "bg-primary text-white border-transparent shadow-md scale-105"
-                      : "bg-white/80 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  <span className="hidden sm:inline">{level.label}</span>
-                  <span className="sm:hidden">{getShortLevelLabel(level.id, level.label)}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
 
 
 
       {/* Lists */}
       <div className="relative">
+        {/* CEFR Level Pill Selector Bar (Lessons, Exercises, Flashcards) */}
+        {!isKindergarten && activeTab !== "games" && (
+          <LevelPillSelector activeTab={activeTab} />
+        )}
+
         {(isPending || isFiltering) && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-transparent">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-md" />
@@ -1449,17 +1356,13 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         )}
         <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
           {activeTab === "flashcards" ? (
-            <Suspense fallback={<SectionSkeleton />}>
-              <FlashcardTopicList topics={filteredFlashcards} />
-            </Suspense>
+            <FlashcardTopicBrowser topics={filteredFlashcards} />
           ) : activeTab === "games" ? (
             <Suspense fallback={<SectionSkeleton />}>
               <GameList games={filteredGames} locale={locale} />
             </Suspense>
           ) : activeTab === "exercises" ? (
-            <Suspense fallback={<SectionSkeleton />}>
-              <ExerciseList key={`ex-${feedKey}`} promise={promises.assignments} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />
-            </Suspense>
+            <GrammarTopicBrowser />
           ) : (
             <Suspense fallback={<SectionSkeleton />}>
               <LessonList key={`ls-${feedKey}`} promise={promises.lessons} isLoggedIn={isLoggedIn} searchKeyword={searchParams.search} onClear={handleClearSearch} searchParams={searchParams} />

@@ -165,6 +165,8 @@ model Assignment {
   readingText           String?
   gradeLevel            String?
   level                 String?
+  grammarTopic          String?
+  grammarLesson         String?
   audienceLevels        Json?
   subject               String?
   instructions              String?
@@ -198,6 +200,8 @@ model Assignment {
   @@index([materialType])
   @@index([deletedAt])
   @@index([createdAt])
+  @@index([grammarTopic])
+  @@index([grammarLesson])
 }
 
 model FlashcardDeck {
@@ -602,6 +606,7 @@ model FlashcardTopic {
   name            String // e.g. "Animals"
   slug            String            @unique
   iconUrl         String?
+  cefrLevel       String?           @default("a1") // a1 | a2 | b1 | b2 | c1
   flashcards      GlobalFlashcard[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

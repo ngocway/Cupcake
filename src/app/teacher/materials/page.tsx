@@ -184,7 +184,9 @@ export default function MaterialLibraryPage() {
           targetAudiences: metadata?.targetAudiences,
           audienceLevels: metadata?.audienceLevels,
           learningGoals: metadata?.learningGoals,
-          level: primaryLevel || undefined,
+          level: metadata?.grammarLevel || primaryLevel || undefined,
+          grammarTopic: metadata?.grammarTopic || undefined,
+          grammarLesson: metadata?.grammarLesson || undefined,
         });
 
         if (i === 0) {

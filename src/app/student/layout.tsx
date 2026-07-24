@@ -62,6 +62,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
               <div className="space-y-1">
                 <SideNavItem href="/student/lessons?source=public" icon="explore" label={t("lessons")} />
                 <SideNavItem href="/student/assignments?source=public" icon="language" label={t("assignments")} />
+                <SideNavItem href="/student/exercises" icon="menu_book" label="Grammar Exercises" />
               </div>
             </div>
   

@@ -63,6 +63,19 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
           className="object-cover transition-transform duration-1000 group-hover:scale-105"
           priority={false}
         />
+        {/* Level Badges (Top-Left) */}
+        {item.level && (
+          <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5 pointer-events-none">
+            {getLevelsWithColors(item.level).map((lvl, index) => (
+              <span 
+                key={index}
+                className={`${lvl.color} px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider shadow-lg border border-white/20`}
+              >
+                {lvl.label}
+              </span>
+            ))}
+          </div>
+        )}
         {/* Media Icons */}
         {(item.videoUrl || item.audioUrl) && (
           <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
@@ -107,20 +120,6 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
             {item.title}
           </h3>
         </Link>
-
-        {/* Level Badges */}
-        {item.level && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {getLevelsWithColors(item.level).map((lvl, index) => (
-              <span 
-                key={index}
-                className={`${lvl.color} px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider shadow-sm`}
-              >
-                {lvl.label}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-3 border-t border-primary/5">
@@ -311,6 +310,19 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
           className="object-cover transition-transform duration-1000 group-hover:scale-105"
           priority={false}
         />
+        {/* Level Badges (Top-Left) */}
+        {item.level && (
+          <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5 pointer-events-none">
+            {getLevelsWithColors(item.level).map((lvl, index) => (
+              <span 
+                key={index}
+                className={`${lvl.color} px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider shadow-lg border border-white/20`}
+              >
+                {lvl.label}
+              </span>
+            ))}
+          </div>
+        )}
         {/* Media Icons */}
         {(item.videoUrl || item.audioUrl) && (
           <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
@@ -355,20 +367,6 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
             {item.title}
           </h3>
         </Link>
-
-        {/* Level Badges */}
-        {item.level && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {getLevelsWithColors(item.level).map((lvl, index) => (
-              <span 
-                key={index}
-                className={`${lvl.color} px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider shadow-sm`}
-              >
-                {lvl.label}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Stats Row */}
         <div className="flex items-center justify-between pt-3 border-t border-secondary/5">

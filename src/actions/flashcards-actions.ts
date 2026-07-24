@@ -21,8 +21,8 @@ const fetchTopics = async () => {
 
 export const getCachedFlashcardTopics = unstable_cache(
   fetchTopics,
-  ["flashcard-topics-cache-v2"],
-  { revalidate: 43200, tags: ["flashcard-categories-v2"] } // Updated tags/cache-key to v2
+  ["flashcard-topics-cache-v5"],
+  { revalidate: 43200, tags: ["flashcard-categories-v5"] } // v5: includes new cefrLevel distribution
 );
 
 /**

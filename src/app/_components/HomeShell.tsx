@@ -43,14 +43,45 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
   };
 
   return (
-    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-background z-0">
-      {isKindergarten && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 animate-in fade-in duration-1000">
-          <div className="absolute top-10 left-[-15%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-amber-300/12 to-transparent blur-[150px] md:blur-[220px] animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute bottom-[10%] right-[-15%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-br from-pink-300/10 to-transparent blur-[160px] md:blur-[240px] animate-pulse" style={{ animationDuration: '10s' }} />
-          <div className="absolute top-[30%] right-[5%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-tr from-sky-200/12 to-transparent blur-[150px] md:blur-[200px] animate-pulse" style={{ animationDuration: '12s' }} />
-        </div>
-      )}
+    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative z-0 bg-[#e2f0e7]">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 animate-in fade-in duration-1000 bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]">
+        {/* Vibrant Mesh Gradients - Predominantly Green & Teal & Soft Yellow (Lighter/Brighter) */}
+        <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[90px] md:blur-[130px] animate-pulse" style={{ animationDuration: '10s' }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[110px] md:blur-[150px] animate-pulse" style={{ animationDuration: '12s' }} />
+        <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[80px] md:blur-[120px] animate-pulse" style={{ animationDuration: '15s' }} />
+        <div className="absolute bottom-[20%] left-[-5%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-[#fef9c3]/55 to-transparent blur-[100px] md:blur-[140px] animate-pulse" style={{ animationDuration: '18s' }} />
+        
+        {/* Semi-transparent Organic Blobs for layered depth - Greens & Yellow-Green */}
+        <div className="absolute top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce" style={{ animationDuration: '8s' }} />
+        <div className="absolute bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce" style={{ animationDuration: '10s' }} />
+        <div className="absolute top-[50%] right-[25%] w-[100px] h-[100px] rounded-full bg-[#14b8a6]/18 blur-[15px] animate-pulse" style={{ animationDuration: '6s' }} />
+
+        {/* Large Rotating Circular Orbits / Outlines (Nét đứt hình tròn) */}
+        <div className="absolute top-[22%] right-[-8vw] w-[28vw] h-[28vw] rounded-full border border-dashed border-indigo-400/20 animate-[spin_80s_linear_infinite]" />
+        <div className="absolute bottom-[-8vh] left-[-4vw] w-[22vw] h-[22vw] rounded-full border border-dashed border-emerald-400/20 animate-[spin_65s_linear_infinite_reverse]" />
+        <div className="absolute top-[55%] left-[15vw] w-[14vw] h-[14vw] rounded-full border border-dashed border-pink-400/15 animate-[spin_50s_linear_infinite]" />
+
+        {/* Floating Plus Doodles ('+' mờ) */}
+        <svg className="absolute top-[8%] right-[6%] w-8 h-8 text-amber-500/25 opacity-80 animate-[float_9s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+        <svg className="absolute bottom-[20%] right-[28%] w-6 h-6 text-pink-500/25 opacity-75 animate-[float_11s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+        <svg className="absolute top-[45%] left-[4%] w-7 h-7 text-emerald-500/20 opacity-70 animate-[float_7s_ease-in-out_infinite]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+
+        {/* Soft Wavy Curves / Arcs (Đường lượn sóng) */}
+        <svg className="absolute top-[38%] right-[2%] w-[10vw] h-[15vh] text-sky-400/20 opacity-70 animate-[float_13s_ease-in-out_infinite]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M0,50 Q25,20 50,50 T100,50" />
+        </svg>
+        <svg className="absolute bottom-[10%] left-[18%] w-[8vw] h-[12vh] text-indigo-400/15 opacity-65 animate-[float_10s_ease-in-out_infinite_reverse]" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M0,50 Q25,80 50,50 T100,50" />
+        </svg>
+
+        {/* Dot grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(#15803d_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
+
+        {/* Whimsical sparkle shapes */}
+        <svg className="absolute top-[12%] left-[18%] w-6 h-6 text-emerald-500/35 opacity-90 animate-bounce" fill="currentColor" viewBox="0 0 24 24" style={{ animationDuration: '4s' }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <svg className="absolute bottom-[28%] right-[22%] w-7 h-7 text-indigo-500/30 opacity-85 animate-bounce" fill="currentColor" viewBox="0 0 24 24" style={{ animationDuration: '6s' }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <svg className="absolute top-[60%] left-[8%] w-5 h-5 text-amber-500/35 opacity-80 animate-pulse" fill="currentColor" viewBox="0 0 24 24" style={{ animationDuration: '5s' }}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      </div>
       <PublicHeader 
         session={session ? {
           id: session.user.id!,
@@ -87,7 +118,7 @@ export function HomeShell({ children }: { children?: React.ReactNode }) {
 
 export function HomeLoadingSkeleton() {
   return (
-    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-background">
+    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-[#e2f0e7]">
        {/* Header Skeleton */}
        <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-10 py-4 w-[95%] max-w-[1440px] bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[32px] border border-outline-variant/10">
           <div className="w-48 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />

@@ -48,24 +48,21 @@ export function LearningGoalsFilter({ config, activeId }: Props) {
   const isAllActive = !activeId || activeId === "all";
 
   return (
-    <div className="pt-4 border-t border-primary/5 animate-in fade-in slide-in-from-left duration-700">
-      <h2 className="text-xs font-black text-primary uppercase tracking-[0.2em] mb-4">
+    <div className="animate-in fade-in slide-in-from-left duration-700">
+      <p className="cefr-redesign-section-label" style={{ marginBottom: "8px" }}>
         {locale === "vi" ? "Mục tiêu học tập" : "Learning Goals"}
-      </h2>
-      <div className="flex flex-wrap gap-2.5">
-        {allGoals.map((goal, idx) => {
+      </p>
+      <div className="cefr-redesign-chip-row">
+        {allGoals.map((goal) => {
           const isSelected = goal.id === "all" ? isAllActive : activeId === goal.id;
-          const blobShape = blobShapes[idx % blobShapes.length];
-          const color = colors[idx % colors.length];
           const displayName = goal.id === "all" && locale === "vi" ? "Tất cả" : goal.label;
-
           const filterHref = goal.id === "all" ? "/?goal=" : `/?goal=${goal.id}`;
 
           return (
             <FilterLink
               key={goal.id}
               href={filterHref}
-              className={`inline-block border px-3 py-1.5 text-[11px] uppercase tracking-[0.05em] font-black transition-all duration-300 ${blobShape} ${color.border} ${isSelected ? `${color.bg} ${color.text} shadow-md scale-[1.05] ring-2 ring-primary/10` : `bg-white text-slate-500 hover:text-slate-800 ${color.hover} opacity-80 hover:opacity-100 shadow-sm hover:scale-105`}`}
+              className={`cefr-redesign-chip decoration-transparent cursor-pointer ${isSelected ? "active" : ""}`}
             >
               {displayName}
             </FilterLink>

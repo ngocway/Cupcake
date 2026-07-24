@@ -5,7 +5,6 @@ import { Toaster } from "sonner"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
 import { useState, useEffect } from "react";
 
 const customStyles = `

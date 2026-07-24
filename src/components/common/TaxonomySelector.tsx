@@ -11,6 +11,8 @@ interface TaxonomySelectorProps {
   learningGoals: string[];
   setLearningGoals: (goals: string[]) => void;
   hideSubject?: boolean;
+  hideLevels?: boolean;
+  hideGoals?: boolean;
 }
 
 export function TaxonomySelector({
@@ -23,7 +25,9 @@ export function TaxonomySelector({
   setAudienceLevels,
   learningGoals,
   setLearningGoals,
-  hideSubject = true
+  hideSubject = true,
+  hideLevels = false,
+  hideGoals = false,
 }: TaxonomySelectorProps) {
   const currentSubjectConfig = config?.subjects?.find((s: any) => s.id === subject);
 
@@ -112,7 +116,7 @@ export function TaxonomySelector({
       </div>
 
       {/* Levels for each target audience */}
-      {targetAudiences.map(audId => {
+      {!hideLevels && targetAudiences.map(audId => {
         const ageGroup = currentSubjectConfig?.ageGroups?.find((a: any) => a.id === audId);
         if (!ageGroup || !ageGroup.levels || ageGroup.levels.length === 0) return null;
         let selectedLevel = audienceLevels[audId] || '';
@@ -151,7 +155,7 @@ export function TaxonomySelector({
       })}
 
       {/* Learning Goals for each target audience */}
-      {targetAudiences.map(audId => {
+      {!hideGoals && targetAudiences.map(audId => {
         const ageGroup = currentSubjectConfig?.ageGroups?.find((a: any) => a.id === audId);
         if (!ageGroup || !ageGroup.goals || ageGroup.goals.length === 0) return null;
 
