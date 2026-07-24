@@ -46,6 +46,27 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
   },
+  async redirects() {
+    return [
+      // SEO: renamed slug redirects (permanent 301)
+      {
+        source: '/public/lessons/my-family-9919',
+        destination: '/public/lessons/my-family',
+        permanent: true,
+      },
+      {
+        source: '/public/lessons/exploring-nature-1rkt',
+        destination: '/public/lessons/exploring-nature',
+        permanent: true,
+      },
+      // SEO: block duplicate "ban-sao" copy → redirect to original
+      {
+        source: '/public/lessons/exploring-the-world-of-animals-ban-sao',
+        destination: '/public/lessons/exploring-the-world-of-animals',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);
