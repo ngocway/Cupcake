@@ -303,6 +303,20 @@ export default async function PublicLessonPage({
     redirect(`/public/lessons/${lesson.slug}`);
   }
 
+  // Fetch additional SEO data for JSON-LD
+  const seoData = await prisma.lesson.findUnique({
+    where: { id: lesson.id },
+    select: {
+      level: true,
+      learningGoals: true,
+      targetAudiences: true,
+      createdAt: true,
+      updatedAt: true,
+      viewsCount: true,
+      teacher: { select: { name: true } },
+    },
+  });
+
   // Parse Youtube ID if applicable
   const getYoutubeId = (url: string | null) => {
     if (!url) return null;
@@ -312,8 +326,61 @@ export default async function PublicLessonPage({
 
   const videoId = getYoutubeId(lesson.videoUrl);
 
+  // Build JSON-LD Course schema
+  const canonicalUrl = `https://dolcake.com/public/lessons/${lesson.slug ?? lesson.id}`;
+  const thumbnail = lesson.assignment?.thumbnail ?? "https://dolcake.com/images/og-image.png";
+  const courseJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: lesson.title,
+    description:
+      lesson.description ||
+      `Learn English with "${lesson.title}" — an interactive lesson on Dolcake.`,
+    url: canonicalUrl,
+    provider: {
+      "@type": "EducationalOrganization",
+      name: "Dolcake",
+      url: "https://dolcake.com",
+      logo: "https://dolcake.com/images/og-image.png",
+    },
+    image: thumbnail,
+    inLanguage: "en",
+    isAccessibleForFree: true,
+    ...(seoData?.level && {
+      educationalLevel: seoData.level,
+    }),
+    ...(seoData?.learningGoals && seoData.learningGoals.length > 0 && {
+      teaches: seoData.learningGoals,
+    }),
+    ...(seoData?.targetAudiences && seoData.targetAudiences.length > 0 && {
+      audience: {
+        "@type": "EducationalAudience",
+        educationalRole: "student",
+        audienceType: seoData.targetAudiences.join(", "),
+      },
+    }),
+    ...(seoData?.teacher?.name && {
+      creator: {
+        "@type": "Person",
+        name: seoData.teacher.name,
+      },
+    }),
+    dateCreated: seoData?.createdAt?.toISOString(),
+    dateModified: seoData?.updatedAt?.toISOString(),
+    hasCourseInstance: {
+      "@type": "CourseInstance",
+      courseMode: "online",
+      courseWorkload: "PT15M",
+      inLanguage: "en",
+    },
+  };
+
   return (
     <div className="min-h-screen bg-[#F4EFE6] dark:bg-slate-950 flex flex-col lg:h-screen lg:overflow-hidden font-body">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+      />
       <PublicHeader session={session as any} />
       
       {/* 2-Column Learning Layout */}
