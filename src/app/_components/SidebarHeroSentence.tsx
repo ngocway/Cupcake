@@ -6,6 +6,7 @@ import { Settings } from "lucide-react";
 import { updateAllPreferences } from "@/actions/user-preferences-actions";
 import { useRouter } from "next/navigation";
 import { SubjectSelector } from "./SubjectSelector";
+import { useLocale } from "next-intl";
 
 interface Props {
   config: any;
@@ -13,6 +14,7 @@ interface Props {
 
 export function SidebarHeroSentence({ config }: Props) {
   const router = useRouter();
+  const locale = useLocale();
   const nativeLanguage = useContentStore(s => s.nativeLanguage);
   const studySubject = useContentStore(s => (s as any).studySubject);
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
@@ -107,7 +109,7 @@ export function SidebarHeroSentence({ config }: Props) {
       </div>
 
       {/* Subject Selector — between sentence and level */}
-      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} config={config} />
+      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} config={config} locale={locale} />
     </div>
   );
 }

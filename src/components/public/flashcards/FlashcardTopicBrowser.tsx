@@ -17,7 +17,7 @@ const CEFR_LEVEL_CONFIG: Record<string, {
   accentIcon: string;
 }> = {
   a1: {
-    label: "Beginner",
+    label: "For Kid 3-6 year and Beginner",
     badge: "bg-emerald-500 text-white shadow-sm shadow-emerald-200",
     border: "border-emerald-200 dark:border-emerald-800/50 hover:border-emerald-400",
     bgClosed: "bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-white dark:from-emerald-950/20 dark:to-slate-800 hover:from-emerald-100/90 hover:to-teal-50/80",
@@ -118,6 +118,23 @@ export function FlashcardTopicBrowser({ topics }: Props) {
       }, 150);
     }
   }, [searchParams]);
+
+  // If the default openLevel ("a1") has no topics, fall back to the first level that does.
+  // Prevents the tab showing "A1 selected" but no accordion being open.
+  useEffect(() => {
+    if (!topics || topics.length === 0) return;
+    const currentLevelHasTopics = topics.some(
+      t => (t.cefrLevel ? t.cefrLevel.toLowerCase() : "a1") === openLevel
+    );
+    if (!currentLevelHasTopics) {
+      const firstAvailable = CEFR_ORDER.find(lvl =>
+        topics.some(t => (t.cefrLevel ? t.cefrLevel.toLowerCase() : "a1") === lvl)
+      );
+      if (firstAvailable) setOpenLevel(firstAvailable);
+    }
+  // Run only when topics first load — not on every openLevel change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topics]);
 
   useEffect(() => {
     const handleOpenLevel = (e: any) => {

@@ -182,9 +182,28 @@ export default async function StudentAssignmentLobbyPage({
   }
   const dateLocale = locale === "vi" ? vi : enUS;
 
+  const _lobbyNormalizedLevel = (assignment.level || "").toLowerCase().split(",")[0].trim();
+  const isHighLevel = ["b1","b2","c1","c2","intermediate","upper-intermediate","upper_intermediate","advanced","proficiency"].includes(_lobbyNormalizedLevel);
+
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-transparent font-body">
-      {/* Background Pre-fetcher (Hướng 2: Sẵn sàng câu hỏi ngầm) */}
+    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative font-body">
+      {/* ── Background ── */}
+      {isHighLevel ? (
+        // B1+ → green gradient + floating decorative shapes (like HomeShell)
+        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]">
+          <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse" style={{ animationDuration:'10s' }} />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse" style={{ animationDuration:'12s' }} />
+          <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse" style={{ animationDuration:'15s' }} />
+          <div className="absolute bottom-[20%] left-[-5%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-[#fef9c3]/55 to-transparent blur-[140px] animate-pulse" style={{ animationDuration:'18s' }} />
+          <div className="absolute top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce" style={{ animationDuration:'8s' }} />
+          <div className="absolute bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce" style={{ animationDuration:'10s' }} />
+          <div className="absolute top-[50%] right-[25%] w-[100px] h-[100px] rounded-full bg-[#14b8a6]/18 blur-[15px] animate-pulse" style={{ animationDuration:'6s' }} />
+        </div>
+      ) : (
+        // A1/A2 → subtle white/transparent (keep existing feel)
+        <div className="fixed inset-0 -z-10 bg-slate-50/80 pointer-events-none" />
+      )}
+      {/* Background Pre-fetcher */}
       <QuizPrefetcher assignmentId={assignment.id} />
 
       <div className="h-12 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-6 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md shrink-0 z-50 shadow-sm">

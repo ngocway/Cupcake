@@ -16,6 +16,10 @@ export function getBestAgeGroupForSubject(subjectId: string, currentUserType: st
   const subject = config?.subjects?.find((s: any) => s.id === subjectId);
   if (!subject || !subject.ageGroups || subject.ageGroups.length === 0) return "";
 
+  // 0. If user has never picked an age group, preserve that — don't auto-assign a default.
+  //    This allows the onboarding popup to trigger on first visit.
+  if (!currentAgeGroup || currentAgeGroup.trim() === "") return "";
+
   // 1. If current age group is already valid for this subject, keep it
   if (subject.ageGroups.some((a: any) => a.id === currentAgeGroup)) {
     return currentAgeGroup;
@@ -27,6 +31,6 @@ export function getBestAgeGroupForSubject(subjectId: string, currentUserType: st
     return sameTypeGroup.id;
   }
 
-  // 3. Fallback to the first age group of this subject
+  // 3. Fallback to the first age group of this subject (only when switching subjects)
   return subject.ageGroups[0].id;
 }

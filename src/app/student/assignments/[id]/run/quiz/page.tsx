@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
-import QuizClientRunner from "./QuizClientRunner";
+import KidTeenQuizRunner from "./KidTeenQuizRunner";
 import { getCachedAssignmentQuestions, getQuestionTranslationMap, getAssignmentTranslations, getRelatedAssignmentsCached } from "../data";
 
 
@@ -35,6 +35,7 @@ export default async function StudentQuizPage({
           title: true,
           slug: true,
           tags: true,
+          level: true,
           targetAudiences: true,
           lesson: { select: { id: true, targetAudiences: true } }
         }
@@ -93,11 +94,12 @@ export default async function StudentQuizPage({
   const assignmentTranslationsPromise = getAssignmentTranslations(assignmentCore.id);
 
   return (
-    <div className="min-h-screen w-full max-w-none bg-slate-50 dark:bg-slate-950">
-       <QuizClientRunner 
+    <div className="min-h-screen w-full max-w-none">
+       <KidTeenQuizRunner 
           assignment={assignmentCore as any}
           submissionId={submissionId}
           questions={questions}
+          cefrLevel={assignmentCore.level || "a1"}
           initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft as string) : {}}
           extraDataPromise={extraDataPromise}
           relatedAssignmentsPromise={relatedAssignmentsPromise}

@@ -594,6 +594,7 @@ interface Props {
   questionTranslationsPromise?: Promise<Record<string, any>>;
   assignmentTranslationsPromise?: Promise<any>;
   isGuest?: boolean;
+  cefrLevel?: string;
 }
 
 /** Resolves questionTranslationsPromise and renders ExplanationBlock with translations. 
@@ -777,10 +778,20 @@ export default function KidTeenQuizRunner({
   questionTranslationsPromise,
   assignmentTranslationsPromise,
   isGuest = false,
+  cefrLevel = "a1",
 }: Props) {
   const t = useTranslations("student.quiz");
   const router = useRouter();
   const [, startTransition] = useTransition();
+
+  // B1 and above get the green gradient background; A1/A2 keep the cartoon image.
+  // The 'level' field in DB stores various formats: "b1", "b1,b1,b1", "intermediate", "upper_intermediate", etc.
+  const _normalizedLevel = (cefrLevel || "").toLowerCase().split(",")[0].trim();
+  const isHighLevel = [
+    "b1", "b2", "c1", "c2",
+    "intermediate", "upper-intermediate", "upper_intermediate",
+    "advanced", "proficiency",
+  ].includes(_normalizedLevel);
 
   // ── Music references ─────────────────────────────────────
   const bgMusicRef = useRef<HTMLAudioElement | null>(null);
@@ -1551,10 +1562,25 @@ export default function KidTeenQuizRunner({
   if (!hasStarted) {
     return (
       <div 
-        className="min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative bg-cover bg-center bg-[#8cd2f6]"
-        style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+        className={`min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative ${
+          isHighLevel
+            ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
+            : "bg-cover bg-center bg-[#8cd2f6]"
+        }`}
+        style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
-        {/* Transparent header just for the BACK button */}
+        {/* B1+ floating decorative blobs */}
+        {isHighLevel && (
+          <>
+            <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none" style={{ animationDuration:'10s' }} />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none" style={{ animationDuration:'12s' }} />
+            <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none" style={{ animationDuration:'15s' }} />
+            <div className="absolute bottom-[20%] left-[-5%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-[#fef9c3]/55 to-transparent blur-[140px] animate-pulse pointer-events-none" style={{ animationDuration:'18s' }} />
+            <div className="absolute top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none" style={{ animationDuration:'8s' }} />
+            <div className="absolute bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none" style={{ animationDuration:'10s' }} />
+            <div className="absolute top-[50%] right-[25%] w-[100px] h-[100px] rounded-full bg-[#14b8a6]/18 blur-[15px] animate-pulse pointer-events-none" style={{ animationDuration:'6s' }} />
+          </>
+        )}
 
 
         {/* Start Card */}
@@ -1628,7 +1654,21 @@ export default function KidTeenQuizRunner({
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div className="min-h-screen font-body flex flex-col bg-[#8cd2f6]">
+    <div className={`min-h-screen font-body flex flex-col ${
+      isHighLevel
+        ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
+        : "bg-[#8cd2f6]"
+    }`}>
+      {/* B1+ floating decorative blobs */}
+      {isHighLevel && (
+        <>
+          <div className="fixed top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none -z-0" style={{ animationDuration:'10s' }} />
+          <div className="fixed bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none -z-0" style={{ animationDuration:'12s' }} />
+          <div className="fixed top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none -z-0" style={{ animationDuration:'15s' }} />
+          <div className="fixed top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none -z-0" style={{ animationDuration:'8s' }} />
+          <div className="fixed bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none -z-0" style={{ animationDuration:'10s' }} />
+        </>
+      )}
       <SelectionTranslator />
       {/* ── TOP HEADER (Glass) ── */}
       <div className="relative z-30 bg-white/70 backdrop-blur-md px-4 py-3 shadow-sm border-b border-white/20">
@@ -1766,7 +1806,7 @@ export default function KidTeenQuizRunner({
       {/* ── MAIN CONTENT (Image Background) ── */}
       <div 
         className="flex-1 flex flex-col items-center justify-start pt-6 sm:justify-center sm:pt-6 p-2 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+        style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
       {questions.length > 0 && (
         <>

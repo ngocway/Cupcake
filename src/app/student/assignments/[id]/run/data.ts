@@ -2,7 +2,7 @@ import { fetchWithRedis } from "@/lib/cached-queries";
 import prisma from "@/lib/prisma";
 
 export const getAssignmentMeta = async (id: string) => {
-  return fetchWithRedis(`assignment:meta:${id}`, 300, async () => {
+  return fetchWithRedis(`assignment:meta:v2:${id}`, 300, async () => {
     return prisma.assignment.findFirst({
       where: { OR: [{ id }, { slug: id }] },
       select: {
@@ -14,6 +14,7 @@ export const getAssignmentMeta = async (id: string) => {
         maxAttempts: true,
         defaultPoints: true,
         focusMode: true,
+        level: true,
         _count: { select: { questions: true } }
       }
     });

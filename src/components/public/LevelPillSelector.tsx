@@ -22,7 +22,7 @@ const LEVEL_PILLS: LevelPillConfig[] = [
   {
     id: "a1",
     label: "A1",
-    subLabel: "Beginner",
+    subLabel: "For Kid 3-6 year and Beginner",
     activeBg: "bg-emerald-500 shadow-md shadow-emerald-500/25",
     inactiveBg: "bg-emerald-50/90 dark:bg-emerald-950/30",
     activeBorder: "border-emerald-500",

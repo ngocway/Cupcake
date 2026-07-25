@@ -1,14 +1,14 @@
 "use client";
 
 import { useContentStore } from "@/store/useContentStore";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 
 export function SidebarContentTypeMenu() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+
   const locale = useLocale();
 
   const [isOpen, setIsOpen] = useState(true);
@@ -45,20 +45,25 @@ export function SidebarContentTypeMenu() {
     return ["lessons", "exercises", "flashcards", "games"];
   }, [isKindergarten, isKid, isTeen, isLearner]);
 
-  const activeTab = searchParams.get("tab") || availableTabIds[0];
+  // Read activeTab from Zustand store (instant, no server round-trip)
+  const activeTab = useContentStore((s) => (s as any).activeTab) || "flashcards";
+  const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   const pathname = usePathname();
 
   const handleSelectTab = (tabId: string) => {
     if (tabId === activeTab && pathname === "/") return;
-    // If not on home page, always navigate home with the selected tab
+    // If not on home page, navigate home first, then set tab
     if (pathname !== "/") {
-      router.push(`/?tab=${tabId}`, { scroll: false });
+      setActiveTab(tabId);
+      router.push(`/`, { scroll: false });
       return;
     }
+    // On home page: instant store update + sync URL without triggering re-render
+    setActiveTab(tabId);
     const p = new URLSearchParams(window.location.search);
     p.set("tab", tabId);
-    router.push(`?${p.toString()}`, { scroll: false });
+    history.replaceState(null, "", `?${p.toString()}`);
   };
 
   const showFlashcards = availableTabIds.includes("flashcards");
@@ -365,9 +370,9 @@ export function SidebarContentTypeMenu() {
             )}
 
             {/* Shadowing by Books */}
-            <Link
-              href="/student/books"
-              className="cefr-redesign-tile story decoration-transparent text-inherit"
+            <button
+              onClick={() => handleSelectTab("shadowing")}
+              className={`cefr-redesign-tile story decoration-transparent text-inherit text-left${activeTab === "shadowing" && pathname === "/" ? " active" : ""}`}
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
@@ -377,7 +382,7 @@ export function SidebarContentTypeMenu() {
               <p className="cefr-redesign-tile-label">
                 {locale === "vi" ? "Shadowing by Books" : "Shadowing by Books"}
               </p>
-            </Link>
+            </button>
           </div>
         </div>
 

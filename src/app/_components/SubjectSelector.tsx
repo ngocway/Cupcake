@@ -5,7 +5,6 @@ import { updateAllPreferences } from "@/actions/user-preferences-actions";
 import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils";
 import { useRouter } from "next/navigation";
 import { useTransition, useState, useEffect } from "react";
-import { useLocale } from "next-intl";
 import { SidebarContentTypeMenu } from "./SidebarContentTypeMenu";
 
 interface SubjectConfig {
@@ -17,6 +16,7 @@ interface SubjectConfig {
 interface Props {
   subjects: SubjectConfig[];
   config: any;
+  locale?: string;
 }
 
 const subjectStyles: Record<string, { bg: string; activeBg: string; border: string; activeBorder: string; text: string; activeText: string; icon: string }> = {
@@ -47,7 +47,7 @@ function getStyle(subjectId: string) {
   return subjectStyles[subjectId] || defaultStyle;
 }
 
-export function SubjectSelector({ subjects, config }: Props) {
+export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -110,7 +110,7 @@ export function SubjectSelector({ subjects, config }: Props) {
     });
   };
 
-  const locale = useLocale();
+  // locale is passed as prop from server component
 
   return (
     <div className="animate-in fade-in slide-in-from-left duration-700">

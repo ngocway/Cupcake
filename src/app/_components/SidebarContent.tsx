@@ -94,7 +94,7 @@ export async function SidebarContent({ searchParams, initialUserType, studySubje
       `}</style>
 
       {/* Subject Selector */}
-      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} config={config} />
+      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} config={config} locale={locale} />
 
       {/* Learning Goals */}
       <LearningGoalsFilter config={config} activeId={searchParams.goal || searchParams.categoryId} />

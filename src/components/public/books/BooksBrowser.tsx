@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-import { LessonCard } from "@/components/public/ContentCards";
+import Link from "next/link";
 
 const CEFR_LEVEL_CONFIG: Record<string, {
   label: string;
@@ -74,29 +74,63 @@ const CEFR_LEVEL_CONFIG: Record<string, {
 
 const CEFR_ORDER = ["a1", "a2", "b1", "b2", "c1"];
 
-export function normalizeLessonLevel(rawLevel?: string): string {
-  if (!rawLevel) return "a1";
-  const lvl = rawLevel.toLowerCase();
-  if (lvl.includes("pre-a1") || lvl.includes("a1") || lvl.includes("beginner")) return "a1";
-  if (lvl.includes("a2") || lvl.includes("elementary")) return "a2";
-  if (lvl.includes("b1") || (lvl.includes("intermediate") && !lvl.includes("upper"))) return "b1";
-  if (lvl.includes("b2") || lvl.includes("upper")) return "b2";
-  if (lvl.includes("c1") || lvl.includes("advanced")) return "c1";
-  return "a1";
-}
-
-interface LessonAccordionBrowserProps {
-  itemsByLevel: Record<string, any[]>;  // pre-grouped: { a1: [], a2: [...], ... }
-  loadingLevels?: string[];             // levels still being fetched
-  isLoggedIn: boolean;
+interface BooksBrowserProps {
+  itemsByLevel: Record<string, any[]>;   // pre-grouped: { a1: [...], a2: [], ... }
+  loadingLevels?: string[];              // levels still being fetched
   initialLevel?: string;
 }
 
-export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLoggedIn, initialLevel }: LessonAccordionBrowserProps) {
-  // Normalize initial level or default to "a1"
+function BookCard({ book }: { book: any }) {
+  const coverSlide = book.slides?.[0];
+  const coverUrl = book.thumbnailUrl || coverSlide?.imageUrl || "";
+  const pageCount = book._count?.slides ?? book.slides?.length ?? 0;
+
+  return (
+    <Link
+      href={`/student/books/${book.bookId}`}
+      className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/55 rounded-3xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group shadow-md"
+    >
+      {/* Thumbnail */}
+      <div className="relative aspect-[16/9] bg-slate-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden border-b border-slate-100 dark:border-slate-800">
+        {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt={book.title}
+            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-700">
+            menu_book
+          </span>
+        )}
+        {/* Page count pill */}
+        <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[9px] font-black text-white uppercase tracking-wider flex items-center gap-1">
+          <span className="material-symbols-outlined text-[11px]">auto_stories</span>
+          <span>{pageCount} pages</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-5 flex-grow flex flex-col justify-between">
+        <h3 className="text-slate-800 dark:text-white font-black text-base line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+          {book.title}
+        </h3>
+        <div className="mt-4 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">
+          <span>Read &amp; shadow</span>
+          <span className="flex items-center gap-0.5 text-amber-500">
+            <span className="material-symbols-outlined text-xs">mic</span>
+            <span>Pronunciation</span>
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = "a1" }: BooksBrowserProps) {
   const defaultLevel = useMemo(() => {
-    const norm = normalizeLessonLevel(initialLevel);
-    return CEFR_ORDER.includes(norm) ? norm : "a1";
+    return CEFR_ORDER.includes(initialLevel) ? initialLevel : "a1";
   }, [initialLevel]);
 
   const [openLevel, setOpenLevel] = useState<string>(defaultLevel);
@@ -104,42 +138,33 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
   useEffect(() => {
     const handleOpenLevel = (e: any) => {
       const lvl = e.detail?.level;
-      if (lvl && lvl !== "all") {
-        setOpenLevel(lvl);
-      }
+      if (lvl && lvl !== "all" && CEFR_ORDER.includes(lvl)) setOpenLevel(lvl);
     };
     window.addEventListener("open-cefr-level", handleOpenLevel);
     return () => window.removeEventListener("open-cefr-level", handleOpenLevel);
   }, []);
 
-  // Track pagination limits per level (default 6 items)
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({
-    a1: 6,
-    a2: 6,
-    b1: 6,
-    b2: 6,
-    c1: 6,
+    a1: 6, a2: 6, b1: 6, b2: 6, c1: 6,
   });
 
   const handleViewMore = (levelId: string) => {
-    setVisibleCounts((prev) => ({
-      ...prev,
-      [levelId]: (prev[levelId] || 6) + 6,
-    }));
+    setVisibleCounts(prev => ({ ...prev, [levelId]: (prev[levelId] || 6) + 6 }));
   };
 
   return (
     <div className="space-y-4">
       {CEFR_ORDER.map((levelId) => {
         const config = CEFR_LEVEL_CONFIG[levelId] || CEFR_LEVEL_CONFIG.a1;
-        const levelLessons = itemsByLevel[levelId] || [];
+        const levelBooks = itemsByLevel[levelId] || [];
         const isLoading = loadingLevels.includes(levelId);
         const isOpen = openLevel === levelId;
         const currentVisibleCount = visibleCounts[levelId] || 6;
-        const displayedLessons = levelLessons.slice(0, currentVisibleCount);
-        const hasMore = levelLessons.length > currentVisibleCount;
-        // Show count as ? while loading
-        const countLabel = isLoading && levelLessons.length === 0 ? "..." : `${levelLessons.length} ${levelLessons.length === 1 ? "lesson" : "lessons"}`;
+        const displayedBooks = levelBooks.slice(0, currentVisibleCount);
+        const hasMore = levelBooks.length > currentVisibleCount;
+        const countLabel = isLoading && levelBooks.length === 0
+          ? "..."
+          : `${levelBooks.length} ${levelBooks.length === 1 ? "book" : "books"}`;
 
         return (
           <div
@@ -149,7 +174,7 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
               isOpen ? config.bgOpen : config.bgClosed
             }`}
           >
-            {/* Level Accordion Header */}
+            {/* Header */}
             <button
               onClick={() => setOpenLevel(isOpen ? "" : levelId)}
               className="w-full flex items-center gap-3.5 px-6 py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5"
@@ -163,7 +188,7 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
                   {config.label}
                 </span>
                 {!isOpen && (
-                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
+                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                     <span>Click to expand</span>
                     <span>•</span>
                     <span>{countLabel}</span>
@@ -174,21 +199,20 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
               <div className="flex-1" />
 
               {!isOpen && (
-                <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg} ${isLoading && levelLessons.length === 0 ? 'animate-pulse' : ''}`}>
+                <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg} ${isLoading && levelBooks.length === 0 ? "animate-pulse" : ""}`}>
                   {countLabel}
                 </span>
               )}
 
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : "group-hover/accordion:translate-y-0.5"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : ""}`}>
                 <ChevronDown className={`w-4 h-4 transition-colors ${config.accentIcon}`} />
               </div>
             </button>
 
-            {/* Expanded Content: Grid of LessonCards */}
+            {/* Expanded content */}
             {isOpen && (
               <div className="px-6 pb-6 border-t border-slate-200/50 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                {isLoading && levelLessons.length === 0 ? (
-                  // Per-level loading skeleton
+                {isLoading && levelBooks.length === 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 pt-5">
                     {[...Array(3)].map((_, i) => (
                       <div key={i} className="space-y-3 animate-pulse">
@@ -198,29 +222,27 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
                       </div>
                     ))}
                   </div>
-                ) : displayedLessons.length > 0 ? (
+                ) : displayedBooks.length > 0 ? (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12 pt-5">
-                      {displayedLessons.map((lesson) => (
-                        <LessonCard key={lesson.id} item={lesson} isLoggedIn={isLoggedIn} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-10 pt-5">
+                      {displayedBooks.map((book) => (
+                        <BookCard key={book.id} book={book} />
                       ))}
                     </div>
-
-                    {/* View More Button */}
                     {hasMore && (
                       <div className="flex justify-center pt-8">
                         <button
                           onClick={() => handleViewMore(levelId)}
                           className="px-8 py-3 rounded-full text-xs font-black uppercase tracking-wider bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-primary text-slate-700 dark:text-slate-200 hover:text-primary shadow-sm hover:shadow-md transition-all cursor-pointer hover:scale-[1.03] active:scale-95"
                         >
-                          View more ({levelLessons.length - currentVisibleCount} more)
+                          View more ({levelBooks.length - currentVisibleCount} more)
                         </button>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="py-8 text-center text-sm font-bold text-slate-400 dark:text-slate-500">
-                    No lessons available for this level.
+                    No books available for this level.
                   </div>
                 )}
               </div>

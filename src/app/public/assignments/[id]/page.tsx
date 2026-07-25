@@ -2,7 +2,7 @@ import React from 'react';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
-import QuizClientRunner from "@/app/student/assignments/[id]/run/quiz/QuizClientRunner";
+import KidTeenQuizRunner from "@/app/student/assignments/[id]/run/quiz/KidTeenQuizRunner";
 import { fetchWithRedis } from "@/lib/cached-queries";
 import { getCachedAssignmentQuestions, getRelatedAssignmentsCached, getQuestionTranslationMap, getAssignmentTranslations } from "@/app/student/assignments/[id]/run/data";
 import type { Metadata } from "next";
@@ -166,8 +166,8 @@ export default async function PublicAssignmentPage({
         name: assignment.teacher.name,
       },
     }),
-    dateCreated: assignment.createdAt?.toISOString(),
-    dateModified: assignment.updatedAt?.toISOString(),
+    dateCreated: assignment.createdAt ? new Date(assignment.createdAt).toISOString() : undefined,
+    dateModified: assignment.updatedAt ? new Date(assignment.updatedAt).toISOString() : undefined,
     hasCourseInstance: {
       "@type": "CourseInstance",
       courseMode: "online",
@@ -182,14 +182,15 @@ export default async function PublicAssignmentPage({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen">
        <script
          type="application/ld+json"
          dangerouslySetInnerHTML={{ __html: JSON.stringify(exerciseJsonLd) }}
        />
-       <QuizClientRunner 
+       <KidTeenQuizRunner 
           assignment={assignment}
           questions={questions}
+          cefrLevel={assignment.level || "a1"}
           initialAnswers={{}}
           extraDataPromise={Promise.resolve(assignment)}
           relatedAssignmentsPromise={Promise.resolve(relatedAssignments)}

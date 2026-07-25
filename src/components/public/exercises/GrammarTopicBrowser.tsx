@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { CEFR_LEVELS, getTopicsForLevel, type CefrLevel } from "@/lib/grammar-taxonomy";
+import { useContentStore } from "@/store/useContentStore";
 
 const CEFR_LEVEL_CONFIG: Record<string, {
   label: string;
@@ -17,7 +18,7 @@ const CEFR_LEVEL_CONFIG: Record<string, {
   accentIcon: string;
 }> = {
   a1: {
-    label: "Beginner",
+    label: "For Kid 3-6 year and Beginner",
     badge: "bg-emerald-500 text-white shadow-sm shadow-emerald-200",
     border: "border-emerald-200 dark:border-emerald-800/50 hover:border-emerald-400",
     bgClosed: "bg-gradient-to-r from-emerald-50/80 via-teal-50/40 to-white dark:from-emerald-950/20 dark:to-slate-800 hover:from-emerald-100/90 hover:to-teal-50/80",
@@ -140,25 +141,47 @@ const CARD_STYLES = [
 ];
 
 export function GrammarTopicBrowser() {
-  const [openLevel, setOpenLevel] = useState<CefrLevel>("a1");
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [countsLoaded, setCountsLoaded] = useState(false);
+  const studyLevel = useContentStore((s) => (s as any).studyLevel);
+  const initialLevel = (studyLevel === "pre-a1-a1" || !studyLevel ? "a1" : studyLevel) as CefrLevel;
+  const [openLevel, setOpenLevel] = useState<CefrLevel>(initialLevel);
+
+  // Read counts from Zustand store (prefetched by LandingPage on mount)
+  const storeCounts       = useContentStore(s => (s as any).exerciseCounts) as Record<string, number>;
+  const storeCountsLoaded = useContentStore(s => (s as any).exerciseCountsLoaded) as boolean;
+  const setExerciseCounts = useContentStore(s => (s as any).setExerciseCounts);
+
+  const [countsLoaded, setCountsLoaded] = useState(storeCountsLoaded);
+  const counts = storeCountsLoaded ? storeCounts : {};
 
   useEffect(() => {
+    // If already prefetched by LandingPage, skip fetch entirely
+    if (storeCountsLoaded) {
+      setCountsLoaded(true);
+      return;
+    }
+    // Fallback: fetch if used outside LandingPage context
     fetch("/api/exercises/counts")
       .then((r) => r.json())
-      .then((data) => { setCounts(data); setCountsLoaded(true); })
+      .then((data) => { setExerciseCounts(data); setCountsLoaded(true); })
       .catch(() => setCountsLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeCountsLoaded]);
 
-    const handleOpenLevel = (e: any) => {
-      const lvl = e.detail?.level;
-      if (lvl && lvl !== "all") {
-        setOpenLevel(lvl as CefrLevel);
-      }
-    };
+  useEffect(() => {
+    if (storeCountsLoaded) setCountsLoaded(true);
+  }, [storeCountsLoaded]);
+
+  const handleOpenLevel = (e: any) => {
+    const lvl = e.detail?.level;
+    if (lvl && lvl !== "all") setOpenLevel(lvl as CefrLevel);
+  };
+
+  useEffect(() => {
     window.addEventListener("open-cefr-level", handleOpenLevel);
     return () => window.removeEventListener("open-cefr-level", handleOpenLevel);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   // Show skeleton while waiting for exercise counts
   if (!countsLoaded) {

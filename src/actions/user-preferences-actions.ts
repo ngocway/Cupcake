@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
+import { fetchWithRedis } from "@/lib/cached-queries"
 
 export async function setUserTypePreference(userType: string) {
   // 1. Set cookie for immediate access by server components
@@ -195,10 +196,12 @@ const DEFAULT_CONFIG = {
 
 export async function getOnboardingConfig() {
   try {
-    const setting = await prisma.systemSetting.findUnique({
-      where: { key: 'onboarding_config' }
+    return await fetchWithRedis('system:onboarding_config', 3600, async () => {
+      const setting = await prisma.systemSetting.findUnique({
+        where: { key: 'onboarding_config' }
+      })
+      return setting ? setting.value : DEFAULT_CONFIG
     })
-    return setting ? setting.value : DEFAULT_CONFIG
   } catch (e) {
     console.error("Failed to fetch onboarding config", e)
     return DEFAULT_CONFIG
