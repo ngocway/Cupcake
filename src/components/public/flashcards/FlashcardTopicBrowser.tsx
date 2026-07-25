@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { FlashcardModePopup } from "./FlashcardModePopup";
+import { useContentStore } from "@/store/useContentStore";
 
 const CEFR_LEVEL_CONFIG: Record<string, {
   label: string;
@@ -100,9 +101,23 @@ interface Props {
 
 export function FlashcardTopicBrowser({ topics }: Props) {
   const searchParams = useSearchParams();
+  const studyLevel = useContentStore((s) => (s as any).studyLevel);
+  const normalizedLevel = studyLevel === "pre-a1-a1" || studyLevel === "beginner" ? "a1" : (studyLevel || "a1");
+
   const [openLevel, setOpenLevel] = useState<string>("a1");
   const [popupTopic, setPopupTopic] = useState<{ id: string; name: string } | null>(null);
   const didApplyLevelParam = useRef(false);
+
+  // Sync openLevel with selected studyLevel (e.g. from user profile / cookie / pill selector)
+  useEffect(() => {
+    // If URL already specified a level, let the URL-based effect handle it
+    const hasLvlParam = searchParams.get("level");
+    if (hasLvlParam) return;
+
+    if (normalizedLevel && ["a1", "a2", "b1", "b2", "c1"].includes(normalizedLevel)) {
+      setOpenLevel(normalizedLevel);
+    }
+  }, [normalizedLevel, searchParams]);
 
   // On mount: if URL has ?level=a1 (from back-navigation), open that accordion & scroll to it
   useEffect(() => {
