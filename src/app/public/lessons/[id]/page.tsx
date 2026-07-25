@@ -34,6 +34,7 @@ import type { Metadata } from "next";
 
 // Reuse data fetching from student page
 import { getLessonBasic, getLessonExtra, getTeacherBasic, getLessonReviews, getRelatedLessons, getLessonReadingText } from "@/app/student/lessons/[id]/data";
+import { fetchWithRedis } from "@/lib/cached-queries";
 
 // --- Per-lesson SEO Metadata ---
 
@@ -173,11 +174,13 @@ async function PublicSidebarWrapper({ teacherId, lessonId, isGuest }: { teacherI
 async function PublicActionsWrapper({ lessonId, studentId }: { lessonId: string, studentId: string | undefined }) {
   let isBookmarked = false;
   if (studentId) {
-    const favorite = await prisma.favoriteLesson.findUnique({
-      where: {
-        studentId_lessonId: { studentId, lessonId }
-      }
-    });
+    const favorite = await fetchWithRedis(
+      `bookmark:${studentId}:lesson:${lessonId}`,
+      120, // 2-min TTL — short enough to reflect user actions
+      () => prisma.favoriteLesson.findUnique({
+        where: { studentId_lessonId: { studentId, lessonId } }
+      })
+    );
     isBookmarked = !!favorite;
   }
   
@@ -303,19 +306,7 @@ export default async function PublicLessonPage({
     redirect(`/public/lessons/${lesson.slug}`);
   }
 
-  // Fetch additional SEO data for JSON-LD
-  const seoData = await prisma.lesson.findUnique({
-    where: { id: lesson.id },
-    select: {
-      level: true,
-      learningGoals: true,
-      targetAudiences: true,
-      createdAt: true,
-      updatedAt: true,
-      viewsCount: true,
-      teacher: { select: { name: true } },
-    },
-  });
+  // seoData is now included in getLessonBasic — no extra DB query needed
 
   // Parse Youtube ID if applicable
   const getYoutubeId = (url: string | null) => {
@@ -346,27 +337,27 @@ export default async function PublicLessonPage({
     image: thumbnail,
     inLanguage: "en",
     isAccessibleForFree: true,
-    ...(seoData?.level && {
-      educationalLevel: seoData.level,
+    ...(lesson.level && {
+      educationalLevel: lesson.level,
     }),
-    ...(seoData?.learningGoals && seoData.learningGoals.length > 0 && {
-      teaches: seoData.learningGoals,
+    ...(lesson.learningGoals && lesson.learningGoals.length > 0 && {
+      teaches: lesson.learningGoals,
     }),
-    ...(seoData?.targetAudiences && seoData.targetAudiences.length > 0 && {
+    ...(lesson.targetAudiences && lesson.targetAudiences.length > 0 && {
       audience: {
         "@type": "EducationalAudience",
         educationalRole: "student",
-        audienceType: seoData.targetAudiences.join(", "),
+        audienceType: lesson.targetAudiences.join(", "),
       },
     }),
-    ...(seoData?.teacher?.name && {
+    ...(lesson.teacher?.name && {
       creator: {
         "@type": "Person",
-        name: seoData.teacher.name,
+        name: lesson.teacher.name,
       },
     }),
-    dateCreated: seoData?.createdAt?.toISOString(),
-    dateModified: seoData?.updatedAt?.toISOString(),
+    dateCreated: lesson.createdAt?.toISOString(),
+    dateModified: lesson.updatedAt?.toISOString(),
     hasCourseInstance: {
       "@type": "CourseInstance",
       courseMode: "online",

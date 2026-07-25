@@ -18,6 +18,14 @@ export const getLessonBasic = cache(async (id: string) => {
         audioUrl: true,
         audioMetadata: true,
         teacherId: true,
+        // SEO fields (merged to avoid a second DB query in page.tsx)
+        level: true,
+        learningGoals: true,
+        targetAudiences: true,
+        createdAt: true,
+        updatedAt: true,
+        viewsCount: true,
+        teacher: { select: { name: true } },
         assignment: {
           select: {
             id: true,
@@ -73,37 +81,46 @@ export const getTeacherBasic = cache(async (teacherId: string) => {
   });
 });
 
-export const getLessonReadingText = async (lessonId: string) => {
-  const assignment = await prisma.assignment.findFirst({
-    where: { lesson: { id: lessonId } },
-    select: { readingText: true, audioMetadata: true }
-  });
-  if (!assignment || !assignment.readingText) return null;
+export const getLessonReadingText = cache(async (lessonId: string) => {
+  return fetchWithRedis(`lesson:readingText:${lessonId}`, 300, async () => {
+    const assignment = await prisma.assignment.findFirst({
+      where: { lesson: { id: lessonId } },
+      select: { readingText: true, readingTextProcessed: true, audioMetadata: true }
+    });
+    if (!assignment || !assignment.readingText) return null;
 
-  // Nếu có audioMetadata nhưng chưa có span nào được bọc trong readingText, tiến hành bọc động
-  if (assignment.audioMetadata && Array.isArray(assignment.audioMetadata) && assignment.audioMetadata.length > 0) {
-    const hasSpans = assignment.readingText.includes('class="reading-word"');
-    if (!hasSpans) {
-      const { alignAndWrapHtmlServer } = await import("@/actions/material-actions");
-      return await alignAndWrapHtmlServer(assignment.readingText, assignment.audioMetadata as any);
+    // 1. Prefer pre-computed processed HTML (no CPU cost)
+    if (assignment.readingTextProcessed) {
+      return assignment.readingTextProcessed;
     }
-  }
 
-  return assignment.readingText;
-};
-
-export const getLessonReviews = async (lessonId: string) => {
-  return prisma.lessonReview.findMany({
-    where: { lessonId, isApproved: true },
-    include: {
-      student: {
-        select: { name: true, image: true }
+    // 2. Fallback: runtime wrap (only for old lessons not yet backfilled)
+    if (assignment.audioMetadata && Array.isArray(assignment.audioMetadata) && assignment.audioMetadata.length > 0) {
+      const hasSpans = assignment.readingText.includes('class="reading-word"');
+      if (!hasSpans) {
+        const { alignAndWrapHtmlServer } = await import("@/actions/material-actions");
+        return await alignAndWrapHtmlServer(assignment.readingText, assignment.audioMetadata as any);
       }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 5
+    }
+
+    return assignment.readingText;
   });
-};
+});
+
+export const getLessonReviews = cache(async (lessonId: string) => {
+  return fetchWithRedis(`lesson:reviews:${lessonId}`, 600, async () => {
+    return prisma.lessonReview.findMany({
+      where: { lessonId, isApproved: true },
+      include: {
+        student: {
+          select: { name: true, image: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    });
+  });
+});
 
 export const getRelatedLessons = async (lessonId: string) => {
   return fetchWithRedis(`lesson:related:${lessonId}`, 900, async () => {

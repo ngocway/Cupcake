@@ -330,6 +330,10 @@ export async function autoSaveMaterial(payload: {
         updatePayload[field] = payload[field as keyof typeof payload] || null;
       }
     }
+    // If readingText changed, invalidate readingTextProcessed so it gets re-generated on next TTS alignment
+    if (updatePayload.readingText !== undefined) {
+      updatePayload.readingTextProcessed = null;
+    }
     // Always force-save instructionsImageUrl if provided — bypass comparison to avoid any edge case
     if (payload.instructionsImageUrl !== undefined) {
       updatePayload.instructionsImageUrl = payload.instructionsImageUrl || null;
@@ -1555,11 +1559,12 @@ export async function alignMaterialWhisper(assignmentId: string) {
   // 3. Align and wrap HTML text nodes with .reading-word spans
   const finalHtml = await alignAndWrapHtmlServer(readingText, words);
 
-  // 4. Save back to Assignment
+  // 4. Save back to Assignment — both readingText and readingTextProcessed (pre-computed for fast page render)
   await prisma.assignment.update({
     where: { id: assignmentId },
     data: {
       readingText: finalHtml,
+      readingTextProcessed: finalHtml, // Pre-computed: eliminates runtime wrap on page load
       audioMetadata: words as any
     }
   });
