@@ -9,6 +9,7 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
+import { getCachedFlashcardTopics } from "@/actions/flashcards-actions"
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
@@ -99,7 +100,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   };
   const assignmentsPromise  = Promise.resolve({ items: [], total: 0 });
   const lessonsPromise      = Promise.resolve({ items: [], total: 0 });
-  const flashcardsPromise   = Promise.resolve([]);
+  // SSR: fetch topics on server (cache-backed, no client round-trip needed)
+  const flashcardsPromise   = getCachedFlashcardTopics();
 
 
   const kindergartenGamesPromise = Promise.resolve([

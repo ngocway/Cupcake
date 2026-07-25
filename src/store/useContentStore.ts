@@ -58,6 +58,40 @@ interface ContentState {
   setSelectedCategoryId: (val: string) => void
   setSelectedSubCategoryId: (val: string) => void
 
+  // Active tab for home page (flashcards | lessons | exercises | games)
+  // Stored in Zustand so switching is instant (no server round-trip)
+  activeTab: string
+  setActiveTab: (val: string) => void
+
+  // Lessons per CEFR level cache — keyed by "userType:subject:level"
+  // Priority-fetched (current level first), then background-fetched for other levels
+  lessonsPerLevel: Record<string, any[]>
+  lessonsLevelLoading: Record<string, boolean>
+  setLessonsForLevel: (key: string, items: any[]) => void
+  setLessonsLevelLoading: (key: string, loading: boolean) => void
+
+  // Flashcard topics cache (prefetched on mount, persists across tab switches)
+  flashcardTopics: any[]
+  flashcardTopicsLoaded: boolean
+  setFlashcardTopics: (items: any[]) => void
+
+  // Exercise counts cache (prefetched on mount, persists across tab switches)
+  exerciseCounts: Record<string, number>
+  exerciseCountsLoaded: boolean
+  setExerciseCounts: (counts: Record<string, number>) => void
+
+  // Books per CEFR level cache — keyed by "level" (no userType/subject filter for books)
+  // Priority-fetched (current level first), then background-fetched for other levels
+  booksPerLevel: Record<string, any[]>
+  booksLevelLoading: Record<string, boolean>
+  setBooksForLevel: (key: string, items: any[]) => void
+  setBooksLevelLoading: (key: string, loading: boolean) => void
+
+  // Flashcard quick-start cache — cards prefetched from homepage popup
+  // Consumed once by FlashcardsClient then cleared
+  pendingFlashcards: { topicId: string; cards: any[]; mode: string } | null
+  setPendingFlashcards: (data: { topicId: string; cards: any[]; mode: string } | null) => void
+
   clearContent: () => void
 }
 
@@ -82,6 +116,38 @@ export const useContentStore = create<ContentState>((set) => ({
 
   selectedCategoryId: "",
   selectedSubCategoryId: "",
+
+  activeTab: "flashcards",
+  setActiveTab: (val) => set({ activeTab: val }),
+
+  lessonsPerLevel: {},
+  lessonsLevelLoading: {},
+  setLessonsForLevel: (key, items) => set((s) => ({
+    lessonsPerLevel: { ...s.lessonsPerLevel, [key]: items }
+  })),
+  setLessonsLevelLoading: (key, loading) => set((s) => ({
+    lessonsLevelLoading: { ...s.lessonsLevelLoading, [key]: loading }
+  })),
+
+  flashcardTopics: [],
+  flashcardTopicsLoaded: false,
+  setFlashcardTopics: (items) => set({ flashcardTopics: items, flashcardTopicsLoaded: true }),
+
+  exerciseCounts: {},
+  exerciseCountsLoaded: false,
+  setExerciseCounts: (counts) => set({ exerciseCounts: counts, exerciseCountsLoaded: true }),
+
+  booksPerLevel: {},
+  booksLevelLoading: {},
+  setBooksForLevel: (key, items) => set((s) => ({
+    booksPerLevel: { ...s.booksPerLevel, [key]: items }
+  })),
+  setBooksLevelLoading: (key, loading) => set((s) => ({
+    booksLevelLoading: { ...s.booksLevelLoading, [key]: loading }
+  })),
+
+  pendingFlashcards: null,
+  setPendingFlashcards: (data) => set({ pendingFlashcards: data }),
 
   userType: "learner",
   setUserType: (val) => set({ userType: val }),

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import { FlashcardModePopup } from "./FlashcardModePopup";
 
 const CEFR_LEVEL_CONFIG: Record<string, {
   label: string;
@@ -97,7 +99,25 @@ interface Props {
 }
 
 export function FlashcardTopicBrowser({ topics }: Props) {
+  const searchParams = useSearchParams();
   const [openLevel, setOpenLevel] = useState<string>("a1");
+  const [popupTopic, setPopupTopic] = useState<{ id: string; name: string } | null>(null);
+  const didApplyLevelParam = useRef(false);
+
+  // On mount: if URL has ?level=a1 (from back-navigation), open that accordion & scroll to it
+  useEffect(() => {
+    if (didApplyLevelParam.current) return;
+    const lvl = searchParams.get("level");
+    if (lvl && ["a1", "a2", "b1", "b2", "c1"].includes(lvl)) {
+      didApplyLevelParam.current = true;
+      setOpenLevel(lvl);
+      // Scroll accordion into view after it opens
+      setTimeout(() => {
+        const el = document.getElementById(`cefr-level-${lvl}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const handleOpenLevel = (e: any) => {
@@ -115,127 +135,138 @@ export function FlashcardTopicBrowser({ topics }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      {CEFR_ORDER.map((levelId) => {
-        const config = CEFR_LEVEL_CONFIG[levelId] || CEFR_LEVEL_CONFIG.a1;
-        const levelTopics = topics.filter(t => (t.cefrLevel ? t.cefrLevel.toLowerCase() : "a1") === levelId);
-        if (levelTopics.length === 0) return null;
+    <>
+      <div className="space-y-4">
+        {CEFR_ORDER.map((levelId) => {
+          const config = CEFR_LEVEL_CONFIG[levelId] || CEFR_LEVEL_CONFIG.a1;
+          const levelTopics = topics.filter(t => (t.cefrLevel ? t.cefrLevel.toLowerCase() : "a1") === levelId);
+          if (levelTopics.length === 0) return null;
 
-        const isOpen = openLevel === levelId;
-        const totalCards = levelTopics.reduce((sum, t) => sum + (t._count?.flashcards ?? 0), 0);
+          const isOpen = openLevel === levelId;
+          const totalCards = levelTopics.reduce((sum, t) => sum + (t._count?.flashcards ?? 0), 0);
 
-        return (
-          <div
-            key={levelId}
-            id={`cefr-level-${levelId}`}
-            className={`group/accordion rounded-[28px] border-2 transition-all duration-300 ${config.border} ${config.hoverGlow} ${
-              isOpen ? config.bgOpen : config.bgClosed
-            }`}
-          >
-            {/* Level header button */}
-            <button
-              onClick={() => setOpenLevel(isOpen ? "" : levelId)}
-              className="w-full flex items-center gap-3.5 px-6 py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5"
+          return (
+            <div
+              key={levelId}
+              id={`cefr-level-${levelId}`}
+              className={`group/accordion rounded-[28px] border-2 transition-all duration-300 ${config.border} ${config.hoverGlow} ${
+                isOpen ? config.bgOpen : config.bgClosed
+              }`}
             >
-              <span className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>
-                {levelId.toUpperCase()}
-              </span>
-              
-              <div className="flex flex-col">
-                <span className={`font-black text-base md:text-lg leading-tight transition-colors ${config.titleColor}`}>
-                  {config.label}
+              {/* Level header button */}
+              <button
+                onClick={() => setOpenLevel(isOpen ? "" : levelId)}
+                className="w-full flex items-center gap-3.5 px-6 py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5"
+              >
+                <span className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>
+                  {levelId.toUpperCase()}
                 </span>
+
+                <div className="flex flex-col">
+                  <span className={`font-black text-base md:text-lg leading-tight transition-colors ${config.titleColor}`}>
+                    {config.label}
+                  </span>
+                  {!isOpen && (
+                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
+                      <span>Click to expand</span>
+                      <span>•</span>
+                      <span>{levelTopics.length} topics</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1" />
+
                 {!isOpen && (
-                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
-                    <span>Click to expand</span>
-                    <span>•</span>
-                    <span>{levelTopics.length} topics</span>
+                  <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg}`}>
+                    {levelTopics.length} topics · {totalCards} cards
                   </span>
                 )}
-              </div>
 
-              <div className="flex-1" />
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : "group-hover/accordion:translate-y-0.5"}`}>
+                  <ChevronDown className={`w-4 h-4 transition-colors ${config.accentIcon}`} />
+                </div>
+              </button>
 
-              {!isOpen && (
-                <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg}`}>
-                  {levelTopics.length} topics · {totalCards} cards
-                </span>
-              )}
+              {/* Expanded: topic card grid */}
+              {isOpen && (
+                <div className="px-6 pb-6 border-t border-slate-200/50 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pt-5">
+                    {levelTopics.map((topic, idx) => {
+                      const style = CARD_STYLES[idx % CARD_STYLES.length];
+                      const cardCount = topic._count?.flashcards ?? 0;
 
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : "group-hover/accordion:translate-y-0.5"}`}>
-                <ChevronDown className={`w-4 h-4 transition-colors ${config.accentIcon}`} />
-              </div>
-            </button>
+                      return (
+                        <button
+                          key={topic.id}
+                          onClick={() => setPopupTopic({ id: topic.id, name: topic.name })}
+                          className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] min-h-[135px] text-left ${style.bg} ${style.border} ${style.hover}`}
+                        >
+                          {/* Ambient blobs */}
+                          {style.circles.map((cls, cIdx) => (
+                            <div key={cIdx} className={cls} />
+                          ))}
 
-            {/* Expanded: topic card grid */}
-            {isOpen && (
-              <div className="px-6 pb-6 border-t border-slate-200/50 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pt-5">
-                  {levelTopics.map((topic, idx) => {
-                    const style = CARD_STYLES[idx % CARD_STYLES.length];
-                    const cardCount = topic._count?.flashcards ?? 0;
-
-                    return (
-                      <button
-                        key={topic.id}
-                        onClick={() => window.location.href = `/flashcards?topic=${topic.id}`}
-                        className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] min-h-[135px] text-left ${style.bg} ${style.border} ${style.hover}`}
-                      >
-                        {/* Ambient blobs */}
-                        {style.circles.map((cls, cIdx) => (
-                          <div key={cIdx} className={cls} />
-                        ))}
-
-                        {/* Ghost icon watermark */}
-                        {topic.iconUrl ? (
-                          topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-                            <img
-                              src={topic.iconUrl}
-                              alt=""
-                              className="absolute -bottom-4 -right-4 w-20 h-20 object-cover opacity-[0.07] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none"
-                            />
+                          {/* Ghost icon watermark */}
+                          {topic.iconUrl ? (
+                            topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                              <img
+                                src={topic.iconUrl}
+                                alt=""
+                                className="absolute -bottom-4 -right-4 w-20 h-20 object-cover opacity-[0.07] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none"
+                              />
+                            ) : (
+                              <span className="absolute -bottom-3 -right-3 text-5xl opacity-[0.08] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
+                                {topic.iconUrl}
+                              </span>
+                            )
                           ) : (
                             <span className="absolute -bottom-3 -right-3 text-5xl opacity-[0.08] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
-                              {topic.iconUrl}
+                              🧸
                             </span>
-                          )
-                        ) : (
-                          <span className="absolute -bottom-3 -right-3 text-5xl opacity-[0.08] transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
-                            🧸
-                          </span>
-                        )}
+                          )}
 
-                        {/* Top: icon + title */}
-                        <div className="flex items-start gap-3 relative z-10">
-                          <div className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden border border-white">
-                            {topic.iconUrl ? (
-                              topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-                                <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
-                              ) : (
-                                topic.iconUrl
-                              )
-                            ) : "🧸"}
+                          {/* Top: icon + title */}
+                          <div className="flex items-start gap-3 relative z-10">
+                            <div className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden border border-white">
+                              {topic.iconUrl ? (
+                                topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
+                                  <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  topic.iconUrl
+                                )
+                              ) : "🧸"}
+                            </div>
+                            <p className="font-black text-sm text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
+                              {topic.name}
+                            </p>
                           </div>
-                          <p className="font-black text-sm text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
-                            {topic.name}
-                          </p>
-                        </div>
 
-                        {/* Footer: card count */}
-                        <div className="mt-auto pt-2 relative z-10">
-                          <span className="text-xs font-black text-slate-400/90 group-hover:text-slate-600 transition-colors">
-                            {cardCount > 0 ? `${cardCount} Cards` : "—"}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
+                          {/* Footer: card count */}
+                          <div className="mt-auto pt-2 relative z-10">
+                            <span className="text-xs font-black text-slate-400/90 group-hover:text-slate-600 transition-colors">
+                              {cardCount > 0 ? `${cardCount} Cards` : "—"}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mode selection popup — renders on top of current page */}
+      {popupTopic && (
+        <FlashcardModePopup
+          topic={popupTopic}
+          onClose={() => setPopupTopic(null)}
+        />
+      )}
+    </>
   );
 }
+
