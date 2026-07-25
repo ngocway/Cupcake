@@ -491,9 +491,32 @@ const LessonList = memo(function LessonList({
   if (displayItems.length === 0 && searchKeyword) return <EmptySearchState keyword={searchKeyword} onClear={onClear} />
   if (displayItems.length === 0) return <div className="text-center py-20 text-primary/50 font-bold">No content available.</div>
 
+  const lessonsByLevel = {
+    a1: displayItems.filter((l: any) => {
+      const lvl = (l.level || "").toLowerCase();
+      return lvl.includes("pre-a1") || lvl.includes("a1") || lvl.includes("beginner");
+    }),
+    a2: displayItems.filter((l: any) => {
+      const lvl = (l.level || "").toLowerCase();
+      return lvl.includes("a2") || lvl.includes("elementary");
+    }),
+    b1: displayItems.filter((l: any) => {
+      const lvl = (l.level || "").toLowerCase();
+      return lvl.includes("b1") || (lvl.includes("intermediate") && !lvl.includes("upper"));
+    }),
+    b2: displayItems.filter((l: any) => {
+      const lvl = (l.level || "").toLowerCase();
+      return lvl.includes("b2") || lvl.includes("upper");
+    }),
+    c1: displayItems.filter((l: any) => {
+      const lvl = (l.level || "").toLowerCase();
+      return lvl.includes("c1") || lvl.includes("advanced");
+    }),
+  };
+
   return (
     <>
-      <LessonAccordionBrowser items={displayItems} isLoggedIn={isLoggedIn} initialLevel={studyLevel} />
+      <LessonAccordionBrowser itemsByLevel={lessonsByLevel} isLoggedIn={isLoggedIn} initialLevel={studyLevel} />
       {hasMoreLe && (
         <div ref={bottomRef} className="w-full flex justify-center py-10">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
