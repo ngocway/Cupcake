@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 interface CustomAudioPlayerProps {
   src: string;
@@ -13,17 +13,18 @@ interface CustomAudioPlayerProps {
 export function CustomAudioPlayer({ 
   src, 
   title = "Nghe bài giảng", 
-  subtitle = "Audio Lesson",
+  subtitle = "Lesson Audio",
   className = "" 
 }: CustomAudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [speedIdx, setSpeedIdx] = useState(0);
 
-  // Safe percentage: returns 0 if duration is 0 or NaN
+  const speeds = [1, 1.25, 1.5, 0.75];
   const progressPercent = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
 
   const togglePlay = () => {
@@ -37,24 +38,21 @@ export function CustomAudioPlayer({
     setIsPlaying(!isPlaying);
   };
 
-  const stopAudio = () => {
+  const cycleSpeed = () => {
     const audio = audioRef.current;
-    if (!audio) return;
-    audio.pause();
-    audio.currentTime = 0;
-    setIsPlaying(false);
-    setCurrentTime(0);
-    window.dispatchEvent(new CustomEvent('readingAudioTimeUpdate', { detail: { currentTime: -1 } }));
+    const nextIdx = (speedIdx + 1) % speeds.length;
+    const nextSpeed = speeds[nextIdx];
+    if (audio) audio.playbackRate = nextSpeed;
+    setSpeedIdx(nextIdx);
   };
 
-  const changeSpeed = (speed: number) => {
+  const toggleMute = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.playbackRate = speed;
-    setPlaybackRate(speed);
+    audio.muted = !isMuted;
+    setIsMuted(!isMuted);
   };
 
-  // Seek by clicking/dragging directly on the progress track
   const handleSeek = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const bar = progressRef.current;
     const audio = audioRef.current;
@@ -67,7 +65,7 @@ export function CustomAudioPlayer({
   }, [duration]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.buttons !== 1) return; // only when mouse button held
+    if (e.buttons !== 1) return;
     handleSeek(e);
   }, [handleSeek]);
 
@@ -81,13 +79,11 @@ export function CustomAudioPlayer({
     };
 
     const handleLoadedMetadata = () => {
-      // duration is reliable here
       if (isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
       }
     };
 
-    // Some browsers fire durationchange separately
     const handleDurationChange = () => {
       if (isFinite(audio.duration) && audio.duration > 0) {
         setDuration(audio.duration);
@@ -105,10 +101,10 @@ export function CustomAudioPlayer({
     audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('ended', handleEnded);
 
-    // Apply current playback rate in case component re-mounts
-    audio.playbackRate = playbackRate;
+    // Apply current speed
+    audio.playbackRate = speeds[speedIdx] ?? 1;
 
-    // If metadata already loaded (e.g. cached)
+    // If metadata already loaded (cached)
     if (isFinite(audio.duration) && audio.duration > 0) {
       setDuration(audio.duration);
     }
@@ -123,80 +119,63 @@ export function CustomAudioPlayer({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
-  // Keep playback rate in sync without re-attaching all listeners
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = playbackRate;
-    }
-  }, [playbackRate]);
-
   const formatTime = (time: number) => {
-    if (!isFinite(time) || time < 0) return '0:00';
+    if (!isFinite(time) || time < 0) return '00:00';
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className={`bg-white/40 backdrop-blur-md rounded-3xl p-6 border border-white/60 shadow-xl flex items-center gap-6 animate-in slide-in-from-top-4 duration-500 ${className}`}>
+    <div className={`bg-emerald-50/70 backdrop-blur-xl rounded-[20px] p-4 sm:p-6 border border-emerald-100 shadow-xl flex items-center gap-4 sm:gap-6 animate-in slide-in-from-top-4 duration-500 ${className}`}>
       <audio ref={audioRef} src={src} preload="metadata" />
-      
-      {/* Play/Pause Button */}
-      <button 
+
+      {/* ── Play/Pause button ── round, like reference */}
+      <button
         onClick={togglePlay}
-        className="size-14 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 shrink-0 hover:scale-105 active:scale-95 transition-all"
+        className="size-12 sm:size-14 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 shrink-0 hover:scale-105 active:scale-95 transition-all"
       >
-        {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current" />}
+        {isPlaying
+          ? <Pause className="w-5 h-5 fill-current" />
+          : <Play className="w-5 h-5 fill-current ml-0.5" />
+        }
       </button>
 
-      <div className="flex-1 min-w-0 space-y-3">
-        {/* Title row + controls */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-black text-slate-700 uppercase tracking-widest truncate">{title}</span>
-            {subtitle && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{subtitle}</span>}
-          </div>
-          
-          <div className="flex items-center gap-2 shrink-0">
-
-            
-            {/* Speed buttons */}
-            {([0.7, 0.9, 1, 1.5, 2] as const).map((speed) => (
-              <button
-                key={speed}
-                onClick={() => changeSpeed(speed)}
-                className={`px-3 py-1 rounded-full text-[10px] font-black transition-all ${
-                  playbackRate === speed 
-                  ? "bg-primary text-white shadow-sm" 
-                  : "bg-slate-100 text-slate-400 hover:bg-slate-200"
-                }`}
-              >
-                {speed}x
-              </button>
-            ))}
-          </div>
+      {/* ── Progress + timestamps ── */}
+      <div className="flex-1 flex flex-col gap-2 min-w-0">
+        <div className="flex justify-between items-center text-[11px] font-black text-slate-500">
+          <span>{formatTime(currentTime)}</span>
+          <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-primary/70">{subtitle}</span>
+          <span>{formatTime(duration)}</span>
         </div>
-
-        {/* Progress row */}
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-bold text-slate-400 w-8 shrink-0">{formatTime(currentTime)}</span>
-
-          {/* Progress track — single source of truth, no overlapping absolutes */}
+        <div
+          ref={progressRef}
+          onClick={handleSeek}
+          onMouseMove={handleMouseMove}
+          className="h-3 w-full bg-white rounded-full overflow-hidden cursor-pointer relative"
+        >
           <div
-            ref={progressRef}
-            onClick={handleSeek}
-            onMouseMove={handleMouseMove}
-            className="flex-1 h-2 bg-slate-200 rounded-full cursor-pointer overflow-hidden"
-          >
-            <div
-              className="h-full bg-primary rounded-full transition-none"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-
-          <span className="text-[10px] font-bold text-slate-400 w-8 text-right shrink-0">{formatTime(duration)}</span>
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-emerald-300 rounded-full transition-none"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
+
+      {/* ── Speed cycle button ── single button like reference */}
+      <button
+        onClick={cycleSpeed}
+        className="h-10 px-3 rounded-full font-black text-[11px] text-slate-500 hover:bg-white transition-colors shrink-0"
+      >
+        {speeds[speedIdx]}x
+      </button>
+
+      {/* ── Mute toggle ── */}
+      <button
+        onClick={toggleMute}
+        className="size-10 rounded-full hover:bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+      >
+        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+      </button>
     </div>
   );
 }

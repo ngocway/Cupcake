@@ -46,7 +46,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-body text-slate-900 dark:text-white relative">
+    <div className="min-h-screen font-body text-slate-900 dark:text-white relative">
       
  
       {/* SideNavBar - Controlled by Wrapper */}

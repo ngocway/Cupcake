@@ -42,7 +42,7 @@ export function LearningSidebar({
   const [showLoginModal, setShowLoginModal] = useState(false);
   
   return (
-    <aside className="w-full h-full flex flex-col bg-transparent overflow-y-auto no-scrollbar p-4 sm:p-10 pt-4 sm:pt-7 space-y-8 sm:space-y-10">
+    <aside className="w-full flex flex-col bg-transparent space-y-6">
        {/* Teacher Profile Card */}
        {teacher?.isPortfolioPublished && (
          <div className="glass rounded-3xl p-8 space-y-8 flex flex-col items-center text-center shadow-xl">
@@ -77,8 +77,8 @@ export function LearningSidebar({
        )}
 
        {/* Related Lessons Card */}
-       <div className="glass rounded-3xl p-6 md:p-8 space-y-6 shadow-xl border border-white/10">
-          <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t("relatedLessons")}</h4>
+       <div className="bg-white/70 backdrop-blur-xl border-2 border-emerald-100 rounded-[28px] p-5 sm:p-6 space-y-5 shadow-xl shadow-primary/5">
+          <h4 className="font-headline text-xs font-black text-[#8C826D] uppercase tracking-widest mb-4 px-1">{t("relatedLessons")}</h4>
           
           <div className="space-y-3">
              {relatedItems.map((item) => {
@@ -88,7 +88,7 @@ export function LearningSidebar({
 
                 const itemContent = (
                   <>
-                    <div className="w-28 aspect-video rounded-[3px] bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0 shadow-sm relative border border-white/20">
+                    <div className="w-24 aspect-video rounded-[10px] overflow-hidden shrink-0 shadow-sm relative border-2 border-white bg-emerald-100">
                       {item.thumbnail ? (
                         <img src={item.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       ) : (
@@ -98,20 +98,14 @@ export function LearningSidebar({
                       )}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
                     </div>
-                    <div className="flex-1 overflow-hidden flex flex-col gap-1.5">
-                      <h5 className="text-[13px] font-black text-slate-800 dark:text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                        {item.title}
-                      </h5>
-                      {tag ? (
-                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded-md w-fit">
-                          #{tag}
-                        </span>
-                      ) : (
-                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded-md w-fit">
-                          Lesson
-                        </span>
-                      )}
-                    </div>
+                     <div className="flex-1 overflow-hidden flex flex-col gap-1.5">
+                       <h5 className="text-[13px] font-black text-[#3E3524] line-clamp-2 leading-snug group-hover:text-[#12A375] transition-colors">
+                         {item.title}
+                       </h5>
+                       <span className="text-[9px] font-black uppercase tracking-wider text-[#0B7A58] bg-emerald-100 px-2 py-0.5 rounded-md w-fit">
+                         {tag ? `#${tag}` : 'Lesson'}
+                       </span>
+                     </div>
                   </>
                 );
 
@@ -121,7 +115,7 @@ export function LearningSidebar({
                     <div
                       key={item.id}
                       onClick={() => setShowLoginModal(true)}
-                      className="flex items-center gap-4 p-2 -mx-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-2xl transition-all duration-300 group cursor-pointer"
+                      className="flex items-center gap-3 p-2 -mx-2 hover:bg-emerald-50 rounded-2xl transition-all duration-300 group cursor-pointer"
                     >
                       {itemContent}
                     </div>
@@ -132,7 +126,7 @@ export function LearningSidebar({
                   <Link
                     key={item.id}
                     href={`/student/lessons/${item.slug || item.id}`}
-                    className="flex items-center gap-4 p-2 -mx-2 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 rounded-2xl transition-all duration-300 group"
+                    className="flex items-center gap-3 p-2 -mx-2 hover:bg-emerald-50 rounded-2xl transition-all duration-300 group"
                   >
                     {itemContent}
                   </Link>

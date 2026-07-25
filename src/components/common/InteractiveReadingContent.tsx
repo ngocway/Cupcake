@@ -541,7 +541,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
     if (fixedHtml.includes('Nghe Audio')) {
       fixedHtml = fixedHtml
         .replace(/<span class="material-symbols-outlined[^>]*>volume_up<\/span>\s*Nghe Audio/g, '<span class="material-symbols-outlined text-[16px]">volume_up</span>')
-        .replace(/class="inline-audio-marker[^"]+"/g, 'class="inline-audio-marker text-primary bg-primary/10 rounded-full w-7 h-7 mx-1 cursor-pointer inline-flex items-center justify-center select-none hover:bg-primary/20 transition-colors shadow-sm ring-1 ring-primary/20 align-middle" title="Nghe Audio"');
+        .replace(/class="inline-audio-marker[^"]+"/g, 'class="inline-audio-marker" title="Nghe câu"');
     }
 
     // 2. Bảo vệ Layout của hệ thống: Biến đổi thẻ `body` bên trong `<style>` thành class `.interactive-reading-content`
@@ -567,32 +567,76 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
       <SelectionTranslator />
 
       <style jsx global>{`
-        .custom-vocab-marker,
-        .custom-vocab-marker * {
-          background-color: transparent !important;
-          background: transparent !important;
-          cursor: pointer !important;
-          padding: 0 !important;
-          color: inherit !important;
-          font-weight: inherit !important;
-          transition: all 0.2s !important;
-          border-radius: 0 !important;
-          box-shadow: none !important;
-          border: none !important;
+        /* ===== Reading content line height ===== */
+        .interactive-reading-content {
+          line-height: 2.2 !important;
+        }
+        .interactive-reading-content p {
+          line-height: 2.2 !important;
+          margin-bottom: 1.2em !important;
         }
 
+        /* ===== Vocab marker — matches reference HTML .vocab ===== */
         .custom-vocab-marker {
-          text-decoration-line: underline !important;
-          text-decoration-color: #eab308 !important;
-          text-decoration-thickness: 2px !important;
-          text-underline-offset: 4px !important;
+          background: rgba(196, 239, 224, 0.45) !important;
+          color: #0B7A58 !important;
+          font-weight: 800 !important;
+          padding: 0px 5px !important;
+          display: inline-block !important;
+          line-height: 1.2 !important;
+          white-space: nowrap !important;
+          vertical-align: middle !important;
+          border-radius: 4px !important;
+          border-bottom: 2px solid #0B7A58 !important;
+          border-top: none !important;
+          border-left: none !important;
+          border-right: none !important;
+          cursor: help !important;
+          text-decoration: none !important;
+          box-shadow: none !important;
+          position: relative !important;
+          transition: all 0.2s !important;
+        }
+        .custom-vocab-marker * {
+          color: #0B7A58 !important;
+          font-weight: 800 !important;
+        }
+        .custom-vocab-marker:hover {
+          background: rgba(196, 239, 224, 0.75) !important;
         }
 
-        .custom-vocab-marker:hover,
-        .custom-vocab-marker:hover * {
-          color: #eab308 !important;
+        /* ===== Inline audio dot — matches reference HTML .audio-dot ===== */
+        .inline-audio-marker {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 22px !important;
+          height: 22px !important;
+          border-radius: 999px !important;
+          background: rgba(18, 163, 117, 0.12) !important;
+          color: #12A375 !important;
+          margin: 0 2px !important;
+          cursor: pointer !important;
+          vertical-align: middle !important;
+          transition: all .2s !important;
+          box-shadow: none !important;
+          outline: none !important;
+          border: none !important;
+          flex-shrink: 0 !important;
+        }
+        .inline-audio-marker:hover {
+          background: rgba(18, 163, 117, 0.25) !important;
+          transform: scale(1.1) !important;
+        }
+        .inline-audio-marker svg,
+        .inline-audio-marker span.material-symbols-outlined {
+          width: 14px !important;
+          height: 14px !important;
+          font-size: 14px !important;
+          line-height: 1 !important;
         }
 
+        /* ===== Reading word highlight ===== */
         .reading-word,
         .reading-sentence {
           transition: background-color 0.15s ease, color 0.15s ease;
@@ -603,13 +647,13 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
 
         .reading-word.highlighted,
         .reading-sentence.highlighted {
-          background-color: #fef08a !important; /* bg-yellow-200 */
-          color: #1e293b !important; /* text-slate-800 */
+          background-color: #fef08a !important;
+          color: #1e293b !important;
         }
 
         :global(.dark) .reading-word.highlighted,
         :global(.dark) .reading-sentence.highlighted {
-          background-color: rgba(234, 179, 8, 0.4) !important; /* yellow-500 with opacity */
+          background-color: rgba(234, 179, 8, 0.4) !important;
           color: #ffffff !important;
         }
       `}</style>
