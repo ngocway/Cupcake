@@ -163,6 +163,7 @@ model Assignment {
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
   readingText           String?
+  readingTextProcessed  String?   // Pre-computed HTML with <span class="reading-word"> for audio sync
   gradeLevel            String?
   level                 String?
   grammarTopic          String?
@@ -742,6 +743,7 @@ model ReadAlongBook {
   description  String?
   mdContent    String?          // Stored raw markdown content (nullable for non-md books)
   thumbnailUrl String?          // 16:9 cover image URL
+  level        String           @default("a1") // CEFR level: a1 | a2 | b1 | b2 | c1
   status       BookStatus       @default(DRAFT)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
