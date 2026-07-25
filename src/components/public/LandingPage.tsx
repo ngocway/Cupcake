@@ -444,9 +444,31 @@ const LessonList = memo(function LessonList({
 
   // During transition: if we have cached data, show it dimmed → no blank flash
   if (isTransitioning && lessons.length > 0) {
+    const lessonsByLevel = {
+      a1: lessons.filter((l: any) => {
+        const lvl = (l.level || "").toLowerCase();
+        return lvl.includes("pre-a1") || lvl.includes("a1") || lvl.includes("beginner");
+      }),
+      a2: lessons.filter((l: any) => {
+        const lvl = (l.level || "").toLowerCase();
+        return lvl.includes("a2") || lvl.includes("elementary");
+      }),
+      b1: lessons.filter((l: any) => {
+        const lvl = (l.level || "").toLowerCase();
+        return lvl.includes("b1") || (lvl.includes("intermediate") && !lvl.includes("upper"));
+      }),
+      b2: lessons.filter((l: any) => {
+        const lvl = (l.level || "").toLowerCase();
+        return lvl.includes("b2") || lvl.includes("upper");
+      }),
+      c1: lessons.filter((l: any) => {
+        const lvl = (l.level || "").toLowerCase();
+        return lvl.includes("c1") || lvl.includes("advanced");
+      }),
+    };
     return (
       <div className="opacity-40 pointer-events-none transition-opacity duration-300">
-        <LessonAccordionBrowser items={lessons} isLoggedIn={isLoggedIn} initialLevel={studyLevel} />
+        <LessonAccordionBrowser itemsByLevel={lessonsByLevel} isLoggedIn={isLoggedIn} initialLevel={studyLevel} />
       </div>
     )
   }
