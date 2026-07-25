@@ -62,3 +62,12 @@ export async function prewarmQuestionsAction(assignmentId: string) {
   const { prewarmAssignmentQuestions } = await import("./data");
   return prewarmAssignmentQuestions(assignmentId);
 }
+
+/** Fetch full questions for lobby prefetch — returns cached data from Redis (TTL 1h).
+ *  Called by QuizPrefetcher client component to seed Zustand store immediately.
+ *  No auth needed since questions are already assigned/visible to the student.
+ */
+export async function fetchQuestionsForLobby(assignmentId: string) {
+  const { getCachedAssignmentQuestions } = await import("./data");
+  return getCachedAssignmentQuestions(assignmentId);
+}

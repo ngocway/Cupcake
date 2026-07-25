@@ -92,6 +92,11 @@ interface ContentState {
   pendingFlashcards: { topicId: string; cards: any[]; mode: string } | null
   setPendingFlashcards: (data: { topicId: string; cards: any[]; mode: string } | null) => void
 
+  // Quiz quick-start cache — questions prefetched from lobby (run page) while user reads instructions
+  // Consumed once by quiz/page.tsx server component then cleared
+  pendingQuizData: { assignmentId: string; questions: any[] } | null
+  setPendingQuizData: (data: { assignmentId: string; questions: any[] } | null) => void
+
   clearContent: () => void
 }
 
@@ -148,6 +153,9 @@ export const useContentStore = create<ContentState>((set) => ({
 
   pendingFlashcards: null,
   setPendingFlashcards: (data) => set({ pendingFlashcards: data }),
+
+  pendingQuizData: null,
+  setPendingQuizData: (data) => set({ pendingQuizData: data }),
 
   userType: "learner",
   setUserType: (val) => set({ userType: val }),

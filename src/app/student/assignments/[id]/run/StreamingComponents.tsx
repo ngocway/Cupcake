@@ -1,5 +1,6 @@
 import React from "react";
 import prisma from "@/lib/prisma";
+import { fetchWithRedis } from "@/lib/cached-queries";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { getAssignmentReviews, getAssignmentInstructions, getAssignmentTeacher } from "./data";
@@ -32,10 +33,14 @@ export async function BookmarkWrapper({
   assignmentId: string; 
   studentId: string;
 }) {
-  const favorite = await prisma.favoriteAssignment.findFirst({
-    where: { assignmentId, studentId },
-    select: { studentId: true }
-  });
+  const favorite = await fetchWithRedis(
+    `bookmark:${studentId}:assignment:${assignmentId}`,
+    120, // 2-min TTL
+    () => prisma.favoriteAssignment.findFirst({
+      where: { assignmentId, studentId },
+      select: { studentId: true }
+    })
+  );
 
   return (
     <BookmarkButton 

@@ -35,17 +35,15 @@ import { getTranslations, getLocale } from 'next-intl/server';
 // --- Sub-components for Streaming ---
 
 async function SubmissionHistoryWrapper({ 
-  assignmentId, 
-  studentId, 
-  maxScore, 
+  completedSubmissions,
+  maxScore,
   slug,
   reviewMode,
   hasAttemptsLeft,
   isDeadlinePassed,
   totalQuestions
 }: { 
-  assignmentId: string;
-  studentId: string;
+  completedSubmissions: Array<{ id: string; submittedAt: Date | null; attemptNumber: number; answers: { isCorrect: boolean | null }[] }>;
   maxScore: number;
   slug: string;
   reviewMode: string;
@@ -56,20 +54,6 @@ async function SubmissionHistoryWrapper({
   const t = await getTranslations("student.assignmentRun");
   const locale = await getLocale();
   const dateLocale = locale === "vi" ? vi : enUS;
-
-  const completedSubmissions = await prisma.submission.findMany({
-    where: {
-      assignmentId,
-      studentId,
-      submittedAt: { not: null }
-    },
-    orderBy: { attemptNumber: 'desc' },
-    include: {
-      answers: {
-        select: { isCorrect: true }
-      }
-    }
-  });
 
   const canReview = (sub: any) => {
     if (reviewMode === "AFTER_EACH_ATTEMPT") return true;
@@ -144,11 +128,17 @@ export default async function StudentAssignmentLobbyPage({
   const userId = sessionData.user.id;
 
   // Hướng 1 & 4: Parallel queries + Meta-only fetch (Cực nhanh)
-  const [rawAssignment, submissionStatus, t, locale] = await Promise.all([
+  const [rawAssignment, allSubmissions, t, locale] = await Promise.all([
     getAssignmentMeta(id),
+    // Fetch submissions once with answers included — reused for both status check and history display
     prisma.submission.findMany({
       where: { assignmentId: id, studentId: userId },
-      select: { id: true, submittedAt: true, attemptNumber: true },
+      select: {
+        id: true,
+        submittedAt: true,
+        attemptNumber: true,
+        answers: { select: { isCorrect: true } }  // Included here so SubmissionHistoryWrapper doesn't need to re-fetch
+      },
       orderBy: { attemptNumber: 'desc' }
     }),
     getTranslations("student.assignmentRun"),
@@ -166,8 +156,9 @@ export default async function StudentAssignmentLobbyPage({
     redirect(`/student/assignments/${assignment.slug}/run`);
   }
 
-  const activeSubmission = submissionStatus.find(s => !s.submittedAt);
-  const completedCount = submissionStatus.filter(s => s.submittedAt).length;
+  const activeSubmission = allSubmissions.find(s => !s.submittedAt);
+  const completedSubmissions = allSubmissions.filter(s => !!s.submittedAt);
+  const completedCount = completedSubmissions.length;
   
   const hasAttemptsLeft = completedCount < assignment.maxAttempts;
   const isDeadlinePassed = assignment.deadline ? new Date() > assignment.deadline : false;
@@ -266,15 +257,14 @@ export default async function StudentAssignmentLobbyPage({
               {/* History Section (Streamed) */}
               <Suspense fallback={<div className="h-48 bg-white dark:bg-slate-900 animate-pulse rounded-2xl" />}>
                 <SubmissionHistoryWrapper 
-                  assignmentId={assignment.id}
-                  studentId={userId}
-                  maxScore={maxScore}
-                  totalQuestions={totalQuestions}
-                  slug={assignment.slug || assignment.id}
-                  reviewMode="AFTER_EACH_ATTEMPT" // Temporary fix or pass correctly
-                  hasAttemptsLeft={hasAttemptsLeft}
-                  isDeadlinePassed={isDeadlinePassed}
-                />
+                completedSubmissions={completedSubmissions}
+                maxScore={maxScore}
+                totalQuestions={totalQuestions}
+                slug={assignment.slug || assignment.id}
+                reviewMode="AFTER_EACH_ATTEMPT"
+                hasAttemptsLeft={hasAttemptsLeft}
+                isDeadlinePassed={isDeadlinePassed}
+              />
               </Suspense>
             </div>
           </div>

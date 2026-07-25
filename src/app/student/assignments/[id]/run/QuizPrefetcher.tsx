@@ -1,18 +1,26 @@
 "use client";
 
 import { useEffect } from "react";
-import { prewarmQuestionsAction } from "./actions";
+import { fetchQuestionsForLobby } from "./actions";
+import { useContentStore } from "@/store/useContentStore";
 
 export function QuizPrefetcher({ assignmentId }: { assignmentId: string }) {
-  useEffect(() => {
-    // Chỉ kích hoạt sau 1s để nhường tài nguyên cho các render quan trọng ban đầu
-    const timer = setTimeout(() => {
-      prewarmQuestionsAction(assignmentId).catch(() => {
-        // Im lặng nếu lỗi, đây chỉ là prefetch
-      });
-    }, 1000);
+  const setPendingQuizData = useContentStore(s => s.setPendingQuizData);
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    // Fetch questions immediately and seed into Zustand store.
+    // quiz/page.tsx will consume them on navigation — no DB round-trip needed.
+    fetchQuestionsForLobby(assignmentId)
+      .then(questions => {
+        if (questions && questions.length > 0) {
+          setPendingQuizData({ assignmentId, questions });
+        }
+      })
+      .catch(() => {
+        // Silent fail — quiz/page.tsx will fetch normally as fallback
+      });
+  // Run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId]);
 
   return null;

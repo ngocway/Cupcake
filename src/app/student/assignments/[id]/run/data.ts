@@ -52,11 +52,13 @@ export const getAssignmentTeacher = async (id: string) => {
 };
 
 export const getAssignmentReviews = async (assignmentId: string) => {
-  return prisma.assignmentReview.findMany({
-    where: { assignmentId, isApproved: true },
-    take: 3,
-    include: { student: { select: { name: true, image: true } } },
-    orderBy: { createdAt: "desc" }
+  return fetchWithRedis(`assignment:reviews:${assignmentId}`, 600, async () => {
+    return prisma.assignmentReview.findMany({
+      where: { assignmentId, isApproved: true },
+      take: 3,
+      include: { student: { select: { name: true, image: true } } },
+      orderBy: { createdAt: "desc" }
+    });
   });
 };
 
