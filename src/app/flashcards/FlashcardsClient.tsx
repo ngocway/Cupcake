@@ -28,6 +28,7 @@ interface Topic {
   slug: string
   iconUrl?: string | null
   flashcardCount?: number
+  cefrLevel?: string | null
 }
 
 interface Category {
@@ -174,6 +175,9 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const router = useRouter()
   const searchParams = useSearchParams()
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
+  const pendingFlashcards = useContentStore(s => s.pendingFlashcards)
+  const setPendingFlashcards = useContentStore(s => s.setPendingFlashcards)
+  const flashcardTopics = useContentStore(s => s.flashcardTopics)
 
   // Sắp xếp các danh mục theo thứ tự độ tuổi
   const CATEGORY_ORDER = [
@@ -220,7 +224,13 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const [wordAudioEnded, setWordAudioEnded] = useState<boolean>(false)
 
   // Trạng thái cho chế độ Thử thách từ vựng (Gợi ý, Ghép chữ, Tự gõ)
-  const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>('scramble')
+  const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>(() => {
+    // Read mode from URL param (?mode=...) for direct links — fallback to 'scramble'
+    const urlMode = typeof window !== 'undefined'
+      ? (new URLSearchParams(window.location.search).get('mode') as 'hint' | 'scramble' | 'type' | null)
+      : null
+    return (urlMode && ['hint', 'scramble', 'type'].includes(urlMode)) ? urlMode : 'scramble'
+  })
   const [scrambledLetters, setScrambledLetters] = useState<{ id: number, letter: string, index: number, used: boolean }[]>([])
   const [shakeItemId, setShakeItemId] = useState<number | null>(null)
   const [wrongTypedIndex, setWrongTypedIndex] = useState<number | null>(null)
@@ -297,6 +307,44 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       window.speechSynthesis.cancel()
     }
   }
+
+  // ── Quick-start: consume pre-fetched cards from homepage popup ───────────────
+  // If the user clicked a topic on the home page, cards + mode are already in
+  // the Zustand store. Consume them immediately (no server round-trip needed).
+  useEffect(() => {
+    const topicId = searchParams.get('topic')
+    if (!topicId || !pendingFlashcards || pendingFlashcards.topicId !== topicId) return
+
+    const { cards, mode } = pendingFlashcards
+    // Clear store so we don't reuse stale data on back/refresh
+    setPendingFlashcards(null)
+
+    if (cards.length === 0) return
+
+    // Find the matching topic in categories to set selectedCategory + selectedTopic
+    let matchedTopic: Topic | null = null
+    let matchedCategory: Category | null = null
+    for (const cat of categories) {
+      const found = cat.topics.find(t => t.id === topicId)
+      if (found) { matchedTopic = found; matchedCategory = cat; break }
+    }
+
+    setFlashcards(cards)
+    setCurrentIndex(0)
+    setIsFlipped(false)
+    setIsImageLoading(true)
+    setChallengeMode(mode as 'hint' | 'scramble' | 'type')
+    if (matchedCategory) setSelectedCategory(matchedCategory)
+    if (matchedTopic) {
+      // Enrich with cefrLevel from store (initialCategories doesn't carry this field)
+      const fullTopicData = flashcardTopics.find((t: any) => t.id === matchedTopic!.id)
+      setSelectedTopic({ ...matchedTopic, cefrLevel: fullTopicData?.cefrLevel ?? 'a1' })
+    }
+    setFocusMode(true)
+    // Mark so the URL-watch useEffect doesn't double-trigger
+    programmaticNavRef.current = true
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Tự nhận diện ngôn ngữ thiết bị lần đầu tiên nếu chưa có
   useEffect(() => {
@@ -773,7 +821,10 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   // Xử lý nạp Flashcards khi chọn xong Topic
   const handleSelectTopic = useCallback(async (topic: Topic) => {
     setLoading(true)
-    setSelectedTopic(topic)
+    // Enrich with cefrLevel from store for accurate back-navigation
+    const fullTopicData = flashcardTopics.find((t: any) => t.id === topic.id)
+    const enrichedTopic = { ...topic, cefrLevel: fullTopicData?.cefrLevel ?? 'a1' }
+    setSelectedTopic(enrichedTopic)
     
     // Đánh dấu đây là navigation do code gọi (không phải user nhập URL)
     // để useEffect URL không re-trigger handleSelectTopic lần 2
@@ -803,7 +854,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [router, flashcardTopics])
   
   const handleChooseMode = useCallback((mode: 'hint' | 'scramble' | 'type') => {
     if (!topicToSelect) return
@@ -834,11 +885,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     }, 200)
   }, [flashcards.length])
 
-  // Quay lại màn hình chọn
+  // Quay về trang chủ tab flashcards, mở đúng accordion CEFR level của topic vừa học
   const handleBackToSelection = useCallback(() => {
     stopCurrentAudio()
-    router.push("/flashcards", { scroll: false })
-  }, [router])
+    const level = selectedTopic?.cefrLevel || 'a1'
+    router.push(`/?tab=flashcards&level=${level}`, { scroll: false })
+  }, [router, selectedTopic])
 
   // Initialize selectedCategory based on studyAgeGroup or URL topic
   useEffect(() => {
