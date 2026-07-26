@@ -1,6 +1,8 @@
 import { MetadataRoute } from "next";
 import prisma from "@/lib/prisma";
 
+export const revalidate = 3600; // Cache and refresh sitemap every 1 hour
+
 // Slug patterns that indicate test/draft/demo content – exclude from sitemap
 const EXCLUDED_SLUG_PATTERNS = [
   /^bai-hoc-moi/,        // "bài học mới" test lessons
