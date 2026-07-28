@@ -170,115 +170,88 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
 
   const thumbnailSrc = item.thumbnail || "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&q=80&w=800"
 
-  const tagsArray = Array.isArray(item.tags)
-    ? item.tags
-    : typeof item.tags === "string"
-      ? item.tags.split(",").map((t: string) => t.trim()).filter(Boolean)
-      : []
+  const levelColors: Record<string, string> = {
+    a1: "bg-emerald-500 text-white",
+    a2: "bg-sky-500 text-white",
+    b1: "bg-amber-500 text-white",
+    b2: "bg-orange-500 text-white",
+    c1: "bg-rose-500 text-white",
+  }
+  const rawLevel = (item.level || "").toLowerCase().replace("pre-a1-", "").trim()
+  const levelKey = rawLevel.startsWith("a1") || rawLevel.includes("beginner") ? "a1"
+    : rawLevel.startsWith("a2") ? "a2"
+    : rawLevel.startsWith("b1") ? "b1"
+    : rawLevel.startsWith("b2") ? "b2"
+    : rawLevel.startsWith("c1") ? "c1" : "a1"
+  const levelLabel = levelKey.toUpperCase()
+  const levelColor = levelColors[levelKey] || levelColors.a1
 
   return (
     <Link
       href={href}
-      className="group flex flex-row relative rounded-[6px] overflow-hidden
-        bg-white/80 dark:bg-slate-800/70
-        backdrop-blur-md
-        border border-white/70 dark:border-white/10
-        shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.3)]
-        hover:shadow-[0_8px_32px_rgba(var(--color-primary-rgb,79,70,229),0.18)] dark:hover:shadow-[0_8px_32px_rgba(var(--color-primary-rgb,79,70,229),0.25)]
-        hover:border-primary/30 dark:hover:border-primary/40
+      className="group flex flex-row rounded-lg overflow-hidden
+        bg-white dark:bg-slate-800
+        border border-slate-100 dark:border-slate-700
+        shadow-md hover:shadow-xl
         hover:-translate-y-0.5
         transition-all duration-300 cursor-pointer"
     >
-      {/* Glass inner shine overlay */}
-      <div className="pointer-events-none absolute inset-0 z-10 rounded-[6px] bg-gradient-to-br from-white/30 via-transparent to-transparent dark:from-white/5 dark:via-transparent" />
-
-
-      {/* Thumbnail — left */}
-      <div className="relative w-[42%] shrink-0 aspect-video overflow-hidden self-center bg-slate-100 dark:bg-slate-800 rounded-[6px] ml-2 shadow-sm">
+      {/* Thumbnail — square 1:1 */}
+      <div className="relative shrink-0 aspect-square w-[140px] sm:w-[150px] overflow-hidden bg-slate-100 dark:bg-slate-700">
         <Image
           src={thumbnailSrc}
           alt={item.title}
           fill
-          sizes="(max-width: 768px) 36vw, 15vw"
-          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          sizes="150px"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
           priority={false}
         />
-        {/* Media icons */}
-        {(item.videoUrl || item.audioUrl) && (
-          <div className="absolute top-2 right-2 z-10 flex gap-1">
-            {item.videoUrl && (
-              <div className="bg-black/60 backdrop-blur-sm text-white p-1 rounded-full flex items-center justify-center border border-white/10">
-                <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_circle</span>
-              </div>
-            )}
-            {item.audioUrl && (
-              <div className="bg-black/60 backdrop-blur-sm text-white p-1 rounded-full flex items-center justify-center border border-white/10">
-                <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>headphones</span>
-              </div>
-            )}
-          </div>
-        )}
-        {/* Gradient edge fade into card */}
-        <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-white/40 dark:to-slate-800/40 pointer-events-none" />
       </div>
 
       {/* Content — right */}
-      <div className="flex-1 p-2.5 flex flex-col justify-between min-w-0 relative z-10">
-        <div>
-          {/* Teacher Info */}
-          <div className="flex items-center gap-1.5 mb-1">
-            <div className="w-4 h-4 rounded-full overflow-hidden border border-primary/10 relative shrink-0">
-              <Image
-                src={item.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.teacher?.id}`}
-                alt="Teacher"
-                fill
-                sizes="16px"
-                className="object-cover"
-              />
-            </div>
-            <span className="text-[9px] font-medium tracking-wide text-primary/60 truncate">
-              {item.teacher?.name || t("instructor")}
-            </span>
+      <div className="flex-1 p-3.5 flex flex-col justify-between min-w-0">
+        {/* Instructor row */}
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded-full overflow-hidden border border-primary/10 relative shrink-0">
+            <Image
+              src={item.teacher?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.teacher?.id}`}
+              alt="Teacher"
+              fill
+              sizes="24px"
+              className="object-cover"
+            />
           </div>
-
-          {/* Title */}
-          <h3 className="text-foreground text-sm font-black leading-snug tracking-tight line-clamp-2 group-hover:text-primary transition-colors">
-            {item.title}
-          </h3>
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
+            {item.teacher?.name || t("instructor")}
+          </span>
         </div>
 
+        {/* Title */}
+        <h3 className="text-slate-800 dark:text-slate-100 text-sm font-black leading-snug tracking-tight line-clamp-2 group-hover:text-primary transition-colors mb-auto first-letter:uppercase">
+          {item.title}
+        </h3>
+
         {/* Stats Row */}
-        <div className="flex items-center justify-between pt-1.5 border-t border-primary/5 mt-2">
+        <div className="flex items-center justify-between mt-2.5">
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Level Badges */}
-            {item.level && getLevelsWithColors(item.level).map((lvl, index) => (
-              <span
-                key={index}
-                className={`${lvl.color} px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shadow-sm`}
-              >
-                {lvl.label}
-              </span>
-            ))}
+            {/* Level Badge */}
+            <span className={`${levelColor} px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider`}>
+              {levelLabel}
+            </span>
+            {/* Questions */}
             {item._count?.questions !== undefined && (
-              <div className="flex items-center gap-1 text-primary/40">
-                <span className="material-symbols-outlined !text-[13px]">help</span>
-                <span className="text-[9px] font-bold">{item._count.questions} Qs</span>
+              <div className="flex items-center gap-0.5 text-slate-400">
+                <span className="material-symbols-outlined !text-[13px]">help_outline</span>
+                <span className="text-[10px] font-bold">{item._count.questions} Qs</span>
               </div>
             )}
-            <div className="flex items-center gap-1 text-primary/40">
-              <span className="material-symbols-outlined !text-[13px]">visibility</span>
-              <span className="text-[9px] font-bold">{views}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 bg-secondary/10 backdrop-blur-sm px-2 py-0.5 rounded-full border border-secondary/10">
-            <span className="material-symbols-outlined !text-[11px] text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            <span className="text-secondary text-[9px] font-black">{rating}</span>
           </div>
         </div>
       </div>
     </Link>
   )
 }
+
 
 
 

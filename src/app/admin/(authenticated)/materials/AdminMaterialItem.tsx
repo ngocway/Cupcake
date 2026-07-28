@@ -110,7 +110,7 @@ export function AdminMaterialItem({ item, isLessons }: { item: any, isLessons: b
            )}
            
            <div className="flex gap-2">
-              <button 
+               <button 
                 onClick={openEdit} 
                 disabled={showDeleteConfirm}
                 className="w-10 h-10 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-500 hover:text-white flex items-center justify-center transition-all border border-neutral-700 disabled:opacity-50"

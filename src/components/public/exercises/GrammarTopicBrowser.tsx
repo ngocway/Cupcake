@@ -314,10 +314,8 @@ export function GrammarTopicBrowser() {
 
                         {/* Top: icon bubble + title */}
                         <div className="flex items-start gap-3 relative z-10">
-                          <div className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center text-xl shrink-0 shadow-sm border border-white">
-                            {topic.icon}
-                          </div>
-                          <p className="font-black text-sm text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
+                          <span className="text-4xl leading-none shrink-0">{topic.icon}</span>
+                          <p className="font-black text-xl text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
                             {topic.label}
                           </p>
                         </div>

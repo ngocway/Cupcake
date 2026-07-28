@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
 import { CEFR_LEVELS, getTopicById } from "@/lib/grammar-taxonomy";
-import { ChevronRight, BookOpen } from "lucide-react";
+import { ChevronRight, BookOpen, ExternalLink } from "lucide-react";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { HomeSidebar } from "@/app/_components/HomeSidebar";
 import { ExerciseGrid } from "./ExerciseGrid";
@@ -103,6 +103,22 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
 
   const lessonsAtLevel = topicCfg.lessons.filter((l) => l.level === level);
 
+  // Color palette for lesson group header pills — one distinct color per group
+  const LESSON_PILL_COLORS = [
+    { bg: "bg-emerald-500", text: "text-white", icon: "text-white" },
+    { bg: "bg-sky-500",     text: "text-white", icon: "text-white" },
+    { bg: "bg-violet-500", text: "text-white", icon: "text-white" },
+    { bg: "bg-amber-500",  text: "text-white", icon: "text-white" },
+    { bg: "bg-rose-500",   text: "text-white", icon: "text-white" },
+    { bg: "bg-teal-500",   text: "text-white", icon: "text-white" },
+    { bg: "bg-pink-500",   text: "text-white", icon: "text-white" },
+    { bg: "bg-orange-500", text: "text-white", icon: "text-white" },
+    { bg: "bg-indigo-500", text: "text-white", icon: "text-white" },
+    { bg: "bg-cyan-500",   text: "text-white", icon: "text-white" },
+  ];
+
+  let lessonColorIndex = 0;
+
   // Group by lesson
   const byLesson = new Map<string, typeof exercises>();
   for (const ex of exercises) {
@@ -171,15 +187,29 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
               {lessonsAtLevel.map((lesson) => {
                 const lessonExs = byLesson.get(lesson.id) ?? [];
                 if (lessonExs.length === 0) return null;
+                const pillColor = LESSON_PILL_COLORS[lessonColorIndex % LESSON_PILL_COLORS.length];
+                lessonColorIndex++;
                 return (
                   <div key={lesson.id}>
                     <div className="flex items-center gap-3 mb-4">
-                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black ${lvlCfg.bg} ${lvlCfg.border} border`}>
-                        <BookOpen className={`w-3.5 h-3.5 ${lvlCfg.color}`} />
-                        <span className={lvlCfg.color}>{lesson.label}</span>
-                      </div>
+                      <Link
+                        href={`/grammar/${topic}/${lesson.id}`}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black ${pillColor.bg} hover:opacity-90 transition-opacity`}
+                      >
+                        <BookOpen className={`w-3.5 h-3.5 ${pillColor.icon}`} />
+                        <span className={pillColor.text}>{lesson.label}</span>
+                        <ExternalLink className={`w-3 h-3 ${pillColor.icon} opacity-70`} />
+                      </Link>
+                      <Link
+                        href={`/grammar/${topic}/${lesson.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-semibold text-amber-500 hover:text-amber-400 hover:underline underline-offset-2 shrink-0 transition-colors"
+                      >
+                        View grammar lesson
+                      </Link>
                       <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-                      <span className="text-xs text-slate-400 font-medium shrink-0">{lessonExs.length} bài</span>
+                      <span className="text-xs text-slate-400 font-medium shrink-0">{lessonExs.length} exercise{lessonExs.length !== 1 ? "s" : ""}</span>
                     </div>
                     <ExerciseGrid exercises={lessonExs} isLoggedIn={isLoggedIn} />
                   </div>
@@ -191,7 +221,7 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black ${lvlCfg.bg} ${lvlCfg.border} border`}>
-                      <span className={lvlCfg.color}>Khác</span>
+                      <span className={lvlCfg.color}>Other</span>
                     </div>
                     <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                   </div>

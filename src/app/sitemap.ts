@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
 import prisma from "@/lib/prisma";
+import { GRAMMAR_TOPICS } from "@/lib/grammar-taxonomy";
 
 export const revalidate = 3600; // Cache and refresh sitemap every 1 hour
 
@@ -19,38 +20,17 @@ function isExcludedSlug(slug: string): boolean {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [lessons, assignments] = await Promise.all([
     prisma.lesson.findMany({
-      where: {
-        deletedAt: null,
-        isBlocked: false,
-        slug: { not: null },
-      },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        updatedAt: true,
-        thumbnail: true,
-      },
+      where: { deletedAt: null, isBlocked: false, slug: { not: null } },
+      select: { id: true, slug: true, title: true, updatedAt: true, thumbnail: true },
       orderBy: { updatedAt: "desc" },
     }),
     prisma.assignment.findMany({
-      where: {
-        deletedAt: null,
-        isBlocked: false,
-        status: "PUBLIC",
-        slug: { not: null },
-      },
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        updatedAt: true,
-      },
+      where: { deletedAt: null, isBlocked: false, status: "PUBLIC", slug: { not: null } },
+      select: { id: true, slug: true, title: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
   ]);
 
-  // Filter out test/draft lessons by slug pattern and require meaningful title
   const publishedLessons = lessons.filter((l) => {
     if (!l.slug) return false;
     if (isExcludedSlug(l.slug)) return false;
@@ -58,7 +38,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return true;
   });
 
-  // Filter out test/draft assignments similarly
   const publishedAssignments = assignments.filter((a) => {
     if (!a.slug) return false;
     if (isExcludedSlug(a.slug)) return false;
@@ -80,7 +59,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  // Find the most recent update to use as lastModified for static pages
+  // Grammar pages — generated from taxonomy, priority 0.9 (SEO landing pages)
+  const latestGrammarDate = await prisma.assignment.findFirst({
+    where: { status: "PUBLIC", deletedAt: null, grammarLesson: { not: null } },
+    orderBy: { updatedAt: "desc" },
+    select: { updatedAt: true },
+  });
+  const grammarLastMod = latestGrammarDate?.updatedAt ?? new Date("2026-07-20");
+
+  const grammarUrls: MetadataRoute.Sitemap = GRAMMAR_TOPICS.flatMap((topic) =>
+    topic.lessons.map((lesson) => ({
+      url: `https://dolcake.com/grammar/${topic.id}/${lesson.id}`,
+      lastModified: grammarLastMod,
+      changeFrequency: "monthly" as const,
+      priority: 0.9,
+    }))
+  );
+
   const allDates = [
     ...publishedLessons.map((l) => l.updatedAt),
     ...publishedAssignments.map((a) => a.updatedAt),
@@ -90,18 +85,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     : new Date("2026-07-20");
 
   return [
-    {
-      url: "https://dolcake.com",
-      lastModified: latestUpdate,
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: "https://dolcake.com/flashcards",
-      lastModified: latestUpdate,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    },
+    { url: "https://dolcake.com", lastModified: latestUpdate, changeFrequency: "daily", priority: 1 },
+    { url: "https://dolcake.com/flashcards", lastModified: latestUpdate, changeFrequency: "weekly", priority: 0.7 },
+    ...grammarUrls,
     ...lessonUrls,
     ...assignmentUrls,
   ];

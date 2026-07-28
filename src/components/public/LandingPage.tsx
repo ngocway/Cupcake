@@ -951,15 +951,19 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const allFlashcardTopics    = useContentStore(s => (s as any).flashcardTopics) as any[];
   const flashcardTopicsLoaded = useContentStore(s => (s as any).flashcardTopicsLoaded) as boolean;
   const setFlashcardTopics    = useContentStore(s => (s as any).setFlashcardTopics);
-  const isFlashcardsLoading   = !flashcardTopicsLoaded;
 
   // SSR seed: unwrap server-fetched flashcard topics and populate the store on first render.
   // This replaces the client-side useEffect fetch — data arrives with the initial HTML,
   // so the Flashcards tab renders immediately without a client round-trip.
-  const ssrFlashcardTopics = use(promises.flashcards ?? Promise.resolve([]));
-  if (!flashcardTopicsLoaded && ssrFlashcardTopics && (ssrFlashcardTopics as any[]).length > 0) {
+  const ssrFlashcardTopics = use(promises.flashcards ?? Promise.resolve([])) as any[];
+  if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
     setFlashcardTopics(ssrFlashcardTopics);
   }
+
+  // Use SSR topics as immediate fallback — avoids skeleton flash on first render
+  // even before Zustand has been hydrated by the render-time setFlashcardTopics call.
+  const effectiveFlashcardTopics = allFlashcardTopics.length > 0 ? allFlashcardTopics : ssrFlashcardTopics;
+  const isFlashcardsLoading = effectiveFlashcardTopics.length === 0;
 
   // Exercise counts — read from Zustand store (prefetched on mount)
   const setExerciseCounts      = useContentStore(s => (s as any).setExerciseCounts);
@@ -1188,32 +1192,37 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     updateAllPreferences({ studyLevel: newLevel }).catch(console.error);
   };
 
-  // Age group selector filter for Flashcards/Games (only for Kid, Teen, Learner)
-  const [selectedAgeFilter, setSelectedAgeFilter] = useState<string>("");
+  // Age group selector filter for Flashcards/Games
+  // Lazy initializer: compute from SSR prop immediately — no useEffect delay
+  const resolveAgeFilter = (ag: string): string => {
+    const a = ag.toLowerCase();
+    if (a.includes("kindergarten") || a.includes("kindergarden") || a === "kids-2-5") return "kindergarten";
+    if (a === "kid" || a.includes("kid")) return "kid";
+    if (a === "teen" || a.includes("teen")) return "teen";
+    if (a === "learner" || a.includes("learner") || a.includes("adult")) return "learner";
+    return "kid"; // Default fallback
+  };
 
+  const [selectedAgeFilter, setSelectedAgeFilter] = useState<string>(() =>
+    resolveAgeFilter(initialStudyAgeGroup || "")
+  );
+
+  // Keep selectedAgeFilter in sync when user changes age group after mount
   useEffect(() => {
-    if (isKindergarten) {
-      setSelectedAgeFilter("kindergarten");
-    } else if (isKid) {
-      setSelectedAgeFilter("kid");
-    } else if (isTeen) {
-      setSelectedAgeFilter("teen");
-    } else if (isLearner) {
-      setSelectedAgeFilter("learner");
-    } else {
-      setSelectedAgeFilter("kid"); // Default fallback
+    if (currentAgeGroup) {
+      setSelectedAgeFilter(resolveAgeFilter(currentAgeGroup));
     }
-  }, [currentAgeGroup, isKindergarten, isKid, isTeen, isLearner]);
+  }, [currentAgeGroup]);
 
   const filteredFlashcards = useMemo(() => {
-    return allFlashcardTopics.filter((t: any) => {
+    return effectiveFlashcardTopics.filter((t: any) => {
       const audiences = (t.targetAudiences || []).map((a: string) => a.toLowerCase());
       if (selectedAgeFilter === "kindergarten") {
         return audiences.some((a: string) => a === "kindergarten" || a === "kids-2-5" || a.includes("kindergarten"));
       }
       return audiences.includes(selectedAgeFilter);
     });
-  }, [allFlashcardTopics, selectedAgeFilter]);
+  }, [effectiveFlashcardTopics, selectedAgeFilter]);
 
   const filteredGames = useMemo(() => {
     return ALL_GAMES_DATA[selectedAgeFilter] || ALL_GAMES_DATA.kindergarten;
@@ -1676,7 +1685,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
           {activeTab === "flashcards" ? (
             isFlashcardsLoading
               ? <FlashcardSkeleton />
-              : <Suspense fallback={<FlashcardSkeleton />}><FlashcardTopicBrowser topics={filteredFlashcards} /></Suspense>
+              : <Suspense fallback={<FlashcardSkeleton />}><FlashcardTopicBrowser topics={filteredFlashcards} initialLevel={normalizedStudyLevel || "a1"} /></Suspense>
           ) : activeTab === "games" ? (
             <Suspense fallback={<SectionSkeleton />}>
               <GameList games={filteredGames} locale={locale} />

@@ -97,14 +97,17 @@ interface Topic {
 
 interface Props {
   topics: Topic[];
+  initialLevel?: string;
 }
 
-export function FlashcardTopicBrowser({ topics }: Props) {
+export function FlashcardTopicBrowser({ topics, initialLevel }: Props) {
   const searchParams = useSearchParams();
   const studyLevel = useContentStore((s) => (s as any).studyLevel);
   const normalizedLevel = studyLevel === "pre-a1-a1" || studyLevel === "beginner" ? "a1" : (studyLevel || "a1");
 
-  const [openLevel, setOpenLevel] = useState<string>("a1");
+  // Initialise openLevel from initialLevel prop (SSR-derived) so accordion opens immediately,
+  // then override from store/URL via effects below.
+  const [openLevel, setOpenLevel] = useState<string>(initialLevel || "a1");
   const [popupTopic, setPopupTopic] = useState<{ id: string; name: string } | null>(null);
   const didApplyLevelParam = useRef(false);
 
@@ -260,16 +263,16 @@ export function FlashcardTopicBrowser({ topics }: Props) {
 
                           {/* Top: icon + title */}
                           <div className="flex items-start gap-3 relative z-10">
-                            <div className="w-10 h-10 rounded-2xl bg-white/80 flex items-center justify-center text-xl shrink-0 shadow-sm overflow-hidden border border-white">
+                            <div className="shrink-0">
                               {topic.iconUrl ? (
                                 topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-                                  <img src={topic.iconUrl} alt={topic.name} className="w-full h-full object-cover" />
+                                  <img src={topic.iconUrl} alt={topic.name} className="w-12 h-12 object-contain" />
                                 ) : (
-                                  topic.iconUrl
+                                  <span className="text-4xl leading-none">{topic.iconUrl}</span>
                                 )
-                              ) : "🧸"}
+                              ) : <span className="text-4xl leading-none">🧸</span>}
                             </div>
-                            <p className="font-black text-sm text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
+                            <p className="font-black text-xl text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
                               {topic.name}
                             </p>
                           </div>
