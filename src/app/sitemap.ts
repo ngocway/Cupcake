@@ -76,6 +76,44 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   );
 
+  // Exercise landing pages (/exercises/[level]/[topic]) — only for groups that have public exercises
+  const exercises = await prisma.assignment.findMany({
+    where: {
+      materialType: "EXERCISE",
+      status: "PUBLIC",
+      deletedAt: null,
+      isBlocked: false,
+      grammarTopic: { not: null },
+      level: { not: null },
+    },
+    select: {
+      level: true,
+      grammarTopic: true,
+      updatedAt: true,
+    },
+  });
+
+  const exerciseGroupsMap = new Map<string, { level: string; topic: string; lastModified: Date }>();
+  for (const ex of exercises) {
+    if (!ex.level || !ex.grammarTopic) continue;
+    const key = `${ex.level.toLowerCase()}:${ex.grammarTopic.toLowerCase()}`;
+    const existing = exerciseGroupsMap.get(key);
+    if (!existing || ex.updatedAt > existing.lastModified) {
+      exerciseGroupsMap.set(key, {
+        level: ex.level.toLowerCase(),
+        topic: ex.grammarTopic.toLowerCase(),
+        lastModified: ex.updatedAt,
+      });
+    }
+  }
+
+  const exerciseUrls: MetadataRoute.Sitemap = Array.from(exerciseGroupsMap.values()).map((g) => ({
+    url: `https://dolcake.com/exercises/${g.level}/${g.topic}`,
+    lastModified: g.lastModified,
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }));
+
   const allDates = [
     ...publishedLessons.map((l) => l.updatedAt),
     ...publishedAssignments.map((a) => a.updatedAt),
@@ -88,6 +126,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: "https://dolcake.com", lastModified: latestUpdate, changeFrequency: "daily", priority: 1 },
     { url: "https://dolcake.com/flashcards", lastModified: latestUpdate, changeFrequency: "weekly", priority: 0.7 },
     ...grammarUrls,
+    ...exerciseUrls,
     ...lessonUrls,
     ...assignmentUrls,
   ];
