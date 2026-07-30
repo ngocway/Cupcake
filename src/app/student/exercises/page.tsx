@@ -136,18 +136,12 @@ export default async function ExercisesPage({
               return (
                 <Link
                   key={lvl.id}
-                  href={hasContent ? `/student/exercises/${lvl.id}` : "#"}
-                  className={`relative flex items-center gap-5 p-5 rounded-3xl border transition-all duration-300 ${
-                    hasContent
-                      ? `${lvl.bg} ${lvl.border} hover:shadow-lg hover:-translate-y-0.5 cursor-pointer`
-                      : "bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed"
-                  }`}
+                  href={`/student/exercises/${lvl.id}`}
+                  className={`relative flex items-center gap-5 p-5 rounded-3xl border transition-all duration-300 ${lvl.bg} ${lvl.border} hover:shadow-lg hover:-translate-y-0.5 cursor-pointer`}
                 >
                   {/* Level circle */}
                   <div
-                    className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
-                      hasContent ? "bg-white/70" : "bg-white/40"
-                    }`}
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm bg-white/70"
                   >
                     <div className="text-center">
                       <div
@@ -167,9 +161,7 @@ export default async function ExercisesPage({
                       {count > 0 ? `${count} ${count === 1 ? "exercise" : "exercises"}` : "No exercises yet"}
                     </p>
                   </div>
-                  {hasContent && (
-                    <ArrowRight className={`w-5 h-5 shrink-0 ${lvl.color} opacity-60 group-hover:opacity-100`} />
-                  )}
+                  <ArrowRight className={`w-5 h-5 shrink-0 ${lvl.color} opacity-60 group-hover:opacity-100`} />
                 </Link>
               );
             })}

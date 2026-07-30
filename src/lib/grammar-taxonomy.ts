@@ -48,6 +48,7 @@ export const GRAMMAR_TOPICS: GrammarTopic[] = [
       { id: "past-perfect-continuous",     label: "Past Perfect Continuous",     level: "c1" },
       { id: "future-perfect",              label: "Future Perfect",              level: "c1" },
       { id: "future-perfect-continuous",   label: "Future Perfect Continuous",   level: "c1" },
+      { id: "tenses-review",              label: "Tenses Review",               level: "a2" },
     ],
   },
   {
@@ -90,6 +91,7 @@ export const GRAMMAR_TOPICS: GrammarTopic[] = [
       { id: "each-every",         label: "Each / Every",           level: "a2" },
       { id: "either-neither",     label: "Either / Neither",       level: "b1" },
       { id: "both",               label: "Both",                   level: "a1" },
+      { id: "another-other-others", label: "Another / Other / Others", level: "b1" },
     ],
   },
   {
@@ -206,6 +208,8 @@ export const GRAMMAR_TOPICS: GrammarTopic[] = [
       { id: "wh-questions",      label: "WH Questions",      level: "a1" },
       { id: "question-tags",     label: "Question Tags",     level: "b1" },
       { id: "indirect-questions", label: "Indirect Questions", level: "b2" },
+      { id: "subject-questions",  label: "Subject Questions",  level: "a2" },
+      { id: "questions-with-prepositions", label: "Questions with Prepositions", level: "a2" },
     ],
   },
   {

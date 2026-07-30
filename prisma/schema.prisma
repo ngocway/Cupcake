@@ -351,6 +351,13 @@ model Lesson {
   @@index([teacherId])
 }
 
+model GrammarLesson {
+  id                       String   @id
+  instructions             String?
+  instructionsTranslations Json?
+  updatedAt                DateTime @updatedAt
+}
+
 model FavoriteLesson {
   studentId String
   lessonId  String

@@ -80,10 +80,11 @@ ${taxonomySummary}
 
 EXERCISE TITLE: "${title}"
 
-Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
-{"level":"a1","grammarTopic":"tenses","grammarLesson":"present-simple"}
-
-If you cannot determine a field, use empty string "".`;
+Instructions:
+1. Carefully analyze the exercise title to determine its level, topic, and specific lesson.
+2. If the exercise title implies a specific grammar structure (for example, "Present Simple Passive" implies passive present, which belongs to "passive-present-past"), match it to the most relevant lesson. Do NOT leave grammarLesson as empty string if there is a logically fitting lesson in the taxonomy for the matched topic.
+3. Respond ONLY with valid JSON in this exact format (no markdown, no explanation):
+{"level":"a1","grammarTopic":"tenses","grammarLesson":"present-simple"}`;
 
   try {
     const res = await fetch(

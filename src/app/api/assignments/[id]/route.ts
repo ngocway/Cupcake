@@ -50,6 +50,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         ttsSpeed: baseAssignment.ttsSpeed || 1.0,
         thumbnail: baseAssignment.thumbnail || null,
         audienceLevels: baseAssignment.audienceLevels || null,
+        level: baseAssignment.level || null,
+        grammarTopic: baseAssignment.grammarTopic || null,
+        grammarLesson: baseAssignment.grammarLesson || null,
+        materialType: baseAssignment.materialType || 'EXERCISE',
         questions: questions.map(q => {
           // Parse the stringified JSON from the database with safety
           let parsed = {};

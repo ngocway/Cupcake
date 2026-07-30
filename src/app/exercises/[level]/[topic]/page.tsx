@@ -164,13 +164,13 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
 
 
 
-          {/* No exercises */}
-          {exercises.length === 0 && (
+          {/* No lessons */}
+          {lessonsAtLevel.length === 0 && (
             <div className="text-center py-24 text-slate-400">
               <p className="text-5xl mb-4">📭</p>
-              <p className="font-bold text-lg">No exercises yet.</p>
+              <p className="font-bold text-lg">No lessons yet.</p>
               <p className="text-sm mt-2">
-                Topic <strong>{topicCfg.label}</strong> has no exercises at {lvlCfg.label} level.
+                Topic <strong>{topicCfg.label}</strong> has no lessons at {lvlCfg.label} level.
               </p>
               <Link
                 href="/?tab=exercises"
@@ -182,11 +182,10 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
           )}
 
           {/* Exercises grouped by lesson */}
-          {exercises.length > 0 && (
+          {lessonsAtLevel.length > 0 && (
             <div className="space-y-10">
               {lessonsAtLevel.map((lesson) => {
                 const lessonExs = byLesson.get(lesson.id) ?? [];
-                if (lessonExs.length === 0) return null;
                 const pillColor = LESSON_PILL_COLORS[lessonColorIndex % LESSON_PILL_COLORS.length];
                 lessonColorIndex++;
                 return (
@@ -211,7 +210,11 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
                       <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
                       <span className="text-xs text-slate-400 font-medium shrink-0">{lessonExs.length} exercise{lessonExs.length !== 1 ? "s" : ""}</span>
                     </div>
-                    <ExerciseGrid exercises={lessonExs} isLoggedIn={isLoggedIn} />
+                    {lessonExs.length === 0 ? (
+                      <p className="text-xs italic text-slate-400 pl-4 py-2">No practice exercises available yet.</p>
+                    ) : (
+                      <ExerciseGrid exercises={lessonExs} isLoggedIn={isLoggedIn} />
+                    )}
                   </div>
                 );
               })}

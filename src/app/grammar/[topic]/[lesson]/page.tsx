@@ -12,13 +12,11 @@ interface Props {
 }
 
 async function getGrammarPageData(topicId: string, lessonId: string) {
-  const referenceExercise = await prisma.assignment.findFirst({
-    where: { grammarLesson: lessonId, status: "PUBLIC", deletedAt: null, instructions: { not: null } },
-    orderBy: { createdAt: "asc" },
+  const grammarLesson = await prisma.grammarLesson.findUnique({
+    where: { id: lessonId },
     select: {
-      id: true, title: true, instructions: true,
-      level: true, thumbnail: true, updatedAt: true,
-      teacher: { select: { id: true, name: true, image: true } },
+      instructions: true,
+      updatedAt: true,
     },
   });
 
@@ -34,7 +32,7 @@ async function getGrammarPageData(topicId: string, lessonId: string) {
     take: 20,
   });
 
-  return { referenceExercise, relatedExercises };
+  return { grammarLesson, relatedExercises };
 }
 
 // Estimate reading time from HTML (strip tags, count words, 200 wpm)
@@ -94,15 +92,15 @@ export default async function GrammarLessonPage({ params }: Props) {
   const lessonCfg = topicCfg?.lessons.find((l) => l.id === lesson);
   if (!topicCfg || !lessonCfg) notFound();
 
-  const { referenceExercise, relatedExercises } = await getGrammarPageData(topic, lesson);
+  const { grammarLesson, relatedExercises } = await getGrammarPageData(topic, lesson);
 
   const lvlCfg = CEFR_LEVELS.find((l) => l.id === lessonCfg.level) ?? CEFR_LEVELS[0];
-  const faqItems = referenceExercise ? extractFaqItems(referenceExercise.instructions ?? "") : [];
-  const readingMins = referenceExercise?.instructions
-    ? estimateReadingTime(referenceExercise.instructions)
+  const faqItems = grammarLesson ? extractFaqItems(grammarLesson.instructions ?? "") : [];
+  const readingMins = grammarLesson?.instructions
+    ? estimateReadingTime(grammarLesson.instructions)
     : null;
-  const lastUpdated = referenceExercise?.updatedAt
-    ? new Date(referenceExercise.updatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+  const lastUpdated = grammarLesson?.updatedAt
+    ? new Date(grammarLesson.updatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
     : null;
 
   // Other lessons in the same topic (for internal linking)
@@ -212,7 +210,7 @@ export default async function GrammarLessonPage({ params }: Props) {
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Left — grammar content */}
           <div className="flex-1 min-w-0">
-            {referenceExercise?.instructions ? (
+            {grammarLesson?.instructions ? (
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-6 md:p-8">
                   <div
@@ -221,7 +219,7 @@ export default async function GrammarLessonPage({ params }: Props) {
                       [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
                       [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
                       [&_div]:rounded-lg"
-                    dangerouslySetInnerHTML={{ __html: referenceExercise.instructions }}
+                    dangerouslySetInnerHTML={{ __html: grammarLesson.instructions }}
                   />
 
                   {/* FAQ Section */}

@@ -210,6 +210,40 @@ You must return the generated content STRICTLY as a JSON object matching the fol
         "vi": "string"
       }
     }
+  ],
+  "practiceClozeTest": [
+    {
+      "textWithBlanks": "string (sentence containing blanks wrapped in double curly braces {{answer}}. CRITICAL: For grammar/verb conjugation topics, you MUST place the base form of the verb or cue in parentheses immediately before the blank space. Example: The stories (publish){{are published}} in the magazine. She (go){{went}} to school yesterday. Never write 'The stories {{are published}}' without the base form '(publish)' before it.)",
+      "caseSensitive": boolean,
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string"
+      }
+    }
+  ],
+  "practiceMatching": [
+    {
+      "instruction": "string (instructions for matching, e.g. Match the active sentence with its passive form.)",
+      "pairs": [
+        { "leftText": "string", "rightText": "string" }
+      ],
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string"
+      }
+    }
+  ],
+  "practiceReorder": [
+    {
+      "instruction": "string (instructions for reordering, e.g. Reorder the words to make a correct passive sentence.)",
+      "items": [
+        { "text": "string (single word or punctuation)", "orderIndex": number }
+      ],
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string"
+      }
+    }
   ]
 }
 
@@ -288,8 +322,8 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
     }
     
     // Validate output structure
-    if (!result.title || !result.practiceMultipleChoice || !result.practiceTrueFalse) {
-      return { success: false, errors: ["Dữ liệu phản hồi từ AI không đúng cấu trúc yêu cầu."] };
+    if (!result.title) {
+      return { success: false, errors: ["Dữ liệu phản hồi từ AI không đúng cấu trúc yêu cầu (thiếu tiêu đề)."] };
     }
 
     // Build the English instructions HTML
@@ -355,8 +389,11 @@ Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. 
       instructions: instructionsHtml,
       instructionsTranslations,
       shortDescription: "",
-      multipleChoice: result.practiceMultipleChoice,
-      trueFalse: result.practiceTrueFalse,
+      multipleChoice: result.practiceMultipleChoice || [],
+      trueFalse: result.practiceTrueFalse || [],
+      clozeTest: result.practiceClozeTest || [],
+      matching: result.practiceMatching || [],
+      reorder: result.practiceReorder || [],
       thumbnailImagePrompt: result.thumbnailImagePrompt
     };
   } catch (error: any) {
@@ -598,6 +635,235 @@ You must return a JSON object with a single key "translatedInstructions":
 }
 
 Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON.`;
+
+export async function generateAILessonAction(
+  assignmentId: string, 
+  userPromptText: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, errors: ["Chưa đăng nhập. Vui lòng đăng nhập lại."] };
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return { success: false, errors: ["OPENAI_API_KEY chưa được cấu hình. Vui lòng thêm vào .env"] };
+  }
+
+  try {
+    const systemPrompt = `You are an expert ESL content creator.
+You must return the generated content STRICTLY as a JSON object matching the following structure:
+{
+  "title": "string (Title of the lesson)",
+  "thumbnailImagePrompt": "string (Thumbnail image prompt based on the requirements)",
+  "instructionsHtml": "string (A full, detailed, beautifully styled HTML string for the English lesson — see detailed requirements below)"
+}
+
+== DETAILED REQUIREMENTS FOR "instructionsHtml" ==
+The "instructionsHtml" must be a COMPLETE, DETAILED, BEAUTIFULLY STYLED HTML lesson guide in English.
+Structure it like a professional grammar textbook chapter — adapt section names to the topic but always include:
+
+1. INTRODUCTION: What is [topic]? — A clear definition paragraph.
+2. WHEN DO WE USE IT? — Sub-sections A, B, C... for each use case. Each sub-section: bold label + explanation + 2-3 example sentences in <ul>.
+3. SENTENCE STRUCTURE — Affirmative, Negative, Question forms. EACH form MUST use a styled <table>. Below each table, show 2-3 examples.
+4. SPELLING / FORM RULES (if applicable) — Grouped rules with word transformation examples (e.g. play → playing).
+5. COMMON TIME EXPRESSIONS / SIGNAL WORDS (if applicable) — Grouped by category in <ul>.
+6. COMPARISON TABLE (if applicable, e.g. Present Simple vs Present Continuous) — MUST use a <table> with headers, comparing contrasting uses. Provide 2-3 comparison example sentences below.
+7. SPECIAL NOTES / EXCEPTIONS (e.g. Stative Verbs) — Correct ✅ and Incorrect ❌ examples.
+8. REMEMBER / QUICK SUMMARY — Bullet checklist (✅ items) + grammar formula(s) in a highlighted box.
+
+== HTML STYLING RULES ==
+Use these exact inline styles:
+- Outer wrapper: <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:720px;line-height:1.75;color:#2d2d2d;padding:4px 0">
+- Section headings (h2): <h2 style="color:#f97316;font-size:1rem;text-transform:uppercase;letter-spacing:1px;margin-top:20px;margin-bottom:6px;font-weight:bold">
+- Sub-headings (h3): <h3 style="color:#374151;font-size:0.95rem;margin-top:14px;margin-bottom:4px;font-weight:bold">
+- Paragraphs: <p style="margin:0 0 10px">
+- Lists: <ul style="margin:0 0 14px;padding-left:22px"> and <li style="margin-bottom:5px">
+- Formula box: <div style="background:#fff7ed;border-left:4px solid #f97316;padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:14px">
+- Tables: <table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:0.9rem;text-align:left">
+- Table headers: <th style="background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:10px 12px;font-weight:bold;color:#1e293b">
+- Table cells (even rows): <td style="border-bottom:1px solid #f1f5f9;padding:10px 12px;color:#334155">
+- Table cells (odd rows): <td style="background:#f8fafc;border-bottom:1px solid #f1f5f9;padding:10px 12px;color:#334155">
+- Correct: <span style="color:#16a34a;font-weight:bold">✅ ...</span>  Incorrect: <span style="color:#dc2626;font-weight:bold">❌ ...</span>
+- Summary box: <p style="margin:0;background:#f0fdf4;padding:12px 16px;border-radius:8px;border-left:4px solid #22c55e">
+
+== COMPLEXITY BASED ON CEFR LEVEL ==
+- A1/Pre-A1: Very short sentences, max 2-3 sub-sections, small tables (2-3 rows), skip complex exceptions. ~400 words visible text.
+- A2: Simple sentences, 3-4 sub-sections, standard tables, 1-2 exceptions. ~550 words.
+- B1: Full detail, all sections, full tables, all exceptions. ~700 words.
+- B2+: Nuanced explanations, extended comparison tables. ~900 words.
+
+Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. All questions and options must be in English only.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPromptText }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0].message.content;
+    if (!responseText) {
+      return { success: false, errors: ["Không nhận được phản hồi từ OpenAI"] };
+    }
+
+    const result = JSON.parse(responseText);
+
+    // Parse topic name from teacher's userPromptText
+    let topicTitle = "";
+    const topicMatch = userPromptText.match(/grammar topic:\s*["']?([^"'\r\n]+)["']?/i);
+    if (topicMatch) {
+      topicTitle = topicMatch[1].replace(/^["']|["']$/g, '').trim();
+      const partMatch = userPromptText.match(/This is Part (\d+) of a/i);
+      if (partMatch) {
+        topicTitle = `${topicTitle} Part ${partMatch[1]}`;
+      }
+    }
+
+    if (topicTitle) {
+      result.title = topicTitle;
+    }
+    
+    // Validate output structure
+    if (!result.title || !result.instructionsHtml) {
+      return { success: false, errors: ["Dữ liệu lý thuyết phản hồi từ AI không đúng cấu trúc yêu cầu."] };
+    }
+
+    return {
+      success: true,
+      title: result.title,
+      instructionsHtml: result.instructionsHtml,
+      thumbnailImagePrompt: result.thumbnailImagePrompt || ""
+    };
+  } catch (error: any) {
+    console.error("OpenAI API Error in generateAILessonAction:", error);
+    return { success: false, errors: ["Lỗi khi phân tích bằng AI: " + (error.message || String(error))] };
+  }
+}
+
+export async function generateAIQuestionsAction({
+  assignmentId,
+  lessonHtml,
+  mcqCount,
+  tfCount,
+  clozeCount,
+  difficulty,
+  targetAudience,
+  learningGoals,
+  topicTitle
+}: {
+  assignmentId: string;
+  lessonHtml: string;
+  mcqCount: number;
+  tfCount: number;
+  clozeCount: number;
+  difficulty: string;
+  targetAudience: string[];
+  learningGoals: string[];
+  topicTitle?: string;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, errors: ["Chưa đăng nhập. Vui lòng đăng nhập lại."] };
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    return { success: false, errors: ["OPENAI_API_KEY chưa được cấu hình. Vui lòng thêm vào .env"] };
+  }
+
+  try {
+    const systemPrompt = `You are an expert ESL content creator.
+${topicTitle ? `The specific exercise title/theme is: "${topicTitle}".\n` : ""}
+You will receive a theoretical ESL lesson in HTML format.
+Your task is to generate practice questions that strictly follow (BAM SAT) the grammar, vocabulary, rules, and examples shown in the theoretical lesson${topicTitle ? ` and align with the exercise theme/title` : ""}.
+
+You must return the generated content STRICTLY as a JSON object matching the following structure:
+{
+  "practiceMultipleChoice": [
+    {
+      "questionText": "string",
+      "options": [
+        { "text": "string", "isCorrect": boolean }
+      ],
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string"
+      }
+    }
+  ],
+  "practiceTrueFalse": [
+    {
+      "statement": "string",
+      "isTrue": boolean,
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string"
+      }
+    }
+  ],
+  "practiceClozeTest": [
+    {
+      "textWithBlanks": "string (sentence containing blanks wrapped in double curly braces {{answer}}. CRITICAL: For grammar/verb conjugation topics, you MUST place the base form of the verb or cue in parentheses immediately before the blank space. Example: The stories (publish){{are published}} in the magazine. She (go){{went}} to school yesterday. Never write 'The stories {{are published}}' without the base form '(publish)' before it.)",
+      "caseSensitive": boolean,
+      "explanation": "string (English explanation, 10-30 words)",
+      "explanationTranslations": {
+        "vi": "string"
+      }
+    }
+  ]
+}
+
+== RULES FOR QUESTIONS ==
+1. Lesson Alignment: All questions MUST focus strictly on the target grammar/vocabulary and rules introduced in the lesson content${topicTitle ? ` and contextually relate to the theme: "${topicTitle}"` : ""}.
+2. CEFR Alignment: Strictly align sentence complexity with the provided CEFR Level (${difficulty}) and Target Audience (${targetAudience.join(', ')}).
+3. Distractor Ambiguity: Every multiple choice question must have a clearly correct choice. NO ambiguous distractors.
+4. ONE correct answer per multiple choice question ("isCorrect": true exactly once).
+5. Tailor questions to the provided "Selected Learning Goals": ${learningGoals.join(', ')}.
+
+Do not include any Markdown wrapping like \`\`\`json. Output strictly raw JSON. All questions and options must be in English only.`;
+
+    const userPrompt = `
+Here is the theoretical lesson content:
+==================
+${lessonHtml}
+==================
+
+Please generate exactly:
+- ${mcqCount} Multiple Choice questions (practiceMultipleChoice)
+- ${tfCount} True/False statements (practiceTrueFalse)
+- ${clozeCount} Fill in Blank/Cloze questions (practiceClozeTest)
+
+Remember to strictly align the questions with the lesson above. If any count is 0, return an empty array for that question type.
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0].message.content;
+    if (!responseText) {
+      return { success: false, errors: ["Không nhận được phản hồi từ OpenAI"] };
+    }
+
+    const result = JSON.parse(responseText);
+
+    return {
+      success: true,
+      multipleChoice: result.practiceMultipleChoice || [],
+      trueFalse: result.practiceTrueFalse || [],
+      clozeTest: result.practiceClozeTest || []
+    };
+  } catch (error: any) {
+    console.error("OpenAI API Error in generateAIQuestionsAction:", error);
+    return { success: false, errors: ["Lỗi khi tạo câu hỏi bằng AI: " + (error.message || String(error))] };
+  }
+}
 
 export async function saveInstructionsTranslationAction(
   assignmentId: string,

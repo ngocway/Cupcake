@@ -313,7 +313,7 @@ export function SidebarContentTypeMenu() {
                   </div>
                 </div>
                 <p className="cefr-redesign-tile-label">
-                  {locale === "vi" ? "Bài học" : "Lessons"}
+                  {locale === "vi" ? "Bài đọc" : "Reading"}
                 </p>
               </div>
             )}
@@ -364,7 +364,7 @@ export function SidebarContentTypeMenu() {
                   </div>
                 </div>
                 <p className="cefr-redesign-tile-label">
-                  {locale === "vi" ? "Bài tập" : "Exercises"}
+                  {locale === "vi" ? "Ngữ pháp" : "Grammar"}
                 </p>
               </div>
             )}

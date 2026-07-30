@@ -36,6 +36,7 @@ export default async function StudentQuizPage({
           slug: true,
           tags: true,
           level: true,
+          grammarLesson: true,
           targetAudiences: true,
           lesson: { select: { id: true, targetAudiences: true } }
         }
@@ -93,6 +94,22 @@ export default async function StudentQuizPage({
   const questionTranslationsPromise = getQuestionTranslationMap(assignmentCore.id);
   const assignmentTranslationsPromise = getAssignmentTranslations(assignmentCore.id);
 
+  // Wrap to fetch grammar instructions dynamically if grammarLesson is present
+  const getExtraDataWithGrammar = async () => {
+    const extraData = await extraDataPromise;
+    if (extraData && assignmentCore.grammarLesson) {
+      const gLesson = await prisma.grammarLesson.findUnique({
+        where: { id: assignmentCore.grammarLesson },
+        select: { instructions: true }
+      });
+      if (gLesson?.instructions) {
+        extraData.instructions = gLesson.instructions;
+      }
+    }
+    return extraData;
+  };
+  const resolvedExtraDataPromise = getExtraDataWithGrammar();
+
   return (
     <div className="min-h-screen w-full max-w-none">
        <KidTeenQuizRunner 
@@ -101,7 +118,7 @@ export default async function StudentQuizPage({
           questions={questions}
           cefrLevel={assignmentCore.level || "a1"}
           initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft as string) : {}}
-          extraDataPromise={extraDataPromise}
+          extraDataPromise={resolvedExtraDataPromise}
           relatedAssignmentsPromise={relatedAssignmentsPromise}
           questionTranslationsPromise={questionTranslationsPromise}
           assignmentTranslationsPromise={assignmentTranslationsPromise}

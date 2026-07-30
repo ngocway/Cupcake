@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTopicsProgressForLevel } from "../actions";
 import { CEFR_LEVELS, GRAMMAR_TOPICS, getTopicsForLevel } from "@/lib/grammar-taxonomy";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronRight, Lock } from "lucide-react";
 
 interface Props {
   params: Promise<{ level: string }>;
@@ -82,21 +82,15 @@ export default async function ExercisesLevelPage({ params }: Props) {
             const lessonCount = topic.lessons.filter((l) => l.level === level).length;
             const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-            return (
-              <Link
-                key={topic.id}
-                href={`/student/exercises/${level}/${topic.id}`}
-                className={`group flex flex-col gap-4 p-5 bg-white dark:bg-slate-800 border rounded-3xl transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 ${
-                  total > 0
-                    ? `border-slate-100 dark:border-slate-700 hover:border-primary/30`
-                    : "border-slate-100 dark:border-slate-700 opacity-70"
-                }`}
-              >
+            const isLocked = total === 0;
+
+            const cardContent = (
+              <>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl">{topic.icon}</span>
                     <div>
-                      <h3 className="font-extrabold text-slate-800 dark:text-white text-sm leading-tight group-hover:text-primary transition-colors">
+                      <h3 className={`font-extrabold text-slate-800 dark:text-white text-sm leading-tight transition-colors ${isLocked ? "" : "group-hover:text-primary"}`}>
                         {topic.label}
                       </h3>
                       <p className="text-xs text-slate-400 font-medium mt-0.5">{topic.labelVi}</p>
@@ -138,10 +132,32 @@ export default async function ExercisesLevelPage({ params }: Props) {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-300 dark:text-slate-600 italic">
-                    No exercises yet
-                  </p>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>No exercises yet (Locked)</span>
+                  </div>
                 )}
+              </>
+            );
+
+            if (isLocked) {
+              return (
+                <div
+                  key={topic.id}
+                  className="group flex flex-col gap-4 p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl transition-all duration-300 opacity-60 cursor-not-allowed"
+                >
+                  {cardContent}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={topic.id}
+                href={`/student/exercises/${level}/${topic.id}`}
+                className="group flex flex-col gap-4 p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-primary/30 rounded-3xl transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+              >
+                {cardContent}
               </Link>
             );
           })}

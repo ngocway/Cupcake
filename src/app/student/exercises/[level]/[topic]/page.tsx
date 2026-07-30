@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getExercisesForTopic } from "../../actions";
 import { CEFR_LEVELS, getTopicById, ALL_LESSONS_FLAT } from "@/lib/grammar-taxonomy";
-import { ArrowLeft, ChevronRight, PlayCircle, CheckCircle2, Clock, RotateCcw, BookOpen } from "lucide-react";
+import { ArrowLeft, ChevronRight, PlayCircle, CheckCircle2, Clock, RotateCcw, BookOpen, Lock } from "lucide-react";
 
 interface Props {
   params: Promise<{ level: string; topic: string }>;
@@ -105,31 +105,37 @@ export default async function ExercisesTopicPage({ params }: Props) {
       )}
 
       {/* Content */}
-      {totalCount === 0 ? (
+      {lessonsAtLevel.length === 0 ? (
         <div className="text-center py-20 text-slate-400">
           <p className="text-5xl mb-4">📭</p>
-          <p className="font-bold text-lg">No exercises yet.</p>
-          <p className="text-sm mt-2">This topic has no exercises at {lvlCfg.label} level.</p>
+          <p className="font-bold text-lg">No lessons yet.</p>
+          <p className="text-sm mt-2">This topic has no lessons at {lvlCfg.label} level.</p>
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Render lessons in taxonomy order, skip lessons with no exercises */}
+          {/* Render lessons in taxonomy order */}
           {lessonsAtLevel.map((lesson) => {
             const lessonExercises = byLesson.get(lesson.id) ?? [];
-            if (lessonExercises.length === 0) return null;
 
             const lessonCompleted = lessonExercises.filter((e) => e.status === "COMPLETED").length;
             const lessonTotal = lessonExercises.length;
             const lessonPct = Math.round((lessonCompleted / lessonTotal) * 100);
             const allDone = lessonCompleted === lessonTotal;
+            const isLocked = lessonTotal === 0;
 
             return (
-              <div key={lesson.id} className="space-y-3">
+              <div key={lesson.id} className={`space-y-3 ${isLocked ? "opacity-60" : ""}`}>
                 {/* Lesson header */}
                 <div className="flex items-center gap-3">
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black ${lvlCfg.bg} ${lvlCfg.border} border`}>
-                    <BookOpen className={`w-3.5 h-3.5 ${lvlCfg.color}`} />
-                    <span className={lvlCfg.color}>{lesson.label}</span>
+                    {isLocked ? (
+                      <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                    ) : (
+                      <BookOpen className={`w-3.5 h-3.5 ${lvlCfg.color}`} />
+                    )}
+                    <span className={isLocked ? "text-slate-400 dark:text-slate-500" : lvlCfg.color}>
+                      {lesson.label}
+                    </span>
                   </div>
                   {lessonTotal > 0 && (
                     <span className="text-xs text-slate-400 font-medium">
@@ -142,7 +148,13 @@ export default async function ExercisesTopicPage({ params }: Props) {
 
                 {/* Exercise cards */}
                 <div className="space-y-2.5 pl-1">
-                  {lessonExercises.map((ex, idx) => {
+                  {lessonExercises.length === 0 ? (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 italic pl-4 py-2">
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>No exercises yet (Locked)</span>
+                    </div>
+                  ) : (
+                    lessonExercises.map((ex, idx) => {
                     const href = `/student/assignments/${ex.slug || ex.id}`;
                     const isCompleted = ex.status === "COMPLETED";
                     const isInProgress = ex.status === "IN_PROGRESS";
@@ -211,8 +223,8 @@ export default async function ExercisesTopicPage({ params }: Props) {
                         </div>
                       </Link>
                     );
-                  })}
-                </div>
+                  })
+                )}
               </div>
             );
           })}
@@ -221,13 +233,14 @@ export default async function ExercisesTopicPage({ params }: Props) {
           {byLesson.has("__none__") && (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black ${lvlCfg.bg} ${lvlCfg.border} border`}>
-                  <span className={lvlCfg.color}>Khác</span>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700`}>
+                  <BookOpen className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  <span className="text-slate-600 dark:text-slate-300">Bài tập bổ sung (Other Exercises)</span>
                 </div>
                 <div className="flex-1 h-px bg-slate-100 dark:bg-slate-800" />
               </div>
               <div className="space-y-2.5 pl-1">
-                {(byLesson.get("__none__") ?? []).map((ex) => {
+                {(byLesson.get("__none__") ?? []).map((ex, idx) => {
                   const href = `/student/assignments/${ex.slug || ex.id}`;
                   const isCompleted = ex.status === "COMPLETED";
                   const isInProgress = ex.status === "IN_PROGRESS";
@@ -235,24 +248,63 @@ export default async function ExercisesTopicPage({ params }: Props) {
                     <Link
                       key={ex.id}
                       href={href}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border transition-all hover:shadow-md group ${
-                        isCompleted ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200" :
-                        isInProgress ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200" :
-                        "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-primary/30"
+                      className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 hover:shadow-md group ${
+                        isCompleted
+                          ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700/40 hover:border-emerald-300"
+                          : isInProgress
+                          ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/40 hover:border-amber-300"
+                          : "bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-primary/30"
                       }`}
                     >
+                      {/* Thumbnail */}
+                      {ex.thumbnail ? (
+                        <div className="w-16 h-11 rounded-xl overflow-hidden shrink-0 shadow-sm">
+                          <img
+                            src={ex.thumbnail}
+                            alt={ex.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                      ) : (
+                        <div className={`w-16 h-11 rounded-xl shrink-0 flex items-center justify-center font-black text-sm ${
+                          isCompleted ? "bg-emerald-500 text-white" :
+                          isInProgress ? "bg-amber-500 text-white" :
+                          `${lvlCfg.bg} ${lvlCfg.color}`
+                        }`}>
+                          {idx + 1}
+                        </div>
+                      )}
+
+                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-slate-800 dark:text-white truncate group-hover:text-primary transition-colors">{ex.title}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">{ex.questionCount} câu hỏi</p>
+                        <p className="font-bold text-sm text-slate-800 dark:text-white truncate group-hover:text-primary transition-colors">
+                          {ex.title}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {ex.questionCount} câu hỏi
+                          {ex.score !== null && (
+                            <span className="ml-2 font-bold text-emerald-600 dark:text-emerald-400">
+                              · Điểm: {typeof ex.score === "number" ? ex.score.toFixed(1) : ex.score}
+                            </span>
+                          )}
+                        </p>
                       </div>
-                      <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black ${
-                        isCompleted ? "text-emerald-600 bg-emerald-100" :
-                        isInProgress ? "text-white bg-amber-500" :
-                        `${lvlCfg.color} ${lvlCfg.bg}`
+
+                      {/* Status chip */}
+                      <div className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide ${
+                        isCompleted
+                          ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40"
+                          : isInProgress
+                          ? "text-white bg-amber-500"
+                          : `${lvlCfg.color} ${lvlCfg.bg}`
                       }`}>
-                        {isCompleted ? <><RotateCcw className="w-3 h-3" /> Ôn lại</> :
-                         isInProgress ? <><Clock className="w-3 h-3" /> Tiếp tục</> :
-                         <><PlayCircle className="w-3 h-3" /> Làm bài</>}
+                        {isCompleted ? (
+                          <><RotateCcw className="w-3 h-3" /> Ôn lại</>
+                        ) : isInProgress ? (
+                          <><Clock className="w-3 h-3" /> Tiếp tục</>
+                        ) : (
+                          <><PlayCircle className="w-3 h-3" /> Làm bài</>
+                        )}
                       </div>
                     </Link>
                   );

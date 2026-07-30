@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, MoreVertical, X, Upload, Plus, Type, Image as ImageIcon, Video, Trash2, GripVertical, Settings } from 'lucide-react';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
+import { GrammarClassifier } from '@/components/common/GrammarClassifier';
 import { BaseQuestionProps, QuestionType, MediaType } from './types';
 import type { MaterialType } from './types';
 import { autoSaveMaterial, syncAssignmentClasses, saveToQuestionBank, saveManyToQuestionBank, saveMaterialThumbnail, createDraftMaterial } from '@/actions/material-actions';
@@ -199,7 +200,10 @@ export function QuizEditor() {
       targetAudiences,
       audienceLevels,
       learningGoals,
-      thumbnail
+      thumbnail,
+      grammarLevel,
+      grammarTopic,
+      grammarLesson
     });
   };
 
@@ -242,6 +246,9 @@ export function QuizEditor() {
   const [targetAudiences, setTargetAudiences] = useState<string[]>([]);
   const [audienceLevels, setAudienceLevels] = useState<Record<string, string>>({});
   const [learningGoals, setLearningGoals] = useState<string[]>([]);
+  const [grammarLevel, setGrammarLevel] = useState("");
+  const [grammarTopic, setGrammarTopic] = useState("");
+  const [grammarLesson, setGrammarLesson] = useState("");
   const [belongsToLesson, setBelongsToLesson] = useState(false);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
@@ -378,6 +385,15 @@ export function QuizEditor() {
           setThumbnail(data.assignment.thumbnail || null);
           setMaterialType(data.assignment.materialType || 'EXERCISE');
           
+          console.log("[QuizEditor] Fetched taxonomy fields:", {
+            level: data.assignment.level,
+            grammarTopic: data.assignment.grammarTopic,
+            grammarLesson: data.assignment.grammarLesson
+          });
+          setGrammarLevel(data.assignment.level || '');
+          setGrammarTopic(data.assignment.grammarTopic || '');
+          setGrammarLesson(data.assignment.grammarLesson || '');
+          
           if (data.assignment.questions?.length > 0) {
             setQuestions(data.assignment.questions);
             setActiveId(data.assignment.questions[0].id);
@@ -397,7 +413,10 @@ export function QuizEditor() {
             targetAudiences: data.assignment.targetAudiences ? data.assignment.targetAudiences.map((t: string) => t.toLowerCase()) : [],
             audienceLevels: data.assignment.audienceLevels || {},
             learningGoals: data.assignment.learningGoals || [],
-            thumbnail: data.assignment.thumbnail || null
+            thumbnail: data.assignment.thumbnail || null,
+            grammarLevel: data.assignment.level || '',
+            grammarTopic: data.assignment.grammarTopic || '',
+            grammarLesson: data.assignment.grammarLesson || ''
           });
         }
       } catch (err) {
@@ -443,7 +462,10 @@ export function QuizEditor() {
         targetAudiences: targetAudiences,
         audienceLevels,
         learningGoals,
-        thumbnail
+        thumbnail,
+        level: grammarLevel || null,
+        grammarTopic: grammarTopic || null,
+        grammarLesson: grammarLesson || null
       });
       setSaveStatus('SAVED');
       lastSavedStateRef.current = getSerializedState();
@@ -476,7 +498,10 @@ export function QuizEditor() {
         targetAudiences: targetAudiences,
         audienceLevels,
         learningGoals,
-        thumbnail
+        thumbnail,
+        level: grammarLevel || null,
+        grammarTopic: grammarTopic || null,
+        grammarLesson: grammarLesson || null
       });
       setSaveStatus('SAVED');
       lastSavedStateRef.current = JSON.stringify({
@@ -492,7 +517,10 @@ export function QuizEditor() {
         targetAudiences,
         audienceLevels,
         learningGoals,
-        thumbnail
+        thumbnail,
+        grammarLevel,
+        grammarTopic,
+        grammarLesson
       });
       toast.success("Đã lưu hướng dẫn làm bài thành công!");
     } catch (err) {
@@ -539,7 +567,10 @@ export function QuizEditor() {
         targetAudiences: targetAudiences,
         audienceLevels,
         learningGoals,
-        thumbnail
+        thumbnail,
+        level: grammarLevel || null,
+        grammarTopic: grammarTopic || null,
+        grammarLesson: grammarLesson || null
       });
       
       // If we came from a class assignment flow, assign it now
@@ -608,7 +639,10 @@ export function QuizEditor() {
         targetAudiences: targetAudiences,
         audienceLevels,
         learningGoals,
-        thumbnail
+        thumbnail,
+        level: grammarLevel || null,
+        grammarTopic: grammarTopic || null,
+        grammarLesson: grammarLesson || null
       });
       setSaveStatus('SAVED');
       
@@ -777,7 +811,10 @@ export function QuizEditor() {
           targetAudiences: metadata?.targetAudiences || targetAudiences,
           audienceLevels: metadata?.audienceLevels || audienceLevels,
           learningGoals,
-          thumbnail: metadata?.thumbnail || thumbnail
+          thumbnail: metadata?.thumbnail || thumbnail,
+          level: metadata?.level || grammarLevel || null,
+          grammarTopic: metadata?.grammarTopic || grammarTopic || null,
+          grammarLesson: metadata?.grammarLesson || grammarLesson || null
         }).then(() => realId);
       }).then((realId) => {
         setSaveStatus('SAVED');
@@ -1156,13 +1193,24 @@ export function QuizEditor() {
               <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
               Tạo bằng AI (Beta)
             </button>
-            <button 
-              onClick={() => setShowInstructionsModal(true)}
-              className="w-full h-11 flex items-center gap-2 px-4 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors shadow-sm"
-            >
-              <span className="material-symbols-outlined text-[20px]">menu_book</span>
-              Hướng dẫn làm bài
-            </button>
+            {grammarLesson ? (
+              <button 
+                disabled
+                className="w-full h-11 flex items-center gap-2 px-4 bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700/30 rounded-xl font-bold text-sm cursor-not-allowed opacity-80"
+                title="Lý thuyết của bài tập ngữ pháp được quản lý tập trung ở trang Quản lý Ngữ pháp của Admin"
+              >
+                <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                Lý thuyết (Quản lý tại Admin)
+              </button>
+            ) : (
+              <button 
+                onClick={() => setShowInstructionsModal(true)}
+                className="w-full h-11 flex items-center gap-2 px-4 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                Hướng dẫn làm bài
+              </button>
+            )}
             <button 
               onClick={() => setShowBankModal(true)}
               className="w-full h-11 flex items-center gap-2 px-4 bg-amber-50 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 rounded-xl font-bold text-sm hover:bg-amber-100 transition-colors shadow-sm"
@@ -1637,17 +1685,35 @@ export function QuizEditor() {
               />
 
 
-              <TaxonomySelector
-                config={config}
-                subject={subject}
-                setSubject={setSubject}
-                targetAudiences={targetAudiences}
-                setTargetAudiences={setTargetAudiences}
-                audienceLevels={audienceLevels}
-                setAudienceLevels={setAudienceLevels}
-                learningGoals={learningGoals}
-                setLearningGoals={setLearningGoals}
-              />
+              {/* Grammar Taxonomy Selector */}
+              {materialType === 'EXERCISE' && (
+                <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <GrammarClassifier
+                    level={grammarLevel}
+                    setLevel={setGrammarLevel}
+                    grammarTopic={grammarTopic}
+                    setGrammarTopic={setGrammarTopic}
+                    grammarLesson={grammarLesson}
+                    setGrammarLesson={setGrammarLesson}
+                  />
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                <TaxonomySelector
+                  config={config}
+                  subject={subject}
+                  setSubject={setSubject}
+                  targetAudiences={targetAudiences}
+                  setTargetAudiences={setTargetAudiences}
+                  audienceLevels={audienceLevels}
+                  setAudienceLevels={setAudienceLevels}
+                  learningGoals={learningGoals}
+                  setLearningGoals={setLearningGoals}
+                  hideLevels={materialType === 'EXERCISE'}
+                  hideGoals={materialType === 'EXERCISE'}
+                />
+              </div>
 
               {/* Short Description */}
               <div className="space-y-2">

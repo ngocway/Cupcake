@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Lock } from "lucide-react";
 import { CEFR_LEVELS, getTopicsForLevel, type CefrLevel } from "@/lib/grammar-taxonomy";
 import { useContentStore } from "@/store/useContentStore";
 
@@ -233,13 +233,11 @@ export function GrammarTopicBrowser() {
         const level = levelId as CefrLevel;
         const config = CEFR_LEVEL_CONFIG[level] || CEFR_LEVEL_CONFIG.a1;
         const isOpen = openLevel === level;
-        const allTopics = getTopicsForLevel(level);
-        const topics = allTopics.filter((t) => (counts[`${t.id}_${level}`] ?? 0) > 0);
+        const topics = getTopicsForLevel(level);
         const totalExercises = topics.reduce(
           (sum, t) => sum + (counts[`${t.id}_${level}`] ?? 0),
           0
         );
-        if (topics.length === 0) return null;
 
         return (
           <div
@@ -295,13 +293,10 @@ export function GrammarTopicBrowser() {
                       .map((l) => l.label)
                       .join(", ");
                     const exCount = counts[`${topic.id}_${level}`] ?? 0;
+                    const isLocked = exCount === 0;
 
-                    return (
-                      <Link
-                        key={topic.id}
-                        href={`/exercises/${level}/${topic.id}`}
-                        className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] ${style.bg} ${style.borderHover} ${style.bgHover} min-h-[135px]`}
-                      >
+                    const cardContent = (
+                      <>
                         {/* Ambient blobs */}
                         {style.circles.map((c, cIdx) => (
                           <div key={cIdx} className={c.className} />
@@ -315,7 +310,7 @@ export function GrammarTopicBrowser() {
                         {/* Top: icon bubble + title */}
                         <div className="flex items-start gap-3 relative z-10">
                           <span className="text-4xl leading-none shrink-0">{topic.icon}</span>
-                          <p className="font-black text-xl text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
+                          <p className={`font-black text-xl text-slate-800 leading-tight pt-1 transition-colors ${isLocked ? "" : "group-hover:text-primary"}`}>
                             {topic.label}
                           </p>
                         </div>
@@ -332,8 +327,33 @@ export function GrammarTopicBrowser() {
                           <span className={`text-xs font-black ${LEVEL_ACCENT[level]}`}>
                             {exCount > 0 ? `${exCount} exercises` : "—"}
                           </span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          {isLocked ? (
+                            <Lock className="w-3.5 h-3.5 text-slate-400/80" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          )}
                         </div>
+                      </>
+                    );
+
+                    if (isLocked) {
+                      return (
+                        <div
+                          key={topic.id}
+                          className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-not-allowed transition-all duration-300 shadow-sm opacity-60 ${style.bg} min-h-[135px]`}
+                        >
+                          {cardContent}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={topic.id}
+                        href={`/exercises/${level}/${topic.id}`}
+                        className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] ${style.bg} ${style.borderHover} ${style.bgHover} min-h-[135px]`}
+                      >
+                        {cardContent}
                       </Link>
                     );
                   })}

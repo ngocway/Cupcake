@@ -1,7 +1,7 @@
 {
   "nav": {
     "explore": "Khám phá",
-    "lessons": "Bài học",
+    "lessons": "Bài đọc",
     "assignments": "Bài tập",
     "myLearning": "Học của tôi",
     "myReviews": "Đánh giá của tôi",
@@ -216,7 +216,7 @@
       "approved": "Đã phê duyệt",
       "averageRating": "Điểm trung bình",
       "all": "Tất cả",
-      "lessons": "Bài học",
+      "lessons": "Bài đọc",
       "assignments": "Bài tập",
       "searchPlaceholder": "Tìm kiếm đánh giá...",
       "noReviews": "Chưa có đánh giá nào",
@@ -224,7 +224,7 @@
       "emptyMessage": "Bạn chưa đánh giá bài học hay bài tập nào. Hãy bắt đầu đánh giá để giúp cộng đồng học tập tốt hơn!",
       "emptyTypeMessage": "Bạn chưa đánh giá {type} nào.",
       "explore": "Khám phá",
-      "lesson": "Bài học",
+      "lesson": "Bài đọc",
       "assignment": "Bài tập",
       "teacher": "Giáo viên",
       "editReview": "Sửa đánh giá",
@@ -316,7 +316,7 @@
   "sidebar": {
     "dashboard": "Dashboard",
     "exploreKnowledge": "Khám phá kiến thức",
-    "lessons": "Bài học",
+    "lessons": "Bài đọc",
     "assignments": "Bài tập",
     "classContent": "Nội dung từ Lớp học",
     "bookmarks": "Đã lưu",
@@ -391,7 +391,7 @@
     "recentActivity": "Hoạt động gần đây"
   },
   "lesson": {
-    "title": "Bài học",
+    "title": "Bài đọc",
     "inProgress": "Đang học",
     "completed": "Hoàn thành",
     "public": "Công khai",

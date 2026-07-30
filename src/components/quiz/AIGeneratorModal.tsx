@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { QuestionType } from './types';
-import { generateAIExerciseAction, generateAIExerciseFromUrlAction } from '@/actions/ai-quiz-generator';
+import { generateAIExerciseFromUrlAction, generateAILessonAction, generateAIQuestionsAction } from '@/actions/ai-quiz-generator';
 import { TaxonomySelector } from '@/components/common/TaxonomySelector';
 import { GrammarClassifier } from '@/components/common/GrammarClassifier';
 import { getOnboardingConfig } from '@/actions/user-preferences-actions';
 import { detectGrammarFromTitle, generateTitleFromGrammar } from '@/actions/grammar-detect';
+import { getLessonGrammarContent } from '@/app/admin/(authenticated)/grammar/actions';
 
 const DEFAULT_PROMPT_TEMPLATE = `You are an expert ESL content creator for young learners.
 
@@ -22,92 +23,13 @@ Requirements:
 - Flat design, colorful, cute
 - Kids learning theme
 - Clean isolated background
-- 16:9 ratio
+- 1:1 ratio
 - English text only (very few words, max 5 words)
 - No Vietnamese text
 - Friendly classroom or learning scene
 - Must include the grammar topic visually
 
 Return ONLY the image prompt.
-
----
-
-## 2. PRACTICE – MULTIPLE CHOICE
-Create 15 questions:
-- Each question must have EXACTLY ONE correct answer and 2 to 3 wrong distractor options. Vary the number of distractors across the questions (some should have 2 distractors/3 choices total, others should have 3 distractors/4 choices total).
-- Distractors must be plausible, common student errors or nearly-correct options. Vary the distractor choices.
-- Avoid obvious correct answers (e.g. options like "none of the above", "all of the above" or "I don't know").
-- Keep vocabulary simple, tailored to the target audience age group.
-- Focus on natural, everyday conversational language.
-- Include answer (e.g. Answer: A)
-- Include explanation in SIMPLE ENGLISH
-
-Format:
-
-Question
-A.
-B.
-C. [optional, if 2 distractors]
-D. [optional, if 3 distractors]
-Answer:
-Explanation:
-
-
----
-
-## 3. PRACTICE – FILL IN BLANK
-Create 10 questions:
-- Use blank spaces in sentences, represented as "_____" (5 underscores)
-- Include the correct word for the blank
-- Distractors are not needed
-- Include explanation in SIMPLE ENGLISH
-
-Format:
-
-Question
-Answer:
-Explanation:
-
-
----
-
-## 4. PRACTICE – MATCHING
-Create 5 pairs of related items:
-- Left Column: word/phrase
-- Right Column: matching definition/picture description/synonym/translation
-- Make them clear and distinct
-
-Format:
-
-Pair 1: left | right
-Pair 2: left | right
-Pair 3: left | right
-Pair 4: left | right
-Pair 5: left | right
-Explanation:
-
-
----
-
-## 5. PRACTICE – REORDER SENTENCE
-Create 5 scrambled sentences:
-- Provide the scrambled words (comma-separated, random order)
-- Provide the correct full sentence
-- Keep sentences short and correct grammar
-- IMPORTANT: Never create a question where two or more options are both correct or could both be accepted as correct
-- Include answer (e.g. Answer: A)
-- Include explanation in SIMPLE ENGLISH
-
-Format:
-
-Question
-A.
-B.
-C. [optional, if 3 distractors]
-D. [optional, if 3 distractors]
-Answer:
-Explanation:
-
 
 ---
 
@@ -132,8 +54,14 @@ interface AIGeneratorModalProps {
 export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }: AIGeneratorModalProps) {
   const [questionsText, setQuestionsText] = useState(DEFAULT_PROMPT_TEMPLATE);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [topic, setTopic] = useState("Present Continuous (e.g. He is playing)");
+  const [generationStage, setGenerationStage] = useState("");
+  const [topic, setTopic] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+
+  // Question counts configuration
+  const [mcqCount, setMcqCount] = useState(10);
+  const [tfCount, setTfCount] = useState(5);
+  const [clozeCount, setClozeCount] = useState(0);
   
   // Custom mode or URL mode switcher
   const [generatorMode, setGeneratorMode] = useState<'prompt' | 'url'>('prompt');
@@ -220,6 +148,12 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
     }
     
     if (generatorMode === 'prompt') {
+      if (!topic.trim()) {
+        newErrors.push('Vui lòng nhập tên chủ đề bài học (Topic Title).');
+      }
+      if (grammarLevel && grammarTopic && !grammarLesson) {
+        newErrors.push('Vui lòng chọn Bài học cụ thể ở Bước 3 để hoàn tất phân loại bài tập.');
+      }
       if (!questionsText.trim()) {
         newErrors.push('Vui lòng nhập hoặc chỉnh sửa nội dung prompt mẫu.');
       }
@@ -241,6 +175,7 @@ export function AIGeneratorModal({ assignmentId, onClose, onQuestionsGenerated }
     }
     
     setIsGenerating(true);
+    setGenerationStage(generatorMode === 'prompt' ? 'Giai đoạn 1: Sinh bài giảng...' : 'Đang xử lý URL...');
     setErrors([]);
     
     try {
@@ -276,7 +211,66 @@ User Prompt:
 ${partPromptText}
 `;
 
-          result = await generateAIExerciseAction(assignmentId || 'new', enhancedPrompt);
+          let lessonHtml = "";
+          let generatedTitle = topic;
+          let thumbnailImagePrompt = "";
+
+          if (grammarLesson) {
+            // For grammar exercises, skip generating theory. Fetch from GrammarLesson table.
+            setGenerationStage("Giai đoạn 1: Đang lấy lý thuyết ngữ pháp...");
+            const existingTheory = await getLessonGrammarContent(grammarLesson);
+            if (existingTheory) {
+              lessonHtml = existingTheory;
+            } else {
+              lessonHtml = `<p>This is a grammar practice exercise for lesson: ${grammarLesson}.</p>`;
+            }
+            if (partsToGenerate > 1) {
+              generatedTitle = `${topic} - Part ${partNum}`;
+            }
+          } else {
+            // Giai đoạn 1: Sinh lý thuyết
+            const lessonResult = await generateAILessonAction(assignmentId || 'new', enhancedPrompt);
+            if (!lessonResult.success || !lessonResult.instructionsHtml) {
+              throw new Error(
+                `Lỗi khi sinh lý thuyết bài học: ` + 
+                (lessonResult.errors?.join(', ') || 'Lỗi không xác định')
+              );
+            }
+            lessonHtml = lessonResult.instructionsHtml;
+            generatedTitle = lessonResult.title || topic;
+            thumbnailImagePrompt = lessonResult.thumbnailImagePrompt || "";
+          }
+
+          // Giai đoạn 2: Sinh câu hỏi luyện tập bám sát lý thuyết
+          setGenerationStage("Giai đoạn 2: Sinh câu hỏi...");
+          const questionsResult = await generateAIQuestionsAction({
+            assignmentId: assignmentId || 'new',
+            lessonHtml: lessonHtml,
+            mcqCount,
+            tfCount,
+            clozeCount,
+            difficulty: primaryLevelLabel,
+            targetAudience: targetAudiences,
+            learningGoals,
+            topicTitle: generatedTitle
+          });
+
+          if (!questionsResult.success) {
+            throw new Error(
+              `Lỗi khi sinh câu hỏi luyện tập: ` + 
+              (questionsResult.errors?.join(', ') || 'Lỗi không xác định')
+            );
+          }
+
+          result = {
+            success: true,
+            title: generatedTitle,
+            instructions: grammarLesson ? null : lessonHtml, // Only save instructions for non-grammar lessons
+            thumbnailImagePrompt,
+            multipleChoice: questionsResult.multipleChoice,
+            trueFalse: questionsResult.trueFalse,
+            clozeTest: questionsResult.clozeTest
+          };
         } else {
           result = await generateAIExerciseFromUrlAction(assignmentId || 'new', urlInput.trim(), {
             subject,
@@ -294,27 +288,48 @@ ${partPromptText}
             ((result as any).rawError ? ` (Chi tiết: ${(result as any).rawError})` : '')
           );
         }
-        
-        if (!result.multipleChoice || !result.trueFalse) {
-          throw new Error(`AI không nhận diện được câu hỏi nào từ nội dung.`);
-        }
 
         const formattedQuestions = [
-          ...result.multipleChoice.map((q: any) => ({
+          ...(result.multipleChoice || []).map((q: any) => ({
             type: 'MULTIPLE_CHOICE' as QuestionType,
             questionText: q.questionText,
             options: q.options,
             explanation: q.explanation,
             explanationTranslations: q.explanationTranslations || null
           })),
-          ...result.trueFalse.map((q: any) => ({
+          ...(result.trueFalse || []).map((q: any) => ({
             type: 'TRUE_FALSE' as QuestionType,
             statement: q.statement,
             isTrue: q.isTrue,
             explanation: q.explanation,
             explanationTranslations: q.explanationTranslations || null
+          })),
+          ...(result.clozeTest || []).map((q: any) => ({
+            type: 'CLOZE_TEST' as QuestionType,
+            textWithBlanks: q.textWithBlanks,
+            caseSensitive: q.caseSensitive ?? false,
+            explanation: q.explanation,
+            explanationTranslations: q.explanationTranslations || null
+          })),
+          ...(result.matching || []).map((q: any) => ({
+            type: 'MATCHING' as QuestionType,
+            instruction: q.instruction,
+            pairs: q.pairs,
+            explanation: q.explanation,
+            explanationTranslations: q.explanationTranslations || null
+          })),
+          ...(result.reorder || []).map((q: any) => ({
+            type: 'REORDER' as QuestionType,
+            instruction: q.instruction,
+            items: q.items,
+            explanation: q.explanation,
+            explanationTranslations: q.explanationTranslations || null
           }))
         ];
+
+        if (formattedQuestions.length === 0) {
+          throw new Error(`AI không nhận diện được câu hỏi nào từ nội dung.`);
+        }
 
         // Group questions by type
         const groupedMap: Record<QuestionType, any[]> = {
@@ -346,7 +361,7 @@ ${partPromptText}
             instructions: result.instructions,
             instructionsTranslations: result.instructionsTranslations || null,
             instructionsImageUrl: instructionsImageUrl || null,
-            shortDescription: result.shortDescription,
+            shortDescription: result.shortDescription || "",
             thumbnailImagePrompt: result.thumbnailImagePrompt,
             subject,
             targetAudiences,
@@ -365,6 +380,7 @@ ${partPromptText}
       setErrors([err.message || 'Có lỗi xảy ra khi gọi AI phân tích.']);
     } finally {
       setIsGenerating(false);
+      setGenerationStage("");
     }
   };
 
@@ -652,6 +668,50 @@ ${partPromptText}
                     </p>
                   </div>
 
+                  {/* Question Counts Grid */}
+                  <div className="border border-slate-150 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/50 dark:bg-slate-800/10 flex flex-col gap-3">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-350 font-headline uppercase tracking-wider">
+                      Cấu hình số câu hỏi trắc nghiệm & bài tập
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 shadow-sm">
+                        <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Trắc nghiệm MCQ</span>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="20" 
+                          className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-xs" 
+                          value={mcqCount} 
+                          onChange={e => setMcqCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))} 
+                        />
+                      </div>
+
+                      <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 shadow-sm">
+                        <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Đúng / Sai</span>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="20" 
+                          className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-xs" 
+                          value={tfCount} 
+                          onChange={e => setTfCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))} 
+                        />
+                      </div>
+
+                      <div className="bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl p-2.5 flex flex-col items-center justify-center gap-1 shadow-sm">
+                        <span className="text-[10px] font-bold text-slate-500 text-center leading-none">Điền từ (Cloze)</span>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="20" 
+                          className="w-12 text-center bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-1 py-0.5 font-bold text-slate-800 dark:text-white text-xs" 
+                          value={clozeCount} 
+                          onChange={e => setClozeCount(Math.max(0, Math.min(20, parseInt(e.target.value) || 0)))} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Prompt input */}
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-headline uppercase tracking-wider">Nội dung Prompt tùy chỉnh <span className="text-red-500">*</span></label>
@@ -704,7 +764,7 @@ ${partPromptText}
             {isGenerating ? (
               <>
                 <span className="material-symbols-outlined animate-spin text-[20px]">sync</span>
-                Đang xử lý bằng AI...
+                {generationStage || "Đang xử lý bằng AI..."}
               </>
             ) : (
               <>

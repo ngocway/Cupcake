@@ -21,6 +21,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
         { href: "/admin/materials", icon: "auto_stories", label: "Học liệu" },
         { href: "/admin/materials/read-along", icon: "chrome_reader_mode", label: "Sách Read-Along" },
         { href: "/admin/flashcards", icon: "quiz", label: "Quản lý Flashcards" },
+        { href: "/admin/grammar", icon: "menu_book", label: "Quản lý Ngữ pháp" },
         { href: "/admin/classes", icon: "school", label: "Lớp học" },
       ]
     },

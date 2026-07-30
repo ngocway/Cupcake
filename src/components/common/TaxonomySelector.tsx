@@ -110,9 +110,11 @@ export function TaxonomySelector({
             <p className="text-xs text-slate-400 italic">Vui lòng chọn môn học để xem các độ tuổi phù hợp.</p>
           )}
         </div>
-        <p className="text-xs text-slate-400 px-1 italic">
-          * Chọn các độ tuổi phù hợp. Với mỗi độ tuổi được chọn, bạn sẽ thiết lập cấp độ và mục tiêu học tập riêng bên dưới.
-        </p>
+        {(!hideLevels || !hideGoals) && (
+          <p className="text-xs text-slate-400 px-1 italic">
+            * Chọn các độ tuổi phù hợp. Với mỗi độ tuổi được chọn, bạn sẽ thiết lập cấp độ và mục tiêu học tập riêng bên dưới.
+          </p>
+        )}
       </div>
 
       {/* Levels for each target audience */}

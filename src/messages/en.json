@@ -1,7 +1,7 @@
 {
   "nav": {
     "explore": "Explore",
-    "lessons": "Lessons",
+    "lessons": "Reading",
     "assignments": "Assignments",
     "myLearning": "My Learning",
     "myReviews": "My Reviews",
@@ -216,7 +216,7 @@
       "approved": "Approved",
       "averageRating": "Average Rating",
       "all": "All",
-      "lessons": "Lessons",
+      "lessons": "Reading",
       "assignments": "Assignments",
       "searchPlaceholder": "Search reviews...",
       "noReviews": "No reviews yet",
@@ -224,7 +224,7 @@
       "emptyMessage": "You haven't reviewed any lessons or assignments yet. Start reviewing to help the community!",
       "emptyTypeMessage": "You haven't reviewed any {type} yet.",
       "explore": "Explore",
-      "lesson": "Lesson",
+      "lesson": "Reading",
       "assignment": "Assignment",
       "teacher": "Teacher",
       "editReview": "Edit Review",
@@ -316,7 +316,7 @@
   "sidebar": {
     "dashboard": "Dashboard",
     "exploreKnowledge": "Explore Knowledge",
-    "lessons": "Lessons",
+    "lessons": "Reading",
     "assignments": "Assignments",
     "classContent": "Class Content",
     "bookmarks": "Bookmarks",
@@ -391,7 +391,7 @@
     "recentActivity": "Recent Activity"
   },
   "lesson": {
-    "title": "Lessons",
+    "title": "Reading",
     "inProgress": "In Progress",
     "completed": "Completed",
     "public": "Public",

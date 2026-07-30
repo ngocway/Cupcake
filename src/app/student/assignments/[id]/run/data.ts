@@ -22,11 +22,22 @@ export const getAssignmentMeta = async (id: string) => {
 };
 
 export const getAssignmentInstructions = async (id: string) => {
-  return fetchWithRedis(`assignment:instructions:${id}`, 600, async () => {
-    return prisma.assignment.findFirst({
+  return fetchWithRedis(`assignment:instructions:v3:${id}`, 600, async () => {
+    const ass = await prisma.assignment.findFirst({
       where: { OR: [{ id }, { slug: id }] },
-      select: { instructions: true, readingText: true }
+      select: { instructions: true, readingText: true, grammarLesson: true }
     });
+    if (ass?.grammarLesson) {
+      const gLesson = await prisma.grammarLesson.findUnique({
+        where: { id: ass.grammarLesson },
+        select: { instructions: true }
+      });
+      return {
+        instructions: gLesson?.instructions ?? ass.instructions,
+        readingText: ass.readingText
+      };
+    }
+    return ass;
   });
 };
 
@@ -98,14 +109,20 @@ export const getQuestionTranslationMap = async (assignmentId: string) => {
   });
 };
 
-/** Fetch instructionsTranslations for an assignment (raw SQL). */
 export const getAssignmentTranslations = async (assignmentId: string) => {
-  return fetchWithRedis(`assignment:translations:${assignmentId}`, 3600, async () => {
-    const rows = await prisma.$queryRawUnsafe<Array<{ instructionsTranslations: any }>>(
-      `SELECT "instructionsTranslations" FROM "Assignment" WHERE id = $1`,
-      assignmentId
-    );
-    return rows[0]?.instructionsTranslations ?? null;
+  return fetchWithRedis(`assignment:translations:v3:${assignmentId}`, 3600, async () => {
+    const ass = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
+      select: { grammarLesson: true, instructionsTranslations: true }
+    });
+    if (ass?.grammarLesson) {
+      const gLesson = await prisma.grammarLesson.findUnique({
+        where: { id: ass.grammarLesson },
+        select: { instructionsTranslations: true }
+      });
+      return gLesson?.instructionsTranslations ?? ass.instructionsTranslations ?? null;
+    }
+    return ass?.instructionsTranslations ?? null;
   });
 };
 
