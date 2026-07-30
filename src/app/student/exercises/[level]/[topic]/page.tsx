@@ -225,6 +225,7 @@ export default async function ExercisesTopicPage({ params }: Props) {
                     );
                   })
                 )}
+                </div>
               </div>
             );
           })}
