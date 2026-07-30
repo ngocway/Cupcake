@@ -320,8 +320,18 @@ export async function autoSaveMaterial(payload: {
   const isExercise = payload.materialType === 'EXERCISE' || (existing && existing.materialType === 'EXERCISE');
   if (payload.audienceLevels !== undefined && !isExercise) {
     const levelsObj = payload.audienceLevels || {};
-    const computedLevel = Object.values(levelsObj).join(',');
-    payload.level = computedLevel || undefined;
+    const rawLevel = (Object.values(levelsObj)[0] as string) || '';
+    // Normalize to a single canonical CEFR level — never join multiple values
+    const normalizeLevel = (v: string): string => {
+      const s = v.toLowerCase().trim();
+      if (s.includes('pre-a1') || s === 'a1' || s.includes('beginner')) return 'pre-a1-a1';
+      if (s.includes('a2') || s.includes('elementary')) return 'a2';
+      if ((s.includes('b1') || s.includes('intermediate')) && !s.includes('upper')) return 'b1';
+      if (s.includes('b2') || s.includes('upper')) return 'b2';
+      if (s.includes('c1') || s.includes('advanced')) return 'c1';
+      return s;
+    };
+    payload.level = rawLevel ? normalizeLevel(rawLevel) : undefined;
   }
 
   if (existing) {

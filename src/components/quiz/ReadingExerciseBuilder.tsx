@@ -3144,6 +3144,7 @@ export function ReadingExerciseBuilder({
                         setAudienceLevels={setAudienceLevels}
                         learningGoals={learningGoals}
                         setLearningGoals={setLearningGoals}
+                        hideAudiences
                       />
 
                       <div className="space-y-2">

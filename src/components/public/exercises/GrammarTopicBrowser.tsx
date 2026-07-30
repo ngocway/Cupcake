@@ -260,13 +260,6 @@ export function GrammarTopicBrowser() {
                 <span className={`font-black text-base md:text-lg leading-tight transition-colors ${config.titleColor}`}>
                   {config.label}
                 </span>
-                {!isOpen && (
-                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
-                    <span>Click to expand</span>
-                    <span>•</span>
-                    <span>{topics.length} {topics.length === 1 ? "topic" : "topics"}</span>
-                  </span>
-                )}
               </div>
 
               <div className="flex-1" />
@@ -324,8 +317,8 @@ export function GrammarTopicBrowser() {
 
                         {/* Footer: exercise count + arrow */}
                         <div className="flex items-center justify-between mt-auto pt-2 relative z-10">
-                          <span className={`text-xs font-black ${LEVEL_ACCENT[level]}`}>
-                            {exCount > 0 ? `${exCount} exercises` : "—"}
+                          <span className={`text-xs font-black ${isLocked ? "text-slate-400/80" : LEVEL_ACCENT[level]}`}>
+                            {isLocked ? "Locked" : `${exCount} exercises`}
                           </span>
                           {isLocked ? (
                             <Lock className="w-3.5 h-3.5 text-slate-400/80" />
@@ -340,7 +333,7 @@ export function GrammarTopicBrowser() {
                       return (
                         <div
                           key={topic.id}
-                          className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-not-allowed transition-all duration-300 shadow-sm opacity-60 ${style.bg} min-h-[135px]`}
+                          className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-not-allowed transition-all duration-300 shadow-sm ${style.bg} min-h-[135px]`}
                         >
                           {cardContent}
                         </div>

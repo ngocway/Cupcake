@@ -2,10 +2,13 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import prisma from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
 import { getTopicById, GRAMMAR_TOPICS, CEFR_LEVELS } from "@/lib/grammar-taxonomy";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { ChevronRight, BookOpen, ExternalLink, Clock, Calendar } from "lucide-react";
 import { ExerciseCardHorizontal } from "@/components/public/ContentCards";
+import { InstructionsBlock } from "@/components/common/InstructionsBlock";
 
 interface Props {
   params: Promise<{ topic: string; lesson: string }>;
@@ -16,6 +19,7 @@ async function getGrammarPageData(topicId: string, lessonId: string) {
     where: { id: lessonId },
     select: {
       instructions: true,
+      instructionsTranslations: true,
       updatedAt: true,
     },
   });
@@ -93,6 +97,7 @@ export default async function GrammarLessonPage({ params }: Props) {
   if (!topicCfg || !lessonCfg) notFound();
 
   const { grammarLesson, relatedExercises } = await getGrammarPageData(topic, lesson);
+  const referenceExercise = relatedExercises[0];
 
   const lvlCfg = CEFR_LEVELS.find((l) => l.id === lessonCfg.level) ?? CEFR_LEVELS[0];
   const faqItems = grammarLesson ? extractFaqItems(grammarLesson.instructions ?? "") : [];
@@ -213,13 +218,15 @@ export default async function GrammarLessonPage({ params }: Props) {
             {grammarLesson?.instructions ? (
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
                 <div className="p-6 md:p-8">
-                  <div
-                    className="prose prose-slate max-w-none dark:prose-invert
+                  <InstructionsBlock
+                    instructions={grammarLesson.instructions || ""}
+                    instructionsTranslations={grammarLesson.instructionsTranslations as any}
+                    isLoggedIn={false}
+                    proseClassName="prose prose-slate max-w-none dark:prose-invert
                       [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
                       [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
                       [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
                       [&_div]:rounded-lg"
-                    dangerouslySetInnerHTML={{ __html: grammarLesson.instructions }}
                   />
 
                   {/* FAQ Section */}

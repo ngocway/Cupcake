@@ -144,7 +144,7 @@ export default async function ExercisesLevelPage({ params }: Props) {
               return (
                 <div
                   key={topic.id}
-                  className="group flex flex-col gap-4 p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl transition-all duration-300 opacity-60 cursor-not-allowed"
+                  className="group flex flex-col gap-4 p-5 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-3xl transition-all duration-300 cursor-not-allowed"
                 >
                   {cardContent}
                 </div>

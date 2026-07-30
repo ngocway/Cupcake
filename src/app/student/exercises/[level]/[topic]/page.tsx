@@ -124,7 +124,7 @@ export default async function ExercisesTopicPage({ params }: Props) {
             const isLocked = lessonTotal === 0;
 
             return (
-              <div key={lesson.id} className={`space-y-3 ${isLocked ? "opacity-60" : ""}`}>
+              <div key={lesson.id} className="space-y-3">
                 {/* Lesson header */}
                 <div className="flex items-center gap-3">
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black ${lvlCfg.bg} ${lvlCfg.border} border`}>

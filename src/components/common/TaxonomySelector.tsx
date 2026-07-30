@@ -13,6 +13,8 @@ interface TaxonomySelectorProps {
   hideSubject?: boolean;
   hideLevels?: boolean;
   hideGoals?: boolean;
+  /** Hide the Target Audiences selector (and dependent Levels/Goals) */
+  hideAudiences?: boolean;
 }
 
 export function TaxonomySelector({
@@ -28,6 +30,7 @@ export function TaxonomySelector({
   hideSubject = true,
   hideLevels = false,
   hideGoals = false,
+  hideAudiences = false,
 }: TaxonomySelectorProps) {
   const currentSubjectConfig = config?.subjects?.find((s: any) => s.id === subject);
 
@@ -75,6 +78,7 @@ export function TaxonomySelector({
       )}
 
       {/* Target Audiences */}
+      {!hideAudiences && (
       <div className="space-y-4">
         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Độ tuổi (Target Audiences)</label>
         <div className="flex flex-wrap gap-2">
@@ -116,9 +120,10 @@ export function TaxonomySelector({
           </p>
         )}
       </div>
+      )}
 
       {/* Levels for each target audience */}
-      {!hideLevels && targetAudiences.map(audId => {
+      {!hideAudiences && !hideLevels && targetAudiences.map(audId => {
         const ageGroup = currentSubjectConfig?.ageGroups?.find((a: any) => a.id === audId);
         if (!ageGroup || !ageGroup.levels || ageGroup.levels.length === 0) return null;
         let selectedLevel = audienceLevels[audId] || '';
@@ -157,7 +162,7 @@ export function TaxonomySelector({
       })}
 
       {/* Learning Goals for each target audience */}
-      {!hideGoals && targetAudiences.map(audId => {
+      {!hideAudiences && !hideGoals && targetAudiences.map(audId => {
         const ageGroup = currentSubjectConfig?.ageGroups?.find((a: any) => a.id === audId);
         if (!ageGroup || !ageGroup.goals || ageGroup.goals.length === 0) return null;
 

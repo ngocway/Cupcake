@@ -1712,6 +1712,7 @@ export function QuizEditor() {
                   setLearningGoals={setLearningGoals}
                   hideLevels={materialType === 'EXERCISE'}
                   hideGoals={materialType === 'EXERCISE'}
+                  hideAudiences
                 />
               </div>
 

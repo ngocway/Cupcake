@@ -86,25 +86,10 @@ export const getShuffledIds = unstable_cache(
       // We no longer filter out Part 2-5 here because we will fetch all parts
       // and randomly choose one part per base title group below.
 
-      if (userType) {
-        if (studyLevel) {
-          const mappedLevels = [studyLevel];
-          if (studyLevel === 'pre-a1-a1') mappedLevels.push('beginner');
-          else if (studyLevel === 'a2') mappedLevels.push('elementary');
-          else if (studyLevel === 'b1') mappedLevels.push('intermediate');
-          else if (studyLevel === 'b2') mappedLevels.push('upper-intermediate');
-
-          where.targetAudiences = { has: userType };
-          where.OR = mappedLevels.map(lvl => ({
-            audienceLevels: { path: [userType], equals: lvl }
-          }));
-        } else {
-          const defaultOR = [
-            { targetAudiences: { has: userType } },
-            { targetAudiences: { equals: [] } }
-          ];
-          where.OR = defaultOR;
-        }
+      // Age-group filtering removed: all Reading and Grammar content is visible to
+      // every user. Level is filtered directly via the canonical `level` field.
+      if (studyLevel) {
+        where.level = studyLevel;
       }
 
       const idRows = await prisma.homepageFeed.findMany({

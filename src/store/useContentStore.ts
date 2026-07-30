@@ -98,6 +98,10 @@ interface ContentState {
   setPendingQuizData: (data: { assignmentId: string; questions: any[] } | null) => void
 
   clearContent: () => void
+
+  // Mobile sidebar drawer state
+  mobileSidebarOpen: boolean
+  setMobileSidebarOpen: (val: boolean) => void
 }
 
 export const useContentStore = create<ContentState>((set) => ({
@@ -118,6 +122,9 @@ export const useContentStore = create<ContentState>((set) => ({
 
   isFilterModalOpen: false,
   setFilterModalOpen: (val) => set({ isFilterModalOpen: val }),
+
+  mobileSidebarOpen: false,
+  setMobileSidebarOpen: (val) => set({ mobileSidebarOpen: val }),
 
   selectedCategoryId: "",
   selectedSubCategoryId: "",

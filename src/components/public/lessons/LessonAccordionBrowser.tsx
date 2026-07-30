@@ -162,13 +162,6 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
                 <span className={`font-black text-base md:text-lg leading-tight transition-colors ${config.titleColor}`}>
                   {config.label}
                 </span>
-                {!isOpen && (
-                  <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 group-hover/accordion:text-slate-600 dark:group-hover/accordion:text-slate-300">
-                    <span>Click to expand</span>
-                    <span>•</span>
-                    <span>{countLabel}</span>
-                  </span>
-                )}
               </div>
 
               <div className="flex-1" />

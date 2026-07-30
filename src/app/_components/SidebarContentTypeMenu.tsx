@@ -1,17 +1,20 @@
 "use client";
 
 import { useContentStore } from "@/store/useContentStore";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { Lock } from "lucide-react";
+import { AgeGroupRestrictionModal } from "@/components/modals/AgeGroupRestrictionModal";
 
 export function SidebarContentTypeMenu() {
   const router = useRouter();
-
+  const searchParams = useSearchParams();
   const locale = useLocale();
 
   const [isOpen, setIsOpen] = useState(true);
+  const [isRestrictionModalOpen, setIsRestrictionModalOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("english_menu_open");
@@ -30,28 +33,44 @@ export function SidebarContentTypeMenu() {
 
   const isKindergarten = useMemo(() => {
     const ag = studyAgeGroup.toLowerCase();
-    return ag.includes("kindergarten") || ag.includes("kindergarden") || ag === "kids-2-5";
+    return ag.includes("kindergarten") || ag.includes("kindergarden") || ag === "kids-2-5" || ag === "kindergarten (< 6 years)";
   }, [studyAgeGroup]);
 
-  const isKid = studyAgeGroup === "kid" || studyAgeGroup.toLowerCase().includes("kid");
-  const isTeen = studyAgeGroup === "teen" || studyAgeGroup.toLowerCase().includes("teen");
-  const isLearner = studyAgeGroup === "learner" || studyAgeGroup.toLowerCase().includes("learner") || studyAgeGroup.toLowerCase().includes("adult");
-
-  // Determine available tabs based on age group filtering logic
-  const availableTabIds = useMemo(() => {
-    if (isKindergarten) return ["flashcards", "games"];
-    if (isKid || isTeen) return ["flashcards", "games", "lessons", "exercises"];
-    if (isLearner) return ["lessons", "exercises", "flashcards", "games"];
-    return ["lessons", "exercises", "flashcards", "games"];
-  }, [isKindergarten, isKid, isTeen, isLearner]);
+  const setFilterModalOpen = useContentStore((s) => (s as any).setFilterModalOpen);
 
   // Read activeTab from Zustand store (instant, no server round-trip)
   const activeTab = useContentStore((s) => (s as any).activeTab) || "flashcards";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
+  const setMobileSidebarOpen = useContentStore((s) => (s as any).setMobileSidebarOpen);
 
   const pathname = usePathname();
 
+  // Helper check if a tab is locked for Kindergarten users
+  const isTabLocked = (tabId: string) => {
+    return isKindergarten && (tabId === "lessons" || tabId === "exercises" || tabId === "shadowing");
+  };
+
+  // Direct URL protection check on mount / searchParams change
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    if (isKindergarten && urlTab && isTabLocked(urlTab)) {
+      setIsRestrictionModalOpen(true);
+      setActiveTab("flashcards");
+      const p = new URLSearchParams(window.location.search);
+      p.set("tab", "flashcards");
+      history.replaceState(null, "", `?${p.toString()}`);
+    }
+  }, [isKindergarten, searchParams]);
+
   const handleSelectTab = (tabId: string) => {
+    if (isTabLocked(tabId)) {
+      setIsRestrictionModalOpen(true);
+      return;
+    }
+
+    // Close mobile drawer when a tab is selected
+    setMobileSidebarOpen(false);
+
     if (tabId === activeTab && pathname === "/") return;
     // If not on home page, navigate home first, then set tab
     if (pathname !== "/") {
@@ -66,10 +85,12 @@ export function SidebarContentTypeMenu() {
     history.replaceState(null, "", `?${p.toString()}`);
   };
 
-  const showFlashcards = availableTabIds.includes("flashcards");
-  const showGames = availableTabIds.includes("games");
-  const showExercises = availableTabIds.includes("exercises");
-  const showLessons = availableTabIds.includes("lessons");
+  const handleConfirmSwitch = () => {
+    setIsRestrictionModalOpen(false);
+    if (setFilterModalOpen) {
+      setFilterModalOpen(true);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full text-[#3E3524] select-none">
@@ -106,6 +127,7 @@ export function SidebarContentTypeMenu() {
           transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
           cursor: pointer;
           border-radius: 20px 14px 20px 16px;
+          position: relative;
         }
 
         .cefr-redesign-tile:nth-child(odd):hover {
@@ -215,6 +237,11 @@ export function SidebarContentTypeMenu() {
         .cefr-redesign-tile.story .cefr-redesign-tile-icon { color: #E26D33; }
         .cefr-redesign-tile.story .cefr-redesign-tile-label { color: #E26D33; }
 
+        /* Locked Tile Overlay Styles */
+        .cefr-redesign-tile.locked-tile {
+          opacity: 0.82;
+        }
+
         /* dolbot cta button - Modern Glassmorphism */
         @keyframes robot-float {
           0%, 100% { transform: translateY(0); }
@@ -301,83 +328,90 @@ export function SidebarContentTypeMenu() {
             {locale === "vi" ? "Luyện tập nhanh" : "Quick Practice"}
           </p>
           <div className="cefr-redesign-tile-grid">
-            {/* Lessons */}
-            {showLessons && (
-              <div
-                onClick={() => handleSelectTab("lessons")}
-                className={`cefr-redesign-tile lessons ${activeTab === "lessons" ? "active" : ""}`}
-              >
-                <div className="cefr-redesign-tile-top">
-                  <div className="cefr-redesign-tile-icon">
-                    <span className="material-symbols-rounded">menu_book</span>
-                  </div>
-                </div>
-                <p className="cefr-redesign-tile-label">
-                  {locale === "vi" ? "Bài đọc" : "Reading"}
-                </p>
-              </div>
-            )}
-
             {/* Flashcards */}
-            {showFlashcards && (
-              <div
-                onClick={() => handleSelectTab("flashcards")}
-                className={`cefr-redesign-tile flash ${activeTab === "flashcards" ? "active" : ""}`}
-              >
-                <div className="cefr-redesign-tile-top">
-                  <div className="cefr-redesign-tile-icon">
-                    <span className="material-symbols-rounded">layers</span>
-                  </div>
+            <div
+              onClick={() => handleSelectTab("flashcards")}
+              className={`cefr-redesign-tile flash ${activeTab === "flashcards" ? "active" : ""}`}
+            >
+              <div className="cefr-redesign-tile-top">
+                <div className="cefr-redesign-tile-icon">
+                  <span className="material-symbols-rounded">layers</span>
                 </div>
-                <p className="cefr-redesign-tile-label">
-                  {locale === "vi" ? "Flashcards" : "Flashcards"}
-                </p>
               </div>
-            )}
+              <p className="cefr-redesign-tile-label">
+                {locale === "vi" ? "Flashcards" : "Flashcards"}
+              </p>
+            </div>
 
             {/* Games */}
-            {showGames && (
-              <div
-                onClick={() => handleSelectTab("games")}
-                className={`cefr-redesign-tile games ${activeTab === "games" ? "active" : ""}`}
-              >
-                <div className="cefr-redesign-tile-top">
-                  <div className="cefr-redesign-tile-icon">
-                    <span className="material-symbols-rounded">sports_esports</span>
-                  </div>
+            <div
+              onClick={() => handleSelectTab("games")}
+              className={`cefr-redesign-tile games ${activeTab === "games" ? "active" : ""}`}
+            >
+              <div className="cefr-redesign-tile-top">
+                <div className="cefr-redesign-tile-icon">
+                  <span className="material-symbols-rounded">sports_esports</span>
                 </div>
-                <p className="cefr-redesign-tile-label">
-                  {locale === "vi" ? "Trò chơi" : "Games"}
-                </p>
               </div>
-            )}
+              <p className="cefr-redesign-tile-label">
+                {locale === "vi" ? "Trò chơi" : "Games"}
+              </p>
+            </div>
 
-            {/* Exercises */}
-            {showExercises && (
-              <div
-                onClick={() => handleSelectTab("exercises")}
-                className={`cefr-redesign-tile exercise ${activeTab === "exercises" ? "active" : ""}`}
-              >
-                <div className="cefr-redesign-tile-top">
-                  <div className="cefr-redesign-tile-icon">
-                    <span className="material-symbols-rounded">quiz</span>
-                  </div>
+            {/* Lessons (Reading) */}
+            <div
+              onClick={() => handleSelectTab("lessons")}
+              className={`cefr-redesign-tile lessons ${activeTab === "lessons" ? "active" : ""} ${isTabLocked("lessons") ? "locked-tile" : ""}`}
+            >
+              <div className="cefr-redesign-tile-top">
+                <div className="cefr-redesign-tile-icon">
+                  <span className="material-symbols-rounded">menu_book</span>
                 </div>
-                <p className="cefr-redesign-tile-label">
-                  {locale === "vi" ? "Ngữ pháp" : "Grammar"}
-                </p>
+                {isTabLocked("lessons") && (
+                  <div className="p-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-amber-600 shadow-xs border border-amber-300/50">
+                    <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </div>
+                )}
               </div>
-            )}
+              <p className="cefr-redesign-tile-label">
+                {locale === "vi" ? "Bài đọc" : "Reading"}
+              </p>
+            </div>
+
+            {/* Exercises (Grammar) */}
+            <div
+              onClick={() => handleSelectTab("exercises")}
+              className={`cefr-redesign-tile exercise ${activeTab === "exercises" ? "active" : ""} ${isTabLocked("exercises") ? "locked-tile" : ""}`}
+            >
+              <div className="cefr-redesign-tile-top">
+                <div className="cefr-redesign-tile-icon">
+                  <span className="material-symbols-rounded">quiz</span>
+                </div>
+                {isTabLocked("exercises") && (
+                  <div className="p-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-amber-600 shadow-xs border border-amber-300/50">
+                    <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </div>
+                )}
+              </div>
+              <p className="cefr-redesign-tile-label">
+                {locale === "vi" ? "Ngữ pháp" : "Grammar"}
+              </p>
+            </div>
 
             {/* Shadowing by Books */}
             <button
               onClick={() => handleSelectTab("shadowing")}
-              className={`cefr-redesign-tile story decoration-transparent text-inherit text-left${activeTab === "shadowing" && pathname === "/" ? " active" : ""}`}
+              className={`cefr-redesign-tile story decoration-transparent text-inherit text-left ${activeTab === "shadowing" && pathname === "/" ? " active" : ""} ${isTabLocked("shadowing") ? "locked-tile" : ""}`}
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
                   <span className="material-symbols-rounded">auto_stories</span>
                 </div>
+                {isTabLocked("shadowing") && (
+                  <div className="p-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-amber-600 shadow-xs border border-amber-300/50">
+                    <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </div>
+                )}
               </div>
               <p className="cefr-redesign-tile-label">
                 {locale === "vi" ? "Shadowing by Books" : "Shadowing by Books"}
@@ -397,6 +431,14 @@ export function SidebarContentTypeMenu() {
           </div>
         </Link>
       </div>
+
+      {/* Age Group Restriction Modal */}
+      <AgeGroupRestrictionModal
+        isOpen={isRestrictionModalOpen}
+        onClose={() => setIsRestrictionModalOpen(false)}
+        onConfirmSwitch={handleConfirmSwitch}
+      />
     </div>
   );
 }
+

@@ -952,6 +952,7 @@ export function MaterialListItem({
                   setLearningGoals={setTempGoals}
                   hideLevels={assignment.materialType === 'EXERCISE'}
                   hideGoals={assignment.materialType === 'EXERCISE'}
+                  hideAudiences
                 />
               ) : (
                 <div className="flex items-center justify-center py-12">
