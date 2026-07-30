@@ -28,7 +28,7 @@ async function getGrammarPageData(topicId: string, lessonId: string) {
     where: { grammarLesson: lessonId, status: "PUBLIC", deletedAt: null },
     select: {
       id: true, slug: true, title: true, thumbnail: true,
-      level: true, viewCount: true, tags: true,
+      level: true, viewCount: true, tags: true, updatedAt: true,
       teacher: { select: { id: true, name: true, image: true } },
       _count: { select: { questions: true } },
     },
