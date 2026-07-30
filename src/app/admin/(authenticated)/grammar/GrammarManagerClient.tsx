@@ -266,9 +266,9 @@ export default function GrammarManagerClient({ levels, topicsByLevel }: GrammarM
 
                                           {/* Instructions check/warning */}
                                           {lesson.hasContent ? (
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" title="Đã có nội dung lý thuyết" />
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" aria-label="Đã có nội dung lý thuyết" />
                                           ) : (
-                                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" title="Chưa có lý thuyết" />
+                                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" aria-label="Chưa có lý thuyết" />
                                           )}
                                         </div>
                                       </button>
