@@ -317,7 +317,7 @@ export async function autoSaveMaterial(payload: {
     ...(payload.learningGoals !== undefined && { learningGoals: { set: payload.learningGoals } })
   };
 
-  const isExercise = payload.materialType === 'EXERCISE' || (existing && existing.materialType === 'EXERCISE');
+  const isExercise = (payload as any).materialType === 'EXERCISE' || (existing && (existing as any).materialType === 'EXERCISE');
   if (payload.audienceLevels !== undefined && !isExercise) {
     const levelsObj = payload.audienceLevels || {};
     const rawLevel = (Object.values(levelsObj)[0] as string) || '';
