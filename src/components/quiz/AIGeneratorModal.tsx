@@ -219,8 +219,8 @@ ${partPromptText}
             // For grammar exercises, skip generating theory. Fetch from GrammarLesson table.
             setGenerationStage("Giai đoạn 1: Đang lấy lý thuyết ngữ pháp...");
             const existingTheory = await getLessonGrammarContent(grammarLesson);
-            if (existingTheory) {
-              lessonHtml = existingTheory;
+            if (existingTheory?.instructions) {
+              lessonHtml = existingTheory.instructions;
             } else {
               lessonHtml = `<p>This is a grammar practice exercise for lesson: ${grammarLesson}.</p>`;
             }
@@ -304,21 +304,21 @@ ${partPromptText}
             explanation: q.explanation,
             explanationTranslations: q.explanationTranslations || null
           })),
-          ...(result.clozeTest || []).map((q: any) => ({
+          ...((result as any).clozeTest || []).map((q: any) => ({
             type: 'CLOZE_TEST' as QuestionType,
             textWithBlanks: q.textWithBlanks,
             caseSensitive: q.caseSensitive ?? false,
             explanation: q.explanation,
             explanationTranslations: q.explanationTranslations || null
           })),
-          ...(result.matching || []).map((q: any) => ({
+          ...((result as any).matching || []).map((q: any) => ({
             type: 'MATCHING' as QuestionType,
             instruction: q.instruction,
             pairs: q.pairs,
             explanation: q.explanation,
             explanationTranslations: q.explanationTranslations || null
           })),
-          ...(result.reorder || []).map((q: any) => ({
+          ...((result as any).reorder || []).map((q: any) => ({
             type: 'REORDER' as QuestionType,
             instruction: q.instruction,
             items: q.items,

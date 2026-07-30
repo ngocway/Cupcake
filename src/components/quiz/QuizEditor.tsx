@@ -463,9 +463,9 @@ export function QuizEditor() {
         audienceLevels,
         learningGoals,
         thumbnail,
-        level: grammarLevel || null,
-        grammarTopic: grammarTopic || null,
-        grammarLesson: grammarLesson || null
+        level: grammarLevel || undefined,
+        grammarTopic: grammarTopic || undefined,
+        grammarLesson: grammarLesson || undefined
       });
       setSaveStatus('SAVED');
       lastSavedStateRef.current = getSerializedState();
@@ -499,9 +499,9 @@ export function QuizEditor() {
         audienceLevels,
         learningGoals,
         thumbnail,
-        level: grammarLevel || null,
-        grammarTopic: grammarTopic || null,
-        grammarLesson: grammarLesson || null
+        level: grammarLevel || undefined,
+        grammarTopic: grammarTopic || undefined,
+        grammarLesson: grammarLesson || undefined
       });
       setSaveStatus('SAVED');
       lastSavedStateRef.current = JSON.stringify({
@@ -568,9 +568,9 @@ export function QuizEditor() {
         audienceLevels,
         learningGoals,
         thumbnail,
-        level: grammarLevel || null,
-        grammarTopic: grammarTopic || null,
-        grammarLesson: grammarLesson || null
+        level: grammarLevel || undefined,
+        grammarTopic: grammarTopic || undefined,
+        grammarLesson: grammarLesson || undefined
       });
       
       // If we came from a class assignment flow, assign it now
@@ -640,9 +640,9 @@ export function QuizEditor() {
         audienceLevels,
         learningGoals,
         thumbnail,
-        level: grammarLevel || null,
-        grammarTopic: grammarTopic || null,
-        grammarLesson: grammarLesson || null
+        level: grammarLevel || undefined,
+        grammarTopic: grammarTopic || undefined,
+        grammarLesson: grammarLesson || undefined
       });
       setSaveStatus('SAVED');
       
