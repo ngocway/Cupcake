@@ -1518,7 +1518,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const feedKey = `feed-${initialUserType}-${initialStudySubject}-${initialStudyLevel}-${searchParams.goal || searchParams.categoryId || ''}-${searchParams.search || ''}`
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-2 lg:space-y-6 relative">
 
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />

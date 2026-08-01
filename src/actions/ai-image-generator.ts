@@ -9,9 +9,9 @@ export async function generateThumbnailFromTitle(title: string) {
   }
 
   try {
-    const prompt = `A premium quality, whimsical 2D children's book illustration themed around: "${title}".
-Style guidelines: children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design.
-Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark.`;
+    const prompt = `A simple flat vector cartoon illustration for an educational thumbnail about: "${title}".
+Style guidelines: flat 2D vector graphic design, clean solid color fill, minimal bold shapes, vibrant contrasting pastel background, cute iconic cartoon style, ultra clean vector art, educational banner style, centered composition, generous negative space.
+Negative directives: no watercolor texture, no paper texture, no realistic shading, no gradients, no 3D render, no photorealistic, no text, no words, no clutter, no watermark.`;
 
     let response = null;
     let lastError = null;

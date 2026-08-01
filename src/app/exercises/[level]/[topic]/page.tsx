@@ -135,7 +135,7 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
 
   return (
     <HomeShell>
-      <div className="w-full pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
+      <div className="w-full pb-20 flex flex-col lg:flex-row items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
         {/* Sidebar — same as homepage */}
         <HomeSidebar
           searchParams={resolvedParams}
@@ -145,7 +145,7 @@ export default async function PublicExercisesTopicPage({ params, searchParams }:
         />
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 space-y-8">
+        <main className="flex-1 min-w-0 space-y-2 lg:space-y-8">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-slate-400 flex-wrap pt-2">
             <Link href="/?tab=exercises" className="hover:text-primary transition-colors font-medium">

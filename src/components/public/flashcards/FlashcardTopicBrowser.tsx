@@ -206,8 +206,9 @@ export function FlashcardTopicBrowser({ topics, initialLevel }: Props) {
                 <div className="flex-1" />
 
                 {!isOpen && (
-                  <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg}`}>
-                    {levelTopics.length} topics · {totalCards} cards
+                  <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 whitespace-nowrap ${config.tagBg}`}>
+                    <span className="sm:hidden">{levelTopics.length} topics</span>
+                    <span className="hidden sm:inline">{levelTopics.length} topics · {totalCards} cards</span>
                   </span>
                 )}
 
@@ -228,7 +229,7 @@ export function FlashcardTopicBrowser({ topics, initialLevel }: Props) {
                         <button
                           key={topic.id}
                           onClick={() => setPopupTopic({ id: topic.id, name: topic.name })}
-                          className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] min-h-[135px] text-left ${style.bg} ${style.border} ${style.hover}`}
+                          className={`group relative flex flex-col justify-between p-3.5 sm:p-4.5 rounded-[20px] sm:rounded-[24px] border-2 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] min-h-[120px] sm:min-h-[135px] text-left ${style.bg} ${style.border} ${style.hover}`}
                         >
                           {/* Ambient blobs */}
                           {style.circles.map((cls, cIdx) => (
@@ -254,25 +255,25 @@ export function FlashcardTopicBrowser({ topics, initialLevel }: Props) {
                             </span>
                           )}
 
-                          {/* Top: icon + title */}
-                          <div className="flex items-start gap-3 relative z-10">
+                          {/* Top: icon + title (Stacked flex-col on mobile, side-by-side flex-row on desktop) */}
+                          <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-start sm:gap-3 relative z-10 w-full min-w-0">
                             <div className="shrink-0">
                               {topic.iconUrl ? (
                                 topic.iconUrl.startsWith("http") || topic.iconUrl.startsWith("/") ? (
-                                  <img src={topic.iconUrl} alt={topic.name} className="w-12 h-12 object-contain" />
+                                  <img src={topic.iconUrl} alt={topic.name} className="w-8 h-8 sm:w-12 sm:h-12 object-contain" />
                                 ) : (
-                                  <span className="text-4xl leading-none">{topic.iconUrl}</span>
+                                  <span className="text-2xl sm:text-4xl leading-none">{topic.iconUrl}</span>
                                 )
-                              ) : <span className="text-4xl leading-none">🧸</span>}
+                              ) : <span className="text-2xl sm:text-4xl leading-none">🧸</span>}
                             </div>
-                            <p className="font-black text-xl text-slate-800 leading-tight pt-1 group-hover:text-primary transition-colors">
+                            <p className="font-black text-xs sm:text-base md:text-xl text-slate-800 leading-snug sm:pt-1 group-hover:text-primary transition-colors line-clamp-2 break-words w-full">
                               {topic.name}
                             </p>
                           </div>
 
                           {/* Footer: card count */}
-                          <div className="mt-auto pt-2 relative z-10">
-                            <span className="text-xs font-black text-slate-400/90 group-hover:text-slate-600 transition-colors">
+                          <div className="mt-auto pt-1.5 relative z-10">
+                            <span className="text-[11px] sm:text-xs font-black text-slate-400/90 group-hover:text-slate-600 transition-colors">
                               {cardCount > 0 ? `${cardCount} Cards` : "—"}
                             </span>
                           </div>

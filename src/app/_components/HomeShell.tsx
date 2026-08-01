@@ -7,6 +7,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
 import { useContentStore } from '@/store/useContentStore';
 
+import { MobileContentTypeMenu } from './MobileContentTypeMenu';
+
 function HomeShellContent({ children }: { children?: React.ReactNode }) {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -93,7 +95,8 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
         setSearch={setSearch}
         isPendingSearch={isPending}
       />
-      <div className={`relative transition-all duration-500 ease-in-out ${isPending ? "opacity-60 pointer-events-none" : ""} pt-4`}>
+      <MobileContentTypeMenu />
+      <div className={`relative transition-all duration-500 ease-in-out ${isPending ? "opacity-60 pointer-events-none" : ""} pt-0 lg:pt-2`}>
         {isPending && (
           <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[101] flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-2xl border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />

@@ -213,7 +213,7 @@ You must return the generated content STRICTLY as a JSON object matching the fol
   ],
   "practiceClozeTest": [
     {
-      "textWithBlanks": "string (sentence containing blanks wrapped in double curly braces {{answer}}. CRITICAL: For grammar/verb conjugation topics, you MUST place the base form of the verb or cue in parentheses immediately before the blank space. Example: The stories (publish){{are published}} in the magazine. She (go){{went}} to school yesterday. Never write 'The stories {{are published}}' without the base form '(publish)' before it.)",
+      "textWithBlanks": "string (sentence containing blanks wrapped in double curly braces {{answer}}. CRITICAL: Only place a base form or cue in parentheses immediately before the blank space IF the topic requires verb conjugation, word form derivation, or tense changes (e.g., 'She (go){{went}} to school' or 'The stories (publish){{are published}}'). DO NOT include any parenthesized cue/word if the answer is filled in directly without changes, such as prepositions, articles, or simple vocabulary (e.g., write 'The cat is {{under}} the chair' or 'She lives {{in}} London', NEVER write 'The cat is (under){{under}} the chair' or 'She lives (in){{in}} London'.)",
       "caseSensitive": boolean,
       "explanation": "string (English explanation, 10-30 words)",
       "explanationTranslations": {
@@ -804,7 +804,7 @@ You must return the generated content STRICTLY as a JSON object matching the fol
   ],
   "practiceClozeTest": [
     {
-      "textWithBlanks": "string (sentence containing blanks wrapped in double curly braces {{answer}}. CRITICAL: For grammar/verb conjugation topics, you MUST place the base form of the verb or cue in parentheses immediately before the blank space. Example: The stories (publish){{are published}} in the magazine. She (go){{went}} to school yesterday. Never write 'The stories {{are published}}' without the base form '(publish)' before it.)",
+      "textWithBlanks": "string (sentence containing blanks wrapped in double curly braces {{answer}}. CRITICAL: Only place a base form or cue in parentheses immediately before the blank space IF the topic requires verb conjugation, word form derivation, or tense changes (e.g., 'She (go){{went}} to school' or 'The stories (publish){{are published}}'). DO NOT include any parenthesized cue/word if the answer is filled in directly without changes, such as prepositions, articles, or simple vocabulary (e.g., write 'The cat is {{under}} the chair' or 'She lives {{in}} London', NEVER write 'The cat is (under){{under}} the chair' or 'She lives (in){{in}} London'.)",
       "caseSensitive": boolean,
       "explanation": "string (English explanation, 10-30 words)",
       "explanationTranslations": {
