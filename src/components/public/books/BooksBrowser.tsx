@@ -153,7 +153,7 @@ export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = 
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {CEFR_ORDER.map((levelId) => {
         const config = CEFR_LEVEL_CONFIG[levelId] || CEFR_LEVEL_CONFIG.a1;
         const levelBooks = itemsByLevel[levelId] || [];
@@ -170,35 +170,33 @@ export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = 
           <div
             key={levelId}
             id={`cefr-level-${levelId}`}
-            className={`group/accordion rounded-[28px] border-2 transition-all duration-300 ${config.border} ${config.hoverGlow} ${
+            className={`w-full group/accordion rounded-[28px] border-2 transition-all duration-300 ${config.border} ${config.hoverGlow} ${
               isOpen ? config.bgOpen : config.bgClosed
             }`}
           >
             {/* Header */}
             <button
               onClick={() => setOpenLevel(isOpen ? "" : levelId)}
-              className="w-full flex items-center gap-3.5 px-6 py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5"
+              className="w-full flex items-center gap-2 sm:gap-3.5 px-3.5 sm:px-6 py-3.5 sm:py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5 min-w-0"
             >
-              <span className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>
+              <span className={`shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>
                 {levelId.toUpperCase()}
               </span>
 
-              <div className="flex flex-col">
-                <span className={`font-black text-base md:text-lg leading-tight transition-colors ${config.titleColor}`}>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className={`font-black text-[clamp(11px,3.2vw,18px)] sm:text-base md:text-lg leading-tight whitespace-nowrap overflow-hidden text-ellipsis transition-colors ${config.titleColor}`}>
                   {config.label}
                 </span>
               </div>
 
-              <div className="flex-1" />
-
               {!isOpen && (
-                <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg} ${isLoading && levelBooks.length === 0 ? "animate-pulse" : ""}`}>
+                <span className={`shrink-0 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 whitespace-nowrap ${config.tagBg} ${isLoading && levelBooks.length === 0 ? "animate-pulse" : ""}`}>
                   {countLabel}
                 </span>
               )}
 
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : ""}`}>
-                <ChevronDown className={`w-4 h-4 transition-colors ${config.accentIcon}`} />
+              <div className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : ""}`}>
+                <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${config.accentIcon}`} />
               </div>
             </button>
 

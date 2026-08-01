@@ -228,7 +228,7 @@ export function GrammarTopicBrowser() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       {CEFR_LEVELS.map(({ id: levelId }) => {
         const level = levelId as CefrLevel;
         const config = CEFR_LEVEL_CONFIG[level] || CEFR_LEVEL_CONFIG.a1;
@@ -243,41 +243,42 @@ export function GrammarTopicBrowser() {
           <div
             key={level}
             id={`cefr-level-${level}`}
-            className={`group/accordion rounded-[28px] border-2 transition-all duration-300 ${config.border} ${config.hoverGlow} ${
+            className={`w-full group/accordion rounded-[28px] border-2 transition-all duration-300 ${config.border} ${config.hoverGlow} ${
               isOpen ? config.bgOpen : config.bgClosed
             }`}
           >
             {/* Level header */}
             <button
               onClick={() => setOpenLevel(isOpen ? ("" as CefrLevel) : level)}
-              className="w-full flex items-center gap-3.5 px-6 py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5"
+              className="w-full flex items-center gap-2 sm:gap-3.5 px-3.5 sm:px-6 py-3.5 sm:py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5 min-w-0"
             >
-              <span className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>
+              <span className={`shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>
                 {level.toUpperCase()}
               </span>
 
-              <div className="flex flex-col">
-                <span className={`font-black text-base md:text-lg leading-tight transition-colors ${config.titleColor}`}>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className={`font-black text-[clamp(11px,3.2vw,18px)] sm:text-base md:text-lg leading-tight whitespace-nowrap overflow-hidden text-ellipsis transition-colors ${config.titleColor}`}>
                   {config.label}
                 </span>
               </div>
 
-              <div className="flex-1" />
-
               {!isOpen && (
-                <span className={`px-3 py-1 text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 ${config.tagBg}`}>
-                  {topics.length} {topics.length === 1 ? "topic" : "topics"}{totalExercises > 0 && ` · ${totalExercises} exercises`}
+                <span className={`shrink-0 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-black rounded-full transition-all duration-300 group-hover/accordion:scale-105 whitespace-nowrap ${config.tagBg}`}>
+                  <span className="sm:hidden">{topics.length} {topics.length === 1 ? "topic" : "topics"}</span>
+                  <span className="hidden sm:inline">
+                    {topics.length} {topics.length === 1 ? "topic" : "topics"}{totalExercises > 0 && ` · ${totalExercises} exercises`}
+                  </span>
                 </span>
               )}
 
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : "group-hover/accordion:translate-y-0.5"}`}>
-                <ChevronDown className={`w-4 h-4 transition-colors ${config.accentIcon}`} />
+              <div className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white/80 dark:bg-slate-700/80 border border-slate-200/60 dark:border-slate-600 shadow-sm transition-all duration-300 group-hover/accordion:bg-white group-hover/accordion:scale-110 ${isOpen ? "rotate-180 bg-white" : "group-hover/accordion:translate-y-0.5"}`}>
+                <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${config.accentIcon}`} />
               </div>
             </button>
 
             {/* Expanded: 4-col grid */}
             {isOpen && (
-              <div className="px-6 pb-6 border-t border-slate-200/50 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="px-3.5 sm:px-6 pb-4.5 sm:pb-6 border-t border-slate-200/50 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-300">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pt-5">
                   {topics.map((topic, idx) => {
                     const style = CARD_STYLES[idx % CARD_STYLES.length];
@@ -300,10 +301,10 @@ export function GrammarTopicBrowser() {
                           {topic.icon}
                         </span>
 
-                        {/* Top: icon bubble + title */}
-                        <div className="flex items-start gap-3 relative z-10">
-                          <span className="text-4xl leading-none shrink-0">{topic.icon}</span>
-                          <p className={`font-black text-xl text-slate-800 leading-tight pt-1 transition-colors ${isLocked ? "" : "group-hover:text-primary"}`}>
+                        {/* Top: icon bubble + title (Stacked flex-col on mobile, side-by-side flex-row on desktop) */}
+                        <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-start sm:gap-3 relative z-10 w-full min-w-0">
+                          <span className="text-2xl sm:text-4xl leading-none shrink-0">{topic.icon}</span>
+                          <p className={`font-black text-xs sm:text-base md:text-xl text-slate-800 leading-snug sm:pt-1 transition-colors line-clamp-2 break-words w-full ${isLocked ? "" : "group-hover:text-primary"}`}>
                             {topic.label}
                           </p>
                         </div>
@@ -333,7 +334,7 @@ export function GrammarTopicBrowser() {
                       return (
                         <div
                           key={topic.id}
-                          className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-not-allowed transition-all duration-300 shadow-sm ${style.bg} min-h-[135px]`}
+                          className={`group relative flex flex-col justify-between w-full p-3.5 sm:p-4.5 rounded-[20px] sm:rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-not-allowed transition-all duration-300 shadow-sm ${style.bg} min-h-[120px] sm:min-h-[135px]`}
                         >
                           {cardContent}
                         </div>
@@ -344,7 +345,7 @@ export function GrammarTopicBrowser() {
                       <Link
                         key={topic.id}
                         href={`/exercises/${level}/${topic.id}`}
-                        className={`group relative flex flex-col justify-between p-4.5 rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] ${style.bg} ${style.borderHover} ${style.bgHover} min-h-[135px]`}
+                        className={`group relative flex flex-col justify-between w-full p-3.5 sm:p-4.5 rounded-[20px] sm:rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] ${style.bg} ${style.borderHover} ${style.bgHover} min-h-[120px] sm:min-h-[135px]`}
                       >
                         {cardContent}
                       </Link>

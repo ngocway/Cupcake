@@ -142,10 +142,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   return (
     <HomeShell>
-      <div className="w-full pb-20 flex flex-col lg:flex-row items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
+      <div className="w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
         <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
 
-        <main className="flex-1 space-y-2 lg:space-y-12 min-w-0">
+        <main className="w-full flex-1 space-y-2 lg:space-y-12 min-w-0">
           <Suspense fallback={
             <div className="space-y-12 animate-pulse">
               <div className="h-48 w-full bg-slate-200 dark:bg-slate-800 rounded-3xl" />
