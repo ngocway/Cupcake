@@ -123,7 +123,7 @@ export const getLessonReviews = cache(async (lessonId: string) => {
 });
 
 export const getRelatedLessons = async (lessonId: string) => {
-  return fetchWithRedis(`lesson:related:${lessonId}`, 900, async () => {
+  return fetchWithRedis(`lesson:related:v2:${lessonId}`, 900, async () => {
     // 1. Resolve actual lesson UUID and fetch pre-computed related IDs
     const lesson = await prisma.lesson.findFirst({
       where: {
@@ -156,7 +156,7 @@ export const getRelatedLessons = async (lessonId: string) => {
           title: true,
           thumbnail: true,
           assignment: {
-            select: { tags: true }
+            select: { tags: true, readingText: true }
           }
         }
       });
@@ -206,7 +206,7 @@ export const getRelatedLessons = async (lessonId: string) => {
           title: true,
           thumbnail: true,
           assignment: {
-            select: { tags: true }
+            select: { tags: true, readingText: true }
           }
         }
       });
@@ -245,7 +245,7 @@ export const getRelatedLessons = async (lessonId: string) => {
           title: true,
           thumbnail: true,
           assignment: {
-            select: { tags: true }
+            select: { tags: true, readingText: true }
           }
         }
       });
@@ -265,3 +265,43 @@ export const getRelatedLessons = async (lessonId: string) => {
     return uniqueLessons;
   });
 };
+
+export const getLessonInlineQuestions = cache(async (lessonId: string) => {
+  return fetchWithRedis(`lesson:inline-questions:v3:${lessonId}`, 300, async () => {
+    const lesson = await prisma.lesson.findFirst({
+      where: { OR: [{ id: lessonId }, { slug: lessonId }] },
+      select: {
+        id: true,
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            defaultPoints: true,
+            questions: {
+              orderBy: { orderIndex: "asc" },
+              select: {
+                id: true,
+                type: true,
+                content: true,
+                explanation: true,
+                orderIndex: true,
+                points: true,
+                audioUrl: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!lesson?.assignment?.questions || lesson.assignment.questions.length === 0) {
+      return null;
+    }
+
+    return {
+      assignmentId: lesson.assignment.id,
+      assignmentTitle: lesson.assignment.title,
+      questions: lesson.assignment.questions
+    };
+  });
+});

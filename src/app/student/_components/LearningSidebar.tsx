@@ -82,9 +82,18 @@ export function LearningSidebar({
           
           <div className="space-y-3">
              {relatedItems.map((item) => {
-                const tag = item.assignment?.tags
-                  ? item.assignment.tags.split(',')[0]?.trim()
-                  : null;
+                const getWordCount = (html?: string | null) => {
+                  if (html) {
+                    const clean = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                    if (clean) {
+                      const words = clean.split(" ").filter(Boolean).length;
+                      if (words > 0) return `${words} words`;
+                    }
+                  }
+                  return "60+ words";
+                };
+
+                const wordCountText = getWordCount(item.assignment?.readingText);
 
                 const itemContent = (
                   <>
@@ -102,8 +111,8 @@ export function LearningSidebar({
                        <h5 className="text-[13px] font-black text-[#3E3524] line-clamp-2 leading-snug group-hover:text-[#12A375] transition-colors">
                          {item.title}
                        </h5>
-                       <span className="text-[9px] font-black uppercase tracking-wider text-[#0B7A58] bg-emerald-100 px-2 py-0.5 rounded-md w-fit">
-                         {tag ? `#${tag}` : 'Lesson'}
+                       <span className="text-xs font-normal text-slate-400">
+                         {wordCountText}
                        </span>
                      </div>
                   </>

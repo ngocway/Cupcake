@@ -567,13 +567,50 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
       <SelectionTranslator />
 
       <style jsx global>{`
-        /* ===== Reading content line height ===== */
+        /* ===== Reading content line height & responsive protection ===== */
         .interactive-reading-content {
           line-height: 2.2 !important;
+          max-width: 100% !important;
         }
         .interactive-reading-content p {
           line-height: 2.2 !important;
           margin-bottom: 1.2em !important;
+        }
+
+        @media (max-width: 767px) {
+          .interactive-reading-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: hidden !important;
+            box-sizing: border-box !important;
+          }
+          .interactive-reading-content div,
+          .interactive-reading-content section,
+          .interactive-reading-content article,
+          .interactive-reading-content main,
+          .interactive-reading-content figure {
+            max-width: 100% !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            float: none !important;
+            box-sizing: border-box !important;
+          }
+          .interactive-reading-content [style*="display: flex"],
+          .interactive-reading-content [style*="display:flex"],
+          .interactive-reading-content [style*="display: flex;"],
+          .interactive-reading-content [style*="flex"] {
+            flex-direction: column !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+          }
+          .interactive-reading-content img,
+          .interactive-reading-content svg,
+          .interactive-reading-content iframe {
+            max-width: 100% !important;
+            height: auto !important;
+            box-sizing: border-box !important;
+          }
         }
 
         /* ===== Vocab marker — matches reference HTML .vocab ===== */
