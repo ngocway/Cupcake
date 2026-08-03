@@ -25,7 +25,8 @@ interface RelatedItem {
   title: string;
   thumbnail: string | null;
   assignment?: {
-    tags: string | null;
+    tags?: string | null;
+    readingText?: string | null;
   } | null;
 }
 
