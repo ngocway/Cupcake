@@ -1810,7 +1810,7 @@ export default function KidTeenQuizRunner({
       >
       {questions.length > 0 && (
         <>
-        <div className="w-full max-w-4xl mx-auto z-10 relative top-0 sm:-top-[100px]">
+        <div className="w-full max-w-4xl mx-auto z-10 relative top-0">
 
         {isShowingResultScreen && scoreResult ? (
         <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">

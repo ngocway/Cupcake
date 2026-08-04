@@ -6,6 +6,7 @@ import { Providers } from "@/components/Providers";
 import { getLocale, getMessages } from "next-intl/server";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Suspense } from "react";
 import PageViewTracker from "@/components/common/PageViewTracker";
 
@@ -150,6 +151,7 @@ export default async function RootLayout({
       </body>
       {gaId && <GoogleAnalytics gaId={gaId} />}
       <Analytics />
+      <SpeedInsights />
     </html>
   );
 }
