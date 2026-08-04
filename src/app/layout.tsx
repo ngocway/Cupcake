@@ -148,10 +148,10 @@ export default async function RootLayout({
           </Suspense>
           {children}
         </Providers>
+        <Analytics />
+        <SpeedInsights />
       </body>
       {gaId && <GoogleAnalytics gaId={gaId} />}
-      <Analytics />
-      <SpeedInsights />
     </html>
   );
 }
