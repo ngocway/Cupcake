@@ -5,6 +5,7 @@
 export interface DeepgramTtsOptions {
   text: string;
   model?: string; // e.g. "aura-asteria-en", "aura-luna-en", "aura-zeus-en"
+  speed?: number;
 }
 
 /**
@@ -12,14 +13,19 @@ export interface DeepgramTtsOptions {
  * Returns an MP3 Audio Buffer.
  */
 export async function generateDeepgramTTS(options: DeepgramTtsOptions): Promise<Buffer> {
-  const { text, model = "aura-asteria-en" } = options;
+  const { text, model = "aura-asteria-en", speed } = options;
   const apiKey = process.env.DEEPGRAM_API_KEY;
 
   if (!apiKey) {
     throw new Error("DEEPGRAM_API_KEY is not configured in environment variables.");
   }
 
-  const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`, {
+  let url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`;
+  if (speed !== undefined && speed !== null) {
+    url += `&speed=${speed}`;
+  }
+
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Authorization": `Token ${apiKey}`,

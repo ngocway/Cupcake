@@ -65,20 +65,55 @@ export function KeyVocabularyWidget({ vocabulary }: KeyVocabularyWidgetProps) {
     return capitalizeStr(text);
   };
 
-  const playAudio = (word: string, e?: React.MouseEvent) => {
+  const playAudio = async (word: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.lang = "en-US";
-    utterance.rate = 0.85;
+    if (!word || !word.trim()) return;
 
     setActiveAudioWord(word);
-    utterance.onend = () => setActiveAudioWord(null);
-    utterance.onerror = () => setActiveAudioWord(null);
 
-    window.speechSynthesis.speak(utterance);
+    try {
+      // 1. Primary: Deepgram TTS API (aura-asteria-en) for natural high quality audio
+      const res = await fetch("/api/tts/deepgram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: word.trim(), model: "aura-asteria-en" })
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+
+        audio.onended = () => {
+          setActiveAudioWord(null);
+          URL.revokeObjectURL(audioUrl);
+        };
+        audio.onerror = () => {
+          setActiveAudioWord(null);
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        await audio.play();
+        return;
+      }
+    } catch (err) {
+      console.warn("Deepgram TTS fallback to SpeechSynthesis:", err);
+    }
+
+    // 2. Fallback: Client-side Web Speech API
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.lang = "en-US";
+      utterance.rate = 0.85;
+
+      utterance.onend = () => setActiveAudioWord(null);
+      utterance.onerror = () => setActiveAudioWord(null);
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setActiveAudioWord(null);
+    }
   };
 
   const handleWordClick = (word: string) => {

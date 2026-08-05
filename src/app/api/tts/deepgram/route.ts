@@ -11,7 +11,7 @@ export const maxDuration = 30;
  */
 export async function POST(req: NextRequest) {
   try {
-    const { text, model } = await req.json();
+    const { text, model, speed } = await req.json();
 
     if (!text || typeof text !== "string" || !text.trim()) {
       return NextResponse.json({ error: "Valid text is required" }, { status: 400 });
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
     const audioBuffer = await generateDeepgramTTS({
       text: text.trim(),
       model: model || "aura-asteria-en",
+      speed: speed ? Number(speed) : undefined,
     });
 
     return new Response(new Uint8Array(audioBuffer), {

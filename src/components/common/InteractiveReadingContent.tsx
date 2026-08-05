@@ -357,13 +357,34 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
 
 
 
-  const handlePlayAudio = () => {
-    if ('speechSynthesis' in window && activeVocab) {
-      // Cancel any ongoing speech to prevent overlapping
+  const handlePlayAudio = async () => {
+    if (!activeVocab || !activeVocab.word) return;
+
+    try {
+      const res = await fetch("/api/tts/deepgram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: activeVocab.word.trim(), model: "aura-asteria-en" })
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audio.onended = () => URL.revokeObjectURL(audioUrl);
+        audio.onerror = () => URL.revokeObjectURL(audioUrl);
+        await audio.play();
+        return;
+      }
+    } catch (err) {
+      console.warn("Deepgram TTS fallback to SpeechSynthesis:", err);
+    }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(activeVocab.word);
       utterance.lang = 'en-US';
-      utterance.rate = 0.9; // Slightly slower for clearer pronunciation
+      utterance.rate = 0.9;
       window.speechSynthesis.speak(utterance);
     }
   };
