@@ -154,8 +154,12 @@ export default async function RootLayout({
         </Providers>
         <Analytics />
         <SpeedInsights />
+        {gaId && (
+          <Suspense fallback={null}>
+            <GoogleAnalytics gaId={gaId} />
+          </Suspense>
+        )}
       </body>
-      {gaId && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }

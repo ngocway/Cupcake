@@ -14,14 +14,26 @@ import {
   ArrowRight,
   Globe,
 } from "lucide-react";
-import { ReviewTrigger } from "@/components/reviews/ReviewTrigger";
-import { BookmarkButton } from "@/components/common/BookmarkButton";
+import dynamic from "next/dynamic";
+import type { VocabItem } from "@/app/student/lessons/[id]/_components/KeyVocabularyWidget";
 import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
-import { InlineReviewForm } from "@/app/student/lessons/[id]/_components/InlineReviewForm";
-import { KeyVocabularyWidget, VocabItem } from "@/app/student/lessons/[id]/_components/KeyVocabularyWidget";
+
+const KeyVocabularyWidget = dynamic(
+  () => import("@/app/student/lessons/[id]/_components/KeyVocabularyWidget").then(mod => mod.KeyVocabularyWidget),
+  { loading: () => <div className="h-48 rounded-[28px] bg-white/50 animate-pulse shadow-xl" /> }
+);
+const InlineReviewForm = dynamic(
+  () => import("@/app/student/lessons/[id]/_components/InlineReviewForm").then(mod => mod.InlineReviewForm)
+);
+const BookmarkButton = dynamic(
+  () => import("@/components/common/BookmarkButton").then(mod => mod.BookmarkButton)
+);
+const ReviewTrigger = dynamic(
+  () => import("@/components/reviews/ReviewTrigger").then(mod => mod.ReviewTrigger)
+);
 
 import { Suspense } from "react";
 

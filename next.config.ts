@@ -19,6 +19,16 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '100mb',
     },
     proxyClientMaxBodySize: '100mb',
+    optimizePackageImports: [
+      'lucide-react',
+      'date-fns',
+      'recharts',
+      'zustand',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-dialog',
+    ],
   },
   outputFileTracingExcludes: {
     '*': [
