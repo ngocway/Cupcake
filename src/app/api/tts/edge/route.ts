@@ -14,7 +14,7 @@ const VOICE = "en-US-AnaNeural"; // Microsoft's child voice
  */
 export async function POST(req: NextRequest) {
   try {
-    const { text } = await req.json();
+    const { text, voice, forceEdge } = await req.json();
 
     if (!text || typeof text !== "string") {
       return new Response(JSON.stringify({ error: "text is required" }), {
@@ -31,9 +31,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 1. Try Deepgram TTS if API key is configured (Primary — fastest, cheapest)
+    const targetVoice = voice || VOICE;
+
+    // 1. Try Deepgram TTS if API key is configured and not forceEdge
     const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
-    if (deepgramApiKey) {
+    if (deepgramApiKey && !forceEdge) {
       try {
         // Aura-2 supports speed param (range 0.7–1.5). Aura-1 does not.
         const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
@@ -121,11 +123,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Fallback to MsEdgeTTS
-    console.log(`[Edge TTS Route -> MsEdgeTTS Fallback] Synthesizing: "${cleanText.substring(0, 30)}..."`);
+    // Prepend silence padding ("... ") so hardware audio output has time to initialize before the first word
+    const speechText = cleanText.startsWith("...") ? cleanText : `... ${cleanText}`;
+    console.log(`[Edge TTS Route -> MsEdgeTTS] Synthesizing with voice=${targetVoice}: "${speechText.substring(0, 30)}..."`);
     const tts = new MsEdgeTTS();
-    await tts.setMetadata(VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    await tts.setMetadata(targetVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
 
-    const { audioStream } = tts.toStream(cleanText);
+    const { audioStream } = tts.toStream(speechText);
 
     // Collect audio chunks then send as one response
     const chunks: Buffer[] = [];

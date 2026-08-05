@@ -1228,18 +1228,19 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   }, [currentAgeGroup]);
 
   const filteredFlashcards = useMemo(() => {
-    return effectiveFlashcardTopics.filter((t: any) => {
-      const audiences = (t.targetAudiences || []).map((a: string) => a.toLowerCase());
-      if (selectedAgeFilter === "kindergarten") {
-        return audiences.some((a: string) => a === "kindergarten" || a === "kids-2-5" || a.includes("kindergarten"));
-      }
-      return audiences.includes(selectedAgeFilter);
-    });
-  }, [effectiveFlashcardTopics, selectedAgeFilter]);
+    // Universal access: return all flashcard topics across all CEFR levels for all age groups
+    return effectiveFlashcardTopics;
+  }, [effectiveFlashcardTopics]);
 
   const filteredGames = useMemo(() => {
-    return ALL_GAMES_DATA[selectedAgeFilter] || ALL_GAMES_DATA.kindergarten;
-  }, [selectedAgeFilter]);
+    // Universal access: return all unique games across all age groups
+    const allGames = Object.values(ALL_GAMES_DATA).flat();
+    const uniqueMap = new Map();
+    allGames.forEach((g: any) => {
+      if (!uniqueMap.has(g.id)) uniqueMap.set(g.id, g);
+    });
+    return Array.from(uniqueMap.values());
+  }, []);
 
   const setNativeLanguage   = useContentStore(s => s.setNativeLanguage)
   const selectedCategoryId  = useContentStore(s => s.selectedCategoryId)

@@ -72,11 +72,11 @@ export function KeyVocabularyWidget({ vocabulary }: KeyVocabularyWidgetProps) {
     setActiveAudioWord(word);
 
     try {
-      // 1. Primary: Deepgram TTS API (aura-asteria-en) for natural high quality audio
-      const res = await fetch("/api/tts/deepgram", {
+      // 1. Primary: Microsoft Edge TTS (en-US-AnaNeural / child voice)
+      const res = await fetch("/api/tts/edge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: word.trim(), model: "aura-asteria-en" })
+        body: JSON.stringify({ text: word.trim(), voice: "en-US-AnaNeural", forceEdge: true })
       });
 
       if (res.ok) {
@@ -97,7 +97,7 @@ export function KeyVocabularyWidget({ vocabulary }: KeyVocabularyWidgetProps) {
         return;
       }
     } catch (err) {
-      console.warn("Deepgram TTS fallback to SpeechSynthesis:", err);
+      console.warn("Edge TTS fallback to SpeechSynthesis:", err);
     }
 
     // 2. Fallback: Client-side Web Speech API

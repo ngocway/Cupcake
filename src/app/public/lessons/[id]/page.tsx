@@ -559,10 +559,18 @@ export default async function PublicLessonPage({
                 <PublicTagsWrapper lessonId={lesson.id} />
               </Suspense>
 
-              {/* Audio Player */}
+              {/* Audio Player (Group 2 Streamed Component) */}
               {lesson.assignment && (lesson.audioUrl || lesson.assignment.audioUrl) && (
                 <div className="mt-6">
-                  <GlobalAudioPlayer audioUrl={lesson.audioUrl || lesson.assignment.audioUrl || ''} />
+                  <Suspense fallback={
+                    <div className="h-20 w-full bg-[#12A375]/10 animate-pulse rounded-[24px] border border-[#12A375]/20 flex items-center justify-between px-6">
+                      <div className="w-10 h-10 rounded-full bg-[#12A375]/20" />
+                      <div className="h-4 w-40 bg-[#12A375]/20 rounded-full" />
+                      <div className="w-8 h-8 rounded-full bg-[#12A375]/20" />
+                    </div>
+                  }>
+                    <GlobalAudioPlayer audioUrl={lesson.audioUrl || lesson.assignment.audioUrl || ''} />
+                  </Suspense>
                 </div>
               )}
 

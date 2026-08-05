@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { FlashcardModePopup } from "./FlashcardModePopup";
@@ -165,6 +165,18 @@ export function FlashcardTopicBrowser({ topics, initialLevel }: Props) {
     return () => window.removeEventListener("open-cefr-level", handleOpenLevel);
   }, []);
 
+  const topicsByLevel = useMemo(() => {
+    if (!topics || topics.length === 0) return {};
+    const map: Record<string, { list: Topic[]; totalCards: number }> = {};
+    for (const t of topics) {
+      const lvl = t.cefrLevel ? t.cefrLevel.toLowerCase() : "a1";
+      if (!map[lvl]) map[lvl] = { list: [], totalCards: 0 };
+      map[lvl].list.push(t);
+      map[lvl].totalCards += (t._count?.flashcards ?? 0);
+    }
+    return map;
+  }, [topics]);
+
   if (!topics || topics.length === 0) {
     return <div className="text-center py-20 text-primary/50 font-bold">No flashcards available.</div>;
   }
@@ -174,11 +186,12 @@ export function FlashcardTopicBrowser({ topics, initialLevel }: Props) {
       <div className="w-full space-y-4">
         {CEFR_ORDER.map((levelId) => {
           const config = CEFR_LEVEL_CONFIG[levelId] || CEFR_LEVEL_CONFIG.a1;
-          const levelTopics = topics.filter(t => (t.cefrLevel ? t.cefrLevel.toLowerCase() : "a1") === levelId);
-          if (levelTopics.length === 0) return null;
+          const groupData = topicsByLevel[levelId];
+          if (!groupData || groupData.list.length === 0) return null;
 
+          const levelTopics = groupData.list;
+          const totalCards = groupData.totalCards;
           const isOpen = openLevel === levelId;
-          const totalCards = levelTopics.reduce((sum, t) => sum + (t._count?.flashcards ?? 0), 0);
 
           return (
             <div

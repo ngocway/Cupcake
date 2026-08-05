@@ -88,6 +88,7 @@ function BookCard({ book }: { book: any }) {
   return (
     <Link
       href={`/student/books/${book.bookId}`}
+      prefetch={true}
       className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/55 rounded-3xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group shadow-md"
     >
       {/* Thumbnail */}

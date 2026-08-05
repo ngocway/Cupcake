@@ -283,7 +283,7 @@ export function LessonCard({ item, isLoggedIn, priority = false }: { item: any; 
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <Link href={href} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5 cursor-pointer">
+      <Link href={href} prefetch={true} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5 cursor-pointer">
         <Image 
           src={thumb} 
           alt={item.title} 
@@ -344,7 +344,7 @@ export function LessonCard({ item, isLoggedIn, priority = false }: { item: any; 
         </div>
 
         {/* Title */}
-        <Link href={href}>
+        <Link href={href} prefetch={true}>
           <h3 className="text-foreground text-lg font-black leading-tight mb-2 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-secondary transition-colors">
             {item.title}
           </h3>

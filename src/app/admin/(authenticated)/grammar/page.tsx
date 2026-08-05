@@ -24,23 +24,22 @@ export default async function AdminGrammarPage() {
 
   // 2. Fetch counts of public exercises per topic and lesson in a single query
   const exerciseCounts = await prisma.assignment.groupBy({
-    by: ["grammarTopic", "grammarLesson", "level"],
+    by: ["grammarTopic", "grammarLesson"],
     where: {
-      status: "PUBLIC",
       deletedAt: null,
-      materialType: "EXERCISE",
+      grammarTopic: { not: null },
+      grammarLesson: { not: null },
     },
     _count: {
       id: true,
     },
   });
 
-  // Helper map: key = `${level}_${topicId}_${lessonId}` -> count
+  // Helper map: key = `${topicId}_${lessonId}` -> count
   const countMap = new Map<string, number>();
   exerciseCounts.forEach(c => {
-    if (c.grammarTopic && c.grammarLesson && c.level) {
-      const lvl = c.level.toLowerCase();
-      countMap.set(`${lvl}_${c.grammarTopic}_${c.grammarLesson}`, c._count.id);
+    if (c.grammarTopic && c.grammarLesson) {
+      countMap.set(`${c.grammarTopic}_${c.grammarLesson}`, c._count.id);
     }
   });
 
@@ -61,7 +60,7 @@ export default async function AdminGrammarPage() {
       const lessons = topic.lessons
         .filter(l => l.level === lvlId)
         .map(l => {
-          const exerciseCount = countMap.get(`${lvlId}_${topic.id}_${l.id}`) ?? 0;
+          const exerciseCount = countMap.get(`${topic.id}_${l.id}`) ?? 0;
           const hasContent = contentSet.has(l.id);
 
           return {

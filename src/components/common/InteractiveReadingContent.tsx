@@ -361,10 +361,10 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
     if (!activeVocab || !activeVocab.word) return;
 
     try {
-      const res = await fetch("/api/tts/deepgram", {
+      const res = await fetch("/api/tts/edge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: activeVocab.word.trim(), model: "aura-asteria-en" })
+        body: JSON.stringify({ text: activeVocab.word.trim(), voice: "en-US-AnaNeural", forceEdge: true })
       });
 
       if (res.ok) {
@@ -377,7 +377,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
         return;
       }
     } catch (err) {
-      console.warn("Deepgram TTS fallback to SpeechSynthesis:", err);
+      console.warn("Edge TTS fallback to SpeechSynthesis:", err);
     }
 
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
