@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
     ],
   },
   images: {
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'api.dicebear.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -69,4 +69,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+let configWithPlugins = withNextIntl(nextConfig);
+
+if (process.env.ANALYZE === 'true') {
+  try {
+    // Dynamic import to prevent build errors if module is missing
+    const withBundleAnalyzer = require('@next/bundle-analyzer')({ enabled: true });
+    configWithPlugins = withBundleAnalyzer(configWithPlugins);
+  } catch (e) {
+    console.warn('Could not load @next/bundle-analyzer:', e);
+  }
+}
+
+export default configWithPlugins;

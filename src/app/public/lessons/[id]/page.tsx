@@ -499,6 +499,7 @@ export default async function PublicLessonPage({
                   className="w-full h-full"
                   src={`https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0`}
                   title={lesson.title}
+                  loading="lazy"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />

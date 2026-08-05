@@ -26,6 +26,11 @@ When generating audio using ElevenLabs (e.g. for flashcards, quiz questions, or 
 When the user requests you to generate any image (e.g. mockups, assets, UI designs, or example illustrations) in the chat, always default to using the FLUX model style with the following prompt:
 "children's book illustration, premium storybook art, soft watercolor digital painting, pastel color palette, clean hand-drawn line art, rounded cartoon design, gentle brush texture, soft gradients, warm diffused lighting, cozy wholesome aesthetic, cute kawaii style, expressive simple faces, minimal facial features, rosy cheeks, smooth organic shapes, soft shading, airy composition, high-end picture book illustration, charming, whimsical, timeless, elegant simplicity, subtle paper texture, matte finish, Adobe Fresco style, Procreate illustration, 2D, ultra clean, consistent character design, no realism, no anime, no manga, no cel shading, no 3D, no photorealistic, no text, no watermark"
 
+# Question Content Language Constraint
+- **Question Content (questionText, statements, options, choices, prompts)** MUST BE **100% IN ENGLISH ONLY**.
+- Do NOT use Vietnamese text in question text, statements, instructions, or choice labels.
+- Explanations (`explanation`) can be bilingual (`[EN]` and `[VI]`) to support student learning.
+
 
 
 

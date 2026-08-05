@@ -13,11 +13,13 @@ import PageViewTracker from "@/components/common/PageViewTracker";
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

@@ -32,7 +32,7 @@ const getLevelsWithColors = (level: string | null | undefined): { label: string;
   });
 }
 
-export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: boolean }) {
+export function ExerciseCard({ item, isLoggedIn, priority = false }: { item: any; isLoggedIn: boolean; priority?: boolean }) {
   const t = useTranslations("home")
   const views = (item.viewCount || 0) + 1500
   const likes = ((item.id?.charCodeAt(0) || 0) * 7) % 1000
@@ -61,7 +61,7 @@ export function ExerciseCard({ item, isLoggedIn }: { item: any; isLoggedIn: bool
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover transition-transform duration-1000 group-hover:scale-105"
-          priority={false}
+          priority={priority}
         />
         {/* Level Badges (Top-Left) */}
         {item.level && (
@@ -255,7 +255,7 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
 
 
 
-export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boolean }) {
+export function LessonCard({ item, isLoggedIn, priority = false }: { item: any; isLoggedIn?: boolean; priority?: boolean }) {
   const t = useTranslations("home")
   const isReading = item.type === 'READING_LESSON' || item.materialType === 'READING'
   
@@ -290,7 +290,7 @@ export function LessonCard({ item, isLoggedIn }: { item: any; isLoggedIn?: boole
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover transition-transform duration-1000 group-hover:scale-105"
-          priority={false}
+          priority={priority}
         />
         {/* Level Badges (Top-Left) */}
         {item.level && (

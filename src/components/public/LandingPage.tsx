@@ -1,5 +1,6 @@
 "use client"
 import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback, useRef } from "react"
+import dynamic from "next/dynamic"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ExerciseCard, ExerciseCardHorizontal, LessonCard } from "@/components/public/ContentCards"
@@ -21,11 +22,6 @@ import {
 } from "@/components/ui/select"
 
 import { LevelPillSelector } from "@/components/public/LevelPillSelector"
-
-import { GrammarTopicBrowser } from "@/components/public/exercises/GrammarTopicBrowser"
-import { FlashcardTopicBrowser } from "@/components/public/flashcards/FlashcardTopicBrowser"
-import { LessonAccordionBrowser } from "@/components/public/lessons/LessonAccordionBrowser"
-import { BooksBrowser } from "@/components/public/books/BooksBrowser"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
