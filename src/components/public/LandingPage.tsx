@@ -46,7 +46,7 @@ interface Props {
 
 function SectionSkeleton() {
   return (
-    <div className="relative min-h-[400px] w-full">
+    <div className="relative min-h-[900px] sm:min-h-[600px] lg:min-h-[400px] w-full">
       {/* Centered spinner loading */}
       <div className="absolute inset-0 z-30 flex items-center justify-center bg-transparent">
         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-md" />

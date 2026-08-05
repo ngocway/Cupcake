@@ -97,7 +97,7 @@ export function StickySidebarWrapper({ children }: { children: React.ReactNode }
             </button>
           </div>
 
-          {children}
+          {mobileSidebarOpen && children}
         </aside>
       </div>
     </>

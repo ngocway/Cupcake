@@ -80,7 +80,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const isActive = (path: string) => pathname === path
 
   return (
-    <nav className="relative mt-6 mx-auto z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] bg-white/95 border border-primary/10 rounded-full shadow-2xl">
+    <nav className="relative mt-6 mx-auto z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] min-h-[56px] sm:min-h-[64px] bg-white/95 border border-primary/10 rounded-full shadow-2xl">
       {/* Hamburger button — mobile only */}
         <button
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -98,6 +98,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           <img 
             src="/images/logo.png" 
             alt="Dolcake" 
+            width={36}
+            height={36}
             className="w-9 h-9 sm:w-12 sm:h-12 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0" 
           />
           <div className="flex-col hidden sm:flex">
