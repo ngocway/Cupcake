@@ -162,6 +162,23 @@ function ExerciseSkeleton() {
   )
 }
 
+const GrammarTopicBrowser = dynamic(
+  () => import("@/components/public/exercises/GrammarTopicBrowser").then(mod => mod.GrammarTopicBrowser),
+  { loading: () => <ExerciseSkeleton /> }
+)
+const FlashcardTopicBrowser = dynamic(
+  () => import("@/components/public/flashcards/FlashcardTopicBrowser").then(mod => mod.FlashcardTopicBrowser),
+  { loading: () => <FlashcardSkeleton /> }
+)
+const LessonAccordionBrowser = dynamic(
+  () => import("@/components/public/lessons/LessonAccordionBrowser").then(mod => mod.LessonAccordionBrowser),
+  { loading: () => <LessonSkeleton /> }
+)
+const BooksBrowser = dynamic(
+  () => import("@/components/public/books/BooksBrowser").then(mod => mod.BooksBrowser),
+  { loading: () => <SectionSkeleton /> }
+)
+
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
 function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () => void }) {
