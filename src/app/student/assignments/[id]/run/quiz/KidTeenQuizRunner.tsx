@@ -587,7 +587,8 @@ const SIDE_PANEL_W = 400;
 interface Props {
   assignment: any;
   submissionId?: string;
-  questions: any[];
+  questions?: any[];
+  questionsPromise?: Promise<any[]>;
   initialAnswers: any;
   extraDataPromise: Promise<any>;
   relatedAssignmentsPromise?: Promise<any[]>;
