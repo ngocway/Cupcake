@@ -1,46 +1,35 @@
-import React from 'react';
+import React from "react";
 
-export default function AssignmentLobbyLoading() {
+export default function AssignmentRunLoading() {
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-slate-50 dark:bg-slate-950">
-      {/* Skeleton Header */}
-      <div className="h-12 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse" />
-      
-      <div className="flex flex-1 overflow-hidden">
-        {/* Main Content Skeleton */}
-        <div className="w-[70%] p-8 lg:p-12 pl-32 lg:pl-40 space-y-12">
-          <div className="space-y-4">
-            <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-            <div className="h-12 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
-          </div>
-          
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-            ))}
-          </div>
+    <div 
+      className="min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative bg-cover bg-center bg-[#8cd2f6]"
+      style={{ backgroundImage: "url(/images/background/cartoon-background-children.jpg)" }}
+    >
+      {/* Start Card Skeleton */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-2xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden flex flex-col items-center space-y-6">
+        {/* Top colored strip */}
+        <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500" />
 
-          <div className="space-y-6">
-            <div className="h-6 w-48 bg-slate-200 dark:bg-slate-800 rounded animate-pulse" />
-            <div className="space-y-4">
-              {[1, 2].map((i) => (
-                <div key={i} className="h-24 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-              ))}
-            </div>
-          </div>
+        {/* Teacher avatar placeholder */}
+        <div className="w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-950/40 animate-pulse border-4 border-white shadow-md shrink-0" />
+
+        {/* Tag line placeholder */}
+        <div className="h-4 w-32 bg-purple-100 dark:bg-purple-950/40 rounded-full animate-pulse" />
+
+        {/* Title placeholder */}
+        <div className="h-10 w-4/5 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+
+        {/* Meta badges placeholder */}
+        <div className="flex flex-wrap items-center justify-center gap-4 w-full">
+          <div className="h-10 w-36 bg-purple-50 dark:bg-purple-950/40 rounded-2xl animate-pulse" />
+          <div className="h-10 w-36 bg-purple-50 dark:bg-purple-950/40 rounded-2xl animate-pulse" />
         </div>
 
-        {/* Sidebar Skeleton */}
-        <div className="w-[30%] border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 space-y-12">
-          <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-        </div>
-      </div>
-
-      {/* Centered Loading Spinner Overlay */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-5 rounded-3xl shadow-2xl flex flex-col items-center justify-center border border-slate-200/50 dark:border-slate-800/50 pointer-events-auto">
-          <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        {/* Mode selection buttons placeholder */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center pt-2">
+          <div className="h-14 w-full sm:w-1/2 rounded-3xl bg-purple-100 dark:bg-purple-950/40 animate-pulse" />
+          <div className="h-14 w-full sm:w-1/2 rounded-3xl bg-orange-200 dark:bg-amber-950/40 animate-pulse" />
         </div>
       </div>
     </div>

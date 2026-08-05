@@ -1,42 +1,67 @@
-import React from 'react';
+import React from "react";
 
 export default function PublicLessonDetailLoading() {
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden relative bg-[#F4EFE6] dark:bg-slate-950 font-body">
-      {/* Fake Header */}
-      <div className="h-14 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 animate-pulse" />
-      
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {/* Main Column */}
-        <div className="w-full lg:w-[70%] p-8 lg:p-12 space-y-8 overflow-y-auto no-scrollbar">
-          {/* Back button skeleton */}
-          <div className="h-10 w-24 bg-white/60 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 animate-pulse" />
-          
-          {/* Video Placeholder */}
-          <div className="aspect-video w-full bg-slate-200 dark:bg-slate-800 rounded-[2.5rem] animate-pulse" />
-          
-          {/* Details Card */}
-          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl rounded-[3.5rem] p-10 space-y-6 shadow-xl border border-primary/5">
-            <div className="h-10 w-2/3 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
-            <div className="flex gap-2">
-              <div className="h-6 w-16 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
-              <div className="h-6 w-20 bg-slate-200 dark:bg-slate-800 rounded-full animate-pulse" />
-            </div>
-            <div className="h-40 w-full bg-slate-100 dark:bg-slate-900 rounded-2xl animate-pulse" />
-          </div>
-        </div>
-
-        {/* Sidebar Column */}
-        <div className="hidden lg:block lg:w-[30%] border-l border-slate-200 dark:border-slate-800 bg-white/40 dark:bg-slate-900/40 p-10 space-y-8 overflow-y-auto no-scrollbar">
-          <div className="h-60 bg-slate-200 dark:bg-slate-800 rounded-3xl animate-pulse" />
-          <div className="h-60 bg-slate-200 dark:bg-slate-800 rounded-3xl animate-pulse" />
-        </div>
+    <div className="min-h-screen font-body relative bg-[#e2f0e7] text-foreground">
+      {/* Background blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]">
+        <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-[#6ee7b7]/40 blur-[130px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-[#a7f3d0]/40 blur-[150px]" />
       </div>
 
-      {/* Centered Loading Spinner Overlay */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-5 rounded-3xl shadow-2xl flex flex-col items-center justify-center border border-slate-200/50 dark:border-slate-800/50 pointer-events-auto">
-          <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      {/* Fake Glass Header */}
+      <div className="h-16 border-b border-white/20 bg-white/70 backdrop-blur-md px-6 flex items-center justify-between">
+        <div className="w-32 h-8 bg-emerald-200/50 rounded-xl animate-pulse" />
+        <div className="w-48 h-8 bg-emerald-100/50 rounded-xl animate-pulse hidden sm:block" />
+        <div className="w-24 h-8 bg-emerald-200/50 rounded-full animate-pulse" />
+      </div>
+
+      {/* 3-column layout skeleton */}
+      <div className="pt-8 pb-16 px-4 sm:px-6 md:px-10 max-w-[1600px] mx-auto">
+        <div className="w-full flex flex-col lg:flex-row items-start gap-8">
+
+          {/* LEFT SIDEBAR: Key Vocabulary Skeleton */}
+          <aside className="w-full lg:w-[300px] shrink-0">
+            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[28px] p-6 space-y-4 border border-emerald-100 shadow-lg">
+              <div className="h-5 w-36 bg-emerald-200/60 rounded-full animate-pulse" />
+              <div className="space-y-3 pt-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-12 bg-emerald-50/80 rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            </div>
+          </aside>
+
+          {/* MAIN CONTENT: Lesson Text & Media Skeleton */}
+          <main className="flex-1 min-w-0 space-y-8 w-full">
+            {/* Video Placeholder */}
+            <div className="aspect-video w-full bg-slate-800 rounded-[28px] animate-pulse shadow-2xl" />
+
+            {/* Main Lesson Card Skeleton */}
+            <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl rounded-[28px] p-6 md:p-10 space-y-6 border-2 border-emerald-100 shadow-xl">
+              {/* Badge & Action buttons */}
+              <div className="flex justify-between items-center">
+                <div className="h-6 w-24 bg-emerald-500/30 rounded-full animate-pulse" />
+                <div className="h-8 w-32 bg-amber-100/60 rounded-full animate-pulse" />
+              </div>
+
+              {/* Title */}
+              <div className="h-10 w-4/5 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+
+              {/* Audio player placeholder */}
+              <div className="h-16 w-full bg-emerald-50 rounded-2xl animate-pulse border border-emerald-100" />
+
+              {/* Reading Content Paragraphs Skeleton */}
+              <div className="space-y-4 pt-4">
+                <div className="h-5 w-full bg-slate-200/80 rounded-lg animate-pulse" />
+                <div className="h-5 w-11/12 bg-slate-200/80 rounded-lg animate-pulse" />
+                <div className="h-5 w-4/5 bg-slate-200/80 rounded-lg animate-pulse" />
+                <div className="h-5 w-full bg-slate-200/80 rounded-lg animate-pulse" />
+                <div className="h-5 w-3/4 bg-slate-200/80 rounded-lg animate-pulse" />
+              </div>
+            </div>
+          </main>
+
         </div>
       </div>
     </div>

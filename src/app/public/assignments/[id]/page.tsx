@@ -13,9 +13,11 @@ export async function generateMetadata(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
   const { id } = await params;
-  const assignment = await prisma.assignment.findFirst({
-    where: { OR: [{ id }, { slug: id }], deletedAt: null },
-    select: { id: true, slug: true, title: true, shortDescription: true, thumbnail: true },
+  const assignment = await fetchWithRedis(`assignment:public:meta:${id}`, 300, async () => {
+    return prisma.assignment.findFirst({
+      where: { OR: [{ id }, { slug: id }], deletedAt: null },
+      select: { id: true, slug: true, title: true, shortDescription: true, thumbnail: true },
+    });
   });
 
   if (!assignment) {
@@ -98,33 +100,7 @@ export default async function PublicAssignmentPage({
   }
 
   const questions = await getCachedAssignmentQuestions(assignment.id);
-
-  // ── Always go directly to quiz (no landing page) ──────────────────────────
-
-  // For logged-in users: create/resume submission then redirect to quiz
-  if (session) {
-    const submissions = await prisma.submission.findMany({
-      where: { assignmentId: assignment.id, studentId: session.id },
-      orderBy: { attemptNumber: 'desc' }
-    });
-    const activeSubmission = submissions.find(s => !s.submittedAt);
-    const completedCount = submissions.filter(s => s.submittedAt).length;
-
-    if (activeSubmission) {
-      redirect(`/student/assignments/${assignment.id}/run/quiz?submissionId=${activeSubmission.id}`);
-    } else {
-      const newSubmission = await prisma.submission.create({
-        data: {
-          assignmentId: assignment.id,
-          studentId: session.id,
-          attemptNumber: completedCount + 1
-        }
-      });
-      redirect(`/student/assignments/${assignment.id}/run/quiz?submissionId=${newSubmission.id}`);
-    }
-  }
-
-  const relatedAssignments = await getRelatedAssignmentsCached(assignment.id, assignment.tags, assignment.targetAudiences as string[]);
+  const relatedAssignmentsPromise = getRelatedAssignmentsCached(assignment.id, assignment.tags, assignment.targetAudiences as string[]);
   const questionTranslationsPromise = getQuestionTranslationMap(assignment.id);
   const assignmentTranslationsPromise = getAssignmentTranslations(assignment.id);
 
@@ -193,7 +169,7 @@ export default async function PublicAssignmentPage({
           cefrLevel={assignment.level || "a1"}
           initialAnswers={{}}
           extraDataPromise={Promise.resolve(assignment)}
-          relatedAssignmentsPromise={Promise.resolve(relatedAssignments)}
+          relatedAssignmentsPromise={relatedAssignmentsPromise}
           questionTranslationsPromise={questionTranslationsPromise}
           assignmentTranslationsPromise={assignmentTranslationsPromise}
           isGuest={true}

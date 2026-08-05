@@ -1,66 +1,35 @@
-import { Skeleton } from "@/components/ui/Skeleton";
+import React from "react";
 
-export default function AssignmentLoading() {
+export default function PublicAssignmentLoading() {
   return (
-    <div className="flex flex-col h-screen max-h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
-      {/* Header Skeleton */}
-      <div className="h-12 border-b border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center px-6 shrink-0">
-        <Skeleton className="h-4 w-32" />
-      </div>
+    <div 
+      className="min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative bg-cover bg-center bg-[#8cd2f6]"
+      style={{ backgroundImage: "url(/images/background/cartoon-background-children.jpg)" }}
+    >
+      {/* Start Card Skeleton */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-2xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden flex flex-col items-center space-y-6">
+        {/* Top colored strip */}
+        <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500" />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Main Content (70%) */}
-        <div className="w-[70%] flex flex-col border-r border-outline-variant/30">
-          <div className="flex-1 p-8 lg:p-12 pl-32 lg:pl-40 space-y-12">
-            <div className="space-y-6">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-16 w-3/4" />
-              <div className="flex gap-3 items-center">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
+        {/* Teacher avatar placeholder */}
+        <div className="w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-950/40 animate-pulse border-4 border-white shadow-md shrink-0" />
 
-            {/* Stats Grid Skeleton */}
-            <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-24 rounded-2xl" />
-              ))}
-            </div>
+        {/* Tag line placeholder */}
+        <div className="h-4 w-32 bg-purple-100 dark:bg-purple-950/40 rounded-full animate-pulse" />
 
-            {/* Content Blocks */}
-            <div className="space-y-6">
-              <Skeleton className="h-10 w-48" />
-              <Skeleton className="h-32 w-full rounded-2xl" />
-              <Skeleton className="h-32 w-full rounded-2xl" />
-            </div>
-          </div>
+        {/* Title placeholder */}
+        <div className="h-10 w-4/5 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
 
-          {/* Bottom Bar Skeleton */}
-          <div className="h-20 border-t border-outline-variant/20 bg-white dark:bg-slate-900 flex items-center justify-center gap-24 px-6">
-            <Skeleton className="h-10 w-32 rounded-xl" />
-            <Skeleton className="h-12 w-48 rounded-xl" />
-          </div>
+        {/* Meta badges placeholder */}
+        <div className="flex flex-wrap items-center justify-center gap-4 w-full">
+          <div className="h-10 w-36 bg-purple-50 dark:bg-purple-950/40 rounded-2xl animate-pulse" />
+          <div className="h-10 w-36 bg-purple-50 dark:bg-purple-950/40 rounded-2xl animate-pulse" />
         </div>
 
-        {/* Sidebar (30%) */}
-        <div className="w-[30%] p-10 space-y-12 bg-white dark:bg-slate-900">
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-40 w-full rounded-2xl" />
-          </div>
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-20 w-full rounded-2xl" />
-          </div>
-          <Skeleton className="h-12 w-full rounded-xl" />
-        </div>
-      </div>
-
-      {/* Centered Loading Spinner Overlay */}
-      <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none">
-        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md p-5 rounded-3xl shadow-2xl flex flex-col items-center justify-center border border-slate-200/50 dark:border-slate-800/50 pointer-events-auto">
-          <div className="size-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        {/* Mode selection buttons placeholder */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center pt-2">
+          <div className="h-14 w-full sm:w-1/2 rounded-3xl bg-purple-100 dark:bg-purple-950/40 animate-pulse" />
+          <div className="h-14 w-full sm:w-1/2 rounded-3xl bg-orange-200 dark:bg-amber-950/40 animate-pulse" />
         </div>
       </div>
     </div>

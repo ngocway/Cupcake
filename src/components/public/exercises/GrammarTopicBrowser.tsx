@@ -142,6 +142,7 @@ const CARD_STYLES = [
 
 export function GrammarTopicBrowser() {
   const studyLevel = useContentStore((s) => (s as any).studyLevel);
+  const setFiltering = useContentStore((s) => s.setFiltering);
   const initialLevel = (studyLevel === "pre-a1-a1" || !studyLevel ? "a1" : studyLevel) as CefrLevel;
   const [openLevel, setOpenLevel] = useState<CefrLevel>(initialLevel);
 
@@ -346,6 +347,7 @@ export function GrammarTopicBrowser() {
                         key={topic.id}
                         href={`/exercises/${level}/${topic.id}`}
                         prefetch={true}
+                        onClick={() => setFiltering(true)}
                         className={`group relative flex flex-col justify-between w-full p-3.5 sm:p-4.5 rounded-[20px] sm:rounded-[24px] border-2 border-slate-200 overflow-hidden cursor-pointer transition-all duration-300 shadow-sm hover:shadow-xl hover:scale-[1.03] ${style.bg} ${style.borderHover} ${style.bgHover} min-h-[120px] sm:min-h-[135px]`}
                       >
                         {cardContent}

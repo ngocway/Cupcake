@@ -18,6 +18,13 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
   const [isPending, startTransition] = useTransition();
   const headerVisible = true;
 
+  const isFiltering = useContentStore(s => s.isFiltering);
+  const setFiltering = useContentStore(s => s.setFiltering);
+
+  useEffect(() => {
+    setFiltering(false);
+  }, [pathname, searchParams, setFiltering]);
+
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
   const isKindergarten = 
     studyAgeGroup?.toLowerCase().includes("kindergarten") || 
@@ -96,7 +103,12 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
         isPendingSearch={isPending}
       />
       <MobileContentTypeMenu />
-      <div className={`relative transition-all duration-500 ease-in-out ${isPending ? "opacity-60 pointer-events-none" : ""} pt-0 lg:pt-2`}>
+      <div className={`relative transition-all duration-500 ease-in-out ${isPending || isFiltering ? "opacity-60 pointer-events-none" : ""} pt-0 lg:pt-2`}>
+        {(isPending || isFiltering) && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-transparent pointer-events-none">
+            <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin shadow-md" />
+          </div>
+        )}
         {isPending && (
           <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[101] flex items-center gap-3 px-6 py-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-2xl border border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />

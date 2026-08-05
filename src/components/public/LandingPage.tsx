@@ -965,16 +965,16 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const flashcardTopicsLoaded = useContentStore(s => (s as any).flashcardTopicsLoaded) as boolean;
   const setFlashcardTopics    = useContentStore(s => (s as any).setFlashcardTopics);
 
-  // SSR seed: unwrap server-fetched flashcard topics and populate the store on first render.
-  // This replaces the client-side useEffect fetch — data arrives with the initial HTML,
-  // so the Flashcards tab renders immediately without a client round-trip.
+  // SSR seed: unwrap server-fetched flashcard topics and populate the store after mount.
   const ssrFlashcardTopics = use(promises.flashcards ?? Promise.resolve([])) as any[];
-  if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
-    setFlashcardTopics(ssrFlashcardTopics);
-  }
+  useEffect(() => {
+    if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
+      setFlashcardTopics(ssrFlashcardTopics);
+    }
+  }, [flashcardTopicsLoaded, ssrFlashcardTopics, setFlashcardTopics]);
 
   // Use SSR topics as immediate fallback — avoids skeleton flash on first render
-  // even before Zustand has been hydrated by the render-time setFlashcardTopics call.
+  // even before Zustand has been hydrated by setFlashcardTopics.
   const effectiveFlashcardTopics = allFlashcardTopics.length > 0 ? allFlashcardTopics : ssrFlashcardTopics;
   const isFlashcardsLoading = effectiveFlashcardTopics.length === 0;
 

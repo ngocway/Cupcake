@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useTranslations } from "next-intl"
+import { useContentStore } from "@/store/useContentStore"
 
 const getLevelsWithColors = (level: string | null | undefined): { label: string; color: string }[] => {
   if (!level) return [];
@@ -54,7 +55,7 @@ export function ExerciseCard({ item, isLoggedIn, priority = false }: { item: any
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <Link href={href} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-primary/5 cursor-pointer">
+      <Link href={href} prefetch={true} onClick={() => useContentStore.getState().setFiltering(true)} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-primary/5 cursor-pointer">
         <Image 
           src={thumbnailSrc} 
           alt={item.title} 
@@ -115,7 +116,7 @@ export function ExerciseCard({ item, isLoggedIn, priority = false }: { item: any
         </div>
 
         {/* Title */}
-        <Link href={href}>
+        <Link href={href} prefetch={true} onClick={() => useContentStore.getState().setFiltering(true)}>
           <h3 className="text-foreground text-lg font-black leading-tight mb-2 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-primary transition-colors">
             {item.title}
           </h3>
@@ -189,6 +190,8 @@ export function ExerciseCardHorizontal({ item, isLoggedIn }: { item: any; isLogg
   return (
     <Link
       href={href}
+      prefetch={true}
+      onClick={() => useContentStore.getState().setFiltering(true)}
       className="group flex flex-row rounded-lg overflow-hidden
         bg-white dark:bg-slate-800
         border border-slate-100 dark:border-slate-700
@@ -283,7 +286,7 @@ export function LessonCard({ item, isLoggedIn, priority = false }: { item: any; 
   return (
     <div className="relative w-full group">
       {/* Thumbnail Container */}
-      <Link href={href} prefetch={true} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5 cursor-pointer">
+      <Link href={href} prefetch={true} onClick={() => useContentStore.getState().setFiltering(true)} className="block relative aspect-video w-full overflow-hidden rounded-lg bg-surface-container shadow-xl border-2 border-secondary/5 cursor-pointer">
         <Image 
           src={thumb} 
           alt={item.title} 
@@ -344,7 +347,7 @@ export function LessonCard({ item, isLoggedIn, priority = false }: { item: any; 
         </div>
 
         {/* Title */}
-        <Link href={href} prefetch={true}>
+        <Link href={href} prefetch={true} onClick={() => useContentStore.getState().setFiltering(true)}>
           <h3 className="text-foreground text-lg font-black leading-tight mb-2 tracking-tight line-clamp-2 min-h-[2.8rem] group-hover:text-secondary transition-colors">
             {item.title}
           </h3>

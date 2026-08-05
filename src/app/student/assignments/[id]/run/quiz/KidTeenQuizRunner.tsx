@@ -771,7 +771,8 @@ function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }:
 export default function KidTeenQuizRunner({
   assignment,
   submissionId,
-  questions,
+  questions = [],
+  questionsPromise,
   initialAnswers,
   extraDataPromise,
   relatedAssignmentsPromise,
@@ -780,6 +781,27 @@ export default function KidTeenQuizRunner({
   isGuest = false,
   cefrLevel = "a1",
 }: Props) {
+  const [activeQuestions, setActiveQuestions] = useState<any[]>(questions);
+
+  useEffect(() => {
+    if (questions && questions.length > 0) {
+      setActiveQuestions(questions);
+    }
+  }, [questions]);
+
+  useEffect(() => {
+    if (questionsPromise) {
+      questionsPromise
+        .then((qs) => {
+          if (qs && qs.length > 0) {
+            setActiveQuestions(qs);
+          }
+        })
+        .catch((err) => {
+          console.error("Error loading questions in background:", err);
+        });
+    }
+  }, [questionsPromise]);
   const t = useTranslations("student.quiz");
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -924,6 +946,7 @@ export default function KidTeenQuizRunner({
 
   // ── Kid/Teen navigation state ────────────────────────────
   const [currentIndex, setCurrentIndex] = useState(0);
+  const currentQuestion = activeQuestions[currentIndex];
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isAutoRevealing, setIsAutoRevealing] = useState(false);
@@ -983,17 +1006,18 @@ export default function KidTeenQuizRunner({
   const isDirty = Object.keys(answers).length > 0;
 
   const isAllChecked = useMemo(
-    () => questions.length > 0 && questions.every((q) => checkedQuestions[q.id]),
-    [questions, checkedQuestions]
+    () => activeQuestions.length > 0 && activeQuestions.every((q) => checkedQuestions[q.id]),
+    [activeQuestions, checkedQuestions]
   );
 
   const allCompleted = useMemo(
     () =>
-      questions.every((q) => {
+      activeQuestions.length > 0 &&
+      activeQuestions.every((q) => {
         const ans = answers[q.id];
         return ans !== undefined && ans !== null && (typeof ans === "object" ? Object.keys(ans).length > 0 : true);
       }),
-    [questions, answers]
+    [activeQuestions, answers]
   );
 
   // ── Before-unload guard ──────────────────────────────────
@@ -1168,7 +1192,6 @@ export default function KidTeenQuizRunner({
   };
 
   // ── Current question data ────────────────────────────────
-  const currentQuestion = questions[currentIndex];
   let currentQuestionData: any;
   try { currentQuestionData = JSON.parse(currentQuestion?.content || "{}"); }
   catch { currentQuestionData = { questionText: currentQuestion?.content }; }
@@ -1560,6 +1583,7 @@ export default function KidTeenQuizRunner({
   };
 
   if (!hasStarted) {
+    const qCount = assignment._count?.questions ?? activeQuestions.length;
     return (
       <div 
         className={`min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative ${
@@ -1575,7 +1599,6 @@ export default function KidTeenQuizRunner({
             <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none" style={{ animationDuration:'10s' }} />
             <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none" style={{ animationDuration:'12s' }} />
             <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none" style={{ animationDuration:'15s' }} />
-            <div className="absolute bottom-[20%] left-[-5%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-tr from-[#fef9c3]/55 to-transparent blur-[140px] animate-pulse pointer-events-none" style={{ animationDuration:'18s' }} />
             <div className="absolute top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none" style={{ animationDuration:'8s' }} />
             <div className="absolute bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none" style={{ animationDuration:'10s' }} />
             <div className="absolute top-[50%] right-[25%] w-[100px] h-[100px] rounded-full bg-[#14b8a6]/18 blur-[15px] animate-pulse pointer-events-none" style={{ animationDuration:'6s' }} />
@@ -1606,7 +1629,7 @@ export default function KidTeenQuizRunner({
           <div className="flex flex-wrap items-center justify-center gap-6 mb-8 text-slate-600 dark:text-slate-300 font-bold text-sm">
             <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
               <HelpCircle className="w-5 h-5 text-purple-500" />
-              {questions.length} QUESTIONS
+              {qCount} QUESTIONS
             </div>
             {assignment.timeLimit && (
               <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
@@ -1650,7 +1673,7 @@ export default function KidTeenQuizRunner({
 
   if (!currentQuestion) return null;
 
-  const cols = Math.ceil(questions.length / 2);
+  const cols = Math.ceil(activeQuestions.length / 2);
 
   // ── Render ───────────────────────────────────────────────
   return (
@@ -1808,7 +1831,7 @@ export default function KidTeenQuizRunner({
         className="flex-1 flex flex-col items-center justify-start pt-6 sm:justify-center sm:pt-6 p-2 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
         style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
-      {questions.length > 0 && (
+      {activeQuestions.length > 0 && (
         <>
         <div className="w-full max-w-4xl mx-auto z-10 relative top-0">
 
@@ -1896,7 +1919,7 @@ export default function KidTeenQuizRunner({
                 <div className="flex sm:hidden items-center">
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 border border-purple-200 text-purple-700 rounded-full font-black text-xs tracking-wider shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                    <span>{currentIndex + 1} / {questions.length}</span>
+                    <span>{currentIndex + 1} / {activeQuestions.length}</span>
                   </div>
                 </div>
               ) : null}
