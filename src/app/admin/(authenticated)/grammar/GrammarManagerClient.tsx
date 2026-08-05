@@ -35,6 +35,7 @@ interface LessonInfo {
   id: string;
   label: string;
   level: string;
+  topicId?: string;
   exerciseCount: number;
   hasContent: boolean;
 }
@@ -78,7 +79,7 @@ export default function GrammarManagerClient({ levels, topicsByLevel }: GrammarM
     if (!selectedLesson) return;
     setIsRefreshingExercise(true);
     try {
-      const updatedExercises = await getLessonExercises(selectedLesson.level, selectedLesson.topicId, selectedLesson.id);
+      const updatedExercises = await getLessonExercises(selectedLesson.level, selectedLesson.topicId || "", selectedLesson.id);
       setExercisesMap(prev => ({ ...prev, [selectedLesson.id]: updatedExercises }));
 
       const currentEx = updatedExercises.find(e => e.id === exerciseId);

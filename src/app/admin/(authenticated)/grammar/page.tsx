@@ -67,6 +67,7 @@ export default async function AdminGrammarPage() {
             id: l.id,
             label: l.label,
             level: l.level,
+            topicId: topic.id,
             exerciseCount,
             hasContent,
           };
