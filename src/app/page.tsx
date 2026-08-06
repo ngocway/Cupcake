@@ -121,8 +121,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     }
   }
 
-  // SSR: fetch topics on server (cache-backed, no client round-trip needed)
-  const flashcardsPromise = getCachedFlashcardTopics();
+  const queryParams = { 
+    ...params, 
+    userType: initialUserType,
+    studySubject,
+    studyLevel
+  };
+
+  // SSR: fetch cached promises on server for immediate streaming
+  const assignmentsPromise = getCachedAssignments(queryParams);
+  const lessonsPromise     = getCachedLessons(queryParams);
+  const flashcardsPromise  = getCachedFlashcardTopics();
 
   return (
     <HomeShell>
@@ -143,8 +152,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           }>
             <LandingPage
               promises={{
-                assignments: EMPTY_PROMISE,
-                lessons: EMPTY_PROMISE,
+                assignments: assignmentsPromise,
+                lessons: lessonsPromise,
                 flashcards: flashcardsPromise,
                 kindergartenGames: STATIC_KINDERGARTEN_GAMES,
               }}

@@ -965,13 +965,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const flashcardTopicsLoaded = useContentStore(s => (s as any).flashcardTopicsLoaded) as boolean;
   const setFlashcardTopics    = useContentStore(s => (s as any).setFlashcardTopics);
 
-  // SSR seed: unwrap server-fetched flashcard topics and populate the store after mount.
+  // SSR seed: unwrap server-fetched flashcard topics and populate the store on first render.
   const ssrFlashcardTopics = use(promises.flashcards ?? Promise.resolve([])) as any[];
-  useEffect(() => {
-    if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
-      setFlashcardTopics(ssrFlashcardTopics);
-    }
-  }, [flashcardTopicsLoaded, ssrFlashcardTopics, setFlashcardTopics]);
+  if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
+    setFlashcardTopics(ssrFlashcardTopics);
+  }
 
   // Use SSR topics as immediate fallback — avoids skeleton flash on first render
   // even before Zustand has been hydrated by setFlashcardTopics.

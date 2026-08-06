@@ -2,12 +2,9 @@ import React from "react";
 
 export default function AssignmentRunLoading() {
   return (
-    <div 
-      className="min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative bg-cover bg-center bg-[#8cd2f6]"
-      style={{ backgroundImage: "url(/images/background/cartoon-background-children.jpg)" }}
-    >
+    <div className="min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative bg-[#8cd2f6]">
       {/* Start Card Skeleton */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-2xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden flex flex-col items-center space-y-6">
+      <div className="bg-white/95 dark:bg-slate-900/95 rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden flex flex-col items-center space-y-6">
         {/* Top colored strip */}
         <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500" />
 
@@ -35,3 +32,4 @@ export default function AssignmentRunLoading() {
     </div>
   );
 }
+

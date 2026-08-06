@@ -3,17 +3,14 @@ import React from "react";
 export default function PublicLessonDetailLoading() {
   return (
     <div className="min-h-screen font-body relative bg-[#e2f0e7] text-foreground">
-      {/* Background blobs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]">
-        <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-[#6ee7b7]/40 blur-[130px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-[#a7f3d0]/40 blur-[150px]" />
-      </div>
+      {/* Lightweight background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]" />
 
-      {/* Fake Glass Header */}
-      <div className="h-16 border-b border-white/20 bg-white/70 backdrop-blur-md px-6 flex items-center justify-between">
-        <div className="w-32 h-8 bg-emerald-200/50 rounded-xl animate-pulse" />
-        <div className="w-48 h-8 bg-emerald-100/50 rounded-xl animate-pulse hidden sm:block" />
-        <div className="w-24 h-8 bg-emerald-200/50 rounded-full animate-pulse" />
+      {/* Lightweight Header Placeholder */}
+      <div className="h-16 border-b border-white/40 bg-white/90 px-6 flex items-center justify-between">
+        <div className="w-32 h-8 bg-emerald-200/60 rounded-xl animate-pulse" />
+        <div className="w-48 h-8 bg-emerald-100/60 rounded-xl animate-pulse hidden sm:block" />
+        <div className="w-24 h-8 bg-emerald-200/60 rounded-full animate-pulse" />
       </div>
 
       {/* 3-column layout skeleton */}
@@ -22,7 +19,7 @@ export default function PublicLessonDetailLoading() {
 
           {/* LEFT SIDEBAR: Key Vocabulary Skeleton */}
           <aside className="w-full lg:w-[300px] shrink-0">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[28px] p-6 space-y-4 border border-emerald-100 shadow-lg">
+            <div className="bg-white/90 dark:bg-slate-900/90 rounded-[28px] p-6 space-y-4 border border-emerald-100 shadow-sm">
               <div className="h-5 w-36 bg-emerald-200/60 rounded-full animate-pulse" />
               <div className="space-y-3 pt-2">
                 {[1, 2, 3, 4].map((i) => (
@@ -35,10 +32,10 @@ export default function PublicLessonDetailLoading() {
           {/* MAIN CONTENT: Lesson Text & Media Skeleton */}
           <main className="flex-1 min-w-0 space-y-8 w-full">
             {/* Video Placeholder */}
-            <div className="aspect-video w-full bg-slate-800 rounded-[28px] animate-pulse shadow-2xl" />
+            <div className="aspect-video w-full bg-slate-800/90 rounded-[28px] animate-pulse shadow-md" />
 
             {/* Main Lesson Card Skeleton */}
-            <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl rounded-[28px] p-6 md:p-10 space-y-6 border-2 border-emerald-100 shadow-xl">
+            <div className="bg-white/90 dark:bg-slate-900/90 rounded-[28px] p-6 md:p-10 space-y-6 border-2 border-emerald-100 shadow-md">
               {/* Badge & Action buttons */}
               <div className="flex justify-between items-center">
                 <div className="h-6 w-24 bg-emerald-500/30 rounded-full animate-pulse" />
@@ -67,3 +64,4 @@ export default function PublicLessonDetailLoading() {
     </div>
   );
 }
+
