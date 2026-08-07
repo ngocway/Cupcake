@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers"
 import { revalidatePath } from "next/cache"
+import { cache } from "react"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { fetchWithRedis } from "@/lib/cached-queries"
@@ -194,7 +195,7 @@ const DEFAULT_CONFIG = {
   ]
 };
 
-export async function getOnboardingConfig() {
+export const getOnboardingConfig = cache(async function getOnboardingConfig() {
   try {
     return await fetchWithRedis('system:onboarding_config', 3600, async () => {
       const setting = await prisma.systemSetting.findUnique({
@@ -206,4 +207,4 @@ export async function getOnboardingConfig() {
     console.error("Failed to fetch onboarding config", e)
     return DEFAULT_CONFIG
   }
-}
+})

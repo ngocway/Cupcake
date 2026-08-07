@@ -192,8 +192,8 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
                 ) : displayedLessons.length > 0 ? (
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12 pt-5">
-                      {displayedLessons.map((lesson) => (
-                        <LessonCard key={lesson.id} item={lesson} isLoggedIn={isLoggedIn} />
+                      {displayedLessons.map((lesson, idx) => (
+                        <LessonCard key={lesson.id} item={lesson} isLoggedIn={isLoggedIn} priority={idx < 3} />
                       ))}
                     </div>
 

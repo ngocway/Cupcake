@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useRef } from "react"
+import Image from "next/image"
 import { useContentStore } from "@/store/useContentStore"
 
 /**
@@ -79,13 +80,13 @@ export function StickySidebarWrapper({ children }: { children: React.ReactNode }
 
         {/* Drawer panel */}
         <aside
-          className={`fixed top-0 left-0 h-full w-[296px] z-[80] bg-[#FBF3DF]/98 backdrop-blur-xl border-r border-white/50 shadow-2xl flex flex-col gap-4 p-[18px_16px_16px] overflow-y-auto no-scrollbar transition-transform duration-300 ease-in-out ${
+          className={`fixed top-0 left-0 h-full w-[296px] z-[80] bg-[#FAF2DE] border-r border-amber-200/40 shadow-2xl flex flex-col gap-4 p-[18px_16px_16px] overflow-y-auto no-scrollbar transition-transform duration-300 ease-in-out transform-gpu will-change-transform ${
             mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           {/* Drawer header: logo + close button */}
           <div className="flex items-center justify-between mb-1">
-            <img src="/images/logo.png" alt="Dolcake" className="w-9 h-9 object-contain" />
+            <Image src="/images/logo.png" alt="Dolcake" width={36} height={36} priority className="w-9 h-9 object-contain" />
             <button
               onClick={() => setMobileSidebarOpen(false)}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-primary/8 hover:bg-primary/15 text-primary transition-all active:scale-90"

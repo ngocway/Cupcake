@@ -2,6 +2,10 @@ import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+
+export const revalidate = 3600;
+export const dynamicParams = true;
 import { 
   ChevronLeft, 
   BookOpenCheck as AssignmentIcon,
@@ -155,7 +159,7 @@ async function PublicReviewsWrapper({ lessonId, isLoggedIn }: { lessonId: string
                 <div key={review.id} className="flex items-start gap-3.5 bg-white/80 p-4 rounded-2xl border border-slate-100 shadow-sm animate-in fade-in duration-500">
                   <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-sm relative">
                     {review.student.image ? (
-                      <img src={review.student.image} alt="" className="w-full h-full object-cover" />
+                      <Image src={review.student.image} alt="" fill sizes="40px" className="object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary font-bold text-sm">
                         {review.student.name?.charAt(0)}
@@ -494,7 +498,7 @@ export default async function PublicLessonPage({
           <aside className="w-full lg:w-[300px] shrink-0">
             <div className="lg:sticky lg:top-6">
               <Suspense fallback={
-                <div className="h-48 rounded-[28px] bg-white/50 animate-pulse shadow-xl hidden lg:block" />
+                <div className="h-64 sm:h-80 lg:h-96 rounded-[28px] bg-white/70 animate-pulse border-2 border-emerald-100/80 shadow-xl hidden lg:block" />
               }>
                 <KeyVocabularyWrapper lessonId={lesson.id} />
               </Suspense>
@@ -577,7 +581,15 @@ export default async function PublicLessonPage({
               {/* Reading Content */}
               {lesson.assignment && (
                 <div className="mt-8">
-                  <Suspense fallback={<div className="h-96 bg-white/30 animate-pulse rounded-2xl" />}>
+                  <Suspense fallback={
+                    <div className="space-y-4 animate-pulse pt-2 min-h-[280px]">
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-full" />
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-11/12" />
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-4/5" />
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-full" />
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-3/4" />
+                    </div>
+                  }>
                     <PublicReadingContentWrapper lessonId={lesson.id} sessionExists={!!session} />
                   </Suspense>
                 </div>
@@ -592,7 +604,7 @@ export default async function PublicLessonPage({
             {/* Section Divider & Reviews Section */}
             <div className="pt-4 border-t-2 border-dashed border-emerald-200/60">
               <Suspense fallback={
-                <div className="h-64 rounded-[28px] bg-white/50 animate-pulse shadow-xl" />
+                <div className="h-64 sm:h-80 rounded-[28px] bg-white/70 animate-pulse border-2 border-emerald-100/80 shadow-xl" />
               }>
                 <PublicReviewsWrapper lessonId={lesson.id} isLoggedIn={!!session} />
               </Suspense>

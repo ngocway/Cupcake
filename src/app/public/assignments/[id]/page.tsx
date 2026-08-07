@@ -7,6 +7,9 @@ import { fetchWithRedis } from "@/lib/cached-queries";
 import { getCachedAssignmentQuestions, getRelatedAssignmentsCached, getQuestionTranslationMap, getAssignmentTranslations } from "@/app/student/assignments/[id]/run/data";
 import type { Metadata } from "next";
 
+export const revalidate = 3600;
+export const dynamicParams = true;
+
 // --- Per-exercise SEO Metadata ---
 
 export async function generateMetadata(

@@ -1,6 +1,7 @@
 "use client"
 import { use, useState, Suspense, useEffect, useTransition, useMemo, memo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { ExerciseCard, ExerciseCardHorizontal, LessonCard } from "@/components/public/ContentCards"
@@ -832,7 +833,7 @@ const GameList = memo(function GameList({ games, locale }: { games: any[]; local
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {games.map((game) => {
+      {games.map((game, idx) => {
         const isComingSoon = game.comingSoon;
         return (
           <div 
@@ -847,10 +848,13 @@ const GameList = memo(function GameList({ games, locale }: { games: any[]; local
             <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-2">
               <div className={`aspect-video relative overflow-hidden flex items-center justify-center ${!game.thumbnail ? `bg-gradient-to-br ${game.gradient} p-6` : ''}`}>
                 {game.thumbnail ? (
-                  <img
+                  <Image
                     src={game.thumbnail}
                     alt={game.title}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    fill
+                    priority={idx < 3}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (
                   <>
@@ -1542,7 +1546,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
           onClick={!isFirstTimeSetup ? handleCloseModalDiscard : undefined}
         >
           <div 
-            className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
+            className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
             onClick={(e) => e.stopPropagation()}
           >
             
@@ -1566,7 +1570,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
                   <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
                     {t("whoAreYou")}
                   </h2>
-                  <div className="flex flex-wrap gap-8 items-center pl-4 md:pl-10 py-2">
+                  <div className="flex flex-wrap gap-4 sm:gap-6 justify-around items-center py-2">
                     {/* Use the first subject's (english) age groups as reference */}
                     {(onboardingConfig.subjects[0]?.ageGroups || []).map((age: any) => {
                       const isActive = tempStudyAgeGroup === age.id;
@@ -1608,7 +1612,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
             {isAllStepsCompleted && (
               <>
                 <hr className="border-primary/10" />
-                <div className="flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-4 fade-in duration-500 py-2">
+                <div className="flex flex-wrap items-center justify-start gap-4 animate-in slide-in-from-bottom-4 fade-in duration-500 py-2">
                   <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0 flex items-center h-full pt-1">
                     {locale === "vi" ? "My native language is" : "My native language is"}
                   </h2>

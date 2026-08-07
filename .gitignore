@@ -49,3 +49,4 @@ scratch/
 /test-*
 /models.json
 /scratch-query.js
+backups/
