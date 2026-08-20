@@ -30,15 +30,7 @@ export default function RobotChatGamePage() {
   if (!mounted) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-      {/* Top Bar Navigation */}
-      <div className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 flex-shrink-0 z-10 shadow-sm relative">
-        
-        <div className="absolute left-1/2 -translate-x-1/2 font-black text-primary uppercase tracking-widest hidden sm:block">
-          Chat with Dolbot
-        </div>
-      </div>
-
+    <div className="fixed inset-0 z-[100] bg-[#0f0c1a] flex flex-col">
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#0f0c1a] overflow-hidden relative">
         {isLoading && (
@@ -50,7 +42,7 @@ export default function RobotChatGamePage() {
         <iframe 
           src={`/games/robot-chat/index.html?nativeLang=${nativeLanguage || "vi"}&level=${effectiveLevel}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-          title="Chat with Dolbot"
+          title="Robot Chat Game"
           allow="microphone"
           onLoad={() => setIsLoading(false)}
         />

@@ -95,17 +95,23 @@
     align-self:flex-end; max-width:90%; animation:bubblePop .25s ease; }
   .student-bubble .label { font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:#4ade8088; margin-bottom:3px; }
 
-  /* ── HINT CHIPS ── */
+  /* ── HINT CARD & TEMPLATE BLANK ── */
   .hint-section { width:100%; margin-bottom:14px; }
-  .hint-label { font-size:.72rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; text-align:center; }
-  .hint-chips { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; width:100%; max-width:760px; margin:0 auto; }
-  .hint-chip { flex:1 1 280px; max-width:100%; padding:12px 20px; border-radius:16px; border:1.5px dashed var(--accent); background:#7c5cfc0d;
-    color:var(--accent2); font-family:inherit; font-size:.95rem; font-weight:700; text-align:center;
-    animation:chipIn .3s cubic-bezier(.17,.67,.35,1.3) both; cursor:pointer; transition:all 0.2s; }
-  .hint-chip:hover { transform:scale(1.02); background:#7c5cfc1a; border-style:solid; }
-  @keyframes chipIn { from{opacity:0;transform:scale(.8)} to{opacity:1;transform:scale(1)} }
-  .hint-chips.loading .hint-chip { animation:shimmer 1.4s infinite; background:var(--card2); border-color:var(--border); color:var(--muted); pointer-events: none; }
-  @keyframes shimmer { 0%,100%{opacity:.3} 50%{opacity:.7} }
+  .hint-label { font-size:.75rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; text-align:center; }
+  .hint-card { width:100%; max-width:760px; margin:0 auto; padding:14px 20px; border-radius:20px; border:2px dashed var(--accent); background:#7c5cfc12; text-align:center; box-shadow:0 4px 20px #7c5cfc1a; transition:filter 0.4s ease, opacity 0.4s ease, transform 0.4s ease; display:flex; align-items:center; justify-content:center; gap:12px; position:relative; }
+  .hint-card.blurred { filter:blur(10px); opacity:0.35; transform:scale(0.98); }
+  .hint-card.blurred .hint-tokens { pointer-events:none; user-select:none; }
+  .hint-tokens { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px 10px; font-size:1.2rem; font-weight:800; line-height:1.6; min-height:44px; flex:1; }
+  .btn-undo-hint { padding:6px 14px; border-radius:100px; border:1.5px solid var(--border); background:var(--card2); color:var(--muted); font-family:inherit; font-size:0.82rem; font-weight:800; display:inline-flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; flex-shrink:0; position:relative; z-index:30; pointer-events:auto !important; }
+  .btn-undo-hint:hover { border-color:var(--yellow); color:var(--yellow); background:#fbbf2415; transform:scale(1.06); box-shadow:0 0 14px #fbbf2444; }
+  .btn-change-hint { padding:6px 14px; border-radius:100px; border:1.5px solid var(--accent); background:rgba(124, 92, 252, 0.15); color:var(--accent2); font-family:inherit; font-size:0.82rem; font-weight:800; display:inline-flex; align-items:center; gap:6px; cursor:pointer; transition:all .2s; flex-shrink:0; position:relative; z-index:30; pointer-events:auto !important; }
+  .btn-change-hint:hover { border-color:#a78bfa; color:#ffffff; background:var(--accent); transform:scale(1.06); box-shadow:0 0 14px #7c5cfc55; }
+  .token-word { padding:4px 10px; border-radius:10px; color:var(--accent2); transition:all 0.22s cubic-bezier(.17,.67,.35,1.3); }
+  .token-word.read { background:var(--yellow); color:#0f0c1a; font-weight:900; box-shadow:0 0 16px #fbbf24aa; transform:scale(1.06); }
+  .token-blank { padding:4px 16px; border-radius:12px; border:2px dashed var(--yellow); background:#fbbf241a; color:var(--yellow); font-weight:900; min-width:70px; text-align:center; display:inline-flex; align-items:center; justify-content:center; transition:all 0.22s cubic-bezier(.17,.67,.35,1.3); animation:blankPulse 2s ease-in-out infinite; }
+  @keyframes blankPulse { 0%,100%{border-color:var(--yellow);box-shadow:0 0 4px #fbbf2444} 50%{border-color:#f59e0b;box-shadow:0 0 14px #fbbf24aa} }
+  .token-blank.filled { background:var(--yellow); color:#0f0c1a; border:2px solid var(--yellow); box-shadow:0 0 20px #fbbf24cc; animation:none; transform:scale(1.08); font-weight:900; }
+
 
   /* ── MIC / DONE ── */
   .mic-section { display:flex; flex-direction:column; align-items:center; gap:10px; margin-bottom:12px; }
@@ -297,26 +303,22 @@
       ⚠️ Your browser doesn't support speech recognition. Please use Chrome or Edge.
     </div>
 
-    <!-- Hint suggested answers -->
+    <!-- Hint suggested answer template -->
     <div class="hint-section" id="hintSection" style="display:none">
-      <div class="hint-label">💡 Hint — Try saying one of these answers:</div>
-      <div class="hint-chips loading" id="hintChips">
-        <div class="hint-chip">···</div>
-        <div class="hint-chip">···</div>
+      <div class="hint-label">💡 HINT — SAY THIS ANSWER & FILL THE BLANK:</div>
+      <div class="hint-card" id="hintCard">
+        <div class="hint-tokens" id="hintTokens"></div>
+        <button class="btn-change-hint" id="btnChangeHint" onclick="changeHintTemplate(event)" title="Change to a different suggested answer structure">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
+          </svg>
+          <span>Change</span>
+        </button>
       </div>
     </div>
 
     <!-- Mic indicator + Done button -->
     <div class="mic-section">
-      <!-- Live transcript shown while mic is active -->
-      <div class="live-text-wrap" id="liveTextWrap" style="display:none">
-        <div class="live-text" id="liveText"></div>
-        <button class="btn-clear-text" id="btnClearText" title="Clear and speak again">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-            <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-          </svg>
-        </button>
-      </div>
 
       <!-- Confirm panel: shown after Done is pressed, before submitting -->
       <div class="confirm-wrap hidden" id="confirmWrap">
@@ -338,6 +340,12 @@
         <div class="mic-icon" id="micIcon">
           <svg viewBox="0 0 24 24"><path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 18.93V21H9v2h6v-2h-2v-1.07A7 7 0 0 0 19 13h-2a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.93z"/></svg>
         </div>
+        <button class="btn-undo-hint hidden" id="btnUndoHint" onclick="resetHintTemplateState(event)" title="Reset and read again">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>
+          </svg>
+          <span>Undo</span>
+        </button>
         <button class="done-btn hidden" id="doneBtn">✓ Done</button>
       </div>
       <div class="mic-status" id="micStatus">Listening to ROBO...</div>
@@ -376,7 +384,7 @@ let initialSpeed = localStorage.getItem('cupcakes_speech_speed');
 if (initialSpeed !== '0.75' && initialSpeed !== '0.85' && initialSpeed !== '0.95') {
   initialSpeed = '0.75';
 }
-let state = { topic:'', level:'', history:[], turn:0, phase:'idle', isClearing: false, showTranslation: false, currentTranslation: '', speechSpeed: parseFloat(initialSpeed) };
+let state = { topic:'', level:'', history:[], turn:0, phase:'idle', isClearing: false, showTranslation: false, currentTranslation: '', speechSpeed: parseFloat(initialSpeed), suggestedTemplate: '', tokens: [] };
 // phase: idle | robot-speaking | listening | processing
 
 const LEVEL_CONFIG = {
@@ -385,6 +393,291 @@ const LEVEL_CONFIG = {
   teen:         { label:'🧑 Teen',         words:'8-12', vocab:'varied vocabulary',                               style:'mix of tenses' },
   learner:      { label:'📖 Learner A2',   words:'6-10', vocab:'A2 CEFR vocabulary',                             style:'simple past and future' },
 };
+
+// --- Word-by-word Fuzzy Matching (Shadowing Books Style) ---
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function cleanWord(w) {
+  return (w || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function fuzzyWordMatch(spoken, target) {
+  const s = cleanWord(spoken);
+  const t = cleanWord(target);
+  if (!s || !t) return false;
+  if (s === t) return true;
+  if (s.length >= 3 && t.length >= 3 && (s.includes(t) || t.includes(s))) return true;
+  const maxLen = Math.max(s.length, t.length);
+  const dist = levenshtein(s, t);
+  return maxLen <= 4 ? dist <= 1 : dist <= 2;
+}
+
+// Generate 4-6 distinct alternate hint template options for a question
+function generateAlternateHintTemplates(question, baseTemplate) {
+  const templates = [];
+  if (baseTemplate && baseTemplate.includes('____')) {
+    templates.push(baseTemplate);
+  }
+
+  const q = (question || '').toLowerCase();
+  
+  // Extract key noun from question
+  const words = q.replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean);
+  const stopWords = ['what', 'is', 'your', 'favorite', 'do', 'you', 'like', 'have', 'a', 'an', 'the', 'how', 'many', 'where', 'who', 'why', 'are', 'so', 'too', 'cute', 'fun', 'great', 'good'];
+  let keyNoun = '';
+  for (let i = words.length - 1; i >= 0; i--) {
+    if (words[i].length > 2 && !stopWords.includes(words[i])) {
+      keyNoun = words[i];
+      break;
+    }
+  }
+
+  if (q.includes('favorite')) {
+    const topic = keyNoun || 'thing';
+    templates.push(`My favorite ${topic} is ____.`);
+    templates.push(`I really love ____.`);
+    templates.push(`The ${topic} I like most is ____.`);
+    templates.push(`I think ____ is my favorite.`);
+  } else if (q.includes('do you have') || q.includes('have a') || q.includes('got a')) {
+    const item = keyNoun || 'cat';
+    templates.push(`I have a ____ ${item}.`);
+    templates.push(`Yes, I have a ____ ${item}.`);
+    templates.push(`No, I don't have a ${item} because ____.`);
+    templates.push(`My ${item} is ____.`);
+    templates.push(`I want to get a ____ ${item}.`);
+  } else if (q.includes('like') || q.includes('enjoy') || q.includes('love')) {
+    const item = keyNoun || 'it';
+    templates.push(`I really like ____.`);
+    templates.push(`Yes, I love ____ ${item}.`);
+    templates.push(`My favorite thing is ____.`);
+    templates.push(`I enjoy ____.`);
+  } else if (q.includes('what do you do') || q.includes('what do you')) {
+    templates.push(`I usually ____.`);
+    templates.push(`In my free time, I ____.`);
+    templates.push(`I like to ____.`);
+    templates.push(`I always ____.`);
+  } else if (q.includes('what color')) {
+    templates.push(`It is ____.`);
+    templates.push(`My favorite color is ____.`);
+    templates.push(`The color is ____.`);
+    templates.push(`I like ____.`);
+  } else {
+    if (keyNoun) {
+      templates.push(`My ${keyNoun} is ____.`);
+      templates.push(`I like ____ ${keyNoun}.`);
+      templates.push(`Yes, ____ is my ${keyNoun}.`);
+    }
+    templates.push(`I like ____.`);
+    templates.push(`My answer is ____.`);
+    templates.push(`I think ____.`);
+  }
+
+  const unique = [];
+  const seen = new Set();
+  for (const t of templates) {
+    if (!t || !t.includes('____')) continue;
+    const clean = t.trim().toLowerCase();
+    if (!seen.has(clean)) {
+      seen.add(clean);
+      unique.push(t.trim());
+    }
+  }
+
+  return unique.length > 0 ? unique : [baseTemplate || 'My answer is ____.'];
+}
+
+// Tokenize hint template (e.g. "My favorite animal is ____.")
+function initTemplateTokens(templateStr) {
+  if (!templateStr) return [];
+  const words = templateStr.trim().split(/\s+/).filter(Boolean);
+  return words.map((w) => {
+    const isBlank = w.includes('____');
+    const clean = isBlank ? '____' : cleanWord(w);
+    return {
+      original: w,
+      clean: clean,
+      isBlank: isBlank,
+      isRead: false,
+      filledWord: null,
+    };
+  });
+}
+
+function renderHintTemplate() {
+  const container = document.getElementById('hintTokens');
+  const sec = document.getElementById('hintSection');
+  const card = document.getElementById('hintCard');
+  if (!container || !sec) return;
+
+  sec.style.display = 'block';
+
+  if (card) {
+    if (state.phase === 'listening') {
+      card.classList.remove('blurred');
+    } else {
+      card.classList.add('blurred');
+    }
+  }
+  if (!state.tokens || state.tokens.length === 0) {
+    container.innerHTML = '<span style="color:var(--muted); font-size:0.95rem;">Generating answer template...</span>';
+    return;
+  }
+
+  container.innerHTML = '';
+  state.tokens.forEach((tok) => {
+    const span = document.createElement('span');
+    if (tok.isBlank) {
+      span.className = `token-blank ${tok.filledWord ? 'filled' : ''}`;
+      const punct = tok.original.replace(/^_*([.,!?:;]*)$/, '$1');
+      span.textContent = tok.filledWord ? (tok.filledWord + (punct || '')) : '____';
+    } else {
+      span.className = `token-word ${tok.isRead ? 'read' : ''}`;
+      span.textContent = tok.original;
+    }
+    container.appendChild(span);
+  });
+}
+
+// Helper to prevent phrase duplication (e.g. "I can play I can play" -> "I can play")
+function hasDeduplicatedPhrase(existingPhrase, newWord) {
+  const fullWords = (existingPhrase + ' ' + newWord).trim().split(/\s+/);
+  const n = fullWords.length;
+  if (n < 4 || n % 2 !== 0) return false;
+  const half = n / 2;
+  const firstHalf = fullWords.slice(0, half).join(' ');
+  const secondHalf = fullWords.slice(half).join(' ');
+  return firstHalf.toLowerCase() === secondHalf.toLowerCase();
+}
+
+// Process real-time spoken tokens (Speech Position Cursor Algorithm + Multi-word Phrase Accumulation)
+function processSpokenTokens(transcriptText) {
+  if (!state.tokens || state.tokens.length === 0 || !transcriptText) return;
+
+  const spokenWords = transcriptText.toLowerCase().split(/\s+/).map(cleanWord).filter(Boolean);
+  const fillers = ['uh', 'um', 'ah', 'er', 'eh', 'like', 'oh', 'well'];
+
+  // Reset tokens read & filled state for clean alignment pass over accumulated transcript
+  state.tokens.forEach(t => {
+    t.isRead = false;
+    t.filledWord = null;
+  });
+
+  // Track the speech position cursor index in state.tokens
+  let cursorIdx = 0;
+
+  for (const spoken of spokenWords) {
+    if (!spoken || cursorIdx >= state.tokens.length) continue;
+
+    // Check if token at cursorIdx is BLANK
+    const currentToken = state.tokens[cursorIdx];
+
+    if (currentToken && currentToken.isBlank) {
+      if (fillers.includes(spoken)) continue;
+
+      // Lookahead: Check if this spoken word matches any non-blank token AFTER current blank position
+      let nextMatchIdx = -1;
+      for (let j = cursorIdx + 1; j < state.tokens.length; j++) {
+        const tok = state.tokens[j];
+        if (!tok.isBlank && fuzzyWordMatch(spoken, tok.clean)) {
+          nextMatchIdx = j;
+          break;
+        }
+      }
+
+      if (nextMatchIdx !== -1) {
+        // Spoken word matches a non-blank token after blank (student reached next part of template)!
+        state.tokens[nextMatchIdx].isRead = true;
+        cursorIdx = nextMatchIdx + 1; // Advance cursor past matched token
+        continue;
+      }
+
+      // Multi-word phrase accumulation inside the blank token
+      if (!currentToken.filledWord) {
+        currentToken.filledWord = spoken;
+        currentToken.isRead = true;
+      } else {
+        // Prevent single word repetition (e.g. "play play") and phrase repetition ("I can play I can play")
+        const existingWords = currentToken.filledWord.split(' ');
+        const lastWord = cleanWord(existingWords[existingWords.length - 1]);
+        if (lastWord !== spoken && !hasDeduplicatedPhrase(currentToken.filledWord, spoken)) {
+          currentToken.filledWord += ' ' + spoken;
+        }
+      }
+      continue;
+    }
+
+    // Cursor is at a NON-BLANK token: Lookahead window of up to 3 tokens for non-blank match
+    let matchFoundIdx = -1;
+    const lookaheadEnd = Math.min(state.tokens.length, cursorIdx + 3);
+
+    for (let i = cursorIdx; i < lookaheadEnd; i++) {
+      const tok = state.tokens[i];
+      if (!tok.isBlank && fuzzyWordMatch(spoken, tok.clean)) {
+        matchFoundIdx = i;
+        break;
+      }
+    }
+
+    if (matchFoundIdx !== -1) {
+      state.tokens[matchFoundIdx].isRead = true;
+      cursorIdx = matchFoundIdx + 1; // Advance cursor past matched token
+      continue;
+    }
+
+    // Check if spoken word is a repetition of a past read token
+    const isPastRepetition = state.tokens.some((tok, idx) => idx < cursorIdx && !tok.isBlank && tok.isRead && fuzzyWordMatch(spoken, tok.clean));
+    if (isPastRepetition) {
+      continue;
+    }
+
+    // Unmatched filler/extra word spoken before reaching blank token: ignore and do not advance cursor
+  }
+
+  renderHintTemplate();
+}
+
+// Determine final text (50% mismatch check — Phương án B)
+function determineFinalSpoken(rawSpoken) {
+  if (!state.tokens || state.tokens.length === 0) return rawSpoken;
+
+  const nonBlankTokens = state.tokens.filter(t => !t.isBlank);
+  if (nonBlankTokens.length === 0) return rawSpoken;
+
+  const readCount = nonBlankTokens.filter(t => t.isRead).length;
+  const matchRatio = readCount / nonBlankTokens.length;
+
+  console.log(`[RobotChat] Words matched: ${readCount}/${nonBlankTokens.length} (${(matchRatio * 100).toFixed(0)}%)`);
+
+  if (matchRatio >= 0.35) {
+    // Matched >= 35%: Assemble filled template sentence
+    const assembled = state.tokens.map(t => {
+      if (t.isBlank) {
+        return t.filledWord || '____';
+      }
+      return t.original;
+    }).join(' ').replace(/\s+([.,!?:;])/g, '$1');
+    console.log(`[RobotChat] Matched >= 35%, using assembled template: "${assembled}"`);
+    return assembled;
+  } else {
+    // Mismatch > 65%: Student spoke freestyle / different answer (Phương án B)
+    console.log(`[RobotChat] Mismatch > 65%, using freeform spoken text: "${rawSpoken}"`);
+    return rawSpoken;
+  }
+}
 
 // ═══════════════════ WELCOME EVENTS ═══════════════════
 document.getElementById('btnStart').addEventListener('click', async () => {
@@ -418,7 +711,7 @@ function startGame(level){
   if (selectEl) selectEl.value = speedVal;
 
   const topic = pickRandomTopic();
-  state={topic,level,history:[],turn:0,phase:'idle',isClearing:false,showTranslation:isChecked,currentTranslation:'',speechSpeed:parseFloat(speedVal),keywords:[]};
+  state={topic,level,history:[],turn:0,phase:'idle',isClearing:false,showTranslation:isChecked,currentTranslation:'',speechSpeed:parseFloat(speedVal),suggestedTemplate:'',tokens:[]};
   document.getElementById('badgeLevel').textContent=LEVEL_CONFIG[level].label;
   document.getElementById('chatArea').innerHTML='';
   document.getElementById('hintSection').style.display='none';
@@ -441,7 +734,7 @@ async function robotTurn(studentSpeech){
   document.getElementById('hintSection').style.display='none';
 
   try {
-    const {robotSays,translatedSays,keywords} = await callOpenAI(studentSpeech);
+    const {robotSays,translatedSays,suggestedAnswer,suggestedAnswers} = await callOpenAI(studentSpeech);
     if(studentSpeech) state.history.push({role:'user',text:studentSpeech});
     state.history.push({role:'robot',text:robotSays});
     if(state.history.length>14) state.history=state.history.slice(-14);
@@ -450,21 +743,41 @@ async function robotTurn(studentSpeech){
     const ttsPromise = prefetchTTS(robotSays);
 
     state.currentTranslation = translatedSays || '';
-    state.keywords = keywords || [];
+    
+    const openAiTemplates = (suggestedAnswers && suggestedAnswers.length > 0) ? suggestedAnswers : [suggestedAnswer];
+    const generatedTemplates = generateAlternateHintTemplates(robotSays, suggestedAnswer || openAiTemplates[0]);
+    const allTemplates = [];
+    const seen = new Set();
+    [...openAiTemplates, ...generatedTemplates].forEach(t => {
+      if (t && t.includes('____')) {
+        const key = t.trim().toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          allTemplates.push(t.trim());
+        }
+      }
+    });
+
+    state.suggestedTemplates = allTemplates;
+    state.templateIndex = 0;
+    state.suggestedTemplate = state.suggestedTemplates[0];
+    state.tokens = initTemplateTokens(state.suggestedTemplate);
+
     showRobotBubble(robotSays, state.currentTranslation);
     setMicStatus('loading', 'ROBO is thinking...');
-    showHintChips([],true);
+    renderHintTemplate();
 
     await speakText(robotSays, () => {
       // Callback triggers when audio starts playing
       setRobotState('speaking');
       state.phase='robot-speaking';
       setMicStatus('loading','ROBO is talking...');
+      renderHintTemplate();
     }, ttsPromise);
     setRobotState('idle');
 
-    showHintChips(keywords, false);
     state.phase = 'listening';
+    renderHintTemplate();
     setMicStatus('listening', '🎤 Your turn — speak your answer!');
 
     // Mic bật tự động sau khi robot nói xong
@@ -492,9 +805,9 @@ async function callOpenAI(studentSpeech){
     ? studentSpeech
     : `[CONVERSATION START]`;
 
-  const keywordsStr = state.keywords && state.keywords.length > 0
-    ? `\n- The student was shown these keywords as answer hints: ${state.keywords.join(', ')}. If their spoken input looks phonetically similar to one of these hints, they most likely intended to say that. Please respond to the intended meaning.`
-    : '';
+  const blankRule = (state.level === 'kindergarten' || state.level === 'kid')
+    ? 'CRITICAL: The suggestedAnswer MUST contain EXACTLY ONE fill-in-the-blank placeholder represented as "____". Example: "My favorite animal is ____."'
+    : 'CRITICAL: The suggestedAnswer MUST contain 1 or 2 fill-in-the-blank placeholders represented as "____". Example: "I like ____ because they are ____." or "My favorite animal is ____."';
 
   const systemPrompt=`You are ROBO, a friendly English-speaking robot teacher chatting with a student.
 Student level: ${state.level}.
@@ -514,20 +827,21 @@ CONVERSATION RULES:
 - Ask ONE question per turn — keep the conversation flowing.
 - Translate your English response into ${targetLangName} and put it in 'translatedSays'.
 
-CRITICAL about Student Spoken Input:
-- Input comes from Speech-to-Text and may contain transcription errors.
-- Auto-correct phonetic/spelling mismatches based on context and level. Respond to the INTENDED meaning. Do NOT point out their mistakes.${keywordsStr}
+CRITICAL about suggestedAnswers:
+- Provide an array of 3 distinct, natural suggested answer templates in English that directly answer your question, each using different phrasing or structure.
+- ${blankRule}
+- The blank "____" MUST correspond to the answer to your question. For example, if you ask "What color is your car toy?", suggestedAnswers MUST be ["My car toy is ____.", "I have a ____ car toy.", "The color of my car toy is ____."]
 
 Respond ONLY with valid JSON format:
 {
   "robotSays": "Your short reaction (in 100% English only). Followed by a direct question (in 100% English only) ending with '?'",
   "translatedSays": "Translation of robotSays in ${targetLangName}",
-  "suggestedAnswers": ["Sample answer 1 in English answering your question", "Sample answer 2 in English answering your question"]
-}
-
-CRITICAL about suggestedAnswers:
-- Exactly 2 complete, natural answers the STUDENT could say to reply to your question.
-- Full sentences, grammatically correct, appropriate for level ${state.level}.`;
+  "suggestedAnswers": [
+    "Suggested answer template 1 with ____ blank(s)",
+    "Suggested answer template 2 with ____ blank(s)",
+    "Suggested answer template 3 with ____ blank(s)"
+  ]
+}`;
 
   const res=await fetch('/api/games/robot-chat/chat',{
     method:'POST',
@@ -560,12 +874,21 @@ CRITICAL about suggestedAnswers:
     }
   }
 
-  const rawList = parsed.suggestedAnswers || parsed.keywords || [];
-  const answersList = rawList.map(w => w.replace(/^[^a-zA-Z0-9\s]+/, '').trim()); // Strip leading dots, dashes, etc.
+  let list = [];
+  if (Array.isArray(parsed.suggestedAnswers) && parsed.suggestedAnswers.length > 0) {
+    list = parsed.suggestedAnswers.map(s => s.trim()).filter(s => s.includes('____'));
+  }
+  if (list.length === 0) {
+    let single = (parsed.suggestedAnswer || parsed.suggestedTemplate || '').trim();
+    if (!single || !single.includes('____')) single = 'My answer is ____.';
+    list = [single];
+  }
+
   return {
     robotSays,
     translatedSays,
-    keywords: answersList.slice(0, 2)
+    suggestedAnswer: list[0],
+    suggestedAnswers: list
   };
 }
 
@@ -792,33 +1115,29 @@ function initRecognition() {
   r.onstart = () => {
     isListening = true;
     fullTranscript = '';
-    document.getElementById('liveText').textContent = '';
     document.getElementById('micIcon').style.display = 'none';
     document.getElementById('waveformBars').classList.add('active');
     document.getElementById('doneBtn').classList.remove('hidden');
-    
-    const clearBtn = document.getElementById('btnClearText');
-    if (clearBtn) clearBtn.style.display = 'none';
-
+    document.getElementById('btnUndoHint')?.classList.remove('hidden');
     setMicStatus('listening', '🔴 Listening... say your answer!');
   };
 
   r.onresult = (e) => {
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
+    let finalTx = '';
+    let interimTx = '';
+    for (let i = 0; i < e.results.length; i++) {
       if (e.results[i].isFinal) {
-        fullTranscript += e.results[i][0].transcript + ' ';
+        finalTx += e.results[i][0].transcript + ' ';
       } else {
-        interim = e.results[i][0].transcript;
+        interimTx += e.results[i][0].transcript;
       }
     }
-    const val = (fullTranscript + interim).trim();
-    document.getElementById('liveText').textContent = val;
+    fullTranscript = (finalTx + interimTx).trim();
+    const val = fullTranscript;
+    console.log('[RobotChat Live STT]:', val);
     
-    const clearBtn = document.getElementById('btnClearText');
-    if (clearBtn) {
-      clearBtn.style.display = val ? 'inline-flex' : 'none';
-    }
+    // Live word-by-word yellow highlighting & fill-in-the-blank
+    processSpokenTokens(val);
   };
 
   r.onend = () => {
@@ -826,21 +1145,9 @@ function initRecognition() {
     document.getElementById('micIcon').style.display = '';
     document.getElementById('waveformBars').classList.remove('active');
     document.getElementById('doneBtn').classList.add('hidden');
-    
-    const clearBtn = document.getElementById('btnClearText');
-    if (clearBtn) clearBtn.style.display = 'none';
-    document.getElementById('liveTextWrap').style.display = 'none';
+    document.getElementById('btnUndoHint')?.classList.add('hidden');
 
-    let spoken = fullTranscript.trim() || document.getElementById('liveText').textContent.trim();
-    document.getElementById('liveText').textContent = '';
-
-    if (state.keywords && state.keywords.length > 0) {
-      const corrected = fuzzyCorrectSpeech(spoken, state.keywords);
-      if (corrected !== spoken) {
-        console.log(`[Speech] Corrected "${spoken}" to "${corrected}"`);
-        spoken = corrected;
-      }
-    }
+    let spoken = fullTranscript.trim();
 
     if (state.isClearing) {
       state.isClearing = false;
@@ -865,23 +1172,11 @@ function initRecognition() {
         }
       }
 
-      // Show loading state while waiting for Deepgram
-      setMicStatus('loading', '⏳ Processing...');
-
-      // Stop MediaRecorder and wait for Deepgram — show confirm only when ready
-      stopMediaRecorder().then(async (audioBlob) => {
-        let finalText = spoken; // fallback to browser STT
-        if (audioBlob) {
-          const deepgramText = await transcribeWithDeepgram(audioBlob);
-          if (deepgramText && deepgramText.trim()) {
-            console.log(`[STT] Deepgram: "${deepgramText}"`);
-            finalText = deepgramText;
-          } else {
-            console.warn('[STT] Deepgram failed, using browser STT:', spoken);
-          }
-        }
-        showConfirmPanel(finalText);
-      });
+      processSpokenTokens(spoken);
+      const finalText = determineFinalSpoken(spoken);
+      state.phase = 'processing';
+      setMicStatus('processing', '⏳ Processing...');
+      submitSpeech(finalText);
     } else if (state.phase === 'listening') {
       // Nothing heard — restart
       setMicStatus('listening', '🎤 Nothing heard, try again...');
@@ -894,6 +1189,7 @@ function initRecognition() {
     document.getElementById('micIcon').style.display = '';
     document.getElementById('waveformBars').classList.remove('active');
     document.getElementById('doneBtn').classList.add('hidden');
+    document.getElementById('btnUndoHint')?.classList.add('hidden');
     if (e.error !== 'no-speech' && e.error !== 'aborted') {
       if (e.error === 'not-allowed') {
         showToast('Microphone access denied. Please enable it in browser settings. 🎙️');
@@ -934,23 +1230,9 @@ async function correctSpeechWithAI(rawTranscript) {
 }
 
 async function submitSpeech(rawSpoken) {
-  // Step 1: show raw transcript immediately so there's no blank wait
+  // Display exact text in student bubble and send directly to robot (no ASR background overwrite)
   showStudentBubble(rawSpoken);
-
-  // Step 2: correct ASR errors in background
-  const corrected = await correctSpeechWithAI(rawSpoken);
-
-  // Step 3: if corrected, update the bubble text
-  if (corrected && corrected !== rawSpoken) {
-    console.log(`[ASR] Corrected: "${rawSpoken}" → "${corrected}"`);
-    if (lastStudentBubbleEl) {
-      const textNode = lastStudentBubbleEl.querySelector('.bubble-text');
-      if (textNode) textNode.textContent = corrected;
-    }
-  }
-
-  // Step 4: send (corrected) text to robot
-  robotTurn(corrected || rawSpoken);
+  robotTurn(rawSpoken);
 }
 
 
@@ -959,8 +1241,6 @@ function autoStartListening() {
   stopListening();
   recognition = initRecognition();
   if (!recognition) { showToast('Speech recognition not supported — use Chrome/Edge'); return; }
-  // Start MediaRecorder in parallel for Deepgram STT
-  startMediaRecorder();
   try { recognition.start(); }
   catch (e) { console.warn('Mic start error:', e.message); }
 }
@@ -975,8 +1255,10 @@ function stopListening() {
 let pendingSpoken = '';
 
 function showConfirmPanel(spoken) {
-  pendingSpoken = spoken;
-  document.getElementById('confirmText').textContent = spoken;
+  processSpokenTokens(spoken);
+  const finalText = determineFinalSpoken(spoken);
+  pendingSpoken = finalText;
+  document.getElementById('confirmText').textContent = finalText;
   document.getElementById('confirmWrap').classList.remove('hidden');
   document.getElementById('micIcon').style.display = 'none';
   setMicStatus('idle', '👆 Is this what you said?');
@@ -1001,6 +1283,13 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
 // Re-record → hide panel and start mic again
 document.getElementById('rerecordBtn').addEventListener('click', () => {
   hideConfirmPanel();
+  if (state.tokens) {
+    state.tokens.forEach(t => {
+      t.isRead = false;
+      t.filledWord = null;
+    });
+    renderHintTemplate();
+  }
   setMicStatus('listening', '🎤 Ready — speak again!');
   setTimeout(() => autoStartListening(), 300);
 });
@@ -1027,40 +1316,73 @@ document.getElementById('micIcon').addEventListener('click', () => {
 document.getElementById('btnClearText').addEventListener('click', (e) => {
   e.stopPropagation();
   if (!isListening) return;
+  resetHintTemplateState();
+});
+
+// Change / Switch hint template button listener
+document.getElementById('btnChangeHint')?.addEventListener('click', (e) => {
+  if (e) e.stopPropagation();
+  changeHintTemplate(e);
+});
+
+function changeHintTemplate(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  const lastRobotSays = state.history.filter(h => h.role === 'robot').pop()?.text || '';
+
+  if (!state.suggestedTemplates || state.suggestedTemplates.length <= 1) {
+    state.suggestedTemplates = generateAlternateHintTemplates(lastRobotSays, state.suggestedTemplate);
+    state.templateIndex = 0;
+  }
+
+  if (!state.suggestedTemplates || state.suggestedTemplates.length <= 1) {
+    state.suggestedTemplates = [
+      state.suggestedTemplate || 'My answer is ____.',
+      'I really love ____.',
+      'My favorite thing is ____.',
+      'I think ____ is great.'
+    ];
+    state.templateIndex = 0;
+  }
+
+  const prevIdx = state.templateIndex || 0;
+  state.templateIndex = (prevIdx + 1) % state.suggestedTemplates.length;
+  state.suggestedTemplate = state.suggestedTemplates[state.templateIndex];
+  state.tokens = initTemplateTokens(state.suggestedTemplate);
   
-  state.isClearing = true;
+  console.log(`[RobotChat Change Hint] Advanced from ${prevIdx} to ${state.templateIndex}/${state.suggestedTemplates.length}: "${state.suggestedTemplate}"`);
+
+  renderHintTemplate();
+  
+  if (isListening) {
+    state.isClearing = true;
+    stopListening(); // restarts recognition smoothly with clean transcript
+  }
+  showToast(`✨ Changed hint: "${state.suggestedTemplate}"`);
+}
+
+// Undo / Reset hint template button listener
+document.getElementById('btnUndoHint')?.addEventListener('click', (e) => {
+  if (e) e.stopPropagation();
+  resetHintTemplateState(e);
+});
+
+function resetHintTemplateState(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  if (state.tokens) {
+    state.tokens.forEach(t => {
+      t.isRead = false;
+      t.filledWord = null;
+    });
+    renderHintTemplate();
+  }
   fullTranscript = '';
-  document.getElementById('liveText').textContent = '';
-  
-  const clearBtn = document.getElementById('btnClearText');
-  if (clearBtn) clearBtn.style.display = 'none';
-  
-  stopListening(); // triggers onend which resets isClearing and restarts recognition
-});
 
-// Click hint chips delegation -> submit immediately
-document.getElementById('hintChips').addEventListener('click', (e) => {
-  const chip = e.target.closest('.hint-chip');
-  if (!chip || chip.parentNode.classList.contains('loading')) return;
-  const keyword = chip.textContent.trim();
-  if (!keyword || keyword === '···') return;
-
-  // Set clearing flag to discard current microphone transcript in onend
-  state.isClearing = true;
-  stopListening();
-
-  // Submit keyword immediately
-  showStudentBubble(keyword);
-  setMicStatus('processing', '⏳ Processing...');
-  state.phase = 'processing';
-  
-  // Clear any live text input displays
-  document.getElementById('liveText').textContent = '';
-  const clearBtn = document.getElementById('btnClearText');
-  if (clearBtn) clearBtn.style.display = 'none';
-
-  setTimeout(() => robotTurn(keyword), 400);
-});
+  if (isListening) {
+    state.isClearing = true;
+    stopListening(); // triggers onend which resets isClearing and restarts recognition
+  }
+  showToast('🔄 Answer reset — say your answer again!');
+}
 
 // ToggleTranslate change listener
 document.getElementById('toggleTranslate').addEventListener('change', function() {
@@ -1181,16 +1503,7 @@ function showStudentBubble(text){
 }
 
 function showHintChips(words,loading){
-  const sec=document.getElementById('hintSection');
-  const chips=document.getElementById('hintChips');
-  sec.style.display='block';
-  if(loading){
-    chips.className='hint-chips loading';
-    chips.innerHTML='<div class="hint-chip">···</div>'.repeat(2);
-    return;
-  }
-  chips.className='hint-chips';
-  chips.innerHTML=words.map((w,i)=>`<div class="hint-chip" style="animation-delay:${i*.08}s">${escHtml(w)}</div>`).join('');
+  renderHintTemplate();
 }
 
 function setMicStatus(phase, text) {
