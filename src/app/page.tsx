@@ -1,5 +1,6 @@
 
 import { Suspense } from "react"
+import { redirect } from "next/navigation"
 import { LandingPage } from "@/components/public/LandingPage"
 import { HomeShell } from "./_components/HomeShell"
 import { HomeSidebar } from "./_components/HomeSidebar"
@@ -66,10 +67,19 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   const session = await auth()
   if (session?.user?.id) {
+    if (session.user.role === "TEACHER") {
+      redirect("/teacher")
+    }
+
     const user = await prisma.user.findUnique({ 
       where: { id: session.user.id },
-      select: { userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
+      select: { role: true, userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
     })
+
+    if (user?.role === "TEACHER") {
+      redirect("/teacher")
+    }
+
     if (user) {
       const dbHasPrefs = !!(user.studySubject || user.studyAgeGroup)
       const cookieHasPrefs = !!(studySubjectCookie || userTypeCookie)

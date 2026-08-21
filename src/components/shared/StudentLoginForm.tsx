@@ -16,6 +16,17 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const router = useRouter();
   const t = useTranslations("student.auth");
 
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorParam = searchParams?.get("error");
+    if (errorParam === "RoleTeacherExists") {
+      setErrorMessage("Tài khoản này đã đăng ký với vai trò Giáo viên (Teacher). Vui lòng chọn tài khoản Google khác để đăng nhập Học sinh.");
+    } else if (errorParam === "RoleStudentExists") {
+      setErrorMessage("Tài khoản này đã đăng ký với vai trò Học sinh (Student).");
+    }
+  }, [searchParams]);
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsPending(true);
@@ -111,6 +122,8 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   }
 
   const handleGoogleLogin = () => {
+    document.cookie = "login_role_intent=STUDENT; path=/; max-age=300";
+
     const searchParams = new URLSearchParams(window.location.search);
     const existingCallbackUrl = searchParams.get("callbackUrl");
     

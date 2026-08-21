@@ -93,8 +93,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
           </svg>
         </button>
-      <div className="flex items-center gap-2 sm:gap-10">
-        <Link href="/" className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <Link href={session?.role === "TEACHER" ? "/teacher" : "/"} className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
           <img 
             src="/images/logo.png" 
             alt="Dolcake" 
@@ -104,10 +104,28 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           />
           <div className="flex-col hidden sm:flex">
             <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Dolcake</span>
-            <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
+            <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">
+              {session?.role === "TEACHER" ? "Teacher Portal" : "Student Portal"}
+            </span>
           </div>
         </Link>
-        {/* Removed top header buttons — moved to sidebar */}
+        {session?.role === "TEACHER" ? (
+          <button 
+            onClick={() => signOut({ callbackUrl: "/" })}
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 rounded-full text-xs font-black transition-all hover:scale-105 border border-emerald-200/80 dark:border-emerald-800 shadow-sm ml-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">school</span>
+            <span>Quay về học</span>
+          </button>
+        ) : (
+          <LoginButton 
+            defaultView="teacherLogin" 
+            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/60 rounded-full text-xs font-black transition-all hover:scale-105 border border-purple-200/80 dark:border-purple-800 shadow-sm ml-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">co_present</span>
+            <span>Teacher Login</span>
+          </LoginButton>
+        )}
       </div>
 
       <div className="flex items-center gap-6">

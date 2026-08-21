@@ -5,6 +5,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
+import { cookies } from "next/headers"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma as any),
@@ -42,22 +43,48 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For Google login, if it's a new user, they might not have a role yet.
-      // We can let them log in, and default behavior or we update role to STUDENT if it's null.
-      if (account?.provider === "google") {
-        const dbUser = await prisma.user.findUnique({ where: { email: user.email! } })
-        if (dbUser && !dbUser.role) {
-          await prisma.user.update({
-            where: { email: user.email! },
-            data: { role: "STUDENT" }
-          })
+      if (account?.provider === "google" && user.email) {
+        let intentRole: string | undefined
+        try {
+          const cookieStore = await cookies()
+          intentRole = cookieStore.get("login_role_intent")?.value
+        } catch (e) {}
+
+        const dbUser = await prisma.user.findUnique({ where: { email: user.email } })
+
+        if (dbUser) {
+          const currentRole = dbUser.role || "STUDENT"
+          
+          // Role conflict check: Reject if student tries to login as teacher or vice versa
+          if (intentRole === "TEACHER" && currentRole === "STUDENT") {
+            return "/?error=RoleStudentExists"
+          }
+          if (intentRole === "STUDENT" && currentRole === "TEACHER") {
+            return "/?error=RoleTeacherExists"
+          }
         }
       }
-      return true;
+      return true
     },
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.role = (user as any).role
+        let userRole = (user as any).role
+        try {
+          const cookieStore = await cookies()
+          const intentRole = cookieStore.get("login_role_intent")?.value
+          
+          if (intentRole === "TEACHER" && token.email) {
+            const dbUser = await prisma.user.findUnique({ where: { email: token.email } })
+            if (dbUser && dbUser.role !== "TEACHER") {
+              await prisma.user.update({
+                where: { email: token.email },
+                data: { role: "TEACHER" }
+              })
+              userRole = "TEACHER"
+            }
+          }
+        } catch (e) {}
+        token.role = userRole
       }
       if (trigger === "update" && session?.role) {
         token.role = session.role

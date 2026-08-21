@@ -374,8 +374,8 @@ function TeacherLayoutWrapper({ children }: { children: React.ReactNode }) {
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Skip layout chrome for login page
-  if (pathname === '/teacher/login') {
+  // Skip layout chrome for login page, /teacher homepage, and game creator pages
+  if (pathname === '/teacher/login' || pathname === '/teacher' || pathname.startsWith('/teacher/games/')) {
     return (
       <SessionProvider>
         {children}
