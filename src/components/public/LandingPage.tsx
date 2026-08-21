@@ -1402,14 +1402,14 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
   }, [hasUserPreference, setNativeLanguage])
 
-  // Auto-open modal if user has no age group set (first time)
-  useEffect(() => {
-    const effectiveAgeGroup = studyAgeGroup || initialStudyAgeGroup;
-    if (!effectiveAgeGroup && !hasAutoOpened) {
-      setIsFilterModalOpen(true)
-      setHasAutoOpened(true)
-    }
-  }, [hasAutoOpened, studyAgeGroup, initialStudyAgeGroup])
+  // Auto-open modal disabled: user browses freely until triggering on-demand selection or clicking change age
+  // useEffect(() => {
+  //   const effectiveAgeGroup = studyAgeGroup || initialStudyAgeGroup;
+  //   if (!effectiveAgeGroup && !hasAutoOpened) {
+  //     setIsFilterModalOpen(true)
+  //     setHasAutoOpened(true)
+  //   }
+  // }, [hasAutoOpened, studyAgeGroup, initialStudyAgeGroup])
 
   const handleOpenModal = () => {
     setTempUserType(userType)
@@ -1423,7 +1423,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   }
 
   const handleCloseModalDiscard = () => {
-    if (isFirstTimeSetup) return // Force setup if no subject
     setIsFilterModalOpen(false)
   }
 
@@ -1487,16 +1486,27 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       router.refresh()
     })
 
-    // 4. Close the modal
+    // Execute any pending action that was queued before onboarding popup opened
+    const pendingAction = (useContentStore.getState() as any).pendingOnboardingAction;
+    if (pendingAction) {
+      (useContentStore.getState() as any).setPendingOnboardingAction(null);
+      setTimeout(() => {
+        pendingAction();
+      }, 50);
+    }
+
+    // 6. Close the modal
     setIsFilterModalOpen(false)
 
-    // 5. Scroll to content tabs
-    setTimeout(() => {
-      document.getElementById("content-tabs")?.scrollIntoView({ 
-        behavior: "smooth", 
-        block: "start" 
-      })
-    }, 150)
+    // 7. Scroll to content tabs if no pending action
+    if (!pendingAction) {
+      setTimeout(() => {
+        document.getElementById("content-tabs")?.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "start" 
+        })
+      }, 150)
+    }
   }
 
   // ── Sync URL → state (e.g. browser Back button) ───────────────────────────
@@ -1651,14 +1661,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
             {/* Ready / Cancel footer */}
 
             <div className="flex justify-end items-center gap-4 mt-4 pt-4 border-t border-primary/10 modal-footer">
-              {!isFirstTimeSetup && (
-                <button
-                  onClick={handleCloseModalDiscard}
-                  className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
-                >
-                  {locale === "vi" ? "CANCEL" : "CANCEL"}
-                </button>
-              )}
+              <button
+                onClick={handleCloseModalDiscard}
+                className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
+              >
+                {locale === "vi" ? "CANCEL" : "CANCEL"}
+              </button>
               <button
                 onClick={handleApplyFilters}
                 disabled={!isReadyEnabled}
@@ -1677,7 +1685,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       )}
 
       {/* Background content wrapped for blurring during first time setup */}
-      <div className={`transition-all duration-700 ${isFirstTimeSetup ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+      <div className={`transition-all duration-700 ${isFilterModalOpen ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
 
 
 

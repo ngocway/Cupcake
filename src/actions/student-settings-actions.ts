@@ -5,17 +5,19 @@ import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import bcrypt from "bcryptjs"
 
-export async function updateStudentProfile(data: { name?: string, image?: string }) {
+export async function updateStudentProfile(data: { name?: string, image?: string, studyAgeGroup?: string }) {
     const session = await auth()
     if (!session?.user?.id) return { error: "Unauthorized" }
 
     try {
+        const updateData: any = {}
+        if (data.name !== undefined) updateData.name = data.name
+        if (data.image !== undefined) updateData.image = data.image
+        if (data.studyAgeGroup !== undefined) updateData.studyAgeGroup = data.studyAgeGroup
+
         await prisma.user.update({
             where: { id: session.user.id },
-            data: {
-                name: data.name,
-                image: data.image
-            }
+            data: updateData
         })
         revalidatePath("/student/settings")
         return { success: true }

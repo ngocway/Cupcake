@@ -33,11 +33,32 @@ export function MobileContentTypeMenu() {
     return searchParams.get("tab") || activeTabStore;
   }, [pathname, searchParams, activeTabStore]);
 
+  const checkAndRequireOnboarding = useContentStore((s) => (s as any).checkAndRequireOnboarding);
+  const setFilterModalOpen = useContentStore((s) => (s as any).setFilterModalOpen);
+
   const isTabLocked = (tabId: string) => {
     return isKindergarten && (tabId === "lessons" || tabId === "exercises" || tabId === "shadowing");
   };
 
   const handleSelectTab = (tabId: string) => {
+    if ((tabId === "lessons" || tabId === "exercises" || tabId === "shadowing") && !studyAgeGroup) {
+      if (checkAndRequireOnboarding) {
+        checkAndRequireOnboarding(() => {
+          setActiveTab(tabId);
+          if (pathname !== "/") {
+            router.push(`/?tab=${tabId}`, { scroll: false });
+          } else {
+            const p = new URLSearchParams(window.location.search);
+            p.set("tab", tabId);
+            history.replaceState(null, "", `?${p.toString()}`);
+          }
+        });
+      } else if (setFilterModalOpen) {
+        setFilterModalOpen(true);
+      }
+      return;
+    }
+
     if (isTabLocked(tabId)) return;
 
     setActiveTab(tabId);

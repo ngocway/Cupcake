@@ -97,6 +97,11 @@ interface ContentState {
   pendingQuizData: { assignmentId: string; questions: any[] } | null
   setPendingQuizData: (data: { assignmentId: string; questions: any[] } | null) => void
 
+  // Lazy onboarding action queue — executed ONCE after user confirms onboarding popup
+  pendingOnboardingAction: (() => void) | null
+  setPendingOnboardingAction: (action: (() => void) | null) => void
+  checkAndRequireOnboarding: (action: () => void) => boolean
+
   clearContent: () => void
 
   // Mobile sidebar drawer state
@@ -104,7 +109,7 @@ interface ContentState {
   setMobileSidebarOpen: (val: boolean) => void
 }
 
-export const useContentStore = create<ContentState>((set) => ({
+export const useContentStore = create<ContentState>((set, get) => ({
   exercises: [],
   lessons: [],
   hasMoreEx: true,
@@ -218,6 +223,18 @@ export const useContentStore = create<ContentState>((set) => ({
   setSelectedCategoryId: (val) => set({ selectedCategoryId: val }),
   setSelectedSubCategoryId: (val) => set({ selectedSubCategoryId: val }),
 
+  pendingOnboardingAction: null,
+  setPendingOnboardingAction: (action) => set({ pendingOnboardingAction: action }),
+  checkAndRequireOnboarding: (action) => {
+    const state = get() as any;
+    if (state.studyAgeGroup && String(state.studyAgeGroup).trim() !== "") {
+      action();
+      return true;
+    }
+    set({ pendingOnboardingAction: action, isFilterModalOpen: true });
+    return false;
+  },
+
   clearContent: () => set({
     exercises: [],
     lessons: [],
@@ -235,6 +252,7 @@ export const useContentStore = create<ContentState>((set) => ({
     userType: "learner",
     studySubject: "english",
     studyAgeGroup: "",
-    studyLevel: ""
+    studyLevel: "",
+    pendingOnboardingAction: null
   })
 }))

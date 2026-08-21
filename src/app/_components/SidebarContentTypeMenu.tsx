@@ -5,13 +5,15 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock, Settings, Sparkles } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { AgeGroupRestrictionModal } from "@/components/modals/AgeGroupRestrictionModal";
 
 export function SidebarContentTypeMenu() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = useLocale();
+  const { data: session } = useSession();
 
   const [isOpen, setIsOpen] = useState(true);
   const [isRestrictionModalOpen, setIsRestrictionModalOpen] = useState(false);
@@ -37,6 +39,7 @@ export function SidebarContentTypeMenu() {
   }, [studyAgeGroup]);
 
   const setFilterModalOpen = useContentStore((s) => (s as any).setFilterModalOpen);
+  const checkAndRequireOnboarding = useContentStore((s) => (s as any).checkAndRequireOnboarding);
 
   // Read activeTab from Zustand store (instant, no server round-trip)
   const activeTab = useContentStore((s) => (s as any).activeTab) || "flashcards";
@@ -53,16 +56,44 @@ export function SidebarContentTypeMenu() {
   // Direct URL protection check on mount / searchParams change
   useEffect(() => {
     const urlTab = searchParams.get("tab");
-    if (isKindergarten && urlTab && isTabLocked(urlTab)) {
-      setIsRestrictionModalOpen(true);
-      setActiveTab("flashcards");
-      const p = new URLSearchParams(window.location.search);
-      p.set("tab", "flashcards");
-      history.replaceState(null, "", `?${p.toString()}`);
+    if (urlTab && (urlTab === "lessons" || urlTab === "exercises" || urlTab === "shadowing")) {
+      if (!studyAgeGroup) {
+        setActiveTab("flashcards");
+        const p = new URLSearchParams(window.location.search);
+        p.set("tab", "flashcards");
+        history.replaceState(null, "", `?${p.toString()}`);
+        if (setFilterModalOpen) setFilterModalOpen(true);
+      } else if (isKindergarten && isTabLocked(urlTab)) {
+        setIsRestrictionModalOpen(true);
+        setActiveTab("flashcards");
+        const p = new URLSearchParams(window.location.search);
+        p.set("tab", "flashcards");
+        history.replaceState(null, "", `?${p.toString()}`);
+      }
     }
-  }, [isKindergarten, searchParams]);
+  }, [isKindergarten, studyAgeGroup, searchParams]);
 
   const handleSelectTab = (tabId: string) => {
+    // If user has not selected an age group yet and tries to open Reading, Grammar, or Shadowing
+    if ((tabId === "lessons" || tabId === "exercises" || tabId === "shadowing") && !studyAgeGroup) {
+      setMobileSidebarOpen(false);
+      if (checkAndRequireOnboarding) {
+        checkAndRequireOnboarding(() => {
+          setActiveTab(tabId);
+          if (pathname !== "/") {
+            router.push(`/?tab=${tabId}`, { scroll: false });
+          } else {
+            const p = new URLSearchParams(window.location.search);
+            p.set("tab", tabId);
+            history.replaceState(null, "", `?${p.toString()}`);
+          }
+        });
+      } else if (setFilterModalOpen) {
+        setFilterModalOpen(true);
+      }
+      return;
+    }
+
     if (isTabLocked(tabId)) {
       setIsRestrictionModalOpen(true);
       return;
@@ -430,6 +461,48 @@ export function SidebarContentTypeMenu() {
             <span className="cefr-redesign-dolbot-badge">AI</span>
           </div>
         </Link>
+
+        {/* Sidebar Bottom Widget for Guest / Unauthenticated users */}
+        {!session?.user && (
+          <button
+            type="button"
+            onClick={() => setFilterModalOpen && setFilterModalOpen(true)}
+            className="mt-3.5 w-full p-3 rounded-2xl bg-gradient-to-r from-amber-100/90 via-orange-50/80 to-amber-50/60 dark:from-slate-800 dark:to-slate-800/80 border-2 border-amber-200/80 dark:border-amber-500/30 hover:border-amber-400 dark:hover:border-amber-400 transition-all text-left flex items-center justify-between group cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-amber-400 shadow-sm shrink-0 bg-white dark:bg-slate-700">
+                <img
+                  src={
+                    (studyAgeGroup.toLowerCase().includes("kindergarten") || studyAgeGroup === "kids-2-5")
+                      ? "/images/avatars/kid.png"
+                      : studyAgeGroup.toLowerCase().includes("teen")
+                      ? "/images/avatars/teen.png"
+                      : studyAgeGroup.toLowerCase().includes("kid")
+                      ? "/images/avatars/kid.png"
+                      : "/images/avatars/adult.png"
+                  }
+                  alt="Age Avatar"
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800/70 dark:text-amber-300">
+                  {locale === "vi" ? "Lứa tuổi học tập" : "Age Profile"}
+                </span>
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                  {(studyAgeGroup === "kindergarten" || studyAgeGroup === "kindergarden")
+                    ? "< 6 years"
+                    : studyAgeGroup
+                    ? studyAgeGroup
+                    : (locale === "vi" ? "Learner" : "Learner")}
+                </span>
+              </div>
+            </div>
+            <div className="w-7 h-7 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all shrink-0">
+              <span className="material-symbols-rounded text-sm">edit</span>
+            </div>
+          </button>
+        )}
       </div>
 
       {/* Age Group Restriction Modal */}
