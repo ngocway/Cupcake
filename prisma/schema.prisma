@@ -64,6 +64,7 @@ model User {
   studySubject         String?
   studyAgeGroup        String?
   studyLevel           String?
+  teacherMatchWordTopics MatchWordTopic[] @relation("TeacherMatchWordTopics")
 }
 
 model AdminRole {
@@ -669,6 +670,8 @@ model MatchWordTopic {
   id        String          @id @default(cuid())
   gameId    String
   game      MatchWordGame   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  teacherId String?
+  teacher   User?           @relation("TeacherMatchWordTopics", fields: [teacherId], references: [id], onDelete: SetNull)
   ageGroup  String // "2-5" or "6-12"
   name      String // e.g. "Animals"
   slug      String

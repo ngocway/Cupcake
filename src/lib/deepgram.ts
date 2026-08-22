@@ -20,6 +20,10 @@ export async function generateDeepgramTTS(options: DeepgramTtsOptions): Promise<
     throw new Error("DEEPGRAM_API_KEY is not configured in environment variables.");
   }
 
+  // Prepend natural silence padding "... " to give browser/hardware audio output time to initialize and prevent clipping
+  const trimmedText = text.trim();
+  const paddedText = trimmedText.startsWith("...") || trimmedText.startsWith(".") ? trimmedText : `... ${trimmedText}`;
+
   let url = `https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`;
   if (speed !== undefined && speed !== null) {
     url += `&speed=${speed}`;
@@ -31,7 +35,7 @@ export async function generateDeepgramTTS(options: DeepgramTtsOptions): Promise<
       "Authorization": `Token ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text: paddedText }),
   });
 
   if (!response.ok) {

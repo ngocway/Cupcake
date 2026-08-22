@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { registerStudent, resetPassword } from "@/actions/auth-actions"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight, User, HelpCircle } from "lucide-react"
