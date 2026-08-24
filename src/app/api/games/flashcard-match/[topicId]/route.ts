@@ -1,62 +1,78 @@
-import { NextResponse } from "next/server"
-import prisma from "@/lib/prisma"
-
-function shuffleArray<T>(array: T[]): T[] {
-  const arr = [...array]
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ topicId: string }> }
 ) {
   try {
-    const topicId = (await params).topicId
+    const { topicId } = await params;
 
-    // Find the topic
-    const topic = await prisma.flashcardTopic.findUnique({
+    if (!topicId) {
+      return NextResponse.json({ success: false, error: "Missing topicId" }, { status: 400 });
+    }
+
+    // 1. Try querying Teacher-created MatchWordTopic & items
+    const matchTopic = await prisma.matchWordTopic.findUnique({
       where: { id: topicId },
-      select: { name: true, targetAudiences: true }
-    })
+      include: { items: true },
+    });
 
-    if (!topic) {
-      return NextResponse.json({ success: false, error: "Topic not found" }, { status: 404 })
+    if (matchTopic && matchTopic.items && matchTopic.items.length > 0) {
+      const cards = matchTopic.items.map((item) => ({
+        id: item.id,
+        word: item.word,
+        imageUrl: item.imageUrl || null,
+        audioUrl: item.audioUrl || null,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        topicName: matchTopic.name,
+        isTeacherGame: true,
+        cards,
+      });
     }
 
-    // Get all cards in this topic that have an imageUrl
-    const cards = await prisma.globalFlashcard.findMany({
-      where: {
-        topicId,
-        imageUrl: { not: null },
-        NOT: { imageUrl: "" }
+    // 2. Fallback: Query system FlashcardTopic & flashcards
+    const flashcardTopic = await prisma.flashcardTopic.findUnique({
+      where: { id: topicId },
+      include: {
+        flashcards: {
+          where: {
+            imageUrl: { not: null },
+            NOT: { imageUrl: "" },
+          },
+          orderBy: { orderIndex: "asc" },
+        },
       },
-      select: {
-        id: true,
-        word: true,
-        imageUrl: true,
-        audioUrl: true,
-        audioWordUrl: true,
-      },
-      orderBy: { orderIndex: "asc" }
-    })
+    });
 
-    if (cards.length === 0) {
-      return NextResponse.json({ success: true, cards: [], topicName: topic.name })
+    if (flashcardTopic && flashcardTopic.flashcards && flashcardTopic.flashcards.length > 0) {
+      const cards = flashcardTopic.flashcards.map((f: any) => ({
+        id: f.id,
+        word: f.englishText || f.word || "",
+        imageUrl: f.imageUrl || null,
+        audioUrl: f.audioUrl || null,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        topicName: flashcardTopic.name,
+        isTeacherGame: false,
+        cards,
+      });
     }
 
-    // Shuffle and return all cards (the game will pick 7 at a time client-side)
     return NextResponse.json({
-      success: true,
-      topicName: topic.name,
-      cards: shuffleArray(cards)
-    })
-
+      success: false,
+      error: "No cards found for this topic",
+    }, { status: 404 });
   } catch (error: any) {
-    console.error("API error getting flashcard match cards:", error)
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 })
+    console.error("[Flashcard Match API Error]:", error);
+    return NextResponse.json({
+      success: false,
+      error: error.message || "Failed to fetch topic cards",
+    }, { status: 500 });
   }
 }

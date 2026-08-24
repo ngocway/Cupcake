@@ -17,14 +17,29 @@ export async function getTeacherMatchGamesAction() {
       ? {}
       : { teacherId: session.user.id };
 
-    const topics = await prisma.matchWordTopic.findMany({
+    const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,
-      include: {
-        items: true,
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
         game: {
           select: {
             name: true,
             level: true,
+          },
+        },
+        items: {
+          take: 4,
+          select: {
+            id: true,
+            word: true,
+            imageUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            items: true,
           },
         },
       },
@@ -32,6 +47,15 @@ export async function getTeacherMatchGamesAction() {
         createdAt: "desc",
       },
     });
+
+    const topics = rawTopics.map((t) => ({
+      id: t.id,
+      name: t.name,
+      createdAt: t.createdAt,
+      game: t.game,
+      items: t.items,
+      totalItems: t._count.items,
+    }));
 
     return { success: true, topics };
   } catch (error: any) {

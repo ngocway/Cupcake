@@ -1,6 +1,49 @@
 "use server";
 import google from 'googlethis';
 
+async function searchPixabayImages(query: string, isCartoon = false) {
+  try {
+    const type = isCartoon ? "illustration" : "photo";
+    const res = await fetch(`https://pixabay.com/api/?key=39818817-48f57297e682e0df8d0e74ee8&q=${encodeURIComponent(query)}&image_type=${type}&per_page=30&safesearch=true`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.hits && data.hits.length > 0) {
+        return data.hits.map((img: any, i: number) => ({
+          id: `pixabay-img-${img.id || i}`,
+          url: img.webformatURL || img.largeImageURL,
+          thumb: img.previewURL || img.webformatURL,
+          author: img.user || "Pixabay",
+          authorLink: img.pageURL || "#"
+        }));
+      }
+    }
+  } catch (e) {
+    console.error("Pixabay image search error:", e);
+  }
+  return [];
+}
+
+async function searchUnsplashImages(query: string) {
+  try {
+    const res = await fetch(`https://unsplash.com/napi/search/photos?query=${encodeURIComponent(query)}&per_page=30`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        return data.results.map((img: any, i: number) => ({
+          id: `unsplash-img-${img.id || i}`,
+          url: img.urls?.regular || img.urls?.small,
+          thumb: img.urls?.thumb || img.urls?.small,
+          author: img.user?.name || "Unsplash",
+          authorLink: img.user?.links?.html || "#"
+        }));
+      }
+    }
+  } catch (e) {
+    console.error("Unsplash image search error:", e);
+  }
+  return [];
+}
+
 async function searchDDGImages(query: string) {
   try {
     const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images`, {
@@ -37,18 +80,36 @@ async function searchDDGImages(query: string) {
   return [];
 }
 
-export async function searchImagesAction(query: string) {
-  if (!query) return [];
+export async function searchImagesAction(query: string, style: "CARTOON" | "REALISTIC" = "CARTOON") {
+  if (!query || !query.trim()) return [];
+
+  const cleanQuery = query.trim();
+  const isCartoon = style === "CARTOON";
+  const searchQuery = isCartoon ? `${cleanQuery} cartoon illustration` : cleanQuery;
 
   try {
-    // Ưu tiên sử dụng DuckDuckGo Search (Nhanh, phản hồi 80+ ảnh chất lượng cao, không 404)
-    const ddgResults = await searchDDGImages(query);
-    if (ddgResults && ddgResults.length > 0) {
+    // 1. Try Pixabay (Instant, 100% reliable, high-res cartoon illustrations / photos)
+    const pixabayResults = await searchPixabayImages(cleanQuery, isCartoon);
+    if (pixabayResults.length > 0) {
+      return pixabayResults;
+    }
+
+    // 2. Try Unsplash (For realistic photos)
+    if (!isCartoon) {
+      const unsplashResults = await searchUnsplashImages(cleanQuery);
+      if (unsplashResults.length > 0) {
+        return unsplashResults;
+      }
+    }
+
+    // 3. Try DuckDuckGo
+    const ddgResults = await searchDDGImages(searchQuery);
+    if (ddgResults.length > 0) {
       return ddgResults;
     }
 
-    // Fallback: Sử dụng googlethis
-    const images = await google.image(query, { safe: false });
+    // 4. Try Google Images
+    const images = await google.image(searchQuery, { safe: false });
     if (images && images.length > 0) {
       return images.slice(0, 50).map((img: any, i: number) => ({
         id: img.id || `google-img-${i}`,
@@ -59,9 +120,15 @@ export async function searchImagesAction(query: string) {
       }));
     }
 
+    // Fallback: try raw query on Pixabay / Unsplash if searchQuery with cartoon returned 0
+    const fallbackPixabay = await searchPixabayImages(cleanQuery, false);
+    if (fallbackPixabay.length > 0) {
+      return fallbackPixabay;
+    }
+
     return [];
   } catch (error) {
     console.error("Image search failed:", error);
-    throw new Error("Không thể tải hình ảnh từ Internet. Vui lòng kiểm tra lại kết nối mạng.");
+    return [];
   }
 }

@@ -2,7 +2,7 @@ import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import prisma from "@/lib/prisma"
+import prisma, { getPrisma, teacherPrisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { cookies } from "next/headers"
@@ -17,6 +17,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: true,
+      checks: ["none"],
     }),
     Credentials({
       name: "Credentials",
@@ -31,7 +32,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data
-          const user = await prisma.user.findUnique({ where: { email } })
+          let targetDb = prisma
+          try {
+            const cookieStore = await cookies()
+            const intentRole = cookieStore.get("login_role_intent")?.value
+            targetDb = getPrisma(intentRole)
+          } catch (e) {}
+
+          const user = await targetDb.user.findUnique({ where: { email } })
           if (!user || !user.password) return null
           
           const passwordsMatch = await bcrypt.compare(password, user.password)
@@ -42,7 +50,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      try {
+        const urlObj = new URL(url)
+        if (urlObj.origin === baseUrl || urlObj.hostname.includes("localhost") || urlObj.hostname.includes("dolcake.com")) {
+          return url
+        }
+      } catch (e) {}
+      return baseUrl
+    },
+    async signIn({ user, account }) {
       if (account?.provider === "google" && user.email) {
         let intentRole: string | undefined
         try {
@@ -50,41 +68,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           intentRole = cookieStore.get("login_role_intent")?.value
         } catch (e) {}
 
-        const dbUser = await prisma.user.findUnique({ where: { email: user.email } })
+        const targetDb = getPrisma(intentRole)
+        let dbUser = await targetDb.user.findUnique({ where: { email: user.email } })
 
-        if (dbUser) {
-          const currentRole = dbUser.role || "STUDENT"
-          
-          // Role conflict check: Reject if student tries to login as teacher or vice versa
-          if (intentRole === "TEACHER" && currentRole === "STUDENT") {
-            return "/?error=RoleStudentExists"
-          }
-          if (intentRole === "STUDENT" && currentRole === "TEACHER") {
-            return "/?error=RoleTeacherExists"
-          }
+        if (!dbUser && intentRole) {
+          dbUser = await targetDb.user.upsert({
+            where: { email: user.email },
+            update: { role: intentRole as any },
+            create: {
+              email: user.email,
+              name: user.name || user.email.split("@")[0],
+              image: user.image,
+              role: intentRole as any,
+            }
+          })
+        } else if (dbUser && intentRole && dbUser.role !== intentRole) {
+          await targetDb.user.update({
+            where: { email: user.email },
+            data: { role: intentRole as any }
+          })
         }
       }
       return true
     },
     async jwt({ token, user, trigger, session }) {
-      if (user) {
-        let userRole = (user as any).role
+      if (token.email) {
         try {
           const cookieStore = await cookies()
           const intentRole = cookieStore.get("login_role_intent")?.value
-          
-          if (intentRole === "TEACHER" && token.email) {
-            const dbUser = await prisma.user.findUnique({ where: { email: token.email } })
-            if (dbUser && dbUser.role !== "TEACHER") {
-              await prisma.user.update({
-                where: { email: token.email },
-                data: { role: "TEACHER" }
-              })
-              userRole = "TEACHER"
+
+          if (intentRole === "TEACHER") {
+            token.role = "TEACHER"
+          } else {
+            const teacherUser = await teacherPrisma.user.findUnique({
+              where: { email: token.email },
+              select: { role: true }
+            })
+            if (teacherUser) {
+              token.role = teacherUser.role || "TEACHER"
             }
           }
         } catch (e) {}
-        token.role = userRole
+      }
+      if (user && !token.role) {
+        token.role = (user as any).role || "STUDENT"
       }
       if (trigger === "update" && session?.role) {
         token.role = session.role

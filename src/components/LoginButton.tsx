@@ -101,13 +101,15 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
         {view === 'studentLogin' && (
           <div className="flex flex-col max-h-[85vh]">
             <div className="relative h-16 shrink-0 px-8 border-b border-neutral-100 dark:border-gray-800 flex items-center justify-between">
-              <button 
-                onClick={() => setView("role")}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 text-sm font-semibold transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </button>
+              {defaultView === "role" ? (
+                <button 
+                  onClick={() => setView("role")}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 text-sm font-semibold transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </button>
+              ) : <div />}
               <button 
                 onClick={handleClose}
                 className="size-10 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-gray-800 text-neutral-500 transition-colors"

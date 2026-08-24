@@ -2,20 +2,34 @@ import { HomeShell } from "@/app/_components/HomeShell";
 import { TeacherHomeSidebar } from "./_components/TeacherHomeSidebar";
 import { MatchGameCards } from "./_components/MatchGameCards";
 import { MyMatchGamesList } from "./_components/MyMatchGamesList";
+import { auth } from "@/auth";
+import { TeacherLoginModalAuto } from "./_components/TeacherLoginModalAuto";
+import { getTeacherMatchGamesAction } from "@/actions/teacher-match-games";
 
 export default async function TeacherHomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
   const activeTab = params?.tab || "match";
+  const session = await auth();
+  const isAuthenticated = Boolean(session?.user?.id && (session.user.role === "TEACHER" || session.user.role === "ADMIN"));
+
+  let initialTopics: any[] = [];
+  if (activeTab === "my-match-games" && isAuthenticated) {
+    const res = await getTeacherMatchGamesAction();
+    if (res.success && res.topics) {
+      initialTopics = res.topics;
+    }
+  }
 
   return (
     <HomeShell>
+      <TeacherLoginModalAuto isAuthenticated={isAuthenticated} />
       <div className="w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
         <TeacherHomeSidebar />
 
         <main className="w-full flex-1 min-w-0 min-h-[500px]">
           {activeTab === "match" && <MatchGameCards />}
 
-          {activeTab === "my-match-games" && <MyMatchGamesList />}
+          {activeTab === "my-match-games" && <MyMatchGamesList initialTopics={initialTopics} />}
 
           {activeTab === "fill" && (
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">

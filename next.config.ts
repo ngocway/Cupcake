@@ -4,7 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n.ts");
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.1.6", "localhost", "127.0.0.1"],
+  allowedDevOrigins: ["192.168.1.6", "localhost", "127.0.0.1", "teacher.dolcake.com", "teacher.localhost", "dolcake.com", "dolcake.local", "teacher.dolcake.local"],
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = [...(config.externals || []), {

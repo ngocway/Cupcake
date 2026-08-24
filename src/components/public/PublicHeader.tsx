@@ -47,6 +47,24 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [localSearch, setLocalSearch] = useState(search || "")
+  const [isTeacherDomain, setIsTeacherDomain] = useState(false)
+  const [teacherUrl, setTeacherUrl] = useState(process.env.NEXT_PUBLIC_TEACHER_URL || "https://teacher.dolcake.com")
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const host = window.location.host;
+      const isTeacher = host.startsWith("teacher.") || host.includes("teacher.dolcake") || host.includes("teacher.localhost");
+      setIsTeacherDomain(isTeacher);
+
+      if (process.env.NEXT_PUBLIC_TEACHER_URL) {
+        setTeacherUrl(process.env.NEXT_PUBLIC_TEACHER_URL);
+      } else {
+        const port = window.location.port ? `:${window.location.port}` : "";
+        const protocol = window.location.protocol;
+        setTeacherUrl(`${protocol}//teacher.dolcake.com${port}`);
+      }
+    }
+  }, [])
 
   useEffect(() => {
     setLocalSearch(search || "")
@@ -94,7 +112,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           </svg>
         </button>
       <div className="flex items-center gap-2 sm:gap-4">
-        <Link href={session?.role === "TEACHER" ? "/teacher" : "/"} className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
+        <Link href={pathname.startsWith("/teacher") ? "/teacher" : "/"} className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
           <img 
             src="/images/logo.png" 
             alt="Dolcake" 
@@ -105,26 +123,30 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           <div className="flex-col hidden sm:flex">
             <span className="font-headline font-black text-lg sm:text-2xl tracking-tighter text-primary leading-none">Dolcake</span>
             <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">
-              {session?.role === "TEACHER" ? "Teacher Portal" : "Student Portal"}
+              {pathname.startsWith("/teacher") ? "Teacher Portal" : "Student Portal"}
             </span>
           </div>
         </Link>
-        {session?.role === "TEACHER" ? (
-          <button 
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 rounded-full text-xs font-black transition-all hover:scale-105 border border-emerald-200/80 dark:border-emerald-800 shadow-sm ml-2"
+        {pathname.startsWith("/teacher") ? (
+          <Link 
+            href="/"
+            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 border border-emerald-500 shadow-sm hover:shadow-md hover:shadow-emerald-500/25 active:scale-95 group ml-1 sm:ml-2"
           >
-            <span className="material-symbols-outlined text-[18px]">school</span>
-            <span>Quay về học</span>
-          </button>
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300">
+              <span className="material-symbols-outlined text-[15px]">auto_stories</span>
+            </span>
+            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Quay về học</span>
+          </Link>
         ) : (
-          <LoginButton 
-            defaultView="teacherLogin" 
-            className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/60 rounded-full text-xs font-black transition-all hover:scale-105 border border-purple-200/80 dark:border-purple-800 shadow-sm ml-2"
+          <Link 
+            href="/teacher"
+            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 border border-blue-500 shadow-sm hover:shadow-md hover:shadow-blue-500/25 active:scale-95 group ml-1 sm:ml-2"
           >
-            <span className="material-symbols-outlined text-[18px]">co_present</span>
-            <span>Teacher Login</span>
-          </LoginButton>
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">
+              <span className="material-symbols-outlined text-[15px]">cast_for_education</span>
+            </span>
+            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Teacher Login</span>
+          </Link>
         )}
       </div>
 
@@ -291,7 +313,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               )}
             </div>
           ) : (
-            <LoginButton className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
+            <LoginButton defaultView="studentLogin" className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
               {t("getStarted")}
             </LoginButton>
           )}

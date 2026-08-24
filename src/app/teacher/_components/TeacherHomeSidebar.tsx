@@ -73,12 +73,12 @@ export function TeacherHomeSidebar() {
           }
 
           .teacher-level1-create {
-            background: linear-gradient(135deg, #12A375 0%, #0E8760 100%);
+            background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
             color: #FFFFFF;
-            box-shadow: 0 4px 14px rgba(18, 163, 117, 0.25);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
           }
           .teacher-level1-create:hover {
-            box-shadow: 0 6px 18px rgba(18, 163, 117, 0.35);
+            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.35);
             transform: translateY(-1px);
           }
 

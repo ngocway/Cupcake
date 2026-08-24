@@ -266,14 +266,14 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
   const { isHidden } = useScrollDirection();
 
   return (
-    <div className={`teacher-theme ${lexend.variable} font-display bg-[#eef8fa] dark:bg-slate-900 text-slate-900 dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
+    <div className={`teacher-theme ${lexend.variable} font-display bg-[#f0f7ff] dark:bg-slate-900 text-slate-900 dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
       {session?.user?.role === 'ADMIN' && <AdminModeBanner mode="TEACHER" />}
       {!isEditMode && (
         <header id="teacher-header" className={`sticky top-0 z-50 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-3 shadow-sm transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
             <div className="flex items-center gap-8 flex-1">
               <div className="flex items-center gap-3 shrink-0">
-                <div className="size-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-sm">
+                <div className="size-10 bg-sky-500 rounded-xl flex items-center justify-center text-white shadow-sm">
                   <BookOpen className="w-5 h-5 stroke-[2px]" />
                 </div>
                 <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight hidden lg:block">Teacher's Library</h2>
@@ -374,8 +374,8 @@ function TeacherLayoutWrapper({ children }: { children: React.ReactNode }) {
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
-  // Skip layout chrome for login page, /teacher homepage, and game creator pages
-  if (pathname === '/teacher/login' || pathname === '/teacher' || pathname.startsWith('/teacher/games/')) {
+  // Skip layout chrome for root subdomain homepage, login page, /teacher homepage, and game creator pages
+  if (pathname === '/' || pathname === '/teacher/login' || pathname === '/teacher' || pathname.startsWith('/teacher/games/')) {
     return (
       <SessionProvider>
         {children}

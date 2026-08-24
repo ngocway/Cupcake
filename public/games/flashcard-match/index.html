@@ -388,7 +388,9 @@
     // ──────────────────────────────────────────────
     //  Config
     // ──────────────────────────────────────────────
-    const PAIRS_PER_ROUND = 7;
+    function getPairsPerRound() {
+        return Math.min(allCards.length || 7, 7);
+    }
 
     const WORD_COLORS = [
         { bg: '#ff6b6b', border: '#ee5253' },
@@ -417,6 +419,8 @@
     let matchedCount = 0;
     let elements     = [];   // physics objects
     let animationId  = null;
+    let isTeacherGame = false;
+    let isGameFullyCompleted = false;
 
     const gameArea    = document.getElementById('gameArea');
     const roundLabel  = document.getElementById('roundLabel');
@@ -544,8 +548,9 @@
     //  Round card selection
     // ──────────────────────────────────────────────
     function pickRoundCards() {
+        const pairsCount = getPairsPerRound();
         let pool = allCards.filter(c => !usedIds.has(c.id));
-        if (pool.length < PAIRS_PER_ROUND) {
+        if (pool.length < pairsCount) {
             usedIds.clear();
             pool = [...allCards];
         }
@@ -554,7 +559,7 @@
             const j=Math.floor(Math.random()*(i+1));
             [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
         }
-        roundCards = shuffled.slice(0, PAIRS_PER_ROUND);
+        roundCards = shuffled.slice(0, pairsCount);
         roundCards.forEach(c => usedIds.add(c.id));
     }
 
@@ -759,7 +764,7 @@
         matchedCount++;
         updateHUD();
 
-        if (matchedCount === PAIRS_PER_ROUND) {
+        if (matchedCount === getPairsPerRound()) {
             setTimeout(showRoundComplete, 900);
         }
     }
@@ -768,9 +773,10 @@
     //  HUD
     // ──────────────────────────────────────────────
     function updateHUD() {
+        const total = getPairsPerRound();
         roundLabel.textContent  = `Round ${roundNumber}`;
-        pairCountEl.textContent = `${matchedCount} / ${PAIRS_PER_ROUND}`;
-        progressBar.style.width = (matchedCount / PAIRS_PER_ROUND * 100) + '%';
+        pairCountEl.textContent = `${matchedCount} / ${total}`;
+        progressBar.style.width = (total > 0 ? (matchedCount / total * 100) : 0) + '%';
     }
 
     // ──────────────────────────────────────────────
@@ -789,19 +795,37 @@
             c.style.animationDelay=(Math.random()*1.5)+'s';
             gameArea.appendChild(c);
         }
-        const emojis=['🎉','🌟','🏆','🎊','⭐'];
-        const msgs  =['Amazing!','Awesome!','You Rock!','Superstar!','Brilliant!'];
-        const ri = (roundNumber-1) % emojis.length;
-        document.getElementById('roundBannerEmoji').textContent = emojis[ri];
-        document.getElementById('roundBannerTitle').textContent = msgs[ri];
-        document.getElementById('roundBannerSub').textContent   = `Round ${roundNumber} complete! Ready for the next one?`;
+        const total = getPairsPerRound();
+        const nextBtn = document.getElementById('nextRoundBtn');
+
+        if (isTeacherGame && usedIds.size >= allCards.length) {
+            isGameFullyCompleted = true;
+            document.getElementById('roundBannerEmoji').textContent = '🏆';
+            document.getElementById('roundBannerTitle').textContent = 'EXCELLENT!';
+            document.getElementById('roundBannerSub').textContent   = `You completed all ${allCards.length} pairs in this assignment!`;
+            nextBtn.textContent = '🔄 REPLAY FROM START';
+        } else {
+            isGameFullyCompleted = false;
+            const emojis=['🎉','🌟','🏆','🎊','⭐'];
+            const msgs  =['Amazing!','Awesome!','You Rock!','Superstar!','Brilliant!'];
+            const ri = (roundNumber-1) % emojis.length;
+            document.getElementById('roundBannerEmoji').textContent = emojis[ri];
+            document.getElementById('roundBannerTitle').textContent = msgs[ri];
+            document.getElementById('roundBannerSub').textContent   = `Round ${roundNumber} complete! You matched all ${total} pairs!`;
+            nextBtn.textContent = 'NEXT ROUND ▶';
+        }
         roundBanner.classList.add('show');
     }
 
     document.getElementById('nextRoundBtn').addEventListener('click', () => {
         roundBanner.classList.remove('show');
         gameArea.querySelectorAll('.confetti').forEach(el => el.remove());
-        roundNumber++;
+        if (isGameFullyCompleted) {
+            usedIds.clear();
+            roundNumber = 1;
+        } else {
+            roundNumber++;
+        }
         initRound();
     });
 
@@ -923,13 +947,7 @@
 
             if (data.success && data.cards && data.cards.length > 0) {
                 allCards = data.cards;
-                // Nếu ít hơn 7 card, nhân bản đủ
-                if (allCards.length < PAIRS_PER_ROUND) {
-                    const base = [...allCards];
-                    while (allCards.length < PAIRS_PER_ROUND) {
-                        allCards = allCards.concat(base);
-                    }
-                }
+                isTeacherGame = Boolean(data.isTeacherGame);
             } else {
                 loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
                 return;

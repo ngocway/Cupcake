@@ -77,15 +77,8 @@ export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
 
   const handleGoogleLogin = () => {
     // Set role intent in cookie for NextAuth server callback verification
-    document.cookie = "login_role_intent=TEACHER; path=/; max-age=300";
-    
-    let callbackUrl = "/teacher";
-    const existingCallbackUrl = searchParams.get("callbackUrl");
-    if (existingCallbackUrl && !existingCallbackUrl.includes("/login")) {
-      callbackUrl = existingCallbackUrl;
-    }
-
-    signIn("google", { callbackUrl });
+    document.cookie = "login_role_intent=TEACHER; path=/; max-age=300; SameSite=Lax";
+    signIn("google", { callbackUrl: "/teacher" });
   }
 
   return (

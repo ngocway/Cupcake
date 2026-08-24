@@ -113,7 +113,7 @@ export function Providers({ children, locale = "en", messages }: {
           messages={messages}
           timeZone="Asia/Ho_Chi_Minh"
         >
-          <Toaster position="bottom-right" richColors />
+          <Toaster position="top-center" richColors />
           <GlobalLoader />
           {children}
         </NextIntlClientProvider>

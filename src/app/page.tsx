@@ -66,21 +66,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   let studyLevel = studyLevelCookie || ""
 
   const session = await auth()
-  if (session?.user?.id) {
-    if (session.user.role === "TEACHER") {
-      redirect("/teacher")
-    }
+  const isStudentSession = session?.user?.id && session?.user?.role !== "TEACHER"
 
+  if (isStudentSession) {
     const user = await prisma.user.findUnique({ 
       where: { id: session.user.id },
       select: { role: true, userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
     })
 
-    if (user?.role === "TEACHER") {
-      redirect("/teacher")
-    }
-
-    if (user) {
+    if (user && user.role !== "TEACHER") {
       const dbHasPrefs = !!(user.studySubject || user.studyAgeGroup)
       const cookieHasPrefs = !!(studySubjectCookie || userTypeCookie)
 

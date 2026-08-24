@@ -1,17 +1,44 @@
 
 import { PrismaClient } from '@prisma/client'
 
-// Client Version: 1.0.2 - Forced New Instance
-const prismaClientSingleton = () => {
-  return new PrismaClient()
+// Client Singletons for Student & Teacher DBs
+const getStudentPrismaClient = () => {
+  const url = process.env.DATABASE_URL_STUDENT || process.env.DATABASE_URL
+  return new PrismaClient({
+    datasources: url ? { db: { url } } : undefined
+  })
+}
+
+const getTeacherPrismaClient = () => {
+  const url = process.env.DATABASE_URL_TEACHER || process.env.DATABASE_URL_STUDENT || process.env.DATABASE_URL
+  return new PrismaClient({
+    datasources: url ? { db: { url } } : undefined
+  })
 }
 
 declare const globalThis: {
-  prismaGlobalFeedV3: ReturnType<typeof prismaClientSingleton>;
+  prismaStudentV1?: ReturnType<typeof getStudentPrismaClient>;
+  prismaTeacherV1?: ReturnType<typeof getTeacherPrismaClient>;
 } & typeof global;
 
-const prisma = globalThis.prismaGlobalFeedV3 ?? prismaClientSingleton()
+export const studentPrisma = globalThis.prismaStudentV1 ?? getStudentPrismaClient()
+export const teacherPrisma = globalThis.prismaTeacherV1 ?? getTeacherPrismaClient()
 
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prismaStudentV1 = studentPrisma
+  globalThis.prismaTeacherV1 = teacherPrisma
+}
+
+/**
+ * Helper to select the appropriate Prisma client based on role or hostname
+ */
+export function getPrisma(roleOrHost?: string) {
+  if (roleOrHost === 'TEACHER' || (roleOrHost && (roleOrHost.startsWith('teacher.') || roleOrHost.includes('teacher.dolcake')))) {
+    return teacherPrisma
+  }
+  return studentPrisma
+}
+
+const prisma = studentPrisma
 export default prisma
 
-if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobalFeedV3 = prisma

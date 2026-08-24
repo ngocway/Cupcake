@@ -18,7 +18,7 @@ const MATCH_GAMES: GameCard[] = [
     id: "image-image",
     title: "Nối Cặp Ảnh - Ảnh",
     badge: "Ảnh - Ảnh",
-    badgeBg: "bg-emerald-500 text-white",
+    badgeBg: "bg-sky-500 text-white",
     desc: "Học sinh ghép 2 hình ảnh tương đồng hoặc có mối liên quan trực quan với nhau.",
     videoId: "swQq7b0V68E",
   },
@@ -103,7 +103,7 @@ function MatchGameCardItem({ game }: { game: GameCard }) {
 
             {/* Play Button Overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-14 h-14 rounded-full bg-white/90 dark:bg-slate-900/90 text-primary flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-primary group-hover/thumb:text-white transition-all duration-300">
+              <div className="w-14 h-14 rounded-full bg-white/90 dark:bg-slate-900/90 text-sky-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-sky-500 group-hover/thumb:text-white transition-all duration-300">
                 <Play className="w-6 h-6 ml-1 fill-current" />
               </div>
             </div>
@@ -140,7 +140,7 @@ function MatchGameCardItem({ game }: { game: GameCard }) {
         <Link
           href={`/teacher/games/match-image-text/create?type=${game.id}`}
           prefetch={true}
-          className="w-full py-3.5 px-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 group/btn text-center"
+          className="w-full py-3.5 px-4 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2 group/btn text-center"
         >
           <Plus className="w-4 h-4 stroke-[3px] group-hover/btn:rotate-90 transition-transform duration-300" />
           <span>Tạo bài tập</span>
