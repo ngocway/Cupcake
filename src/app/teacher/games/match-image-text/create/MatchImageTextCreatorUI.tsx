@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   Plus, 
   Trash2, 
@@ -22,11 +22,12 @@ import {
   AlertTriangle,
   MoveRight,
   Layers,
-  Info
+  Info,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { searchImagesAction } from "@/actions/image-search-actions";
-import { saveMatchImageTextGameAction } from "@/actions/match-image-text-actions";
+import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { uploadMedia } from "@/actions/upload-actions";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
@@ -61,12 +62,16 @@ const INITIAL_ROUNDS: GameRound[] = [
 
 export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const topicId = searchParams?.get("topicId") || null;
+
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState("english");
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
+  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
   
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
@@ -87,6 +92,53 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       // Ignore background warm-up errors
     });
   }, []);
+
+  // Load existing topic details when in Edit mode (topicId is present)
+  useEffect(() => {
+    if (!topicId) return;
+
+    async function loadTopicDetails() {
+      setIsLoadingTopic(true);
+      const res = await getMatchImageTextGameDetailsAction(topicId!);
+      if (res.success && res.topic) {
+        setTitle(res.topic.title || "");
+        if (res.topic.gradeLevel) setGradeLevel(res.topic.gradeLevel);
+
+        const items = res.topic.items || [];
+        if (items.length > 0) {
+          const loadedRounds: GameRound[] = [];
+          const totalRounds = Math.ceil(items.length / MAX_PAIRS_PER_ROUND);
+
+          for (let r = 0; r < totalRounds; r++) {
+            const roundItems = items.slice(r * MAX_PAIRS_PER_ROUND, (r + 1) * MAX_PAIRS_PER_ROUND);
+            const roundPairs: CardPair[] = roundItems.map((item, idx) => ({
+              id: item.id || `pair-loaded-${r}-${idx}`,
+              word: item.word || "",
+              imageUrl: item.imageUrl || undefined,
+              audioUrl: item.audioUrl || undefined,
+            }));
+            loadedRounds.push({
+              id: `round-${r + 1}`,
+              title: `Vòng ${r + 1}`,
+              pairs: roundPairs,
+            });
+          }
+
+          setRounds(loadedRounds);
+          setActiveRoundIndex(0);
+
+          if (res.topic.audioMode) {
+            setAudioMode(res.topic.audioMode as AudioMode);
+          }
+        }
+      } else {
+        toast.error(res.error || "Không thể tải thông tin bài tập!");
+      }
+      setIsLoadingTopic(false);
+    }
+
+    loadTopicDetails();
+  }, [topicId]);
 
   // Track unsaved changes
   const isDirty = Boolean(title.trim() || rounds.some(r => r.pairs.some(p => p.word.trim() || p.imageUrl || p.audioUrl)));
@@ -648,10 +700,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       );
 
       const res = await saveMatchImageTextGameAction({
+        topicId: topicId || undefined,
         title: title.trim(),
         subject,
         gradeLevel,
         description,
+        audioMode,
         pairs: updatedPairs,
       });
 
@@ -662,8 +716,15 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         return;
       }
 
+      // Clear cache so the newly created game is fetched fresh immediately
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("cached_teacher_match_games");
+        } catch (e) {}
+      }
+
       toast.success("Lưu bài tập Nối Cặp thành công vào Cơ sở dữ liệu!", { position: "top-center" });
-      router.push("/teacher");
+      router.push("/teacher?tab=my-match-games");
     } catch (error: any) {
       toast.dismiss(toastId);
       setValidationModalMessage(error.message || "Đã xảy ra lỗi khi lưu bài tập!");
@@ -706,369 +767,350 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                 Nối Cặp Ảnh - Chữ
               </span>
-              <span className="text-xs font-semibold text-slate-400">Thiết kế bài tập</span>
+              <span className="text-xs font-semibold text-slate-400">
+                {topicId ? "Chỉnh sửa bài tập" : "Thiết kế bài tập"}
+              </span>
             </div>
             <h1 className="font-headline font-black text-2xl md:text-3xl text-slate-800 dark:text-white mt-1">
-              Tạo Game Nối Cặp Ảnh - Chữ
+              {topicId ? "Chỉnh sửa Game Nối Cặp Ảnh - Chữ" : "Tạo Game Nối Cặp Ảnh - Chữ"}
             </h1>
           </div>
         </div>
       </div>
 
-      {/* Main Settings Card */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-primary/10 p-6 md:p-8 shadow-sm space-y-4">
-        <h2 className="font-headline font-black text-lg text-slate-800 dark:text-white flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-500" />
-          <span>1. Thông tin bài tập</span>
-        </h2>
-
-        <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
-            <span>Tên bài tập / Game <span className="text-rose-500">*</span></span>
-            {titleError && (
-              <span className="text-xs font-bold text-rose-500 flex items-center gap-1 animate-pulse">
-                <AlertCircle className="w-3.5 h-3.5" /> Bắt buộc nhập tên bài tập
-              </span>
-            )}
-          </label>
-          <input
-            ref={titleInputRef}
-            type="text"
-            value={title}
-            onChange={e => {
-              setTitle(e.target.value);
-              if (titleError && e.target.value.trim()) setTitleError(false);
-            }}
-            placeholder="Nhập tên bài tập (VD: Bài tập Nối Cặp Ảnh - Chữ)..."
-            className={`w-full px-4 py-3 text-sm font-bold rounded-2xl outline-none transition-all ${
-              titleError
-                ? "bg-rose-50/60 dark:bg-rose-950/30 border-2 border-rose-500 text-rose-900 dark:text-rose-200 placeholder:text-rose-300 ring-4 ring-rose-500/15"
-                : "bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary"
-            }`}
-          />
-          {titleError && (
-            <p className="text-xs font-bold text-rose-500 flex items-center gap-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>Vui lòng nhập Tên bài tập / Game trước khi lưu!</span>
+      {/* Loading Skeleton state when fetching existing topic data */}
+      {isLoadingTopic ? (
+        <div className="w-full min-h-[420px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-primary/10 p-12 flex flex-col items-center justify-center text-center shadow-sm space-y-4 animate-in fade-in duration-300">
+          <div className="relative flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center shadow-inner">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+            <Sparkles className="w-5 h-5 text-amber-400 absolute -top-1 -right-1 animate-pulse" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-headline font-black text-lg text-slate-800 dark:text-slate-100">
+              Đang tải dữ liệu bài tập...
+            </h3>
+            <p className="text-xs text-slate-400 font-medium max-w-sm">
+              Hệ thống đang đồng bộ toàn bộ nội dung và danh sách các cặp thẻ từ CSDL
             </p>
-          )}
+          </div>
         </div>
-      </div>
-
-      {/* Pairs Editor Section */}
-      <div className="relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-primary/10 p-6 md:p-8 shadow-sm space-y-3.5">
-        {/* Editor Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div>
-            <h2 className="font-headline font-black text-lg text-slate-800 dark:text-white">
-              2. Danh sách các cặp thẻ Nối (Ảnh - Chữ)
+      ) : (
+        <>
+          {/* Main Settings Card */}
+          <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-primary/10 p-6 md:p-8 shadow-sm space-y-4">
+            <h2 className="font-headline font-black text-lg text-slate-800 dark:text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <span>1. Thông tin bài tập</span>
             </h2>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Tên bài tập / Game <span className="text-rose-500">*</span></span>
+                {titleError && (
+                  <span className="text-xs font-bold text-rose-500 flex items-center gap-1 animate-pulse">
+                    <AlertCircle className="w-3.5 h-3.5" /> Bắt buộc nhập tên bài tập
+                  </span>
+                )}
+              </label>
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={title}
+                onChange={e => {
+                  setTitle(e.target.value);
+                  if (titleError && e.target.value.trim()) setTitleError(false);
+                }}
+                placeholder="Nhập tên bài tập (VD: Bài tập Nối Cặp Ảnh - Chữ)..."
+                className={`w-full px-4 py-3 text-sm font-bold rounded-2xl outline-none transition-all ${
+                  titleError
+                    ? "bg-rose-50/60 dark:bg-rose-950/30 border-2 border-rose-500 text-rose-900 dark:text-rose-200 placeholder:text-rose-300 ring-4 ring-rose-500/15"
+                    : "bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                }`}
+              />
+              {titleError && (
+                <p className="text-xs font-bold text-rose-500 flex items-center gap-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Vui lòng nhập Tên bài tập / Game trước khi lưu!</span>
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Add Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Audio Mode Segmented Control (3 Options) */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setAudioMode("AUTO_TTS")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  audioMode === "AUTO_TTS" 
-                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm" 
-                    : "text-slate-400 hover:text-slate-700 dark:text-slate-400"
-                }`}
-                title="Tự động phát âm bằng giọng đọc AI chuẩn Mỹ khi nhấp thẻ"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>Hệ thống tự đọc</span>
-              </button>
+          {/* Pairs Editor Section */}
+          <div className="relative bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-primary/10 p-6 md:p-8 shadow-sm space-y-3.5">
+            {/* Editor Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div>
+                <h2 className="font-headline font-black text-lg text-slate-800 dark:text-white">
+                  2. Danh sách các cặp thẻ Nối (Ảnh - Chữ)
+                </h2>
+              </div>
+
+              {/* Segmented Control for Audio Mode */}
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setAudioMode("AUTO_TTS")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    audioMode === "AUTO_TTS"
+                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <Wand2 className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Hệ thống tự đọc</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudioMode("CUSTOM_FILE")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    audioMode === "CUSTOM_FILE"
+                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <Volume2 className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Tải lên Audio</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAudioMode("NONE")}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    audioMode === "NONE"
+                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  }`}
+                >
+                  <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Không đọc</span>
+                </button>
+              </div>
 
               <button
                 type="button"
-                onClick={() => setAudioMode("CUSTOM_FILE")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  audioMode === "CUSTOM_FILE" 
-                    ? "bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm" 
-                    : "text-slate-400 hover:text-slate-700 dark:text-slate-400"
-                }`}
-                title="Giáo viên tải file thu âm trực tiếp cho từng từ vựng"
+                onClick={() => setShowPasteModal(true)}
+                className="px-3.5 py-2 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-2xl shadow-md shadow-sky-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
               >
-                <Volume2 className="w-3.5 h-3.5 text-sky-500" />
-                <span>Tải lên Audio</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAudioMode("NONE")}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  audioMode === "NONE" 
-                    ? "bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm" 
-                    : "text-slate-400 hover:text-slate-700 dark:text-slate-400"
-                }`}
-                title="Bài tập không phát âm thanh đọc chữ"
-              >
-                <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-                <span>Không đọc</span>
+                <FileText className="w-4 h-4 stroke-[2]" />
+                <span>Nhập nhanh nhiều từ</span>
               </button>
             </div>
 
-            <button
-              onClick={() => setShowPasteModal(true)}
-              className="px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-2xl shadow-md shadow-sky-500/20 transition-all flex items-center gap-2 active:scale-95 cursor-pointer"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Nhập nhanh nhiều từ</span>
-            </button>
-          </div>
-        </div>
-
-        {/* --- ROUND TABS NAVIGATION BAR --- */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 overflow-x-auto pb-1 no-scrollbar">
-          <div className="flex items-center gap-2 flex-wrap">
-            {rounds.map((round, rIdx) => {
-              const isSelected = rIdx === activeRoundIndex;
-              const isFull = round.pairs.length >= MAX_PAIRS_PER_ROUND;
-              return (
-                <div key={round.id} className="flex items-center group">
+            {/* Rounds Tab Strip */}
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none max-w-full">
+                {rounds.map((r, idx) => (
                   <button
+                    key={r.id}
                     type="button"
-                    onClick={() => setActiveRoundIndex(rIdx)}
-                    className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer border ${
-                      isSelected
-                        ? "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/20 scale-[1.02]"
-                        : "bg-slate-100 hover:bg-sky-50 text-slate-600 hover:text-sky-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200/80 dark:border-slate-700"
+                    onClick={() => setActiveRoundIndex(idx)}
+                    className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                      activeRoundIndex === idx
+                        ? "bg-sky-500 text-white shadow-md shadow-sky-500/30 scale-105"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
-                    <span>{round.title}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                      isSelected
-                        ? "bg-white/20 text-white"
-                        : isFull
-                          ? "bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                    <span>{r.title}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      activeRoundIndex === idx ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500"
                     }`}>
-                      {round.pairs.length}/7
+                      {r.pairs.length}/{MAX_PAIRS_PER_ROUND}
                     </span>
                   </button>
-                  {rounds.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRound(rIdx)}
-                      className="ml-1 p-1 text-slate-300 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors cursor-pointer"
-                      title={`Xóa ${round.title}`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+                ))}
 
-            <button
-              type="button"
-              onClick={handleAddRound}
-              className="px-4 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border border-dashed border-sky-300 dark:border-sky-800 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Thêm Vòng Mới</span>
-            </button>
-          </div>
+                <button
+                  type="button"
+                  onClick={handleAddRound}
+                  className="px-3 py-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 hover:bg-purple-100 rounded-2xl text-xs font-bold border border-purple-200 dark:border-purple-800 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm Vòng Mới</span>
+                </button>
+              </div>
 
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
-            <Layers className="w-4 h-4 text-sky-500" />
-            <span>Tổng cộng: <strong className="text-sky-600 dark:text-sky-400 font-black">{rounds.reduce((sum, r) => sum + r.pairs.length, 0)} thẻ</strong> ({rounds.length} Vòng)</span>
-          </div>
-        </div>
+              {/* Total Stats Badge */}
+              <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-400 shrink-0">
+                <Layers className="w-4 h-4 text-purple-500" />
+                <span>Tổng cộng: <strong className="text-slate-700 dark:text-slate-200">{rounds.reduce((acc, r) => acc + r.pairs.length, 0)} thẻ</strong> ({rounds.length} Vòng)</span>
+              </div>
+            </div>
 
-        {/* Teacher Guidance Note Banner */}
-        <div className="py-2 px-3.5 bg-sky-50/80 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/80 rounded-2xl flex items-start sm:items-center gap-2 text-[11px] md:text-xs text-sky-900 dark:text-sky-200 font-medium">
-          <Info className="w-4 h-4 shrink-0 text-sky-600 dark:text-sky-400 mt-0.5 sm:mt-0" />
-          <span>
-            <strong>💡 Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa <strong>tối đa 7 cặp thẻ</strong> để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
-          </span>
-        </div>
+            {/* Instruction Tip Banner */}
+            <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 rounded-2xl border border-sky-200/60 dark:border-sky-800/60 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-200">
+              <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>7 cặp thẻ</strong> để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
+              </p>
+            </div>
 
-        {/* Cards Grid for Currently Selected Active Round */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {pairs.map((pair, index) => {
-            const isDragOver = dragActivePairId === pair.id;
-
-            return (
-              <div
-                key={pair.id}
-                onDragOver={e => handleDragOver(e, pair.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={e => handleDropImage(e, pair.id)}
-                className={`group relative bg-white dark:bg-slate-800 rounded-3xl border-2 transition-all duration-300 shadow-sm hover:shadow-xl flex flex-col p-4 space-y-3 ${
-                  isDragOver 
-                    ? "border-sky-500 bg-sky-50/50 dark:bg-sky-950/40 scale-105" 
-                    : pair.imageUrl 
-                      ? "border-slate-200/80 dark:border-slate-700" 
-                      : "border-slate-200 dark:border-slate-700 hover:border-sky-400"
-                }`}
-              >
-                {/* Number Badge & Delete Action */}
-                <div className="flex items-center justify-between">
-                  <div className="w-7 h-7 rounded-full bg-sky-500 text-white font-black text-xs flex items-center justify-center shadow-md shadow-sky-500/20">
-                    {index + 1}
+            {/* Card Pairs Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
+              {pairs.map((pair, index) => (
+                <div 
+                  key={pair.id}
+                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-3 shadow-sm hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                >
+                  {/* Pair Header & Delete */}
+                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
+                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white font-black text-xs flex items-center justify-center shadow-sm">
+                      {index + 1}
+                    </span>
+                    {pairs.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePair(pair.id)}
+                        className="text-slate-300 hover:text-rose-500 transition-colors cursor-pointer"
+                        title="Xóa cặp thẻ này"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePair(pair.id)}
-                    className="w-7 h-7 rounded-full hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 text-slate-400 flex items-center justify-center transition-all cursor-pointer"
-                    title="Xóa cặp thẻ này"
-                  >
-                    <Trash2 className="w-4 h-4 stroke-[2]" />
-                  </button>
-                </div>
+                  {/* Image Slot / Preview */}
+                  <div className="relative aspect-square rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 overflow-hidden flex items-center justify-center group/img">
+                    {pair.imageUrl ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={pair.imageUrl} 
+                          alt={pair.word || "Card image"} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenSearchModal(pair.id, pair.word)}
+                            className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
+                            title="Đổi ảnh khác"
+                          >
+                            <Search className="w-4 h-4 text-sky-600" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageUpload(pair.id)}
+                            className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
+                            title="Tải ảnh khác từ máy"
+                          >
+                            <Upload className="w-4 h-4 text-purple-600" />
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center">
+                          <ImageIcon className="w-5 h-5" />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Chưa chọn ảnh</span>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenSearchModal(pair.id, pair.word)}
+                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                          >
+                            <Search className="w-3 h-3" />
+                            <span>Tìm ảnh</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageUpload(pair.id)}
+                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Upload className="w-3 h-3" />
+                            <span>Tải file</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                {/* Image Upload / Drop Display Box */}
-                <div className="relative aspect-square w-full rounded-2xl bg-slate-50 dark:bg-slate-900 border-2 border-dashed border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col items-center justify-center group/img transition-all">
-                  {pair.imageUrl ? (
-                    <>
-                      <img 
-                        src={pair.imageUrl} 
-                        alt={pair.word || "Card Image"} 
-                        className="w-full h-full object-contain p-2 group-hover/img:scale-105 transition-transform duration-300"
-                      />
-                      {/* Image Action Overlay */}
-                      <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/img:opacity-100 transition-opacity backdrop-blur-[2px] flex items-center justify-center gap-2 p-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenImageSearch(pair)}
-                          className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Search className="w-3.5 h-3.5" />
-                          <span>Đổi ảnh</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(pair.id)}
-                          className="w-8 h-8 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md transition-all flex items-center justify-center cursor-pointer"
-                          title="Xóa ảnh"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-3 space-y-2">
-                      <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center border border-purple-200/50">
-                        <ImageIcon className="w-5 h-5" />
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                        Chưa chọn ảnh
+                  {/* Word Input */}
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      value={pair.word}
+                      onChange={e => handleUpdateWord(pair.id, e.target.value)}
+                      placeholder="Nhập Chữ/Từ..."
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-center focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                    />
+                  </div>
+
+                  {/* Optional Custom Audio Controls */}
+                  {audioMode === "CUSTOM_FILE" && (
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                      <span className="truncate max-w-[100px]">
+                        {pair.audioFileName || (pair.audioUrl ? "Audio đã có" : "Chưa có audio")}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAudioUpload(pair.id)}
+                        className="px-2 py-1 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 hover:bg-sky-100 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                        <span>{pair.audioUrl ? "Đổi" : "Tải MP3"}</span>
+                      </button>
+                    </div>
+                  )}
 
-                      <div className="flex items-center gap-1.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenImageSearch(pair)}
-                          className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-xl shadow-sm transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Search className="w-3 h-3" />
-                          <span>Tìm ảnh</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenImageUpload(pair.id)}
-                          className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-[11px] rounded-xl transition-all flex items-center gap-1 cursor-pointer"
-                        >
-                          <Upload className="w-3 h-3" />
-                          <span>Tải file</span>
-                        </button>
-                      </div>
+                  {/* Optional Test TTS Button */}
+                  {audioMode === "AUTO_TTS" && (
+                    <div className="pt-1 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewTTS(pair.word)}
+                        disabled={!pair.word.trim()}
+                        className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 disabled:opacity-30 disabled:no-underline cursor-pointer"
+                      >
+                        <Volume2 className="w-3 h-3" />
+                        <span>Nghe thử đọc</span>
+                      </button>
                     </div>
                   )}
                 </div>
+              ))}
 
-                {/* Word Input */}
-                <div className="space-y-1">
-                  <input
-                    type="text"
-                    value={pair.word}
-                    onChange={e => handleUpdateWord(pair.id, e.target.value)}
-                    placeholder="Nhập Chữ/Từ..."
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black text-center focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
-                  />
+              {/* Add New Pair Card in Current Round */}
+              <div 
+                onClick={handleAddPair}
+                className={`group border-2 border-dashed border-sky-300 dark:border-sky-800 hover:border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all cursor-pointer min-h-[260px] ${
+                  pairs.length >= MAX_PAIRS_PER_ROUND ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
+                <div className="w-12 h-12 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-lg shadow-sky-500/30 group-hover:scale-110 transition-transform">
+                  <Plus className="w-6 h-6 stroke-[3]" />
                 </div>
-
-                {/* Optional Custom Audio Controls */}
-                {audioMode === "CUSTOM_FILE" && (
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] font-bold text-slate-500">
-                    <span className="truncate max-w-[100px]">
-                      {pair.audioFileName || (pair.audioUrl ? "Audio đã có" : "Chưa có audio")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenAudioUpload(pair.id)}
-                      className="px-2 py-1 bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 hover:bg-sky-100 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Volume2 className="w-3 h-3" />
-                      <span>{pair.audioUrl ? "Đổi" : "Tải MP3"}</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Optional Test TTS Button */}
-                {audioMode === "AUTO_TTS" && (
-                  <div className="pt-1 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() => handleTestTTS(pair)}
-                      className="px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 text-[10px] font-black rounded-xl transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <Volume2 className={`w-3 h-3 ${playingTTSPairId === pair.id ? "animate-bounce text-purple-600" : ""}`} />
-                      <span>{playingTTSPairId === pair.id ? "Đang đọc..." : "Nghe thử đọc"}</span>
-                    </button>
-                  </div>
-                )}
+                <span className="font-headline font-black text-sm text-sky-900 dark:text-sky-200">Thêm 1 cặp</span>
+                <span className="text-[11px] font-bold text-sky-600/70 dark:text-sky-400/70">
+                  {pairs.length >= MAX_PAIRS_PER_ROUND 
+                    ? `Đã đủ ${MAX_PAIRS_PER_ROUND}/7 cặp cho ${currentRound.title}`
+                    : `Tạo cặp thứ ${pairs.length + 1} cho ${currentRound.title}`}
+                </span>
               </div>
-            );
-          })}
-
-          {/* Add New Pair Card inside current active round */}
-          <div
-            onClick={handleAddPair}
-            className={`min-h-[200px] rounded-3xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center text-center p-4 cursor-pointer group shadow-sm ${
-              pairs.length >= MAX_PAIRS_PER_ROUND
-                ? "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 opacity-60"
-                : "border-sky-300 hover:border-sky-500 bg-sky-50/40 hover:bg-sky-50 dark:bg-slate-900/40 dark:hover:bg-slate-900 hover:-translate-y-1 hover:shadow-md"
-            }`}
-          >
-            <div className="w-10 h-10 rounded-2xl bg-sky-500 text-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-md shadow-sky-500/30">
-              <Plus className="w-5 h-5 stroke-[3]" />
             </div>
-            <span className="font-headline font-black text-xs text-slate-800 dark:text-white">
-              Thêm 1 cặp
-            </span>
-            <span className="text-[11px] font-bold text-slate-400 mt-0.5">
-              {pairs.length >= MAX_PAIRS_PER_ROUND 
-                ? `Đã đủ ${MAX_PAIRS_PER_ROUND}/7 cặp cho ${currentRound.title}`
-                : `Tạo cặp thứ ${pairs.length + 1} cho ${currentRound.title}`}
-            </span>
-          </div>
-        </div>
 
-        {/* Sticky Floating Save Action Button inside Card */}
-        <div className="sticky bottom-6 flex justify-end z-[40] pointer-events-none pt-2">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="pointer-events-auto px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-800 hover:to-indigo-900 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl shadow-blue-900/40 hover:shadow-blue-900/60 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
-            title="Lưu bài tập"
-          >
-            {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
-            )}
-            <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
-          </button>
-        </div>
-      </div>
+            {/* Sticky Floating Save Action Button inside Card */}
+            <div className="sticky bottom-6 flex justify-end z-[40] pointer-events-none pt-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="pointer-events-auto px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-800 hover:to-indigo-900 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl shadow-blue-900/40 hover:shadow-blue-900/60 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
+                title="Lưu bài tập"
+              >
+                {isSaving ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
+                )}
+                <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* --- BULK PASTE MODAL --- */}
       {showPasteModal && (() => {

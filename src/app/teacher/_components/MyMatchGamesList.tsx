@@ -194,7 +194,7 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
                 </a>
 
                 <Link
-                  href="/teacher/games/match-image-text/create"
+                  href={`/teacher/games/match-image-text/create?topicId=${topic.id}`}
                   className="py-2 px-3 bg-slate-100 hover:bg-purple-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center gap-1 active:scale-95 cursor-pointer border border-slate-200/60 dark:border-slate-700"
                   title="Chỉnh sửa bài tập"
                 >
