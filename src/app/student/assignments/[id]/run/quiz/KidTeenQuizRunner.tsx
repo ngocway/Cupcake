@@ -852,7 +852,7 @@ export default function KidTeenQuizRunner({
 
     const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
     bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.2;
+    bgMusic.volume = isMuted ? 0 : 0.1;
     bgMusicRef.current = bgMusic;
 
     const playMusic = () => {
@@ -910,7 +910,7 @@ export default function KidTeenQuizRunner({
         window.dispatchEvent(new CustomEvent('pauseAllAudio'));
       } else {
         bgMusicRef.current.play().catch(() => {});
-        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.05 : 0.2;
+        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.03 : 0.1;
       }
     }
   }, [isMuted, isHintPlaying, isTtsPlaying]);
@@ -1694,58 +1694,133 @@ export default function KidTeenQuizRunner({
         </>
       )}
       <SelectionTranslator />
-      {/* ── TOP HEADER (Glass) ── */}
-      <div className="relative z-30 bg-white/70 backdrop-blur-md px-4 py-3 shadow-sm border-b border-white/20">
-        {/* Row 1: Back button + Title */}
-        <div className="flex items-center gap-3">
-          <div className="shrink-0 flex items-center gap-2">
+      {/* ── MAIN CONTENT (Image Background) ── */}
+      <div 
+        className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-44 lg:pt-6 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+      >
+        {/* ── FLOATING TOP-LEFT CONTROLS (Logo & Mute Button) ── */}
+        <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2.5">
+          {/* Dolcake Logo - về trang chủ */}
+          <button
+            onClick={() => router.push("/")}
+            className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-md hover:bg-white/80 transition-all active:scale-95 group"
+            title="Về trang chủ"
+          >
+            <img
+              src="/images/logo.png"
+              alt="Dolcake"
+              className="w-7 h-7 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
+            />
+            <div className="flex flex-col text-left">
+              <span className="font-headline font-black text-base tracking-tighter text-primary leading-none">Dolcake</span>
+              <span className="text-[7px] font-black text-primary/60 tracking-[0.3em] uppercase hidden sm:block">Student Portal</span>
+            </div>
+          </button>
 
-            {/* Dolcake Logo - về trang chủ */}
-            <button
-              onClick={() => router.push("/")}
-              className="flex items-center gap-1.5 group"
-              title="Về trang chủ"
-            >
-              <img
-                src="/images/logo.png"
-                alt="Dolcake"
-                className="w-8 h-8 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
-              />
-              <div className="flex flex-col">
-                <span className="font-headline font-black text-lg tracking-tighter text-primary leading-none">Dolcake</span>
-                <span className="text-[8px] font-black text-primary/40 tracking-[0.4em] uppercase hidden sm:block">Student Portal</span>
-              </div>
-            </button>
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className="flex items-center justify-center p-2 bg-white/60 backdrop-blur-md text-purple-600 rounded-full border border-white/80 hover:bg-white/80 transition-all active:scale-95 shadow-md"
+            title={isMuted ? "Unmute music" : "Mute music"}
+          >
+            {isMuted ? (
+              <VolumeX className="w-5 h-5 text-rose-500" />
+            ) : (
+              <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
+            )}
+          </button>
 
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="flex items-center justify-center p-2 bg-white text-purple-600 rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm"
-              title={isMuted ? "Unmute music" : "Mute music"}
-            >
-              {isMuted ? (
-                <VolumeX className="w-5 h-5 text-rose-500" />
-              ) : (
-                <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
-              )}
-            </button>
-          </div>
-          <div className="absolute left-6 top-3 z-40 hidden md:block">
-            <React.Suspense fallback={<div className="w-[72px] h-[72px] rounded-full bg-slate-200 animate-pulse border-4 border-white shadow-lg" />}>
-              <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
-            </React.Suspense>
-          </div>
-          <h2 className="flex-1 text-sm font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight pr-2 hidden md:block">
-            {assignment.title || "FUN WITH SCHOOL TOOLS: QUIZ FOR LITTLE LEARNERS"}
-          </h2>
+          <React.Suspense fallback={null}>
+            <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
+          </React.Suspense>
         </div>
 
+        {/* ── DESKTOP FLOATING PANEL (Top-Right: Exercise Title & Question Grid 5 cols for >= 1024px) ── */}
+        <div className="hidden lg:block absolute top-4 right-4 sm:right-6 z-30 bg-white/45 backdrop-blur-xl border-2 border-white/70 shadow-2xl shadow-slate-900/10 rounded-3xl p-3.5 w-[260px] sm:w-[290px] max-h-[calc(100vh-140px)] transition-all duration-300">
+          <h2 className="text-xs font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight mb-2.5 pb-2 border-b border-slate-200/50">
+            {assignment.title || "FUN WITH SCHOOL TOOLS: QUIZ FOR LITTLE LEARNERS"}
+          </h2>
+          <div className="grid grid-cols-5 gap-2 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 py-0.5 justify-items-center scrollbar-thin scrollbar-thumb-purple-200/60">
+            {questions.map((q, i) => {
+              const active = i === currentIndex;
+              
+              // Check answer status
+              const ans = answers[q.id];
+              let isAnswered = false;
+              if (ans !== undefined && ans !== null) {
+                if (Array.isArray(ans)) {
+                  isAnswered = ans.length > 0;
+                } else if (typeof ans === "object") {
+                  isAnswered = Object.keys(ans).length > 0;
+                } else {
+                  isAnswered = true;
+                }
+              }
 
+              // Check if graded
+              const isGraded = checkedQuestions[q.id];
+              let status = "pending";
+              if (isGraded) {
+                status = getQuestionStatus(q, ans);
+              }
 
-        {/* Question Map */}
-        <div 
-          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-          className={`${quizMode === "autoplay" ? "hidden sm:flex" : "grid sm:flex"} sm:flex-wrap sm:items-center sm:justify-center gap-[2vw] sm:gap-2 justify-items-center mt-3 max-w-6xl mx-auto px-2 w-full`}
-        >
+              // Determine classes based on state
+              let btnClass = "";
+              
+              if (isGraded) {
+                if (status === "correct") {
+                  btnClass = active 
+                    ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-105" 
+                    : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600 opacity-90";
+                } else if (status === "incorrect") {
+                  btnClass = active 
+                    ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-105" 
+                    : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 opacity-90";
+                } else {
+                  // skipped/unanswered
+                  btnClass = active
+                    ? "bg-slate-500 text-white border-2 border-slate-200 shadow-md shadow-slate-500/40 scale-105"
+                    : "bg-white/40 text-slate-400 border border-slate-300/60 border-dashed hover:bg-white/70";
+                }
+              } else {
+                // Not graded yet
+                if (active) {
+                  btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-2 border-orange-200 scale-105 z-10";
+                } else if (isAnswered) {
+                  btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
+                } else {
+                  btnClass = "bg-white/60 backdrop-blur-sm border border-white/80 text-slate-600 hover:bg-white/90 hover:border-purple-300 hover:text-purple-600 shadow-sm";
+                }
+              }
+
+              return (
+                <button
+                  key={q.id}
+                  onClick={() => navigateTo(i)}
+                  disabled={isAutoRevealing}
+                  className={`relative w-9 h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center ${btnClass}`}
+                >
+                  <span className="font-black text-sm leading-none">
+                    {i + 1}
+                  </span>
+                  {isGraded && !active && status === "correct" && (
+                    <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
+                      <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
+                    </div>
+                  )}
+                  {isGraded && !active && status === "incorrect" && (
+                    <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
+                      <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── MOBILE / IPAD PORTRAIT HORIZONTAL SCROLLBAR (1 Line under Logo for < 1024px) ── */}
+        <div className="lg:hidden absolute top-[62px] left-4 right-4 z-30 flex items-center bg-white/45 backdrop-blur-xl border-2 border-white/70 shadow-xl rounded-2xl px-3 py-2 overflow-x-auto whitespace-nowrap gap-2 scrollbar-none">
           {questions.map((q, i) => {
             const active = i === currentIndex;
             
@@ -1775,26 +1850,26 @@ export default function KidTeenQuizRunner({
             if (isGraded) {
               if (status === "correct") {
                 btnClass = active 
-                  ? "bg-emerald-500 text-white border-4 border-emerald-200 shadow-lg shadow-emerald-500/40 scale-110" 
-                  : "bg-emerald-500 text-white border-2 border-emerald-600 hover:bg-emerald-600 opacity-90";
+                  ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-105" 
+                  : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600 opacity-90";
               } else if (status === "incorrect") {
                 btnClass = active 
-                  ? "bg-rose-500 text-white border-4 border-rose-200 shadow-lg shadow-rose-500/40 scale-110" 
-                  : "bg-rose-500 text-white border-2 border-rose-600 hover:bg-rose-600 opacity-90";
+                  ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-105" 
+                  : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 opacity-90";
               } else {
                 // skipped/unanswered
                 btnClass = active
-                  ? "bg-slate-500 text-white border-4 border-slate-200 shadow-lg shadow-slate-500/40 scale-110"
-                  : "bg-slate-100 text-slate-400 border-2 border-slate-300 border-dashed hover:bg-slate-200";
+                  ? "bg-slate-500 text-white border-2 border-slate-200 shadow-md shadow-slate-500/40 scale-105"
+                  : "bg-white/40 text-slate-400 border border-slate-300/60 border-dashed hover:bg-white/70";
               }
             } else {
               // Not graded yet
               if (active) {
-                btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-4 border-orange-200 scale-110 z-10";
+                btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-2 border-orange-200 scale-105 z-10";
               } else if (isAnswered) {
-                btnClass = "bg-purple-500 border-2 border-purple-600 text-white shadow-md shadow-purple-500/20 hover:bg-purple-600 hover:border-purple-700";
+                btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
               } else {
-                btnClass = "bg-white border-2 border-slate-200 text-slate-400 hover:border-purple-300 hover:text-purple-500";
+                btnClass = "bg-white/60 backdrop-blur-sm border border-white/80 text-slate-600 hover:bg-white/90 hover:border-purple-300 hover:text-purple-600 shadow-sm";
               }
             }
 
@@ -1803,38 +1878,30 @@ export default function KidTeenQuizRunner({
                 key={q.id}
                 onClick={() => navigateTo(i)}
                 disabled={isAutoRevealing}
-                style={{ containerType: 'inline-size' }}
-                className={`relative w-full max-w-[40px] aspect-square sm:w-10 sm:h-10 rounded-full transition-all duration-300 shrink-0 flex items-center justify-center ${btnClass}`}
+                className={`relative w-9 h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center ${btnClass}`}
               >
-                <span className="font-black text-[38cqw] sm:text-base leading-none">
+                <span className="font-black text-sm leading-none">
                   {i + 1}
                 </span>
                 {isGraded && !active && status === "correct" && (
-                   <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
-                     <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
-                   </div>
+                  <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
+                    <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
+                  </div>
                 )}
                 {isGraded && !active && status === "incorrect" && (
-                   <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
-                     <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
-                   </div>
+                  <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
+                    <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
+                  </div>
                 )}
               </button>
             );
           })}
         </div>
 
-        {/* Decorative Sun removed */}
-      </div>
-
-      {/* ── MAIN CONTENT (Image Background) ── */}
-      <div 
-        className="flex-1 flex flex-col items-center justify-start pt-6 sm:justify-center sm:pt-6 p-2 sm:p-6 w-full relative bg-cover bg-center bg-no-repeat"
-        style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
-      >
       {activeQuestions.length > 0 && (
         <>
-        <div className="w-full max-w-4xl mx-auto z-10 relative top-0">
+        {/* ── SMART CONTAINER (Main Card + Right Padding Shift when top-right panel is active) ── */}
+        <div className="w-full max-w-4xl mx-auto lg:pr-[310px] 2xl:pr-0 z-10 relative transition-all duration-300">
 
         {isShowingResultScreen && scoreResult ? (
         <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
@@ -2324,95 +2391,10 @@ export default function KidTeenQuizRunner({
         )}
         </>
         )}
-      </div>
-      </>
+        </div>
+        </>
       )}
       </div>
-    {/* ── BACKDROP ── */}
-      {isSidePanelOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 transition-opacity"
-          onClick={() => setIsSidePanelOpen(false)}
-        />
-      )}
-
-      {/* ── RIGHT SLIDE PANEL ── */}
-      <div
-        className="fixed top-0 right-0 bottom-0 bg-white/96 backdrop-blur-xl border-l-2 border-primary/10 shadow-2xl z-40 flex flex-col transition-transform duration-500 ease-in-out overflow-hidden w-[80vw] md:w-1/2 max-w-none"
-        style={{ transform: isSidePanelOpen ? "translateX(0)" : "translateX(100%)" }}
-      >
-        {/* Panel header */}
-        <div className="sticky top-0 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-4 flex items-center justify-start shrink-0">
-          <button onClick={() => setIsSidePanelOpen(false)} className="p-1.5 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-rose-500 rounded-full transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Panel body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
-          <React.Suspense fallback={<div className="space-y-4 animate-pulse"><div className="h-40 bg-slate-100 rounded-2xl w-full"></div><div className="h-8 bg-slate-100 rounded-lg w-1/2"></div></div>}>
-            <ExtraDataConsumer promise={extraDataPromise} translationsPromise={assignmentTranslationsPromise} isGuest={isGuest} t={t} />
-          </React.Suspense>
-        </div>
-      </div>
-
-      {/* ── REVIEW MODAL ── */}
-      {isReviewModalOpen && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300"
-          onClick={() => setIsReviewModalOpen(false)}
-        >
-          <div
-            className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 w-full max-w-lg p-8 relative animate-in zoom-in-95 slide-in-from-bottom-10 duration-500"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button onClick={() => setIsReviewModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 transition-colors">
-              <X className="w-6 h-6" />
-            </button>
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-2xl font-black text-slate-900 uppercase">{t("yourReview")}</h4>
-                <p className="text-slate-500 text-sm mt-1">{t("reviewSubtitle")}</p>
-              </div>
-              {userReview ? (
-                <div className="py-10 text-center space-y-4 bg-slate-50 rounded-3xl border border-green-100">
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h5 className="text-lg font-black">{t("thankYou")}</h5>
-                  <p className="text-sm text-slate-500 italic">{userReview.isApproved ? t("reviewApproved") : t("reviewPending")}</p>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div className="flex justify-center gap-3">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} onMouseEnter={() => setHoverRating(star)} onMouseLeave={() => setHoverRating(0)} onClick={() => setReviewRating(star)} className="transition-transform hover:scale-110 active:scale-90">
-                        <Star className={`w-9 h-9 ${star <= (hoverRating || reviewRating) ? "text-amber-400 fill-amber-400" : "text-slate-200"} transition-colors`} />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="relative">
-                    <MessageCircle className="absolute top-4 left-4 w-5 h-5 text-slate-300" />
-                    <textarea
-                      placeholder={t("commentPlaceholder")}
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 pl-12 min-h-[120px] text-base focus:border-primary outline-none transition-all resize-none"
-                    />
-                  </div>
-                  <button
-                    onClick={handleReviewSubmit}
-                    disabled={isSubmittingReview || reviewRating === 0}
-                    className="w-full h-12 bg-slate-900 text-white rounded-full font-black tracking-widest hover:bg-primary transition-all disabled:opacity-50 shadow-xl"
-                  >
-                    {isSubmittingReview ? t("sending") : t("sendReview")}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── NAV GUARD MODAL ── */}
       {navGuard.isOpen && (
