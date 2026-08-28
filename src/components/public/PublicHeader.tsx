@@ -7,6 +7,7 @@ import { signOut } from "next-auth/react"
 import { usePathname } from "next/navigation"
 
 import { useContentStore } from "@/store/useContentStore"
+import { useTranslations } from "next-intl"
 
 const LANG_LABELS: Record<string, string> = {
   vi: "Tiếng Việt", th: "ภาษาไทย", id: "Bahasa Indonesia",
@@ -23,6 +24,7 @@ interface PublicHeaderProps {
 }
 
 export function PublicHeader({ session, search, setSearch, isPendingSearch }: PublicHeaderProps) {
+  const t = useTranslations("header")
   const pathname = usePathname()
   
   const isDetailOrRunPage = (pathname?.includes('/lessons/') && pathname !== '/student/lessons') || 

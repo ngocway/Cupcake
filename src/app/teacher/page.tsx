@@ -7,6 +7,7 @@ import { TeacherLoginModalAuto } from "./_components/TeacherLoginModalAuto";
 import { getTeacherMatchGamesAction } from "@/actions/teacher-match-games";
 
 import { MyChoiceGamesList } from "./_components/MyChoiceGamesList";
+import { ChoiceGameCards } from "./_components/ChoiceGameCards";
 
 export default async function TeacherHomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;

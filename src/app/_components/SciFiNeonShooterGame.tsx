@@ -437,6 +437,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
     window.addEventListener("resize", onResize);
 
     function gameLoop() {
+      if (!ctx) return;
       ctx.save();
 
       // Screen Shake

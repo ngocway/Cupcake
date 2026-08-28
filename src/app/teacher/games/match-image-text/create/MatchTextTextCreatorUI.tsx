@@ -107,6 +107,7 @@ export function MatchTextTextCreatorUI() {
             roundsMap[rIdx].push(item);
           });
           const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+          const loadedRounds: GameRound[] = [];
 
           roundIndices.forEach((rIdx, i) => {
             const roundItems = roundsMap[rIdx];
