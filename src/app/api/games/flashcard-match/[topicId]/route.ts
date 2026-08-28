@@ -15,21 +15,30 @@ export async function GET(
     // 1. Try querying Teacher-created MatchWordTopic & items
     const matchTopic = await prisma.matchWordTopic.findUnique({
       where: { id: topicId },
-      include: { items: true },
+      include: {
+        items: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     if (matchTopic && matchTopic.items && matchTopic.items.length > 0) {
+      const isImageImage = matchTopic.items.some((item) => Boolean(item.imageBUrl));
       const cards = matchTopic.items.map((item) => ({
         id: item.id,
+        roundIndex: item.roundIndex ?? 0,
         word: item.word,
         imageUrl: item.imageUrl || null,
         audioUrl: item.audioUrl || null,
+        imageBUrl: item.imageBUrl || null,
+        labelB: item.labelB || null,
       }));
 
       return NextResponse.json({
         success: true,
         topicName: matchTopic.name,
         isTeacherGame: true,
+        isImageImage,
         cards,
       });
     }

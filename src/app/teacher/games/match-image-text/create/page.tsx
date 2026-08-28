@@ -1,5 +1,7 @@
 import { HomeShell } from "@/app/_components/HomeShell";
 import { MatchImageTextCreatorUI } from "./MatchImageTextCreatorUI";
+import { MatchImageImageCreatorUI } from "./MatchImageImageCreatorUI";
+import { MatchTextTextCreatorUI } from "./MatchTextTextCreatorUI";
 
 export default async function MatchImageTextCreatePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
@@ -8,7 +10,13 @@ export default async function MatchImageTextCreatePage({ searchParams }: { searc
   return (
     <HomeShell>
       <div className="w-full pb-20 px-4 md:px-10 max-w-[1400px] mx-auto">
-        <MatchImageTextCreatorUI gameType={gameType} />
+        {gameType === "image-image" ? (
+          <MatchImageImageCreatorUI />
+        ) : gameType === "text-text" ? (
+          <MatchTextTextCreatorUI />
+        ) : (
+          <MatchImageTextCreatorUI gameType={gameType} />
+        )}
       </div>
     </HomeShell>
   );

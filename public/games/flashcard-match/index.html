@@ -389,6 +389,9 @@
     //  Config
     // ──────────────────────────────────────────────
     function getPairsPerRound() {
+        if (isTeacherGame && roundCards.length > 0) {
+            return roundCards.length;
+        }
         return Math.min(allCards.length || 7, 7);
     }
 
@@ -548,6 +551,20 @@
     //  Round card selection
     // ──────────────────────────────────────────────
     function pickRoundCards() {
+        if (isTeacherGame) {
+            const roundsMap = {};
+            allCards.forEach(c => {
+                const r = (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0;
+                if (!roundsMap[r]) roundsMap[r] = [];
+                roundsMap[r].push(c);
+            });
+            const roundKeys = Object.keys(roundsMap).sort((a, b) => a - b);
+            const currentKey = roundKeys[(roundNumber - 1) % roundKeys.length];
+            roundCards = roundsMap[currentKey] || [];
+            roundCards.forEach(c => usedIds.add(c.id));
+            return;
+        }
+
         const pairsCount = getPairsPerRound();
         let pool = allCards.filter(c => !usedIds.has(c.id));
         if (pool.length < pairsCount) {
@@ -590,7 +607,7 @@
             const wColor  = WORD_COLORS[index % WORD_COLORS.length];
             const bColor  = BORDER_COLORS[index % BORDER_COLORS.length];
 
-            // ── Image drop zone ──
+            // ── Image A drop zone ──
             const imgEl = document.createElement('div');
             imgEl.className = 'game-item-image';
             imgEl.style.width  = cardSize + 'px';
@@ -600,30 +617,47 @@
 
             const imgNode = document.createElement('img');
             imgNode.src = card.imageUrl;
-            imgNode.alt = card.word;
+            imgNode.alt = 'Image A';
             imgNode.draggable = false;
             imgEl.appendChild(imgNode);
             gameArea.appendChild(imgEl);
 
-            // ── Word chip ──
-            const txtEl = document.createElement('div');
-            txtEl.className = 'game-item-text';
-            txtEl.textContent = card.word;
-            txtEl.style.backgroundColor = wColor.bg;
-            txtEl.style.border = `4px solid ${wColor.border}`;
-            gameArea.appendChild(txtEl);
+            // ── Item B (Image B or Word chip) ──
+            const isImgB = Boolean(card.imageBUrl);
+            let itemBEl;
+            if (isImgB) {
+                itemBEl = document.createElement('div');
+                itemBEl.className = 'game-item-image game-item-b';
+                itemBEl.style.width  = cardSize + 'px';
+                itemBEl.style.height = cardSize + 'px';
+                itemBEl.style.borderColor = wColor.border;
+                itemBEl.style.backgroundColor = wColor.bg + '22';
+                itemBEl.style.cursor = 'grab';
+                itemBEl.style.zIndex = '50';
+
+                const imgBNode = document.createElement('img');
+                imgBNode.src = card.imageBUrl;
+                imgBNode.alt = 'Image B';
+                imgBNode.draggable = false;
+                itemBEl.appendChild(imgBNode);
+            } else {
+                itemBEl = document.createElement('div');
+                itemBEl.className = 'game-item-text';
+                itemBEl.textContent = card.word;
+                itemBEl.style.backgroundColor = wColor.bg;
+                itemBEl.style.border = `4px solid ${wColor.border}`;
+            }
+            gameArea.appendChild(itemBEl);
 
             // ── Starting positions ──
-            // Images: top 55% zone, distributed in columns
             const colW = W / roundCards.length;
             const imgX = colW * index + (colW - cardSize) / 2 + cardSize / 2;
-            const imgY = 55 + Math.random() * (H * 0.50 - cardSize - 10) + cardSize / 2;
+            const imgY = 55 + Math.random() * (H * 0.45 - cardSize - 10) + cardSize / 2;
 
-            // Words: bottom 38% zone, shuffled columns
             const wCol  = wordCols[index];
             const wColW = W / roundCards.length;
-            const txtX  = wColW * wCol + wColW / 2;
-            const txtY  = H * 0.68 + Math.random() * (H * 0.25);
+            const txtX  = wColW * wCol + (wColW - cardSize) / 2 + cardSize / 2;
+            const txtY  = H * 0.62 + Math.random() * (H * 0.30 - cardSize / 2);
 
             const rndSpd = () => Math.random() * 0.38 + 0.28;
             const rndAng = () => Math.random() * Math.PI * 2;
@@ -634,22 +668,23 @@
                 x: imgX, y: imgY,
                 vx: Math.cos(rndAng()) * rndSpd(),
                 vy: Math.sin(rndAng()) * rndSpd(),
-                radius: cardSize / 2 + 22
+                radius: cardSize / 2 + 10
             };
             const txtObj = {
-                id: card.id, card, el: txtEl, type: 'txt',
+                id: card.id, card, el: itemBEl, type: isImgB ? 'imgB' : 'txt',
                 matched: false, index,
                 x: txtX, y: txtY,
                 vx: Math.cos(rndAng()) * rndSpd(),
                 vy: Math.sin(rndAng()) * rndSpd(),
-                radius: 80,
+                radius: isImgB ? cardSize / 2 + 10 : 80,
                 dragging: false
             };
 
             elements.push(imgObj, txtObj);
 
-            // Setup drag for this word chip
-            setupDrag(txtObj, imgObj, imgEl);
+            // Enable bi-directional dragging for BOTH cards!
+            setupDrag(imgObj, txtObj);
+            setupDrag(txtObj, imgObj);
         });
 
         if (animationId) cancelAnimationFrame(animationId);
@@ -657,79 +692,79 @@
     }
 
     // ──────────────────────────────────────────────
-    //  Drag-and-drop (pointer events — same as Word Match)
+    //  Drag-and-drop (Bi-directional Pointer Events)
     // ──────────────────────────────────────────────
-    function setupDrag(txtObj, correctImgObj, correctImgEl) {
+    function setupDrag(sourceObj, targetObj) {
         let startX, startY, initialX, initialY;
 
-        txtObj.el.addEventListener('pointerdown', (e) => {
-            if (txtObj.matched) return;
+        sourceObj.el.style.cursor = 'grab';
+
+        sourceObj.el.addEventListener('pointerdown', (e) => {
+            if (sourceObj.matched) return;
             e.preventDefault();
-            txtObj.dragging = true;
-            txtObj.el.classList.add('dragging');
-            txtObj.el.style.zIndex = 1000;
+            sourceObj.dragging = true;
+            sourceObj.el.classList.add('dragging');
+            sourceObj.el.style.zIndex = 1000;
             startX   = e.clientX;
             startY   = e.clientY;
-            initialX = txtObj.x;
-            initialY = txtObj.y;
-            txtObj.el.setPointerCapture(e.pointerId);
+            initialX = sourceObj.x;
+            initialY = sourceObj.y;
+            sourceObj.el.setPointerCapture(e.pointerId);
         });
 
-        txtObj.el.addEventListener('pointermove', (e) => {
-            if (!txtObj.dragging) return;
+        sourceObj.el.addEventListener('pointermove', (e) => {
+            if (!sourceObj.dragging) return;
             e.preventDefault();
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-            txtObj.x = initialX + dx;
-            txtObj.y = initialY + dy;
-            updatePosition(txtObj);
+            sourceObj.x = initialX + dx;
+            sourceObj.y = initialY + dy;
+            updatePosition(sourceObj);
 
-            // Highlight correct image when dragging near it
-            const txtRect = txtObj.el.getBoundingClientRect();
-            const imgRect = correctImgEl.getBoundingClientRect();
-            const overlapping = rectsOverlap(txtRect, imgRect);
-            if (!correctImgObj.matched) {
-                correctImgEl.classList.toggle('drop-hover', overlapping);
+            // Highlight target item when dragging near it
+            const srcRect = sourceObj.el.getBoundingClientRect();
+            const targetRect = targetObj.el.getBoundingClientRect();
+            const overlapping = rectsOverlap(srcRect, targetRect);
+            if (!targetObj.matched) {
+                targetObj.el.classList.toggle('drop-hover', overlapping);
             }
         });
 
-        txtObj.el.addEventListener('pointerup', (e) => {
-            if (!txtObj.dragging) return;
-            txtObj.dragging = false;
-            txtObj.el.classList.remove('dragging');
-            txtObj.el.style.zIndex = 50;
-            correctImgEl.classList.remove('drop-hover');
+        sourceObj.el.addEventListener('pointerup', (e) => {
+            if (!sourceObj.dragging) return;
+            sourceObj.dragging = false;
+            sourceObj.el.classList.remove('dragging');
+            sourceObj.el.style.zIndex = 50;
+            targetObj.el.classList.remove('drop-hover');
 
-            const txtRect = txtObj.el.getBoundingClientRect();
-            const imgRect = correctImgEl.getBoundingClientRect();
+            const srcRect = sourceObj.el.getBoundingClientRect();
+            const targetRect = targetObj.el.getBoundingClientRect();
 
-            if (rectsOverlap(txtRect, imgRect)) {
+            if (rectsOverlap(srcRect, targetRect)) {
                 // ✅ Correct match!
-                doMatch(txtObj, correctImgObj);
+                doMatch(sourceObj, targetObj);
             } else {
-                // Check if dropped on a WRONG image
+                // Check if dropped on any WRONG image/card
                 const hitWrong = elements.some(obj => {
-                    if (obj.type !== 'img' || obj.id === txtObj.id || obj.matched) return false;
+                    if (obj.id === sourceObj.id || obj.matched) return false;
                     const r = obj.el.getBoundingClientRect();
-                    return rectsOverlap(txtRect, r);
+                    return rectsOverlap(srcRect, r);
                 });
                 if (hitWrong) {
                     playErrorSound();
-                    txtObj.el.classList.add('wrong-flash');
-                    setTimeout(() => txtObj.el.classList.remove('wrong-flash'), 380);
+                    sourceObj.el.classList.add('wrong-flash');
+                    setTimeout(() => sourceObj.el.classList.remove('wrong-flash'), 380);
                 }
-                // Give a gentle bounce-back velocity
-                txtObj.vx = (Math.random() - 0.5) * 1.2;
-                txtObj.vy = (Math.random() - 0.5) * 1.2;
+                sourceObj.vx = (Math.random() - 0.5) * 1.2;
+                sourceObj.vy = (Math.random() - 0.5) * 1.2;
             }
         });
 
-        // Cancel drag on pointer cancel
-        txtObj.el.addEventListener('pointercancel', () => {
-            txtObj.dragging = false;
-            txtObj.el.classList.remove('dragging');
-            correctImgEl.classList.remove('drop-hover');
-            txtObj.el.style.zIndex = 50;
+        sourceObj.el.addEventListener('pointercancel', () => {
+            sourceObj.dragging = false;
+            sourceObj.el.classList.remove('dragging');
+            targetObj.el.classList.remove('drop-hover');
+            sourceObj.el.style.zIndex = 50;
         });
     }
 
@@ -748,17 +783,41 @@
         txtObj.el.classList.add('matched');
         imgObj.el.classList.add('matched');
 
-        // Snap word just below the image
         const iH = imgObj.el.offsetHeight || 130;
         const tH = txtObj.el.offsetHeight || 44;
-        txtObj.x = imgObj.x;
-        txtObj.y = imgObj.y + iH/2 + tH/2 + 4;
-        txtObj.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out';
-        updatePosition(txtObj);
-        setTimeout(() => { txtObj.el.style.transition = ''; }, 260);
+
+        const isImageImage = (txtObj.type === 'imgB' || imgObj.type === 'imgB');
+
+        if (isImageImage) {
+            const cardA = (txtObj.type === 'img' ? txtObj : imgObj);
+            const cardB = (txtObj.type === 'imgB' ? txtObj : imgObj);
+
+            const cardW = cardA.el.offsetWidth || 130;
+            const offset = cardW * 0.28;
+
+            cardB.x = cardA.x + offset;
+            cardB.y = cardA.y + offset;
+            cardB.el.style.opacity = '1';
+            cardB.el.style.zIndex = '60';
+            cardA.el.style.zIndex = '55';
+            cardB.el.style.transform = 'rotate(6deg)';
+            
+            cardB.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out, opacity 0.22s ease-out, transform 0.22s ease-out';
+            updatePosition(cardB);
+            updatePosition(cardA);
+            setTimeout(() => { cardB.el.style.transition = ''; }, 260);
+        } else {
+            txtObj.x = imgObj.x;
+            txtObj.y = imgObj.y + iH/2 + tH/2 + 4;
+            txtObj.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out, opacity 0.22s ease-out';
+            updatePosition(txtObj);
+            setTimeout(() => { txtObj.el.style.transition = ''; }, 260);
+        }
 
         playSuccessSound();
-        speakWord(txtObj.card);
+        if (!isImageImage) {
+            speakWord(txtObj.card);
+        }
         createParticles(imgObj.x, imgObj.y - 20);
 
         matchedCount++;

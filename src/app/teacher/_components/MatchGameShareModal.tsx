@@ -20,6 +20,7 @@ interface MatchGameShareModalProps {
   onClose: () => void;
   topicName: string;
   topicId: string;
+  gamePath?: string;
 }
 
 export function MatchGameShareModal({
@@ -27,14 +28,15 @@ export function MatchGameShareModal({
   onClose,
   topicName,
   topicId,
+  gamePath = "/student/game/flashcard-match",
 }: MatchGameShareModalProps) {
   const [copied, setCopied] = useState(false);
   const downloadCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const gameUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/student/game/flashcard-match?topicId=${topicId}`
-      : `/student/game/flashcard-match?topicId=${topicId}`;
+      ? `${window.location.origin}${gamePath}?topicId=${topicId}`
+      : `${gamePath}?topicId=${topicId}`;
 
   // Close on Escape key
   useEffect(() => {

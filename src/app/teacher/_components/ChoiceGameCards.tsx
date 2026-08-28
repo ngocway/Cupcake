@@ -13,50 +13,18 @@ interface GameCard {
   videoId: string;
 }
 
-const MATCH_GAMES: GameCard[] = [
+const CHOICE_GAMES: GameCard[] = [
   {
-    id: "image-image",
-    title: "Nối Cặp Ảnh - Ảnh",
-    badge: "Ảnh - Ảnh",
+    id: "shooter",
+    title: "Bắn Súng Toán Học",
+    badge: "BẮN SÚNG",
     badgeBg: "bg-emerald-500 text-white",
-    desc: "Học sinh ghép 2 hình ảnh tương đồng hoặc có mối liên quan trực quan với nhau.",
-    videoId: "swQq7b0V68E",
-  },
-  {
-    id: "image-text",
-    title: "Nối Cặp Ảnh - Chữ",
-    badge: "Ảnh - Chữ",
-    badgeBg: "bg-orange-500 text-white",
-    desc: "Học sinh nhìn hình ảnh minh họa và chọn từ vựng / câu bằng chữ tương ứng.",
-    videoId: "swQq7b0V68E",
-  },
-  {
-    id: "conveyor-drop",
-    title: "Băng Chuyền Thả Khối",
-    badge: "Băng Chuyền",
-    badgeBg: "bg-cyan-500 text-white",
-    desc: "Học sinh nhìn khối hàng hình ảnh di chuyển trên băng chuyền và thả vào đúng ống hút từ vựng tương ứng.",
-    videoId: "swQq7b0V68E",
-  },
-  {
-    id: "line-image-image",
-    title: "Nối Dây Ảnh - Ảnh",
-    badge: "Nối Dây",
-    badgeBg: "bg-violet-500 text-white",
-    desc: "Học sinh kéo dây nối 2 hình ảnh tương ứng giữa hàng trên và hàng dưới.",
-    videoId: "swQq7b0V68E",
-  },
-  {
-    id: "line-image-text",
-    title: "Nối Dây Ảnh - Chữ",
-    badge: "Nối Dây",
-    badgeBg: "bg-violet-500 text-white",
-    desc: "Học sinh kéo dây nối hình ảnh với từ vựng / câu tương ứng giữa hàng trên và hàng dưới.",
+    desc: "Học sinh điều khiển tháp pháo bắn phá các khối cầu mang đáp án đúng để ghi điểm và tích lũy combo trong không gian Neon Sci-Fi.",
     videoId: "swQq7b0V68E",
   },
 ];
 
-function MatchGameCardItem({ game }: { game: GameCard }) {
+function ChoiceGameCardItem({ game }: { game: GameCard }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
@@ -69,21 +37,8 @@ function MatchGameCardItem({ game }: { game: GameCard }) {
     setIsMuted(!isMuted);
   };
 
-  const handleCreateAssignment = () => {
-    console.log("Create assignment clicked for:", game.id);
-  };
-
   const getHref = () => {
-    if (game.id === "conveyor-drop") {
-      return "/teacher/games/conveyor-drop/create";
-    }
-    if (game.id === "line-image-image") {
-      return "/teacher/games/match-image-text/create?type=image-image&gameMode=line";
-    }
-    if (game.id === "line-image-text") {
-      return "/teacher/games/match-image-text/create?type=image-text&gameMode=line";
-    }
-    return `/teacher/games/match-image-text/create?type=${game.id}`;
+    return `/teacher/games/choice-shooter/create`;
   };
 
   return (
@@ -132,7 +87,7 @@ function MatchGameCardItem({ game }: { game: GameCard }) {
 
             {/* Play Button Overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-14 h-14 rounded-full bg-white/90 dark:bg-slate-900/90 text-sky-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-sky-500 group-hover/thumb:text-white transition-all duration-300">
+              <div className="w-14 h-14 rounded-full bg-white/90 dark:bg-slate-900/90 text-emerald-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-emerald-500 group-hover/thumb:text-white transition-all duration-300">
                 <Play className="w-6 h-6 ml-1 fill-current" />
               </div>
             </div>
@@ -157,13 +112,7 @@ function MatchGameCardItem({ game }: { game: GameCard }) {
       {/* Bottom Content Container */}
       <div className="p-6 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900">
         <div>
-          <h3 className={`font-headline font-black text-lg sm:text-xl mb-2 leading-tight ${
-            game.id === "image-image"
-              ? "text-emerald-700 dark:text-emerald-300"
-              : game.id === "image-text"
-                ? "text-orange-700 dark:text-orange-300"
-                : "text-violet-700 dark:text-violet-300"
-          }`}>
+          <h3 className="font-headline font-black text-lg sm:text-xl mb-2 leading-tight text-emerald-700 dark:text-emerald-300">
             {game.title}
           </h3>
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
@@ -185,23 +134,23 @@ function MatchGameCardItem({ game }: { game: GameCard }) {
   );
 }
 
-export function MatchGameCards() {
+export function ChoiceGameCards() {
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
-            Tạo Game Nối Cặp
+            Tạo Game Chọn Đáp Án
           </h2>
           <p className="text-xs font-semibold text-slate-400 mt-1">
-            Chọn dạng game nối cặp bạn muốn tạo cho học sinh làm bài
+            Chọn dạng game chọn đáp án bạn muốn tạo cho học sinh làm bài
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-        {MATCH_GAMES.map((game) => (
-          <MatchGameCardItem key={game.id} game={game} />
+        {CHOICE_GAMES.map((game) => (
+          <ChoiceGameCardItem key={game.id} game={game} />
         ))}
       </div>
     </div>

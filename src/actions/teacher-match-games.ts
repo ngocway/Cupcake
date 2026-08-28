@@ -23,6 +23,7 @@ export async function getTeacherMatchGamesAction() {
         id: true,
         name: true,
         createdAt: true,
+        gameMode: true,
         game: {
           select: {
             name: true,
@@ -35,6 +36,7 @@ export async function getTeacherMatchGamesAction() {
             id: true,
             word: true,
             imageUrl: true,
+            imageBUrl: true,
           },
         },
         _count: {
@@ -48,14 +50,22 @@ export async function getTeacherMatchGamesAction() {
       },
     });
 
-    const topics = rawTopics.map((t) => ({
-      id: t.id,
-      name: t.name,
-      createdAt: t.createdAt,
-      game: t.game,
-      items: t.items,
-      totalItems: t._count.items,
-    }));
+    const topics = rawTopics.map((t) => {
+      const isImageImage = t.game?.name?.includes("Ảnh - Ảnh") || t.items.some((item) => Boolean(item.imageBUrl));
+      return {
+        id: t.id,
+        name: t.name,
+        createdAt: t.createdAt,
+        gameMode: t.gameMode || "match",
+        game: {
+          ...t.game,
+          name: isImageImage ? "Trò chơi Nối Cặp Ảnh - Ảnh" : (t.game?.name || "Trò chơi Nối Cặp Ảnh - Chữ"),
+        },
+        items: t.items,
+        totalItems: t._count.items,
+        isImageImage,
+      };
+    });
 
     return { success: true, topics };
   } catch (error: any) {

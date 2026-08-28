@@ -6,6 +6,8 @@ import { auth } from "@/auth";
 import { TeacherLoginModalAuto } from "./_components/TeacherLoginModalAuto";
 import { getTeacherMatchGamesAction } from "@/actions/teacher-match-games";
 
+import { MyChoiceGamesList } from "./_components/MyChoiceGamesList";
+
 export default async function TeacherHomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
   const activeTab = params?.tab || "match";
@@ -30,6 +32,10 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
           {activeTab === "match" && <MatchGameCards />}
 
           {activeTab === "my-match-games" && <MyMatchGamesList initialTopics={initialTopics} />}
+
+          {activeTab === "choice" && <ChoiceGameCards />}
+
+          {activeTab === "my-choice-games" && <MyChoiceGamesList />}
 
           {activeTab === "fill" && (
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">

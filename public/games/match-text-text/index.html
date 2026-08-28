@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Match the Pairs! 🌟</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@600;700;800&display=swap');
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Fredoka One', 'Quicksand', cursive, sans-serif;
+            background: #c2e9fb;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* ── PURE VECTOR SVG BACKGROUND ── */
+        .svg-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ── TOP ROUND PROGRESS HUD BAR ── */
+        #roundHud {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(14px);
+            border: 3px solid #ffffff;
+            border-radius: 32px;
+            padding: 8px 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .round-text {
+            color: #ff6b6b;
+            font-size: 1.45rem;
+            font-family: 'Fredoka One', cursive;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            text-shadow: 1px 1px 0 rgba(255,255,255,0.8);
+        }
+
+        .progress-bar-wrap {
+            width: 300px;
+            height: 20px;
+            background: #edf2f7;
+            border-radius: 20px;
+            border: 2px solid #ff9ff3;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b6b 0%, #feca57 50%, #1dd1a1 100%);
+            border-radius: 20px;
+            transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .progress-count {
+            color: #7048e8;
+            font-size: 1.35rem;
+            font-family: 'Fredoka One', cursive;
+            white-space: nowrap;
+            letter-spacing: 1px;
+        }
+
+        /* Music Toggle Button in HUD */
+        .music-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #ffe3e3;
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            margin-left: 6px;
+        }
+
+        .music-btn:hover {
+            transform: scale(1.1);
+            background: #ffc9c9;
+        }
+
+        .music-btn.muted {
+            background: #e9ecef;
+            border-color: #adb5bd;
+            color: #868e96;
+        }
+
+        /* ── MAIN GAME CONTAINER ── */
+        #gameWrap {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 70px 40px 20px;
+        }
+
+        /* ⚡ FROSTED GLASSMORPHISM BOARD CARD ⚡ */
+        #boardCard {
+            position: relative;
+            width: 100%;
+            min-width: 680px;
+            max-width: 980px;
+            height: 100%;
+            max-height: 540px;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 36px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.14), inset 0 0 35px rgba(255,255,255,0.95), 0 0 30px rgba(255, 118, 156, 0.3);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 36px 48px;
+            overflow: visible;
+            transition: max-width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* ⚡ FLOATING AMBIENT STARS & SPARKLES INSIDE BOARD ⚡ */
+        .ambient-stars-container {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 3;
+            overflow: hidden;
+            border-radius: 36px;
+        }
+
+        .ambient-star {
+            position: absolute;
+            font-size: 1.3rem;
+            pointer-events: none;
+            opacity: 0.35;
+            animation: starFloat 4s ease-in-out infinite alternate, starTwinkle 3s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+        }
+
+        @keyframes starFloat {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(-16px) rotate(25deg); }
+        }
+
+        @keyframes starTwinkle {
+            0% { opacity: 0.2; transform: scale(0.85); }
+            100% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        /* ⚡ ANIMATED MOVING DASHED BORDER OVERLAY ⚡ */
+        .board-border-svg {
+            position: absolute;
+            inset: -3px;
+            width: calc(100% + 6px);
+            height: calc(100% + 6px);
+            pointer-events: none;
+            z-index: 20;
+            overflow: visible;
+        }
+
+        .animated-board-border {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: #ff769c;
+            stroke-width: 5px;
+            stroke-dasharray: 14 14;
+            animation: boardDashMove 1.5s linear infinite;
+            filter: drop-shadow(0 0 8px rgba(255, 118, 156, 0.6));
+        }
+
+        @keyframes boardDashMove {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: -28; }
+        }
+
+        /* ⚡ SVG WIRE CANVAS ⚡ */
+        #wireSvg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            overflow: visible;
+        }
+
+        /* ⚡ ANIMATED NEON FLOWING LIGHT PARTICLES ⚡ */
+        .dash-flow-path {
+            stroke: #ffffff;
+            stroke-width: 4px;
+            stroke-linecap: round;
+            stroke-dasharray: 10 30;
+            animation: dashFlow 1.2s linear infinite;
+            filter: drop-shadow(0 0 6px #ffffff);
+        }
+
+        @keyframes dashFlow {
+            from { stroke-dashoffset: 40; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* ⚡ EQUAL GRID COLUMNS ⚡ */
+        .card-row {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+            align-items: center;
+            justify-items: center;
+            gap: 24px;
+            width: 100%;
+            z-index: 10;
+        }
+
+        /* ── CARD STYLES ── */
+        .match-card {
+            position: relative;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease, max-width 0.3s ease;
+            width: 100%;
+            max-width: 180px;
+            z-index: 10;
+        }
+
+        .match-card:hover {
+            transform: translateY(-4px) scale(1.03);
+            box-shadow: 0 14px 26px rgba(0,0,0,0.14);
+        }
+
+        /* Image Cards (Square) */
+        .card-img {
+            aspect-ratio: 1 / 1;
+            padding: 8px;
+            border: 5px solid #ffd154;
+        }
+
+        .card-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 16px;
+            pointer-events: none;
+        }
+
+        /* Word Cards (Pill shape) */
+        .card-word {
+            height: 68px;
+            border: 4px dashed #4dabf7;
+            border-radius: 34px;
+            padding: 0 20px;
+            font-size: 1.4rem;
+            color: #1c7ed6;
+            background: rgba(231, 245, 255, 0.9);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .card-word .word-icon {
+            font-size: 1.1rem;
+        }
+
+        /* Card Themes */
+        .theme-yellow { border-color: #feca57; background: #fff9db; color: #d97706; }
+        .theme-pink   { border-color: #ff6b6b; background: #fff0f6; color: #e03131; }
+        .theme-green  { border-color: #1dd1a1; background: #e6fcf5; color: #0ca678; }
+        .theme-blue   { border-color: #4dabf7; background: #e7f5ff; color: #1c7ed6; }
+        .theme-purple { border-color: #b197fc; background: #f3f0ff; color: #7048e8; }
+        .theme-orange { border-color: #ff922b; background: #fff4e6; color: #d9480f; }
+
+        /* Matched State */
+        .match-card.matched {
+            border-style: solid !important;
+            filter: grayscale(0.1);
+            opacity: 0.9;
+        }
+
+        /* Wrong Flash Animation */
+        .match-card.wrong-shake {
+            animation: cardShake 0.4s ease-in-out;
+            border-color: #ff6b6b !important;
+        }
+
+        @keyframes cardShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px) rotate(-3deg); }
+            40% { transform: translateX(8px) rotate(3deg); }
+            60% { transform: translateX(-5px) rotate(-1deg); }
+            80% { transform: translateX(5px) rotate(1deg); }
+        }
+
+        /* ── CONNECTION DOT HANDLES ── */
+        .dot-handle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 4px solid currentColor;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+
+        .dot-handle::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+            transition: transform 0.2s ease;
+        }
+
+        .dot-bottom {
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dot-top {
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dot-handle:hover, .dot-handle.active-hover {
+            transform: translateX(-50%) scale(1.4) !important;
+            box-shadow: 0 0 16px currentColor, 0 0 25px currentColor;
+            animation: handlePulse 1.2s infinite ease-in-out;
+        }
+
+        @keyframes handlePulse {
+            0%, 100% { transform: translateX(-50%) scale(1.35); }
+            50% { transform: translateX(-50%) scale(1.5); }
+        }
+
+        .dot-handle.matched-dot {
+            background: currentColor;
+            box-shadow: 0 0 14px currentColor;
+        }
+        .dot-handle.matched-dot::after {
+            background: #ffffff;
+            transform: scale(1.2);
+        }
+
+        /* Completion Popup Overlay */
+        /* ── NEXT ROUND BUTTON ── */
+        .next-round-btn {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(180deg, #ff9f43 0%, #ee5253 100%);
+            color: #ffffff;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.35rem;
+            letter-spacing: 1.5px;
+            padding: 12px 42px;
+            border: 4px solid #ffffff;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #d63031, 0 12px 25px rgba(238, 82, 83, 0.4);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            display: none;
+            z-index: 100;
+            text-transform: uppercase;
+        }
+
+        .next-round-btn.show {
+            display: block;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .next-round-btn:hover {
+            transform: translateX(-50%) translateY(-3px);
+            box-shadow: 0 11px 0 #d63031, 0 16px 28px rgba(238, 82, 83, 0.45);
+        }
+
+        .next-round-btn:active {
+            transform: translateX(-50%) translateY(3px);
+            box-shadow: 0 2px 0 #d63031, 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.4) translateX(-50%); opacity: 0; }
+            100% { transform: scale(1) translateX(-50%); opacity: 1; }
+        }
+
+        /* Star Particles */
+        .sparkle {
+            position: absolute;
+            font-size: 1.8rem;
+            pointer-events: none;
+            z-index: 1000;
+            animation: sparkleFly 0.8s ease-out forwards;
+        }
+
+        @keyframes sparkleFly {
+            0% { transform: translate(0, 0) scale(0.5) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(1.4) rotate(180deg); opacity: 0; }
+        }
+
+        @media (max-width: 768px) {
+            #roundHud { padding: 6px 16px; gap: 10px; }
+            .progress-bar-wrap { width: 160px; height: 16px; }
+            .round-text { font-size: 1.1rem; }
+            .progress-count { font-size: 1.1rem; }
+            #gameWrap { padding: 60px 16px 16px; }
+            #boardCard { min-width: 0 !important; padding: 20px 16px; }
+            .match-card { max-width: 120px !important; }
+            .card-word { font-size: 1.1rem !important; height: 50px !important; }
+        /* ── LOADING OVERLAY ── */
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.5s ease;
+        }
+        #loadingOverlay .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(255, 255, 255, 0.4);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        #loadingOverlay .loadText {
+            color: #ffffff;
+            font-size: 1.6rem;
+            margin-top: 20px;
+            letter-spacing: 2px;
+            text-shadow: 1px 2px 4px rgba(0,0,0,0.15);
+            font-family: 'Fredoka One', cursive;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── LOADING OVERLAY ── -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loadText">LOADING GAME... 🌟</div>
+    </div>
+
+    <!-- ── BACKGROUND AUDIO MUSIC ── -->
+    <audio id="bgMusic" src="/sounds/bg-music.mp3" loop></audio>
+
+    <!-- ── PURE VECTOR SVG BACKGROUND ── -->
+    <svg class="svg-bg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#b6e7ff"/>
+                <stop offset="60%" stop-color="#e2f5ff"/>
+                <stop offset="100%" stop-color="#fff5db"/>
+            </linearGradient>
+            <linearGradient id="hillGradBack" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#a4ed84"/>
+                <stop offset="100%" stop-color="#72d654"/>
+            </linearGradient>
+            <linearGradient id="hillGradFront" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#7cd849"/>
+                <stop offset="100%" stop-color="#55b82e"/>
+            </linearGradient>
+        </defs>
+
+        <!-- Sky background -->
+        <rect width="1440" height="900" fill="url(#skyGrad)"/>
+
+        <!-- Rainbow Top Right -->
+        <g opacity="0.65" transform="translate(900, -100)">
+            <path d="M 0,550 A 450,450 0 0,1 900,550" fill="none" stroke="#ff7675" stroke-width="20"/>
+            <path d="M 18,550 A 432,432 0 0,1 882,550" fill="none" stroke="#ffeaa7" stroke-width="20"/>
+            <path d="M 36,550 A 414,414 0 0,1 864,550" fill="none" stroke="#55efc4" stroke-width="20"/>
+            <path d="M 54,550 A 396,396 0 0,1 846,550" fill="none" stroke="#74b9ff" stroke-width="20"/>
+            <path d="M 72,550 A 378,378 0 0,1 828,550" fill="none" stroke="#a29bfe" stroke-width="20"/>
+        </g>
+
+        <!-- Fluffy Clouds -->
+        <g fill="#ffffff" opacity="0.88">
+            <path d="M 120,180 Q 140,140 190,150 Q 230,120 270,150 Q 310,140 330,180 Q 350,220 300,230 L 140,230 Q 90,220 120,180 Z"/>
+            <path d="M 580,120 Q 600,90 640,100 Q 670,75 710,100 Q 740,90 760,120 L 770,150 L 560,150 Z" opacity="0.75"/>
+            <path d="M 1100,200 Q 1120,165 1160,175 Q 1190,150 1230,175 Q 1260,165 1280,200 L 1290,240 L 1080,240 Z"/>
+        </g>
+
+        <!-- Back Rolling Hills -->
+        <path d="M -50,680 Q 350,540 800,640 Q 1200,720 1500,580 L 1500,950 L -50,950 Z" fill="url(#hillGradBack)"/>
+
+        <!-- Front Rolling Hills -->
+        <path d="M -50,730 Q 400,640 850,720 Q 1250,590 1500,680 L 1500,950 L -50,950 Z" fill="url(#hillGradFront)"/>
+
+        <!-- Colorful Kawaii Vector Flowers -->
+        <g transform="translate(0, 720)">
+            <g transform="translate(60, 40)">
+                <path d="M 15,30 Q 15,80 15,100" stroke="#388e3c" stroke-width="6" fill="none"/>
+                <path d="M 15,70 Q -5,60 0,45 Q 10,60 15,70 Z" fill="#4caf50"/>
+                <path d="M 15,75 Q 35,65 30,50 Q 20,65 15,75 Z" fill="#4caf50"/>
+                <path d="M 0,25 C -5,0 10,-5 15,15 C 20,-5 35,0 30,25 C 25,38 5,38 0,25 Z" fill="#ff5252"/>
+            </g>
+
+            <g transform="translate(180, 50)">
+                <path d="M 20,30 L 20,100" stroke="#388e3c" stroke-width="6"/>
+                <circle cx="20" cy="25" r="12" fill="#ffb300"/>
+                <circle cx="20" cy="5" r="7" fill="#ffffff"/>
+                <circle cx="20" cy="45" r="7" fill="#ffffff"/>
+                <circle cx="0" cy="25" r="7" fill="#ffffff"/>
+                <circle cx="40" cy="25" r="7" fill="#ffffff"/>
+                <circle cx="6" cy="11" r="7" fill="#ffffff"/>
+                <circle cx="34" cy="11" r="7" fill="#ffffff"/>
+                <circle cx="6" cy="39" r="7" fill="#ffffff"/>
+                <circle cx="34" cy="39" r="7" fill="#ffffff"/>
+            </g>
+
+            <g transform="translate(300, 35)">
+                <path d="M 15,30 L 15,110" stroke="#388e3c" stroke-width="6"/>
+                <path d="M 0,20 C 0,0 30,0 30,20 C 30,32 20,38 15,38 C 10,38 0,32 0,20 Z" fill="#5c6bc0"/>
+            </g>
+
+            <g transform="translate(420, 60)">
+                <path d="M 15,20 L 15,90" stroke="#388e3c" stroke-width="6"/>
+                <circle cx="15" cy="20" r="10" fill="#f48fb1"/>
+                <circle cx="5" cy="10" r="8" fill="#ff4081"/>
+                <circle cx="25" cy="10" r="8" fill="#ff4081"/>
+                <circle cx="5" cy="30" r="8" fill="#ff4081"/>
+                <circle cx="25" cy="30" r="8" fill="#ff4081"/>
+            </g>
+
+            <g transform="translate(980, 45)">
+                <path d="M 20,30 L 20,100" stroke="#388e3c" stroke-width="6"/>
+                <circle cx="20" cy="25" r="11" fill="#ffd54f"/>
+                <circle cx="20" cy="5" r="8" fill="#ab47bc"/>
+                <circle cx="20" cy="45" r="8" fill="#ab47bc"/>
+                <circle cx="0" cy="25" r="8" fill="#ab47bc"/>
+                <circle cx="40" cy="25" r="8" fill="#ab47bc"/>
+            </g>
+
+            <g transform="translate(1120, 30)">
+                <path d="M 15,30 L 15,110" stroke="#388e3c" stroke-width="6"/>
+                <path d="M 0,25 C -5,0 10,-5 15,15 C 20,-5 35,0 30,25 C 25,38 5,38 0,25 Z" fill="#ff7043"/>
+            </g>
+
+            <g transform="translate(1260, 55)">
+                <path d="M 20,30 L 20,100" stroke="#388e3c" stroke-width="6"/>
+                <circle cx="20" cy="25" r="12" fill="#ffca28"/>
+                <circle cx="20" cy="5" r="7" fill="#ffffff"/>
+                <circle cx="20" cy="45" r="7" fill="#ffffff"/>
+                <circle cx="0" cy="25" r="7" fill="#ffffff"/>
+                <circle cx="40" cy="25" r="7" fill="#ffffff"/>
+            </g>
+        </g>
+    </svg>
+
+    <!-- ── TOP ROUND PROGRESS BAR ── -->
+    <div id="roundHud">
+        <span class="round-text" id="roundLabel">Round 1</span>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-count" id="progressCount">0 / 0</span>
+        <button class="music-btn" id="musicToggleBtn" title="Toggle Background Music">🎵</button>
+    </div>
+
+    <!-- ── MAIN GAME WRAPPER ── -->
+    <div id="gameWrap">
+        <!-- Center Playing Card Board -->
+        <div id="boardCard">
+            <!-- Floating Ambient Stars Inside Board -->
+            <div class="ambient-stars-container">
+                <span class="ambient-star" style="top: 10%; left: 6%; animation-delay: 0s;">✨</span>
+                <span class="ambient-star" style="top: 15%; right: 8%; animation-delay: 1.2s; font-size: 1.4rem;">⭐</span>
+                <span class="ambient-star" style="bottom: 12%; left: 9%; animation-delay: 2.1s;">🌟</span>
+                <span class="ambient-star" style="bottom: 18%; right: 10%; animation-delay: 0.8s;">✨</span>
+                <span class="ambient-star" style="top: 45%; left: 3%; animation-delay: 1.8s; font-size: 1.1rem;">💖</span>
+                <span class="ambient-star" style="top: 48%; right: 4%; animation-delay: 2.5s; font-size: 1.1rem;">✨</span>
+            </div>
+
+            <!-- Animated Flowing Dashed Border Overlay -->
+            <svg class="board-border-svg">
+                <rect id="boardBorderRect" class="animated-board-border" x="2" y="2" rx="34" ry="34" />
+            </svg>
+
+            <svg id="wireSvg"></svg>
+
+            <!-- Top Row: Items A -->
+            <div class="card-row" id="rowTop"></div>
+
+            <!-- Bottom Row: Items B -->
+            <div class="card-row" id="rowBottom"></div>
+
+            <!-- Next Round Button (shown only if there is a next round) -->
+            <button class="next-round-btn" id="nextRoundBtn">NEXT ROUND ▶</button>
+        </div>
+    </div>
+
+    <script>
+    const URL_PARAMS = new URLSearchParams(window.location.search);
+    const TOPIC_ID = URL_PARAMS.get('topicId');
+    const GAME_ID = URL_PARAMS.get('gameId');
+    const AGE_GROUP = URL_PARAMS.get('age') || '2-5';
+
+    const COLOR_THEMES = [
+        { name: 'yellow', color: '#feca57', icon: '🐾' },
+        { name: 'pink',   color: '#ff6b6b', icon: '💖' },
+        { name: 'green',  color: '#1dd1a1', icon: '🥕' },
+        { name: 'blue',   color: '#4dabf7', icon: '🫧' },
+        { name: 'purple', color: '#b197fc', icon: '⭐' },
+        { name: 'orange', color: '#ff922b', icon: '✨' }
+    ];
+
+    let allCards = [];
+    let roundsData = [];
+    let currentRoundIndex = 0;
+    let currentRoundCards = [];
+    let isImageImage = false;
+    let soundEnabled = true;
+    let matchedCount = 0;
+    let matchedPairs = new Set();
+
+    let isDraggingWire = false;
+    let dragStartItem = null;
+    let activeDragGroup = null;
+    let activeDragMainPath = null;
+    let activeDragFlowPath = null;
+    let activeHoverDot = null;
+
+    const bgMusic = document.getElementById('bgMusic');
+    const musicToggleBtn = document.getElementById('musicToggleBtn');
+
+    const roundLabel = document.getElementById('roundLabel');
+    const progressFill = document.getElementById('progressFill');
+    const progressCount = document.getElementById('progressCount');
+    const boardCard = document.getElementById('boardCard');
+    const boardBorderRect = document.getElementById('boardBorderRect');
+    const wireSvg = document.getElementById('wireSvg');
+    const rowTop = document.getElementById('rowTop');
+    const rowBottom = document.getElementById('rowBottom');
+    const wellDoneBanner = document.getElementById('wellDoneBanner');
+
+    /* ⚡ BACKGROUND MUSIC SETUP ⚡ */
+    function initBgMusic() {
+        if (!bgMusic) return;
+        bgMusic.volume = 0.2;
+        
+        const startPlay = () => {
+            if (bgMusic.paused) {
+                bgMusic.play().then(() => {
+                    musicToggleBtn.classList.remove('muted');
+                    musicToggleBtn.textContent = '🎵';
+                }).catch(() => {});
+            }
+            window.removeEventListener('pointerdown', startPlay);
+        };
+        window.addEventListener('pointerdown', startPlay);
+
+        musicToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicToggleBtn.classList.remove('muted');
+                musicToggleBtn.textContent = '🎵';
+            } else {
+                bgMusic.pause();
+                musicToggleBtn.classList.add('muted');
+                musicToggleBtn.textContent = '🔇';
+            }
+        });
+    }
+
+    function updateBoardBorderRect() {
+        if (boardCard && boardBorderRect) {
+            const w = boardCard.clientWidth - 4;
+            const h = boardCard.clientHeight - 4;
+            boardBorderRect.setAttribute('width', Math.max(0, w));
+            boardBorderRect.setAttribute('height', Math.max(0, h));
+        }
+    }
+
+    function playChimeSound() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.08);
+                gain.gain.setValueAtTime(0.4, ctx.currentTime + i * 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + i * 0.08);
+                osc.stop(ctx.currentTime + i * 0.08 + 0.3);
+            });
+        } catch (e) {}
+    }
+
+    function playErrorSound() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, ctx.currentTime);
+            osc.frequency.linearRampToValueAtTime(120, ctx.currentTime + 0.25);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.25);
+        } catch (e) {}
+    }
+
+    function playWinSound() {
+        if (!soundEnabled) return;
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const notes = [440, 554.37, 659.25, 880, 1108.73];
+            notes.forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
+                gain.gain.setValueAtTime(0.5, ctx.currentTime + i * 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.4);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + i * 0.12);
+                osc.stop(ctx.currentTime + i * 0.12 + 0.4);
+            });
+        } catch (e) {}
+    }
+
+    async function preloadImages(imageUrls) {
+        const promises = imageUrls.filter(Boolean).map(url => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = resolve;
+                img.onerror = resolve;
+                img.src = url;
+            });
+        });
+        await Promise.all(promises);
+    }
+
+    async function loadGameData() {
+        const loadingEl = document.getElementById('loadingOverlay');
+        try {
+            let cards = [];
+            if (TOPIC_ID) {
+                const res = await fetch(`/api/games/flashcard-match/${TOPIC_ID}`);
+                const data = await res.json();
+                if (data.success && data.cards) {
+                    cards = data.cards;
+                    isImageImage = Boolean(data.isImageImage || data.cards.some(c => Boolean(c.imageBUrl)));
+                }
+            } else {
+                const fetchUrl = GAME_ID ? `/api/games/match-words?age=${AGE_GROUP}&gameId=${GAME_ID}` : `/api/games/match-words?age=${AGE_GROUP}`;
+                const res = await fetch(fetchUrl);
+                const data = await res.json();
+                if (data && data.topicsData) {
+                    const firstTopicKey = data.defaultTopic || Object.keys(data.topicsData)[0];
+                    if (firstTopicKey && data.topicsData[firstTopicKey]) {
+                        cards = data.topicsData[firstTopicKey].items.map(item => ({
+                            id: item.id,
+                            word: item.word,
+                            imageUrl: item.image || item.imageUrl,
+                            imageBUrl: item.imageBUrl,
+                            audioUrl: item.audio
+                        }));
+                        isImageImage = cards.some(c => Boolean(c.imageBUrl));
+                    }
+                }
+            }
+
+            if (cards.length > 0) {
+                allCards = cards;
+                const roundsMap = {};
+                allCards.forEach(c => {
+                    const r = (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0;
+                    if (!roundsMap[r]) roundsMap[r] = [];
+                    roundsMap[r].push(c);
+                });
+                roundsData = Object.keys(roundsMap).sort((a, b) => a - b).map(r => roundsMap[r]);
+                currentRoundIndex = 0;
+
+                // Preload image assets in background before initializing
+                const urlsToPreload = [];
+                allCards.forEach(c => {
+                    if (c.imageUrl) urlsToPreload.push(c.imageUrl);
+                    if (c.imageBUrl) urlsToPreload.push(c.imageBUrl);
+                });
+                await preloadImages(urlsToPreload);
+
+                initRound();
+            } else if (loadingEl) {
+                loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
+                return;
+            }
+        } catch (e) {
+            console.error('Failed to load game data:', e);
+            if (loadingEl) {
+                loadingEl.querySelector('.loadText').textContent = 'Error loading game 😢';
+            }
+            return;
+        }
+
+        if (loadingEl) {
+            loadingEl.style.opacity = '0';
+            setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+        }
+    }
+
+    /* ⚡ MINIMUM COMFORTABLE BOARD WIDTH ⚡ */
+    function applyDynamicScaling(count) {
+        let boardMaxWidth = 860;
+        let cardMaxWidth = 170;
+        let cardWordHeight = 68;
+        let cardFontSize = 1.4;
+        let gridGap = 24;
+
+        if (count <= 2) {
+            boardMaxWidth = 680;
+            cardMaxWidth = 180;
+            cardWordHeight = 72;
+            cardFontSize = 1.45;
+            gridGap = 54;
+        } else if (count === 3) {
+            boardMaxWidth = 780;
+            cardMaxWidth = 175;
+            cardWordHeight = 70;
+            cardFontSize = 1.4;
+            gridGap = 36;
+        } else if (count === 4) {
+            boardMaxWidth = 860;
+            cardMaxWidth = 170;
+            cardWordHeight = 68;
+            cardFontSize = 1.4;
+            gridGap = 24;
+        } else if (count === 5) {
+            boardMaxWidth = 920;
+            cardMaxWidth = 158;
+            cardWordHeight = 64;
+            cardFontSize = 1.3;
+            gridGap = 20;
+        } else if (count === 6) {
+            boardMaxWidth = 980;
+            cardMaxWidth = 145;
+            cardWordHeight = 60;
+            cardFontSize = 1.2;
+            gridGap = 16;
+        } else {
+            boardMaxWidth = 1040;
+            cardMaxWidth = 135;
+            cardWordHeight = 56;
+            cardFontSize = 1.1;
+            gridGap = 12;
+        }
+
+        boardCard.style.maxWidth = `${boardMaxWidth}px`;
+
+        rowTop.style.gap = `${gridGap}px`;
+        rowBottom.style.gap = `${gridGap}px`;
+
+        document.querySelectorAll('.match-card').forEach(card => {
+            card.style.maxWidth = `${cardMaxWidth}px`;
+        });
+        document.querySelectorAll('.card-word').forEach(card => {
+            card.style.height = `${cardWordHeight}px`;
+            card.style.fontSize = `${cardFontSize}rem`;
+        });
+
+        setTimeout(updateBoardBorderRect, 50);
+    }
+
+    function initRound() {
+        currentRoundCards = roundsData[currentRoundIndex] || [];
+        rowTop.innerHTML = '';
+        rowBottom.innerHTML = '';
+        wireSvg.innerHTML = '';
+        matchedPairs.clear();
+        matchedCount = 0;
+        const nextBtn = document.getElementById('nextRoundBtn');
+        if (nextBtn) nextBtn.classList.remove('show');
+
+        roundLabel.textContent = `Round ${currentRoundIndex + 1}`;
+        progressCount.textContent = `0 / ${currentRoundCards.length}`;
+        progressFill.style.width = '0%';
+
+        const shuffledBottom = [...currentRoundCards].sort(() => Math.random() - 0.5);
+
+        currentRoundCards.forEach((item, index) => {
+            const theme = COLOR_THEMES[index % COLOR_THEMES.length];
+
+            const topCard = document.createElement('div');
+            topCard.dataset.id = item.id;
+            topCard.dataset.side = 'top';
+
+            const dotBottom = document.createElement('div');
+            dotBottom.className = `dot-handle dot-bottom theme-${theme.name}`;
+            dotBottom.dataset.id = item.id;
+            dotBottom.dataset.side = 'top';
+
+            if (item.imageUrl) {
+                topCard.className = `match-card card-img theme-${theme.name}`;
+                const img = document.createElement('img');
+                img.src = item.imageUrl;
+                img.alt = item.word || 'Item';
+                topCard.appendChild(img);
+            } else {
+                topCard.className = `match-card card-word theme-${theme.name}`;
+                topCard.innerHTML = `<span class="word-icon">${theme.icon}</span> <span>${item.word || 'Item'}</span>`;
+            }
+
+            topCard.appendChild(dotBottom);
+            rowTop.appendChild(topCard);
+        });
+
+        shuffledBottom.forEach((item, index) => {
+            const theme = COLOR_THEMES[index % COLOR_THEMES.length];
+
+            const bottomCard = document.createElement('div');
+            bottomCard.dataset.id = item.id;
+            bottomCard.dataset.side = 'bottom';
+
+            const dotTop = document.createElement('div');
+            dotTop.className = `dot-handle dot-top theme-${theme.name}`;
+            dotTop.dataset.id = item.id;
+            dotTop.dataset.side = 'bottom';
+
+            if (isImageImage && item.imageBUrl) {
+                bottomCard.className = `match-card card-img theme-${theme.name}`;
+                const img = document.createElement('img');
+                img.src = item.imageBUrl;
+                img.alt = item.word || 'Item B';
+                bottomCard.appendChild(img);
+            } else {
+                bottomCard.className = `match-card card-word theme-${theme.name}`;
+                bottomCard.innerHTML = `<span class="word-icon">${theme.icon}</span> <span>${item.labelB || item.word || 'Word'}</span>`;
+            }
+
+            bottomCard.appendChild(dotTop);
+            rowBottom.appendChild(bottomCard);
+        });
+
+        applyDynamicScaling(currentRoundCards.length);
+        setupWireInteractions();
+    }
+
+    function updateProgressUI() {
+        const total = currentRoundCards.length;
+        progressCount.textContent = `${matchedCount} / ${total}`;
+        const pct = total > 0 ? (matchedCount / total) * 100 : 0;
+        progressFill.style.width = `${pct}%`;
+    }
+
+    /* ⚡ PRECISE DOT CENTER CALCULATION ⚡ */
+    function getDotCenter(dotEl) {
+        const card = dotEl.closest('.match-card');
+        const boardRect = boardCard.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        
+        const centerX = cardRect.left + cardRect.width / 2 - boardRect.left;
+
+        if (dotEl.classList.contains('dot-bottom')) {
+            return {
+                x: centerX,
+                y: cardRect.bottom - boardRect.top
+            };
+        } else {
+            return {
+                x: centerX,
+                y: cardRect.top - boardRect.top
+            };
+        }
+    }
+
+    function createBezierPath(x1, y1, x2, y2) {
+        const midY = (y1 + y2) / 2;
+        return `M ${x1},${y1} C ${x1},${midY} ${x2},${midY} ${x2},${y2}`;
+    }
+
+    function setupWireInteractions() {
+        const cards = boardCard.querySelectorAll('.match-card');
+        cards.forEach(el => el.addEventListener('pointerdown', onPointerDown));
+
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
+    }
+
+    function createNeonWireGroup(color) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+        const glowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        glowPath.setAttribute('stroke', color);
+        glowPath.setAttribute('stroke-width', '14');
+        glowPath.setAttribute('stroke-linecap', 'round');
+        glowPath.setAttribute('fill', 'none');
+        glowPath.setAttribute('opacity', '0.45');
+        glowPath.setAttribute('filter', 'drop-shadow(0 0 8px ' + color + ')');
+
+        const mainPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        mainPath.setAttribute('stroke', color);
+        mainPath.setAttribute('stroke-width', '8');
+        mainPath.setAttribute('stroke-linecap', 'round');
+        mainPath.setAttribute('fill', 'none');
+
+        const flowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        flowPath.setAttribute('class', 'dash-flow-path');
+        flowPath.setAttribute('fill', 'none');
+
+        group.appendChild(glowPath);
+        group.appendChild(mainPath);
+        group.appendChild(flowPath);
+
+        return { group, glowPath, mainPath, flowPath };
+    }
+
+    function onPointerDown(e) {
+        const cardEl = e.target.closest('.match-card');
+        if (!cardEl) return;
+        const id = cardEl.dataset.id;
+        if (matchedPairs.has(id)) return;
+
+        const side = cardEl.dataset.side;
+        const dotEl = cardEl.querySelector('.dot-handle');
+        if (!dotEl) return;
+
+        const pos = getDotCenter(dotEl);
+        const cardThemeClass = Array.from(cardEl.classList).find(c => c.startsWith('theme-')) || 'theme-yellow';
+        const themeName = cardThemeClass.replace('theme-', '');
+        const themeObj = COLOR_THEMES.find(t => t.name === themeName) || COLOR_THEMES[0];
+
+        isDraggingWire = true;
+        dragStartItem = {
+            id,
+            side,
+            x: pos.x,
+            y: pos.y,
+            themeColor: themeObj.color,
+            dotEl,
+            cardEl
+        };
+
+        const wireObj = createNeonWireGroup(themeObj.color);
+        activeDragGroup = wireObj.group;
+        activeDragMainPath = wireObj.mainPath;
+        activeDragFlowPath = wireObj.flowPath;
+
+        wireSvg.appendChild(activeDragGroup);
+
+        dotEl.classList.add('active-hover');
+    }
+
+    function onPointerMove(e) {
+        if (!isDraggingWire || !dragStartItem || !activeDragGroup) return;
+
+        const boardRect = boardCard.getBoundingClientRect();
+        const currentX = e.clientX - boardRect.left;
+        const currentY = e.clientY - boardRect.top;
+
+        const pathD = createBezierPath(dragStartItem.x, dragStartItem.y, currentX, currentY);
+        
+        Array.from(activeDragGroup.children).forEach(path => path.setAttribute('d', pathD));
+
+        const targetSide = dragStartItem.side === 'top' ? 'bottom' : 'top';
+        const potentialTargets = boardCard.querySelectorAll(`.match-card[data-side="${targetSide}"]`);
+        let closestDot = null;
+        let minDistance = 50;
+
+        potentialTargets.forEach(card => {
+            const id = card.dataset.id;
+            if (matchedPairs.has(id)) return;
+            const dot = card.querySelector('.dot-handle');
+            if (!dot) return;
+            const pos = getDotCenter(dot);
+            const dist = Math.hypot(pos.x - currentX, pos.y - currentY);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestDot = dot;
+            }
+        });
+
+        if (activeHoverDot && activeHoverDot !== closestDot) {
+            activeHoverDot.classList.remove('active-hover');
+        }
+        if (closestDot) {
+            closestDot.classList.add('active-hover');
+            activeHoverDot = closestDot;
+        } else {
+            activeHoverDot = null;
+        }
+    }
+
+    function onPointerUp(e) {
+        if (!isDraggingWire || !dragStartItem) return;
+
+        const boardRect = boardCard.getBoundingClientRect();
+        const releaseX = e.clientX - boardRect.left;
+        const releaseY = e.clientY - boardRect.top;
+
+        const targetSide = dragStartItem.side === 'top' ? 'bottom' : 'top';
+        const potentialTargets = boardCard.querySelectorAll(`.match-card[data-side="${targetSide}"]`);
+        let matchedCard = null;
+
+        potentialTargets.forEach(card => {
+            const id = card.dataset.id;
+            if (matchedPairs.has(id)) return;
+            const dot = card.querySelector('.dot-handle');
+            if (!dot) return;
+            const pos = getDotCenter(dot);
+            const dist = Math.hypot(pos.x - releaseX, pos.y - releaseY);
+            if (dist < 55) {
+                matchedCard = card;
+            }
+        });
+
+        if (matchedCard && matchedCard.dataset.id === dragStartItem.id) {
+            // ✅ CORRECT MATCH
+            const targetDot = matchedCard.querySelector('.dot-handle');
+            const targetPos = getDotCenter(targetDot);
+
+            const finalPath = createBezierPath(dragStartItem.x, dragStartItem.y, targetPos.x, targetPos.y);
+            Array.from(activeDragGroup.children).forEach(path => path.setAttribute('d', finalPath));
+
+            dragStartItem.cardEl.classList.add('matched');
+            matchedCard.classList.add('matched');
+            dragStartItem.dotEl.classList.add('matched-dot');
+            targetDot.classList.add('matched-dot');
+
+            matchedPairs.add(dragStartItem.id);
+            matchedCount++;
+            updateProgressUI();
+
+            playChimeSound();
+            spawnSparkles(e.clientX, e.clientY);
+
+            if (matchedCount === currentRoundCards.length) {
+                setTimeout(winRoundSequence, 650);
+            }
+        } else {
+            // ❌ MISMATCH
+            if (activeDragGroup) activeDragGroup.remove();
+            if (matchedCard) {
+                matchedCard.classList.add('wrong-shake');
+                dragStartItem.cardEl.classList.add('wrong-shake');
+                setTimeout(() => {
+                    matchedCard.classList.remove('wrong-shake');
+                    dragStartItem.cardEl.classList.remove('wrong-shake');
+                }, 450);
+                playErrorSound();
+            }
+        }
+
+        if (dragStartItem.dotEl) dragStartItem.dotEl.classList.remove('active-hover');
+        if (activeHoverDot) activeHoverDot.classList.remove('active-hover');
+
+        isDraggingWire = false;
+        dragStartItem = null;
+        activeDragGroup = null;
+        activeDragMainPath = null;
+        activeDragFlowPath = null;
+        activeHoverDot = null;
+    }
+
+    function spawnSparkles(x, y) {
+        const emojis = ['⭐', '✨', '💖', '🌟', '⚡'];
+        for (let i = 0; i < 12; i++) {
+            const p = document.createElement('div');
+            p.className = 'sparkle';
+            p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            p.style.left = x + 'px';
+            p.style.top = y + 'px';
+
+            const tx = (Math.random() - 0.5) * 220 + 'px';
+            const ty = (Math.random() - 0.5) * 220 + 'px';
+            p.style.setProperty('--tx', tx);
+            p.style.setProperty('--ty', ty);
+
+            document.body.appendChild(p);
+            setTimeout(() => p.remove(), 800);
+        }
+    }
+
+    function winRoundSequence() {
+        playWinSound();
+        for (let i = 0; i < 6; i++) {
+            setTimeout(() => {
+                spawnSparkles(window.innerWidth / 2 + (Math.random() - 0.5) * 360, window.innerHeight / 2 + (Math.random() - 0.5) * 180);
+            }, i * 180);
+        }
+
+        // Show Next Round button ONLY if there are more rounds remaining
+        if (currentRoundIndex < roundsData.length - 1) {
+            const nextBtn = document.getElementById('nextRoundBtn');
+            if (nextBtn) nextBtn.classList.add('show');
+        }
+        // If it's the last round, do NOT show any button or banner, just leave the final matched board intact with victory sounds/sparkles!
+    }
+
+    document.getElementById('nextRoundBtn')?.addEventListener('click', () => {
+        const nextBtn = document.getElementById('nextRoundBtn');
+        if (nextBtn) nextBtn.classList.remove('show');
+        if (currentRoundIndex < roundsData.length - 1) {
+            currentRoundIndex++;
+            initRound();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        updateBoardBorderRect();
+        if (currentRoundCards.length > 0) initRound();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        initBgMusic();
+        loadGameData();
+        updateBoardBorderRect();
+    });
+    </script>
+</body>
+</html>

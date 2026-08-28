@@ -54,19 +54,19 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
   const isTeacherPage = pathname.startsWith('/teacher');
 
   return (
-    <div className={`text-foreground min-h-screen font-body selection:bg-primary/20 relative z-0 ${isTeacherPage ? 'bg-[#f0f7ff]' : 'bg-[#e2f0e7]'}`}>
+    <div className={`text-foreground min-h-screen font-body selection:bg-primary/20 relative z-0 ${isTeacherPage ? 'bg-[#f8fafc]' : 'bg-[#e2f0e7]'}`}>
       <div className={`fixed inset-0 overflow-hidden pointer-events-none -z-10 ${
         isTeacherPage 
-          ? 'bg-gradient-to-tr from-[#eff6ff] via-[#f0f9ff] to-[#dbeafe]' 
+          ? 'bg-gradient-to-tr from-[#ffffff] via-[#f4f9ff] to-[#eaf3ff]' 
           : 'bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]'
       }`}>
         {/* Lightweight Mesh Gradients */}
         {isTeacherPage ? (
           <>
-            <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-[#93c5fd]/30 blur-3xl" />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-[#bfdbfe]/30 blur-3xl" />
-            <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-[#3b82f6]/20 blur-3xl" />
-            <div className="absolute inset-0 opacity-[0.05] bg-[radial-gradient(#2563eb_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
+            <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-[#3b82f6]/10 blur-3xl" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-[#60a5fa]/10 blur-3xl" />
+            <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-[#93c5fd]/15 blur-3xl" />
+            <div className="absolute inset-0 opacity-[0.025] bg-[radial-gradient(#3b82f6_1.5px,transparent_1.5px)] [background-size:24px_24px]" />
           </>
         ) : (
           <>

@@ -677,6 +677,7 @@ model MatchWordTopic {
   slug      String
   icon      String // e.g. "🐶"
   audioMode String?         @default("AUTO_TTS")
+  gameMode  String?         @default("match") // "match" | "line"
   items     MatchWordItem[]
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
@@ -685,15 +686,19 @@ model MatchWordTopic {
 }
 
 model MatchWordItem {
-  id        String         @id @default(cuid())
-  topicId   String
-  word      String
-  emoji     String?
-  imageUrl  String?
-  audioUrl  String?
-  topic     MatchWordTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id         String         @id @default(cuid())
+  topicId    String
+  roundIndex Int            @default(0)
+  word       String
+  emoji      String?
+  imageUrl   String?
+  audioUrl   String?
+  imageBUrl  String?
+  labelB     String?
+  audioBUrl  String?
+  topic      MatchWordTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 }
 
 model SentenceBuilderGame {

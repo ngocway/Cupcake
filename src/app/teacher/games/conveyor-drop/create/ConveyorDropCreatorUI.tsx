@@ -49,9 +49,9 @@ export interface GameRound {
   pairs: CardPair[];
 }
 
-const MAX_PAIRS_PER_ROUND = 7;
+const MAX_PAIRS_PER_ROUND = 15;
 const MAX_ROUNDS = 10;
-const MAX_BULK_WORDS = 70;
+const MAX_BULK_WORDS = 150;
 const MAX_TEXT_WORDS = 5;
 
 function countWords(str: string): number {
@@ -67,7 +67,7 @@ const INITIAL_ROUNDS: GameRound[] = [
   },
 ];
 
-export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
+export function ConveyorDropCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
@@ -79,7 +79,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
-  const [currentGameMode, setCurrentGameMode] = useState<string>(() => searchParams?.get("gameMode") || "match");
+  const currentGameMode = "conveyor-drop";
   
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
@@ -121,6 +121,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             roundsMap[rIdx].push(item);
           });
           const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+          const loadedRounds: GameRound[] = [];
 
           roundIndices.forEach((rIdx, i) => {
             const roundItems = roundsMap[rIdx];
@@ -142,10 +143,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
 
           if (res.topic.audioMode) {
             setAudioMode(res.topic.audioMode as AudioMode);
-          }
-
-          if (res.topic.gameMode) {
-            setCurrentGameMode(res.topic.gameMode);
           }
         }
       } else {
@@ -263,33 +260,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     setRounds(updatedRounds);
   };
 
-  const handleMovePairToRound = (pairId: string, targetRoundIndex: number) => {
-    if (targetRoundIndex === activeRoundIndex) return;
-    const targetRound = rounds[targetRoundIndex];
-    if (!targetRound) return;
-
-    if (targetRound.pairs.length >= MAX_PAIRS_PER_ROUND) {
-      toast.error(`${targetRound.title} đã có 7 cặp thẻ (đã đầy)!`, { position: "top-center" });
-      return;
-    }
-
-    const pairToMove = pairs.find(p => p.id === pairId);
-    if (!pairToMove) return;
-
-    const updatedRounds = rounds.map((r, rIdx) => {
-      if (rIdx === activeRoundIndex) {
-        return { ...r, pairs: r.pairs.filter(p => p.id !== pairId) };
-      }
-      if (rIdx === targetRoundIndex) {
-        return { ...r, pairs: [...r.pairs, pairToMove] };
-      }
-      return r;
-    });
-
-    setRounds(updatedRounds);
-    toast.success(`Đã chuyển thẻ "${pairToMove.word || 'từ'}" sang ${targetRound.title}!`, { position: "top-center" });
-  };
-
   // Upload & Search Image Handlers
   const handleOpenImageUpload = (pairId: string) => {
     setActivePairIdForUpload(pairId);
@@ -376,26 +346,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     toast.success("Đã chọn hình ảnh cho từ vựng!");
   };
 
-  const handleRemoveImage = (pairId: string) => {
-    const updatedRounds = [...rounds];
-    updatedRounds[activeRoundIndex] = {
-      ...currentRound,
-      pairs: pairs.map(p => {
-        if (p.id === pairId) {
-          return {
-            ...p,
-            imageUrl: undefined,
-            imageFile: undefined,
-            imageFileName: undefined,
-          };
-        }
-        return p;
-      }),
-    };
-    setRounds(updatedRounds);
-  };
-
-  // Drag & Drop Image Handling (Supports External Files & Internal Card Swapping/Moving)
+  // Drag & Drop Image Handling
   const handleDragOver = (e: React.DragEvent, pairId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -411,7 +362,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     e.preventDefault();
     setDragActivePairId(null);
 
-    // Case 1: Drop external desktop image file
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("image/")) {
       const objectUrl = URL.createObjectURL(file);
@@ -436,7 +386,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
 
-    // Case 2: Drop internal image dragged from another card
     let srcPairId = dragSourcePairId;
     if (!srcPairId) {
       try {
@@ -544,7 +493,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     setPlayingTTSPairId(pair.id);
 
     try {
-      // 1. Try Edge TTS real-time synthesis (en-US-AnaNeural, child voice)
       const res = await fetch("/api/tts/edge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -565,12 +513,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       }
       throw new Error(`Edge TTS API status ${res.status}`);
     } catch (err) {
-      console.warn("Deepgram TTS preview failed, falling back to Web Speech API:", err);
+      console.warn("TTS preview failed, falling back to Web Speech API:", err);
       fallbackWebSpeech(pair.word);
     }
   };
 
-  // Bulk Paste Handler with Auto Multi-Round Split (Max 70 words)
+  // Bulk Paste Handler
   const handleProcessBulkPaste = () => {
     if (!pasteContent.trim()) {
       toast.error("Vui lòng nhập danh sách từ vựng vào ô!");
@@ -592,7 +540,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
 
-    // Check for words > 5 words
     const violatingWords: { word: string; count: number; index: number }[] = [];
     words.forEach((w, idx) => {
       const c = countWords(w);
@@ -610,7 +557,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
 
-    // Auto calculate number of rounds (7 cards per round max, 10 rounds max)
     const newRounds: GameRound[] = [];
     const totalRounds = Math.min(Math.ceil(words.length / MAX_PAIRS_PER_ROUND), MAX_ROUNDS);
 
@@ -660,7 +606,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       const r = rounds[rIdx];
       if (r.pairs.length < 2) {
         setActiveRoundIndex(rIdx);
-        setValidationModalMessage(`${r.title} phải có ít nhất 2 cặp thẻ để học sinh nối. Vui lòng bấm [+ Thêm 1 cặp]!`);
+        setValidationModalMessage(`${r.title} phải có ít nhất 2 cặp thẻ để học sinh làm bài. Vui lòng bấm [+ Thêm 1 cặp]!`);
         return;
       }
     }
@@ -682,7 +628,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       }
     }
 
-    // Verification 3: Check word count > 5 for Image-Text game
+    // Verification 3: Check word count > 5
     for (let rIdx = 0; rIdx < rounds.length; rIdx++) {
       const r = rounds[rIdx];
       for (let pIdx = 0; pIdx < r.pairs.length; pIdx++) {
@@ -690,7 +636,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         const count = countWords(p.word);
         if (count > MAX_TEXT_WORDS) {
           setActiveRoundIndex(rIdx);
-          setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${pIdx + 1} ("${p.word.slice(0, 20)}...") đang có ${count} từ (vượt quá 5 từ cho game Nối Ảnh - Chữ). Vui lòng rút gọn!`);
+          setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${pIdx + 1} ("${p.word.slice(0, 20)}...") đang có ${count} từ (vượt quá 5 từ cho game Băng Chuyền Thả Khối). Vui lòng rút gọn!`);
           return;
         }
       }
@@ -730,11 +676,9 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     const toastId = toast.loading(loadingMessage);
 
     try {
-      // Parallel batch processing: process all pairs simultaneously, and process image upload + audio TTS upload in parallel for each pair
       const updatedPairs = await Promise.all(
         allPairs.map(async (pair) => {
           const [finalImageUrl, finalAudioUrl] = await Promise.all([
-            // Task A: Process Custom Image File
             (async () => {
               if (pair.imageFile) {
                 const formData = new FormData();
@@ -747,7 +691,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
               return pair.imageUrl;
             })(),
 
-            // Task B: Process Audio File or Synthesize Edge TTS Child Voice
             (async () => {
               if (pair.audioFile) {
                 const formData = new FormData();
@@ -800,7 +743,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         gradeLevel,
         description,
         audioMode,
-        gameMode: currentGameMode,
+        gameType: "conveyor-drop",
+        gameMode: "conveyor-drop",
         pairs: updatedPairs,
       });
 
@@ -811,14 +755,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         return;
       }
 
-      // Clear cache so the newly created game is fetched fresh immediately
       if (typeof window !== "undefined") {
         try {
           sessionStorage.removeItem("cached_teacher_match_games");
         } catch (e) {}
       }
 
-      toast.success("Lưu bài tập Nối Cặp thành công vào Cơ sở dữ liệu!", { position: "top-center" });
+      toast.success("Lưu bài tập Băng Chuyền Thả Khối thành công vào Cơ sở dữ liệu!", { position: "top-center" });
       router.push("/teacher?tab=my-match-games");
     } catch (error: any) {
       toast.dismiss(toastId);
@@ -859,8 +802,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                {currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800">
+                Băng Chuyền Thả Khối
               </span>
               <span className="text-xs font-semibold text-slate-400">
                 {topicId ? "Chỉnh sửa bài tập" : "Thiết kế bài tập"}
@@ -868,8 +811,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             </div>
             <h1 className="font-headline font-black text-2xl md:text-3xl text-slate-800 dark:text-white mt-1">
               {topicId 
-                ? (currentGameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Chữ" : "Chỉnh sửa Game Nối Cặp Ảnh - Chữ")
-                : (currentGameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Chữ" : "Tạo Game Nối Cặp Ảnh - Chữ")}
+                ? "Chỉnh sửa Game Băng Chuyền Thả Khối"
+                : "Tạo Game Băng Chuyền Thả Khối"}
             </h1>
           </div>
         </div>
@@ -879,8 +822,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       {isLoadingTopic ? (
         <div className="w-full min-h-[420px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl border border-primary/10 p-12 flex flex-col items-center justify-center text-center shadow-sm space-y-4 animate-in fade-in duration-300">
           <div className="relative flex items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center shadow-inner">
-              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            <div className="w-16 h-16 rounded-2xl bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 flex items-center justify-center shadow-inner">
+              <Loader2 className="w-8 h-8 animate-spin text-cyan-600" />
             </div>
             <Sparkles className="w-5 h-5 text-amber-400 absolute -top-1 -right-1 animate-pulse" />
           </div>
@@ -919,7 +862,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   setTitle(e.target.value);
                   if (titleError && e.target.value.trim()) setTitleError(false);
                 }}
-                placeholder="Nhập tên bài tập (VD: Bài tập Nối Cặp Ảnh - Chữ)..."
+                placeholder="Nhập tên bài tập (VD: Bài tập Băng Chuyền Thả Khối)..."
                 className={`w-full px-4 py-3 text-sm font-bold rounded-2xl outline-none transition-all ${
                   titleError
                     ? "bg-rose-50/60 dark:bg-rose-950/30 border-2 border-rose-500 text-rose-900 dark:text-rose-200 placeholder:text-rose-300 ring-4 ring-rose-500/15"
@@ -941,7 +884,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h2 className="font-headline font-black text-lg text-slate-800 dark:text-white">
-                  2. Danh sách các cặp thẻ Nối (Ảnh - Chữ)
+                  2. Danh sách các cặp thẻ Băng Chuyền (Ảnh - Chữ)
                 </h2>
               </div>
 
@@ -952,7 +895,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   onClick={() => setAudioMode("AUTO_TTS")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "AUTO_TTS"
-                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                      ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
@@ -964,7 +907,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   onClick={() => setAudioMode("CUSTOM_FILE")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "CUSTOM_FILE"
-                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                      ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
@@ -976,7 +919,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   onClick={() => setAudioMode("NONE")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "NONE"
-                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                      ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                   }`}
                 >
@@ -1021,7 +964,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                 <button
                   type="button"
                   onClick={handleAddRound}
-                  className="px-3 py-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 hover:bg-purple-100 rounded-2xl text-xs font-bold border border-purple-200 dark:border-purple-800 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+                  className="px-3 py-2 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-300 hover:bg-cyan-100 rounded-2xl text-xs font-bold border border-cyan-200 dark:border-cyan-800 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Thêm Vòng Mới</span>
@@ -1030,7 +973,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
 
               {/* Total Stats Badge */}
               <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-400 shrink-0">
-                <Layers className="w-4 h-4 text-purple-500" />
+                <Layers className="w-4 h-4 text-cyan-500" />
                 <span>Tổng cộng: <strong className="text-slate-700 dark:text-slate-200">{rounds.reduce((acc, r) => acc + r.pairs.length, 0)} thẻ</strong> ({rounds.length} Vòng)</span>
               </div>
             </div>
@@ -1039,7 +982,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 rounded-2xl border border-sky-200/60 dark:border-sky-800/60 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-200">
               <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
               <p className="leading-relaxed">
-                <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>7 cặp thẻ</strong> để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
+                <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>15 cặp thẻ</strong> để Học sinh thả trực quan không bị rối mắt. Khi Học sinh hoàn thành hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
               </p>
             </div>
 
@@ -1048,7 +991,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
               {pairs.map((pair, index) => (
                 <div 
                   key={pair.id}
-                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-3 shadow-sm hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-3 shadow-sm hover:border-cyan-300 dark:hover:border-cyan-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
                 >
                   {/* Pair Header & Delete */}
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
@@ -1114,13 +1057,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                             className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
                             title="Tải ảnh khác từ máy"
                           >
-                            <Upload className="w-4 h-4 text-purple-600" />
+                            <Upload className="w-4 h-4 text-cyan-600" />
                           </button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
-                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 text-cyan-500 flex items-center justify-center">
                           <ImageIcon className="w-5 h-5" />
                         </div>
                         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Chưa chọn ảnh</span>
@@ -1162,7 +1105,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                       className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${
                         countWords(pair.word) > MAX_TEXT_WORDS
                           ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
-                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-purple-500/20 focus:border-purple-500"
+                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-cyan-500/20 focus:border-cyan-500"
                       }`}
                     />
                     {countWords(pair.word) > MAX_TEXT_WORDS && (
@@ -1197,7 +1140,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                         type="button"
                         onClick={() => handleTestTTS(pair)}
                         disabled={!pair.word.trim()}
-                        className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 disabled:opacity-30 disabled:no-underline cursor-pointer"
+                        className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 disabled:opacity-30 disabled:no-underline cursor-pointer"
                       >
                         <Volume2 className="w-3 h-3" />
                         <span>Nghe thử đọc</span>
@@ -1282,7 +1225,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                 </button>
               </div>
 
-              {/* Info badge when words exist */}
               {parsedWords.length > 0 && !isOverLimit && (
                 <div className="p-3.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-2xl flex items-center gap-2.5 text-sky-900 dark:text-sky-300 text-xs font-bold">
                   <Sparkles className="w-4 h-4 shrink-0 text-sky-600" />
@@ -1306,7 +1248,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   }`}
                 />
 
-                {/* Real-time word count & limit warning */}
                 <div className="flex items-center justify-between text-xs font-bold pt-1">
                   <span className="text-slate-500">
                     Số từ nhận diện:{" "}
@@ -1372,7 +1313,6 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
 
             {/* Search Controls Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              {/* Style Selector */}
               <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700 shrink-0">
                 <button
                   type="button"

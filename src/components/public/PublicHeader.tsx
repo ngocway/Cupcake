@@ -6,7 +6,6 @@ import { signOut } from "next-auth/react"
 
 import { usePathname } from "next/navigation"
 
-import { useTranslations } from "next-intl"
 import { useContentStore } from "@/store/useContentStore"
 
 const LANG_LABELS: Record<string, string> = {
@@ -24,12 +23,12 @@ interface PublicHeaderProps {
 }
 
 export function PublicHeader({ session, search, setSearch, isPendingSearch }: PublicHeaderProps) {
-  const t = useTranslations("header")
   const pathname = usePathname()
   
   const isDetailOrRunPage = (pathname?.includes('/lessons/') && pathname !== '/student/lessons') || 
                             (pathname?.includes('/assignments/') && pathname !== '/student/assignments') ||
-                            (pathname?.includes('/books/') && pathname !== '/student/books')
+                            (pathname?.includes('/books/') && pathname !== '/student/books') ||
+                            Boolean(pathname?.includes('/game/'))
   
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
   const nativeLanguage = useContentStore(s => s.nativeLanguage)
@@ -170,7 +169,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               onChange={e => setLocalSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleTriggerSearch()}
               className="bg-primary/5 border-transparent rounded-full py-3.5 pl-14 pr-8 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:bg-white focus:border-primary/20 w-80 transition-all duration-500 outline-none placeholder:text-primary/20" 
-              placeholder={t("searchPlaceholder")} 
+              placeholder="Search lessons, assignments..." 
               type="text" 
             />
           </div>
@@ -239,7 +238,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">assignment</span>
-                      <span>{t("myAssignments")}</span>
+                      <span>Bài tập của tôi</span>
                     </Link>
                     <Link 
                       href="/student/lessons?filter=completed"
@@ -251,7 +250,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">history_edu</span>
-                      <span>{t("learnedLessons")}</span>
+                      <span>Bài học đã học</span>
                     </Link>
                     <Link 
                       href="/student/bookmarks"
@@ -263,7 +262,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                      <span>{t("myBookmarks")}</span>
+                      <span>Đã lưu</span>
                     </Link>
                     <Link 
                       href="/student/my-reviews"
@@ -275,7 +274,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       }`}
                     >
                       <span className="material-symbols-outlined text-[18px]">star</span>
-                      <span>{t("myReviews")}</span>
+                      <span>Đánh giá của tôi</span>
                     </Link>
                     
                     <div className="h-px bg-primary/5 mt-2 mb-1" />
@@ -306,7 +305,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
                     >
                       <span className="material-symbols-outlined text-[18px]">logout</span>
-                      <span>{t("logout")}</span>
+                      <span>Đăng xuất</span>
                     </button>
                   </div>
                 </div>
@@ -314,7 +313,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
             </div>
           ) : (
             <LoginButton defaultView="studentLogin" className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
-              {t("getStarted")}
+              Bắt đầu học
             </LoginButton>
           )}
         </div>

@@ -12,10 +12,16 @@ export interface SaveMatchImageTextPayload {
   gradeLevel?: string;
   description?: string;
   audioMode?: string;
+  gameType?: string;
+  gameMode?: string; // "match" | "line"
   pairs: Array<{
+    roundIndex?: number;
     word: string;
     imageUrl?: string;
     audioUrl?: string;
+    imageBUrl?: string;
+    labelB?: string;
+    audioBUrl?: string;
   }>;
 }
 
@@ -29,7 +35,9 @@ export async function getMatchImageTextGameDetailsAction(topicId: string) {
     const topic = await prisma.matchWordTopic.findUnique({
       where: { id: topicId },
       include: {
-        items: true,
+        items: {
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
@@ -43,12 +51,17 @@ export async function getMatchImageTextGameDetailsAction(topicId: string) {
         id: topic.id,
         title: topic.name,
         gradeLevel: topic.ageGroup,
-        audioMode: (topic as any).audioMode || "AUTO_TTS",
+        audioMode: topic.audioMode || "AUTO_TTS",
+        gameMode: topic.gameMode || "match",
         items: topic.items.map((item) => ({
           id: item.id,
+          roundIndex: item.roundIndex ?? 0,
           word: item.word,
           imageUrl: item.imageUrl || undefined,
           audioUrl: item.audioUrl || undefined,
+          imageBUrl: (item as any).imageBUrl || undefined,
+          labelB: (item as any).labelB || undefined,
+          audioBUrl: (item as any).audioBUrl || undefined,
         })),
       },
     };
@@ -75,11 +88,16 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
           name: data.title,
           ageGroup: data.gradeLevel || "kids-2-5",
           audioMode: data.audioMode || "AUTO_TTS",
+          ...(data.gameMode ? { gameMode: data.gameMode } : {}),
           items: {
             create: data.pairs.map((pair) => ({
-              word: pair.word,
+              roundIndex: pair.roundIndex ?? 0,
+              word: pair.word || "",
               imageUrl: pair.imageUrl || null,
               audioUrl: pair.audioUrl || null,
+              imageBUrl: pair.imageBUrl || null,
+              labelB: pair.labelB || null,
+              audioBUrl: pair.audioBUrl || null,
             })),
           },
         },
@@ -92,14 +110,24 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
     }
 
     // 1. Get or create a default match word game container for new topic
+    const targetGameName = data.gameType === "conveyor-drop"
+      ? "Trò chơi Băng Chuyền Thả Khối"
+      : data.gameType === "image-image" 
+        ? "Trò chơi Nối Cặp Ảnh - Ảnh" 
+        : data.gameType === "text-text" 
+          ? "Trò chơi Nối Cặp Chữ - Chữ" 
+          : "Trò chơi Nối Cặp Ảnh - Chữ";
     let game = await prisma.matchWordGame.findFirst({
-      where: { ageGroup: data.gradeLevel || "kids-2-5" },
+      where: { 
+        ageGroup: data.gradeLevel || "kids-2-5",
+        name: targetGameName,
+      },
     });
 
     if (!game) {
       game = await prisma.matchWordGame.create({
         data: {
-          name: "Trò chơi Nối Cặp Ảnh - Chữ",
+          name: targetGameName,
           ageGroup: data.gradeLevel || "kids-2-5",
           level: 1,
         },
@@ -115,14 +143,19 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
         name: data.title,
         slug,
         ageGroup: data.gradeLevel || "kids-2-5",
-        icon: "🧩",
+        icon: "🖼️",
         audioMode: data.audioMode || "AUTO_TTS",
+        gameMode: data.gameMode || "match",
         teacherId: session?.user?.id || null,
         items: {
           create: data.pairs.map((pair) => ({
-            word: pair.word,
+            roundIndex: pair.roundIndex ?? 0,
+            word: pair.word || "",
             imageUrl: pair.imageUrl || null,
             audioUrl: pair.audioUrl || null,
+            imageBUrl: pair.imageBUrl || null,
+            labelB: pair.labelB || null,
+            audioBUrl: pair.audioBUrl || null,
           })),
         },
       },
@@ -136,7 +169,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
 
     return { success: true, topicId: topic.id, slug: topic.slug };
   } catch (error: any) {
-    console.error("Failed to save match image text game:", error);
+    console.error("Failed to save match image game:", error);
     return { success: false, error: error.message || "Failed to save game to database" };
   }
 }
