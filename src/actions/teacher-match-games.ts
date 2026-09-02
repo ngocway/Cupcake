@@ -14,8 +14,19 @@ export async function getTeacherMatchGamesAction() {
 
     const isAdmin = session.user.role === "ADMIN";
     const whereCondition: any = isAdmin
-      ? {}
-      : { teacherId: session.user.id };
+      ? {
+          OR: [
+            { game: { is: null } },
+            { game: { name: { not: { contains: "Lật Ảnh" } } } }
+          ]
+        }
+      : { 
+          teacherId: session.user.id,
+          OR: [
+            { game: { is: null } },
+            { game: { name: { not: { contains: "Lật Ảnh" } } } }
+          ]
+        };
 
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,
@@ -74,6 +85,76 @@ export async function getTeacherMatchGamesAction() {
   }
 }
 
+export async function getTeacherFlipGamesAction() {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { success: true, topics: [] };
+    }
+
+    const isAdmin = session.user.role === "ADMIN";
+    const whereCondition: any = isAdmin
+      ? { game: { name: { contains: "Lật Ảnh" } } }
+      : { teacherId: session.user.id, game: { name: { contains: "Lật Ảnh" } } };
+
+    const rawTopics = await prisma.matchWordTopic.findMany({
+      where: whereCondition,
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        gameMode: true,
+        game: {
+          select: {
+            name: true,
+            level: true,
+          },
+        },
+        items: {
+          take: 4,
+          select: {
+            id: true,
+            word: true,
+            imageUrl: true,
+            imageBUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            items: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    const topics = rawTopics.map((t) => {
+      const isImageImage = t.game?.name?.includes("Ảnh-Ảnh") || t.items.some((item) => Boolean(item.imageBUrl));
+      return {
+        id: t.id,
+        name: t.name,
+        createdAt: t.createdAt,
+        gameMode: t.gameMode || "flip",
+        game: {
+          ...t.game,
+          name: isImageImage ? "Trò chơi Lật Ảnh-Ảnh" : (t.game?.name || "Trò chơi Lật Ảnh-Chữ"),
+        },
+        items: t.items,
+        totalItems: t._count.items,
+        isImageImage,
+      };
+    });
+
+    return { success: true, topics };
+  } catch (error: any) {
+    console.error("Failed to fetch teacher flip games:", error);
+    return { success: false, error: error.message || "Failed to fetch flip games", topics: [] };
+  }
+}
+
 export async function deleteTeacherMatchGameAction(topicId: string) {
   try {
     const session = await auth();
@@ -100,7 +181,7 @@ export async function deleteTeacherMatchGameAction(topicId: string) {
     });
 
     revalidatePath("/teacher");
-    revalidatePath("/student/game/match-words");
+    revalidatePath("/student/game/flashcard-match");
 
     return { success: true };
   } catch (error: any) {

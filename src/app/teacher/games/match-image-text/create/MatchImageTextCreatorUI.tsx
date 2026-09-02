@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { searchImagesAction } from "@/actions/image-search-actions";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { uploadMedia } from "@/actions/upload-actions";
+import { uploadImageFast } from "@/lib/direct-upload";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -38,6 +39,7 @@ export interface CardPair {
   imageUrl?: string;
   imageFileName?: string;
   imageFile?: File;
+  isUploadingImage?: boolean;
   audioUrl?: string;
   audioFileName?: string;
   audioFile?: File;
@@ -217,7 +219,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
     const roundTitle = rounds[index].title;
-    const updated = rounds.filter((_, i) => i !== index);
+    const updated = rounds
+      .filter((_, i) => i !== index)
+      .map((r, i) => ({
+        ...r,
+        title: `Vòng ${i + 1}`,
+      }));
     setRounds(updated);
     if (activeRoundIndex >= updated.length) {
       setActiveRoundIndex(updated.length - 1);
@@ -300,7 +307,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     }
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activePairIdForUpload) return;
 
@@ -309,24 +316,28 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
-    const updatedRounds = [...rounds];
-    updatedRounds[activeRoundIndex] = {
-      ...currentRound,
-      pairs: pairs.map(p => {
-        if (p.id === activePairIdForUpload) {
-          return {
-            ...p,
-            imageUrl: objectUrl,
-            imageFileName: file.name,
-            imageFile: file,
-          };
-        }
-        return p;
-      }),
-    };
-    setRounds(updatedRounds);
-    toast.success("Tải ảnh lên thành công!");
+    const pairId = activePairIdForUpload;
+    const tempUrl = URL.createObjectURL(file);
+
+    setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
+      ...r,
+      pairs: r.pairs.map(p => p.id === pairId ? { ...p, imageUrl: tempUrl, imageFile: file, isUploadingImage: true } : p)
+    }));
+
+    try {
+      const finalUrl = await uploadImageFast(file);
+      setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
+        ...r,
+        pairs: r.pairs.map(p => p.id === pairId ? { ...p, imageUrl: finalUrl, imageFile: undefined, isUploadingImage: false } : p)
+      }));
+      toast.success("Tải & nén ảnh thành công!");
+    } catch (err: any) {
+      toast.error(`Tải ảnh thất bại: ${err.message}`);
+      setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
+        ...r,
+        pairs: r.pairs.map(p => p.id === pairId ? { ...p, isUploadingImage: false } : p)
+      }));
+    }
   };
 
   const handleOpenImageSearch = (pair: CardPair) => {
@@ -738,12 +749,9 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             // Task A: Process Custom Image File
             (async () => {
               if (pair.imageFile) {
-                const formData = new FormData();
-                formData.append("file", pair.imageFile);
-                const uploadData = await uploadMedia(formData);
-                if (uploadData.success && uploadData.url) {
-                  return uploadData.url;
-                }
+                try {
+                  return await uploadImageFast(pair.imageFile);
+                } catch (e) {}
               }
               return pair.imageUrl;
             })(),
@@ -1004,7 +1012,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                     key={r.id}
                     type="button"
                     onClick={() => setActiveRoundIndex(idx)}
-                    className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                    className={`group/tab relative px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
                       activeRoundIndex === idx
                         ? "bg-sky-500 text-white shadow-md shadow-sky-500/30 scale-105"
                         : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -1016,6 +1024,19 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                     }`}>
                       {r.pairs.length}/{MAX_PAIRS_PER_ROUND}
                     </span>
+
+                    {rounds.length > 1 && (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveRound(idx);
+                        }}
+                        className="w-4 h-4 rounded-full bg-black/10 hover:bg-rose-600 hover:text-white flex items-center justify-center text-[10px] ml-0.5 transition-all cursor-pointer"
+                        title={`Xóa ${r.title}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </span>
+                    )}
                   </button>
                 ))}
 

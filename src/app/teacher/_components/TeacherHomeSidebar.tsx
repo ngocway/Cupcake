@@ -37,7 +37,7 @@ export function TeacherHomeSidebar() {
     localStorage.setItem("teacher_mygames_menu_open", String(next));
   };
 
-  const handleSelectTab = (tab: "match" | "choice" | "fill" | "my-match-games" | "my-choice-games" | "my-fill-games") => {
+  const handleSelectTab = (tab: "match" | "choice" | "fill" | "flip" | "my-match-games" | "my-choice-games" | "my-fill-games" | "my-flip-games") => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("tab", tab);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
@@ -165,6 +165,10 @@ export function TeacherHomeSidebar() {
             0%, 100% { transform: translate(0, 0) rotate(0); }
             50% { transform: translate(3px, -3px) rotate(12deg); }
           }
+          @keyframes flip-card {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2) rotate(10deg); }
+          }
 
           .teacher-tile.match:hover .teacher-tile-icon .material-symbols-rounded {
             animation: match-shake 0.5s ease-in-out infinite;
@@ -174,6 +178,9 @@ export function TeacherHomeSidebar() {
           }
           .teacher-tile.fill:hover .teacher-tile-icon .material-symbols-rounded {
             animation: edit-write 0.6s ease-in-out infinite;
+          }
+          .teacher-tile.flip:hover .teacher-tile-icon .material-symbols-rounded {
+            animation: flip-card 0.5s ease-in-out infinite;
           }
 
           /* Tile variations matching home page pastel style */
@@ -191,6 +198,11 @@ export function TeacherHomeSidebar() {
           .teacher-tile.fill .teacher-tile-icon { color: #7B5CFA; }
           .teacher-tile.fill .teacher-tile-label { color: #5A3EDB; }
           .teacher-tile.fill.active { border-color: #7B5CFA; box-shadow: 0 0 10px rgba(123, 92, 250, 0.2); }
+
+          .teacher-tile.flip { background: #FFE4E8 !important; }
+          .teacher-tile.flip .teacher-tile-icon { color: #F43F5E; }
+          .teacher-tile.flip .teacher-tile-label { color: #BE123C; }
+          .teacher-tile.flip.active { border-color: #F43F5E; box-shadow: 0 0 10px rgba(244, 63, 94, 0.2); }
 
           .teacher-list-item {
             display: flex;
@@ -220,6 +232,10 @@ export function TeacherHomeSidebar() {
           .teacher-list-item.active.fill-active {
             border-color: #7B5CFA;
             box-shadow: 0 4px 12px rgba(123, 92, 250, 0.15);
+          }
+          .teacher-list-item.active.flip-active {
+            border-color: #F43F5E;
+            box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15);
           }
 
           .material-symbols-rounded {
@@ -295,6 +311,19 @@ export function TeacherHomeSidebar() {
                 </div>
                 <p className="teacher-tile-label">Điền ô trống</p>
               </div>
+
+              {/* Lật ảnh */}
+              <div
+                onClick={() => handleSelectTab("flip")}
+                className={`teacher-tile flip ${activeTab === "flip" ? "active" : ""}`}
+              >
+                <div className="teacher-tile-top">
+                  <div className="teacher-tile-icon">
+                    <span className="material-symbols-rounded">style</span>
+                  </div>
+                </div>
+                <p className="teacher-tile-label">Lật ảnh</p>
+              </div>
             </div>
           </div>
 
@@ -307,6 +336,7 @@ export function TeacherHomeSidebar() {
               <span className="material-symbols-rounded text-base text-sky-500">extension</span>
               <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
               <span className="material-symbols-rounded text-base text-purple-500">edit_note</span>
+              <span className="material-symbols-rounded text-base text-rose-500">style</span>
             </div>
           )}
         </div>
@@ -371,6 +401,20 @@ export function TeacherHomeSidebar() {
                   <span className="text-[11px] font-semibold text-slate-400">Danh sách game Điền ô</span>
                 </div>
               </div>
+
+              {/* Lật ảnh đã tạo */}
+              <div
+                onClick={() => handleSelectTab("my-flip-games")}
+                className={`teacher-list-item ${activeTab === "my-flip-games" ? "active flip-active" : ""}`}
+              >
+                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-rounded text-[22px]">style</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-headline font-black text-sm text-slate-800">Lật ảnh đã tạo</span>
+                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Lật ảnh</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -383,6 +427,7 @@ export function TeacherHomeSidebar() {
               <span className="material-symbols-rounded text-base text-sky-500">auto_awesome_motion</span>
               <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
               <span className="material-symbols-rounded text-base text-purple-500">assignment</span>
+              <span className="material-symbols-rounded text-base text-rose-500">style</span>
             </div>
           )}
         </div>

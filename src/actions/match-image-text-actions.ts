@@ -27,11 +27,6 @@ export interface SaveMatchImageTextPayload {
 
 export async function getMatchImageTextGameDetailsAction(topicId: string) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return { success: false, error: "Unauthorized" };
-    }
-
     const topic = await prisma.matchWordTopic.findUnique({
       where: { id: topicId },
       include: {
@@ -112,11 +107,15 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
     // 1. Get or create a default match word game container for new topic
     const targetGameName = data.gameType === "conveyor-drop"
       ? "Trò chơi Băng Chuyền Thả Khối"
-      : data.gameType === "image-image" 
-        ? "Trò chơi Nối Cặp Ảnh - Ảnh" 
-        : data.gameType === "text-text" 
-          ? "Trò chơi Nối Cặp Chữ - Chữ" 
-          : "Trò chơi Nối Cặp Ảnh - Chữ";
+      : data.gameType === "FLIP_IMAGE_IMAGE" || data.gameType === "flip-image-image"
+        ? "Trò chơi Lật Ảnh-Ảnh"
+        : data.gameType === "FLIP_IMAGE_TEXT" || data.gameType === "flip-image-text"
+          ? "Trò chơi Lật Ảnh-Chữ"
+          : data.gameType === "image-image" 
+            ? "Trò chơi Nối Cặp Ảnh - Ảnh" 
+            : data.gameType === "text-text" 
+              ? "Trò chơi Nối Cặp Chữ - Chữ" 
+              : "Trò chơi Nối Cặp Ảnh - Chữ";
     let game = await prisma.matchWordGame.findFirst({
       where: { 
         ageGroup: data.gradeLevel || "kids-2-5",

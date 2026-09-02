@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ocean Memory Match UI</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="scene" aria-label="Ocean Memory Match UI mockup">
+      <img class="scene-bg" src="./assets/background-ocean.png" alt="Ocean background" />
+
+      <img class="decor fish-left" src="./assets/mascot-fish.png" alt="" />
+      <img class="decor fish-right" src="./assets/mascot-fish.png" alt="" />
+      <img class="decor dolphin" src="./assets/mascot-dolphin.png" alt="" />
+      <img class="decor octopus" src="./assets/mascot-octopus.png" alt="" />
+      <img class="decor starfish-left" src="./assets/mascot-starfish-pink.png" alt="" />
+      <img class="decor starfish-bottom" src="./assets/mascot-starfish-orange.png" alt="" />
+      <img class="decor pearl-shell" src="./assets/prop-pearl-shell.png" alt="" />
+
+      <section class="panel" aria-label="Game controls">
+        <img class="panel-bg" src="./assets/panel-main.png" alt="" />
+
+        <button class="back-button image-button" type="button">
+          <span class="button-visual aqua-pill"></span>
+          <span class="button-content">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+            <span>Quay lại</span>
+          </span>
+        </button>
+
+        <div class="title-block">
+          <img class="title-jellyfish" src="./assets/mascot-jellyfish.png" alt="" />
+          <div class="title-text">
+            <span class="title-line top">Ghép Hình</span>
+            <span class="title-line bottom">Đại Dương</span>
+          </div>
+          <button class="sound-button" type="button" aria-label="Âm thanh">
+            <img src="./assets/icon-sound.png" alt="" />
+          </button>
+          <img class="title-turtle" src="./assets/mascot-turtle.png" alt="" />
+        </div>
+
+        <div class="mode-card">
+          <div class="mode-title"><span class="mode-emoji">🐚</span><span>Lưới</span></div>
+          <div class="size-buttons">
+            <button class="size-btn image-button" type="button">
+              <span class="button-visual aqua-pill"></span>
+              <span class="button-content">4x4</span>
+            </button>
+            <button class="size-btn image-button" type="button">
+              <span class="button-visual aqua-pill"></span>
+              <span class="button-content">5x5</span>
+            </button>
+            <button class="size-btn image-button active" type="button">
+              <span class="button-visual orange-pill"></span>
+              <span class="button-content">6x6</span>
+              <span class="sparkle">★</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card time">
+            <div class="stat-icon clock-icon" aria-hidden="true"></div>
+            <div class="stat-copy">
+              <p class="stat-label">Thời gian</p>
+              <p class="stat-value">00:00</p>
+            </div>
+          </article>
+
+          <article class="stat-card moves">
+            <div class="stat-icon star-icon" aria-hidden="true">★</div>
+            <div class="stat-copy">
+              <p class="stat-label">Lượt</p>
+              <p class="stat-value accent-orange">0</p>
+            </div>
+          </article>
+
+          <article class="stat-card pairs">
+            <div class="stat-icon shell-icon" aria-hidden="true">◔</div>
+            <div class="stat-copy">
+              <p class="stat-label">Cặp</p>
+              <p class="stat-value accent-green">0<span class="subtle">/18</span></p>
+            </div>
+          </article>
+
+          <article class="stat-card best">
+            <div class="stat-icon trophy-icon" aria-hidden="true">🏆</div>
+            <div class="stat-copy">
+              <p class="stat-label">Tốt nhất</p>
+              <p class="stat-value accent-purple">--</p>
+            </div>
+          </article>
+        </div>
+
+        <button class="restart-button image-button" type="button">
+          <span class="button-visual replay-pill"></span>
+          <span class="button-content restart-content">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 1-6.3 4"/><path d="M5.2 4.8v5.1h5.1"/></svg>
+            <span>Chơi lại 6x6</span>
+          </span>
+        </button>
+      </section>
+
+      <section class="board" aria-label="Memory grid">
+        <div class="cards-grid">
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+          <div class="memory-card" aria-hidden="true"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

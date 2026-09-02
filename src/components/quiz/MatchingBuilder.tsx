@@ -60,27 +60,18 @@ export function MatchingBuilder({ initialData, onChange }: MatchingBuilderProps)
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Dung lượng ảnh quá lớn (tối đa 5MB)');
-      return;
-    }
-
     const key = `${id}_${field}`;
     setUploadingState(prev => ({ ...prev, [key]: true }));
 
     try {
-      const { uploadMedia } = await import('@/actions/upload-actions');
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await uploadMedia(formData);
-      if (res.success && res.url) {
-        updatePair(id, field, res.url);
-      } else {
-        alert('Tải ảnh thất bại: ' + res.error);
+      const { uploadImageFast } = await import('@/lib/direct-upload');
+      const url = await uploadImageFast(file);
+      if (url) {
+        updatePair(id, field, url);
       }
     } catch (err: any) {
       console.error(err);
-      alert('Có lỗi xảy ra khi tải ảnh lên.');
+      alert('Có lỗi xảy ra khi tải và nén ảnh lên: ' + (err.message || 'Lỗi không xác định'));
     } finally {
       setUploadingState(prev => ({ ...prev, [key]: false }));
     }

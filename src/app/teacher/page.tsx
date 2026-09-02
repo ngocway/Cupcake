@@ -4,10 +4,12 @@ import { MatchGameCards } from "./_components/MatchGameCards";
 import { MyMatchGamesList } from "./_components/MyMatchGamesList";
 import { auth } from "@/auth";
 import { TeacherLoginModalAuto } from "./_components/TeacherLoginModalAuto";
-import { getTeacherMatchGamesAction } from "@/actions/teacher-match-games";
+import { getTeacherMatchGamesAction, getTeacherFlipGamesAction } from "@/actions/teacher-match-games";
 
 import { MyChoiceGamesList } from "./_components/MyChoiceGamesList";
 import { ChoiceGameCards } from "./_components/ChoiceGameCards";
+import { FlipGameCards } from "./_components/FlipGameCards";
+import { MyFlipGamesList } from "./_components/MyFlipGamesList";
 
 export default async function TeacherHomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
@@ -20,6 +22,14 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
     const res = await getTeacherMatchGamesAction();
     if (res.success && res.topics) {
       initialTopics = res.topics;
+    }
+  }
+
+  let initialFlipTopics: any[] = [];
+  if (activeTab === "my-flip-games" && isAuthenticated) {
+    const res = await getTeacherFlipGamesAction();
+    if (res.success && res.topics) {
+      initialFlipTopics = res.topics;
     }
   }
 
@@ -37,6 +47,10 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
           {activeTab === "choice" && <ChoiceGameCards />}
 
           {activeTab === "my-choice-games" && <MyChoiceGamesList />}
+
+          {activeTab === "flip" && <FlipGameCards />}
+
+          {activeTab === "my-flip-games" && <MyFlipGamesList initialTopics={initialFlipTopics} />}
 
           {activeTab === "fill" && (
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">

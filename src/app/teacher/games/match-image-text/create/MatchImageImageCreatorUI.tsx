@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { searchImagesAction } from "@/actions/image-search-actions";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { uploadMedia } from "@/actions/upload-actions";
+import { uploadImageFast } from "@/lib/direct-upload";
 
 export interface ImageCardPair {
   id: string;
@@ -36,12 +37,14 @@ export interface ImageCardPair {
   imageAUrl?: string;
   imageAFileName?: string;
   imageAFile?: File;
+  isUploadingA?: boolean;
   labelA?: string;
 
   // Image B
   imageBUrl?: string;
   imageBFileName?: string;
   imageBFile?: File;
+  isUploadingB?: boolean;
   labelB?: string;
 }
 
@@ -190,7 +193,12 @@ export function MatchImageImageCreatorUI() {
       return;
     }
     const roundTitle = rounds[index].title;
-    const updated = rounds.filter((_, i) => i !== index);
+    const updated = rounds
+      .filter((_, i) => i !== index)
+      .map((r, i) => ({
+        ...r,
+        title: `Vòng ${i + 1}`,
+      }));
     setRounds(updated);
     if (activeRoundIndex >= updated.length) {
       setActiveRoundIndex(updated.length - 1);
@@ -303,7 +311,7 @@ export function MatchImageImageCreatorUI() {
     }
   };
 
-  const handleSingleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSingleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeUploadTarget) return;
 
@@ -312,23 +320,38 @@ export function MatchImageImageCreatorUI() {
       return;
     }
 
-    const objectUrl = URL.createObjectURL(file);
     const { pairId, side } = activeUploadTarget;
+    const tempUrl = URL.createObjectURL(file);
 
-    const updatedRounds = [...rounds];
-    updatedRounds[activeRoundIndex] = {
-      ...currentRound,
-      pairs: pairs.map(p => {
-        if (p.id === pairId) {
-          return side === "A"
-            ? { ...p, imageAUrl: objectUrl, imageAFileName: file.name, imageAFile: file }
-            : { ...p, imageBUrl: objectUrl, imageBFileName: file.name, imageBFile: file };
-        }
-        return p;
-      }),
-    };
-    setRounds(updatedRounds);
-    toast.success(`Đã tải ảnh vế ${side} lên thành công!`);
+    setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
+      ...r,
+      pairs: r.pairs.map(p => p.id === pairId ? (
+        side === "A"
+          ? { ...p, imageAUrl: tempUrl, imageAFile: file, isUploadingA: true }
+          : { ...p, imageBUrl: tempUrl, imageBFile: file, isUploadingB: true }
+      ) : p)
+    }));
+
+    try {
+      const finalUrl = await uploadImageFast(file);
+      setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
+        ...r,
+        pairs: r.pairs.map(p => p.id === pairId ? (
+          side === "A"
+            ? { ...p, imageAUrl: finalUrl, imageAFile: undefined, isUploadingA: false }
+            : { ...p, imageBUrl: finalUrl, imageBFile: undefined, isUploadingB: false }
+        ) : p)
+      }));
+      toast.success(`Đã tải & nén ảnh vế ${side} thành công!`);
+    } catch (err: any) {
+      toast.error(`Tải ảnh vế ${side} thất bại: ${err.message}`);
+      setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
+        ...r,
+        pairs: r.pairs.map(p => p.id === pairId ? (
+          side === "A" ? { ...p, isUploadingA: false } : { ...p, isUploadingB: false }
+        ) : p)
+      }));
+    }
   };
 
   // Bulk Upload Images Handler
@@ -339,34 +362,39 @@ export function MatchImageImageCreatorUI() {
     }
   };
 
-  const handleBulkImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBulkImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
     if (files.length === 0) {
       toast.error("Không tìm thấy file hình ảnh hợp lệ!");
       return;
     }
 
-    // Group selected files into pairs of 2
+    toast.info(`Đang nén và tải lên ${files.length} ảnh trong nền...`);
+
+    const itemsToProcess: Array<{ pairId: string; fileA?: File; fileB?: File }> = [];
     const newPairs: ImageCardPair[] = [];
     for (let i = 0; i < files.length; i += 2) {
       const fileA = files[i];
       const fileB = files[i + 1];
+      const pairId = `pair-bulk-${Date.now()}-${i}`;
 
+      itemsToProcess.push({ pairId, fileA, fileB });
       newPairs.push({
-        id: `pair-bulk-${Date.now()}-${i}`,
+        id: pairId,
         imageAUrl: fileA ? URL.createObjectURL(fileA) : undefined,
         imageAFileName: fileA?.name,
         imageAFile: fileA,
+        isUploadingA: Boolean(fileA),
         labelA: fileA ? fileA.name.replace(/\.[^/.]+$/, "") : undefined,
 
         imageBUrl: fileB ? URL.createObjectURL(fileB) : undefined,
         imageBFileName: fileB?.name,
         imageBFile: fileB,
+        isUploadingB: Boolean(fileB),
         labelB: fileB ? fileB.name.replace(/\.[^/.]+$/, "") : undefined,
       });
     }
 
-    // Distribute pairs into rounds (Max 10 rounds)
     const newRounds: GameRound[] = [];
     const totalRounds = Math.min(Math.ceil(newPairs.length / MAX_PAIRS_PER_ROUND), MAX_ROUNDS);
 
@@ -381,7 +409,37 @@ export function MatchImageImageCreatorUI() {
 
     setRounds(newRounds);
     setActiveRoundIndex(0);
-    toast.success(`Đã tải lên ${files.length} ảnh và tự động tạo ${newRounds.length} Vòng chơi!`);
+
+    itemsToProcess.forEach(({ pairId, fileA, fileB }) => {
+      if (fileA) {
+        uploadImageFast(fileA).then((url) => {
+          setRounds(prev => prev.map(r => ({
+            ...r,
+            pairs: r.pairs.map(p => p.id === pairId ? { ...p, imageAUrl: url, imageAFile: undefined, isUploadingA: false } : p)
+          })));
+        }).catch(() => {
+          setRounds(prev => prev.map(r => ({
+            ...r,
+            pairs: r.pairs.map(p => p.id === pairId ? { ...p, isUploadingA: false } : p)
+          })));
+        });
+      }
+      if (fileB) {
+        uploadImageFast(fileB).then((url) => {
+          setRounds(prev => prev.map(r => ({
+            ...r,
+            pairs: r.pairs.map(p => p.id === pairId ? { ...p, imageBUrl: url, imageBFile: undefined, isUploadingB: false } : p)
+          })));
+        }).catch(() => {
+          setRounds(prev => prev.map(r => ({
+            ...r,
+            pairs: r.pairs.map(p => p.id === pairId ? { ...p, isUploadingB: false } : p)
+          })));
+        });
+      }
+    });
+
+    toast.success(`Đã tạo ${newRounds.length} Vòng chơi! Các ảnh đang được nén & tải lên ngầm...`);
   };
 
   const handleOpenImageSearch = (pair: ImageCardPair, side: "A" | "B") => {
@@ -612,40 +670,17 @@ export function MatchImageImageCreatorUI() {
     toast.loading("Đang lưu bài tập Nối Cặp Ảnh - Ảnh...", { id: "save-game-toast" });
 
     try {
-      // Upload all local image files across rounds concurrently in parallel
+      // Fast image processing for any remaining unuploaded files
       const allPairsToSave = await Promise.all(
         rounds.flatMap((round, roundIndex) => round.pairs.map((pair) => ({ pair, roundIndex }))).map(async ({ pair, roundIndex }) => {
-          const [finalImageAUrl, finalImageBUrl] = await Promise.all([
-            // Task A: Process Image A file
-            (async () => {
-              if (pair.imageAFile) {
-                const formDataA = new FormData();
-                formDataA.append("file", pair.imageAFile);
-                const uploadResA = await uploadMedia(formDataA);
-                if (uploadResA.url) {
-                  return uploadResA.url;
-                } else {
-                  throw new Error(`Không thể tải ảnh vế A cho cặp thẻ "${pair.labelA || 'ảnh'}"!`);
-                }
-              }
-              return pair.imageAUrl;
-            })(),
-
-            // Task B: Process Image B file
-            (async () => {
-              if (pair.imageBFile) {
-                const formDataB = new FormData();
-                formDataB.append("file", pair.imageBFile);
-                const uploadResB = await uploadMedia(formDataB);
-                if (uploadResB.url) {
-                  return uploadResB.url;
-                } else {
-                  throw new Error(`Không thể tải ảnh vế B cho cặp thẻ "${pair.labelB || 'ảnh'}"!`);
-                }
-              }
-              return pair.imageBUrl;
-            })(),
-          ]);
+          let finalImageAUrl = pair.imageAUrl;
+          if (pair.imageAFile) {
+            finalImageAUrl = await uploadImageFast(pair.imageAFile);
+          }
+          let finalImageBUrl = pair.imageBUrl;
+          if (pair.imageBFile) {
+            finalImageBUrl = await uploadImageFast(pair.imageBFile);
+          }
 
           return {
             roundIndex,
@@ -786,7 +821,7 @@ export function MatchImageImageCreatorUI() {
                 <button
                   key={round.id}
                   onClick={() => setActiveRoundIndex(idx)}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                  className={`group/tab relative px-4 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
                     activeRoundIndex === idx
                       ? "bg-sky-500 text-white shadow-md shadow-sky-500/20"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -797,6 +832,19 @@ export function MatchImageImageCreatorUI() {
                   <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">
                     {round.pairs.length} cặp
                   </span>
+
+                  {rounds.length > 1 && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveRound(idx);
+                      }}
+                      className="w-4 h-4 rounded-full bg-black/10 hover:bg-rose-600 hover:text-white flex items-center justify-center text-[10px] ml-0.5 transition-all cursor-pointer"
+                      title={`Xóa ${round.title}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </span>
+                  )}
                 </button>
               ))}
 
@@ -808,17 +856,6 @@ export function MatchImageImageCreatorUI() {
                 <span>Thêm Vòng Mới</span>
               </button>
             </div>
-
-            {rounds.length > 1 && (
-              <button
-                onClick={() => handleRemoveRound(activeRoundIndex)}
-                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-bold transition-all flex items-center gap-1"
-                title="Xóa vòng hiện tại"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Xóa {currentRound.title}</span>
-              </button>
-            )}
           </div>
 
           {/* Pair Items 3-Column Grid Container */}
