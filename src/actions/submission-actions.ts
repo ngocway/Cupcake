@@ -57,7 +57,18 @@ export async function completeSubmission(submissionId: string, answers: any) {
 
             case "TRUE_FALSE": {
               stringifiedAns = String(studentAns)
-              isCorrect = studentAns === content.isTrue
+              if (typeof content.isTrue === "boolean") {
+                isCorrect = studentAns === content.isTrue
+              } else if (Array.isArray(content.options)) {
+                const userBool = studentAns === true || String(studentAns).toLowerCase() === "true";
+                const matchedOpt = content.options.find((opt: any) => {
+                  const normText = (opt.text || "").toLowerCase().trim();
+                  return userBool 
+                    ? (normText === "true" || normText === "đúng" || normText === "yes") 
+                    : (normText === "false" || normText === "sai" || normText === "no");
+                });
+                isCorrect = !!matchedOpt?.isCorrect;
+              }
               break;
             }
 

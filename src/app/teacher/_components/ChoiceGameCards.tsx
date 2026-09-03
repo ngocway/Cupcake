@@ -22,6 +22,14 @@ const CHOICE_GAMES: GameCard[] = [
     desc: "Học sinh điều khiển tháp pháo bắn phá các khối cầu mang đáp án đúng để ghi điểm và tích lũy combo trong không gian Neon Sci-Fi.",
     videoId: "swQq7b0V68E",
   },
+  {
+    id: "egg-crack",
+    title: "Đập Trứng Toán Học",
+    badge: "ĐẬP TRỨNG",
+    badgeBg: "bg-amber-500 text-white",
+    desc: "Học sinh đập vỡ các quả trứng mang đáp án đúng để tích lũy xu thưởng, nhân sao và chinh phục bảng xếp hạng.",
+    videoId: "swQq7b0V68E",
+  },
 ];
 
 function ChoiceGameCardItem({ game }: { game: GameCard }) {
@@ -38,6 +46,9 @@ function ChoiceGameCardItem({ game }: { game: GameCard }) {
   };
 
   const getHref = () => {
+    if (game.id === "egg-crack") {
+      return `/teacher/games/choice-egg/create`;
+    }
     return `/teacher/games/choice-shooter/create`;
   };
 

@@ -103,7 +103,17 @@ const getQuestionStatus = (q: any, answer: any) => {
   }
 
   if (qType === "TRUE_FALSE") {
-    return answer === questionData.isTrue ? 'correct' : 'incorrect';
+    if (typeof questionData.isTrue === "boolean") {
+      return answer === questionData.isTrue ? 'correct' : 'incorrect';
+    }
+    if (Array.isArray(questionData.options)) {
+      const selectedOpt = questionData.options.find((o: any) => {
+        const normText = (o.text || "").toLowerCase().trim();
+        return answer ? (normText === "true" || normText === "đúng" || normText === "yes") : (normText === "false" || normText === "sai" || normText === "no");
+      });
+      return selectedOpt?.isCorrect ? 'correct' : 'incorrect';
+    }
+    return 'incorrect';
   }
 
   if (qType === "CLOZE_TEST") {
@@ -1394,7 +1404,16 @@ export default function QuizClientRunner({
                             ].map((opt, i) => {
                               const blobShape = blobShapes[i % blobShapes.length];
                               const isSelected = userAnswer === opt.value;
-                              const isCorrect = questionData.isTrue === opt.value;
+                              let isCorrect = false;
+                              if (typeof questionData.isTrue === "boolean") {
+                                isCorrect = questionData.isTrue === opt.value;
+                              } else if (Array.isArray(questionData.options)) {
+                                const matchedOpt = questionData.options.find((o: any) => {
+                                  const normText = (o.text || "").toLowerCase().trim();
+                                  return opt.value ? (normText === "true" || normText === "đúng" || normText === "yes") : (normText === "false" || normText === "sai" || normText === "no");
+                                });
+                                isCorrect = !!matchedOpt?.isCorrect;
+                              }
                               let borderClass = '';
                               let bgClass = '';
                               let textClass = '';

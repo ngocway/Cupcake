@@ -1,0 +1,123 @@
+
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app">
+    <section id="gameRoot" class="game-root" aria-label="Game đập trứng toán học">
+      <div class="scene">
+        <img class="scene-bg" src="assets/background-farm-no-nest.png" alt="Phông nền nông trại vui nhộn" draggable="false" />
+        <div class="ambient-layer" aria-hidden="true">
+          <img class="bee sprite bee-1" src="assets/bee-premium.png" alt="" draggable="false" />
+          <img class="butterfly sprite butterfly-2" src="assets/butterfly-blue-premium.png" alt="" draggable="false" />
+
+          <div class="flower-sway flower-2"><img class="sprite flower" src="assets/flower-yellow-premium.png" alt="" draggable="false" /></div>
+          <div class="flower-sway flower-3"><img class="sprite flower" src="assets/flower-white-premium.png" alt="" draggable="false" /></div>
+        </div>
+
+
+        <header class="hud">
+          <div class="hud-pill question-pill">
+            <span id="questionCounter" class="value">1/10</span>
+          </div>
+
+          <div class="hud-pill coin-pill">
+            <span id="coinValue" class="value value-white">160</span>
+            <button id="addCoinBtn" class="mini-plus-overlay" type="button" aria-label="Cộng xu"></button>
+          </div>
+        </header>
+
+        <section class="question-panel">
+          <div id="questionText" class="question-text">15 - 8 = ?</div>
+        </section>
+
+        <div id="effectLayer" class="effect-layer" aria-hidden="true"></div>
+        <div id="coinBurst" class="coin-burst" aria-hidden="true">+15</div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+        <img id="customCursorHammer" class="custom-cursor-hammer hidden" src="assets/hammer-cursor.png" alt="" draggable="false" />
+
+        <div id="eggsWrap" class="eggs-wrap" aria-label="4 đáp án">
+          <div class="nest-slot pos-1">
+            <img class="nest-straw" src="assets/nest-straw.png" alt="" draggable="false" />
+            <button class="egg-btn" data-egg-color="blue" data-index="0" type="button" aria-label="Đáp án 1">
+              <span class="egg-glow"></span>
+              <img class="egg-intact" src="assets/egg-blue.png" alt="" draggable="false" />
+              <img class="egg-half half-top" src="assets/egg-blue.png" alt="" draggable="false" />
+              <img class="egg-half half-bottom" src="assets/egg-blue.png" alt="" draggable="false" />
+              <span class="answer-label">6</span>
+              <span class="egg-mark wrong-x"></span>
+              <span class="egg-poof"></span>
+            </button>
+          </div>
+
+          <div class="nest-slot pos-2">
+            <img class="nest-straw" src="assets/nest-straw.png" alt="" draggable="false" />
+            <button class="egg-btn" data-egg-color="green" data-index="1" type="button" aria-label="Đáp án 2">
+              <span class="egg-glow"></span>
+              <img class="egg-intact" src="assets/egg-green.png" alt="" draggable="false" />
+              <img class="egg-half half-top" src="assets/egg-green.png" alt="" draggable="false" />
+              <img class="egg-half half-bottom" src="assets/egg-green.png" alt="" draggable="false" />
+              <span class="answer-label">8</span>
+              <span class="egg-mark wrong-x"></span>
+              <span class="egg-poof"></span>
+            </button>
+          </div>
+
+          <div class="nest-slot pos-3">
+            <img class="nest-straw" src="assets/nest-straw.png" alt="" draggable="false" />
+            <button class="egg-btn" data-egg-color="pink" data-index="2" type="button" aria-label="Đáp án 3">
+              <span class="egg-glow"></span>
+              <img class="egg-intact" src="assets/egg-pink.png" alt="" draggable="false" />
+              <img class="egg-half half-top" src="assets/egg-pink.png" alt="" draggable="false" />
+              <img class="egg-half half-bottom" src="assets/egg-pink.png" alt="" draggable="false" />
+              <span class="answer-label">9</span>
+              <span class="egg-mark wrong-x"></span>
+              <span class="egg-poof"></span>
+            </button>
+          </div>
+
+          <div class="nest-slot pos-4">
+            <img class="nest-straw" src="assets/nest-straw.png" alt="" draggable="false" />
+            <button class="egg-btn" data-egg-color="purple" data-index="3" type="button" aria-label="Đáp án 4">
+              <span class="egg-glow"></span>
+              <img class="egg-intact" src="assets/egg-purple.png" alt="" draggable="false" />
+              <img class="egg-half half-top" src="assets/egg-purple.png" alt="" draggable="false" />
+              <img class="egg-half half-bottom" src="assets/egg-purple.png" alt="" draggable="false" />
+              <span class="answer-label">7</span>
+              <span class="egg-mark wrong-x"></span>
+              <span class="egg-poof"></span>
+            </button>
+          </div>
+        </div>
+
+        <div id="pauseOverlay" class="overlay hidden">
+          <div class="modal-card">
+            <h2>Tạm dừng</h2>
+            <p>Bé bấm tiếp tục để chơi nhé.</p>
+            <button id="resumeBtn" class="primary-btn" type="button">Tiếp tục</button>
+          </div>
+        </div>
+
+        <div id="resultOverlay" class="overlay hidden">
+          <div class="modal-card">
+            <h2 id="resultTitle">Chính xác!</h2>
+            <p id="resultDesc">Bé đã chọn đúng đáp án.</p>
+            <div class="result-actions">
+              <button id="nextBtn" class="primary-btn" type="button">Câu tiếp theo</button>
+              <button id="restartBtn" class="secondary-btn" type="button">Chơi lại từ đầu</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>

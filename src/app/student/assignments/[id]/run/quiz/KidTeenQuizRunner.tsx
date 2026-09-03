@@ -99,7 +99,17 @@ const getQuestionStatus = (q: any, answer: any) => {
     }
   }
   if (qType === "TRUE_FALSE") {
-    return answer === questionData.isTrue ? "correct" : "incorrect";
+    if (typeof questionData.isTrue === "boolean") {
+      return answer === questionData.isTrue ? "correct" : "incorrect";
+    }
+    if (Array.isArray(questionData.options)) {
+      const selectedOpt = questionData.options.find((o: any) => {
+        const normText = (o.text || "").toLowerCase().trim();
+        return answer ? (normText === "true" || normText === "đúng" || normText === "yes") : (normText === "false" || normText === "sai" || normText === "no");
+      });
+      return selectedOpt?.isCorrect ? "correct" : "incorrect";
+    }
+    return "incorrect";
   }
   if (qType === "CLOZE_TEST") {
     const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
@@ -2161,7 +2171,16 @@ export default function KidTeenQuizRunner({
                     },
                   ].map((opt, i) => {
                     const isSelected = userAnswer === opt.value;
-                    const isCorrectOpt = currentQuestionData.isTrue === opt.value;
+                    let isCorrectOpt = false;
+                    if (typeof currentQuestionData.isTrue === "boolean") {
+                      isCorrectOpt = currentQuestionData.isTrue === opt.value;
+                    } else if (Array.isArray(currentQuestionData.options)) {
+                      const matchedOpt = currentQuestionData.options.find((o: any) => {
+                        const normText = (o.text || "").toLowerCase().trim();
+                        return opt.value ? (normText === "true" || normText === "đúng" || normText === "yes") : (normText === "false" || normText === "sai" || normText === "no");
+                      });
+                      isCorrectOpt = !!matchedOpt?.isCorrect;
+                    }
                     
                     let btnStyle = "";
                     let iconBgColor = "";

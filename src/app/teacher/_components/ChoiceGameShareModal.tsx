@@ -8,6 +8,7 @@ interface ChoiceGameShareModalProps {
   onClose: () => void;
   gameTitle: string;
   gameCode: string;
+  directPath?: string;
 }
 
 export function ChoiceGameShareModal({
@@ -15,12 +16,13 @@ export function ChoiceGameShareModal({
   onClose,
   gameTitle,
   gameCode,
+  directPath,
 }: ChoiceGameShareModalProps) {
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
 
-  const directLink = `${typeof window !== "undefined" ? window.location.origin : ""}/game/shooter/${gameCode}`;
+  const directLink = `${typeof window !== "undefined" ? window.location.origin : ""}${directPath || `/game/shooter/${gameCode}`}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(directLink);
