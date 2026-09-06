@@ -29,6 +29,7 @@ export interface SaveCandyQuizPayload {
   title: string;
   gradeLevel?: string;
   rounds: QuizRound[];
+  gameMode?: string;
 }
 
 export async function getCandyQuizGameDetailsAction(topicId: string) {
@@ -144,6 +145,11 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
       return { success: false, error: "Bài tập phải có ít nhất 1 câu hỏi!" };
     }
 
+    const targetGameMode = data.gameMode || "candy-quiz";
+    const isTreasure = targetGameMode === "treasure-hunt";
+    const targetGameName = isTreasure ? "Trò chơi Truy tìm Kho báu" : "Trò chơi Trắc nghiệm Kẹo Ngọt";
+    const defaultIcon = isTreasure ? "🗺️" : "🍬";
+
     // If updating an existing topic
     if (data.topicId) {
       await prisma.matchWordItem.deleteMany({
@@ -156,7 +162,7 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
           name: data.title,
           ageGroup: data.gradeLevel || "kids-2-5",
           audioMode: "NONE",
-          gameMode: "candy-quiz",
+          gameMode: targetGameMode,
           items: {
             create: flatItems.map((item) => ({
               roundIndex: item.roundIndex,
@@ -175,7 +181,6 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
     }
 
     // Create container game if not exists
-    const targetGameName = "Trò chơi Trắc nghiệm Kẹo Ngọt";
     let game = await prisma.matchWordGame.findFirst({
       where: {
         name: targetGameName,
@@ -200,9 +205,9 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
         name: data.title,
         slug,
         ageGroup: data.gradeLevel || "kids-2-5",
-        icon: "🍬",
+        icon: defaultIcon,
         audioMode: "NONE",
-        gameMode: "candy-quiz",
+        gameMode: targetGameMode,
         teacherId: session?.user?.id || null,
         items: {
           create: flatItems.map((item) => ({
@@ -220,7 +225,7 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
     revalidatePath("/teacher");
     return { success: true, topicId: topic.id, slug: topic.slug };
   } catch (error: any) {
-    console.error("Failed to save candy quiz game:", error);
+    console.error("Failed to save quiz game:", error);
     return { success: false, error: error.message || "Failed to save game to database" };
   }
 }
@@ -238,14 +243,18 @@ export async function getTeacherQuizGamesAction() {
       ? {
           OR: [
             { gameMode: "candy-quiz" },
+            { gameMode: "treasure-hunt" },
             { game: { name: { contains: "Trắc nghiệm" } } },
+            { game: { name: { contains: "Kho báu" } } },
           ],
         }
       : {
           teacherId: session.user.id,
           OR: [
             { gameMode: "candy-quiz" },
+            { gameMode: "treasure-hunt" },
             { game: { name: { contains: "Trắc nghiệm" } } },
+            { game: { name: { contains: "Kho báu" } } },
           ],
         };
 
@@ -282,18 +291,21 @@ export async function getTeacherQuizGamesAction() {
       },
     });
 
-    const topics = rawTopics.map((t) => ({
-      id: t.id,
-      name: t.name,
-      createdAt: t.createdAt,
-      gameMode: t.gameMode || "candy-quiz",
-      game: {
-        ...t.game,
-        name: "Trò chơi Trắc nghiệm Kẹo Ngọt",
-      },
-      items: t.items,
-      totalItems: t._count.items,
-    }));
+    const topics = rawTopics.map((t) => {
+      const isTreasure = t.gameMode === "treasure-hunt" || t.game?.name?.includes("Kho báu");
+      return {
+        id: t.id,
+        name: t.name,
+        createdAt: t.createdAt,
+        gameMode: t.gameMode || (isTreasure ? "treasure-hunt" : "candy-quiz"),
+        game: {
+          ...t.game,
+          name: t.game?.name || (isTreasure ? "Trò chơi Truy tìm Kho báu" : "Trò chơi Trắc nghiệm Kẹo Ngọt"),
+        },
+        items: t.items,
+        totalItems: t._count.items,
+      };
+    });
 
     return { success: true, topics };
   } catch (error: any) {

@@ -12,6 +12,8 @@ interface GameCard {
   desc: string;
   videoId?: string;
   imageUrl?: string;
+  createHref?: string;
+  titleColor?: string;
 }
 
 const QUIZ_GAMES: GameCard[] = [
@@ -23,6 +25,18 @@ const QUIZ_GAMES: GameCard[] = [
     desc: "Học sinh tham gia trả lời các câu hỏi và 4 đáp án dạng câu văn dài trên giao diện Xứ sở Kẹo Ngọt (Candy World) đầy màu sắc và âm thanh vui nhộn.",
     imageUrl: "/images/games/candy-quiz.jpg",
     videoId: "swQq7b0V68E",
+    createHref: "/teacher/games/candy-quiz/create",
+    titleColor: "text-pink-600 dark:text-pink-400",
+  },
+  {
+    id: "treasure-hunt",
+    title: "Truy tìm Kho báu",
+    badge: "KHO BÁU",
+    badgeBg: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white",
+    desc: "Học sinh tham gia trả lời các câu hỏi trắc nghiệm để mở khóa các ô bí ẩn trên bản đồ hải tặc kỳ bí và thu thập các rương vàng quý giá.",
+    imageUrl: "/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
+    createHref: "/teacher/games/treasure-hunt/create",
+    titleColor: "text-amber-600 dark:text-amber-400",
   },
 ];
 
@@ -42,7 +56,7 @@ function QuizGameCardItem({ game }: { game: GameCard }) {
   };
 
   const getHref = () => {
-    return `/teacher/games/candy-quiz/create`;
+    return game.createHref || `/teacher/games/${game.id}/create`;
   };
 
   return (
@@ -118,7 +132,7 @@ function QuizGameCardItem({ game }: { game: GameCard }) {
       {/* Bottom Content Container */}
       <div className="p-6 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900">
         <div>
-          <h3 className="font-headline font-black text-lg sm:text-xl mb-2 leading-tight text-pink-600 dark:text-pink-400">
+          <h3 className={`font-headline font-black text-lg sm:text-xl mb-2 leading-tight ${game.titleColor || "text-pink-600 dark:text-pink-400"}`}>
             {game.title}
           </h3>
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-6">

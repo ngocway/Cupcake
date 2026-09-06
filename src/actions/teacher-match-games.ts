@@ -15,17 +15,19 @@ export async function getTeacherMatchGamesAction() {
     const isAdmin = session.user.role === "ADMIN";
     const whereCondition: any = isAdmin
       ? {
-          OR: [
-            { game: { is: null } },
-            { game: { name: { not: { contains: "Lật Ảnh" } } } }
-          ]
+          game: { name: { not: { contains: "Lật Ảnh" } } },
+          NOT: [
+            { gameMode: "candy-quiz" },
+            { gameMode: "treasure-hunt" },
+          ],
         }
       : { 
           teacherId: session.user.id,
-          OR: [
-            { game: { is: null } },
-            { game: { name: { not: { contains: "Lật Ảnh" } } } }
-          ]
+          game: { name: { not: { contains: "Lật Ảnh" } } },
+          NOT: [
+            { gameMode: "candy-quiz" },
+            { gameMode: "treasure-hunt" },
+          ],
         };
 
     const rawTopics = await prisma.matchWordTopic.findMany({

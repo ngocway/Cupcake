@@ -206,8 +206,7 @@ body {
   font-size: 62px;
   font-weight: 900;
   color: #fff8da;
-  -webkit-text-stroke: 4px #76431c;
-  text-shadow: 0 5px 0 rgba(121, 56, 12, .65), 0 8px 12px rgba(0,0,0,.2);
+  text-shadow: -3px -3px 0 #76431c, 3px -3px 0 #76431c, -3px 3px 0 #76431c, 3px 3px 0 #76431c, 0 5px 0 rgba(121, 56, 12, .65), 0 8px 12px rgba(0,0,0,.2);
 }
 .tile::after {
   content: "";
@@ -340,8 +339,7 @@ body {
   font-weight: 900;
   letter-spacing: 1px;
   text-transform: uppercase;
-  -webkit-text-stroke: 3px #6e3406;
-  text-shadow: 0 6px 0 rgba(101,50,10,.65);
+  text-shadow: -3px -3px 0 #6e3406, 3px -3px 0 #6e3406, -3px 3px 0 #6e3406, 3px 3px 0 #6e3406, 0 6px 0 rgba(101,50,10,.65);
 }
 .modal-subtitle,
 .finish-subtitle {

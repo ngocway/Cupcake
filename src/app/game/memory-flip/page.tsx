@@ -792,8 +792,7 @@ function MemoryGameContent() {
         .title-text { position: absolute; left: 18.5%; top: 8%; width: 63%; line-height: 0.93; transform: rotate(-2deg); }
         .title-line {
           display: block; white-space: nowrap; font-weight: 800; letter-spacing: -0.035em;
-          paint-order: stroke fill; -webkit-text-stroke: 0.43cqw #fff;
-          text-shadow: 0 0.31cqw 0 #2468b9, 0 0.48cqw 0.5cqw rgba(9,74,138,0.18);
+          text-shadow: -0.2cqw -0.2cqw 0 #fff, 0.2cqw -0.2cqw 0 #fff, -0.2cqw 0.2cqw 0 #fff, 0.2cqw 0.2cqw 0 #fff, 0 0.31cqw 0 #2468b9, 0 0.48cqw 0.5cqw rgba(9,74,138,0.18);
         }
         .title-line.top { font-size: 3.35cqw; color: #f64c9d; }
         .title-line.bottom { font-size: 3.25cqw; color: #3dbcf7; margin-top: 0.10cqw; }
