@@ -19,8 +19,10 @@ import {
   Volume2,
   VolumeX,
   ShieldAlert,
-  Edit3
+  Edit3,
+  Trash2
 } from "lucide-react";
+import { toast } from "sonner";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceShooterGame, getChoiceShooterGameById, ChoiceShooterGame } from "@/lib/choice-shooter-storage";
 import { SciFiNeonShooterGame } from "@/app/_components/SciFiNeonShooterGame";
@@ -334,6 +336,36 @@ export default function CreateChoiceShooterPage() {
     setQuestions(next);
   };
 
+  const handleDeleteQuestion = (index: number) => {
+    if (questions.length <= 1) {
+      toast.error("Bài tập phải có ít nhất 1 câu hỏi!");
+      return;
+    }
+    const next = questions.filter((_, i) => i !== index);
+    setQuestions(next);
+    setQuestionCount(next.length);
+    toast.success(`Đã xóa câu hỏi #${index + 1}`);
+  };
+
+  const handleAddManualQuestion = () => {
+    if (questions.length >= 50) {
+      toast.warning("Đã đạt giới hạn tối đa 50 câu hỏi!");
+      return;
+    }
+    const newQ: GeneratedQuestion = {
+      id: Math.random().toString(36).substring(2, 9),
+      typeId: "custom",
+      q: "",
+      a: "",
+      wrong: ["", "", ""],
+    };
+    const next = [...questions, newQ];
+    setQuestions(next);
+    setQuestionCount(next.length);
+    if (step !== 2) setStep(2);
+    toast.success(`Đã thêm ô câu hỏi trống #${next.length}`);
+  };
+
   const handleSaveAndComplete = () => {
     if (questions.length === 0) return;
 
@@ -504,6 +536,30 @@ export default function CreateChoiceShooterPage() {
                         </div>
                       );
                     })}
+
+                    {/* Manual Question Entry Card (Cell #9 in Step 1 Grid) */}
+                    <div
+                      onClick={handleAddManualQuestion}
+                      className="p-5 rounded-3xl border-2 border-dashed border-emerald-300 dark:border-emerald-800/80 hover:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50/80 transition-all cursor-pointer flex flex-col justify-between gap-4 relative overflow-hidden group min-h-[135px]"
+                    >
+                      <div className="flex items-center justify-between relative z-10">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-xs bg-emerald-100 text-emerald-700 border-emerald-300">
+                          Thủ công
+                        </span>
+                        <div className="w-7 h-7 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+                          <Plus className="w-4 h-4 stroke-[3]" />
+                        </div>
+                      </div>
+
+                      <div className="relative z-10 space-y-1">
+                        <h4 className="font-headline font-black text-base text-emerald-600 dark:text-emerald-400 block">
+                          + Tự nhập câu hỏi thủ công
+                        </h4>
+                        <p className="text-xs font-semibold text-slate-400">
+                          Tạo câu hỏi & 4 đáp án tùy chỉnh từ đầu
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -734,18 +790,29 @@ export default function CreateChoiceShooterPage() {
                         type="text"
                         value={item.q}
                         onChange={(e) => handleUpdateQuestionText(idx, "q", e.target.value)}
-                        className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full"
+                        placeholder="Nhập câu hỏi..."
+                        className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full placeholder:text-slate-400 placeholder:font-normal"
                       />
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRerollSingleQuestion(idx)}
-                      title="Đổi câu hỏi khác"
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-emerald-950 text-slate-600 hover:text-emerald-600 transition-all shrink-0"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleRerollSingleQuestion(idx)}
+                        title="Đổi câu hỏi khác"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-emerald-100 dark:bg-slate-800 dark:hover:bg-emerald-950 text-slate-600 hover:text-emerald-600 transition-all cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteQuestion(idx)}
+                        title="Xóa câu hỏi này"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-rose-100 dark:bg-slate-800 dark:hover:bg-rose-950 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Correct & Wrong Answers Inputs Grid (2x2) */}
@@ -758,7 +825,8 @@ export default function CreateChoiceShooterPage() {
                         type="text"
                         value={item.a}
                         onChange={(e) => handleUpdateQuestionText(idx, "a", e.target.value)}
-                        className="px-2 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl font-mono font-black text-emerald-700 dark:text-emerald-300 text-xs text-center focus:outline-none"
+                        placeholder="Đáp án đúng"
+                        className="px-2 py-1.5 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl font-mono font-black text-emerald-700 dark:text-emerald-300 text-xs text-center focus:outline-none placeholder:text-emerald-400/70 placeholder:font-normal"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -769,7 +837,8 @@ export default function CreateChoiceShooterPage() {
                         type="text"
                         value={item.wrong[0]}
                         onChange={(e) => handleUpdateQuestionText(idx, "w0", e.target.value)}
-                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-medium text-slate-600 dark:text-slate-300 text-xs text-center focus:outline-none"
+                        placeholder="Đáp án sai 1"
+                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-medium text-slate-600 dark:text-slate-300 text-xs text-center focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -780,7 +849,8 @@ export default function CreateChoiceShooterPage() {
                         type="text"
                         value={item.wrong[1]}
                         onChange={(e) => handleUpdateQuestionText(idx, "w1", e.target.value)}
-                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-medium text-slate-600 dark:text-slate-300 text-xs text-center focus:outline-none"
+                        placeholder="Đáp án sai 2"
+                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-medium text-slate-600 dark:text-slate-300 text-xs text-center focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
                       />
                     </div>
                     <div className="flex flex-col gap-1">
@@ -791,12 +861,34 @@ export default function CreateChoiceShooterPage() {
                         type="text"
                         value={item.wrong[2]}
                         onChange={(e) => handleUpdateQuestionText(idx, "w2", e.target.value)}
-                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-medium text-slate-600 dark:text-slate-300 text-xs text-center focus:outline-none"
+                        placeholder="Đáp án sai 3"
+                        className="px-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-medium text-slate-600 dark:text-slate-300 text-xs text-center focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
                       />
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* Add Custom Question Button Card */}
+              {questions.length < 50 && (
+                <button
+                  type="button"
+                  onClick={handleAddManualQuestion}
+                  className="min-h-[195px] rounded-3xl border-2 border-dashed border-emerald-300 dark:border-emerald-800/60 hover:border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/10 hover:bg-emerald-50/70 p-5 flex flex-col items-center justify-center gap-2.5 transition-all group cursor-pointer"
+                >
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
+                    <Plus className="w-6 h-6 stroke-[3]" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-headline font-black text-sm text-emerald-600 dark:text-emerald-400 block">
+                      + Tự nhập câu hỏi
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-400">
+                      Thêm câu thứ {questions.length + 1} thủ công
+                    </span>
+                  </div>
+                </button>
+              )}
             </div>
           </div>
         )}

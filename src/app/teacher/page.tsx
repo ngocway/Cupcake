@@ -10,6 +10,9 @@ import { MyChoiceGamesList } from "./_components/MyChoiceGamesList";
 import { ChoiceGameCards } from "./_components/ChoiceGameCards";
 import { FlipGameCards } from "./_components/FlipGameCards";
 import { MyFlipGamesList } from "./_components/MyFlipGamesList";
+import { QuizGameCards } from "./_components/QuizGameCards";
+import { MyQuizGamesList } from "./_components/MyQuizGamesList";
+import { getTeacherQuizGamesAction } from "@/actions/candy-quiz-actions";
 
 export default async function TeacherHomePage({ searchParams }: { searchParams: Promise<any> }) {
   const params = await searchParams;
@@ -33,6 +36,14 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
     }
   }
 
+  let initialQuizTopics: any[] = [];
+  if (activeTab === "my-quiz-games" && isAuthenticated) {
+    const res = await getTeacherQuizGamesAction();
+    if (res.success && res.topics) {
+      initialQuizTopics = res.topics;
+    }
+  }
+
   return (
     <HomeShell>
       <TeacherLoginModalAuto isAuthenticated={isAuthenticated} />
@@ -51,6 +62,10 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
           {activeTab === "flip" && <FlipGameCards />}
 
           {activeTab === "my-flip-games" && <MyFlipGamesList initialTopics={initialFlipTopics} />}
+
+          {activeTab === "quiz" && <QuizGameCards />}
+
+          {activeTab === "my-quiz-games" && <MyQuizGamesList initialTopics={initialQuizTopics} />}
 
           {activeTab === "fill" && (
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">

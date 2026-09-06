@@ -1,0 +1,32 @@
+{
+  "background": [
+    "assets/background/candyland-clean-hq.png"
+  ],
+  "boards": [
+    "assets/boards/question-board-hq.png",
+    "assets/boards/answer-board-hq.png",
+    "assets/boards/instruction-hq.png"
+  ],
+  "hud": [
+    "assets/hud/question-counter-hq.png",
+    "assets/hud/star-progress-hq.png",
+    "assets/hud/coin-counter-hq.png",
+    "assets/hud/badge-a.svg",
+    "assets/hud/badge-b.svg",
+    "assets/hud/badge-c.svg",
+    "assets/hud/badge-d.svg"
+  ],
+  "buttons": [
+    "assets/buttons/pause-hq.png",
+    "assets/buttons/sound-hq.png"
+  ],
+  "effects": [
+    "assets/effects/sugar-ring.svg",
+    "assets/effects/sugar-star.svg",
+    "assets/effects/jelly-poof.svg",
+    "assets/effects/sprinkles.svg"
+  ],
+  "decor": [
+    "assets/decor/candy-hammer-hq.png"
+  ]
+}

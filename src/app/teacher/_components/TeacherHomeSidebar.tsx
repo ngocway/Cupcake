@@ -37,7 +37,7 @@ export function TeacherHomeSidebar() {
     localStorage.setItem("teacher_mygames_menu_open", String(next));
   };
 
-  const handleSelectTab = (tab: "match" | "choice" | "fill" | "flip" | "my-match-games" | "my-choice-games" | "my-fill-games" | "my-flip-games") => {
+  const handleSelectTab = (tab: "match" | "choice" | "fill" | "flip" | "quiz" | "my-match-games" | "my-choice-games" | "my-fill-games" | "my-flip-games" | "my-quiz-games") => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("tab", tab);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
@@ -96,6 +96,7 @@ export function TeacherHomeSidebar() {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
+            padding: 6px 4px;
           }
 
           .teacher-tile {
@@ -108,16 +109,19 @@ export function TeacherHomeSidebar() {
             cursor: pointer;
             border-radius: 20px 14px 20px 16px;
             position: relative;
+            z-index: 1;
           }
 
           .teacher-tile:nth-child(odd):hover {
             transform: scale(1.05) rotate(-1.5deg);
-            box-shadow: 0 8px 18px rgba(62, 53, 36, 0.1);
+            box-shadow: 0 8px 18px rgba(62, 53, 36, 0.12);
+            z-index: 10;
           }
 
           .teacher-tile:nth-child(even):hover {
             transform: scale(1.05) rotate(1.5deg);
-            box-shadow: 0 8px 18px rgba(62, 53, 36, 0.1);
+            box-shadow: 0 8px 18px rgba(62, 53, 36, 0.12);
+            z-index: 10;
           }
 
           .teacher-tile:active {
@@ -169,6 +173,10 @@ export function TeacherHomeSidebar() {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.2) rotate(10deg); }
           }
+          @keyframes quiz-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15) rotate(-5deg); }
+          }
 
           .teacher-tile.match:hover .teacher-tile-icon .material-symbols-rounded {
             animation: match-shake 0.5s ease-in-out infinite;
@@ -181,6 +189,9 @@ export function TeacherHomeSidebar() {
           }
           .teacher-tile.flip:hover .teacher-tile-icon .material-symbols-rounded {
             animation: flip-card 0.5s ease-in-out infinite;
+          }
+          .teacher-tile.quiz:hover .teacher-tile-icon .material-symbols-rounded {
+            animation: quiz-pulse 0.5s ease-in-out infinite;
           }
 
           /* Tile variations matching home page pastel style */
@@ -204,6 +215,11 @@ export function TeacherHomeSidebar() {
           .teacher-tile.flip .teacher-tile-label { color: #BE123C; }
           .teacher-tile.flip.active { border-color: #F43F5E; box-shadow: 0 0 10px rgba(244, 63, 94, 0.2); }
 
+          .teacher-tile.quiz { background: #FEF3C7 !important; }
+          .teacher-tile.quiz .teacher-tile-icon { color: #F59E0B; }
+          .teacher-tile.quiz .teacher-tile-label { color: #B45309; }
+          .teacher-tile.quiz.active { border-color: #F59E0B; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+
           .teacher-list-item {
             display: flex;
             align-items: center;
@@ -214,11 +230,14 @@ export function TeacherHomeSidebar() {
             border: 2px solid transparent;
             transition: all 0.25s ease;
             cursor: pointer;
+            position: relative;
+            z-index: 1;
           }
           .teacher-list-item:hover {
             background: #FFFFFF;
             border-color: #E2E8F0;
             transform: translateX(4px);
+            z-index: 10;
           }
           .teacher-list-item.active {
             background: #FFFFFF;
@@ -236,6 +255,10 @@ export function TeacherHomeSidebar() {
           .teacher-list-item.active.flip-active {
             border-color: #F43F5E;
             box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15);
+          }
+          .teacher-list-item.active.quiz-active {
+            border-color: #F59E0B;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
           }
 
           .material-symbols-rounded {
@@ -271,7 +294,7 @@ export function TeacherHomeSidebar() {
           </button>
 
           {/* SUBMENU CẤP 2 - TẠO MỚI (GRID 2 CỘT) */}
-          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isCreateOpen ? "max-h-[500px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
+          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isCreateOpen ? "max-h-[600px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
             <div className="teacher-tile-grid">
               {/* Nối cặp */}
               <div
@@ -324,6 +347,19 @@ export function TeacherHomeSidebar() {
                 </div>
                 <p className="teacher-tile-label">Lật ảnh</p>
               </div>
+
+              {/* Trắc nghiệm */}
+              <div
+                onClick={() => handleSelectTab("quiz")}
+                className={`teacher-tile quiz ${activeTab === "quiz" ? "active" : ""}`}
+              >
+                <div className="teacher-tile-top">
+                  <div className="teacher-tile-icon">
+                    <span className="material-symbols-rounded">quiz</span>
+                  </div>
+                </div>
+                <p className="teacher-tile-label">Trắc nghiệm</p>
+              </div>
             </div>
           </div>
 
@@ -337,6 +373,7 @@ export function TeacherHomeSidebar() {
               <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
               <span className="material-symbols-rounded text-base text-purple-500">edit_note</span>
               <span className="material-symbols-rounded text-base text-rose-500">style</span>
+              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
             </div>
           )}
         </div>
@@ -358,8 +395,8 @@ export function TeacherHomeSidebar() {
           </button>
 
           {/* SUBMENU CẤP 2 - BÀI TẬP ĐÃ TẠO */}
-          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isMyGamesOpen ? "max-h-[500px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
-            <div className="ml-2.5 pl-2.5 border-l-2 border-purple-200/60 flex flex-col gap-2">
+          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isMyGamesOpen ? "max-h-[600px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
+            <div className="ml-2.5 pl-2.5 py-1 pr-1 border-l-2 border-purple-200/60 flex flex-col gap-2">
               {/* Nối cặp đã tạo */}
               <div
                 onClick={() => handleSelectTab("my-match-games")}
@@ -415,6 +452,20 @@ export function TeacherHomeSidebar() {
                   <span className="text-[11px] font-semibold text-slate-400">Danh sách game Lật ảnh</span>
                 </div>
               </div>
+
+              {/* Trắc nghiệm đã tạo */}
+              <div
+                onClick={() => handleSelectTab("my-quiz-games")}
+                className={`teacher-list-item ${activeTab === "my-quiz-games" ? "active quiz-active" : ""}`}
+              >
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-rounded text-[22px]">quiz</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-headline font-black text-sm text-slate-800">Trắc nghiệm đã tạo</span>
+                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Trắc nghiệm</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -428,6 +479,7 @@ export function TeacherHomeSidebar() {
               <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
               <span className="material-symbols-rounded text-base text-purple-500">assignment</span>
               <span className="material-symbols-rounded text-base text-rose-500">style</span>
+              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
             </div>
           )}
         </div>
