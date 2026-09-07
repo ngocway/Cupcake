@@ -331,20 +331,39 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
       const segment = width / opts.length;
       opts.forEach((opt, index) => {
-        const minX = segment * index + 60;
-        const maxX = segment * (index + 1) - 60;
-        const targetX = Math.max(60, Math.min(width - 60, Math.random() * (maxX - minX) + minX));
+        const textStr = (opt.text || "").trim();
+        const textLen = textStr.length;
+
+        // Dynamic radius calculation:
+        // Base radius 40px for short 1-3 char answers.
+        // Expands smoothly based on text length up to 76px so any answer fits inside cleanly.
+        let calculatedRadius = 40;
+        if (textLen > 3) {
+          calculatedRadius += Math.min(34, Math.round((textLen - 3) * 1.6));
+        }
+        // Account for extra long single words
+        const longestWordLen = Math.max(...textStr.split(/\s+/).map((w) => w.length), 0);
+        if (longestWordLen > 7) {
+          calculatedRadius = Math.max(calculatedRadius, 42 + (longestWordLen - 7) * 3.5);
+        }
+        const r = Math.max(40, Math.min(76, calculatedRadius));
+
+        const margin = r + 15;
+        const minX = segment * index + margin;
+        const maxX = segment * (index + 1) - margin;
+        const targetX = minX < maxX
+          ? Math.random() * (maxX - minX) + minX
+          : (segment * index + segment * (index + 1)) / 2;
         const color = sciFiColors[Math.floor(Math.random() * sciFiColors.length)];
-        const r = Math.floor(Math.random() * 20) + 32;
 
         targets.push({
-          x: targetX,
-          y: -70,
+          x: Math.max(margin, Math.min(width - margin, targetX)),
+          y: -80,
           radius: r,
           text: opt.text,
           isCorrect: opt.isCorrect,
           baseColor: color,
-          speed: (55 - r) / 20 + Math.random() * 0.4 + Math.min(localCombo * 0.08, 1.2),
+          speed: Math.max(0.65, (85 - r) / 28 + Math.random() * 0.35 + Math.min(localCombo * 0.08, 1.2)),
           rotation: Math.random() * Math.PI,
           rotSpeed: 0.02,
           scale: 0.1,
@@ -849,30 +868,72 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
         ctx.rotate(t.rotation * 1.5);
         ctx.shadowBlur = 0;
-        ctx.fillStyle = "#ffffff";
 
-        let fontSize = Math.max(12, Math.floor(t.radius * 0.5));
-        ctx.font = `900 ${fontSize}px Roboto, Arial, sans-serif`;
+        // Inner safe bounds of circle
+        const safeWidth = (t.radius - 8) * 1.62;
+        const safeHeight = (t.radius - 8) * 1.55;
+
+        // Smart multi-line wrapping and dynamic font size fitting
+        const words = (t.text || "").trim().split(/\s+/);
+        let bestFontSize = Math.min(22, Math.max(11, Math.floor(t.radius * 0.4)));
+        let bestLines: string[] = [t.text];
+
+        // Iteratively scale down font until all wrapped lines fit safely inside the circle
+        for (let fs = bestFontSize; fs >= 10; fs--) {
+          ctx.font = `900 ${fs}px Roboto, Arial, sans-serif`;
+          const currentLines: string[] = [];
+          let currentLine = "";
+          let fitsHorizontally = true;
+
+          for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            if (ctx.measureText(testLine).width <= safeWidth) {
+              currentLine = testLine;
+            } else {
+              if (currentLine) {
+                currentLines.push(currentLine);
+                currentLine = word;
+              } else {
+                currentLine = word;
+              }
+              if (ctx.measureText(currentLine).width > safeWidth) {
+                fitsHorizontally = false;
+                break;
+              }
+            }
+          }
+          if (currentLine) currentLines.push(currentLine);
+
+          const testLineHeight = fs * 1.25;
+          const testTotalHeight = currentLines.length * testLineHeight;
+
+          if (fitsHorizontally && testTotalHeight <= safeHeight && currentLines.length <= 4) {
+            bestFontSize = fs;
+            bestLines = currentLines;
+            break;
+          }
+          if (fs === 10) {
+            // Reached minimum font size, use best-effort wrapped lines
+            bestLines = currentLines;
+          }
+        }
+
+        ctx.font = `900 ${bestFontSize}px Roboto, Arial, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
+        ctx.lineWidth = Math.min(4, Math.max(2, bestFontSize * 0.22));
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
+        ctx.fillStyle = "#ffffff";
 
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        const lineHeight = bestFontSize * 1.25;
+        const startY = -((bestLines.length - 1) * lineHeight) / 2;
 
-        if (t.text.length > 7 && t.text.includes(" ")) {
-          let parts = t.text.split(" ");
-          let mid = Math.floor(parts.length / 2);
-          let line1 = parts.slice(0, mid).join(" ");
-          let line2 = parts.slice(mid).join(" ");
-          ctx.strokeText(line1, 0, -fontSize / 2);
-          ctx.fillText(line1, 0, -fontSize / 2);
-          ctx.strokeText(line2, 0, fontSize / 2);
-          ctx.fillText(line2, 0, fontSize / 2);
-        } else {
-          if (t.text.length > 8) ctx.font = `900 ${fontSize * 0.75}px Roboto, Arial, sans-serif`;
-          ctx.strokeText(t.text, 0, 0);
-          ctx.fillText(t.text, 0, 0);
-        }
+        bestLines.forEach((line, idx) => {
+          const ly = startY + idx * lineHeight;
+          ctx.strokeText(line, 0, ly);
+          ctx.fillText(line, 0, ly);
+        });
+
         ctx.restore();
       });
 

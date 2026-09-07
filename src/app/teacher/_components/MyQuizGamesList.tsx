@@ -127,15 +127,18 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {topics.map((topic) => {
             const isTreasure = topic.gameMode === "treasure-hunt";
-            const gameTitle = isTreasure ? "Truy tìm Kho báu" : "Trắc nghiệm Kẹo Ngọt";
-            const playUrl = isTreasure ? `/game/treasure-grid?topicId=${topic.id}` : `/student/game/candy-quiz?topicId=${topic.id}`;
-            const editUrl = isTreasure ? `/teacher/games/treasure-hunt/create?topicId=${topic.id}` : `/teacher/games/candy-quiz/create?topicId=${topic.id}`;
+            const isShooter = topic.gameMode === "shooter-quiz";
+            const gameTitle = isShooter ? "Bắn súng Trắc nghiệm" : isTreasure ? "Truy tìm Kho báu" : "Trắc nghiệm Kẹo Ngọt";
+            const playUrl = isShooter ? `/game/shooter-quiz?topicId=${topic.id}` : isTreasure ? `/game/treasure-grid?topicId=${topic.id}` : `/student/game/candy-quiz?topicId=${topic.id}`;
+            const editUrl = isShooter ? `/teacher/games/shooter-quiz/create?topicId=${topic.id}` : isTreasure ? `/teacher/games/treasure-hunt/create?topicId=${topic.id}` : `/teacher/games/candy-quiz/create?topicId=${topic.id}`;
 
             return (
               <div
                 key={topic.id}
                 className={`rounded-3xl shadow-md hover:shadow-xl backdrop-blur-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group p-5 gap-4 bg-white dark:bg-slate-900 border ${
-                  isTreasure
+                  isShooter
+                    ? "border-cyan-200/80 dark:border-cyan-800/60 shadow-cyan-500/5 hover:shadow-cyan-500/15 hover:border-cyan-400"
+                    : isTreasure
                     ? "border-amber-200/80 dark:border-amber-800/60 shadow-amber-500/5 hover:shadow-amber-500/15 hover:border-amber-400"
                     : "border-pink-200/80 dark:border-pink-800/60 shadow-pink-500/5 hover:shadow-pink-500/15 hover:border-pink-400"
                 }`}
@@ -146,7 +149,9 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                     <div className="flex items-center gap-2">
                       <span
                         className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider text-white shadow-sm ${
-                          isTreasure
+                          isShooter
+                            ? "bg-gradient-to-r from-cyan-500 to-blue-600 shadow-cyan-500/30"
+                            : isTreasure
                             ? "bg-gradient-to-r from-amber-500 to-yellow-600 shadow-amber-500/30"
                             : "bg-gradient-to-r from-pink-500 to-rose-500 shadow-pink-500/30"
                         }`}
@@ -169,7 +174,11 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
 
                   <h3
                     className={`font-headline font-black text-lg line-clamp-2 leading-snug ${
-                      isTreasure ? "text-amber-800 dark:text-amber-300" : "text-pink-700 dark:text-pink-300"
+                      isShooter
+                        ? "text-cyan-800 dark:text-cyan-300"
+                        : isTreasure
+                        ? "text-amber-800 dark:text-amber-300"
+                        : "text-pink-700 dark:text-pink-300"
                     }`}
                   >
                     {topic.name}
@@ -182,7 +191,9 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                     <div
                       key={item.id}
                       className={`h-12 rounded-xl border shrink-0 p-1 flex items-center justify-center overflow-hidden gap-1 ${
-                        isTreasure
+                        isShooter
+                          ? "bg-cyan-50/80 dark:bg-cyan-950/30 border-cyan-200/80 dark:border-cyan-800/60"
+                          : isTreasure
                           ? "bg-amber-50/80 dark:bg-amber-950/30 border-amber-200/80 dark:border-amber-800/60"
                           : "bg-pink-50/80 dark:bg-pink-950/30 border-pink-200/80 dark:border-pink-800/60"
                       }`}
@@ -198,7 +209,11 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                         <div className="flex flex-col items-center justify-center px-2 max-w-[110px]">
                           <span
                             className={`text-[9px] font-black truncate w-full text-center ${
-                              isTreasure ? "text-amber-900 dark:text-amber-200" : "text-pink-900 dark:text-pink-200"
+                              isShooter
+                                ? "text-cyan-900 dark:text-cyan-200"
+                                : isTreasure
+                                ? "text-amber-900 dark:text-amber-200"
+                                : "text-pink-900 dark:text-pink-200"
                             }`}
                           >
                             {item.word}
@@ -210,7 +225,9 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                   {(topic.totalItems || topic.items?.length || 0) > 4 && (
                     <div
                       className={`w-8 h-12 rounded-xl font-bold text-xs flex items-center justify-center shrink-0 ${
-                        isTreasure
+                        isShooter
+                          ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-300"
+                          : isTreasure
                           ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                           : "bg-pink-500/20 text-pink-700 dark:text-pink-300"
                       }`}
@@ -223,7 +240,9 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                 {/* Card Footer Actions */}
                 <div
                   className={`pt-3 border-t flex items-center justify-between gap-2 ${
-                    isTreasure
+                    isShooter
+                      ? "border-cyan-200/50 dark:border-cyan-800/50"
+                      : isTreasure
                       ? "border-amber-200/50 dark:border-amber-800/50"
                       : "border-pink-200/50 dark:border-pink-800/50"
                   }`}
@@ -233,7 +252,9 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`flex-1 py-2 px-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
-                      isTreasure
+                      isShooter
+                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-cyan-500/20"
+                        : isTreasure
                         ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 shadow-amber-500/20"
                         : "bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 shadow-pink-500/20"
                     }`}

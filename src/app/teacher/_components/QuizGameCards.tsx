@@ -38,6 +38,16 @@ const QUIZ_GAMES: GameCard[] = [
     createHref: "/teacher/games/treasure-hunt/create",
     titleColor: "text-amber-600 dark:text-amber-400",
   },
+  {
+    id: "shooter-quiz",
+    title: "Bắn súng Trắc nghiệm",
+    badge: "BẮN SÚNG",
+    badgeBg: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white",
+    desc: "Học sinh điều khiển nòng pháo không gian, bắn đạn laser neon vào các quả cầu năng lượng chứa đáp án đúng giữa vũ trụ huyền ảo.",
+    imageUrl: "/images/games/shooter-quiz.jpg",
+    createHref: "/teacher/games/shooter-quiz/create",
+    titleColor: "text-cyan-600 dark:text-cyan-400",
+  },
 ];
 
 function QuizGameCardItem({ game }: { game: GameCard }) {
