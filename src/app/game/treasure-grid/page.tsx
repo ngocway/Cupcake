@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   getTreasureHuntGameDetailsAction,
-  QuizRound,
 } from '@/actions/treasure-hunt-actions';
+import type { QuizRound } from '@/types/candy-quiz';
 import {
   ArrowLeft,
   Sparkles,

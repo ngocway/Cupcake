@@ -42,10 +42,12 @@ import { uploadImageFast } from "@/lib/direct-upload";
 import {
   saveTreasureHuntGameAction,
   getTreasureHuntGameDetailsAction,
+} from "@/actions/treasure-hunt-actions";
+import type {
   QuizRound,
   QuizQuestion,
   QuizQuestionOption,
-} from "@/actions/treasure-hunt-actions";
+} from "@/types/candy-quiz";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;

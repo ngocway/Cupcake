@@ -5,32 +5,14 @@ import { auth } from "@/auth";
 import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
 
-export interface QuizQuestionOption {
-  id: string;
-  text: string;
-  isCorrect: boolean;
-}
+import type {
+  QuizQuestionOption,
+  QuizQuestion,
+  QuizRound,
+  SaveCandyQuizPayload,
+} from "@/types/candy-quiz";
 
-export interface QuizQuestion {
-  id: string;
-  question: string;
-  imageUrl?: string;
-  options: QuizQuestionOption[];
-}
 
-export interface QuizRound {
-  id: string;
-  title: string;
-  questions: QuizQuestion[];
-}
-
-export interface SaveCandyQuizPayload {
-  topicId?: string;
-  title: string;
-  gradeLevel?: string;
-  rounds: QuizRound[];
-  gameMode?: string;
-}
 
 export async function getCandyQuizGameDetailsAction(topicId: string) {
   try {

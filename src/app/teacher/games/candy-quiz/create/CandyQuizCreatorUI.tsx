@@ -48,10 +48,12 @@ import { uploadImageFast } from "@/lib/direct-upload";
 import {
   saveCandyQuizGameAction,
   getCandyQuizGameDetailsAction,
+} from "@/actions/candy-quiz-actions";
+import type {
   QuizRound,
   QuizQuestion,
   QuizQuestionOption,
-} from "@/actions/candy-quiz-actions";
+} from "@/types/candy-quiz";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;

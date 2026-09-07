@@ -3,13 +3,13 @@
 import {
   saveCandyQuizGameAction,
   getCandyQuizGameDetailsAction,
-  SaveCandyQuizPayload,
+} from "./candy-quiz-actions";
+import type {
   QuizRound,
   QuizQuestion,
   QuizQuestionOption,
-} from "./candy-quiz-actions";
-
-export type { QuizRound, QuizQuestion, QuizQuestionOption, SaveCandyQuizPayload };
+  SaveCandyQuizPayload,
+} from "@/types/candy-quiz";
 
 export async function saveTreasureHuntGameAction(data: Omit<SaveCandyQuizPayload, "gameMode">) {
   return saveCandyQuizGameAction({
