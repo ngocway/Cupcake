@@ -143,9 +143,26 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
   const [qIndex, setQIndex] = useState(0);
   const [typewriterText, setTypewriterText] = useState("");
   const [muted, setMuted] = useState(false);
+  const [isPortrait, setIsPortrait] = useState(false);
 
   const questions = game.questions || [];
   const endMode = game.endMode || "finish";
+
+  // Check orientation for iPad / Mobile tablets
+  useEffect(() => {
+    const checkOrientation = () => {
+      if (typeof window !== "undefined") {
+        setIsPortrait(window.innerHeight > window.innerWidth * 1.15);
+      }
+    };
+    checkOrientation();
+    window.addEventListener("resize", checkOrientation);
+    window.addEventListener("orientationchange", checkOrientation);
+    return () => {
+      window.removeEventListener("resize", checkOrientation);
+      window.removeEventListener("orientationchange", checkOrientation);
+    };
+  }, []);
 
   // Audio Engine Ref init
   if (!audioRef.current) {
@@ -212,6 +229,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       length: number;
       markedForDeletion: boolean;
       history: Array<{ x: number; y: number }>;
+      target?: any;
     }> = [];
 
     let targets: Array<{
@@ -370,34 +388,47 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       }
     }
 
-    function shoot() {
+    function shoot(targetObj?: any) {
       const now = Date.now();
-      if (now - turret.lastShootTime < 180) return;
+      if (now - turret.lastShootTime < 160) return;
       turret.lastShootTime = now;
 
       if (audio) audio.playShoot();
       turret.recoil = 22;
 
-      const barrelTipX = turret.x + Math.cos(turret.angle) * 75;
-      const barrelTipY = turret.y + Math.sin(turret.angle) * 75;
+      let shootAngle = turret.angle;
+      let bulletSpeed = 24;
+
+      if (targetObj && !targetObj.markedForDeletion) {
+        // Direct lock onto target
+        const tdx = targetObj.x - turret.x;
+        const tdy = targetObj.y - turret.y;
+        shootAngle = Math.atan2(tdy, tdx);
+        turret.angle = shootAngle;
+        bulletSpeed = 32; // Snappy speed for smart-locked shots
+      }
+
+      const barrelTipX = turret.x + Math.cos(shootAngle) * 75;
+      const barrelTipY = turret.y + Math.sin(shootAngle) * 75;
 
       bullets.push({
         x: barrelTipX,
         y: barrelTipY,
-        vx: Math.cos(turret.angle) * 22,
-        vy: Math.sin(turret.angle) * 22,
-        angle: turret.angle,
-        length: 35,
+        vx: Math.cos(shootAngle) * bulletSpeed,
+        vy: Math.sin(shootAngle) * bulletSpeed,
+        angle: shootAngle,
+        length: 38,
         markedForDeletion: false,
         history: [],
+        target: targetObj,
       });
 
       for (let i = 0; i < 4; i++) {
         particles.push({
           x: barrelTipX,
           y: barrelTipY,
-          vx: (Math.random() - 0.5) * 8 + Math.cos(turret.angle) * 15,
-          vy: (Math.random() - 0.5) * 8 + Math.sin(turret.angle) * 15,
+          vx: (Math.random() - 0.5) * 8 + Math.cos(shootAngle) * 15,
+          vy: (Math.random() - 0.5) * 8 + Math.sin(shootAngle) * 15,
           radius: Math.random() * 3 + 1.5,
           color: "#22d3ee",
           alpha: 1,
@@ -407,21 +438,77 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       }
     }
 
+    let isTouchActive = false;
+
+    // Smart Tap-to-Lock & Fire handler
+    const handlePointerAction = (clientX: number, clientY: number) => {
+      mouse.x = clientX;
+      mouse.y = clientY;
+
+      // Detect if user tapped on or near any active target (within target radius + 70px)
+      let bestTarget: any = null;
+      let minDistance = 160;
+
+      targets.forEach((t) => {
+        if (t.markedForDeletion) return;
+        const d = Math.hypot(t.x - clientX, t.y - clientY);
+        if (d < t.radius + 70 && d < minDistance) {
+          minDistance = d;
+          bestTarget = t;
+        }
+      });
+
+      if (bestTarget) {
+        // Smart lock on target: align turret and shoot homing laser
+        turret.angle = Math.atan2(bestTarget.y - turret.y, bestTarget.x - turret.x);
+        mouse.x = bestTarget.x;
+        mouse.y = bestTarget.y;
+        shoot(bestTarget);
+      } else {
+        // Aim and shoot towards tapped coordinates
+        turret.angle = Math.atan2(clientY - turret.y, clientX - turret.x);
+        shoot();
+      }
+    };
+
     const onMouseMove = (e: MouseEvent) => {
+      if (isTouchActive) return;
       mouse.x = e.clientX;
       mouse.y = e.clientY;
     };
 
-    const onClick = () => {
-      shoot();
+    const onClick = (e: MouseEvent) => {
+      // Prevent double firing when touch triggered
+      if (isTouchActive) return;
+      handlePointerAction(e.clientX, e.clientY);
     };
 
     const onTouchStart = (e: TouchEvent) => {
-      if (e.touches[0]) {
-        mouse.x = e.touches[0].clientX;
-        mouse.y = e.touches[0].clientY;
-        shoot();
+      isTouchActive = true;
+      if (e.touches && e.touches[0]) {
+        const touch = e.touches[0];
+        // Ignore touches on UI overlay buttons (sound, exit)
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (el && (el.closest("button") || el.closest(".pointer-events-auto"))) {
+          return;
+        }
+        handlePointerAction(touch.clientX, touch.clientY);
       }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches && e.touches[0]) {
+        const touch = e.touches[0];
+        mouse.x = touch.clientX;
+        mouse.y = touch.clientY;
+      }
+    };
+
+    const onTouchEnd = () => {
+      // Keep isTouchActive true briefly to swallow the synthetic click event (typically 300ms)
+      setTimeout(() => {
+        isTouchActive = false;
+      }, 450);
     };
 
     const onResize = () => {
@@ -433,7 +520,9 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("click", onClick);
-    window.addEventListener("touchstart", onTouchStart);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
     window.addEventListener("resize", onResize);
 
     function gameLoop() {
@@ -528,6 +617,20 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       bullets.forEach((b) => {
         b.history.push({ x: b.x, y: b.y });
         if (b.history.length > 5) b.history.shift();
+
+        // Homing trajectory if locked on a target
+        if (b.target && !b.target.markedForDeletion) {
+          const tdx = b.target.x - b.x;
+          const tdy = b.target.y - b.y;
+          const dist = Math.hypot(tdx, tdy);
+          if (dist > 15) {
+            const speed = 34;
+            b.vx = (tdx / dist) * speed;
+            b.vy = (tdy / dist) * speed;
+            b.angle = Math.atan2(tdy, tdx);
+          }
+        }
+
         b.x += b.vx;
         b.y += b.vy;
         if (b.x < 0 || b.x > width || b.y < 0 || b.y > height) b.markedForDeletion = true;
@@ -950,12 +1053,14 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("click", onClick);
       window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("resize", onResize);
     };
   }, [gameState, questions, endMode]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#050510] text-white font-sans select-none overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[100] bg-[#050510] text-white font-sans select-none overflow-hidden flex flex-col touch-none">
       <style flex-inline="true">{`
         @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@700;900&display=swap');
         .font-sci-fi { font-family: 'Roboto Mono', Courier, monospace; }
@@ -979,7 +1084,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       `}</style>
 
       {/* Game Canvas Area */}
-      <canvas ref={canvasRef} className="block w-full h-full cursor-none" />
+      <canvas ref={canvasRef} className="block w-full h-full cursor-none touch-none" />
 
       {/* UI HUD OVERLAY */}
       {gameState === "playing" && (
@@ -1033,6 +1138,14 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Portrait Mode Hint for Tablets / Phones */}
+      {isPortrait && gameState === "playing" && (
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-none px-4 py-2 rounded-2xl glass-panel border border-cyan-400/40 text-cyan-300 text-xs font-sci-fi font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] animate-pulse whitespace-nowrap">
+          <span className="text-base">📱</span>
+          <span>Xoay ngang màn hình để chơi đã mắt nhất!</span>
         </div>
       )}
 

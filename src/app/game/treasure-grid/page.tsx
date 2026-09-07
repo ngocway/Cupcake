@@ -66,46 +66,299 @@ interface MascotItem {
 
 const DEFAULT_MASCOTS: MascotItem[] = [
   {
-    id: 'turtle',
-    name: 'Bé Rùa Biển Vàng',
-    title: 'Thần Hộ Mệnh Vòng 1',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/mascot-turtle.jpg',
+    id: 'baby_treasure_dragon',
+    name: 'Bé Rồng Giữ Vàng',
+    title: 'Thần Hộ Mệnh Long Tộc',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/01_baby_treasure_dragon.png',
     color: '#f59e0b',
-    tag: 'Bình An & Trí Tuệ',
+    tag: 'Dũng Cảm & Cao Quý',
   },
   {
-    id: 'crab',
-    name: 'Bé Cua Ngọc Bích',
-    title: 'Dũng Sĩ Vòng 2',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/mascot-crab.jpg',
-    color: '#ef4444',
-    tag: 'Khéo Léo & Dũng Cảm',
-  },
-  {
-    id: 'parrot',
+    id: 'pirate_parrot',
     name: 'Chú Vẹt Hải Tặc',
-    title: 'Hoa Tiêu Vòng 3',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/mascot-parrot.webp',
+    title: 'Hoa Tiêu Biển Cả',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/02_pirate_parrot.png',
     color: '#3b82f6',
-    tag: 'Thông Thái & Vui Vẻ',
+    tag: 'Thông Thái & Nhanh Nhẹn',
   },
   {
-    id: 'starfish',
-    name: 'Bé Sao Biển Lấp Lánh',
-    title: 'Ngôi Sao Vòng 4',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/mascot-starfish.webp',
+    id: 'treasure_turtle',
+    name: 'Bé Rùa Biển Vàng',
+    title: 'Thần Hộ Mệnh Trầm Lặng',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/03_treasure_turtle.png',
     color: '#10b981',
+    tag: 'Bình An & Kiên Trì',
+  },
+  {
+    id: 'gem_crab',
+    name: 'Bé Cua Ngọc Bích',
+    title: 'Chiến Binh Càng Vàng',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/04_gem_crab.png',
+    color: '#ef4444',
+    tag: 'Khéo Léo & Tinh Anh',
+  },
+  {
+    id: 'treasure_slime',
+    name: 'Slime Hoàng Kim',
+    title: 'Tinh Linh Biển Sâu',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/05_treasure_slime.png',
+    color: '#06b6d4',
+    tag: 'Đáng Yêu & Diệu Kỳ',
+  },
+  {
+    id: 'treasure_otter',
+    name: 'Rái Cá Thủy Thủ',
+    title: 'Thợ Lặn Đại Dương',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/06_treasure_otter.png',
+    color: '#8b5cf6',
+    tag: 'Chăm Chỉ & Tinh Nghịch',
+  },
+  {
+    id: 'royal_dolphin',
+    name: 'Cá Heo Hoàng Gia',
+    title: 'Sứ Giả Biển Xanh',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/07_royal_dolphin.png',
+    color: '#0284c7',
+    tag: 'Thân Thiện & Hòa Bình',
+  },
+  {
+    id: 'explorer_penguin',
+    name: 'Cánh Cụt Thám Hiểm',
+    title: 'Nhà Thám Hiểm Băng Giá',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/08_explorer_penguin.png',
+    color: '#1e293b',
+    tag: 'Bền Bỉ & Quyết Đoán',
+  },
+  {
+    id: 'adventure_bunny',
+    name: 'Thỏ Con Phiêu Lưu',
+    title: 'Sứ Giả Tốc Độ',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/09_adventure_bunny.png',
+    color: '#f97316',
+    tag: 'Nhanh Nhẹn & Hoạt Bát',
+  },
+  {
+    id: 'map_raccoon',
+    name: 'Gấu Mèo Bản Đồ',
+    title: 'Chuyên Gia Dẫn Đường',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/10_map_raccoon.png',
+    color: '#78716c',
+    tag: 'Sắc Sảo & Tỉ Mỉ',
+  },
+  {
+    id: 'pirate_kitten',
+    name: 'Mèo Con Cướp Biển',
+    title: 'Thuyền Trưởng Tí Hon',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/11_pirate_kitten.png',
+    color: '#ea580c',
+    tag: 'Dũng Cảm & Đáng Yêu',
+  },
+  {
+    id: 'pirate_octopus',
+    name: 'Bạch Tuộc Xúc Tu Vàng',
+    title: 'Chúa Tể Vực Sâu',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/12_pirate_octopus.png',
+    color: '#ec4899',
+    tag: 'Uy Quyền & Huyền Bí',
+  },
+  {
+    id: 'captain_shark',
+    name: 'Cá Mập Đại Dương',
+    title: 'Dũng Sĩ Biển Cả',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/13_captain_shark.png',
+    color: '#2563eb',
+    tag: 'Mạnh Mẽ & Kiên Cường',
+  },
+  {
+    id: 'treasure_ram',
+    name: 'Cừu Sừng Vàng',
+    title: 'Thần Hộ Mệnh Núi Đá',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/14_treasure_ram.png',
+    color: '#d97706',
+    tag: 'Vững Vàng & Trung Kiên',
+  },
+  {
+    id: 'treasure_monkey',
+    name: 'Bé Khỉ Giữ Khóa',
+    title: 'Thần Hộ Vệ Kho Báu',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/15_treasure_monkey.png',
+    color: '#b45309',
+    tag: 'Thông Minh & Hài Hước',
+  },
+  {
+    id: 'pirate_owl',
+    name: 'Cú Mèo Thông Thái',
+    title: 'Bậc Thầy Chiến Thuật',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/16_pirate_owl.png',
+    color: '#6366f1',
+    tag: 'Tri Thức & Sáng Suốt',
+  },
+  {
+    id: 'adventure_fox',
+    name: 'Cáo Đỏ Thám Hiểm',
+    title: 'Trinh Sát Rừng Xanh',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/17_adventure_fox.png',
+    color: '#dc2626',
+    tag: 'Mưu Trí & Nhạy Bén',
+  },
+  {
+    id: 'gem_seal',
+    name: 'Hải Cẩu Ngọc Bích',
+    title: 'Thần Hộ Vệ Băng Tuyết',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/18_gem_seal.png',
+    color: '#0ea5e9',
+    tag: 'Hiền Hòa & May Mắn',
+  },
+  {
+    id: 'royal_seahorse',
+    name: 'Cá Ngựa Hoàng Triều',
+    title: 'Kỵ Sĩ San Hô',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/19_royal_seahorse.png',
+    color: '#eab308',
+    tag: 'Quý Phái & Trung Thành',
+  },
+  {
+    id: 'jewel_starfish',
+    name: 'Bé Sao Biển Lấp Lánh',
+    title: 'Ngôi Sao Diệu Kỳ',
+    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/20_jewel_starfish.png',
+    color: '#f43f5e',
     tag: 'Tỏa Sáng & Diệu Kỳ',
   },
-  {
-    id: 'ruby-crab',
-    name: 'Cua San Hô Thần',
-    title: 'Bảo Vật Hoàng Kim',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/mascot-ruby-crab.webp',
-    color: '#ec4899',
-    tag: 'Kiên Cường & Tự Hào',
-  },
 ];
+
+// Calculate layout configuration for the mascot ledge (adaptive 1 or 2 rows)
+const getLedgeLayout = (count: number) => {
+  const isDouble = count > 6;
+  const bottomCount = isDouble ? Math.ceil(count / 2) : count;
+  const topCount = isDouble ? count - bottomCount : 0;
+  const maxRowItems = Math.max(bottomCount, topCount);
+
+  // Dynamic coin badge diameter & gap to fit ~395px width
+  let size = 48;
+  let gap = 6;
+  if (isDouble) {
+    if (maxRowItems >= 10) {
+      size = 34;
+      gap = 4;
+    } else if (maxRowItems >= 8) {
+      size = 36;
+      gap = 5;
+    } else if (maxRowItems >= 7) {
+      size = 38;
+      gap = 6;
+    } else {
+      size = 40;
+      gap = 6;
+    }
+  } else {
+    if (count <= 3) {
+      size = 54;
+      gap = 10;
+    } else if (count <= 4) {
+      size = 50;
+      gap = 8;
+    } else {
+      size = 46;
+      gap = 6;
+    }
+  }
+
+  const rowGap = 6;
+  return { isDouble, bottomCount, topCount, maxRowItems, size, gap, rowGap };
+};
+
+// Calculate exact target coordinates on ledge for any round index
+const getLedgeBadgeCoords = (roundIdx: number, totalRoundsCount: number) => {
+  const count = totalRoundsCount > 0 ? totalRoundsCount : 4;
+  const { isDouble, bottomCount, size, gap, rowGap } = getLedgeLayout(count);
+
+  const panelLeft = 1090;
+  const panelTop = 213;
+  const ledgeBaseLeft = panelLeft + 14;
+  const bottomRowBaseTop = panelTop - 26;
+
+  const isTopRow = isDouble && roundIdx >= bottomCount;
+  const col = isTopRow ? roundIdx - bottomCount : roundIdx;
+
+  const targetX = ledgeBaseLeft + col * (size + gap) + size / 2;
+  const targetY = isTopRow
+    ? bottomRowBaseTop - (size + rowGap) + size / 2
+    : bottomRowBaseTop + size / 2;
+
+  return { targetX, targetY, size };
+};
+
+// Calculate adaptive layout for progress slot circles on right parchment
+const getSlotGridLayout = (count: number) => {
+  const c = Math.max(1, Math.min(20, count));
+  let rowCounts: number[] = [];
+  let size = 48;
+  let gap = 10;
+  let rowGap = 8;
+  let top = 295;
+
+  if (c <= 4) {
+    rowCounts = [c];
+    size = 48;
+    gap = 10;
+    top = 298;
+  } else if (c <= 6) {
+    rowCounts = [c];
+    size = 44;
+    gap = 8;
+    top = 300;
+  } else if (c <= 8) {
+    const r1 = Math.ceil(c / 2);
+    rowCounts = [r1, c - r1];
+    size = 42;
+    gap = 10;
+    rowGap = 8;
+    top = 280;
+  } else if (c <= 10) {
+    const r1 = Math.ceil(c / 2);
+    rowCounts = [r1, c - r1];
+    size = 40;
+    gap = 8;
+    rowGap = 8;
+    top = 280;
+  } else if (c <= 12) {
+    const r1 = Math.ceil(c / 2);
+    rowCounts = [r1, c - r1];
+    size = 38;
+    gap = 8;
+    rowGap = 8;
+    top = 282;
+  } else if (c <= 14) {
+    const r1 = Math.ceil(c / 2);
+    rowCounts = [r1, c - r1];
+    size = 36;
+    gap = 7;
+    rowGap = 8;
+    top = 282;
+  } else {
+    // 15 to 20: 3 balanced rows
+    const base = Math.floor(c / 3);
+    const rem = c % 3;
+    const r1 = base + (rem >= 1 ? 1 : 0);
+    const r2 = base + (rem >= 2 ? 1 : 0);
+    const r3 = base;
+    rowCounts = [r1, r2, r3];
+    size = c >= 19 ? 34 : 36;
+    gap = c >= 19 ? 6 : 7;
+    rowGap = 7;
+    top = 270;
+  }
+
+  let currIdx = 0;
+  const rows = rowCounts.map((countInRow) => {
+    const rowIndices = Array.from({ length: countInRow }, (_, k) => currIdx + k);
+    currIdx += countInRow;
+    return rowIndices;
+  });
+
+  return { count: c, rows, size, gap, rowGap, top };
+};
 
 const TILE_COLORS = [
   'tile-red', 'tile-yellow', 'tile-green', 'tile-blue',
@@ -912,7 +1165,12 @@ function MysteryTreasureGridContent() {
 
   // 3-Phase Chest & Mascot Reveal Sequence
   const startRoundClearSequence = () => {
-    const mascotToAward = DEFAULT_MASCOTS[currentRoundIndex % DEFAULT_MASCOTS.length];
+    // Chọn ngẫu nhiên 1 linh vật chưa được mở khóa trong ván chơi hiện tại
+    const uncollected = DEFAULT_MASCOTS.filter(
+      (m) => !collectedMascots.some((c) => c.id === m.id)
+    );
+    const pool = uncollected.length > 0 ? uncollected : DEFAULT_MASCOTS;
+    const mascotToAward = pool[Math.floor(Math.random() * pool.length)];
 
     // Phase 1: 5-second intense chest rumble & golden glowing energy buildup
     setIsChestRumbling(true);
@@ -932,18 +1190,15 @@ function MysteryTreasureGridContent() {
 
       // After 5000ms center reveal:
       setTimeout(() => {
-        // Calculate destination badge on ledge (red scribble mark area at top of chest frame)
-        // Chest panel is at left: 1090, top: 213.
-        const badgeSize = 54;
+        // Calculate destination badge on ledge (supporting dynamic 1 or 2 rows)
         const currentCount = collectedMascots.length;
-        const targetLedgeX = 1090 + 14 + currentCount * (badgeSize + 8) + badgeSize / 2;
-        const targetLedgeY = 213 - 26 + badgeSize / 2;
+        const { targetX, targetY } = getLedgeBadgeCoords(currentCount, totalRounds);
 
         setFlyingMascot({
           startX: 1672 / 2,
           startY: 941 / 2,
-          endX: targetLedgeX,
-          endY: targetLedgeY,
+          endX: targetX,
+          endY: targetY,
           mascot: mascotToAward,
         });
         setCenterMascotReveal(null);
@@ -1687,6 +1942,81 @@ function MysteryTreasureGridContent() {
         .star-pos-6 { top: 30%; right: 10%; animation-delay: 0.7s; }
         .star-pos-7 { bottom: 36%; left: 26%; animation-delay: 0.2s; }
         .star-pos-8 { bottom: 34%; right: 26%; animation-delay: 0.8s; }
+
+        @keyframes barrelSwaySmooth {
+          0%, 100% {
+            transform: rotate(0deg) translateY(0);
+          }
+          20% {
+            transform: rotate(-5deg) translateY(-3px);
+          }
+          40% {
+            transform: rotate(4.5deg) translateY(-1px);
+          }
+          60% {
+            transform: rotate(-3deg) translateY(-2px);
+          }
+          80% {
+            transform: rotate(2deg) translateY(0);
+          }
+        }
+        .animate-barrel-sway {
+          animation: barrelSwaySmooth 1.9s ease-in-out infinite;
+          transform-origin: bottom center;
+        }
+
+        @keyframes crabSwaySlow {
+          0%, 100% {
+            transform: rotate(0deg) translateY(0);
+          }
+          25% {
+            transform: rotate(-7deg) translateY(-3px);
+          }
+          50% {
+            transform: rotate(0deg) translateY(0);
+          }
+          75% {
+            transform: rotate(7deg) translateY(-3px);
+          }
+        }
+        .animate-crab-slow {
+          animation: crabSwaySlow 2.8s ease-in-out infinite;
+          transform-origin: bottom center;
+        }
+
+        @keyframes chestDoubleHop {
+          0% {
+            transform: translateY(0) scale(1, 1);
+          }
+          2.5% {
+            transform: translateY(2px) scale(1.08, 0.92);
+          }
+          6% {
+            transform: translateY(-16px) scale(0.94, 1.08);
+          }
+          9.5% {
+            transform: translateY(0) scale(1.07, 0.92);
+          }
+          12% {
+            transform: translateY(2px) scale(1.04, 0.95);
+          }
+          16% {
+            transform: translateY(-22px) scale(0.92, 1.1);
+          }
+          20% {
+            transform: translateY(0) scale(1.07, 0.92);
+          }
+          24% {
+            transform: translateY(0) scale(1, 1);
+          }
+          100% {
+            transform: translateY(0) scale(1, 1);
+          }
+        }
+        .animate-chest-idle-hop {
+          animation: chestDoubleHop 3s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+          transform-origin: bottom center;
+        }
       `}</style>
 
       {/* 1672x941 Game Stage */}
@@ -1720,9 +2050,40 @@ function MysteryTreasureGridContent() {
         </div>
 
         {/* Left Side Decor */}
-        <img src="/games/mystery-treasure-grid-assets/assets/png/parrot.png" alt="Parrot" className="absolute left-[-65px] top-[0px] w-[460px] z-[3]" />
-        <img src="/games/mystery-treasure-grid-assets/assets/webp/sign-left.webp" alt="Sign Left" className="absolute left-[5px] top-[430px] w-[245px] z-[4]" />
-        <img src="/games/mystery-treasure-grid-assets/assets/webp/barrel-gold.webp" alt="Barrel" className="absolute left-[0px] bottom-[10px] w-[175px] z-[5]" />
+        <img src="/games/mystery-treasure-grid-assets/assets/png/parrot.png" alt="Parrot" className="absolute left-[-65px] top-[0px] w-[460px] z-[3] pointer-events-none" />
+        <img src="/games/mystery-treasure-grid-assets/assets/webp/sign-left.webp" alt="Sign Left" className="absolute left-[5px] top-[430px] w-[245px] z-[4] pointer-events-none" />
+        {/* Barrel of Gold (To hơn + Rung lắc nhịp nhàng + Hào quang rực rỡ) */}
+        <div
+          onClick={() => sounds.playSparkle()}
+          className="absolute left-[-12px] bottom-[5px] w-[220px] z-[5] pointer-events-auto cursor-pointer select-none group"
+          title="Thùng vàng kho báu (Bấm để nghe tiếng vàng)"
+        >
+          {/* Rotating Golden Sunburst Ray Aura behind Barrel */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
+            <div className="w-[310px] h-[310px] rounded-full animate-beam-spin bg-[conic-gradient(from_0deg,rgba(255,225,80,0.55)_0deg,transparent_20deg,rgba(255,245,140,0.65)_40deg,transparent_60deg,rgba(255,225,80,0.55)_80deg,transparent_100deg,rgba(255,245,140,0.65)_120deg,transparent_140deg,rgba(255,225,80,0.55)_160deg,transparent_180deg,rgba(255,245,140,0.65)_200deg,transparent_220deg,rgba(255,225,80,0.55)_240deg,transparent_260deg,rgba(255,245,140,0.65)_280deg,transparent_300deg,rgba(255,225,80,0.55)_320deg,transparent_340deg,rgba(255,245,140,0.65)_360deg)] filter blur-[3px] opacity-80" />
+          </div>
+
+          {/* Radiant Pulsing Golden Halo */}
+          <div className="absolute -inset-4 rounded-full bg-gradient-to-t from-amber-400/50 via-yellow-300/70 to-orange-400/50 blur-2xl animate-pulse pointer-events-none -z-10" />
+
+          {/* Twinkling Sparkles above Gold Coins */}
+          <span className="absolute top-[8px] left-[42px] text-xl select-none animate-ping opacity-90 pointer-events-none text-yellow-200 filter drop-shadow-[0_0_10px_gold]">
+            ✨
+          </span>
+          <span className="absolute top-[-10px] right-[52px] text-lg select-none animate-pulse opacity-95 pointer-events-none text-amber-300 filter drop-shadow-[0_0_12px_gold] [animation-delay:0.35s]">
+            ⭐
+          </span>
+          <span className="absolute top-[22px] right-[28px] text-base select-none animate-ping opacity-80 pointer-events-none text-yellow-100 filter drop-shadow-[0_0_10px_gold] [animation-delay:0.7s]">
+            ✨
+          </span>
+
+          {/* Smooth Swaying Barrel with Golden Drop-Shadow */}
+          <img
+            src="/games/mystery-treasure-grid-assets/assets/webp/barrel-gold.webp"
+            alt="Thùng vàng"
+            className="relative w-full h-auto object-contain animate-barrel-sway filter drop-shadow-[0_0_24px_rgba(255,215,0,0.9)] drop-shadow-[0_10px_20px_rgba(245,158,11,0.65)] group-hover:scale-105 transition-transform"
+          />
+        </div>
 
         {/* Left Panel Wrap (Grid of Tiles) */}
         <section className="absolute left-[230px] top-[90px] w-[840px] h-[740px] z-[2]">
@@ -1863,106 +2224,266 @@ function MysteryTreasureGridContent() {
 
         {/* Right Panel Wrap (Chest & Progress Slots) */}
         <section className="absolute left-[1090px] top-[213px] w-[427px] h-[494px] z-[2]">
-          {/* Top Ledge Mascot Badges (Collection starting at top-left red mark) */}
-          <div className="absolute left-[14px] top-[-26px] z-[12] flex items-center gap-2 pointer-events-auto">
-            {Array.from({ length: Math.max(totalRounds, 4) }).map((_, idx) => {
+          {/* Top Ledge Mascot Badges (Adaptive 1 or 2 Rows of 100% Round Pirate Coin Medallions) */}
+          {(() => {
+            const displayCount = totalRounds > 0 ? totalRounds : 4;
+            const { isDouble, bottomCount, topCount, size, gap, rowGap } = getLedgeLayout(displayCount);
+
+            const renderBadge = (idx: number) => {
               const mascot = collectedMascots[idx];
               const isCurrentRound = idx === currentRoundIndex;
+
               if (mascot) {
                 return (
                   <div
                     key={mascot.id || idx}
                     onClick={() => sounds.playMascotSqueak()}
-                    className="group relative w-[54px] h-[54px] rounded-2xl bg-gradient-to-b from-[#fffbe6] to-[#fed7aa] border-[3px] border-[#f59e0b] shadow-[0_4px_12px_rgba(0,0,0,0.35),0_0_15px_rgba(255,215,0,0.65)] flex items-center justify-center cursor-pointer hover:scale-115 active:scale-95 transition-all animate-mascot-float"
-                    style={{ animationDelay: `${idx * 0.25}s` }}
-                    title={`${mascot.name} - ${mascot.title}`}
+                    className="group relative rounded-full bg-gradient-to-b from-[#fffbe6] via-[#fef08a] to-[#f59e0b] border-[2.5px] border-[#fbbf24] shadow-[0_3px_10px_rgba(0,0,0,0.35),0_0_14px_rgba(255,215,0,0.7)] flex items-center justify-center cursor-pointer hover:scale-120 active:scale-95 transition-transform animate-mascot-float shrink-0"
+                    style={{
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      animationDelay: `${(idx % 10) * 0.18}s`,
+                    }}
+                    title={`Vòng ${idx + 1}: ${mascot.name} - ${mascot.title}`}
                   >
                     <img
                       src={mascot.imageUrl}
                       alt={mascot.name}
-                      className="w-[42px] h-[42px] object-contain drop-shadow-sm rounded-xl"
+                      className="w-[82%] h-[82%] object-contain rounded-full drop-shadow-xs"
                     />
-                    <span className="absolute -top-2 -right-1.5 text-xs select-none filter drop-shadow">
+                    <span className="absolute -top-1 -right-1 text-[10px] select-none filter drop-shadow">
                       ⭐
                     </span>
-                    <div className="absolute bottom-[-32px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap px-2.5 py-0.5 rounded-md bg-amber-950/90 text-amber-200 text-[11px] font-black border border-amber-400/50 shadow-md z-30">
-                      {mascot.name}
+
+                    {/* Smart Hover Tooltip */}
+                    <div className="absolute bottom-[-34px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap px-2.5 py-1 rounded-lg bg-amber-950/95 text-amber-200 text-[11px] font-black border border-amber-400/60 shadow-xl z-50">
+                      Vòng {idx + 1}: {mascot.name} ⭐
                     </div>
                   </div>
                 );
               }
+
               return (
                 <div
                   key={idx}
-                  className={`relative w-[48px] h-[48px] rounded-2xl border-2 border-dashed flex items-center justify-center select-none transition-all ${
+                  className={`group relative rounded-full border-2 border-dashed flex items-center justify-center select-none transition-all shrink-0 ${
                     isCurrentRound
-                      ? 'border-amber-300 bg-amber-500/15 shadow-[0_0_12px_rgba(255,215,0,0.4)] animate-pulse'
-                      : 'border-white/30 bg-black/15 opacity-60'
+                      ? 'border-amber-300 bg-amber-500/25 shadow-[0_0_12px_rgba(255,215,0,0.6)] animate-pulse'
+                      : 'border-white/35 bg-black/25 opacity-60'
                   }`}
-                  title={`Linh vật Vòng ${idx + 1}`}
+                  style={{
+                    width: `${size}px`,
+                    height: `${size}px`,
+                  }}
+                  title={`Vòng ${idx + 1}: ${isCurrentRound ? 'Đang chơi' : 'Chưa mở khóa'}`}
                 >
-                  <span className="text-white/40 text-xs font-black">
+                  <span
+                    className={`font-black ${
+                      isCurrentRound ? 'text-amber-300 text-xs' : 'text-white/40 text-[11px]'
+                    }`}
+                  >
                     {isCurrentRound ? '✨' : `?`}
                   </span>
+
+                  {/* Smart Hover Tooltip */}
+                  <div className="absolute bottom-[-34px] left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap px-2 py-0.5 rounded-lg bg-slate-900/90 text-white/90 text-[10px] font-bold border border-white/20 shadow-md z-50">
+                    Vòng {idx + 1}: {isCurrentRound ? 'Đang chinh phục' : 'Chưa mở khóa'}
+                  </div>
                 </div>
               );
-            })}
-          </div>
+            };
+
+            const containerTop = -26 - (isDouble && topCount > 0 ? size + rowGap : 0);
+
+            return (
+              <div
+                className="absolute left-[14px] z-[25] pointer-events-auto flex flex-col"
+                style={{
+                  top: `${containerTop}px`,
+                  gap: `${rowGap}px`,
+                }}
+              >
+                {/* Hàng 2 (Hàng trên): các vòng từ bottomCount -> displayCount - 1 */}
+                {isDouble && topCount > 0 && (
+                  <div
+                    className="flex items-center"
+                    style={{ gap: `${gap}px` }}
+                  >
+                    {Array.from({ length: topCount }).map((_, colIdx) =>
+                      renderBadge(bottomCount + colIdx)
+                    )}
+                  </div>
+                )}
+
+                {/* Hàng 1 (Hàng dưới): các vòng từ 0 -> bottomCount - 1 */}
+                <div
+                  className="flex items-center"
+                  style={{ gap: `${gap}px` }}
+                >
+                  {Array.from({ length: bottomCount }).map((_, colIdx) =>
+                    renderBadge(colIdx)
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           <img src="/games/mystery-treasure-grid-assets/assets/webp/panel-right.webp" alt="" className="absolute left-0 top-0 w-[427px] h-[494px]" />
 
           {/* Inner Panel Elements */}
-          <div className="absolute left-0 top-0 w-[427px] h-[494px] scale-[0.85] origin-center z-[3]">
-            {/* Treasure Chest */}
-            <div className="absolute left-[28px] top-[39px] w-[333px] z-[3]">
-              {/* Shaking & Glowing Aura during 5s rumble */}
-              {isChestRumbling && (
-                <>
-                  <div className="absolute -inset-10 rounded-full bg-gradient-to-r from-amber-400/60 via-yellow-300/80 to-amber-500/60 blur-3xl animate-golden-aura pointer-events-none -z-10" />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none -z-10">
-                    <div className="w-[420px] h-[420px] rounded-full animate-beam-spin bg-[conic-gradient(from_0deg,rgba(255,220,50,0.5)_0deg,transparent_25deg,rgba(255,240,120,0.6)_50deg,transparent_75deg,rgba(255,220,50,0.5)_100deg,transparent_125deg,rgba(255,240,120,0.6)_150deg,transparent_175deg,rgba(255,220,50,0.5)_200deg,transparent_225deg,rgba(255,240,120,0.6)_250deg,transparent_275deg,rgba(255,220,50,0.5)_300deg,transparent_325deg,rgba(255,240,120,0.6)_350deg)] filter blur-[2px]" />
-                  </div>
-                </>
-              )}
+          <div className="absolute left-0 top-0 w-[427px] h-[494px] z-[3]">
+            {/* Permanent Radiant Sunburst Aura behind Chest (vòng hào quang mờ nhẹ, êm dịu phóng to theo rương) */}
+            <div className="absolute left-1/2 -translate-x-1/2 top-[216px] -translate-y-1/2 w-[480px] h-[480px] pointer-events-none z-[1] flex items-center justify-center">
+              {/* Rotating Soft Misty Golden Sunburst Rays */}
+              <div
+                className={`w-full h-full rounded-full animate-beam-spin filter blur-[6px] transition-all duration-300 ${
+                  isChestRumbling ? 'opacity-75 scale-115' : 'opacity-42 scale-100'
+                }`}
+                style={{
+                  background: `conic-gradient(
+                    from 0deg,
+                    rgba(245, 158, 11, 0.38) 0deg 12deg,
+                    transparent 12deg 22.5deg,
+                    rgba(251, 191, 36, 0.32) 22.5deg 34.5deg,
+                    transparent 34.5deg 45deg,
+                    rgba(245, 158, 11, 0.38) 45deg 57deg,
+                    transparent 57deg 67.5deg,
+                    rgba(254, 240, 138, 0.42) 67.5deg 79.5deg,
+                    transparent 79.5deg 90deg,
+                    rgba(245, 158, 11, 0.38) 90deg 102deg,
+                    transparent 102deg 112.5deg,
+                    rgba(251, 191, 36, 0.32) 112.5deg 124.5deg,
+                    transparent 124.5deg 135deg,
+                    rgba(245, 158, 11, 0.38) 135deg 147deg,
+                    transparent 147deg 157.5deg,
+                    rgba(254, 240, 138, 0.42) 157.5deg 169.5deg,
+                    transparent 169.5deg 180deg,
+                    rgba(245, 158, 11, 0.38) 180deg 192deg,
+                    transparent 192deg 202.5deg,
+                    rgba(251, 191, 36, 0.32) 202.5deg 214.5deg,
+                    transparent 214.5deg 225deg,
+                    rgba(245, 158, 11, 0.38) 225deg 237deg,
+                    transparent 237deg 247.5deg,
+                    rgba(254, 240, 138, 0.42) 247.5deg 259.5deg,
+                    transparent 259.5deg 270deg,
+                    rgba(245, 158, 11, 0.38) 270deg 282deg,
+                    transparent 282deg 292.5deg,
+                    rgba(251, 191, 36, 0.32) 292.5deg 304.5deg,
+                    transparent 304.5deg 315deg,
+                    rgba(245, 158, 11, 0.38) 315deg 327deg,
+                    transparent 327deg 337.5deg,
+                    rgba(254, 240, 138, 0.42) 337.5deg 349.5deg,
+                    transparent 349.5deg 360deg
+                  )`,
+                  maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 72%)',
+                  WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 72%)',
+                }}
+              />
 
+              {/* Gentle Soft Warm Glow Halo */}
+              <div
+                className={`absolute inset-8 rounded-full bg-[radial-gradient(circle,rgba(253,224,71,0.35)_0%,rgba(245,158,11,0.18)_55%,transparent_75%)] blur-2xl animate-pulse transition-all duration-300 ${
+                  isChestRumbling ? 'opacity-80 scale-120' : 'opacity-42 scale-100'
+                }`}
+              />
+
+              {/* Ambient Soft Twinkles */}
+              <span className="absolute top-2 left-8 text-lg select-none animate-pulse opacity-60 text-yellow-200 filter drop-shadow-[0_0_6px_gold]">
+                ✨
+              </span>
+              <span className="absolute top-0 right-10 text-base select-none animate-pulse opacity-65 text-amber-300 filter drop-shadow-[0_0_6px_gold] [animation-delay:0.6s]">
+                ⭐
+              </span>
+              <span className="absolute bottom-12 right-6 text-sm select-none animate-pulse opacity-55 text-yellow-100 filter drop-shadow-[0_0_5px_gold] [animation-delay:1.2s]">
+                ✨
+              </span>
+              <span className="absolute bottom-10 left-7 text-sm select-none animate-pulse opacity-55 text-amber-200 filter drop-shadow-[0_0_5px_gold] [animation-delay:1.8s]">
+                ✨
+              </span>
+            </div>
+
+            {/* Treasure Chest + Nameplate Unit (To hơn 1.2 lần: w-[395px], hạ xuống top-[90px]) */}
+            <div
+              onClick={() => sounds.playMascotSqueak()}
+              className={`absolute left-1/2 -translate-x-1/2 top-[90px] z-[3] flex flex-col items-center cursor-pointer select-none transition-transform duration-240 ${
+                isChestRumbling
+                  ? 'animate-chest-rumble filter drop-shadow-[0_0_35px_rgba(255,220,50,1)] brightness-110'
+                  : chestAnim === 'celebrate'
+                  ? 'animate-chest-bounce'
+                  : chestAnim === 'mega'
+                  ? 'animate-chest-mega'
+                  : 'animate-chest-idle-hop filter drop-shadow-[0_0_18px_rgba(255,215,0,0.55)] drop-shadow-[0_6px_14px_rgba(0,0,0,0.22)]'
+              }`}
+              title="Rương Kho Báu Thần Kỳ (Bấm để nghe âm thanh)"
+            >
+              {/* Chest Image (To hơn 1.2 lần: w-[395px]) */}
               <img
                 src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
-                alt="Chest"
-                className={`w-[333px] transition-transform duration-240 ${
-                  isChestRumbling
-                    ? 'animate-chest-rumble filter drop-shadow-[0_0_35px_rgba(255,220,50,1)] brightness-110'
-                    : chestAnim === 'celebrate'
-                    ? 'animate-chest-bounce'
-                    : chestAnim === 'mega'
-                    ? 'animate-chest-mega'
-                    : ''
-                }`}
+                alt="Treasure Chest"
+                className="w-[395px] object-contain drop-shadow-md hover:scale-105 transition-transform"
+              />
+
+              {/* Nameplate (Tỉ lệ chuẩn 1.2 lần: w-[414px]) */}
+              <img
+                src="/games/mystery-treasure-grid-assets/assets/webp/chest-nameplate.webp"
+                alt="Magical Treasure Chest"
+                className="-mt-[52px] w-[414px] object-contain drop-shadow-md hover:scale-105 transition-transform"
               />
             </div>
 
-            <img src="/games/mystery-treasure-grid-assets/assets/webp/chest-nameplate.webp" alt="Nameplate" className="absolute left-[45px] top-[232px] w-[330px] z-[4]" />
+            {/* Slot Grid (Tự động tính toán số hàng, kích thước và khoảng cách để không bị sát mép khung) */}
+            {(() => {
+              const slotCount = Math.min(20, activeQuestions.length || 4);
+              const { rows, size, gap, rowGap, top } = getSlotGridLayout(slotCount);
 
-            {/* Slot Grid (Matches activeQuestions count) */}
-            <div className="absolute left-[22px] top-[336px] w-[384px] flex flex-wrap justify-center gap-x-[6px] gap-y-[7px] z-[4]">
-              {Array.from({ length: Math.min(16, activeQuestions.length) }).map((_, i) => {
-                const isFilled = revealedSlotsSet.has(i);
-                return (
-                  <div
-                    key={i}
-                    data-slot-index={i}
-                    className={`relative w-[43px] h-[43px] bg-[url('/games/mystery-treasure-grid-assets/assets/webp/progress-slot.webp')] bg-contain bg-center bg-no-repeat ${
-                      isFilled ? 'after:scale-100 after:opacity-100 animate-slot-spark' : ''
-                    } after:content-[''] after:absolute after:inset-[12px] after:rounded-full after:scale-25 after:opacity-0 after:bg-[radial-gradient(circle_at_35%_35%,#fff7af_0%,#ffd643_35%,#f4a012_100%)] after:shadow-[0_0_18px_rgba(255,217,74,0.82)] after:transition-all after:duration-220`}
-                  />
-                );
-              })}
-            </div>
+              return (
+                <div
+                  className="absolute left-0 right-0 flex flex-col items-center z-[4] pointer-events-none"
+                  style={{
+                    top: `${top}px`,
+                    gap: `${rowGap}px`,
+                  }}
+                >
+                  {rows.map((rowIndices, rowIdx) => (
+                    <div
+                      key={rowIdx}
+                      className="flex items-center justify-center"
+                      style={{ gap: `${gap}px` }}
+                    >
+                      {rowIndices.map((i) => {
+                        const isFilled = revealedSlotsSet.has(i);
+                        return (
+                          <div
+                            key={i}
+                            data-slot-index={i}
+                            style={{
+                              width: `${size}px`,
+                              height: `${size}px`,
+                            }}
+                            className={`relative bg-[url('/games/mystery-treasure-grid-assets/assets/webp/progress-slot.webp')] bg-contain bg-center bg-no-repeat ${
+                              isFilled ? 'after:scale-100 after:opacity-100 animate-slot-spark' : ''
+                            } after:content-[''] after:absolute after:inset-[26%] after:rounded-full after:scale-25 after:opacity-0 after:bg-[radial-gradient(circle_at_35%_35%,#fff7af_0%,#ffd643_35%,#f4a012_100%)] after:shadow-[0_0_18px_rgba(255,217,74,0.82)] after:transition-all after:duration-220`}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </section>
 
         {/* Right Side Decor */}
-        <img src="/games/mystery-treasure-grid-assets/assets/webp/sign-right.webp" alt="Sign Right" className="absolute right-[80px] bottom-[110px] w-[170px] z-[2]" />
-        <img src="/games/mystery-treasure-grid-assets/assets/webp/crab.webp" alt="Crab" className="absolute right-[130px] bottom-[30px] w-[130px] z-[2]" />
+        <img src="/games/mystery-treasure-grid-assets/assets/webp/sign-right.webp" alt="Sign Right" className="absolute right-[80px] bottom-[110px] w-[170px] z-[2] pointer-events-none" />
+        {/* Crab (Lắc chậm) */}
+        <img
+          src="/games/mystery-treasure-grid-assets/assets/webp/crab.webp"
+          alt="Bé Cua"
+          onClick={() => sounds.playMascotSqueak()}
+          className="absolute right-[130px] bottom-[30px] w-[130px] z-[2] animate-crab-slow cursor-pointer hover:scale-110 transition-transform filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
+          title="Bé Cua (Bấm để nghe tiếng kêu)"
+        />
 
         {/* Dynamic Particles Layer */}
         <div ref={particlesRef} className="absolute inset-0 pointer-events-none z-[15]">
@@ -2047,11 +2568,11 @@ function MysteryTreasureGridContent() {
               '--mascot-end-y': `${flyingMascot.endY}px`,
             } as React.CSSProperties}
           >
-            <div className="relative w-[130px] h-[130px] rounded-[32px] p-2.5 bg-gradient-to-b from-[#fffbe8] via-[#fef3c7] to-[#fed7aa] border-[5px] border-amber-400 shadow-[0_0_35px_rgba(255,215,0,1)] flex items-center justify-center">
+            <div className="relative w-[120px] h-[120px] rounded-full p-2.5 bg-gradient-to-b from-[#fffbe8] via-[#fef08a] to-[#fed7aa] border-[4.5px] border-amber-400 shadow-[0_0_35px_rgba(255,215,0,1)] flex items-center justify-center">
               <img
                 src={flyingMascot.mascot.imageUrl}
                 alt={flyingMascot.mascot.name}
-                className="w-full h-full object-contain rounded-2xl drop-shadow-md"
+                className="w-full h-full object-contain rounded-full drop-shadow-md"
               />
               <span className="absolute -top-3 -right-3 text-3xl animate-ping select-none">
                 ✨
@@ -2470,35 +2991,50 @@ function MysteryTreasureGridContent() {
             className="w-full max-w-[620px] p-[28px_32px] rounded-[42px] bg-gradient-to-b from-[#fff9dc] to-[#f6ecbe] border-[8px] border-[#ffd634] shadow-[0_10px_0_rgba(180,112,11,0.8),0_26px_36px_rgba(6,28,56,0.38)] text-center animate-in zoom-in-95 duration-300"
           >
             <div
-              className="text-[#ffcc34] text-[36px] sm:text-[42px] font-black tracking-wider uppercase text-shadow-md"
+              className="text-[#ffcc34] text-[32px] sm:text-[40px] font-black tracking-wider uppercase text-shadow-md"
               style={{
                 textShadow: '-2px -2px 0 #6e3406, 2px -2px 0 #6e3406, -2px 2px 0 #6e3406, 2px 2px 0 #6e3406, 0 4px 6px rgba(0,0,0,0.4)',
               }}
             >
-              🎉 HOÀN THÀNH {currentRound.title}! 🎉
-            </div>
-            <div className="mt-2 text-[#0c4b9f] font-bold text-[18px] sm:text-[20px]">
-              Bạn đã mở khóa toàn bộ {activeQuestions.length} ô kho báu!
+              🎉 HOÀN THÀNH {currentRound.title}!
             </div>
 
-            {/* Unlocked Mascot Mini Card */}
+            {/* Unlocked Mascot Display (Enlarged, Glowing, Transparent & No Border) */}
             {collectedMascots[currentRoundIndex] && (
-              <div className="mt-4 flex items-center justify-center gap-3 p-3 rounded-2xl bg-amber-950/15 border border-amber-400/50">
-                <img
-                  src={collectedMascots[currentRoundIndex].imageUrl}
-                  alt=""
-                  className="w-14 h-14 object-contain rounded-xl border-2 border-amber-300 shadow"
-                />
-                <div className="text-left">
-                  <div className="text-amber-800 text-xs font-black uppercase">Linh vật vừa mở khóa</div>
-                  <div className="text-amber-950 text-lg font-black">{collectedMascots[currentRoundIndex].name}</div>
+              <div className="my-6 sm:my-8 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
+                {/* Glowing Mascot Container */}
+                <div className="relative flex items-center justify-center">
+                  {/* Radiant Golden Glow Aura */}
+                  <div className="absolute w-36 h-36 sm:w-48 sm:h-48 rounded-full bg-gradient-to-r from-amber-300/60 via-yellow-300/70 to-orange-400/50 blur-2xl animate-pulse pointer-events-none" />
+                  
+                  {/* Pure Transparent Glowing Mascot Image */}
+                  <img
+                    src={collectedMascots[currentRoundIndex].imageUrl}
+                    alt={collectedMascots[currentRoundIndex].name}
+                    className="relative w-32 h-32 sm:w-44 sm:h-44 object-contain filter drop-shadow-[0_8px_20px_rgba(245,158,11,0.75)] drop-shadow-[0_0_28px_rgba(255,215,0,0.9)] animate-mascot-float select-none"
+                  />
+                </div>
+
+                {/* Typography (Enlarged & Prominent) */}
+                <div className="text-center sm:text-left space-y-1.5 sm:space-y-2">
+                  <div className="text-amber-800 text-xs sm:text-sm font-black uppercase tracking-wider bg-amber-500/15 px-3.5 py-1 rounded-full inline-block border border-amber-400/40">
+                    ✨ LINH VẬT VỪA MỞ KHÓA ✨
+                  </div>
+                  <div
+                    className="text-amber-950 text-3xl sm:text-[40px] font-black leading-tight tracking-wide"
+                    style={{
+                      fontFamily: '"Baloo 2", sans-serif',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.12)',
+                    }}
+                  >
+                    {collectedMascots[currentRoundIndex].name}
+                  </div>
+                  <div className="text-amber-900 font-extrabold text-base sm:text-xl">
+                    ⭐ {collectedMascots[currentRoundIndex].title}
+                  </div>
                 </div>
               </div>
             )}
-
-            <div className="mt-4 text-[34px] text-[#e27300] font-black drop-shadow-sm">
-              +{score} ĐIỂM TÍCH LŨY
-            </div>
 
             <div className="flex justify-center gap-4 mt-6">
               <button
@@ -2518,7 +3054,10 @@ function MysteryTreasureGridContent() {
       {showFinish && (
         <div
           onClick={(e) => {
-            if (e.target === e.currentTarget) setShowFinish(false);
+            if (e.target === e.currentTarget) {
+              setShowFinish(false);
+              resetGame();
+            }
           }}
           className="fixed inset-0 z-[100] grid place-items-center bg-[#071f39]/70 backdrop-blur-[6px] p-4"
         >
@@ -2549,28 +3088,43 @@ function MysteryTreasureGridContent() {
               Chúc mừng bạn đã chinh phục toàn bộ kho báu hải tặc!
             </div>
 
-            {/* SHOW ALL COLLECTED MASCOTS FROM ALL ROUNDS */}
-            <div className="mt-6 p-5 rounded-3xl bg-amber-950/20 border-2 border-amber-400/40 shadow-inner">
-              <div className="text-amber-900 text-sm sm:text-base font-black uppercase tracking-wider mb-4">
+            {/* SHOW ALL COLLECTED MASCOTS FROM ALL ROUNDS (Enlarged, Transparent, Glowing, No Gray Frame) */}
+            <div className="my-6">
+              <div className="text-amber-950 text-sm sm:text-base font-black uppercase tracking-wider mb-6 bg-amber-500/15 px-5 py-1.5 rounded-full inline-block border border-amber-400/40 shadow-xs">
                 🌟 BỘ SƯU TẬP LINH VẬT CỦA BẠN ({collectedMascots.length} BẢO VẬT) 🌟
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+              <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
                 {collectedMascots.map((m, mIdx) => (
                   <div
                     key={m.id || mIdx}
-                    className="group relative flex flex-col items-center animate-mascot-float"
+                    className="group relative flex flex-col items-center animate-mascot-float cursor-pointer hover:scale-110 transition-transform"
                     style={{ animationDelay: `${mIdx * 0.2}s` }}
-                    title={m.name}
+                    onClick={() => sounds.playMascotSqueak()}
+                    title={`${m.name} - ${m.title}`}
                   >
-                    <div className="relative w-[76px] sm:w-[92px] aspect-square rounded-2xl bg-gradient-to-b from-[#fffbe8] to-[#fed7aa] border-[3.5px] border-amber-400 shadow-[0_6px_16px_rgba(0,0,0,0.25),0_0_15px_rgba(255,215,0,0.6)] flex items-center justify-center p-2 hover:scale-110 transition-transform">
+                    {/* Glowing Mascot (Transparent, No background box, No border) */}
+                    <div className="relative flex items-center justify-center">
+                      {/* Radial Golden Glow Aura */}
+                      <div className="absolute w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-r from-amber-300/50 via-yellow-300/60 to-orange-400/40 blur-xl animate-pulse pointer-events-none" />
+
                       <img
                         src={m.imageUrl}
                         alt={m.name}
-                        className="w-full h-full object-contain rounded-xl"
+                        className="relative w-24 h-24 sm:w-32 sm:h-32 object-contain filter drop-shadow-[0_8px_18px_rgba(245,158,11,0.7)] drop-shadow-[0_0_22px_rgba(255,215,0,0.85)] select-none"
                       />
-                      <span className="absolute -top-2 -right-2 text-base select-none">
+                      <span className="absolute -top-1 -right-1 text-xl select-none filter drop-shadow">
                         ⭐
                       </span>
+                    </div>
+
+                    {/* Mascot Name & Title (Enlarged, Full Text) */}
+                    <div className="mt-2 text-center">
+                      <div className="text-base sm:text-lg font-black text-amber-950 drop-shadow-sm leading-tight">
+                        {m.name}
+                      </div>
+                      <div className="text-xs sm:text-sm font-bold text-amber-900/80">
+                        {m.title}
+                      </div>
                     </div>
                   </div>
                 ))}
