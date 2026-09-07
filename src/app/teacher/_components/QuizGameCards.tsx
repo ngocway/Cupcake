@@ -45,6 +45,7 @@ const QUIZ_GAMES: GameCard[] = [
     badgeBg: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white",
     desc: "Học sinh điều khiển nòng pháo không gian, bắn đạn laser neon vào các quả cầu năng lượng chứa đáp án đúng giữa vũ trụ huyền ảo.",
     imageUrl: "/images/games/shooter-quiz.jpg",
+    videoId: "eWAlcTjJvrU",
     createHref: "/teacher/games/shooter-quiz/create",
     titleColor: "text-cyan-600 dark:text-cyan-400",
   },
