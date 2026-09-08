@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { TEACHER_GAME_CATEGORIES } from "@/constants/teacher-game-categories";
 
 export async function getTeacherMatchGamesAction() {
   try {
@@ -13,21 +14,33 @@ export async function getTeacherMatchGamesAction() {
     }
 
     const isAdmin = session.user.role === "ADMIN";
-    const whereCondition: any = isAdmin
-      ? {
-          game: { name: { not: { contains: "Lật Ảnh" } } },
+    const matchModes = TEACHER_GAME_CATEGORIES.match.gameModes;
+
+    // Strict Whitelist Filter: only games explicitly classified as Match
+    const matchFilter: any = {
+      OR: [
+        { gameMode: { in: matchModes } },
+        {
+          gameMode: null,
+          game: {
+            name: { not: { contains: "Lật Ảnh" } },
+          },
           NOT: [
-            { gameMode: "candy-quiz" },
-            { gameMode: "treasure-hunt" },
+            { game: { name: { contains: "Trắc nghiệm" } } },
+            { game: { name: { contains: "Kho báu" } } },
+            { game: { name: { contains: "Bắn súng" } } },
+            { game: { name: { contains: "Đập Trứng" } } },
+            { game: { name: { contains: "Toán" } } },
           ],
-        }
+        },
+      ],
+    };
+
+    const whereCondition: any = isAdmin
+      ? matchFilter
       : { 
           teacherId: session.user.id,
-          game: { name: { not: { contains: "Lật Ảnh" } } },
-          NOT: [
-            { gameMode: "candy-quiz" },
-            { gameMode: "treasure-hunt" },
-          ],
+          ...matchFilter,
         };
 
     const rawTopics = await prisma.matchWordTopic.findMany({
@@ -96,9 +109,19 @@ export async function getTeacherFlipGamesAction() {
     }
 
     const isAdmin = session.user.role === "ADMIN";
+    const flipModes = TEACHER_GAME_CATEGORIES.flip.gameModes;
+
+    // Strict Whitelist Filter for Flip Games
+    const flipFilter: any = {
+      OR: [
+        { gameMode: { in: flipModes } },
+        { game: { name: { contains: "Lật Ảnh" } } },
+      ],
+    };
+
     const whereCondition: any = isAdmin
-      ? { game: { name: { contains: "Lật Ảnh" } } }
-      : { teacherId: session.user.id, game: { name: { contains: "Lật Ảnh" } } };
+      ? flipFilter
+      : { teacherId: session.user.id, ...flipFilter };
 
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,

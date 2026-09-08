@@ -23,6 +23,10 @@ import {
   getChoiceEggGames,
   deleteChoiceEggGame,
 } from "@/lib/choice-egg-storage";
+import {
+  getTeacherChoiceGamesAction,
+  deleteTeacherChoiceGameAction,
+} from "@/actions/teacher-choice-games";
 import { ChoiceGameShareModal } from "./ChoiceGameShareModal";
 import { toast } from "sonner";
 
@@ -40,46 +44,89 @@ export function MyChoiceGamesList() {
   const router = useRouter();
   const [games, setGames] = useState<UnifiedGameItem[]>([]);
   const [shareGame, setShareGame] = useState<UnifiedGameItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const loadGames = () => {
-    const shooters: UnifiedGameItem[] = getChoiceShooterGames().map((g) => ({
-      ...g,
-      gameType: "shooter" as const,
-    }));
+  const loadGames = async (isBackground = false) => {
+    if (!isBackground && games.length === 0) setLoading(true);
 
-    const eggs: UnifiedGameItem[] = getChoiceEggGames().map((g) => ({
-      ...g,
-      gameType: "egg" as const,
-    }));
+    try {
+      const res = await getTeacherChoiceGamesAction();
+      let dbGames: UnifiedGameItem[] = [];
+      if (res.success && Array.isArray(res.games)) {
+        dbGames = res.games as UnifiedGameItem[];
+      }
 
-    // Merge and sort newest first
-    const combined = [...shooters, ...eggs].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+      // Also read local games for backwards compatibility
+      const localShooters: UnifiedGameItem[] = getChoiceShooterGames().map((g) => ({
+        ...g,
+        gameType: "shooter" as const,
+      }));
 
-    setGames(combined);
-    setLoading(false);
+      const localEggs: UnifiedGameItem[] = getChoiceEggGames().map((g) => ({
+        ...g,
+        gameType: "egg" as const,
+      }));
+
+      // Combine DB games with local games not yet in DB
+      const existingCodes = new Set(dbGames.map((g) => g.code.toUpperCase()));
+      const extraLocal = [...localShooters, ...localEggs].filter(
+        (g) => !existingCodes.has(g.code.toUpperCase())
+      );
+
+      const combined = [...dbGames, ...extraLocal].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      setGames(combined);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("cached_teacher_choice_games", JSON.stringify(combined));
+        } catch (e) {}
+      }
+    } catch (err) {
+      console.error("Failed to load choice games:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadGames();
+    let hasCache = false;
+    try {
+      const cached = sessionStorage.getItem("cached_teacher_choice_games");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setGames(parsed);
+          setLoading(false);
+          hasCache = true;
+        }
+      }
+    } catch (e) {}
+
+    loadGames(hasCache);
   }, []);
 
-  const handleDelete = (game: UnifiedGameItem) => {
+  const handleDelete = async (game: UnifiedGameItem) => {
     if (!confirm(`Bạn có chắc chắn muốn xóa bài tập "${game.title}" không?`)) return;
 
-    const ok =
-      game.gameType === "egg"
-        ? deleteChoiceEggGame(game.id)
-        : deleteChoiceShooterGame(game.id);
+    // Delete from DB if present
+    try {
+      await deleteTeacherChoiceGameAction(game.id);
+    } catch (e) {}
 
-    if (ok) {
-      toast.success(`Đã xóa bài tập "${game.title}"!`);
-      loadGames();
+    // Delete from local storage if present
+    if (game.gameType === "egg") {
+      deleteChoiceEggGame(game.id);
     } else {
-      toast.error("Không thể xóa bài tập này!");
+      deleteChoiceShooterGame(game.id);
     }
+
+    toast.success(`Đã xóa bài tập "${game.title}"!`);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("cached_teacher_choice_games");
+    }
+    loadGames();
   };
 
   const handleCreateNew = () => {

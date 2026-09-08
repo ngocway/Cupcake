@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceShooterGame, getChoiceShooterGameById, ChoiceShooterGame } from "@/lib/choice-shooter-storage";
+import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
 import { SciFiNeonShooterGame } from "@/app/_components/SciFiNeonShooterGame";
 
 // ==========================================
@@ -366,9 +367,25 @@ export default function CreateChoiceShooterPage() {
     toast.success(`Đã thêm ô câu hỏi trống #${next.length}`);
   };
 
-  const handleSaveAndComplete = () => {
+  const handleSaveAndComplete = async () => {
     if (questions.length === 0) return;
 
+    // Save to Database
+    try {
+      await saveTeacherChoiceGameAction({
+        code: createdCode,
+        title: gameTitle,
+        gameType: "shooter",
+        questionCount,
+        endMode,
+        selectedTypes,
+        questions,
+      });
+    } catch (e) {
+      console.error("Failed to save choice shooter to DB:", e);
+    }
+
+    // Save to localStorage as local fallback
     saveChoiceShooterGame({
       id: createdCode,
       code: createdCode,
@@ -378,6 +395,12 @@ export default function CreateChoiceShooterPage() {
       selectedTypes,
       questions,
     });
+
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("cached_teacher_choice_games");
+      } catch (e) {}
+    }
 
     setIsSuccessModalOpen(true);
   };

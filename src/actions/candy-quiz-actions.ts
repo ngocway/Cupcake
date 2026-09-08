@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
 
+import { TEACHER_GAME_CATEGORIES } from "@/constants/teacher-game-categories";
 import type {
   QuizQuestionOption,
   QuizQuestion,
@@ -129,8 +130,13 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
 
     const targetGameMode = data.gameMode || "candy-quiz";
     const isTreasure = targetGameMode === "treasure-hunt";
-    const targetGameName = isTreasure ? "Trò chơi Truy tìm Kho báu" : "Trò chơi Trắc nghiệm Kẹo Ngọt";
-    const defaultIcon = isTreasure ? "🗺️" : "🍬";
+    const isShooter = targetGameMode === "shooter-quiz";
+    const targetGameName = isTreasure
+      ? "Trò chơi Truy tìm Kho báu"
+      : isShooter
+        ? "Trò chơi Bắn súng Trắc nghiệm"
+        : "Trò chơi Trắc nghiệm Kẹo Ngọt";
+    const defaultIcon = isTreasure ? "🗺️" : isShooter ? "🎯" : "🍬";
 
     // If updating an existing topic
     if (data.topicId) {
@@ -145,18 +151,22 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
           ageGroup: data.gradeLevel || "kids-2-5",
           audioMode: "NONE",
           gameMode: targetGameMode,
-          items: {
-            create: flatItems.map((item) => ({
-              roundIndex: item.roundIndex,
-              word: item.word,
-              imageUrl: item.imageUrl,
-              labelB: item.labelB,
-              audioUrl: null,
-              audioBUrl: null,
-            })),
-          },
         },
       });
+
+      if (flatItems.length > 0) {
+        await prisma.matchWordItem.createMany({
+          data: flatItems.map((item) => ({
+            topicId: updatedTopic.id,
+            roundIndex: item.roundIndex,
+            word: item.word,
+            imageUrl: item.imageUrl,
+            labelB: item.labelB,
+            audioUrl: null,
+            audioBUrl: null,
+          })),
+        });
+      }
 
       revalidatePath("/teacher");
       return { success: true, topicId: updatedTopic.id, slug: updatedTopic.slug };
@@ -191,18 +201,22 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
         audioMode: "NONE",
         gameMode: targetGameMode,
         teacherId: session?.user?.id || null,
-        items: {
-          create: flatItems.map((item) => ({
-            roundIndex: item.roundIndex,
-            word: item.word,
-            imageUrl: item.imageUrl,
-            labelB: item.labelB,
-            audioUrl: null,
-            audioBUrl: null,
-          })),
-        },
       },
     });
+
+    if (flatItems.length > 0) {
+      await prisma.matchWordItem.createMany({
+        data: flatItems.map((item) => ({
+          topicId: topic.id,
+          roundIndex: item.roundIndex,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          labelB: item.labelB,
+          audioUrl: null,
+          audioBUrl: null,
+        })),
+      });
+    }
 
     revalidatePath("/teacher");
     return { success: true, topicId: topic.id, slug: topic.slug };
@@ -221,24 +235,25 @@ export async function getTeacherQuizGamesAction() {
     }
 
     const isAdmin = session.user.role === "ADMIN";
+    const quizModes = TEACHER_GAME_CATEGORIES.quiz.gameModes;
+
+    // Strict Whitelist Filter for Quiz Games
+    const quizFilter: any = {
+      OR: [
+        { gameMode: { in: quizModes } },
+        { game: { name: { contains: "Trắc nghiệm" } } },
+        { game: { name: { contains: "Kho báu" } } },
+      ],
+      NOT: [
+        { gameMode: { in: TEACHER_GAME_CATEGORIES.choice.gameModes } },
+        { gameMode: { in: TEACHER_GAME_CATEGORIES.match.gameModes } },
+        { gameMode: { in: TEACHER_GAME_CATEGORIES.flip.gameModes } },
+      ],
+    };
+
     const whereCondition: any = isAdmin
-      ? {
-          OR: [
-            { gameMode: "candy-quiz" },
-            { gameMode: "treasure-hunt" },
-            { game: { name: { contains: "Trắc nghiệm" } } },
-            { game: { name: { contains: "Kho báu" } } },
-          ],
-        }
-      : {
-          teacherId: session.user.id,
-          OR: [
-            { gameMode: "candy-quiz" },
-            { gameMode: "treasure-hunt" },
-            { game: { name: { contains: "Trắc nghiệm" } } },
-            { game: { name: { contains: "Kho báu" } } },
-          ],
-        };
+      ? quizFilter
+      : { teacherId: session.user.id, ...quizFilter };
 
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,

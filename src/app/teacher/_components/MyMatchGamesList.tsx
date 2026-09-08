@@ -31,23 +31,9 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Optimization 3: Browser SessionStorage Cache + Instant Initial State
-  const [topics, setTopics] = useState<any[]>(() => {
-    if (initialTopics && initialTopics.length >= 0) return initialTopics;
-    if (typeof window !== "undefined") {
-      try {
-        const cached = sessionStorage.getItem("cached_teacher_match_games");
-        if (cached) return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [];
-  });
-
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (initialTopics && initialTopics.length >= 0) return false;
-    if (typeof window !== "undefined" && sessionStorage.getItem("cached_teacher_match_games")) return false;
-    return true;
-  });
+  // Optimization: Hydration-safe initial state, then hydrate from sessionStorage
+  const [topics, setTopics] = useState<any[]>(initialTopics || []);
+  const [loading, setLoading] = useState<boolean>(!initialTopics || initialTopics.length === 0);
 
   const [previewTopic, setPreviewTopic] = useState<PreviewGameTopic | null>(null);
   const [shareTopic, setShareTopic] = useState<any | null>(null);
@@ -68,7 +54,18 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
   };
 
   useEffect(() => {
-    // If initialTopics was provided by server, do silent background revalidation
+    // Read cached data immediately on client mount after hydration
+    try {
+      const cached = sessionStorage.getItem("cached_teacher_match_games");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTopics(parsed);
+          setLoading(false);
+        }
+      }
+    } catch (e) {}
+
     fetchGames(Boolean(initialTopics && initialTopics.length >= 0));
   }, [initialTopics]);
 

@@ -22,23 +22,8 @@ import { toast } from "sonner";
 export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const router = useRouter();
 
-  const [topics, setTopics] = useState<any[]>(() => {
-    if (initialTopics && initialTopics.length >= 0) return initialTopics;
-    if (typeof window !== "undefined") {
-      try {
-        const cached = sessionStorage.getItem("cached_teacher_quiz_games");
-        if (cached) return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [];
-  });
-
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (initialTopics && initialTopics.length >= 0) return false;
-    if (typeof window !== "undefined" && sessionStorage.getItem("cached_teacher_quiz_games"))
-      return false;
-    return true;
-  });
+  const [topics, setTopics] = useState<any[]>(initialTopics || []);
+  const [loading, setLoading] = useState<boolean>(!initialTopics || initialTopics.length === 0);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareTopic, setShareTopic] = useState<any | null>(null);
@@ -58,6 +43,18 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
   };
 
   useEffect(() => {
+    // Read cached data immediately on client mount after hydration
+    try {
+      const cached = sessionStorage.getItem("cached_teacher_quiz_games");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTopics(parsed);
+          setLoading(false);
+        }
+      }
+    } catch (e) {}
+
     fetchGames(Boolean(initialTopics && initialTopics.length >= 0));
   }, [initialTopics]);
 

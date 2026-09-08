@@ -1000,6 +1000,9 @@ export function TreasureHuntCreatorUI() {
       });
 
       if (res.success) {
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("cached_teacher_quiz_games");
+        }
         toast.success(topicId ? "Cập nhật bài tập thành công!" : "Tạo bài tập Truy tìm Kho báu thành công!");
         router.push("/teacher?tab=my-quiz-games");
       } else {

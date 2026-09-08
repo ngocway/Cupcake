@@ -310,18 +310,53 @@ const DEFAULT_GAME_DATA = [
     const textEl = card.querySelector('.answer-text');
     if (!textEl) return;
 
-    const minSize = 13;
+    const rawText = (textEl.textContent || '').trim();
+    if (!rawText) return;
+
+    const charCount = rawText.length;
     const isOptions2 = answersGrid && answersGrid.classList.contains('options-2');
 
-    let maxSize = isOptions2
-      ? Math.min(25, Math.max(19, Math.round(window.innerWidth * 0.022)))
-      : Math.min(22, Math.max(16, Math.round(window.innerWidth * 0.018)));
+    const cardH = card.clientHeight || 100;
+    const cardW = card.clientWidth || 240;
 
-    const lineHeightVal = 1.20;
-    textEl.style.fontSize = `${maxSize}px`;
-    textEl.style.lineHeight = `${lineHeightVal}`;
+    // Dynamic sizing bounds based on character count
+    let minSize = 13;
+    let maxSize = 24;
 
-    const maxH = card.clientHeight * (isOptions2 ? 0.84 : 0.78);
+    if (charCount <= 4) {
+      // Very short: numbers (e.g. 65, 68), short codes
+      const hLimit = Math.round(cardH * 0.48);
+      maxSize = Math.max(32, Math.min(hLimit, 52));
+      minSize = 22;
+    } else if (charCount <= 10) {
+      // Short words/numbers: e.g. "Banana", "45 + 23"
+      const hLimit = Math.round(cardH * 0.40);
+      maxSize = Math.max(26, Math.min(hLimit, 42));
+      minSize = 18;
+    } else if (charCount <= 22) {
+      // Medium phrases
+      const hLimit = Math.round(cardH * 0.32);
+      maxSize = Math.max(20, Math.min(hLimit, 32));
+      minSize = 15;
+    } else if (charCount <= 45) {
+      // Regular sentences
+      const hLimit = Math.round(cardH * 0.25);
+      maxSize = Math.max(16, Math.min(hLimit, 24));
+      minSize = 13;
+    } else {
+      // Long sentences (> 45 chars)
+      const hLimit = Math.round(cardH * 0.20);
+      maxSize = Math.max(13, Math.min(hLimit, 20));
+      minSize = 12;
+    }
+
+    if (isOptions2) {
+      maxSize = Math.round(maxSize * 1.15);
+    }
+
+    const lineHeightVal = charCount <= 6 ? 1.10 : 1.20;
+    const maxH = cardH * (isOptions2 ? 0.86 : 0.80);
+    const maxAllowedLines = charCount <= 10 ? 1 : 2;
 
     let low = minSize;
     let high = maxSize;
@@ -330,6 +365,7 @@ const DEFAULT_GAME_DATA = [
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
       textEl.style.fontSize = `${mid}px`;
+      textEl.style.lineHeight = `${lineHeightVal}`;
 
       let lineCount = 1;
       try {
@@ -339,9 +375,9 @@ const DEFAULT_GAME_DATA = [
       } catch (e) {}
 
       const isOverflowing =
-        lineCount > 2 ||
-        (maxH > 0 && textEl.clientHeight > maxH + 3) ||
-        (textEl.clientWidth > 0 && textEl.scrollWidth > textEl.clientWidth + 6);
+        lineCount > maxAllowedLines ||
+        (maxH > 0 && textEl.clientHeight > maxH) ||
+        (textEl.scrollWidth > textEl.clientWidth + 4);
 
       if (isOverflowing) {
         high = mid - 1;

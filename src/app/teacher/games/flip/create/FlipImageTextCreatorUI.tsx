@@ -824,7 +824,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
       // Clear cache so the newly created game is fetched fresh immediately
       if (typeof window !== "undefined") {
         try {
-          sessionStorage.removeItem("cached_teacher_match_games");
+          sessionStorage.removeItem("cached_teacher_flip_games");
         } catch (e) {}
       }
 

@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw, X, Trophy, Heart, Sparkles, Volume2, VolumeX } from "lucide-react";
 import { getChoiceShooterGameById, ChoiceShooterGame } from "@/lib/choice-shooter-storage";
+import { getTeacherChoiceGameByCodeAction } from "@/actions/teacher-choice-games";
 
 import { SciFiNeonShooterGame } from "@/app/_components/SciFiNeonShooterGame";
 
@@ -15,11 +16,26 @@ export default function StudentShooterGamePage({ params }: { params: Promise<{ c
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (code) {
+    async function load() {
+      if (!code) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const dbRes = await getTeacherChoiceGameByCodeAction(code);
+        if (dbRes.success && dbRes.game) {
+          setGame(dbRes.game as any);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {}
+
+      // Fallback to local storage
       const found = getChoiceShooterGameById(code);
       setGame(found);
+      setLoading(false);
     }
-    setLoading(false);
+    load();
   }, [code]);
 
   if (loading) {

@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
+import { getTeacherChoiceGameByCodeAction } from "@/actions/teacher-choice-games";
 
 function prepareEggGameData(questions: ChoiceEggGame["questions"]) {
   return questions.map((q) => {
@@ -26,16 +27,35 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
 
   useEffect(() => {
-    if (code) {
-      const found = getChoiceEggGameById(code);
+    async function load() {
+      if (!code) {
+        setLoading(false);
+        return;
+      }
+
+      let found: ChoiceEggGame | null = null;
+
+      try {
+        const dbRes = await getTeacherChoiceGameByCodeAction(code);
+        if (dbRes.success && dbRes.game) {
+          found = dbRes.game as any;
+        }
+      } catch (e) {}
+
+      if (!found) {
+        found = getChoiceEggGameById(code);
+      }
+
       if (found) {
         setGame(found);
         // Inject custom questions into parent window for iframe game.js to read
         (window as any).CUSTOM_EGG_GAME_DATA = prepareEggGameData(found.questions);
         (window as any).CUSTOM_EGG_END_MODE = found.endMode || "finish";
       }
+
+      setLoading(false);
     }
-    setLoading(false);
+    load();
   }, [code]);
 
   if (loading) {

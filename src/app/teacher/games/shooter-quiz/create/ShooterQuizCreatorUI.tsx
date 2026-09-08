@@ -852,6 +852,9 @@ export function ShooterQuizCreatorUI() {
       });
 
       if (res.success) {
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("cached_teacher_quiz_games");
+        }
         toast.success(topicId ? "Cập nhật bài tập thành công!" : "Tạo bài tập Bắn súng Trắc nghiệm thành công!");
         router.push("/teacher?tab=my-quiz-games");
       } else {

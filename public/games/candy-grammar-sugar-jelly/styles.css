@@ -419,7 +419,7 @@ button{font:inherit}
 .answer-text{
   position:absolute;z-index:3;left:9%;right:11%;top:50%;transform:translateY(-50%);width:80%;height:auto;max-height:84%;
   display:flex;align-items:center;justify-content:center;text-align:center;
-  color:#532007;font-weight:900;font-size:clamp(13px,1.6vw,27px);line-height:1.20;
+  color:#532007;font-weight:900;font-size:clamp(14px,2.2vw,48px);line-height:1.20;
   text-wrap:balance;overflow-wrap:break-word;
   white-space:normal;overflow:hidden;text-overflow:ellipsis;
 }

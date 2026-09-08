@@ -76,7 +76,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
         where: { topicId: data.topicId },
       });
 
-      // 2. Update the topic and create new items
+      // 2. Update the topic
       const updatedTopic = await prisma.matchWordTopic.update({
         where: { id: data.topicId },
         data: {
@@ -84,19 +84,24 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
           ageGroup: data.gradeLevel || "kids-2-5",
           audioMode: data.audioMode || "AUTO_TTS",
           ...(data.gameMode ? { gameMode: data.gameMode } : {}),
-          items: {
-            create: data.pairs.map((pair) => ({
-              roundIndex: pair.roundIndex ?? 0,
-              word: pair.word || "",
-              imageUrl: pair.imageUrl || null,
-              audioUrl: pair.audioUrl || null,
-              imageBUrl: pair.imageBUrl || null,
-              labelB: pair.labelB || null,
-              audioBUrl: pair.audioBUrl || null,
-            })),
-          },
         },
       });
+
+      // 3. Bulk insert items in 1 SQL statement
+      if (data.pairs.length > 0) {
+        await prisma.matchWordItem.createMany({
+          data: data.pairs.map((pair) => ({
+            topicId: updatedTopic.id,
+            roundIndex: pair.roundIndex ?? 0,
+            word: pair.word || "",
+            imageUrl: pair.imageUrl || null,
+            audioUrl: pair.audioUrl || null,
+            imageBUrl: pair.imageBUrl || null,
+            labelB: pair.labelB || null,
+            audioBUrl: pair.audioBUrl || null,
+          })),
+        });
+      }
 
       revalidatePath("/teacher");
       revalidatePath("/student/game/flashcard-match");
@@ -135,7 +140,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
 
     const slug = toSlug(data.title) + "-" + Date.now().toString(36);
 
-    // 2. Create the new topic with all card items
+    // 2. Create the new topic
     const topic = await prisma.matchWordTopic.create({
       data: {
         gameId: game.id,
@@ -146,22 +151,24 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
         audioMode: data.audioMode || "AUTO_TTS",
         gameMode: data.gameMode || "match",
         teacherId: session?.user?.id || null,
-        items: {
-          create: data.pairs.map((pair) => ({
-            roundIndex: pair.roundIndex ?? 0,
-            word: pair.word || "",
-            imageUrl: pair.imageUrl || null,
-            audioUrl: pair.audioUrl || null,
-            imageBUrl: pair.imageBUrl || null,
-            labelB: pair.labelB || null,
-            audioBUrl: pair.audioBUrl || null,
-          })),
-        },
-      },
-      include: {
-        items: true,
       },
     });
+
+    // 3. Bulk insert all card items in 1 SQL statement
+    if (data.pairs.length > 0) {
+      await prisma.matchWordItem.createMany({
+        data: data.pairs.map((pair) => ({
+          topicId: topic.id,
+          roundIndex: pair.roundIndex ?? 0,
+          word: pair.word || "",
+          imageUrl: pair.imageUrl || null,
+          audioUrl: pair.audioUrl || null,
+          imageBUrl: pair.imageBUrl || null,
+          labelB: pair.labelB || null,
+          audioBUrl: pair.audioBUrl || null,
+        })),
+      });
+    }
 
     revalidatePath("/teacher");
     revalidatePath("/student/game/flashcard-match");

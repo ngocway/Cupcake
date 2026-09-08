@@ -4,12 +4,20 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { StickySidebarWrapper } from "@/app/_components/StickySidebarWrapper";
 import { useState, useEffect } from "react";
 
-export function TeacherHomeSidebar() {
+interface TeacherHomeSidebarProps {
+  activeTab?: string;
+  onSelectTab?: (tab: "match" | "choice" | "fill" | "flip" | "quiz" | "my-match-games" | "my-choice-games" | "my-fill-games" | "my-flip-games" | "my-quiz-games") => void;
+}
+
+export function TeacherHomeSidebar({
+  activeTab: propActiveTab,
+  onSelectTab,
+}: TeacherHomeSidebarProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const activeTab = searchParams?.get("tab") || "match";
+  const activeTab = propActiveTab ?? (searchParams?.get("tab") || "match");
 
   const [isCreateOpen, setIsCreateOpen] = useState(true);
   const [isMyGamesOpen, setIsMyGamesOpen] = useState(true);
@@ -38,6 +46,10 @@ export function TeacherHomeSidebar() {
   };
 
   const handleSelectTab = (tab: "match" | "choice" | "fill" | "flip" | "quiz" | "my-match-games" | "my-choice-games" | "my-fill-games" | "my-flip-games" | "my-quiz-games") => {
+    if (onSelectTab) {
+      onSelectTab(tab);
+      return;
+    }
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("tab", tab);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });

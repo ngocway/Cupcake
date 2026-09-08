@@ -731,7 +731,7 @@ export function FlipImageImageCreatorUI() {
       if (res.success) {
         if (typeof window !== "undefined") {
           try {
-            sessionStorage.removeItem("cached_teacher_match_games");
+            sessionStorage.removeItem("cached_teacher_flip_games");
           } catch (e) {}
         }
         toast.success("Lưu bài tập Lật Ảnh-Ảnh thành công!", { id: "save-game-toast" });

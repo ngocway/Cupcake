@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceEggGame, getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
+import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -354,9 +355,25 @@ export default function CreateChoiceEggPage() {
     toast.success(`Đã thêm ô câu hỏi trống #${next.length}`);
   };
 
-  const handleSaveAndComplete = () => {
+  const handleSaveAndComplete = async () => {
     if (questions.length === 0) return;
 
+    // Save to Database
+    try {
+      await saveTeacherChoiceGameAction({
+        code: createdCode,
+        title: gameTitle,
+        gameType: "egg",
+        questionCount,
+        endMode,
+        selectedTypes,
+        questions,
+      });
+    } catch (e) {
+      console.error("Failed to save choice egg to DB:", e);
+    }
+
+    // Save to localStorage as local fallback
     saveChoiceEggGame({
       id: createdCode,
       code: createdCode,
@@ -366,6 +383,12 @@ export default function CreateChoiceEggPage() {
       selectedTypes,
       questions,
     });
+
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("cached_teacher_choice_games");
+      } catch (e) {}
+    }
 
     setIsSuccessModalOpen(true);
   };
