@@ -227,6 +227,10 @@ const DEFAULT_GAME_DATA = [
       state.autoNext = !state.autoNext;
       localStorage.setItem('candy_quiz_auto_next', String(state.autoNext));
       updateAutoNextUI();
+      if (state.autoNext && nextBtn && !nextBtn.hidden) {
+        nextBtn.hidden = true;
+        handleNext();
+      }
       uiSound();
     });
   }
@@ -679,22 +683,6 @@ const DEFAULT_GAME_DATA = [
   cards.forEach(card => card.addEventListener('click', () => select(card)));
   if (nextBtn) nextBtn.addEventListener('click', handleNext);
   if (nextRoundBtn) nextRoundBtn.addEventListener('click', handleNextRound);
-  if (autoNextBtn) {
-    autoNextBtn.classList.toggle('off', !state.autoNext);
-    autoNextBtn.setAttribute('aria-checked', String(state.autoNext));
-    autoNextBtn.addEventListener('click', () => {
-      state.autoNext = !state.autoNext;
-      localStorage.setItem('candy_quiz_auto_next', String(state.autoNext));
-      autoNextBtn.classList.toggle('off', !state.autoNext);
-      autoNextBtn.setAttribute('aria-checked', String(state.autoNext));
-      autoNextBtn.setAttribute('title', `Tự chuyển câu: ${state.autoNext ? 'BẬT' : 'TẮT'}`);
-      if (state.autoNext && nextBtn && !nextBtn.hidden) {
-        nextBtn.hidden = true;
-        handleNext();
-      }
-      uiSound();
-    });
-  }
   if (pauseBtn) {
     pauseBtn.addEventListener('click', () => {
       state.paused = true;
