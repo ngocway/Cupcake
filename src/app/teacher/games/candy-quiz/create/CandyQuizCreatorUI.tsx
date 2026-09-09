@@ -475,12 +475,14 @@ export function CandyQuizCreatorUI() {
     isOpen: boolean;
     targetQuestionId: string | null;
     query: string;
+    style: "CARTOON" | "REALISTIC";
     results: any[];
     isSearching: boolean;
   }>({
     isOpen: false,
     targetQuestionId: null,
     query: "",
+    style: "CARTOON",
     results: [],
     isSearching: false,
   });
@@ -744,13 +746,14 @@ export function CandyQuizCreatorUI() {
     options?: QuizQuestionOption[],
     defaultQuestionText?: string
   ) => {
-    setSearchImageModal({
+    setSearchImageModal((prev) => ({
       isOpen: true,
       targetQuestionId: questionId,
       query: "",
+      style: prev.style || "CARTOON",
       results: [],
       isSearching: true,
-    });
+    }));
 
     try {
       const keyword = await resolveQuestionKeywordAction(defaultQuestionText || "", options);
@@ -760,7 +763,7 @@ export function CandyQuizCreatorUI() {
       }));
 
       if (keyword && keyword.trim()) {
-        const results = await searchImagesClient(keyword, "CARTOON");
+        const results = await searchImagesClient(keyword, searchImageModal.style || "CARTOON");
         setSearchImageModal((prev) => ({
           ...prev,
           results: results || [],
@@ -778,11 +781,12 @@ export function CandyQuizCreatorUI() {
     }
   };
 
-  const executeImageSearch = async (qText: string) => {
+  const executeImageSearch = async (qText: string, searchStyle?: "CARTOON" | "REALISTIC") => {
     if (!qText.trim()) return;
-    setSearchImageModal((prev) => ({ ...prev, isSearching: true }));
+    const modeToUse = searchStyle || searchImageModal.style || "CARTOON";
+    setSearchImageModal((prev) => ({ ...prev, isSearching: true, style: modeToUse }));
     try {
-      const results = await searchImagesClient(qText, "CARTOON");
+      const results = await searchImagesClient(qText, modeToUse);
       setSearchImageModal((prev) => ({
         ...prev,
         results: results || [],
@@ -1463,7 +1467,7 @@ D. goes`
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
                 value={searchImageModal.query}
@@ -1471,15 +1475,52 @@ D. goes`
                   setSearchImageModal((prev) => ({ ...prev, query: e.target.value }))
                 }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") executeImageSearch(searchImageModal.query);
+                  if (e.key === "Enter") executeImageSearch(searchImageModal.query, searchImageModal.style);
                 }}
                 placeholder="Nhập từ khóa tiếng Anh hoặc tiếng Việt (VD: door, cat, school...)"
-                className="flex-1 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold text-sm focus:outline-none focus:border-pink-500"
+                className="flex-1 min-w-[200px] px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold text-sm focus:outline-none focus:border-pink-500"
               />
+
+              {/* Mode Toggle Switch */}
+              <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchImageModal((prev) => ({ ...prev, style: "CARTOON" }));
+                    if (searchImageModal.query.trim()) {
+                      executeImageSearch(searchImageModal.query, "CARTOON");
+                    }
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    searchImageModal.style === "CARTOON"
+                      ? "bg-pink-500 text-white shadow-xs"
+                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                >
+                  🎨 Hoạt hình
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchImageModal((prev) => ({ ...prev, style: "REALISTIC" }));
+                    if (searchImageModal.query.trim()) {
+                      executeImageSearch(searchImageModal.query, "REALISTIC");
+                    }
+                  }}
+                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    searchImageModal.style === "REALISTIC"
+                      ? "bg-pink-500 text-white shadow-xs"
+                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                >
+                  📸 Thực tế
+                </button>
+              </div>
+
               <button
                 type="button"
-                onClick={() => executeImageSearch(searchImageModal.query)}
-                className="px-6 py-3 rounded-2xl bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+                onClick={() => executeImageSearch(searchImageModal.query, searchImageModal.style)}
+                className="px-6 py-3 rounded-2xl bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm shrink-0"
               >
                 {searchImageModal.isSearching ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
