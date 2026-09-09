@@ -14,7 +14,13 @@ async function searchPixabayImages(query: string, isCartoon = false) {
     const apiKey = process.env.PIXABAY_API_KEY || "39818817-48f57297e682e0df8d0e74ee8";
     const res = await fetch(
       `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(query)}&image_type=${type}&per_page=30&safesearch=true`,
-      { signal: AbortSignal.timeout(1500) }
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          "Accept": "application/json, text/plain, */*"
+        },
+        signal: AbortSignal.timeout(2000)
+      }
     );
     if (res.ok) {
       const data = await res.json();
@@ -320,6 +326,10 @@ const COMMON_VI_MAP: Record<string, string> = {
   "hình thoi": "rhombus shape"
 };
 
+function hasVietnameseDiacritics(text: string): boolean {
+  return /[àáảãạâầấẩẫậăằắẳẵặèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i.test(text);
+}
+
 async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
   const clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
   if (!clean) return "";
@@ -367,20 +377,22 @@ async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
     }
   }
 
-  // 2. Free MyMemory Translation API (Fallback for production server without GEMINI_API_KEY)
-  try {
-    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=vi|en`, {
-      signal: AbortSignal.timeout(2500)
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const translatedText = data.responseData?.translatedText?.trim()?.replace(/["']/g, "");
-      if (translatedText && translatedText.length > 0 && translatedText.length < 50) {
-        return translatedText;
+  // 2. Free MyMemory Translation API (Only if query contains Vietnamese diacritics)
+  if (hasVietnameseDiacritics(clean)) {
+    try {
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=vi|en`, {
+        signal: AbortSignal.timeout(2500)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const translatedText = data.responseData?.translatedText?.trim()?.replace(/["']/g, "");
+        if (translatedText && translatedText.length > 0 && translatedText.length < 50) {
+          return translatedText;
+        }
       }
+    } catch (e) {
+      // Fallback
     }
-  } catch (e) {
-    // Fallback
   }
 
   return clean;
@@ -416,12 +428,17 @@ export async function resolveQuestionKeywordAction(
 
 const ANIMAL_WORDS = new Set([
   "dog", "cat", "bat", "cow", "pig", "rat", "fox", "owl", "hen", "duck",
-  "fish", "bear", "lion", "wolf", "frog", "deer", "goat", "seal", "swan"
+  "fish", "bear", "lion", "wolf", "frog", "deer", "goat", "seal", "swan",
+  "ant", "bee", "bug", "fly", "ram", "elk", "ape", "yak"
 ]);
 
 function disambiguateQuery(query: string): string {
   const clean = query.trim();
   const lower = clean.toLowerCase();
+
+  if (lower === "bat") {
+    return "bat animal flying";
+  }
 
   if (ANIMAL_WORDS.has(lower)) {
     return `${clean} animal pet`;
@@ -442,14 +459,14 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
   let englishKeyword = cleanQuery;
   try {
     const translated = await translateOrExtractKeyword(cleanQuery);
-    if (translated && translated.toLowerCase() !== cleanQuery.toLowerCase()) {
-      englishKeyword = translated;
+    if (translated && translated.trim().length > 0) {
+      englishKeyword = translated.trim();
     }
   } catch (e) {
     // Fallback to cleanQuery
   }
 
-  // Disambiguate short words (e.g. "dog" -> "dog animal pet") to prevent financial ticker collisions on US server IPs
+  // Always disambiguate short words (e.g. "dog" -> "dog animal pet") to prevent financial ticker collisions on US server IPs
   englishKeyword = disambiguateQuery(englishKeyword);
 
   const isTranslated = englishKeyword.toLowerCase() !== cleanQuery.toLowerCase();
@@ -467,30 +484,37 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
 
       const pixabayResults = await searchPixabayImages(englishKeyword, isCartoon);
       if (pixabayResults && pixabayResults.length > 0) return pixabayResults;
+
+      const openverseResults = await searchOpenverseImages(isCartoon ? `${englishKeyword} illustration` : englishKeyword);
+      if (openverseResults && openverseResults.length > 0) return openverseResults;
+
+      const wikimediaResults = await searchWikimediaImages(englishKeyword, isCartoon);
+      if (wikimediaResults && wikimediaResults.length > 0) return wikimediaResults;
     }
 
-    // 2. Fallback to original query (If non-translated, search raw query without appending English "cartoon illustration" to avoid Bing search corruption)
+    // 2. Fallback to original cleanQuery with disambiguation
+    const safeRawQuery = disambiguateQuery(cleanQuery);
     const rawSearchQuery = isCartoon
-      ? (isTranslated ? `${cleanQuery} cartoon illustration` : cleanQuery)
-      : cleanQuery;
+      ? `${safeRawQuery} cartoon illustration`
+      : safeRawQuery;
 
     const ddgResults = await searchDDGImages(rawSearchQuery);
     if (ddgResults && ddgResults.length > 0) return ddgResults;
 
-    const webResults = await searchWebImages(cleanQuery, isCartoon);
+    const webResults = await searchWebImages(safeRawQuery, isCartoon);
     if (webResults && webResults.length > 0) return webResults;
 
-    const pixabayResults = await searchPixabayImages(cleanQuery, isCartoon);
+    const pixabayResults = await searchPixabayImages(safeRawQuery, isCartoon);
     if (pixabayResults && pixabayResults.length > 0) return pixabayResults;
 
-    const pexelsResults = await searchPexelsImages(isCartoon ? `${cleanQuery} illustration` : cleanQuery);
+    const openverseResults = await searchOpenverseImages(isCartoon ? `${safeRawQuery} illustration` : safeRawQuery);
+    if (openverseResults && openverseResults.length > 0) return openverseResults;
+
+    const pexelsResults = await searchPexelsImages(isCartoon ? `${safeRawQuery} illustration` : safeRawQuery);
     if (pexelsResults && pexelsResults.length > 0) return pexelsResults;
 
-    const wikimediaResults = await searchWikimediaImages(cleanQuery, isCartoon);
+    const wikimediaResults = await searchWikimediaImages(safeRawQuery, isCartoon);
     if (wikimediaResults && wikimediaResults.length > 0) return wikimediaResults;
-
-    const openverseResults = await searchOpenverseImages(cleanQuery);
-    if (openverseResults && openverseResults.length > 0) return openverseResults;
 
     return [];
   } catch (error) {
