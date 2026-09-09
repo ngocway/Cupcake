@@ -172,8 +172,9 @@ async function searchDDGImages(query: string) {
 
 async function searchWebImages(query: string, isCartoon = false) {
   try {
-    // Search clean query without appending conflicting suffixes to prevent Bing query parsing corruption
-    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
+    const filterParam = isCartoon ? "&qft=+filterui:photo-clipart" : "&qft=+filterui:photo-photo";
+    const searchQuery = isCartoon ? `${query} cartoon clipart` : query;
+    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(searchQuery)}${filterParam}&form=HDRSC2&first=1`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -229,8 +230,8 @@ async function searchWikimediaImages(query: string, isCartoon = false) {
     const data = await res.json();
     let searchResults = data.query?.search || [];
 
-    // If clipart specific search returned few results, try raw query on Wikimedia
-    if (searchResults.length < 3 && isCartoon) {
+    // For realistic mode only: if specific search returned few results, try raw query on Wikimedia
+    if (!isCartoon && searchResults.length < 3) {
       const fallbackUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&srlimit=24&format=json&origin=*`;
       const fallbackRes = await fetch(fallbackUrl, {
         headers: { "User-Agent": "CupcakesEducationalApp/1.0" },
@@ -509,9 +510,15 @@ const ANIMAL_WORDS = new Set([
   "ant", "bee", "bug", "fly", "ram", "elk", "ape", "yak"
 ]);
 
-function disambiguateQuery(query: string): string {
+function disambiguateQuery(query: string, isCartoon = false): string {
   const clean = query.trim();
   const lower = clean.toLowerCase();
+
+  // For CARTOON mode, keep the keyword simple and clean ("bat", "cat", "dog")
+  // so stock engines can find illustrations without conflicting with "animal flying"
+  if (isCartoon) {
+    return clean;
+  }
 
   if (lower === "bat") {
     return "bat animal flying";
@@ -543,8 +550,8 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
     // Fallback to cleanQuery
   }
 
-  // Always disambiguate short words (e.g. "dog" -> "dog animal pet") to prevent financial ticker collisions on US server IPs
-  englishKeyword = disambiguateQuery(englishKeyword);
+  // Only disambiguate for REALISTIC mode (prevents "bat animal flying" when searching cartoon)
+  englishKeyword = disambiguateQuery(englishKeyword, isCartoon);
 
   const isTranslated = englishKeyword.toLowerCase() !== cleanQuery.toLowerCase();
 
@@ -562,7 +569,7 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
       const pixabayResults = await searchPixabayImages(englishKeyword, isCartoon);
       if (pixabayResults && pixabayResults.length > 0) return pixabayResults;
 
-      const openverseResults = await searchOpenverseImages(isCartoon ? `${englishKeyword} illustration` : englishKeyword);
+      const openverseResults = await searchOpenverseImages(isCartoon ? `${englishKeyword} cartoon clipart` : englishKeyword);
       if (openverseResults && openverseResults.length > 0) return openverseResults;
 
       const wikimediaResults = await searchWikimediaImages(englishKeyword, isCartoon);
@@ -570,7 +577,7 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
     }
 
     // 2. Fallback to original cleanQuery with disambiguation
-    const safeRawQuery = disambiguateQuery(cleanQuery);
+    const safeRawQuery = disambiguateQuery(cleanQuery, isCartoon);
     const rawSearchQuery = isCartoon
       ? `${safeRawQuery} cartoon illustration`
       : safeRawQuery;
@@ -584,11 +591,13 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
     const pixabayResults = await searchPixabayImages(safeRawQuery, isCartoon);
     if (pixabayResults && pixabayResults.length > 0) return pixabayResults;
 
-    const openverseResults = await searchOpenverseImages(isCartoon ? `${safeRawQuery} illustration` : safeRawQuery);
+    const openverseResults = await searchOpenverseImages(isCartoon ? `${safeRawQuery} cartoon clipart` : safeRawQuery);
     if (openverseResults && openverseResults.length > 0) return openverseResults;
 
-    const pexelsResults = await searchPexelsImages(isCartoon ? `${safeRawQuery} illustration` : safeRawQuery);
-    if (pexelsResults && pexelsResults.length > 0) return pexelsResults;
+    if (!isCartoon) {
+      const pexelsResults = await searchPexelsImages(safeRawQuery);
+      if (pexelsResults && pexelsResults.length > 0) return pexelsResults;
+    }
 
     const wikimediaResults = await searchWikimediaImages(safeRawQuery, isCartoon);
     if (wikimediaResults && wikimediaResults.length > 0) return wikimediaResults;

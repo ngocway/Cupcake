@@ -101,7 +101,7 @@ const ANIMAL_WORDS = new Set([
   "ant", "bee", "bug", "fly", "ram", "elk", "ape", "yak"
 ]);
 
-export function cleanAndTranslateQuery(rawQuery: string): { englishKeyword: string; isTranslated: boolean; cleanQuery: string } {
+export function cleanAndTranslateQuery(rawQuery: string, style: "CARTOON" | "REALISTIC" = "CARTOON"): { englishKeyword: string; isTranslated: boolean; cleanQuery: string } {
   let clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
   clean = clean.replace(/^(con|cái|quả|trái|bức|tấm|loài)\s+/i, "").trim();
 
@@ -114,11 +114,15 @@ export function cleanAndTranslateQuery(rawQuery: string): { englishKeyword: stri
     englishKeyword = COMMON_VI_MAP[rawQuery.trim().toLowerCase()];
   }
 
-  const engLower = englishKeyword.toLowerCase();
-  if (engLower === "bat") {
-    englishKeyword = "bat animal flying";
-  } else if (ANIMAL_WORDS.has(engLower)) {
-    englishKeyword = `${englishKeyword} animal pet`;
+  // Only disambiguate for REALISTIC mode.
+  // In CARTOON mode, keep keyword clean (e.g. "bat", "dog") so vector/clipart search works accurately.
+  if (style === "REALISTIC") {
+    const engLower = englishKeyword.toLowerCase();
+    if (engLower === "bat") {
+      englishKeyword = "bat animal flying";
+    } else if (ANIMAL_WORDS.has(engLower)) {
+      englishKeyword = `${englishKeyword} animal pet`;
+    }
   }
 
   const isTranslated = englishKeyword.toLowerCase() !== clean.toLowerCase();
@@ -128,17 +132,16 @@ export function cleanAndTranslateQuery(rawQuery: string): { englishKeyword: stri
 export async function searchImagesClient(query: string, style: "CARTOON" | "REALISTIC" = "CARTOON"): Promise<SearchImageResult[]> {
   if (!query || !query.trim()) return [];
 
-  const { englishKeyword } = cleanAndTranslateQuery(query);
   const isCartoon = style === "CARTOON";
+  const { englishKeyword } = cleanAndTranslateQuery(query, style);
   const apiKey = "39818817-48f57297e682e0df8d0e74ee8";
-
-  const searchKeyword = isCartoon ? `${englishKeyword} cartoon` : englishKeyword;
 
   // 1. Try Pixabay directly from Client Browser (User IP)
   try {
     const pixabayType = isCartoon ? "illustration" : "photo";
+    const pixabayQuery = isCartoon ? englishKeyword : englishKeyword;
     const pixabayRes = await fetch(
-      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(searchKeyword)}&image_type=${pixabayType}&per_page=30&safesearch=true`
+      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(pixabayQuery)}&image_type=${pixabayType}&per_page=30&safesearch=true`
     );
     if (pixabayRes.ok) {
       const data = await pixabayRes.json();
@@ -158,7 +161,7 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
 
   // 2. Try Openverse API directly from Client Browser (User IP)
   try {
-    const openverseQuery = isCartoon ? `${englishKeyword} cartoon illustration` : englishKeyword;
+    const openverseQuery = isCartoon ? `${englishKeyword} cartoon clipart` : englishKeyword;
     const ovRes = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(openverseQuery)}&page_size=30`);
     if (ovRes.ok) {
       const data = await ovRes.json();
@@ -176,35 +179,7 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
     // Fallthrough
   }
 
-  // 3. Try DuckDuckGo directly from Client Browser (User IP)
-  try {
-    const ddgQuery = isCartoon ? `${englishKeyword} cartoon` : englishKeyword;
-    const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(ddgQuery)}&iar=images&iax=images`);
-    if (tokenRes.ok) {
-      const html = await tokenRes.text();
-      const vqdMatch = html.match(/vqd=["']?([^&"'\s]+)/i) || html.match(/vqd=([\d-]+)/i);
-      const vqd = vqdMatch ? vqdMatch[1] : null;
-      if (vqd) {
-        const imgRes = await fetch(`https://duckduckgo.com/i.js?q=${encodeURIComponent(ddgQuery)}&o=json&vqd=${vqd}&f=,,,`);
-        if (imgRes.ok) {
-          const data = await imgRes.json();
-          if (data.results && data.results.length > 0) {
-            return data.results.slice(0, 50).map((img: any, i: number) => ({
-              id: `ddg-client-${i}`,
-              url: img.image,
-              thumb: img.thumbnail || img.image,
-              author: img.title || "Internet Image",
-              authorLink: img.url || "#"
-            }));
-          }
-        }
-      }
-    }
-  } catch (e) {
-    // Fallthrough
-  }
-
-  // 4. Server Action Fallback
+  // 3. Server Action Fallback (Bing, Wikimedia, DDG server-side)
   try {
     const { searchImagesAction } = await import("@/actions/image-search-actions");
     return await searchImagesAction(query, style);
