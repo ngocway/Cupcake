@@ -132,11 +132,13 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
   const isCartoon = style === "CARTOON";
   const apiKey = "39818817-48f57297e682e0df8d0e74ee8";
 
+  const searchKeyword = isCartoon ? `${englishKeyword} cartoon` : englishKeyword;
+
   // 1. Try Pixabay directly from Client Browser (User IP)
   try {
     const pixabayType = isCartoon ? "illustration" : "photo";
     const pixabayRes = await fetch(
-      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(englishKeyword)}&image_type=${pixabayType}&per_page=30&safesearch=true`
+      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(searchKeyword)}&image_type=${pixabayType}&per_page=30&safesearch=true`
     );
     if (pixabayRes.ok) {
       const data = await pixabayRes.json();
@@ -156,7 +158,7 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
 
   // 2. Try Openverse API directly from Client Browser (User IP)
   try {
-    const openverseQuery = isCartoon ? `${englishKeyword} illustration` : englishKeyword;
+    const openverseQuery = isCartoon ? `${englishKeyword} cartoon illustration` : englishKeyword;
     const ovRes = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(openverseQuery)}&page_size=30`);
     if (ovRes.ok) {
       const data = await ovRes.json();
@@ -176,7 +178,7 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
 
   // 3. Try DuckDuckGo directly from Client Browser (User IP)
   try {
-    const ddgQuery = isCartoon ? `${englishKeyword} illustration` : englishKeyword;
+    const ddgQuery = isCartoon ? `${englishKeyword} cartoon` : englishKeyword;
     const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(ddgQuery)}&iar=images&iax=images`);
     if (tokenRes.ok) {
       const html = await tokenRes.text();
