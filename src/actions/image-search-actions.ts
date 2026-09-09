@@ -107,38 +107,59 @@ async function searchPexelsImages(query: string) {
 
 async function searchDDGImages(query: string) {
   try {
-    const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images`, {
+    const tokenRes = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images&iax=images`, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,vi;q=0.8",
+        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1"
       },
-      signal: AbortSignal.timeout(1000)
+      signal: AbortSignal.timeout(4500)
     });
+
+    if (!tokenRes.ok) return [];
     const html = await tokenRes.text();
     const vqdMatch = html.match(/vqd=["']?([^&"'\s]+)/i) || html.match(/vqd=([\d-]+)/i);
     const vqd = vqdMatch ? vqdMatch[1] : null;
 
     if (!vqd) return [];
 
-    const imgRes = await fetch(`https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}`, {
+    const imgRes = await fetch(`https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,`, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": "https://duckduckgo.com/"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/javascript, */*; q=0.01",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://duckduckgo.com/",
+        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "X-Requested-With": "XMLHttpRequest"
       },
-      signal: AbortSignal.timeout(1000)
+      signal: AbortSignal.timeout(4500)
     });
 
     if (imgRes.ok) {
       const data = await imgRes.json();
-      return (data.results || []).slice(0, 50).map((img: any, i: number) => ({
-        id: `ddg-img-${i}`,
-        url: img.image,
-        thumb: img.thumbnail || img.image,
-        author: img.title || "Internet Image",
-        authorLink: img.url || "#"
-      }));
+      if (data.results && data.results.length > 0) {
+        return data.results.slice(0, 50).map((img: any, i: number) => ({
+          id: `ddg-img-${i}`,
+          url: img.image,
+          thumb: img.thumbnail || img.image,
+          author: img.title || "Internet Image",
+          authorLink: img.url || "#"
+        }));
+      }
     }
   } catch (e) {
-    // Silent fail or timeout
+    // Silent fail or timeout to continue to next provider
   }
   return [];
 }
