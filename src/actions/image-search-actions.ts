@@ -143,11 +143,10 @@ async function searchDDGImages(query: string) {
   return [];
 }
 
-// Modern Search Engine Parser for Web Images (Replaces obsolete googlethis, extracts high-res images & CDN thumbs)
 async function searchWebImages(query: string, isCartoon = false) {
   try {
-    const searchTerm = isCartoon ? `${query} cartoon illustration clipart` : query;
-    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(searchTerm)}&form=HDRSC2&first=1`;
+    // Search clean query without appending conflicting suffixes to prevent Bing query parsing corruption
+    const url = `https://www.bing.com/images/search?q=${encodeURIComponent(query)}&form=HDRSC2&first=1`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -282,9 +281,32 @@ async function searchOpenverseImages(query: string) {
   return [];
 }
 
+const COMMON_VI_MAP: Record<string, string> = {
+  "cá voi xanh": "blue whale",
+  "hươu cao cổ": "giraffe",
+  "tam giác vuông": "right triangle",
+  "tam giác cân": "isosceles triangle",
+  "tam giác đều": "equilateral triangle",
+  "tam giác nhọn": "acute triangle",
+  "tam giác tù": "obtuse triangle",
+  "sóc bay": "flying squirrel",
+  "cáo túi": "opossum",
+  "chim én": "swallow bird",
+  "dơi": "bat",
+  "hình vuông": "square shape",
+  "hình tròn": "circle shape",
+  "hình chữ nhật": "rectangle shape",
+  "hình thoi": "rhombus shape"
+};
+
 async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
   const clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
   if (!clean) return "";
+
+  const lower = clean.toLowerCase();
+  if (COMMON_VI_MAP[lower]) {
+    return COMMON_VI_MAP[lower];
+  }
 
   // 1. Try Gemini AI Translation
   const apiKey = process.env.GEMINI_API_KEY;
