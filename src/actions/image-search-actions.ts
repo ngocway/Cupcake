@@ -414,6 +414,22 @@ export async function resolveQuestionKeywordAction(
   return rawAnswer;
 }
 
+const ANIMAL_WORDS = new Set([
+  "dog", "cat", "bat", "cow", "pig", "rat", "fox", "owl", "hen", "duck",
+  "fish", "bear", "lion", "wolf", "frog", "deer", "goat", "seal", "swan"
+]);
+
+function disambiguateQuery(query: string): string {
+  const clean = query.trim();
+  const lower = clean.toLowerCase();
+
+  if (ANIMAL_WORDS.has(lower)) {
+    return `${clean} animal pet`;
+  }
+
+  return clean;
+}
+
 export async function searchImagesAction(query: string, style: "CARTOON" | "REALISTIC" = "CARTOON") {
   if (!query || !query.trim()) return [];
 
@@ -432,6 +448,9 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
   } catch (e) {
     // Fallback to cleanQuery
   }
+
+  // Disambiguate short words (e.g. "dog" -> "dog animal pet") to prevent financial ticker collisions on US server IPs
+  englishKeyword = disambiguateQuery(englishKeyword);
 
   const isTranslated = englishKeyword.toLowerCase() !== cleanQuery.toLowerCase();
 
