@@ -43,6 +43,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import { searchImagesAction, resolveQuestionKeywordAction } from "@/actions/image-search-actions";
+import { searchImagesClient } from "@/lib/image-search-client";
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast } from "@/lib/direct-upload";
 import {
@@ -759,7 +760,7 @@ export function CandyQuizCreatorUI() {
       }));
 
       if (keyword && keyword.trim()) {
-        const results = await searchImagesAction(keyword, "CARTOON");
+        const results = await searchImagesClient(keyword, "CARTOON");
         setSearchImageModal((prev) => ({
           ...prev,
           results: results || [],
@@ -781,7 +782,7 @@ export function CandyQuizCreatorUI() {
     if (!qText.trim()) return;
     setSearchImageModal((prev) => ({ ...prev, isSearching: true }));
     try {
-      const results = await searchImagesAction(qText, "CARTOON");
+      const results = await searchImagesClient(qText, "CARTOON");
       setSearchImageModal((prev) => ({
         ...prev,
         results: results || [],

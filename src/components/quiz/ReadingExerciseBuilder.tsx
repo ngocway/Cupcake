@@ -7,6 +7,7 @@ import { getPopularTags } from '@/actions/tag-actions';
 
 import { generateVocabularyDetails } from '@/actions/ai-actions';
 import { searchImagesAction } from '@/actions/image-search-actions';
+import { searchImagesClient } from '@/lib/image-search-client';
 import { toast } from 'sonner';
 import { uploadMedia, uploadUrlMedia } from '@/actions/upload-actions';
 import { sliceAudioFile } from '@/utils/audioSlicer';
@@ -704,9 +705,8 @@ export function ReadingExerciseBuilder({
     setIsSearchingImage(true);
     setShowImageSearchDrawer(true);
     const styleToUse = forceStyle || imageSearchStyle;
-    const finalSearchTerm = styleToUse === "CARTOON" ? `${searchTerm} cartoon illustration` : searchTerm;
     try {
-      const results = await searchImagesAction(finalSearchTerm);
+      const results = await searchImagesClient(searchTerm, styleToUse);
       setImageSearchResults(results || []);
       setVisibleImagesCount(12);
     } catch (err: any) {

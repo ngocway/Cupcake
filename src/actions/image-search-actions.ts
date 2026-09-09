@@ -309,21 +309,92 @@ async function searchOpenverseImages(query: string) {
 }
 
 const COMMON_VI_MAP: Record<string, string> = {
-  "cá voi xanh": "blue whale",
+  // Animals
+  "dơi": "bat",
+  "con dơi": "bat",
+  "chó": "dog",
+  "con chó": "dog",
+  "mèo": "cat",
+  "con mèo": "cat",
+  "hổ": "tiger",
+  "con hổ": "tiger",
+  "cọp": "tiger",
+  "sư tử": "lion",
+  "voi": "elephant",
+  "con voi": "elephant",
   "hươu cao cổ": "giraffe",
+  "cá voi xanh": "blue whale",
+  "cá voi": "whale",
+  "cá mập": "shark",
+  "cá heo": "dolphin",
+  "sóc": "squirrel",
+  "sóc bay": "flying squirrel",
+  "cáo": "fox",
+  "cáo túi": "opossum",
+  "chim én": "swallow bird",
+  "chim": "bird",
+  "gấu": "bear",
+  "gấu trúc": "panda bear",
+  "thỏ": "rabbit",
+  "con thỏ": "rabbit",
+  "khỉ": "monkey",
+  "ngựa": "horse",
+  "bò": "cow",
+  "heo": "pig",
+  "lợn": "pig",
+  "dê": "goat",
+  "cừu": "sheep",
+  "vịt": "duck",
+  "gà": "chicken",
+  "gà trống": "rooster",
+  "rùa": "turtle",
+  "ếch": "frog",
+  "rắn": "snake",
+  "ong": "bee",
+  "bướm": "butterfly",
+  "kiến": "ant",
+  
+  // Nature & Objects
+  "mây": "cloud",
+  "đám mây": "cloud",
+  "mặt trời": "sun",
+  "mặt trăng": "moon",
+  "ngôi sao": "star",
+  "cây": "tree",
+  "hoa": "flower",
+  "bông hoa": "flower",
+  "quả táo": "apple",
+  "trái táo": "apple",
+  "quả chuối": "banana",
+  "quả dưa hấu": "watermelon",
+  "quả cam": "orange fruit",
+  "quả nho": "grapes",
+  "xe hơi": "car",
+  "ô tô": "car",
+  "xe đạp": "bicycle",
+  "xe máy": "motorbike",
+  "máy bay": "airplane",
+  "tàu hỏa": "train",
+  "xe lửa": "train",
+  "thuyền": "boat",
+  "nhà": "house",
+  "ngôi nhà": "house",
+  "trường học": "school",
+  "sách": "book",
+  "quyển sách": "book",
+  "bút": "pen",
+  "cái bút": "pen",
+
+  // Shapes
+  "hình vuông": "square shape",
+  "hình tròn": "circle shape",
+  "hình chữ nhật": "rectangle shape",
+  "hình thoi": "rhombus shape",
   "tam giác vuông": "right triangle",
   "tam giác cân": "isosceles triangle",
   "tam giác đều": "equilateral triangle",
   "tam giác nhọn": "acute triangle",
-  "tam giác tù": "obtuse triangle",
-  "sóc bay": "flying squirrel",
-  "cáo túi": "opossum",
-  "chim én": "swallow bird",
-  "dơi": "bat",
-  "hình vuông": "square shape",
-  "hình tròn": "circle shape",
-  "hình chữ nhật": "rectangle shape",
-  "hình thoi": "rhombus shape"
+  "tam giác tù": "obtuse triangle"
 };
 
 function hasVietnameseDiacritics(text: string): boolean {
@@ -331,12 +402,18 @@ function hasVietnameseDiacritics(text: string): boolean {
 }
 
 async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
-  const clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
+  let clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
   if (!clean) return "";
+
+  // Strip prefixes like "con", "cái", "quả", "trái", "bức", "tấm", "loài"
+  clean = clean.replace(/^(con|cái|quả|trái|bức|tấm|loài)\s+/i, "").trim();
 
   const lower = clean.toLowerCase();
   if (COMMON_VI_MAP[lower]) {
     return COMMON_VI_MAP[lower];
+  }
+  if (COMMON_VI_MAP[rawQuery.trim().toLowerCase()]) {
+    return COMMON_VI_MAP[rawQuery.trim().toLowerCase()];
   }
 
   // 1. Try Gemini AI Translation
