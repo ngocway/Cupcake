@@ -380,6 +380,7 @@ function SortableQuestionCard({
         </div>
 
         <DndContext
+          id={`candy-quiz-opt-dnd-${q.id}`}
           sensors={optionSensors}
           collisionDetection={closestCenter}
           onDragEnd={handleOptionDragEnd}
@@ -1183,6 +1184,7 @@ export function CandyQuizCreatorUI() {
         </div>
 
         <DndContext
+          id="candy-quiz-questions-dnd"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}

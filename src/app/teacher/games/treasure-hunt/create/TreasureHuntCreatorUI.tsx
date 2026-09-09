@@ -374,6 +374,7 @@ function SortableQuestionCard({
         </div>
 
         <DndContext
+          id={`treasure-hunt-opt-dnd-${q.id}`}
           sensors={optionSensors}
           collisionDetection={closestCenter}
           onDragEnd={handleOptionDragEnd}
@@ -1163,6 +1164,7 @@ export function TreasureHuntCreatorUI() {
         </div>
 
         <DndContext
+          id="treasure-hunt-questions-dnd"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}

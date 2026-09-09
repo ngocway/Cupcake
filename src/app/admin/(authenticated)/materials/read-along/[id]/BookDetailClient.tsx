@@ -1515,6 +1515,7 @@ export function BookDetailClient({ bookId }: Props) {
 
       {/* Slides Grid with DnD */}
       <DndContext
+        id="book-detail-slides-dnd"
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}

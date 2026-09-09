@@ -1226,6 +1226,7 @@ export function QuizEditor() {
           </div>
           <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2">
             <DndContext 
+              id="quiz-editor-questions-dnd"
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
@@ -1779,6 +1780,7 @@ export function QuizEditor() {
                       <div className="space-y-2">
                         <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Danh sách thẻ đã chọn (Kéo thả để sắp xếp thứ tự)</label>
                         <DndContext
+                          id="quiz-editor-tags-dnd"
                           sensors={sensors}
                           collisionDetection={closestCenter}
                           onDragEnd={handleTagDragEnd}

@@ -174,7 +174,7 @@ export function ReorderBuilder({ initialData, onChange }: { initialData?: Reorde
       <div className="flex flex-col gap-4">
         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Thứ tự đúng của các thẻ:</h4>
         
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext id="reorder-builder-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={data.items} strategy={verticalListSortingStrategy}>
             <div className="flex flex-col gap-2">
               {data.items.map(item => (

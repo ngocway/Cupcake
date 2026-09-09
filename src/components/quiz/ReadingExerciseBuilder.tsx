@@ -2625,6 +2625,7 @@ export function ReadingExerciseBuilder({
               ) : (
                 <div className="space-y-4">
                   <DndContext 
+                    id="reading-exercise-questions-dnd"
                     sensors={sensors}
                     collisionDetection={closestCenter}
                     onDragEnd={handleDragEnd}
@@ -3202,6 +3203,7 @@ export function ReadingExerciseBuilder({
                           <div className="space-y-2">
                             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Danh sách thẻ đã chọn (Kéo thả để sắp xếp)</label>
                             <DndContext
+                              id="reading-exercise-tags-dnd"
                               sensors={sensors}
                               collisionDetection={closestCenter}
                               onDragEnd={handleTagDragEnd}
