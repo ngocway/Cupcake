@@ -286,6 +286,7 @@ async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
   const clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
   if (!clean) return "";
 
+  // 1. Try Gemini AI Translation
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey) {
     try {
@@ -304,7 +305,7 @@ async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Extract the main visual subject noun or translate this text to a concise 1-3 word English search term for image search (e.g. "Loài động vật có vú duy nhất bay được?" -> "bat", "Hình tam giác có một góc 90 độ" -> "right triangle", "Sóc bay" -> "flying squirrel", "Dơi" -> "bat", "Quả táo" -> "apple"). Return ONLY the English keyword phrase in plain text, no quotes, no extra words.\nText: "${clean}"`
+              text: `Extract the main visual subject noun or translate this text to a concise 1-3 word English search term for image search (e.g. "Loài động vật có vú duy nhất bay được?" -> "bat", "Hình tam giác có một góc 90 độ" -> "right triangle", "Sóc bay" -> "flying squirrel", "Dơi" -> "bat", "Quả táo" -> "apple", "Hươu cao cổ" -> "giraffe"). Return ONLY the English keyword phrase in plain text, no quotes, no extra words.\nText: "${clean}"`
             }]
           }]
         }),
@@ -319,8 +320,24 @@ async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
         }
       }
     } catch (e) {
-      // Silent fallback
+      // Fallback to MyMemory
     }
+  }
+
+  // 2. Free MyMemory Translation API (Fallback for production server without GEMINI_API_KEY)
+  try {
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=vi|en`, {
+      signal: AbortSignal.timeout(2500)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const translatedText = data.responseData?.translatedText?.trim()?.replace(/["']/g, "");
+      if (translatedText && translatedText.length > 0 && translatedText.length < 50) {
+        return translatedText;
+      }
+    }
+  } catch (e) {
+    // Fallback
   }
 
   return clean;
@@ -366,63 +383,52 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
   let englishKeyword = cleanQuery;
   try {
     const translated = await translateOrExtractKeyword(cleanQuery);
-    if (translated) {
+    if (translated && translated.toLowerCase() !== cleanQuery.toLowerCase()) {
       englishKeyword = translated;
     }
   } catch (e) {
     // Fallback to cleanQuery
   }
 
-  const termsToTry = Array.from(new Set([englishKeyword, cleanQuery])).filter(Boolean);
+  const isTranslated = englishKeyword.toLowerCase() !== cleanQuery.toLowerCase();
 
   try {
-    for (const term of termsToTry) {
-      const searchQuery = isCartoon ? `${term} cartoon illustration` : term;
+    // 1. Try translated English term first (if available)
+    if (isTranslated) {
+      const engSearchQuery = isCartoon ? `${englishKeyword} cartoon illustration` : englishKeyword;
 
-      // 1. DuckDuckGo Image Search (High quality, no key needed)
-      const ddgResults = await searchDDGImages(searchQuery);
-      if (ddgResults && ddgResults.length > 0) {
-        return ddgResults;
-      }
+      const ddgResults = await searchDDGImages(engSearchQuery);
+      if (ddgResults && ddgResults.length > 0) return ddgResults;
 
-      // 2. Web Image Search (Bing)
-      const webResults = await searchWebImages(term, isCartoon);
-      if (webResults && webResults.length > 0) {
-        return webResults;
-      }
+      const webResults = await searchWebImages(englishKeyword, isCartoon);
+      if (webResults && webResults.length > 0) return webResults;
 
-      // 3. Pixabay
-      const pixabayResults = await searchPixabayImages(term, isCartoon);
-      if (pixabayResults && pixabayResults.length > 0) {
-        return pixabayResults;
-      }
-
-      // 4. Pexels
-      const pexelsResults = await searchPexelsImages(isCartoon ? `${term} illustration` : term);
-      if (pexelsResults && pexelsResults.length > 0) {
-        return pexelsResults;
-      }
-
-      // 5. Unsplash
-      if (!isCartoon) {
-        const unsplashResults = await searchUnsplashImages(term);
-        if (unsplashResults && unsplashResults.length > 0) {
-          return unsplashResults;
-        }
-      }
-
-      // 6. Wikimedia Commons
-      const wikimediaResults = await searchWikimediaImages(term, isCartoon);
-      if (wikimediaResults && wikimediaResults.length > 0) {
-        return wikimediaResults;
-      }
-
-      // 7. Openverse
-      const openverseResults = await searchOpenverseImages(term);
-      if (openverseResults && openverseResults.length > 0) {
-        return openverseResults;
-      }
+      const pixabayResults = await searchPixabayImages(englishKeyword, isCartoon);
+      if (pixabayResults && pixabayResults.length > 0) return pixabayResults;
     }
+
+    // 2. Fallback to original query (If non-translated, search raw query without appending English "cartoon illustration" to avoid Bing search corruption)
+    const rawSearchQuery = isCartoon
+      ? (isTranslated ? `${cleanQuery} cartoon illustration` : cleanQuery)
+      : cleanQuery;
+
+    const ddgResults = await searchDDGImages(rawSearchQuery);
+    if (ddgResults && ddgResults.length > 0) return ddgResults;
+
+    const webResults = await searchWebImages(cleanQuery, isCartoon);
+    if (webResults && webResults.length > 0) return webResults;
+
+    const pixabayResults = await searchPixabayImages(cleanQuery, isCartoon);
+    if (pixabayResults && pixabayResults.length > 0) return pixabayResults;
+
+    const pexelsResults = await searchPexelsImages(isCartoon ? `${cleanQuery} illustration` : cleanQuery);
+    if (pexelsResults && pexelsResults.length > 0) return pexelsResults;
+
+    const wikimediaResults = await searchWikimediaImages(cleanQuery, isCartoon);
+    if (wikimediaResults && wikimediaResults.length > 0) return wikimediaResults;
+
+    const openverseResults = await searchOpenverseImages(cleanQuery);
+    if (openverseResults && openverseResults.length > 0) return openverseResults;
 
     return [];
   } catch (error) {
@@ -430,4 +436,5 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
     return [];
   }
 }
+
 
