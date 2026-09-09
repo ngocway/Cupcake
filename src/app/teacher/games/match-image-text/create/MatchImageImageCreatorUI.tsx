@@ -26,7 +26,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
-import { searchImagesAction } from "@/actions/image-search-actions";
+import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
@@ -461,12 +461,17 @@ export function MatchImageImageCreatorUI() {
   const executeImageSearch = (query: string, style: "CARTOON" | "REALISTIC") => {
     if (!query.trim()) return;
     startSearchTransition(async () => {
-      const res = await searchImagesAction(query, style);
-      const imageList = Array.isArray(res) ? res : (res?.images || []);
-      if (imageList.length > 0) {
-        setSearchResults(imageList);
-      } else {
-        toast.error("Không tìm thấy hình ảnh phù hợp!");
+      try {
+        const results = await searchImagesClient(query, style);
+        if (results && results.length > 0) {
+          setSearchResults(results);
+        } else {
+          setSearchResults([]);
+          toast.error("Không tìm thấy hình ảnh phù hợp!");
+        }
+      } catch (e) {
+        setSearchResults([]);
+        toast.error("Lỗi khi tìm ảnh!");
       }
     });
   };
