@@ -141,12 +141,13 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         ) : (
           <Link 
             href="/teacher"
-            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 border border-blue-500 shadow-sm hover:shadow-md hover:shadow-blue-500/25 active:scale-95 group ml-1 sm:ml-2"
+            className="inline-flex items-center rounded-full transition-all duration-300 ease-out hover:scale-105 hover:shadow-lg hover:shadow-blue-500/40 hover:brightness-105 active:scale-95 active:brightness-90 ml-1 sm:ml-2 shrink-0"
           >
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300">
-              <span className="material-symbols-outlined text-[15px]">cast_for_education</span>
-            </span>
-            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Teacher Login</span>
+            <img 
+              src="/images/teacher_login_btn.png" 
+              alt="Teacher Login" 
+              className="h-9 sm:h-10 md:h-11 w-auto object-contain"
+            />
           </Link>
         )}
       </div>

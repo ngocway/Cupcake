@@ -22,7 +22,7 @@ const MATCH_GAMES: GameCard[] = [
     badge: "Ảnh - Ảnh",
     badgeBg: "bg-emerald-500 text-white",
     desc: "Học sinh ghép 2 hình ảnh tương đồng hoặc có mối liên quan trực quan với nhau.",
-    videoId: "swQq7b0V68E",
+    videoId: "XSLnexaHxHM",
   },
   {
     id: "image-text",
@@ -30,7 +30,7 @@ const MATCH_GAMES: GameCard[] = [
     badge: "Ảnh - Chữ",
     badgeBg: "bg-orange-500 text-white",
     desc: "Học sinh nhìn hình ảnh minh họa và chọn từ vựng / câu bằng chữ tương ứng.",
-    videoId: "swQq7b0V68E",
+    videoId: "pe7grSyHL0g",
   },
   {
     id: "conveyor-drop",
@@ -38,7 +38,7 @@ const MATCH_GAMES: GameCard[] = [
     badge: "Băng Chuyền",
     badgeBg: "bg-cyan-500 text-white",
     desc: "Học sinh nhìn khối hàng hình ảnh di chuyển trên băng chuyền và thả vào đúng ống hút từ vựng tương ứng.",
-    videoId: "swQq7b0V68E",
+    videoId: "JTMQ83gi9wo",
   },
   {
     id: "line-image-image",
@@ -46,7 +46,7 @@ const MATCH_GAMES: GameCard[] = [
     badge: "Nối Dây",
     badgeBg: "bg-violet-500 text-white",
     desc: "Học sinh kéo dây nối 2 hình ảnh tương ứng giữa hàng trên và hàng dưới.",
-    videoId: "swQq7b0V68E",
+    videoId: "wO2Q6tGhfLM",
   },
   {
     id: "line-image-text",
@@ -54,7 +54,7 @@ const MATCH_GAMES: GameCard[] = [
     badge: "Nối Dây",
     badgeBg: "bg-violet-500 text-white",
     desc: "Học sinh kéo dây nối hình ảnh với từ vựng / câu tương ứng giữa hàng trên và hàng dưới.",
-    videoId: "swQq7b0V68E",
+    videoId: "qkE6qYZ-DDU",
   },
 ];
 
@@ -114,7 +114,7 @@ function MatchGameCardItem({
               }
             }}
             alt={game.title}
-            className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
 

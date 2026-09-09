@@ -22,7 +22,7 @@ const FLIP_GAMES: GameCard[] = [
     badge: "Ảnh - Ảnh",
     badgeBg: "bg-emerald-500 text-white",
     desc: "Học sinh lật các thẻ bài để tìm và ghép các cặp hình ảnh tương đồng hoặc có mối liên quan trực quan với nhau.",
-    videoId: "swQq7b0V68E",
+    videoId: "ZgE2PaGdvFU",
   },
   {
     id: "flip-image-text",
@@ -30,7 +30,7 @@ const FLIP_GAMES: GameCard[] = [
     badge: "Ảnh - Chữ",
     badgeBg: "bg-orange-500 text-white",
     desc: "Học sinh lật các thẻ bài để tìm và ghép cặp giữa hình ảnh minh họa với từ vựng / câu bằng chữ tương ứng.",
-    videoId: "swQq7b0V68E",
+    videoId: "30Ov93AvLwY",
   },
 ];
 
@@ -84,7 +84,7 @@ function FlipGameCardItem({
               }
             }}
             alt={game.title}
-            className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
 

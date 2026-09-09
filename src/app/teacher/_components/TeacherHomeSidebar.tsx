@@ -17,7 +17,8 @@ export function TeacherHomeSidebar({
   const router = useRouter();
   const pathname = usePathname();
 
-  const activeTab = propActiveTab ?? (searchParams?.get("tab") || "match");
+  const rawActiveTab = propActiveTab ?? (searchParams?.get("tab") || "match");
+  const activeTab = (rawActiveTab === "fill" || rawActiveTab === "my-fill-games") ? "match" : rawActiveTab;
 
   const [isCreateOpen, setIsCreateOpen] = useState(true);
   const [isMyGamesOpen, setIsMyGamesOpen] = useState(true);
@@ -334,15 +335,16 @@ export function TeacherHomeSidebar({
                 <p className="teacher-tile-label">Toán học</p>
               </div>
 
-              {/* Điền ô trống */}
+              {/* Điền ô trống (Tạm khóa) */}
               <div
-                onClick={() => handleSelectTab("fill")}
-                className={`teacher-tile fill ${activeTab === "fill" ? "active" : ""}`}
+                className="teacher-tile fill opacity-50 cursor-not-allowed pointer-events-none grayscale-[30%] relative"
+                title="Tính năng đang hoàn thiện"
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
                     <span className="material-symbols-rounded">edit_note</span>
                   </div>
+                  <span className="material-symbols-rounded text-purple-700/80 text-[18px]">lock</span>
                 </div>
                 <p className="teacher-tile-label">Điền ô trống</p>
               </div>
@@ -383,7 +385,7 @@ export function TeacherHomeSidebar({
             >
               <span className="material-symbols-rounded text-base text-sky-500">extension</span>
               <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
-              <span className="material-symbols-rounded text-base text-purple-500">edit_note</span>
+              <span className="material-symbols-rounded text-base text-purple-400 opacity-50">lock</span>
               <span className="material-symbols-rounded text-base text-rose-500">style</span>
               <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
             </div>
@@ -437,16 +439,19 @@ export function TeacherHomeSidebar({
                 </div>
               </div>
 
-              {/* Điền ô trống đã tạo */}
+              {/* Điền ô trống đã tạo (Tạm khóa) */}
               <div
-                onClick={() => handleSelectTab("my-fill-games")}
-                className={`teacher-list-item ${activeTab === "my-fill-games" ? "active fill-active" : ""}`}
+                className="teacher-list-item opacity-50 cursor-not-allowed pointer-events-none relative select-none grayscale-[30%]"
+                title="Tính năng đang hoàn thiện"
               >
-                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-purple-100/70 text-purple-500 flex items-center justify-center shrink-0">
                   <span className="material-symbols-rounded text-[22px]">assignment</span>
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">Điền ô trống đã tạo</span>
+                <div className="flex flex-col flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-headline font-black text-sm text-slate-600">Điền ô trống đã tạo</span>
+                    <span className="material-symbols-rounded text-purple-600/80 text-[16px]">lock</span>
+                  </div>
                   <span className="text-[11px] font-semibold text-slate-400">Danh sách game Điền ô</span>
                 </div>
               </div>

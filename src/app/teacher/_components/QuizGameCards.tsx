@@ -25,7 +25,7 @@ const QUIZ_GAMES: GameCard[] = [
     badgeBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white",
     desc: "Học sinh tham gia trả lời các câu hỏi và 4 đáp án dạng câu văn dài trên giao diện Xứ sở Kẹo Ngọt (Candy World) đầy màu sắc và âm thanh vui nhộn.",
     imageUrl: "/images/games/candy-quiz.jpg",
-    videoId: "swQq7b0V68E",
+    videoId: "m6_CohSIXpo",
     createHref: "/teacher/games/candy-quiz/create",
     titleColor: "text-pink-600 dark:text-pink-400",
   },
@@ -36,6 +36,7 @@ const QUIZ_GAMES: GameCard[] = [
     badgeBg: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white",
     desc: "Học sinh tham gia trả lời các câu hỏi trắc nghiệm để mở khóa các ô bí ẩn trên bản đồ hải tặc kỳ bí và thu thập các rương vàng quý giá.",
     imageUrl: "/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
+    videoId: "9juS0TQRyHw",
     createHref: "/teacher/games/treasure-hunt/create",
     titleColor: "text-amber-600 dark:text-amber-400",
   },
@@ -46,7 +47,7 @@ const QUIZ_GAMES: GameCard[] = [
     badgeBg: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white",
     desc: "Học sinh điều khiển nòng pháo không gian, bắn đạn laser neon vào các quả cầu năng lượng chứa đáp án đúng giữa vũ trụ huyền ảo.",
     imageUrl: "/images/games/shooter-quiz.jpg",
-    videoId: "eWAlcTjJvrU",
+    videoId: "MxrxyO1a8gM",
     createHref: "/teacher/games/shooter-quiz/create",
     titleColor: "text-cyan-600 dark:text-cyan-400",
   },
@@ -98,7 +99,7 @@ function QuizGameCardItem({
               }
             }}
             alt={game.title}
-            className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
 

@@ -22,7 +22,7 @@ const CHOICE_GAMES: GameCard[] = [
     badge: "BẮN SÚNG",
     badgeBg: "bg-emerald-500 text-white",
     desc: "Học sinh điều khiển tháp pháo bắn phá các khối cầu mang đáp án đúng để ghi điểm và tích lũy combo trong không gian Neon Sci-Fi.",
-    videoId: "swQq7b0V68E",
+    videoId: "vyQ8QBQ1m4E",
   },
   {
     id: "egg-crack",
@@ -30,7 +30,7 @@ const CHOICE_GAMES: GameCard[] = [
     badge: "ĐẬP TRỨNG",
     badgeBg: "bg-amber-500 text-white",
     desc: "Học sinh đập vỡ các quả trứng mang đáp án đúng để tích lũy xu thưởng, nhân sao và chinh phục bảng xếp hạng.",
-    videoId: "swQq7b0V68E",
+    videoId: "R6fn9PnMmog",
   },
 ];
 
@@ -84,7 +84,7 @@ function ChoiceGameCardItem({
               }
             }}
             alt={game.title}
-            className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
 
