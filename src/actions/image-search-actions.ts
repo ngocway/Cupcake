@@ -282,62 +282,146 @@ async function searchOpenverseImages(query: string) {
   return [];
 }
 
+async function translateOrExtractKeyword(rawQuery: string): Promise<string> {
+  const clean = rawQuery.trim().replace(/[?!.,;:()'"]/g, "");
+  if (!clean) return "";
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey) {
+    try {
+      const IS_PROXY = !!process.env.GEMINI_API_ENDPOINT;
+      const GEMINI_BASE = (process.env.GEMINI_API_ENDPOINT ?? "https://generativelanguage.googleapis.com").replace(/\/$/, "");
+      const url = IS_PROXY
+        ? `${GEMINI_BASE}/v1beta/models/gemini-2.0-flash:generateContent`
+        : `${GEMINI_BASE}/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      const headers: Record<string, string> = IS_PROXY
+        ? { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` }
+        : { "Content-Type": "application/json" };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Extract the main visual subject noun or translate this text to a concise 1-3 word English search term for image search (e.g. "Loài động vật có vú duy nhất bay được?" -> "bat", "Hình tam giác có một góc 90 độ" -> "right triangle", "Sóc bay" -> "flying squirrel", "Dơi" -> "bat", "Quả táo" -> "apple"). Return ONLY the English keyword phrase in plain text, no quotes, no extra words.\nText: "${clean}"`
+            }]
+          }]
+        }),
+        signal: AbortSignal.timeout(2500)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.replace(/["']/g, "");
+        if (text && text.length > 0 && text.length < 50) {
+          return text;
+        }
+      }
+    } catch (e) {
+      // Silent fallback
+    }
+  }
+
+  return clean;
+}
+
+export async function resolveQuestionKeywordAction(
+  questionText: string,
+  options?: Array<{ text: string; isCorrect?: boolean }>
+): Promise<string> {
+  const correctOption = options?.find((opt) => opt.isCorrect && opt.text && opt.text.trim().length > 0);
+  
+  if (!correctOption) {
+    // Leave empty for manual typing as requested by user
+    return "";
+  }
+
+  const rawAnswer = correctOption.text.trim();
+  const words = rawAnswer.split(/\s+/).filter(Boolean);
+
+  if (words.length <= 4) {
+    return rawAnswer;
+  }
+
+  try {
+    const extracted = await translateOrExtractKeyword(rawAnswer);
+    if (extracted) return extracted;
+  } catch (e) {
+    // Ignore error
+  }
+
+  return rawAnswer;
+}
+
 export async function searchImagesAction(query: string, style: "CARTOON" | "REALISTIC" = "CARTOON") {
   if (!query || !query.trim()) return [];
 
-  const cleanQuery = query.trim();
+  const cleanQuery = query.trim().replace(/[?!.,;:()'"]/g, "");
+  if (!cleanQuery) return [];
+
   const isCartoon = style === "CARTOON";
-  const searchQuery = isCartoon ? `${cleanQuery} cartoon illustration` : cleanQuery;
+
+  // Translate or extract English keyword for stock photo engines
+  let englishKeyword = cleanQuery;
+  try {
+    const translated = await translateOrExtractKeyword(cleanQuery);
+    if (translated) {
+      englishKeyword = translated;
+    }
+  } catch (e) {
+    // Fallback to cleanQuery
+  }
+
+  const termsToTry = Array.from(new Set([englishKeyword, cleanQuery])).filter(Boolean);
 
   try {
-    // 1. Try Pixabay (Existing source 1)
-    const pixabayResults = await searchPixabayImages(cleanQuery, isCartoon);
-    if (pixabayResults.length > 0) {
-      return pixabayResults;
-    }
+    for (const term of termsToTry) {
+      const searchQuery = isCartoon ? `${term} cartoon illustration` : term;
 
-    // 2. Try Unsplash (Existing source 2 - realistic photos)
-    if (!isCartoon) {
-      const unsplashResults = await searchUnsplashImages(cleanQuery);
-      if (unsplashResults.length > 0) {
-        return unsplashResults;
+      // 1. DuckDuckGo Image Search (High quality, no key needed)
+      const ddgResults = await searchDDGImages(searchQuery);
+      if (ddgResults && ddgResults.length > 0) {
+        return ddgResults;
       }
-    }
 
-    // 3. Try Pexels (High-quality photos & creative media)
-    const pexelsResults = await searchPexelsImages(isCartoon ? `${cleanQuery} illustration` : cleanQuery);
-    if (pexelsResults.length > 0) {
-      return pexelsResults;
-    }
+      // 2. Web Image Search (Bing)
+      const webResults = await searchWebImages(term, isCartoon);
+      if (webResults && webResults.length > 0) {
+        return webResults;
+      }
 
-    // 3. Try DuckDuckGo (Existing source 3)
-    const ddgResults = await searchDDGImages(searchQuery);
-    if (ddgResults.length > 0) {
-      return ddgResults;
-    }
+      // 3. Pixabay
+      const pixabayResults = await searchPixabayImages(term, isCartoon);
+      if (pixabayResults && pixabayResults.length > 0) {
+        return pixabayResults;
+      }
 
-    // 4. Try Modern Web Image Search Engine (Replaces obsolete googlethis)
-    const webResults = await searchWebImages(cleanQuery, isCartoon);
-    if (webResults.length > 0) {
-      return webResults;
-    }
+      // 4. Pexels
+      const pexelsResults = await searchPexelsImages(isCartoon ? `${term} illustration` : term);
+      if (pexelsResults && pexelsResults.length > 0) {
+        return pexelsResults;
+      }
 
-    // Fallback: try raw query on Pixabay if searchQuery with cartoon returned 0
-    const fallbackPixabay = await searchPixabayImages(cleanQuery, false);
-    if (fallbackPixabay.length > 0) {
-      return fallbackPixabay;
-    }
+      // 5. Unsplash
+      if (!isCartoon) {
+        const unsplashResults = await searchUnsplashImages(term);
+        if (unsplashResults && unsplashResults.length > 0) {
+          return unsplashResults;
+        }
+      }
 
-    // 5. High-Reliability Educational Fallback: Wikimedia Commons API
-    const wikimediaResults = await searchWikimediaImages(cleanQuery, isCartoon);
-    if (wikimediaResults.length > 0) {
-      return wikimediaResults;
-    }
+      // 6. Wikimedia Commons
+      const wikimediaResults = await searchWikimediaImages(term, isCartoon);
+      if (wikimediaResults && wikimediaResults.length > 0) {
+        return wikimediaResults;
+      }
 
-    // 6. High-Reliability Creative Commons Fallback: Openverse API
-    const openverseResults = await searchOpenverseImages(cleanQuery);
-    if (openverseResults.length > 0) {
-      return openverseResults;
+      // 7. Openverse
+      const openverseResults = await searchOpenverseImages(term);
+      if (openverseResults && openverseResults.length > 0) {
+        return openverseResults;
+      }
     }
 
     return [];
@@ -346,3 +430,4 @@ export async function searchImagesAction(query: string, style: "CARTOON" | "REAL
     return [];
   }
 }
+

@@ -37,12 +37,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
-import { searchImagesAction } from "@/actions/image-search-actions";
+import { searchImagesAction, resolveQuestionKeywordAction } from "@/actions/image-search-actions";
 import { uploadImageFast } from "@/lib/direct-upload";
 import {
   saveTreasureHuntGameAction,
   getTreasureHuntGameDetailsAction,
 } from "@/actions/treasure-hunt-actions";
+import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import type {
   QuizRound,
   QuizQuestion,
@@ -183,7 +184,7 @@ interface SortableQuestionCardProps {
   handleQuestionTextChange: (id: string, text: string) => void;
   updateQuestionImage: (id: string, url: string | undefined) => void;
   handleUploadImageFile: (id: string, file: File) => void;
-  handleOpenSearchImage: (id: string, questionText: string) => void;
+  handleOpenSearchImage: (id: string, options?: QuizQuestionOption[], questionText?: string) => void;
   handleAddOption: (id: string) => void;
   handleSelectCorrectOption: (questionId: string, optionIdx: number) => void;
   handleOptionTextChange: (questionId: string, optionIdx: number, text: string) => void;
@@ -344,7 +345,7 @@ function SortableQuestionCard({
 
               <button
                 type="button"
-                onClick={() => handleOpenSearchImage(q.id, q.question)}
+                onClick={() => handleOpenSearchImage(q.id, q.options, q.question)}
                 className="w-full flex-1 py-1.5 px-2 rounded-[5px] bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer"
               >
                 <Search className="w-3 h-3 text-amber-600 shrink-0" />
@@ -414,6 +415,8 @@ export function TreasureHuntCreatorUI() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
   // Multi-Round State
   const [rounds, setRounds] = useState<QuizRound[]>(INITIAL_ROUNDS);
@@ -727,16 +730,42 @@ export function TreasureHuntCreatorUI() {
   };
 
   // Image search modal
-  const handleOpenSearchImage = (questionId: string, defaultQuery?: string) => {
+  const handleOpenSearchImage = async (
+    questionId: string,
+    options?: QuizQuestionOption[],
+    defaultQuestionText?: string
+  ) => {
     setSearchImageModal({
       isOpen: true,
       targetQuestionId: questionId,
-      query: defaultQuery || "",
+      query: "",
       results: [],
-      isSearching: false,
+      isSearching: true,
     });
-    if (defaultQuery) {
-      executeImageSearch(defaultQuery);
+
+    try {
+      const keyword = await resolveQuestionKeywordAction(defaultQuestionText || "", options);
+      setSearchImageModal((prev) => ({
+        ...prev,
+        query: keyword,
+      }));
+
+      if (keyword && keyword.trim()) {
+        const results = await searchImagesAction(keyword, "CARTOON");
+        setSearchImageModal((prev) => ({
+          ...prev,
+          results: results || [],
+          isSearching: false,
+        }));
+      } else {
+        setSearchImageModal((prev) => ({
+          ...prev,
+          isSearching: false,
+        }));
+      }
+    } catch (e) {
+      setSearchImageModal((prev) => ({ ...prev, isSearching: false }));
+      toast.error("Lỗi khi tìm ảnh!");
     }
   };
 
@@ -1001,11 +1030,12 @@ export function TreasureHuntCreatorUI() {
       });
 
       if (res.success) {
+        toast.dismiss();
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("cached_teacher_quiz_games");
         }
-        toast.success(topicId ? "Cập nhật bài tập thành công!" : "Tạo bài tập Truy tìm Kho báu thành công!");
-        router.push("/teacher?tab=my-quiz-games");
+        setSavedTopicId(res.topicId || (res as any).id || topicId);
+        setIsSuccessModalOpen(true);
       } else {
         toast.error(res.error || "Không thể lưu bài tập!");
       }
@@ -1472,6 +1502,16 @@ D. Black`
           </div>
         </div>
       )}
+
+      {/* Save Success Modal */}
+      <GameSaveSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title={title}
+        gameType="Truy tìm Kho báu"
+        playUrl={`/student/game/treasure-hunt?topicId=${savedTopicId || topicId}`}
+        redirectTab="my-quiz-games"
+      />
     </div>
   );
 }

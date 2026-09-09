@@ -20,9 +20,11 @@ import {
   VolumeX,
   ShieldAlert,
   Edit3,
-  Trash2
+  Trash2,
+  Save
 } from "lucide-react";
 import { toast } from "sonner";
+import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceShooterGame, getChoiceShooterGameById, ChoiceShooterGame } from "@/lib/choice-shooter-storage";
 import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
@@ -275,6 +277,7 @@ export default function CreateChoiceShooterPage() {
   // Play Test & Success Modal States
   const [isTestPlaying, setIsTestPlaying] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Copy Link State (Step 3 / Modal)
   const [copied, setCopied] = useState(false);
@@ -368,41 +371,47 @@ export default function CreateChoiceShooterPage() {
   };
 
   const handleSaveAndComplete = async () => {
-    if (questions.length === 0) return;
+    if (questions.length === 0 || isSaving) return;
 
-    // Save to Database
+    setIsSaving(true);
     try {
-      await saveTeacherChoiceGameAction({
+      // Save to Database
+      try {
+        await saveTeacherChoiceGameAction({
+          code: createdCode,
+          title: gameTitle,
+          gameType: "shooter",
+          questionCount,
+          endMode,
+          selectedTypes,
+          questions,
+        });
+      } catch (e) {
+        console.error("Failed to save choice shooter to DB:", e);
+      }
+
+      // Save to localStorage as local fallback
+      saveChoiceShooterGame({
+        id: createdCode,
         code: createdCode,
         title: gameTitle,
-        gameType: "shooter",
         questionCount,
         endMode,
         selectedTypes,
         questions,
       });
-    } catch (e) {
-      console.error("Failed to save choice shooter to DB:", e);
+
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("cached_teacher_choice_games");
+        } catch (e) {}
+      }
+
+      toast.dismiss();
+      setIsSuccessModalOpen(true);
+    } finally {
+      setIsSaving(false);
     }
-
-    // Save to localStorage as local fallback
-    saveChoiceShooterGame({
-      id: createdCode,
-      code: createdCode,
-      title: gameTitle,
-      questionCount,
-      endMode,
-      selectedTypes,
-      questions,
-    });
-
-    if (typeof window !== "undefined") {
-      try {
-        sessionStorage.removeItem("cached_teacher_choice_games");
-      } catch (e) {}
-    }
-
-    setIsSuccessModalOpen(true);
   };
 
   const handleCopyLink = () => {
@@ -784,16 +793,6 @@ export default function CreateChoiceShooterPage() {
                   Bạn có thể bấm icon 🔄 để đổi câu khác hoặc chỉnh sửa trực tiếp chữ/số trước khi hoàn tất
                 </p>
               </div>
-
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <button
-                  type="button"
-                  onClick={handleSaveAndComplete}
-                  className="flex-1 md:flex-initial py-3.5 px-6 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span>Lưu & Hoàn tất bài tập ➔</span>
-                </button>
-              </div>
             </div>
 
             {/* Questions 4-Column Grid List */}
@@ -916,69 +915,34 @@ export default function CreateChoiceShooterPage() {
           </div>
         )}
 
-        {/* SUCCESS CREATED ASSIGNMENT MODAL POPUP */}
-        {isSuccessModalOpen && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200 relative">
-              <button
-                type="button"
-                onClick={() => setIsSuccessModalOpen(false)}
-                className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
-                <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
-              </div>
-
-              <div>
-                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white">
-                  Tạo Bài Tập Thành Công!
-                </h2>
-              </div>
-
-              {/* Copy Link Input Row Only */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`${typeof window !== "undefined" ? window.location.origin : ""}/game/shooter/${createdCode}`}
-                  className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-xs text-slate-700 dark:text-slate-300 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleCopyLink}
-                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-emerald-500/20 cursor-pointer"
-                >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>{copied ? "Đã chép" : "Sao chép"}</span>
-                </button>
-              </div>
-
-              {/* Modal Actions (2 Auto-width Buttons Side by Side) */}
-              <div className="pt-2 flex flex-wrap sm:flex-nowrap items-center justify-center gap-3">
-                <Link
-                  href="/teacher?tab=my-choice-games"
-                  className="py-3.5 px-5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95 whitespace-nowrap"
-                >
-                  <span>Về Danh Sách Bài Tập Đã Tạo</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSuccessModalOpen(false);
-                    setIsTestPlaying(true);
-                  }}
-                  className="py-3.5 px-6 bg-sky-500 hover:bg-sky-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center shadow-lg shadow-sky-500/20 active:scale-95 cursor-pointer whitespace-nowrap"
-                >
-                  <span>Chơi Thử</span>
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Floating Save Action Button */}
+        {step === 2 && (
+          <button
+            type="button"
+            onClick={handleSaveAndComplete}
+            disabled={isSaving}
+            className="fixed bottom-6 right-6 z-50 px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-emerald-700 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-2xl shadow-emerald-900/50 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
+            title="Lưu bài tập"
+          >
+            {isSaving ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
+            )}
+            <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+          </button>
         )}
+
+        {/* SUCCESS CREATED ASSIGNMENT MODAL POPUP */}
+        <GameSaveSuccessModal
+          isOpen={isSuccessModalOpen}
+          onClose={() => setIsSuccessModalOpen(false)}
+          title={gameTitle}
+          gameType="Bắn Súng Toán Học"
+          gameCode={createdCode}
+          playUrl={`/game/shooter/${createdCode}`}
+          redirectTab="my-choice-games"
+        />
 
         {/* PLAY TEST NEON SHOOTER MODAL */}
         {isTestPlaying && (

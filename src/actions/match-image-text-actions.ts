@@ -106,7 +106,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
       revalidatePath("/teacher");
       revalidatePath("/student/game/flashcard-match");
 
-      return { success: true, topicId: updatedTopic.id, slug: updatedTopic.slug };
+      return { success: true, id: updatedTopic.id, topicId: updatedTopic.id, slug: updatedTopic.slug };
     }
 
     // 1. Get or create a default match word game container for new topic
@@ -173,7 +173,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
     revalidatePath("/teacher");
     revalidatePath("/student/game/flashcard-match");
 
-    return { success: true, topicId: topic.id, slug: topic.slug };
+    return { success: true, id: topic.id, topicId: topic.id, slug: topic.slug };
   } catch (error: any) {
     console.error("Failed to save match image game:", error);
     return { success: false, error: error.message || "Failed to save game to database" };

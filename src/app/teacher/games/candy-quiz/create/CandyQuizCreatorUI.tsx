@@ -42,13 +42,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
-import { searchImagesAction } from "@/actions/image-search-actions";
+import { searchImagesAction, resolveQuestionKeywordAction } from "@/actions/image-search-actions";
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast } from "@/lib/direct-upload";
 import {
   saveCandyQuizGameAction,
   getCandyQuizGameDetailsAction,
 } from "@/actions/candy-quiz-actions";
+import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import type {
   QuizRound,
   QuizQuestion,
@@ -151,7 +152,7 @@ function SortableOptionItem({
         className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all cursor-pointer ${
           opt.isCorrect
             ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 scale-105"
-            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-pink-100 hover:text-pink-600"
+            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:bg-slate-300 hover:bg-pink-100 hover:text-pink-600"
         }`}
         title={opt.isCorrect ? "Đáp án ĐÚNG" : "Click để chọn làm đáp án ĐÚNG"}
       >
@@ -189,7 +190,7 @@ interface SortableQuestionCardProps {
   handleQuestionTextChange: (id: string, text: string) => void;
   updateQuestionImage: (id: string, url: string | undefined) => void;
   handleUploadImageFile: (id: string, file: File) => void;
-  handleOpenSearchImage: (id: string, questionText: string) => void;
+  handleOpenSearchImage: (id: string, options?: QuizQuestionOption[], questionText?: string) => void;
   handleAddOption: (id: string) => void;
   handleSelectCorrectOption: (questionId: string, optionIdx: number) => void;
   handleOptionTextChange: (questionId: string, optionIdx: number, text: string) => void;
@@ -350,7 +351,7 @@ function SortableQuestionCard({
 
               <button
                 type="button"
-                onClick={() => handleOpenSearchImage(q.id, q.question)}
+                onClick={() => handleOpenSearchImage(q.id, q.options, q.question)}
                 className="w-full flex-1 py-1.5 px-2 rounded-[5px] bg-pink-50 hover:bg-pink-100 dark:bg-pink-950/40 text-pink-600 dark:text-pink-300 border border-pink-200 dark:border-pink-800 font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer"
               >
                 <Search className="w-3 h-3 text-pink-500 shrink-0" />
@@ -420,6 +421,8 @@ export function CandyQuizCreatorUI() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
   // Multi-Round State
   const [rounds, setRounds] = useState<QuizRound[]>(INITIAL_ROUNDS);
@@ -735,16 +738,42 @@ export function CandyQuizCreatorUI() {
   };
 
   // Image search modal
-  const handleOpenSearchImage = (questionId: string, defaultQuery?: string) => {
+  const handleOpenSearchImage = async (
+    questionId: string,
+    options?: QuizQuestionOption[],
+    defaultQuestionText?: string
+  ) => {
     setSearchImageModal({
       isOpen: true,
       targetQuestionId: questionId,
-      query: defaultQuery || "",
+      query: "",
       results: [],
-      isSearching: false,
+      isSearching: true,
     });
-    if (defaultQuery) {
-      executeImageSearch(defaultQuery);
+
+    try {
+      const keyword = await resolveQuestionKeywordAction(defaultQuestionText || "", options);
+      setSearchImageModal((prev) => ({
+        ...prev,
+        query: keyword,
+      }));
+
+      if (keyword && keyword.trim()) {
+        const results = await searchImagesAction(keyword, "CARTOON");
+        setSearchImageModal((prev) => ({
+          ...prev,
+          results: results || [],
+          isSearching: false,
+        }));
+      } else {
+        setSearchImageModal((prev) => ({
+          ...prev,
+          isSearching: false,
+        }));
+      }
+    } catch (e) {
+      setSearchImageModal((prev) => ({ ...prev, isSearching: false }));
+      toast.error("Lỗi khi tìm ảnh!");
     }
   };
 
@@ -1021,11 +1050,12 @@ export function CandyQuizCreatorUI() {
       });
 
       if (res.success) {
+        toast.dismiss();
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("cached_teacher_quiz_games");
         }
-        toast.success(topicId ? "Cập nhật bài tập thành công!" : "Tạo bài tập Trắc nghiệm Kẹo Ngọt thành công!");
-        router.push("/teacher?tab=my-quiz-games");
+        setSavedTopicId(res.topicId || (res as any).id || topicId);
+        setIsSuccessModalOpen(true);
       } else {
         toast.error(res.error || "Không thể lưu bài tập!");
       }
@@ -1492,6 +1522,16 @@ D. goes`
           </div>
         </div>
       )}
+
+      {/* Save Success Modal */}
+      <GameSaveSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title={title}
+        gameType="Trắc nghiệm Kẹo Ngọt"
+        playUrl={`/student/game/candy-quiz?topicId=${savedTopicId || topicId}`}
+        redirectTab="my-quiz-games"
+      />
     </div>
   );
 }

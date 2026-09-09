@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { searchImagesAction } from "@/actions/image-search-actions";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
+import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast } from "@/lib/direct-upload";
 
@@ -78,6 +79,8 @@ export function MatchImageImageCreatorUI() {
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
@@ -158,18 +161,19 @@ export function MatchImageImageCreatorUI() {
   const [dragActiveTarget, setDragActiveTarget] = useState<{ pairId: string; side: "A" | "B" } | null>(null);
   const [dragSource, setDragSource] = useState<{ pairId: string; side: "A" | "B" } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavedSuccessfully, setIsSavedSuccessfully] = useState(false);
 
   // Warn teacher before closing browser tab or reloading if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty && !isSaving) {
+      if (isDirty && !isSaving && !isSavedSuccessfully) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty, isSaving]);
+  }, [isDirty, isSaving, isSavedSuccessfully]);
 
   // --- Round Management Handlers ---
   const handleAddRound = () => {
@@ -704,13 +708,17 @@ export function MatchImageImageCreatorUI() {
       });
 
       if (res.success) {
+        toast.dismiss("save-game-toast");
+        toast.dismiss();
+        setIsSavedSuccessfully(true);
         if (typeof window !== "undefined") {
           try {
             sessionStorage.removeItem("cached_teacher_match_games");
           } catch (e) {}
         }
-        toast.success("Lưu bài tập Nối Cặp Ảnh - Ảnh thành công!", { id: "save-game-toast" });
-        router.push("/teacher?tab=my-match-games");
+        setSavedTopicId(res.topicId || res.id || topicId);
+        setIsSuccessModalOpen(true);
+        setIsSaving(false);
       } else {
         toast.error(res.error || "Không thể lưu bài tập!", { id: "save-game-toast" });
         setIsSaving(false);
@@ -1105,23 +1113,21 @@ export function MatchImageImageCreatorUI() {
             </div>
           </div>
 
-          {/* Sticky Floating Save Action Button */}
-          <div className="sticky bottom-6 flex justify-end z-[40] pointer-events-none pt-2 w-full h-fit">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="pointer-events-auto h-auto min-h-0 w-fit max-w-fit px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-800 hover:to-indigo-900 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl shadow-blue-900/40 hover:shadow-blue-900/60 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
-              title="Lưu bài tập"
-            >
-              {isSaving ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
-              )}
-              <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
-            </button>
-          </div>
+      {/* Floating Save Action Button */}
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={isSaving}
+        className="fixed bottom-6 right-6 z-50 px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-800 hover:to-indigo-900 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-2xl shadow-blue-900/50 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
+        title="Lưu bài tập"
+      >
+        {isSaving ? (
+          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
+        )}
+        <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+      </button>
         </div>
 
       {/* --- MODAL 1: Search Image Modal --- */}
@@ -1277,6 +1283,16 @@ export function MatchImageImageCreatorUI() {
           </div>
         </div>
       )}
+
+      {/* Save Success Modal */}
+      <GameSaveSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title={title}
+        gameType={gameMode === "line" ? "Nối Dây Ảnh - Ảnh" : "Nối Cặp Ảnh - Ảnh"}
+        playUrl={`/student/game/flashcard-match?topicId=${savedTopicId || topicId}`}
+        redirectTab="my-match-games"
+      />
     </div>
   );
 }

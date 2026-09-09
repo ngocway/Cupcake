@@ -39,6 +39,7 @@ import {
   saveShooterQuizGameAction,
   getShooterQuizGameDetailsAction,
 } from "@/actions/shooter-quiz-actions";
+import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import type {
   QuizRound,
   QuizQuestion,
@@ -346,6 +347,8 @@ export function ShooterQuizCreatorUI() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
   // Multi-Round State
   const [rounds, setRounds] = useState<QuizRound[]>(INITIAL_ROUNDS);
@@ -852,11 +855,12 @@ export function ShooterQuizCreatorUI() {
       });
 
       if (res.success) {
+        toast.dismiss();
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("cached_teacher_quiz_games");
         }
-        toast.success(topicId ? "Cập nhật bài tập thành công!" : "Tạo bài tập Bắn súng Trắc nghiệm thành công!");
-        router.push("/teacher?tab=my-quiz-games");
+        setSavedTopicId(res.topicId || (res as any).id || topicId);
+        setIsSuccessModalOpen(true);
       } else {
         toast.error(res.error || "Không thể lưu bài tập!");
       }
@@ -1233,6 +1237,15 @@ D. Black`
       )}
 
 
+      {/* Save Success Modal */}
+      <GameSaveSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title={title}
+        gameType="Bắn súng Trắc nghiệm"
+        playUrl={`/student/game/shooter-quiz?topicId=${savedTopicId || topicId}`}
+        redirectTab="my-quiz-games"
+      />
     </div>
   );
 }

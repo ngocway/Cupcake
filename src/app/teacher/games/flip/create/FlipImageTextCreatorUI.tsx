@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import { searchImagesAction } from "@/actions/image-search-actions";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
+import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast } from "@/lib/direct-upload";
 
@@ -82,6 +83,8 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
   const [currentGameMode, setCurrentGameMode] = useState<string>(() => searchParams?.get("gameMode") || "match");
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
   
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
@@ -183,19 +186,20 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   const [dragActivePairId, setDragActivePairId] = useState<string | null>(null);
   const [dragSourcePairId, setDragSourcePairId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavedSuccessfully, setIsSavedSuccessfully] = useState(false);
   const [playingTTSPairId, setPlayingTTSPairId] = useState<string | null>(null);
 
   // Warn teacher before closing browser tab or reloading if there are unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty && !isSaving) {
+      if (isDirty && !isSaving && !isSavedSuccessfully) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty, isSaving]);
+  }, [isDirty, isSaving, isSavedSuccessfully]);
 
   // --- Round Management Handlers ---
   const handleAddRound = () => {
@@ -815,6 +819,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
       });
 
       toast.dismiss(toastId);
+      toast.dismiss();
 
       if (!res.success) {
         setValidationModalMessage(res.error || "Không thể lưu bài tập!");
@@ -828,8 +833,9 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
         } catch (e) {}
       }
 
-      toast.success("Lưu bài tập Lật Ảnh-Chữ thành công!", { position: "top-center" });
-      router.push("/teacher?tab=my-flip-games");
+      setIsSavedSuccessfully(true);
+      setSavedTopicId(res.topicId || res.id || topicId);
+      setIsSuccessModalOpen(true);
     } catch (error: any) {
       toast.dismiss(toastId);
       setValidationModalMessage(error.message || "Đã xảy ra lỗi khi lưu bài tập!");
@@ -1247,23 +1253,21 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
               </div>
             </div>
 
-            {/* Sticky Floating Save Action Button inside Card */}
-            <div className="sticky bottom-6 flex justify-end z-[40] pointer-events-none pt-2">
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="pointer-events-auto px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-700 hover:to-amber-700 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-xl shadow-orange-900/40 hover:shadow-orange-900/60 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
-                title="Lưu bài tập"
-              >
-                {isSaving ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
-                )}
-                <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
-              </button>
-            </div>
+            {/* Floating Save Action Button */}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="fixed bottom-6 right-6 z-50 px-6 py-3 sm:px-7 sm:py-3.5 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-700 hover:from-orange-700 hover:to-amber-700 active:scale-95 text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-full shadow-2xl shadow-orange-900/50 border border-white/30 backdrop-blur-md transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group hover:scale-105"
+              title="Lưu bài tập"
+            >
+              {isSaving ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
+              )}
+              <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+            </button>
           </div>
         </>
       )}
@@ -1558,6 +1562,16 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
           </div>
         </div>
       )}
+
+      {/* Save Success Modal */}
+      <GameSaveSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={() => setIsSuccessModalOpen(false)}
+        title={title}
+        gameType="Lật Ảnh - Chữ"
+        playUrl={`/student/game/flashcard-match?topicId=${savedTopicId || topicId}`}
+        redirectTab="my-flip-games"
+      />
     </div>
   );
 }
