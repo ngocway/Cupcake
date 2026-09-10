@@ -1088,15 +1088,6 @@ export function TreasureHuntCreatorUI() {
           </div>
         </div>
 
-        {/* BULK UPLOAD BUTTON */}
-        <button
-          type="button"
-          onClick={() => setIsBulkModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 font-bold text-xs uppercase tracking-wider transition-all active:scale-95 shadow-xs shrink-0 cursor-pointer"
-        >
-          <FileText className="w-4 h-4 text-amber-600" />
-          <span>Tải câu hỏi hàng loạt</span>
-        </button>
       </div>
 
       {/* CARD 1: TITLE & METADATA */}
@@ -1130,58 +1121,73 @@ export function TreasureHuntCreatorUI() {
       </div>
 
       {/* CARD 2: ROUND MANAGEMENT TABS */}
-      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-primary/10 shadow-sm flex items-center gap-3 overflow-x-auto select-none no-scrollbar">
-        <div className="flex items-center gap-2 shrink-0">
-          {rounds.map((round, idx) => {
-            const isActive = idx === activeRoundIndex;
-            return (
-              <div key={round.id} className="flex items-center">
-                <button
-                  type="button"
-                  onClick={() => setActiveRoundIndex(idx)}
-                  className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/25 scale-100"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  <span>{round.title}</span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      isActive
-                        ? "bg-white/25 text-white"
-                        : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                    }`}
-                  >
-                    {round.questions.length} câu
-                  </span>
-                </button>
-
-                {rounds.length > 1 && isActive && (
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-3xl border border-primary/10 shadow-sm flex flex-wrap items-center justify-between gap-3 select-none">
+        <div className="flex items-center gap-3 overflow-x-auto select-none no-scrollbar py-0.5">
+          <div className="flex items-center gap-2 shrink-0">
+            {rounds.map((round, idx) => {
+              const isActive = idx === activeRoundIndex;
+              return (
+                <div key={round.id} className="flex items-center">
                   <button
                     type="button"
-                    onClick={() => handleDeleteRound(idx)}
-                    className="ml-1.5 w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 flex items-center justify-center transition-all cursor-pointer"
-                    title="Xóa vòng này"
+                    onClick={() => setActiveRoundIndex(idx)}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/25 scale-100"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <span>{round.title}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isActive
+                          ? "bg-white/25 text-white"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                      }`}
+                    >
+                      {round.questions.length} câu
+                    </span>
                   </button>
-                )}
-              </div>
-            );
-          })}
+
+                  {rounds.length > 1 && isActive && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRound(idx)}
+                      className="ml-1.5 w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 flex items-center justify-center transition-all cursor-pointer"
+                      title="Xóa vòng này"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {rounds.length < MAX_ROUNDS && (
+            <button
+              type="button"
+              onClick={handleAddRound}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 text-slate-500 hover:text-amber-600 dark:text-slate-400 font-bold text-xs uppercase tracking-wider transition-all shrink-0 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Vòng Mới</span>
+            </button>
+          )}
         </div>
 
-        {rounds.length < MAX_ROUNDS && (
-          <button
-            type="button"
-            onClick={handleAddRound}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 text-slate-500 hover:text-amber-600 dark:text-slate-400 font-bold text-xs uppercase tracking-wider transition-all shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Vòng Mới</span>
-          </button>
-        )}
+        {/* BULK UPLOAD BUTTON (Vibrant Amber - Orange Gradient) */}
+        <button
+          type="button"
+          onClick={() => setIsBulkModalOpen(true)}
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-amber-400/30 shrink-0 cursor-pointer"
+          title="Tải câu hỏi hàng loạt cho bài tập này"
+        >
+          <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+            <FileText className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span>Tải câu hỏi hàng loạt</span>
+        </button>
       </div>
 
       {/* QUESTIONS GRID SECTION */}

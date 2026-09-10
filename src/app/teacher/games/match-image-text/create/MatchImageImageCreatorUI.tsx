@@ -786,15 +786,6 @@ export function MatchImageImageCreatorUI() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleOpenBulkImageUpload}
-            className="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all flex items-center gap-2"
-          >
-            <Images className="w-4 h-4 text-sky-500" />
-            <span>Tải bộ ảnh hàng loạt</span>
-          </button>
-        </div>
       </div>
 
       {/* Game Title Input Card (Single Column Layout) */}
@@ -869,6 +860,19 @@ export function MatchImageImageCreatorUI() {
                 <span>Thêm Vòng Mới</span>
               </button>
             </div>
+
+            {/* Bulk Upload Images Button */}
+            <button
+              type="button"
+              onClick={handleOpenBulkImageUpload}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white text-xs font-bold transition-all duration-200 shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shrink-0 cursor-pointer border border-amber-400/30"
+              title="Tải lên nhiều hình ảnh để tự động tạo nhanh các cặp ảnh cho vòng này"
+            >
+              <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+                <Images className="w-3.5 h-3.5 text-white" />
+              </div>
+              <span>Tải bộ ảnh hàng loạt</span>
+            </button>
           </div>
 
           {/* Pair Items 3-Column Grid Container */}
