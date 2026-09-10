@@ -22,11 +22,12 @@ export function TeacherGameGuideButton({ game, className = "" }: TeacherGameGuid
 
   const videoModalData: VideoModalGame = {
     id: game.id,
-    title: game.title,
-    badge: game.badge,
-    badgeBg: game.badgeBg,
+    title: `${game.title} (Hướng dẫn tạo bài)`,
+    badge: "HƯỚNG DẪN",
+    badgeBg: "bg-gradient-to-r from-sky-500 to-blue-600 text-white",
     videoId: game.videoId || "",
     createHref: game.createHref || "",
+    videoType: "guide",
   };
 
   return (

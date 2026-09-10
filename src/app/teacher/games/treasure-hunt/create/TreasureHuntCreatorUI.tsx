@@ -1095,6 +1095,7 @@ export function TreasureHuntCreatorUI() {
             title: "Truy tìm Kho báu",
             badge: "KHO BÁU",
             badgeBg: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white",
+            videoId: "cd1fmkugmxY",
             createHref: "/teacher/games/treasure-hunt/create",
           }}
         />

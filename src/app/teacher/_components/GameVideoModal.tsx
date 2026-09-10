@@ -11,6 +11,7 @@ export interface VideoModalGame {
   badgeBg: string;
   videoId: string;
   createHref: string;
+  videoType?: "demo" | "guide";
 }
 
 interface GameVideoModalProps {
@@ -246,7 +247,11 @@ export function GameVideoModal({ game, onClose }: GameVideoModalProps) {
               </button>
 
               <span className="text-xs text-slate-300 font-medium hidden sm:inline select-none">
-                {isPlaying ? "Đang phát video demo (HD 1080p)" : "Đã tạm dừng"}
+                {isPlaying
+                  ? game.videoType === "guide"
+                    ? "Đang phát video hướng dẫn tạo bài (HD 1080p)"
+                    : "Đang phát video giới thiệu game (HD 1080p)"
+                  : "Đã tạm dừng"}
               </span>
             </div>
 

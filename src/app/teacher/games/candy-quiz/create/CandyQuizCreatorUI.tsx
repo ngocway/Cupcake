@@ -1115,7 +1115,7 @@ export function CandyQuizCreatorUI() {
             title: "Trắc nghiệm Kẹo Ngọt",
             badge: "KẸO NGỌT",
             badgeBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white",
-            videoId: "IwpFLemjRv4",
+            videoId: "kzlPlOYLZUg",
             createHref: "/teacher/games/candy-quiz/create",
           }}
         />

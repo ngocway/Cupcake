@@ -50,19 +50,36 @@ function ChoiceGameCardItem({
   onPlayVideo: (videoGame: VideoModalGame) => void;
 }) {
   const href = getChoiceHref(game);
+  const hasVideo = Boolean(game.videoId);
   const activeGuideVideoId = game.guideVideoId;
   const hasGuide = Boolean(activeGuideVideoId);
+
+  const handleOpenDemo = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (hasVideo && onPlayVideo && game.videoId) {
+      onPlayVideo({
+        id: game.id,
+        title: game.title,
+        badge: game.badge,
+        badgeBg: game.badgeBg,
+        videoId: game.videoId,
+        createHref: href,
+        videoType: "demo",
+      });
+    }
+  };
 
   const handleOpenGuide = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (hasGuide && onPlayVideo && activeGuideVideoId) {
       onPlayVideo({
         id: game.id,
-        title: game.title,
-        badge: game.badge,
-        badgeBg: game.badgeBg,
+        title: `${game.title} (Hướng dẫn tạo bài)`,
+        badge: "HƯỚNG DẪN",
+        badgeBg: "bg-gradient-to-r from-sky-500 to-blue-600 text-white",
         videoId: activeGuideVideoId,
         createHref: href,
+        videoType: "guide",
       });
     }
   };
@@ -72,8 +89,9 @@ function ChoiceGameCardItem({
       {/* Top 16:9 Thumbnail Frame */}
       <div className="relative aspect-[16/10] w-full bg-slate-900 overflow-hidden shrink-0">
         <div
-          onClick={hasGuide ? handleOpenGuide : undefined}
-          className={`relative w-full h-full ${hasGuide ? "cursor-pointer group/thumb" : ""}`}
+          onClick={hasVideo ? handleOpenDemo : undefined}
+          className={`relative w-full h-full ${hasVideo ? "cursor-pointer group/thumb" : ""}`}
+          title={hasVideo ? "Xem video giới thiệu game" : undefined}
         >
           {/* Cover Image (Prioritize YouTube HD maxresdefault, fallback to hqdefault, then default image) */}
           <img
@@ -96,9 +114,9 @@ function ChoiceGameCardItem({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
 
-          {/* Play Button Overlay (Cinema Mode Trigger) - only visible when guide video is available */}
-          {hasGuide && (
-            <div className="absolute inset-0 flex items-center justify-center">
+          {/* Play Button Overlay (Cinema Mode Trigger) - only visible when demo video is available */}
+          {hasVideo && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="relative flex items-center justify-center">
                 <div className="absolute w-20 h-20 rounded-full bg-emerald-500/30 animate-ping opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 <div className="w-16 h-16 rounded-full bg-white/95 dark:bg-slate-900/95 text-emerald-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-emerald-500 group-hover/thumb:text-white transition-all duration-300">
