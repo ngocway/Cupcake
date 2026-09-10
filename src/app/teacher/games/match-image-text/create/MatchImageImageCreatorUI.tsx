@@ -25,6 +25,7 @@ import {
   Images,
   RefreshCw
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
@@ -786,6 +787,15 @@ export function MatchImageImageCreatorUI() {
           </div>
         </div>
 
+        <TeacherGameGuideButton
+          game={{
+            id: "image-image",
+            title: "Nối Cặp Ảnh - Ảnh",
+            badge: "Ảnh - Ảnh",
+            badgeBg: "bg-emerald-500 text-white",
+            createHref: "/teacher/games/match-image-text/create?type=image-image",
+          }}
+        />
       </div>
 
       {/* Game Title Input Card (Single Column Layout) */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Play, Plus } from "lucide-react";
+import { Play, Plus, Video } from "lucide-react";
 import Link from "next/link";
 import { GameVideoModal, VideoModalGame } from "./GameVideoModal";
 
@@ -12,6 +12,7 @@ interface GameCard {
   badgeBg: string;
   desc: string;
   videoId: string;
+  guideVideoId?: string;
   imageUrl?: string;
 }
 
@@ -49,23 +50,30 @@ function ChoiceGameCardItem({
   onPlayVideo: (videoGame: VideoModalGame) => void;
 }) {
   const href = getChoiceHref(game);
+  const activeGuideVideoId = game.guideVideoId;
+  const hasGuide = Boolean(activeGuideVideoId);
+
+  const handleOpenGuide = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (hasGuide && onPlayVideo && activeGuideVideoId) {
+      onPlayVideo({
+        id: game.id,
+        title: game.title,
+        badge: game.badge,
+        badgeBg: game.badgeBg,
+        videoId: activeGuideVideoId,
+        createHref: href,
+      });
+    }
+  };
 
   return (
     <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-primary/10 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col group">
       {/* Top 16:9 Thumbnail Frame */}
       <div className="relative aspect-[16/10] w-full bg-slate-900 overflow-hidden shrink-0">
         <div
-          onClick={() =>
-            onPlayVideo({
-              id: game.id,
-              title: game.title,
-              badge: game.badge,
-              badgeBg: game.badgeBg,
-              videoId: game.videoId,
-              createHref: href,
-            })
-          }
-          className="relative w-full h-full cursor-pointer group/thumb"
+          onClick={hasGuide ? handleOpenGuide : undefined}
+          className={`relative w-full h-full ${hasGuide ? "cursor-pointer group/thumb" : ""}`}
         >
           {/* Cover Image (Prioritize YouTube HD maxresdefault, fallback to hqdefault, then default image) */}
           <img
@@ -88,15 +96,17 @@ function ChoiceGameCardItem({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
 
-          {/* Play Button Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-20 h-20 rounded-full bg-emerald-500/30 animate-ping opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 pointer-events-none" />
-              <div className="w-16 h-16 rounded-full bg-white/95 dark:bg-slate-900/95 text-emerald-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-emerald-500 group-hover/thumb:text-white transition-all duration-300">
-                <Play className="w-7 h-7 ml-1 fill-current" />
+          {/* Play Button Overlay (Cinema Mode Trigger) - only visible when guide video is available */}
+          {hasGuide && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-20 h-20 rounded-full bg-emerald-500/30 animate-ping opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <div className="w-16 h-16 rounded-full bg-white/95 dark:bg-slate-900/95 text-emerald-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-115 group-hover/thumb:bg-emerald-500 group-hover/thumb:text-white transition-all duration-300">
+                  <Play className="w-7 h-7 ml-1 fill-current" />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Top-left Format Badge */}
@@ -113,6 +123,31 @@ function ChoiceGameCardItem({
           <div className="w-8 h-8 rounded-full bg-slate-900/60 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-md">
             <span className="material-symbols-rounded text-[18px]">sports_esports</span>
           </div>
+        </div>
+
+        {/* Bottom-right Guide Button */}
+        <div className="absolute bottom-3 right-3 z-20">
+          {hasGuide ? (
+            <button
+              type="button"
+              onClick={handleOpenGuide}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-500 hover:bg-white text-white hover:text-sky-600 border-2 border-sky-500 text-xs font-bold shadow-md shadow-sky-500/30 cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group/guide"
+              title="Xem video hướng dẫn"
+            >
+              <Video className="w-3.5 h-3.5 text-white group-hover/guide:text-sky-600 transition-colors" />
+              <span>Hướng dẫn</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-500/30 text-white/60 border border-sky-500/30 text-xs font-medium shadow-sm cursor-not-allowed opacity-80 select-none"
+              title="Chưa có video hướng dẫn (Sắp cập nhật)"
+            >
+              <Video className="w-3.5 h-3.5 text-white/40" />
+              <span>Hướng dẫn</span>
+            </button>
+          )}
         </div>
       </div>
 

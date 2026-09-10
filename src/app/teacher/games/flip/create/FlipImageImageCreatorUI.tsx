@@ -25,6 +25,7 @@ import {
   Images,
   RefreshCw
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
@@ -811,6 +812,15 @@ export function FlipImageImageCreatorUI() {
           </div>
         </div>
 
+        <TeacherGameGuideButton
+          game={{
+            id: "flip-image-image",
+            title: "Lật Ảnh-Ảnh",
+            badge: "Ảnh - Ảnh",
+            badgeBg: "bg-emerald-500 text-white",
+            createHref: "/teacher/games/flip/create?type=image-image",
+          }}
+        />
       </div>
 
       {/* Game Title Input Card */}

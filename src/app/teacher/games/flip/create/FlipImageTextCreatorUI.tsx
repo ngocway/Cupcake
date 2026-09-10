@@ -23,8 +23,10 @@ import {
   MoveRight,
   Layers,
   Info,
-  Loader2
+  Loader2,
+  HelpCircle
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
@@ -892,6 +894,16 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
             </h1>
           </div>
         </div>
+
+        <TeacherGameGuideButton
+          game={{
+            id: "flip-image-text",
+            title: "Lật Ảnh-Chữ",
+            badge: "Ảnh - Chữ",
+            badgeBg: "bg-orange-500 text-white",
+            createHref: "/teacher/games/flip/create?type=image-text",
+          }}
+        />
       </div>
 
       {/* Loading Skeleton state when fetching existing topic data */}

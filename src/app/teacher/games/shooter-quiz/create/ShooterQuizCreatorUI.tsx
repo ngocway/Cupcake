@@ -16,6 +16,7 @@ import {
   FileText,
   GripVertical,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import {
   DndContext,
   closestCenter,
@@ -908,6 +909,15 @@ export function ShooterQuizCreatorUI() {
           </div>
         </div>
 
+        <TeacherGameGuideButton
+          game={{
+            id: "shooter-quiz",
+            title: "Bắn súng Trắc nghiệm",
+            badge: "BẮN SÚNG",
+            badgeBg: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white",
+            createHref: "/teacher/games/shooter-quiz/create",
+          }}
+        />
       </div>
 
       {/* CARD 1: TITLE & METADATA */}

@@ -18,6 +18,7 @@ import {
   FileText,
   GripVertical,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import {
   DndContext,
   closestCenter,
@@ -1088,6 +1089,15 @@ export function TreasureHuntCreatorUI() {
           </div>
         </div>
 
+        <TeacherGameGuideButton
+          game={{
+            id: "treasure-hunt",
+            title: "Truy tìm Kho báu",
+            badge: "KHO BÁU",
+            badgeBg: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white",
+            createHref: "/teacher/games/treasure-hunt/create",
+          }}
+        />
       </div>
 
       {/* CARD 1: TITLE & METADATA */}

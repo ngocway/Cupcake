@@ -21,8 +21,9 @@ import {
   ShieldAlert,
   Edit3,
   Trash2,
-  Save
+  Save,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { HomeShell } from "@/app/_components/HomeShell";
@@ -444,8 +445,19 @@ export default function CreateChoiceShooterPage() {
             </div>
           </div>
 
-          {/* Stepper Navigation Bar (2 Steps) */}
-          <div className="flex items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm self-start md:self-auto">
+          <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+            <TeacherGameGuideButton
+              game={{
+                id: "shooter",
+                title: "Bắn Súng Toán Học",
+                badge: "BẮN SÚNG",
+                badgeBg: "bg-emerald-500 text-white",
+                createHref: "/teacher/games/choice-shooter/create",
+              }}
+            />
+
+            {/* Stepper Navigation Bar (2 Steps) */}
+            <div className="flex items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
             {/* Step 1 Button */}
             <button
               type="button"
@@ -488,6 +500,7 @@ export default function CreateChoiceShooterPage() {
             </button>
           </div>
         </div>
+      </div>
 
         {/* STEP 1: CONFIGURATION FORM (SPLIT 2-COLUMN DASHBOARD) */}
         {step === 1 && (

@@ -23,8 +23,10 @@ import {
   MoveRight,
   Layers,
   Info,
+  HelpCircle,
   Loader2
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
@@ -835,6 +837,16 @@ export function ConveyorDropCreatorUI() {
             </h1>
           </div>
         </div>
+
+        <TeacherGameGuideButton
+          game={{
+            id: "conveyor-drop",
+            title: "Băng Chuyền Thả Khối",
+            badge: "Băng Chuyền",
+            badgeBg: "bg-cyan-500 text-white",
+            createHref: "/teacher/games/conveyor-drop/create",
+          }}
+        />
       </div>
 
       {/* Loading Skeleton state when fetching existing topic data */}

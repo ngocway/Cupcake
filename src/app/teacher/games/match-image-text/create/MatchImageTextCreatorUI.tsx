@@ -23,8 +23,10 @@ import {
   MoveRight,
   Layers,
   Info,
-  Loader2
+  Loader2,
+  HelpCircle,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
@@ -893,6 +895,16 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             </h1>
           </div>
         </div>
+
+        <TeacherGameGuideButton
+          game={{
+            id: currentGameMode === "line" ? "line-image-text" : "image-text",
+            title: currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ",
+            badge: currentGameMode === "line" ? "Nối Dây" : "Ảnh - Chữ",
+            badgeBg: currentGameMode === "line" ? "bg-violet-500 text-white" : "bg-orange-500 text-white",
+            createHref: "/teacher/games/match-image-text/create",
+          }}
+        />
       </div>
 
       {/* Loading Skeleton state when fetching existing topic data */}

@@ -20,8 +20,9 @@ import {
   Loader2, 
   ArrowRightLeft, 
   Sparkles, 
-  Type
+  Type,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
@@ -552,6 +553,15 @@ export function MatchTextTextCreatorUI() {
           </div>
         </div>
 
+        <TeacherGameGuideButton
+          game={{
+            id: "text-text",
+            title: "Nối Cặp Chữ - Chữ",
+            badge: "Chữ - Chữ",
+            badgeBg: "bg-sky-500 text-white",
+            createHref: "/teacher/games/match-image-text/create?type=text-text",
+          }}
+        />
       </div>
 
       {/* Game Title & Settings Card */}

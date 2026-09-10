@@ -14,8 +14,9 @@ import {
   Edit3,
   Trash2,
   Plus,
-  Save
+  Save,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceEggGame, getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
@@ -432,48 +433,60 @@ export default function CreateChoiceEggPage() {
             </div>
           </div>
 
-          {/* Stepper Navigation Bar (2 Steps) */}
-          <div className="flex items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm self-start md:self-auto">
-            {/* Step 1 Button */}
-            <button
-              type="button"
-              onClick={() => setStep(1)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer hover:opacity-90 ${
-                step === 1 
-                  ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" 
-                  : "text-amber-600 bg-amber-50 dark:bg-amber-950/40"
-              }`}
-            >
-              <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[11px]">1</span>
-              <span>Cấu hình</span>
-            </button>
-
-            <div className="w-4 h-0.5 bg-slate-200 dark:bg-slate-700 mx-1" />
-
-            {/* Step 2 Button */}
-            <button
-              type="button"
-              disabled={selectedTypes.length === 0}
-              onClick={() => {
-                if (selectedTypes.length === 0) return;
-                if (questions.length === 0) {
-                  handleGenerateQuestions();
-                } else {
-                  setStep(2);
-                }
+          <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+            <TeacherGameGuideButton
+              game={{
+                id: "egg-crack",
+                title: "Đập Trứng Toán Học",
+                badge: "ĐẬP TRỨNG",
+                badgeBg: "bg-amber-500 text-white",
+                createHref: "/teacher/games/choice-egg/create",
               }}
-              title={selectedTypes.length === 0 ? "Vui lòng chọn ít nhất 1 dạng toán" : "Sang bước xem trước & lưu bài tập"}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
-                selectedTypes.length === 0 ? "opacity-40 cursor-not-allowed text-slate-400" : "cursor-pointer hover:bg-amber-100/80"
-              } ${
-                step === 2 
-                  ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" 
-                  : "text-slate-600 bg-slate-100 dark:bg-slate-800"
-              }`}
-            >
-              <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[11px]">2</span>
-              <span>Xem trước & Lưu</span>
-            </button>
+            />
+
+            {/* Stepper Navigation Bar (2 Steps) */}
+            <div className="flex items-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm self-start md:self-auto">
+              {/* Step 1 Button */}
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer hover:opacity-90 ${
+                  step === 1 
+                    ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" 
+                    : "text-amber-600 bg-amber-50 dark:bg-amber-950/40"
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[11px]">1</span>
+                <span>Cấu hình</span>
+              </button>
+
+              <div className="w-4 h-0.5 bg-slate-200 dark:bg-slate-700 mx-1" />
+
+              {/* Step 2 Button */}
+              <button
+                type="button"
+                disabled={selectedTypes.length === 0}
+                onClick={() => {
+                  if (selectedTypes.length === 0) return;
+                  if (questions.length === 0) {
+                    handleGenerateQuestions();
+                  } else {
+                    setStep(2);
+                  }
+                }}
+                title={selectedTypes.length === 0 ? "Vui lòng chọn ít nhất 1 dạng toán" : "Sang bước xem trước & lưu bài tập"}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+                  selectedTypes.length === 0 ? "opacity-40 cursor-not-allowed text-slate-400" : "cursor-pointer hover:bg-amber-100/80"
+                } ${
+                  step === 2 
+                    ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" 
+                    : "text-slate-600 bg-slate-100 dark:bg-slate-800"
+                }`}
+              >
+                <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[11px]">2</span>
+                <span>Xem trước & Lưu</span>
+              </button>
+            </div>
           </div>
         </div>
 

@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   GripVertical,
 } from "lucide-react";
+import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import {
   DndContext,
   closestCenter,
@@ -1108,6 +1109,16 @@ export function CandyQuizCreatorUI() {
           </div>
         </div>
 
+        <TeacherGameGuideButton
+          game={{
+            id: "candy-quiz",
+            title: "Trắc nghiệm Kẹo Ngọt",
+            badge: "KẸO NGỌT",
+            badgeBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white",
+            videoId: "IwpFLemjRv4",
+            createHref: "/teacher/games/candy-quiz/create",
+          }}
+        />
       </div>
 
       {/* CARD 1: TITLE & METADATA */}
