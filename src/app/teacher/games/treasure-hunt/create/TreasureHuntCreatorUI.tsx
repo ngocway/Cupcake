@@ -1567,7 +1567,7 @@ D. Black`
         onClose={() => setIsSuccessModalOpen(false)}
         title={title}
         gameType="Truy tìm Kho báu"
-        playUrl={`/student/game/treasure-hunt?topicId=${savedTopicId || topicId}`}
+        playUrl={`/game/treasure-grid?topicId=${savedTopicId || topicId}`}
         redirectTab="my-quiz-games"
       />
     </div>
