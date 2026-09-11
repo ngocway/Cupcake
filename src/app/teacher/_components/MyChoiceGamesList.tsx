@@ -3,12 +3,10 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Play,
   Edit3,
   Trash2,
-  Plus,
   Layers,
   Share2,
   Link2,
@@ -41,7 +39,6 @@ export interface UnifiedGameItem {
 }
 
 export function MyChoiceGamesList() {
-  const router = useRouter();
   const [games, setGames] = useState<UnifiedGameItem[]>([]);
   const [shareGame, setShareGame] = useState<UnifiedGameItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -129,10 +126,6 @@ export function MyChoiceGamesList() {
     loadGames();
   };
 
-  const handleCreateNew = () => {
-    router.push("/teacher/games/choice-shooter/create");
-  };
-
   const getPlayPath = (game: UnifiedGameItem) => {
     return game.gameType === "egg"
       ? `/game/egg-smash/${game.code}`
@@ -173,18 +166,10 @@ export function MyChoiceGamesList() {
               Hãy tạo các bài tập Chọn đáp án (Bắn súng, Đập trứng...) để học sinh rèn luyện tính nhẩm tốc độ!
             </p>
           </div>
-          <button
-            type="button"
-            onClick={handleCreateNew}
-            className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>+ Tạo bài tập mới ngay</span>
-          </button>
         </div>
       ) : (
         /* Games Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
           {games.map((game) => {
             const playPath = getPlayPath(game);
             const editPath = getEditPath(game);
@@ -192,34 +177,34 @@ export function MyChoiceGamesList() {
             return (
               <div
                 key={game.id}
-                className="rounded-3xl shadow-md hover:shadow-xl backdrop-blur-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group p-5 gap-4 bg-white dark:bg-slate-900 border border-emerald-300/80 dark:border-emerald-700/80 shadow-emerald-500/5 hover:shadow-emerald-500/15 hover:border-emerald-400"
+                className="rounded-3xl shadow-md hover:shadow-xl backdrop-blur-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group p-4 sm:p-5 gap-3.5 sm:gap-4 bg-white dark:bg-slate-900 border border-emerald-300/80 dark:border-emerald-700/80 shadow-emerald-500/5 hover:shadow-emerald-500/15 hover:border-emerald-400"
               >
                 {/* Top Header Details */}
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       {game.gameType === "egg" ? (
-                        <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs">
+                        <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs shrink-0">
                           🥚 Đập Trứng
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-xs">
+                        <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-xs shrink-0">
                           🎯 Bắn Súng
                         </span>
                       )}
 
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate">
                         {format(new Date(game.createdAt), "dd/MM/yyyy")}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                       <Layers className="w-3.5 h-3.5" />
                       <span>{game.questionCount || game.questions?.length || 0} câu</span>
                     </div>
                   </div>
 
-                  <h3 className="font-headline font-black text-lg line-clamp-2 leading-snug text-slate-800 dark:text-white group-hover:text-emerald-600 transition-colors">
+                  <h3 className="font-headline font-black text-base sm:text-lg line-clamp-2 leading-snug text-slate-800 dark:text-white group-hover:text-emerald-600 transition-colors">
                     {game.title}
                   </h3>
                 </div>
@@ -295,22 +280,6 @@ export function MyChoiceGamesList() {
               </div>
             );
           })}
-
-          {/* Add New Game Card (Last item in grid) */}
-          <div
-            onClick={handleCreateNew}
-            className="min-h-[220px] rounded-3xl border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 hover:bg-emerald-50 dark:bg-slate-900/40 dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center text-center p-6 cursor-pointer group hover:-translate-y-1 shadow-sm hover:shadow-md"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md shadow-emerald-500/30">
-              <Plus className="w-7 h-7 stroke-[3]" />
-            </div>
-            <span className="font-headline font-black text-base text-slate-800 dark:text-white">
-              Tạo bài tập mới
-            </span>
-            <span className="text-xs font-semibold text-slate-400 mt-1">
-              Thêm game Chọn đáp án
-            </span>
-          </div>
         </div>
       )}
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Plus, X, RotateCcw, Volume2, VolumeX, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export interface VideoModalGame {
   id: string;
@@ -20,6 +21,9 @@ interface GameVideoModalProps {
 }
 
 export function GameVideoModal({ game, onClose }: GameVideoModalProps) {
+  const pathname = usePathname();
+  const isTeacherPortal = pathname.startsWith("/teacher");
+
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -157,12 +161,15 @@ export function GameVideoModal({ game, onClose }: GameVideoModalProps) {
 
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              href={game.createHref}
+              href={isTeacherPortal ? game.createHref : "/teacher"}
               onClick={onClose}
-              className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sky-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sky-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+              title={isTeacherPortal ? "Tạo bài tập này" : "Đăng nhập Giáo viên để tạo"}
             >
-              <Plus className="w-4 h-4 stroke-[3px]" />
-              <span className="hidden sm:inline">Tạo bài tập này</span>
+              <Plus className="w-4 h-4 stroke-[3px] shrink-0" />
+              <span>
+                {isTeacherPortal ? "Tạo bài tập này" : "Đăng nhập Giáo viên để tạo"}
+              </span>
             </Link>
 
             <button

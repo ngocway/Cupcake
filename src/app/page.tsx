@@ -11,6 +11,7 @@ import prisma from "@/lib/prisma"
 import { getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
 import { getCachedFlashcardTopics } from "@/actions/flashcards-actions"
+import { getPublishedTeacherGamesAction } from "@/actions/admin-teacher-games"
 
 const STATIC_KINDERGARTEN_GAMES = Promise.resolve([
   {
@@ -136,6 +137,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const assignmentsPromise = getCachedAssignments(queryParams);
   const lessonsPromise     = getCachedLessons(queryParams);
   const flashcardsPromise  = getCachedFlashcardTopics();
+  const teacherGamesPromise = getPublishedTeacherGamesAction();
 
   return (
     <HomeShell>
@@ -160,6 +162,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 lessons: lessonsPromise,
                 flashcards: flashcardsPromise,
                 kindergartenGames: STATIC_KINDERGARTEN_GAMES,
+                teacherGames: teacherGamesPromise,
               }}
               searchParams={params}
               initialUserType={initialUserType}

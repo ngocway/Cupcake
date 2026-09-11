@@ -30,6 +30,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
       items: [
         { href: "/admin/games/match-words", icon: "sports_esports", label: "Game Match Words" },
         { href: "/admin/games/sentence-builder", icon: "extension", label: "Sentences Builder" },
+        { href: "/admin/games/teacher-games", icon: "joystick", label: "Game giáo viên tạo" },
       ]
     },
     {

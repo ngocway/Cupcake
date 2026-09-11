@@ -857,7 +857,7 @@ function MemoryGameContent() {
         }
 
         .board { position: absolute; z-index: 3; left: 43.5%; top: 8.4%; width: 46.5%; height: 78.6%; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 0.5cqw; }
-        .cards-grid { width: 100%; height: auto; max-width: 100%; max-height: 100%; margin: auto; display: grid; column-gap: 1.2cqw; row-gap: 1.2cqw; justify-items: center; align-items: center; }
+        .cards-grid { max-width: 100%; max-height: 100%; margin: auto; display: grid; justify-items: center; align-items: center; }
 
         .memory-card-wrapper {
           width: 100%;
@@ -1096,9 +1096,12 @@ function MemoryGameContent() {
             <div
               className="cards-grid"
               style={{
-                gridTemplateColumns: `repeat(${gridDimensions.cols}, 1fr)`,
-                gridTemplateRows: `repeat(${gridDimensions.rows}, 1fr)`,
+                gridTemplateColumns: `repeat(${gridDimensions.cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${gridDimensions.rows}, minmax(0, 1fr))`,
                 aspectRatio: `${gridDimensions.cols} / ${gridDimensions.rows}`,
+                width: gridDimensions.cols / gridDimensions.rows <= 1.05 ? 'auto' : '100%',
+                height: gridDimensions.cols / gridDimensions.rows <= 1.05 ? '100%' : 'auto',
+                gap: gridDimensions.rows >= 4 ? '0.9cqw' : '1.2cqw',
               }}
             >
               {deck.map((card) => {

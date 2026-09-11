@@ -3,12 +3,10 @@
 import { useEffect, useState, useTransition } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { 
   Play, 
   Edit3, 
   Trash2, 
-  Plus, 
   Layers, 
   Sparkles, 
   Calendar,
@@ -27,10 +25,6 @@ import { MatchGameShareModal } from "./MatchGameShareModal";
 import { toast } from "sonner";
 
 export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
   // Optimization: Hydration-safe initial state, then hydrate from sessionStorage
   const [topics, setTopics] = useState<any[]>(initialTopics || []);
   const [loading, setLoading] = useState<boolean>(!initialTopics || initialTopics.length === 0);
@@ -92,12 +86,6 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
     }
   };
 
-  const handleCreateNew = () => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.set("tab", "match");
-    router.push(`${pathname}?${params.toString()}`);
-  };
-
   if (loading) {
     return (
       <div className="w-full h-96 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center space-y-4">
@@ -124,17 +112,10 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
               Hãy tạo các bộ thẻ Nối Cặp Ảnh - Chữ hoặc Chữ - Chữ đầu tiên để học sinh thực hành!
             </p>
           </div>
-          <button
-            onClick={handleCreateNew}
-            className="px-6 py-3 bg-sky-500 hover:bg-sky-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-sky-500/20 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>+ Tạo bài tập mới ngay</span>
-          </button>
         </div>
       ) : (
         /* Games Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
           {topics.map((topic) => {
             const isConveyorDrop = topic.gameMode === "conveyor-drop" || topic.game?.name?.includes("Băng Chuyền");
             const isImageImage = !isConveyorDrop && topic.isImageImage;
@@ -150,7 +131,7 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
             return (
               <div
                 key={topic.id}
-                className={`rounded-3xl shadow-md hover:shadow-xl backdrop-blur-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group p-5 gap-4 bg-white dark:bg-slate-900 ${
+                className={`rounded-3xl shadow-md hover:shadow-xl backdrop-blur-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group p-4 sm:p-5 gap-3.5 sm:gap-4 bg-white dark:bg-slate-900 ${
                   isConveyorDrop
                     ? "border border-cyan-300/80 dark:border-cyan-700/80 shadow-cyan-500/5 hover:shadow-cyan-500/15 hover:border-cyan-400"
                     : isLineDraw
@@ -163,10 +144,10 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
                 }`}
               >
                 {/* Top Details */}
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 ${
                         isConveyorDrop
                           ? "bg-cyan-500 text-white shadow-sm shadow-cyan-500/30"
                           : isLineDraw
@@ -181,19 +162,19 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
                       </span>
 
                       {topic.createdAt && (
-                        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate">
                           {format(new Date(topic.createdAt), "dd/MM/yyyy HH:mm")}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                       <Layers className="w-3.5 h-3.5" />
-                      <span>{topic.totalItems || topic.items?.length || 0} cặp thẻ</span>
+                      <span>{topic.totalItems || topic.items?.length || 0} cặp</span>
                     </div>
                   </div>
 
-                  <h3 className={`font-headline font-black text-lg line-clamp-2 leading-snug ${
+                  <h3 className={`font-headline font-black text-base sm:text-lg line-clamp-2 leading-snug ${
                     isConveyorDrop
                       ? "text-cyan-700 dark:text-cyan-300"
                       : isLineDraw
@@ -365,22 +346,6 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
               </div>
             );
           })}
-
-          {/* Add New Game Card (Last item in grid) */}
-          <div
-            onClick={handleCreateNew}
-            className="min-h-[220px] rounded-3xl border-2 border-dashed border-sky-300 hover:border-sky-500 bg-sky-50/40 hover:bg-sky-50 dark:bg-slate-900/40 dark:hover:bg-slate-900 transition-all duration-300 flex flex-col items-center justify-center text-center p-6 cursor-pointer group hover:-translate-y-1 shadow-sm hover:shadow-md"
-          >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 text-white flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-md shadow-sky-500/30">
-              <Plus className="w-7 h-7 stroke-[3]" />
-            </div>
-            <span className="font-headline font-black text-base text-slate-800 dark:text-white">
-              Tạo bài tập mới
-            </span>
-            <span className="text-xs font-semibold text-slate-400 mt-1">
-              Thêm game Nối Cặp
-            </span>
-          </div>
         </div>
       )}
 

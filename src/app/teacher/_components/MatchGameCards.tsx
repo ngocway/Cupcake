@@ -200,10 +200,10 @@ function MatchGameCardItem({
       </div>
 
       {/* Bottom Content Container */}
-      <div className="p-6 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900">
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900">
         <div>
           <h3
-            className={`font-headline font-black text-lg sm:text-xl mb-2 leading-tight ${
+            className={`font-headline font-black text-base sm:text-lg mb-1.5 leading-snug line-clamp-2 ${
               game.id === "image-image"
                 ? "text-emerald-700 dark:text-emerald-300"
                 : game.id === "image-text"
@@ -213,7 +213,7 @@ function MatchGameCardItem({
           >
             {game.title}
           </h3>
-          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-2">
             {game.desc}
           </p>
         </div>
@@ -222,7 +222,7 @@ function MatchGameCardItem({
         <Link
           href={href}
           prefetch={true}
-          className="w-full py-3.5 px-4 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2 group/btn text-center"
+          className="w-full py-3 px-3.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2 group/btn text-center"
         >
           <Plus className="w-4 h-4 stroke-[3px] group-hover/btn:rotate-90 transition-transform duration-300" />
           <span>Tạo bài tập</span>
@@ -248,7 +248,7 @@ export function MatchGameCards() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
         {MATCH_GAMES.map((game) => (
           <MatchGameCardItem
             key={game.id}

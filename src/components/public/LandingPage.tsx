@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 
 import { LevelPillSelector } from "@/components/public/LevelPillSelector"
+import { StudentGamesHub } from "@/components/public/StudentGamesHub"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ interface Props {
     categoryTree?: Promise<any[]>
     flashcards?: Promise<any[]>
     kindergartenGames?: Promise<any[]>
+    teacherGames?: Promise<any[]>
   }
   searchParams: any
   initialUserType?: string
@@ -975,6 +977,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     setFlashcardTopics(ssrFlashcardTopics);
   }
 
+  // Teacher-created games unwrap
+  const ssrTeacherGames = use(promises.teacherGames ?? Promise.resolve([])) as any[];
+
   // Use SSR topics as immediate fallback — avoids skeleton flash on first render
   // even before Zustand has been hydrated by setFlashcardTopics.
   const effectiveFlashcardTopics = allFlashcardTopics.length > 0 ? allFlashcardTopics : ssrFlashcardTopics;
@@ -1712,7 +1717,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               : <Suspense fallback={<FlashcardSkeleton />}><FlashcardTopicBrowser topics={filteredFlashcards} initialLevel={normalizedStudyLevel || "a1"} /></Suspense>
           ) : activeTab === "games" ? (
             <Suspense fallback={<SectionSkeleton />}>
-              <GameList games={filteredGames} locale={locale} />
+              <StudentGamesHub
+                systemGames={filteredGames}
+                teacherGames={ssrTeacherGames}
+                locale={locale}
+              />
             </Suspense>
           ) : activeTab === "exercises" ? (
             <GrammarTopicBrowser />
