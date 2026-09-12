@@ -418,7 +418,8 @@ const END_MODE = (typeof window !== "undefined" && window.parent && window.paren
   function openResultModal() {
     resultTitle.textContent = 'Hoàn thành rồi!';
     resultDesc.textContent = `Bé đã vượt qua ${GAME_DATA.length}/${GAME_DATA.length} câu. Tổng xu: ${state.coins}.`;
-    nextBtn.textContent = 'Chơi lại từ đầu';
+    nextBtn.textContent = 'Chơi lại';
+    restartBtn.textContent = 'Đóng';
     resultOverlay.classList.remove('hidden');
   }
 
@@ -585,8 +586,14 @@ const END_MODE = (typeof window !== "undefined" && window.parent && window.paren
     burstCoins();
     playUiSfx();
   });
-  nextBtn.addEventListener('click', nextQuestion);
-  restartBtn.addEventListener('click', restartGame);
+  nextBtn.addEventListener('click', () => {
+    playUiSfx();
+    restartGame();
+  });
+  restartBtn.addEventListener('click', () => {
+    playUiSfx();
+    resultOverlay.classList.add('hidden');
+  });
   if (questionText) {
     questionText.style.cursor = 'pointer';
     questionText.title = 'Nhấp vào đây để nghe đọc phép tính 🔊';
@@ -595,7 +602,10 @@ const END_MODE = (typeof window !== "undefined" && window.parent && window.paren
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!resultOverlay.classList.contains('hidden')) return;
+      if (!resultOverlay.classList.contains('hidden')) {
+        resultOverlay.classList.add('hidden');
+        return;
+      }
       setPaused(!state.paused);
       return;
     }
