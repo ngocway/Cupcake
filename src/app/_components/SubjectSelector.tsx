@@ -195,8 +195,8 @@ export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
               {!isMenuOpen && isActive && subject.id === "english" && (
                 <div className="flex gap-3 px-3 py-2 bg-white/60 rounded-[16px] border border-[#F0E2BF] w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-white transition-all shadow-xs" onClick={toggleMenu}>
                   <span className="material-symbols-rounded text-base text-[#0B7A58] opacity-75">import_contacts</span>
-                  <span className="material-symbols-rounded text-base text-[#7B5CFA] opacity-75">style</span>
                   <span className="material-symbols-rounded text-base text-[#FF6F96] opacity-75">sports_esports</span>
+                  <span className="material-symbols-rounded text-base text-[#7B5CFA] opacity-75">style</span>
                   <span className="material-symbols-rounded text-base text-[#3FA9F5] opacity-75">edit_note</span>
                   <span className="material-symbols-rounded text-base text-[#FF9F43] opacity-75">auto_stories</span>
                 </div>

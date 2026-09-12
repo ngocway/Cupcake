@@ -109,8 +109,8 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
       {/* PHẦN 1: GAME HỆ THỐNG (1 hàng ngang, có thể scroll ngang)              */}
       {/* ══════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-4">
-        {/* Scroll Arrows */}
-        <div className="flex items-center justify-end gap-2">
+        {/* Scroll Arrows (chỉ cần trên mobile/tablet khi có cuộn ngang) */}
+        <div className="flex items-center justify-end gap-2 lg:hidden">
           <button
             type="button"
             onClick={handleScrollLeft}
@@ -129,10 +129,10 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
           </button>
         </div>
 
-        {/* Horizontal Scroll Row */}
+        {/* System Games Row: Grid 3 cột trên Desktop (overflow-visible) & Scroll ngang trên Mobile (pb-8 không cấn bóng) */}
         <div
           ref={scrollContainerRef}
-          className="flex gap-6 overflow-x-auto no-scrollbar pb-3 pt-1 px-1 scroll-smooth snap-x snap-mandatory"
+          className="flex lg:grid lg:grid-cols-3 gap-6 overflow-x-auto lg:overflow-visible no-scrollbar pb-8 pt-2 px-2 -mb-4 lg:py-2 lg:px-1 lg:mb-0 scroll-smooth snap-x snap-mandatory"
         >
           {playableSystemGames.map((game) => (
             <div
@@ -140,7 +140,7 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
               onClick={() => {
                 window.location.href = game.href;
               }}
-              className="min-w-[300px] sm:min-w-[340px] md:min-w-[380px] max-w-[400px] shrink-0 snap-start group cursor-pointer"
+              className="min-w-[300px] sm:min-w-[340px] md:min-w-[380px] max-w-[400px] lg:min-w-0 lg:max-w-none lg:w-full shrink-0 lg:shrink snap-start group cursor-pointer"
             >
               <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-200 dark:border-slate-800 shadow-md hover:shadow-2xl hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col h-full transform hover:-translate-y-1.5">
                 {/* 16:9 Thumbnail Frame */}

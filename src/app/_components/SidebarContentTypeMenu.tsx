@@ -42,7 +42,7 @@ export function SidebarContentTypeMenu() {
   const checkAndRequireOnboarding = useContentStore((s) => (s as any).checkAndRequireOnboarding);
 
   // Read activeTab from Zustand store (instant, no server round-trip)
-  const activeTab = useContentStore((s) => (s as any).activeTab) || "flashcards";
+  const activeTab = useContentStore((s) => (s as any).activeTab) || "games";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
   const setMobileSidebarOpen = useContentStore((s) => (s as any).setMobileSidebarOpen);
 
@@ -58,16 +58,16 @@ export function SidebarContentTypeMenu() {
     const urlTab = searchParams.get("tab");
     if (urlTab && (urlTab === "lessons" || urlTab === "exercises" || urlTab === "shadowing")) {
       if (!studyAgeGroup) {
-        setActiveTab("flashcards");
+        setActiveTab("games");
         const p = new URLSearchParams(window.location.search);
-        p.set("tab", "flashcards");
+        p.set("tab", "games");
         history.replaceState(null, "", `?${p.toString()}`);
         if (setFilterModalOpen) setFilterModalOpen(true);
       } else if (isKindergarten && isTabLocked(urlTab)) {
         setIsRestrictionModalOpen(true);
-        setActiveTab("flashcards");
+        setActiveTab("games");
         const p = new URLSearchParams(window.location.search);
-        p.set("tab", "flashcards");
+        p.set("tab", "games");
         history.replaceState(null, "", `?${p.toString()}`);
       }
     }
@@ -359,21 +359,6 @@ export function SidebarContentTypeMenu() {
             {locale === "vi" ? "Luyện tập nhanh" : "Quick Practice"}
           </p>
           <div className="cefr-redesign-tile-grid">
-            {/* Flashcards */}
-            <div
-              onClick={() => handleSelectTab("flashcards")}
-              className={`cefr-redesign-tile flash ${activeTab === "flashcards" ? "active" : ""}`}
-            >
-              <div className="cefr-redesign-tile-top">
-                <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">layers</span>
-                </div>
-              </div>
-              <p className="cefr-redesign-tile-label">
-                {locale === "vi" ? "Flashcards" : "Flashcards"}
-              </p>
-            </div>
-
             {/* Games */}
             <div
               onClick={() => handleSelectTab("games")}
@@ -386,6 +371,21 @@ export function SidebarContentTypeMenu() {
               </div>
               <p className="cefr-redesign-tile-label">
                 {locale === "vi" ? "Trò chơi" : "Games"}
+              </p>
+            </div>
+
+            {/* Flashcards */}
+            <div
+              onClick={() => handleSelectTab("flashcards")}
+              className={`cefr-redesign-tile flash ${activeTab === "flashcards" ? "active" : ""}`}
+            >
+              <div className="cefr-redesign-tile-top">
+                <div className="cefr-redesign-tile-icon">
+                  <span className="material-symbols-rounded">layers</span>
+                </div>
+              </div>
+              <p className="cefr-redesign-tile-label">
+                {locale === "vi" ? "Flashcards" : "Flashcards"}
               </p>
             </div>
 

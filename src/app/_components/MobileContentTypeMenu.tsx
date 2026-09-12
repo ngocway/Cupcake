@@ -13,7 +13,7 @@ export function MobileContentTypeMenu() {
   const locale = useLocale();
 
   const studyAgeGroup = useContentStore((s) => (s as any).studyAgeGroup) || "";
-  const activeTabStore = useContentStore((s) => (s as any).activeTab) || "flashcards";
+  const activeTabStore = useContentStore((s) => (s as any).activeTab) || "games";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   const isKindergarten = useMemo(() => {
@@ -73,18 +73,18 @@ export function MobileContentTypeMenu() {
 
   const items = [
     {
-      id: "flashcards",
-      label: locale === "vi" ? "Flashcards" : "Flashcards",
-      icon: "layers",
-      bgClass: "bg-[#DFD7FC] text-[#5A3EDB] border-[#7B5CFA]",
-      activeStyle: "border-[#7B5CFA] ring-2 ring-[#7B5CFA]/40 shadow-md scale-[1.03]",
-    },
-    {
       id: "games",
       label: locale === "vi" ? "Trò chơi" : "Games",
       icon: "sports_esports",
       bgClass: "bg-[#FCD5DF] text-[#D9436C] border-[#FF6F96]",
       activeStyle: "border-[#FF6F96] ring-2 ring-[#FF6F96]/40 shadow-md scale-[1.03]",
+    },
+    {
+      id: "flashcards",
+      label: locale === "vi" ? "Flashcards" : "Flashcards",
+      icon: "layers",
+      bgClass: "bg-[#DFD7FC] text-[#5A3EDB] border-[#7B5CFA]",
+      activeStyle: "border-[#7B5CFA] ring-2 ring-[#7B5CFA]/40 shadow-md scale-[1.03]",
     },
     {
       id: "lessons",

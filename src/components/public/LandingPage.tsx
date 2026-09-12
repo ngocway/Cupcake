@@ -990,7 +990,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const exerciseCountsLoaded   = useContentStore(s => (s as any).exerciseCountsLoaded) as boolean;
 
   // Active tab — read directly from Zustand store (instant, no re-mount)
-  const activeTab    = useContentStore((s) => (s as any).activeTab) || "flashcards";
+  const activeTab    = useContentStore((s) => (s as any).activeTab) || "games";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   // On first mount: initialize store from URL so bookmarks/direct links still work
@@ -1184,10 +1184,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   // Determine dynamic tabs array based on current age group
   // "shadowing" is always included — it's a universal tab not tied to age group
   const tabs = useMemo(() => {
-    if (isKindergarten) return ["flashcards", "games", "shadowing"];
-    if (isKid || isTeen) return ["flashcards", "games", "lessons", "exercises", "shadowing"];
-    if (isLearner) return ["lessons", "exercises", "flashcards", "games", "shadowing"];
-    return ["lessons", "exercises", "flashcards", "games", "shadowing"]; // Fallback
+    if (isKindergarten) return ["games", "flashcards", "shadowing"];
+    if (isKid || isTeen) return ["games", "flashcards", "lessons", "exercises", "shadowing"];
+    if (isLearner) return ["games", "lessons", "exercises", "flashcards", "shadowing"];
+    return ["games", "lessons", "exercises", "flashcards", "shadowing"]; // Fallback
   }, [isKindergarten, isKid, isTeen, isLearner]);
 
   // Sync activeTab with available tabs (reset if current tab not available for this age group)
