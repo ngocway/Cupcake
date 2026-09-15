@@ -333,8 +333,12 @@ export default function TeacherProfileEditor({ profile }: { profile: any }) {
                                                 </div>
                                             ) : null}
                                             <img 
-                                                src={formData.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.name} 
+                                                src={formData.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(profile.name || 'Teacher')} 
                                                 alt="Avatar" 
+                                                referrerPolicy="no-referrer"
+                                                onError={(e) => {
+                                                    e.currentTarget.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(profile.name || 'Teacher');
+                                                }}
                                                 className="w-full h-full object-cover group-hover:opacity-50 transition-opacity" 
                                             />
                                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/40 text-white z-10">

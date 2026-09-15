@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 import { PublicTeacherHeader } from "./PublicTeacherHeader";
 
 export default async function TeacherLessonsPage({ 
@@ -64,11 +65,16 @@ export default async function TeacherLessonsPage({
           {/* Teacher Profile Section */}
           <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-8">
              <div className="w-32 h-32 rounded-[2rem] bg-slate-100 overflow-hidden ring-4 ring-primary/5">
-                {teacher.image ? (
-                  <img src={teacher.image} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-300"><User className="w-12 h-12" /></div>
-                )}
+                <TeacherAvatar
+                  src={teacher.image}
+                  name={teacher.name}
+                  className="w-full h-full object-cover"
+                  fallback={
+                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                      <User className="w-12 h-12" />
+                    </div>
+                  }
+                />
              </div>
              <div className="text-center md:text-left space-y-2 flex-1">
                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Lesson Archive</p>

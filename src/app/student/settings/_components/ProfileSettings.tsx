@@ -61,8 +61,12 @@ export function ProfileSettings({ user }: { user: any }) {
                 <div className="relative group">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-200 dark:border-slate-700 shadow-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                         <img 
-                            src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`} 
+                            src={user.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || 'user')}`} 
                             alt="Avatar" 
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                                e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || 'user')}`;
+                            }}
                             className="w-full h-full object-cover"
                         />
                     </div>

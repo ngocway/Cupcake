@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation"
 
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations } from "next-intl"
+import { TeacherLanguageSelector } from "@/components/teacher/TeacherLanguageSelector"
 
 const LANG_LABELS: Record<string, string> = {
   vi: "Tiếng Việt", th: "ภาษาไทย", id: "Bahasa Indonesia",
@@ -93,8 +94,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
     }
   }
 
-  const dashboardHref = session?.role === "TEACHER" ? "/teacher/dashboard" : "/student/dashboard"
-
+  const isTeacher = session?.role === "TEACHER" || pathname.startsWith("/teacher") || isTeacherDomain
+  const dashboardHref = isTeacher ? "/teacher/dashboard" : "/student/dashboard"
 
   const isActive = (path: string) => pathname === path
 
@@ -189,6 +190,10 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                   <img 
                     src={session.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.id}`} 
                     alt="User avatar" 
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.id}`;
+                    }}
                     className="w-full h-full object-cover" 
                   />
                 </div>
@@ -204,112 +209,128 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                     <p className="font-bold text-sm text-on-surface truncate">{session.name}</p>
                   </div>
                   <div className="flex flex-col">
-                    <Link 
-                      href={dashboardHref}
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        isActive(dashboardHref) 
-                          ? "bg-primary/5 text-primary" 
-                          : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                      <span>{t("dashboard")}</span>
-                    </Link>
-                    <Link 
-                      href={`/profile/${session.id}`}
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        isActive(`/profile/${session.id}`) 
-                          ? "bg-primary/5 text-primary" 
-                          : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">person</span>
-                      <span>{t("profile")}</span>
-                    </Link>
-                    
-                    <div className="h-px bg-primary/5 my-2 mx-4" />
-                    
-                    <Link 
-                      href="/student/my-learning/assignments"
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        isActive('/student/my-learning/assignments') 
-                          ? "bg-primary/5 text-primary" 
-                          : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">assignment</span>
-                      <span>Bài tập của tôi</span>
-                    </Link>
-                    <Link 
-                      href="/student/lessons?filter=completed"
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        pathname.includes('/student/lessons') 
-                          ? "bg-primary/5 text-primary" 
-                          : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">history_edu</span>
-                      <span>Bài học đã học</span>
-                    </Link>
-                    <Link 
-                      href="/student/bookmarks"
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        isActive('/student/bookmarks') 
-                          ? "bg-primary/5 text-primary" 
-                          : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                      <span>Đã lưu</span>
-                    </Link>
-                    <Link 
-                      href="/student/my-reviews"
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                        isActive('/student/my-reviews') 
-                          ? "bg-primary/5 text-primary" 
-                          : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">star</span>
-                      <span>Đánh giá của tôi</span>
-                    </Link>
-                    
-                    <div className="h-px bg-primary/5 mt-2 mb-1" />
+                    {isTeacher ? (
+                      <>
+                        <TeacherLanguageSelector />
+                        <div className="h-px bg-primary/10 my-1 mx-3" />
+                        <button 
+                          onClick={() => signOut({ callbackUrl: "/" })}
+                          className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">logout</span>
+                          <span>Đăng xuất</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link 
+                          href={dashboardHref}
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive(dashboardHref) 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                          <span>{t("dashboard")}</span>
+                        </Link>
+                        <Link 
+                          href={`/profile/${session.id}`}
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive(`/profile/${session.id}`) 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">person</span>
+                          <span>{t("profile")}</span>
+                        </Link>
+                        
+                        <div className="h-px bg-primary/5 my-2 mx-4" />
+                        
+                        <Link 
+                          href="/student/my-learning/assignments"
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive('/student/my-learning/assignments') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">assignment</span>
+                          <span>Bài tập của tôi</span>
+                        </Link>
+                        <Link 
+                          href="/student/lessons?filter=completed"
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            pathname.includes('/student/lessons') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">history_edu</span>
+                          <span>Bài học đã học</span>
+                        </Link>
+                        <Link 
+                          href="/student/bookmarks"
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive('/student/bookmarks') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                          <span>Đã lưu</span>
+                        </Link>
+                        <Link 
+                          href="/student/my-reviews"
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                            isActive('/student/my-reviews') 
+                              ? "bg-primary/5 text-primary" 
+                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[18px]">star</span>
+                          <span>Đánh giá của tôi</span>
+                        </Link>
+                        
+                        <div className="h-px bg-primary/5 mt-2 mb-1" />
 
-                    {/* Age group + native language — click to open preferences modal */}
-                    <button
-                      onClick={() => { setFilterModalOpen(true); setIsMenuOpen(false); }}
-                      className="w-full text-left px-5 py-3 transition-colors group hover:bg-surface-container-low"
-                    >
-                      <div className="flex flex-wrap items-center gap-1 text-[11px] font-bold">
-                        <span className="text-primary/40 group-hover:text-primary/60">I&apos;m a</span>
-                        <span className="border border-sky-300 px-1.5 py-0.5 bg-sky-50 text-sky-800 rounded-full">
-                          {(effectiveAgeGroup === "kindergarten" || effectiveAgeGroup === "kindergarden") ? "< 6 years"
-                            : effectiveAgeGroup || "Learner"}
-                        </span>
-                        <span className="text-primary/40 group-hover:text-primary/60">speaking</span>
-                        <span className="border border-amber-300 px-1.5 py-0.5 bg-amber-50 text-amber-800 rounded-full">
-                          {LANG_LABELS[nativeLanguage] || "English"}
-                        </span>
-                        <span className="material-symbols-outlined text-[13px] text-primary/30 group-hover:text-primary ml-0.5">settings</span>
-                      </div>
-                    </button>
+                        {/* Age group + native language — click to open preferences modal */}
+                        <button
+                          onClick={() => { setFilterModalOpen(true); setIsMenuOpen(false); }}
+                          className="w-full text-left px-5 py-3 transition-colors group hover:bg-surface-container-low"
+                        >
+                          <div className="flex flex-wrap items-center gap-1 text-[11px] font-bold">
+                            <span className="text-primary/40 group-hover:text-primary/60">I&apos;m a</span>
+                            <span className="border border-sky-300 px-1.5 py-0.5 bg-sky-50 text-sky-800 rounded-full">
+                              {(effectiveAgeGroup === "kindergarten" || effectiveAgeGroup === "kindergarden") ? "< 6 years"
+                                : effectiveAgeGroup || "Learner"}
+                            </span>
+                            <span className="text-primary/40 group-hover:text-primary/60">speaking</span>
+                            <span className="border border-amber-300 px-1.5 py-0.5 bg-amber-50 text-amber-800 rounded-full">
+                              {LANG_LABELS[nativeLanguage] || "English"}
+                            </span>
+                            <span className="material-symbols-outlined text-[13px] text-primary/30 group-hover:text-primary ml-0.5">settings</span>
+                          </div>
+                        </button>
 
-                    <div className="h-px bg-primary/5 mt-1 mb-1" />
+                        <div className="h-px bg-primary/5 mt-1 mb-1" />
 
-                    <button 
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                      className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">logout</span>
-                      <span>Đăng xuất</span>
-                    </button>
+                        <button 
+                          onClick={() => signOut({ callbackUrl: "/" })}
+                          className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">logout</span>
+                          <span>Đăng xuất</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

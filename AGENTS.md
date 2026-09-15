@@ -31,6 +31,9 @@ When the user requests you to generate any image (e.g. mockups, assets, UI desig
 - Do NOT use Vietnamese text in question text, statements, instructions, or choice labels.
 - Explanations (`explanation`) can be bilingual (`[EN]` and `[VI]`) to support student learning.
 
+# Browser Constraint
+- **Do NOT open or interact with the browser** (such as using `browser_subagent` or opening browser URLs) unless the user explicitly requests it.
+
 
 
 

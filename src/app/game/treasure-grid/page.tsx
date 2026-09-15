@@ -558,15 +558,20 @@ function MysteryTreasureGridContent() {
   const [rounds, setRounds] = useState<ParsedRound[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
 
-  // Format topic title to max 5 words, with '...' if longer
+  // Dynamic topic title without truncation
   const displayTopicTitle = useMemo(() => {
-    const title = (topicTitle || 'TRUY TÌM KHO BÁU').trim();
-    const words = title.split(/\s+/);
-    if (words.length > 5) {
-      return words.slice(0, 5).join(' ') + '...';
-    }
-    return title;
+    return (topicTitle || 'TRUY TÌM KHO BÁU').trim();
   }, [topicTitle]);
+
+  // Dynamic font size for the topic banner based on character length (supports up to 2 lines)
+  const titleFontSize = useMemo(() => {
+    const len = displayTopicTitle.length;
+    if (len <= 16) return '25px';
+    if (len <= 26) return '21px';
+    if (len <= 38) return '18px';
+    if (len <= 52) return '15px';
+    return '13px';
+  }, [displayTopicTitle]);
 
   // Gameplay State
   const [solvedSet, setSolvedSet] = useState<Set<number>>(new Set());
@@ -2097,14 +2102,20 @@ function MysteryTreasureGridContent() {
               className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             />
             <span
-              className="relative z-10 text-[#0d3468] text-[27px] font-[900] uppercase tracking-tight text-center truncate max-w-[500px]"
+              className="relative z-10 text-[#0d3468] font-[900] uppercase tracking-tight text-center max-w-[490px] leading-[1.15]"
               style={{
+                fontSize: titleFontSize,
                 fontFamily: '"Baloo 2", "Arial Rounded MT Bold", sans-serif',
                 fontWeight: 900,
                 WebkitTextStroke: '0.6px #072044',
                 textShadow: '0 2px 0 rgba(255,255,255,0.85), 0 3px 6px rgba(111,69,21,0.2)',
+                wordBreak: 'break-word',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
               }}
-              title={topicTitle || 'TRUY TÌM KHO BÁU'}
+              title={displayTopicTitle}
             >
               {displayTopicTitle}
             </span>

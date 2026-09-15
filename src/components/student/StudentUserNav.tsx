@@ -35,6 +35,7 @@ export function StudentUserNav({ user }: StudentUserNavProps) {
         <img 
           alt="Student Profile Avatar" 
           className="w-full h-full object-cover" 
+          referrerPolicy="no-referrer"
           src={user.image || "https://lh3.googleusercontent.com/aida-public/AB6AXuDG4UeVjdE9vLCqkj7SyCEGler4aGvlCwdYpmqVp0cDgQN-B09pvN9OrtVWynZmUUxvTVP9mAsgSLWx-Ag5kxfQqqRcSdYN61zxDBeCHI71WSlnCIo6Kxz83OBuTEfG3qVktRHHG_LyuaozLOD4wQOQ54OCfGNgnP2_VH7ocpD6u0Ypc3y0Zu52SVqPW0sW4guBb4C06oiwglwM15Fhah6pGngIrtFVsU47mG1qGAnOMnQZFV6fGI_6uFlo89i4ULCFPitxZrmXH4QS"} 
         />
       </button>

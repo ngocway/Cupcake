@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { User, MapPin, Briefcase, GraduationCap, LayoutGrid, BookOpen, FileEdit } from "lucide-react";
 import { LessonCard, ExerciseCard } from "@/components/public/ContentCards";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 export function TeacherProfileContent({ 
   teacher, 
@@ -33,13 +34,16 @@ export function TeacherProfileContent({
          <div className="flex flex-col md:flex-row gap-8 items-start">
            {/* Avatar */}
            <div className="w-40 h-40 shrink-0 rounded-[2rem] border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden bg-white relative">
-             {teacher.image ? (
-               <Image src={teacher.image} alt={teacher.name || "Teacher"} fill className="object-cover" />
-             ) : (
-               <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                 <User className="w-16 h-16" />
-               </div>
-             )}
+             <TeacherAvatar
+               src={teacher.image}
+               name={teacher.name}
+               className="w-full h-full object-cover"
+               fallback={
+                 <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                   <User className="w-16 h-16" />
+                 </div>
+               }
+             />
            </div>
 
            {/* Info */}

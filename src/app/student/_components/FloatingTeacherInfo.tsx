@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { User, X, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 interface TeacherInfo {
   id: string;
@@ -54,13 +55,16 @@ export function FloatingTeacherInfo({
         onClick={() => setIsOpen(!isOpen)}
         className="w-[72px] h-[72px] rounded-full border-4 border-white dark:border-slate-800 shadow-2xl overflow-hidden bg-white hover:scale-110 active:scale-95 transition-all focus:outline-none ring-1 ring-black/5"
       >
-        {teacher.image ? (
-          <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-            <User className="w-6 h-6" />
-          </div>
-        )}
+        <TeacherAvatar
+          src={teacher.image}
+          name={teacher.name}
+          className="w-full h-full object-cover"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+              <User className="w-6 h-6" />
+            </div>
+          }
+        />
       </button>
 
       {/* Popup */}
@@ -71,13 +75,16 @@ export function FloatingTeacherInfo({
         >
           <div className="space-y-4 flex flex-col items-center text-center w-full">
             <div className="w-20 h-20 rounded-full border-2 border-white dark:border-slate-800 shadow-lg overflow-hidden bg-white">
-              {teacher.image ? (
-                <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                  <User className="w-10 h-10" />
-                </div>
-              )}
+              <TeacherAvatar
+                src={teacher.image}
+                name={teacher.name}
+                className="w-full h-full object-cover"
+                fallback={
+                  <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                    <User className="w-10 h-10" />
+                  </div>
+                }
+              />
             </div>
             
             <div className="space-y-1">

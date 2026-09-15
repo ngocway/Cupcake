@@ -7,6 +7,7 @@ import {
   toggleTeacherGamePublishAction,
   type AdminTeacherGameItem,
 } from "@/actions/admin-teacher-games";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 interface TeacherGamesClientProps {
   initialGames: AdminTeacherGameItem[];
@@ -374,17 +375,18 @@ export function TeacherGamesClient({ initialGames }: TeacherGamesClientProps) {
 
                   {/* Teacher Info */}
                   <div className="flex items-center gap-2.5 pt-1">
-                    {game.teacher?.image ? (
-                      <img
-                        src={game.teacher.image}
-                        alt={game.teacher.name || "Teacher"}
-                        className="w-7 h-7 rounded-full object-cover border border-neutral-700"
+                    <div className="w-7 h-7 rounded-full overflow-hidden border border-neutral-700 shrink-0">
+                      <TeacherAvatar
+                        src={game.teacher?.image}
+                        name={game.teacher?.name || "Teacher"}
+                        className="w-full h-full object-cover"
+                        fallback={
+                          <div className="w-full h-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-black">
+                            {teacherInitial}
+                          </div>
+                        }
                       />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-xs font-black shrink-0">
-                        {teacherInitial}
-                      </div>
-                    )}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-neutral-300 truncate">
                         {game.teacher?.name || "Giáo viên ẩn danh"}

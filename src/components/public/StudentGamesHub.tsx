@@ -4,9 +4,9 @@ import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { differenceInDays } from "date-fns";
-import { Play, ChevronLeft, ChevronRight, Search, Sparkles, User, HelpCircle } from "lucide-react";
+import { Play, ChevronLeft, ChevronRight, Search, Sparkles } from "lucide-react";
 import type { AdminTeacherGameItem } from "@/actions/admin-teacher-games";
-import { GameVideoModal, VideoModalGame } from "@/app/teacher/_components/GameVideoModal";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 interface StudentGamesHubProps {
   systemGames: any[];
@@ -29,8 +29,6 @@ const CATEGORY_TABS: Array<{ key: FilterGroup; label: string; icon: string }> = 
 export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: StudentGamesHubProps) {
   const [activeTab, setActiveTab] = useState<FilterGroup>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("all");
-  const [activeVideoGame, setActiveVideoGame] = useState<VideoModalGame | null>(null);
 
   // Horizontal scroll ref for system games
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -52,20 +50,6 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
     return (systemGames || []).filter((g) => !g.comingSoon).slice(0, 3);
   }, [systemGames]);
 
-  // Unique teachers list for filter pills
-  const teachersList = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; image: string | null }>();
-    teacherGames.forEach((g) => {
-      if (g.teacher?.id) {
-        map.set(g.teacher.id, {
-          id: g.teacher.id,
-          name: g.teacher.name || "Thầy Cô",
-          image: g.teacher.image || null,
-        });
-      }
-    });
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [teacherGames]);
 
   // Count per category
   const categoryCounts = useMemo(() => {
@@ -90,7 +74,6 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
   const filteredTeacherGames = useMemo(() => {
     return teacherGames.filter((game) => {
       if (activeTab !== "all" && game.group !== activeTab) return false;
-      if (selectedTeacherId !== "all" && game.teacher?.id !== selectedTeacherId) return false;
 
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -101,7 +84,7 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
       }
       return true;
     });
-  }, [teacherGames, activeTab, selectedTeacherId, searchQuery]);
+  }, [teacherGames, activeTab, searchQuery]);
 
   return (
     <div className="space-y-12">
@@ -271,55 +254,6 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
               );
             })}
           </div>
-
-          {/* Teacher Filter Bar (Avatars of teachers) */}
-          {teachersList.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 p-1">
-              <span className="text-xs font-bold text-slate-400 shrink-0 flex items-center gap-1 pl-1">
-                <User className="w-3.5 h-3.5" />
-                <span>{locale === "vi" ? "Lọc theo Thầy Cô:" : "Teacher:"}</span>
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setSelectedTeacherId("all")}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  selectedTeacherId === "all"
-                    ? "bg-amber-500 text-white shadow-sm"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
-                }`}
-              >
-                {locale === "vi" ? "Tất cả thầy cô" : "All teachers"}
-              </button>
-
-              {teachersList.map((t) => {
-                const isSelected = selectedTeacherId === t.id;
-                const initial = (t.name[0] || "T").toUpperCase();
-
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setSelectedTeacherId(t.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      isSelected
-                        ? "bg-amber-500 text-white shadow-sm"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
-                    }`}
-                  >
-                    {t.image ? (
-                      <img src={t.image} alt={t.name} className="w-4 h-4 rounded-full object-cover" />
-                    ) : (
-                      <span className="w-4 h-4 rounded-full bg-amber-400 text-amber-900 text-[10px] flex items-center justify-center font-black">
-                        {initial}
-                      </span>
-                    )}
-                    <span>{t.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* 3-Column Grid of Teacher Games */}
@@ -358,24 +292,7 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {filteredTeacherGames.map((game) => {
               const isNew = differenceInDays(new Date(), new Date(game.createdAt)) <= 5;
-              const hasVideo = Boolean(game.videoId);
               const teacherInitial = (game.teacher?.name?.[0] || "T").toUpperCase();
-
-              // Trigger cinema video demo
-              const handleOpenDemo = (e?: React.MouseEvent) => {
-                e?.stopPropagation();
-                if (hasVideo && game.videoId) {
-                  setActiveVideoGame({
-                    id: game.id,
-                    title: game.title,
-                    badge: game.badge,
-                    badgeBg: game.badgeBg,
-                    videoId: game.videoId,
-                    createHref: game.playUrl,
-                    videoType: "demo",
-                  });
-                }
-              };
 
               return (
                 <div
@@ -383,45 +300,30 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
                   className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl border border-primary/10 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col group transform hover:-translate-y-1.5"
                 >
                   {/* Top 16:10 Thumbnail Frame */}
-                  <div className="relative aspect-[16/10] w-full bg-slate-900 overflow-hidden shrink-0">
-                    <div
-                      onClick={hasVideo ? handleOpenDemo : undefined}
-                      className={`relative w-full h-full ${hasVideo ? "cursor-pointer group/thumb" : ""}`}
-                      title={hasVideo ? (locale === "vi" ? "Xem video demo cách chơi" : "Watch demo video") : undefined}
-                    >
-                      {/* Cover Image */}
-                      <img
-                        src={
-                          game.videoId
-                            ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                            : (game.imageUrl || "/images/games/flashcard-quiz.png")
+                  <Link
+                    href={game.playUrl}
+                    className="relative aspect-[16/10] w-full bg-slate-900 overflow-hidden shrink-0 block cursor-pointer group/thumb"
+                  >
+                    {/* Cover Image */}
+                    <img
+                      src={
+                        game.videoId
+                          ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
+                          : (game.imageUrl || "/images/games/flashcard-quiz.png")
+                      }
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (game.videoId && !target.dataset.fallback) {
+                          target.dataset.fallback = "1";
+                          target.src = `https://img.youtube.com/vi/${game.videoId}/hqdefault.jpg`;
+                        } else if (game.imageUrl && target.src !== game.imageUrl) {
+                          target.src = game.imageUrl;
                         }
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (game.videoId && !target.dataset.fallback) {
-                            target.dataset.fallback = "1";
-                            target.src = `https://img.youtube.com/vi/${game.videoId}/hqdefault.jpg`;
-                          } else if (game.imageUrl && target.src !== game.imageUrl) {
-                            target.src = game.imageUrl;
-                          }
-                        }}
-                        alt={game.title}
-                        className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent" />
-
-                      {/* Play Button Overlay (Cinema Demo Video Trigger) */}
-                      {hasVideo && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="relative flex items-center justify-center">
-                            <div className="absolute w-20 h-20 rounded-full bg-sky-500/30 animate-ping opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                            <div className="w-16 h-16 rounded-full bg-white/95 dark:bg-slate-900/95 text-sky-500 flex items-center justify-center shadow-2xl border-2 border-white/80 group-hover/thumb:scale-110 group-hover/thumb:bg-sky-500 group-hover/thumb:text-white transition-all duration-300">
-                              <Play className="w-7 h-7 ml-1 fill-current" />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      }}
+                      alt={game.title}
+                      className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent" />
 
                     {/* Top-left Badge + NEW indicator */}
                     <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 pointer-events-none">
@@ -449,36 +351,39 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
                         {game.itemCount} {game.group === "match" || game.group === "flip" ? "cặp thẻ" : "câu hỏi"}
                       </span>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Bottom Content Container */}
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900 gap-4">
                     <div className="space-y-1.5">
                       {/* Teacher Author */}
                       <div className="flex items-center gap-2">
-                        {game.teacher?.image ? (
-                          <img
-                            src={game.teacher.image}
-                            alt={game.teacher.name || "Teacher"}
-                            className="w-5 h-5 rounded-full object-cover border border-slate-200"
+                        <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-200 shrink-0">
+                          <TeacherAvatar
+                            src={game.teacher?.image}
+                            name={game.teacher?.name || "Teacher"}
+                            className="w-full h-full object-cover"
+                            fallback={
+                              <div className="w-full h-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-black">
+                                {teacherInitial}
+                              </div>
+                            }
                           />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-black shrink-0">
-                            {teacherInitial}
-                          </div>
-                        )}
+                        </div>
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">
                           {game.teacher?.name || "Thầy Cô"}
                         </span>
                       </div>
 
                       {/* Game Title */}
-                      <h3
-                        className="font-headline font-black text-base sm:text-lg text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-primary transition-colors"
-                        title={game.title}
-                      >
-                        {game.title}
-                      </h3>
+                      <Link href={game.playUrl} className="block group/title">
+                        <h3
+                          className="font-headline font-black text-base sm:text-lg text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover/title:text-primary transition-colors cursor-pointer"
+                          title={game.title}
+                        >
+                          {game.title}
+                        </h3>
+                      </Link>
 
                       {/* Short Description */}
                       <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
@@ -501,12 +406,6 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
           </div>
         )}
       </section>
-
-      {/* Cinema Video Modal for Demo Playback */}
-      <GameVideoModal
-        game={activeVideoGame}
-        onClose={() => setActiveVideoGame(null)}
-      />
     </div>
   );
 }

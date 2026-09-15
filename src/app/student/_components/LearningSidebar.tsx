@@ -5,6 +5,7 @@ import { User, Play } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { LoginPromptModal } from "./LoginPromptModal";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 interface TeacherInfo {
   id: string;
@@ -48,15 +49,18 @@ export function LearningSidebar({
        {teacher?.isPortfolioPublished && (
          <div className="glass rounded-3xl p-8 space-y-8 flex flex-col items-center text-center shadow-xl">
             <div className="space-y-4 flex flex-col items-center w-full">
-               <div className="w-28 h-28 rounded-full border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden bg-white">
-                  {teacher.image ? (
-                     <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover" />
-                  ) : (
-                     <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                <div className="w-28 h-28 rounded-full border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden bg-white">
+                  <TeacherAvatar
+                    src={teacher.image}
+                    name={teacher.name}
+                    className="w-full h-full object-cover"
+                    fallback={
+                      <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
                         <User className="w-12 h-12" />
-                     </div>
-                  )}
-               </div>
+                      </div>
+                    }
+                  />
+                </div>
                
                <div className="space-y-1">
                   <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{teacher.name}</h3>

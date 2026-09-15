@@ -28,6 +28,7 @@ import {
 
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LoginModal } from "@/components/LoginButton";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 import { submitAssignmentReview } from "@/actions/reviews";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
@@ -653,13 +654,16 @@ function StartScreenTeacherAvatar({ promise }: { promise: Promise<any> }) {
 
   return (
     <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-800 shadow-md overflow-hidden bg-white shrink-0">
-      {teacher.image ? (
-        <img src={teacher.image} alt={teacher.name || ""} className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-          <User className="w-8 h-8" />
-        </div>
-      )}
+      <TeacherAvatar
+        src={teacher.image}
+        name={teacher.name}
+        className="w-full h-full object-cover"
+        fallback={
+          <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+            <User className="w-8 h-8" />
+          </div>
+        }
+      />
     </div>
   );
 }

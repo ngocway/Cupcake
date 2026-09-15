@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import Link from 'next/link';
+import { TeacherAvatar } from '@/components/shared/TeacherAvatar';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -43,10 +44,10 @@ export default async function PublicTeacherProfile({ params }: Props) {
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100 flex flex-col items-center">
               <div className="p-8 text-center border-b border-slate-50 w-full">
                 <div className="size-40 rounded-[40px] border-8 border-white shadow-2xl mx-auto overflow-hidden bg-slate-100 mb-6 transition-transform hover:scale-105 duration-300">
-                   <img 
-                    src={teacher.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + teacher.name} 
+                   <TeacherAvatar 
+                    src={teacher.image}
+                    name={teacher.name}
                     className="w-full h-full object-cover"
-                    alt={teacher.name || ''} 
                   />
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900">{teacher.name}</h1>

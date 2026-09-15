@@ -6,6 +6,7 @@ import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { getAssignmentReviews, getAssignmentInstructions, getAssignmentTeacher } from "./data";
 import { BookOpen, ChevronRight, FileText, FileImage } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 export async function SidebarReviewsWrapper({ assignmentId }: { assignmentId: string }) {
   const [reviews, t] = await Promise.all([
@@ -104,8 +105,13 @@ export async function TeacherInfoWrapper({ id }: { id: string }) {
 
   return (
     <div className="flex items-center gap-3 py-2 animate-in fade-in duration-300">
-       <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-black overflow-hidden">
-          {teacher.image ? <img src={teacher.image} alt="" className="w-full h-full object-cover" /> : (teacher.name?.charAt(0) || "T")}
+       <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-black overflow-hidden shrink-0">
+          <TeacherAvatar
+            src={teacher.image}
+            name={teacher.name}
+            className="w-full h-full object-cover"
+            fallback={teacher.name?.charAt(0) || "T"}
+          />
        </div>
        <div className="flex flex-col">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t("instructor")}</span>
