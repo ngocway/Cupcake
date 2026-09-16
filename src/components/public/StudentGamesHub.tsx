@@ -266,20 +266,19 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
               {locale === "vi" ? "Chưa có bài tập nào" : "No games found"}
             </h3>
             <p className="text-xs text-slate-400 max-w-sm">
-              {searchQuery || selectedTeacherId !== "all"
+              {searchQuery || activeTab !== "all"
                 ? locale === "vi"
-                  ? "Thử thay đổi từ khóa tìm kiếm hoặc chọn lại giáo viên khác."
+                  ? "Thử thay đổi từ khóa tìm kiếm hoặc chọn danh mục khác."
                   : "Try clearing search or filter."
                 : locale === "vi"
                   ? "Thầy cô đang chuẩn bị thêm các trò chơi mới thú vị, bạn quay lại sau nhé!"
                   : "New games will be added soon!"}
             </p>
-            {(searchQuery || selectedTeacherId !== "all" || activeTab !== "all") && (
+            {(searchQuery || activeTab !== "all") && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
-                  setSelectedTeacherId("all");
                   setActiveTab("all");
                 }}
                 className="text-xs text-primary font-bold hover:underline cursor-pointer pt-1"
