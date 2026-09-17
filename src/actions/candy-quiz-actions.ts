@@ -151,6 +151,7 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
           ageGroup: data.gradeLevel || "kids-2-5",
           audioMode: "NONE",
           gameMode: targetGameMode,
+          ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
         },
       });
 
@@ -169,6 +170,7 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
       }
 
       revalidatePath("/teacher");
+      revalidatePath("/");
       return { success: true, id: updatedTopic.id, topicId: updatedTopic.id, slug: updatedTopic.slug };
     }
 
@@ -198,6 +200,7 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
         slug,
         ageGroup: data.gradeLevel || "kids-2-5",
         icon: defaultIcon,
+        thumbnailUrl: data.thumbnailUrl || null,
         audioMode: "NONE",
         gameMode: targetGameMode,
         teacherId: session?.user?.id || null,

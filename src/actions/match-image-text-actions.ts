@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
+import { processTopicAudioInBackground } from "@/lib/server-topic-tts";
 
 export interface SaveMatchImageTextPayload {
   topicId?: string;
@@ -14,6 +15,7 @@ export interface SaveMatchImageTextPayload {
   audioMode?: string;
   gameType?: string;
   gameMode?: string; // "match" | "line"
+  thumbnailUrl?: string;
   pairs: Array<{
     roundIndex?: number;
     word: string;
@@ -84,6 +86,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
           ageGroup: data.gradeLevel || "kids-2-5",
           audioMode: data.audioMode || "AUTO_TTS",
           ...(data.gameMode ? { gameMode: data.gameMode } : {}),
+          ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
         },
       });
 
@@ -105,6 +108,11 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
 
       revalidatePath("/teacher");
       revalidatePath("/student/game/flashcard-match");
+      revalidatePath("/");
+
+      if (data.audioMode === "AUTO_TTS" || !data.audioMode) {
+        processTopicAudioInBackground(updatedTopic.id).catch(() => {});
+      }
 
       return { success: true, id: updatedTopic.id, topicId: updatedTopic.id, slug: updatedTopic.slug };
     }
@@ -148,6 +156,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
         slug,
         ageGroup: data.gradeLevel || "kids-2-5",
         icon: "🖼️",
+        thumbnailUrl: data.thumbnailUrl || null,
         audioMode: data.audioMode || "AUTO_TTS",
         gameMode: data.gameMode || "match",
         teacherId: session?.user?.id || null,
@@ -172,6 +181,11 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
 
     revalidatePath("/teacher");
     revalidatePath("/student/game/flashcard-match");
+    revalidatePath("/");
+
+    if (data.audioMode === "AUTO_TTS" || !data.audioMode) {
+      processTopicAudioInBackground(topic.id).catch(() => {});
+    }
 
     return { success: true, id: topic.id, topicId: topic.id, slug: topic.slug };
   } catch (error: any) {

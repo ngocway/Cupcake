@@ -22,6 +22,8 @@ import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceEggGame, getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
 import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
+import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
+import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -266,8 +268,16 @@ export default function CreateChoiceEggPage() {
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
 
   // Success Modal State
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [isSaving, setIsSaving] = useState(false);
+  const thumbnailPreviewRef = useRef<HTMLDivElement>(null);
+  const { captureThumbnail } = useGameThumbnailCapture();
+
+  useEffect(() => {
+    if (searchParams?.get("saved") === "true") {
+      setIsSuccessModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Copy Link State
   const [copied, setCopied] = useState(false);
@@ -364,6 +374,18 @@ export default function CreateChoiceEggPage() {
 
     setIsSaving(true);
     try {
+      let generatedThumbnailUrl: string | undefined = undefined;
+      try {
+        if (thumbnailPreviewRef.current) {
+          const captured = await captureThumbnail(thumbnailPreviewRef.current);
+          if (captured) {
+            generatedThumbnailUrl = captured;
+          }
+        }
+      } catch (thumbErr) {
+        console.warn("Failed to generate choice egg thumbnail:", thumbErr);
+      }
+
       // Save to Database
       try {
         await saveTeacherChoiceGameAction({
@@ -374,6 +396,7 @@ export default function CreateChoiceEggPage() {
           endMode,
           selectedTypes,
           questions,
+          thumbnailUrl: generatedThumbnailUrl,
         });
       } catch (e) {
         console.error("Failed to save choice egg to DB:", e);
@@ -394,6 +417,12 @@ export default function CreateChoiceEggPage() {
         try {
           sessionStorage.removeItem("cached_teacher_choice_games");
         } catch (e) {}
+        if (createdCode) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("id", createdCode);
+          url.searchParams.set("saved", "true");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
       }
 
       toast.dismiss();
@@ -924,6 +953,32 @@ export default function CreateChoiceEggPage() {
           </button>
         )}
 
+      </div>
+
+      {/* Off-screen Container for Generating 16:9 Realistic Game Thumbnail */}
+      <div
+        style={{
+          position: "fixed",
+          left: -99999,
+          top: 0,
+          width: 1200,
+          height: 675,
+          pointerEvents: "none",
+          zIndex: -100,
+        }}
+      >
+        <GameCardThumbnailPreview
+          ref={thumbnailPreviewRef}
+          gameMode="choice-egg"
+          title={gameTitle}
+          questionText={questions[0]?.q || ""}
+          options={[
+            { id: "A", text: questions[0]?.a || "", isCorrect: true },
+            { id: "B", text: questions[0]?.wrong?.[0] || "" },
+            { id: "C", text: questions[0]?.wrong?.[1] || "" },
+            { id: "D", text: questions[0]?.wrong?.[2] || "" },
+          ]}
+        />
       </div>
 
       {/* Completion Modal */}

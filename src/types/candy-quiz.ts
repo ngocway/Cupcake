@@ -23,4 +23,5 @@ export interface SaveCandyQuizPayload {
   gradeLevel?: string;
   rounds: QuizRound[];
   gameMode?: string;
+  thumbnailUrl?: string;
 }

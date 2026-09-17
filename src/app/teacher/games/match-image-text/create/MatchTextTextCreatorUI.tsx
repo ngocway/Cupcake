@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
+import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
+import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -79,8 +81,16 @@ export function MatchTextTextCreatorUI() {
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams?.get("saved") === "true") {
+      setIsSuccessModalOpen(true);
+    }
+  }, [searchParams]);
+  const thumbnailPreviewRef = useRef<HTMLDivElement>(null);
+  const { captureThumbnail } = useGameThumbnailCapture();
 
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
@@ -485,8 +495,21 @@ export function MatchTextTextCreatorUI() {
         }))
       );
 
+      let generatedThumbnailUrl: string | undefined = undefined;
+      try {
+        if (thumbnailPreviewRef.current) {
+          const captured = await captureThumbnail(thumbnailPreviewRef.current);
+          if (captured) {
+            generatedThumbnailUrl = captured;
+          }
+        }
+      } catch (thumbErr) {
+        console.warn("Failed to generate match thumbnail:", thumbErr);
+      }
+
+      const currentEffectiveTopicId = savedTopicId || topicId;
       const res = await saveMatchImageTextGameAction({
-        topicId: topicId || undefined,
+        topicId: currentEffectiveTopicId || undefined,
         title: title.trim(),
         subject,
         gradeLevel,
@@ -494,6 +517,7 @@ export function MatchTextTextCreatorUI() {
         audioMode,
         gameType: "text-text",
         pairs: allPairsToSave,
+        thumbnailUrl: generatedThumbnailUrl,
       });
 
       if (res.success) {
@@ -505,7 +529,14 @@ export function MatchTextTextCreatorUI() {
             sessionStorage.removeItem("cached_teacher_match_games");
           } catch (e) {}
         }
-        setSavedTopicId(res.topicId || res.id || topicId);
+        const finalTopicId = res.topicId || res.id || currentEffectiveTopicId;
+        setSavedTopicId(finalTopicId);
+        if (typeof window !== "undefined" && finalTopicId) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("topicId", finalTopicId);
+          url.searchParams.set("saved", "true");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
         setIsSuccessModalOpen(true);
         setIsSaving(false);
       } else {
@@ -940,6 +971,27 @@ export function MatchTextTextCreatorUI() {
           </div>
         </div>
       )}
+
+      {/* Off-screen Container for Generating 16:9 Realistic Game Thumbnail */}
+      <div
+        style={{
+          position: "fixed",
+          left: -99999,
+          top: 0,
+          width: 1200,
+          height: 675,
+          pointerEvents: "none",
+          zIndex: -100,
+        }}
+      >
+        <GameCardThumbnailPreview
+          ref={thumbnailPreviewRef}
+          gameMode="line"
+          title={title.trim()}
+          questionText={title.trim()}
+          pairs={rounds[0]?.pairs.map((p) => ({ word: p.wordA })) || []}
+        />
+      </div>
 
       {/* Save Success Modal */}
       <GameSaveSuccessModal

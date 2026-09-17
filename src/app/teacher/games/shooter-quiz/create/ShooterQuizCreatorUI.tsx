@@ -348,8 +348,14 @@ export function ShooterQuizCreatorUI() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams?.get("saved") === "true") {
+      setIsSuccessModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Multi-Round State
   const [rounds, setRounds] = useState<QuizRound[]>(INITIAL_ROUNDS);
@@ -848,8 +854,9 @@ export function ShooterQuizCreatorUI() {
     // 3. Save to backend
     setIsSaving(true);
     try {
+      const currentEffectiveTopicId = savedTopicId || topicId;
       const res = await saveShooterQuizGameAction({
-        topicId: topicId || undefined,
+        topicId: currentEffectiveTopicId || undefined,
         title: title.trim(),
         gradeLevel,
         rounds,
@@ -860,7 +867,14 @@ export function ShooterQuizCreatorUI() {
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("cached_teacher_quiz_games");
         }
-        setSavedTopicId(res.topicId || (res as any).id || topicId);
+        const finalTopicId = res.topicId || (res as any).id || currentEffectiveTopicId;
+        setSavedTopicId(finalTopicId);
+        if (typeof window !== "undefined" && finalTopicId) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("topicId", finalTopicId);
+          url.searchParams.set("saved", "true");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
         setIsSuccessModalOpen(true);
       } else {
         toast.error(res.error || "Không thể lưu bài tập!");

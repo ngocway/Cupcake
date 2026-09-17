@@ -12,6 +12,7 @@ export interface SaveTeacherChoiceGamePayload {
   questionCount?: number;
   endMode?: "finish" | "loop";
   selectedTypes?: string[];
+  thumbnailUrl?: string;
   questions: Array<{
     id: string;
     typeId: string;
@@ -58,10 +59,10 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
       imageUrl: null,
       audioUrl: null,
       imageBUrl: null,
-      audioBUrl: null,
+      labelA: null,
     }));
 
-    // 3. Check if topic already exists by slug (code)
+    // 3. Upsert into MatchWordTopic
     const existing = await prisma.matchWordTopic.findFirst({
       where: {
         slug: data.code.trim().toUpperCase(),
@@ -85,6 +86,7 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
           name: data.title.trim(),
           icon: defaultIcon,
           gameMode: targetGameMode,
+          ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
           updatedAt: new Date(),
         },
       });
@@ -97,6 +99,7 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
           slug: data.code.trim().toUpperCase(),
           ageGroup: "kids-2-5",
           icon: defaultIcon,
+          thumbnailUrl: data.thumbnailUrl || null,
           audioMode: "NONE",
           gameMode: targetGameMode,
           teacherId: session?.user?.id || null,
@@ -116,6 +119,7 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
     }
 
     revalidatePath("/teacher");
+    revalidatePath("/");
     return { success: true, topicId, code: data.code.trim().toUpperCase() };
   } catch (error: any) {
     console.error("Failed to save teacher choice game:", error);

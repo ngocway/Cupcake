@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import {
-  X,
   Copy,
   Check,
   Download,
@@ -37,7 +36,12 @@ export function GameSaveSuccessModal({
 }: GameSaveSuccessModalProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Construct absolute play URL
   const fullUrl =
@@ -47,18 +51,50 @@ export function GameSaveSuccessModal({
         : `${window.location.origin}${playUrl.startsWith("/") ? "" : "/"}${playUrl}`
       : playUrl;
 
-  // Handle escape key & dismiss loading toasts on open
+  const handleClose = () => {
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("saved")) {
+          url.searchParams.delete("saved");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
+      } catch (e) {}
+    }
+    onClose();
+  };
+
+  // Handle escape key, dismiss loading toasts & sync URL saved param on open
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !mounted) return;
     toast.dismiss();
+
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get("saved") !== "true") {
+          url.searchParams.set("saved", "true");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
+      } catch (e) {}
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleCloseAndRedirect();
+      if (e.key === "Escape") handleClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, mounted, onClose]);
 
-  if (!isOpen) return null;
+  if (!mounted || !isOpen) return null;
+
+  const handlePreviewGame = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof window !== "undefined") {
+      window.open(fullUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
@@ -85,7 +121,7 @@ export function GameSaveSuccessModal({
   };
 
   const handleCloseAndRedirect = () => {
-    onClose();
+    handleClose();
     if (redirectTab) {
       router.push(`/teacher?tab=${redirectTab}`);
     } else {
@@ -96,16 +132,6 @@ export function GameSaveSuccessModal({
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto">
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200 relative my-8">
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={handleCloseAndRedirect}
-          className="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700"
-          aria-label="Đóng"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
         {/* Celebration Header Badge */}
         <div className="space-y-3 pt-2">
           <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30 text-3xl">
@@ -203,9 +229,10 @@ export function GameSaveSuccessModal({
             href={fullUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={handlePreviewGame}
             className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer active:scale-95"
           >
-            <span>Chơi thử ngay</span>
+            <span>Xem trước game</span>
             <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </a>
 

@@ -675,8 +675,9 @@ model MatchWordTopic {
   ageGroup  String // "2-5" or "6-12"
   name      String // e.g. "Animals"
   slug      String
-  icon      String // e.g. "🐶"
-  audioMode String?         @default("AUTO_TTS")
+  icon         String // e.g. "🐶"
+  thumbnailUrl String?
+  audioMode    String?         @default("AUTO_TTS")
   gameMode  String?         @default("match") // "match" | "line"
   items     MatchWordItem[]
   createdAt DateTime        @default(now())

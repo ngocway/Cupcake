@@ -6,7 +6,6 @@ import Link from "next/link";
 import { differenceInDays } from "date-fns";
 import { Play, ChevronLeft, ChevronRight, Search, Sparkles } from "lucide-react";
 import type { AdminTeacherGameItem } from "@/actions/admin-teacher-games";
-import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 interface StudentGamesHubProps {
   systemGames: any[];
@@ -291,7 +290,6 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
             {filteredTeacherGames.map((game) => {
               const isNew = differenceInDays(new Date(), new Date(game.createdAt)) <= 5;
-              const teacherInitial = (game.teacher?.name?.[0] || "T").toUpperCase();
 
               return (
                 <div
@@ -304,24 +302,33 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
                     className="relative aspect-[16/10] w-full bg-slate-900 overflow-hidden shrink-0 block cursor-pointer group/thumb"
                   >
                     {/* Cover Image */}
-                    <img
-                      src={
-                        game.videoId
-                          ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                          : (game.imageUrl || "/images/games/flashcard-quiz.png")
-                      }
-                      onError={(e) => {
-                        const target = e.currentTarget;
-                        if (game.videoId && !target.dataset.fallback) {
-                          target.dataset.fallback = "1";
-                          target.src = `https://img.youtube.com/vi/${game.videoId}/hqdefault.jpg`;
-                        } else if (game.imageUrl && target.src !== game.imageUrl) {
-                          target.src = game.imageUrl;
-                        }
-                      }}
-                      alt={game.title}
-                      className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
-                    />
+                    {(() => {
+                      const isCustomThumbnail = Boolean(
+                        game.imageUrl && (game.imageUrl.startsWith("http") || game.imageUrl.startsWith("/api/"))
+                      );
+                      const coverSrc = isCustomThumbnail
+                        ? game.imageUrl!
+                        : (game.videoId
+                            ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
+                            : (game.imageUrl || "/images/games/flashcard-quiz.png"));
+
+                      return (
+                        <img
+                          src={coverSrc}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (!isCustomThumbnail && game.videoId && !target.dataset.fallback) {
+                              target.dataset.fallback = "1";
+                              target.src = `https://img.youtube.com/vi/${game.videoId}/hqdefault.jpg`;
+                            } else if (game.imageUrl && target.src !== game.imageUrl) {
+                              target.src = game.imageUrl;
+                            }
+                          }}
+                          alt={game.title}
+                          className="w-full h-full object-cover scale-[1.02] group-hover/thumb:scale-[1.08] transition-transform duration-700"
+                        />
+                      );
+                    })()}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent" />
 
                     {/* Top-left Badge + NEW indicator */}
@@ -337,12 +344,7 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
                       )}
                     </div>
 
-                    {/* Top-right Game Controller Icon */}
-                    <div className="absolute top-3 right-3 z-10 pointer-events-none">
-                      <div className="w-8 h-8 rounded-full bg-slate-900/70 backdrop-blur-md text-white flex items-center justify-center border border-white/20 shadow-md">
-                        <span className="material-symbols-rounded text-[18px]">sports_esports</span>
-                      </div>
-                    </div>
+
 
                     {/* Bottom overlay: Item count badge */}
                     <div className="absolute bottom-2.5 left-3 z-10">
@@ -354,26 +356,7 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
 
                   {/* Bottom Content Container */}
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between bg-white dark:bg-slate-900 gap-4">
-                    <div className="space-y-1.5">
-                      {/* Teacher Author */}
-                      <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full overflow-hidden border border-slate-200 shrink-0">
-                          <TeacherAvatar
-                            src={game.teacher?.image}
-                            name={game.teacher?.name || "Teacher"}
-                            className="w-full h-full object-cover"
-                            fallback={
-                              <div className="w-full h-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-black">
-                                {teacherInitial}
-                              </div>
-                            }
-                          />
-                        </div>
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate">
-                          {game.teacher?.name || "Thầy Cô"}
-                        </span>
-                      </div>
-
+                    <div>
                       {/* Game Title */}
                       <Link href={game.playUrl} className="block group/title">
                         <h3
@@ -383,11 +366,6 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
                           {game.title}
                         </h3>
                       </Link>
-
-                      {/* Short Description */}
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
-                        {game.desc}
-                      </p>
                     </div>
 
                     {/* CTA Button: PLAY NOW */}

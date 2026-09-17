@@ -30,6 +30,8 @@ import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceShooterGame, getChoiceShooterGameById, ChoiceShooterGame } from "@/lib/choice-shooter-storage";
 import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
 import { SciFiNeonShooterGame } from "@/app/_components/SciFiNeonShooterGame";
+import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
+import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -277,8 +279,16 @@ export default function CreateChoiceShooterPage() {
 
   // Play Test & Success Modal States
   const [isTestPlaying, setIsTestPlaying] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [isSaving, setIsSaving] = useState(false);
+  const thumbnailPreviewRef = useRef<HTMLDivElement>(null);
+  const { captureThumbnail } = useGameThumbnailCapture();
+
+  useEffect(() => {
+    if (searchParams?.get("saved") === "true") {
+      setIsSuccessModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Copy Link State (Step 3 / Modal)
   const [copied, setCopied] = useState(false);
@@ -376,6 +386,18 @@ export default function CreateChoiceShooterPage() {
 
     setIsSaving(true);
     try {
+      let generatedThumbnailUrl: string | undefined = undefined;
+      try {
+        if (thumbnailPreviewRef.current) {
+          const captured = await captureThumbnail(thumbnailPreviewRef.current);
+          if (captured) {
+            generatedThumbnailUrl = captured;
+          }
+        }
+      } catch (thumbErr) {
+        console.warn("Failed to generate choice shooter thumbnail:", thumbErr);
+      }
+
       // Save to Database
       try {
         await saveTeacherChoiceGameAction({
@@ -386,6 +408,7 @@ export default function CreateChoiceShooterPage() {
           endMode,
           selectedTypes,
           questions,
+          thumbnailUrl: generatedThumbnailUrl,
         });
       } catch (e) {
         console.error("Failed to save choice shooter to DB:", e);
@@ -406,6 +429,12 @@ export default function CreateChoiceShooterPage() {
         try {
           sessionStorage.removeItem("cached_teacher_choice_games");
         } catch (e) {}
+        if (createdCode) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("id", createdCode);
+          url.searchParams.set("saved", "true");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
       }
 
       toast.dismiss();
@@ -947,6 +976,32 @@ export default function CreateChoiceShooterPage() {
         )}
 
         {/* SUCCESS CREATED ASSIGNMENT MODAL POPUP */}
+        {/* Off-screen Container for Generating 16:9 Realistic Game Thumbnail */}
+        <div
+          style={{
+            position: "fixed",
+            left: -99999,
+            top: 0,
+            width: 1200,
+            height: 675,
+            pointerEvents: "none",
+            zIndex: -100,
+          }}
+        >
+          <GameCardThumbnailPreview
+            ref={thumbnailPreviewRef}
+            gameMode="choice-shooter"
+            title={gameTitle}
+            questionText={questions[0]?.q || ""}
+            options={[
+              { id: "A", text: questions[0]?.a || "", isCorrect: true },
+              { id: "B", text: questions[0]?.wrong?.[0] || "" },
+              { id: "C", text: questions[0]?.wrong?.[1] || "" },
+              { id: "D", text: questions[0]?.wrong?.[2] || "" },
+            ]}
+          />
+        </div>
+
         <GameSaveSuccessModal
           isOpen={isSuccessModalOpen}
           onClose={() => setIsSuccessModalOpen(false)}

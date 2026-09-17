@@ -51,6 +51,8 @@ import type {
   QuizQuestion,
   QuizQuestionOption,
 } from "@/types/candy-quiz";
+import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
+import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;
@@ -417,8 +419,14 @@ export function TreasureHuntCreatorUI() {
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams?.get("saved") === "true") {
+      setIsSuccessModalOpen(true);
+    }
+  }, [searchParams]);
 
   // Multi-Round State
   const [rounds, setRounds] = useState<QuizRound[]>(INITIAL_ROUNDS);
@@ -459,6 +467,8 @@ export function TreasureHuntCreatorUI() {
 
   // Saving state
   const [isSaving, setIsSaving] = useState(false);
+  const thumbnailPreviewRef = useRef<HTMLDivElement>(null);
+  const { captureThumbnail } = useGameThumbnailCapture();
 
   // Bulk Upload Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
@@ -1028,11 +1038,25 @@ export function TreasureHuntCreatorUI() {
     // 3. Save to backend
     setIsSaving(true);
     try {
+      let generatedThumbnailUrl: string | undefined = undefined;
+      try {
+        if (thumbnailPreviewRef.current) {
+          const captured = await captureThumbnail(thumbnailPreviewRef.current);
+          if (captured) {
+            generatedThumbnailUrl = captured;
+          }
+        }
+      } catch (thumbErr) {
+        console.warn("Could not capture thumbnail:", thumbErr);
+      }
+
+      const currentEffectiveTopicId = savedTopicId || topicId;
       const res = await saveTreasureHuntGameAction({
-        topicId: topicId || undefined,
+        topicId: currentEffectiveTopicId || undefined,
         title: title.trim(),
         gradeLevel,
         rounds,
+        thumbnailUrl: generatedThumbnailUrl,
       });
 
       if (res.success) {
@@ -1040,7 +1064,14 @@ export function TreasureHuntCreatorUI() {
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("cached_teacher_quiz_games");
         }
-        setSavedTopicId(res.topicId || (res as any).id || topicId);
+        const finalTopicId = res.topicId || (res as any).id || currentEffectiveTopicId;
+        setSavedTopicId(finalTopicId);
+        if (typeof window !== "undefined" && finalTopicId) {
+          const url = new URL(window.location.href);
+          url.searchParams.set("topicId", finalTopicId);
+          url.searchParams.set("saved", "true");
+          window.history.replaceState(null, "", url.pathname + url.search);
+        }
         setIsSuccessModalOpen(true);
       } else {
         toast.error(res.error || "Không thể lưu bài tập!");
@@ -1561,6 +1592,28 @@ D. Black`
           </div>
         </div>
       )}
+
+      {/* Off-screen Container for Generating 16:9 Realistic Game Thumbnail */}
+      <div
+        style={{
+          position: "fixed",
+          left: -99999,
+          top: 0,
+          width: 1200,
+          height: 675,
+          pointerEvents: "none",
+          zIndex: -100,
+        }}
+      >
+        <GameCardThumbnailPreview
+          ref={thumbnailPreviewRef}
+          gameMode="treasure-hunt"
+          title={title.trim()}
+          questionText={rounds[0]?.questions[0]?.question || ""}
+          questionImage={rounds[0]?.questions[0]?.imageUrl}
+          options={rounds[0]?.questions[0]?.options || []}
+        />
+      </div>
 
       {/* Save Success Modal */}
       <GameSaveSuccessModal

@@ -33,6 +33,8 @@ import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast } from "@/lib/direct-upload";
+import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
+import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -85,8 +87,14 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
   const [currentGameMode, setCurrentGameMode] = useState<string>(() => searchParams?.get("gameMode") || "match");
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams?.get("saved") === "true") {
+      setIsSuccessModalOpen(true);
+    }
+  }, [searchParams]);
   
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
@@ -184,6 +192,8 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   // Hidden file input refs for dynamic triggering
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const thumbnailPreviewRef = useRef<HTMLDivElement>(null);
+  const { captureThumbnail } = useGameThumbnailCapture();
   const [activePairIdForUpload, setActivePairIdForUpload] = useState<string | null>(null);
   const [dragActivePairId, setDragActivePairId] = useState<string | null>(null);
   const [dragSourcePairId, setDragSourcePairId] = useState<string | null>(null);
@@ -813,8 +823,21 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
         })
       );
 
+      let generatedThumbnailUrl: string | undefined = undefined;
+      try {
+        if (thumbnailPreviewRef.current) {
+          const captured = await captureThumbnail(thumbnailPreviewRef.current);
+          if (captured) {
+            generatedThumbnailUrl = captured;
+          }
+        }
+      } catch (thumbErr) {
+        console.warn("Failed to generate flip thumbnail:", thumbErr);
+      }
+
+      const currentEffectiveTopicId = savedTopicId || topicId;
       const res = await saveMatchImageTextGameAction({
-        topicId: topicId || undefined,
+        topicId: currentEffectiveTopicId || undefined,
         title: title.trim(),
         subject,
         gradeLevel,
@@ -823,6 +846,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
         gameType: "FLIP_IMAGE_TEXT",
         gameMode: currentGameMode,
         pairs: updatedPairs,
+        thumbnailUrl: generatedThumbnailUrl,
       });
 
       toast.dismiss(toastId);
@@ -840,8 +864,15 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
         } catch (e) {}
       }
 
+      const finalTopicId = res.topicId || res.id || currentEffectiveTopicId;
       setIsSavedSuccessfully(true);
-      setSavedTopicId(res.topicId || res.id || topicId);
+      setSavedTopicId(finalTopicId);
+      if (typeof window !== "undefined" && finalTopicId) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("topicId", finalTopicId);
+        url.searchParams.set("saved", "true");
+        window.history.replaceState(null, "", url.pathname + url.search);
+      }
       setIsSuccessModalOpen(true);
     } catch (error: any) {
       toast.dismiss(toastId);
@@ -1579,6 +1610,27 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
           </div>
         </div>
       )}
+
+      {/* Off-screen Container for Generating 16:9 Realistic Game Thumbnail */}
+      <div
+        style={{
+          position: "fixed",
+          left: -99999,
+          top: 0,
+          width: 1200,
+          height: 675,
+          pointerEvents: "none",
+          zIndex: -100,
+        }}
+      >
+        <GameCardThumbnailPreview
+          ref={thumbnailPreviewRef}
+          gameMode="flip"
+          title={title.trim()}
+          questionText={title.trim()}
+          pairs={rounds[0]?.pairs.map((p) => ({ word: p.word, imageUrl: p.imageUrl })) || []}
+        />
+      </div>
 
       {/* Save Success Modal */}
       <GameSaveSuccessModal

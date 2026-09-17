@@ -36,6 +36,31 @@ function classifyTeacherGame(topic: {
   name: string;
   slug: string;
   gameMode: string | null;
+  thumbnailUrl?: string | null;
+  createdAt: Date;
+  game?: { name?: string | null } | null;
+  teacher?: {
+    id: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  } | null;
+  _count?: { items: number };
+}, isPublished = false): AdminTeacherGameItem {
+  const item = getBaseClassifiedTeacherGame(topic, isPublished);
+  if (topic.thumbnailUrl) {
+    item.imageUrl = topic.thumbnailUrl;
+    item.videoId = undefined;
+  }
+  return item;
+}
+
+function getBaseClassifiedTeacherGame(topic: {
+  id: string;
+  name: string;
+  slug: string;
+  gameMode: string | null;
+  thumbnailUrl?: string | null;
   createdAt: Date;
   game?: { name?: string | null } | null;
   teacher?: {
