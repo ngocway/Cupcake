@@ -962,8 +962,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                {currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                currentGameMode === "cut-rope"
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                  : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+              }`}>
+                {currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
               </span>
               <span className="text-xs font-semibold text-slate-400">
                 {topicId ? "Chỉnh sửa bài tập" : "Thiết kế bài tập"}
@@ -971,18 +975,18 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             </div>
             <h1 className="font-headline font-black text-2xl md:text-3xl text-slate-800 dark:text-white mt-1">
               {topicId 
-                ? (currentGameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Chữ" : "Chỉnh sửa Game Nối Cặp Ảnh - Chữ")
-                : (currentGameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Chữ" : "Tạo Game Nối Cặp Ảnh - Chữ")}
+                ? (currentGameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Chỉnh sửa Game Cắt Ảnh - Chữ" : "Chỉnh sửa Game Nối Cặp Ảnh - Chữ")
+                : (currentGameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Tạo game cắt Ảnh-chữ" : "Tạo Game Nối Cặp Ảnh - Chữ")}
             </h1>
           </div>
         </div>
 
         <TeacherGameGuideButton
           game={{
-            id: currentGameMode === "line" ? "line-image-text" : "image-text",
-            title: currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ",
-            badge: currentGameMode === "line" ? "Nối Dây" : "Ảnh - Chữ",
-            badgeBg: currentGameMode === "line" ? "bg-violet-500 text-white" : "bg-orange-500 text-white",
+            id: currentGameMode === "line" ? "line-image-text" : currentGameMode === "cut-rope" ? "cut-rope-image-text" : "image-text",
+            title: currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ",
+            badge: currentGameMode === "line" ? "Nối Dây" : currentGameMode === "cut-rope" ? "Cắt Dây" : "Ảnh - Chữ",
+            badgeBg: currentGameMode === "line" ? "bg-violet-500 text-white" : currentGameMode === "cut-rope" ? "bg-rose-500 text-white" : "bg-orange-500 text-white",
             createHref: "/teacher/games/match-image-text/create",
           }}
         />
@@ -1032,7 +1036,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   setTitle(e.target.value);
                   if (titleError && e.target.value.trim()) setTitleError(false);
                 }}
-                placeholder="Nhập tên bài tập (VD: Bài tập Nối Cặp Ảnh - Chữ)..."
+                placeholder={
+                  currentGameMode === "cut-rope"
+                    ? "Nhập tên bài tập (VD: Bài tập Cắt Ảnh - Chữ)..."
+                    : currentGameMode === "line"
+                      ? "Nhập tên bài tập (VD: Bài tập Nối Dây Ảnh - Chữ)..."
+                      : "Nhập tên bài tập (VD: Bài tập Nối Cặp Ảnh - Chữ)..."
+                }
                 className={`w-full px-4 py-3 text-sm font-bold rounded-2xl outline-none transition-all ${
                   titleError
                     ? "bg-rose-50/60 dark:bg-rose-950/30 border-2 border-rose-500 text-rose-900 dark:text-rose-200 placeholder:text-rose-300 ring-4 ring-rose-500/15"
@@ -1707,8 +1717,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
         title={title}
-        gameType={currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
-        playUrl={`/student/game/flashcard-match?topicId=${savedTopicId || topicId}`}
+        gameType={currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
+        playUrl={
+          currentGameMode === "cut-rope"
+            ? `/student/game/cut-rope?topicId=${savedTopicId || topicId}`
+            : `/student/game/flashcard-match?topicId=${savedTopicId || topicId}`
+        }
         redirectTab="my-match-games"
       />
     </div>

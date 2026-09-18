@@ -1,0 +1,41 @@
+BACKGROUND
+- assets/background/bg-desktop-1920x1080.png
+- assets/background/bg-desktop-2560x1440.png
+
+CARD FRAME - NEW VERSION
+- assets/cards/card-frame-hanging.png
+- assets/cards/card-frame-hanging@2x.png
+- assets/cards/card-frame-hanging-source.png
+  Design: two side ropes merge into one long center rope, with a knot at the top.
+
+ANIMALS
+- assets/animals/animal-dog.png
+- assets/animals/animal-cat.png
+- assets/animals/animal-monkey.png
+- assets/animals/animal-chicken.png
+- @2x variants for each
+
+ANSWER AREA
+- assets/answer/answer-basket.png
+- assets/answer/answer-plaque.png
+- @2x variants
+
+UI
+- assets/ui/stars-panel.png
+- assets/ui/star-filled.png
+- assets/ui/star-empty.png
+- assets/ui/score-panel.png
+- assets/ui/sound-on.png
+- assets/ui/sound-off.png
+- @2x variants
+
+MASCOT
+- assets/mascot/mascot-squirrel.png
+- assets/mascot/speech-bubble.png
+- @2x variants
+
+DECOR
+- assets/decor/instruction-sign.png
+- assets/decor/left-signpost.png
+- assets/decor/encouragement-rock.png
+- @2x variants

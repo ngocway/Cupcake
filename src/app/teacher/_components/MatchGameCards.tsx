@@ -57,6 +57,15 @@ const MATCH_GAMES: GameCard[] = [
     desc: "Học sinh kéo dây nối hình ảnh với từ vựng / câu tương ứng giữa hàng trên và hàng dưới.",
     videoId: "qkE6qYZ-DDU",
   },
+  {
+    id: "cut-rope-image-text",
+    title: "Cắt Dây Ảnh - Chữ",
+    badge: "Cắt Dây",
+    badgeBg: "bg-rose-500 text-white",
+    desc: "Học sinh dùng thao tác cắt dây để nối hình ảnh với từ vựng / câu tương ứng.",
+    videoId: "",
+    imageUrl: "/images/games/flashcard-match.png",
+  },
 ];
 
 function getGameHref(game: GameCard) {
@@ -68,6 +77,9 @@ function getGameHref(game: GameCard) {
   }
   if (game.id === "line-image-text") {
     return "/teacher/games/match-image-text/create?type=image-text&gameMode=line";
+  }
+  if (game.id === "cut-rope-image-text") {
+    return "/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope";
   }
   return `/teacher/games/match-image-text/create?type=${game.id}`;
 }
@@ -208,7 +220,9 @@ function MatchGameCardItem({
                 ? "text-emerald-700 dark:text-emerald-300"
                 : game.id === "image-text"
                   ? "text-orange-700 dark:text-orange-300"
-                  : "text-violet-700 dark:text-violet-300"
+                  : game.id === "cut-rope-image-text"
+                    ? "text-rose-700 dark:text-rose-300"
+                    : "text-violet-700 dark:text-violet-300"
             }`}
           >
             {game.title}

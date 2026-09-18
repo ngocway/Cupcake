@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Magic Tree Matching Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <main id="gameScene" class="scene" aria-label="Animal matching game">
+      <!-- Full Bleed Panoramic Background -->
+      <img class="bg-image" src="assets/background/background.png" alt="Magic tree background" />
+
+      <!-- Screen HUD (always pinned to top-right viewport) -->
+      <div class="screen-hud">
+        <section class="hud score-hud" aria-label="Score board">
+          <img src="assets/ui/score-panel.png" alt="" class="panel-img" />
+          <div class="score-content">
+            <span class="score-label">Score</span>
+            <span id="scoreValue" class="score-value">0</span>
+          </div>
+        </section>
+
+        <button id="soundButton" class="sound-button" type="button" aria-label="Toggle sound">
+          <img id="soundIcon" src="assets/ui/sound-on.png" alt="Sound on" />
+        </button>
+      </div>
+
+      <!-- Background-aligned Game Board (1:1 with background tree and branches) -->
+      <div class="game-board" id="gameBoard">
+        <!-- Hanging Animal Cards -->
+        <div id="cardsLayer" class="cards-layer" aria-label="Animal choices"></div>
+
+        <!-- Answer Basket (3D Layered Sandwich) -->
+        <section class="answer-area" aria-live="polite">
+          <!-- Layer 1: Back wall and interior cavity of basket -->
+          <img class="basket-back-img" src="assets/answer/answer-basket.png" alt="" />
+          <!-- Layer 2: Stack of collected picture frames sitting inside the basket cavity -->
+          <div id="basketCardsStack" class="basket-cards-stack"></div>
+          <!-- Layer 3: Front rim and front woven wall of basket -->
+          <img class="basket-front-img" src="assets/answer/basket-front.png" alt="" />
+          <!-- Layer 4: Word plaque (Click to replay pronunciation) -->
+          <div id="plaqueWrap" class="plaque-wrap" role="button" tabindex="0" title="Bấm để nghe phát âm" aria-label="Nghe lại phát âm">
+            <img class="plaque-img" src="assets/answer/answer-plaque.png" alt="" />
+            <div id="promptWord" class="prompt-word">CAT</div>
+          </div>
+        </section>
+
+        <!-- Mascot Squirrel (Clean without cut-off speech bubble) -->
+        <section class="mascot-area">
+          <img src="assets/mascot/mascot-squirrel.png" alt="Friendly squirrel mascot" class="mascot-img" />
+        </section>
+
+        <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+
+        <!-- Round Transition Banner (Vòng 2, Vòng 3...) -->
+        <div id="roundTransitionOverlay" class="round-transition-overlay hidden" aria-live="assertive">
+          <div class="round-transition-banner">
+            <div class="round-transition-star">⭐</div>
+            <div id="roundTransitionText" class="round-transition-text">VÒNG 2</div>
+            <div class="round-transition-sub">SẴN SÀNG NÀO!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full-screen Canvas for Fruit Ninja slash trail & sparks -->
+      <canvas id="slashCanvas" class="slash-canvas"></canvas>
+      <div id="slashSparksLayer" class="slash-sparks-layer"></div>
+
+      <!-- Finish Screen Modal -->
+      <section id="finishModal" class="finish-modal hidden" aria-live="polite">
+        <div class="finish-card">
+          <h2 id="finishTitle">Tuyệt vời!</h2>
+          <p id="finishSubtitle">Bạn đã hoàn thành bài tập.</p>
+          <p class="finish-score">Tổng điểm: <span id="finalScore">0</span></p>
+          <div class="finish-actions">
+            <button id="restartButton" class="restart-button" type="button">Chơi lại</button>
+            <button id="exitButton" class="exit-button" type="button">Thoát Game</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
