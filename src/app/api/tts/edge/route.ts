@@ -185,6 +185,5 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
       headers: { "Content-Type": "application/json" },
     });
   }
-  }
 }
 
