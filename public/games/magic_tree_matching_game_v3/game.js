@@ -234,20 +234,38 @@ function playWordAudio(card) {
     currentAudio = null;
   }
 
+  const wordText = (card.word || '').trim();
+  if (!wordText) return;
+
   if (card.audioUrl) {
     try {
       currentAudio = new Audio(card.audioUrl);
       currentAudio.play().catch(() => {
-        speak(card.word);
+        fallbackPlayTTS(wordText);
       });
       return;
     } catch (e) {
-      speak(card.word);
+      fallbackPlayTTS(wordText);
+      return;
     }
-  } else {
-    speak(card.word);
+  }
+
+  fallbackPlayTTS(wordText);
+}
+
+function fallbackPlayTTS(text) {
+  if (!soundOn || !text) return;
+  try {
+    const ttsUrl = `/api/tts/edge?text=${encodeURIComponent(text)}`;
+    currentAudio = new Audio(ttsUrl);
+    currentAudio.play().catch(() => {
+      speak(text);
+    });
+  } catch (e) {
+    speak(text);
   }
 }
+
 
 // --- Visual Sparks & Cut FX ---
 function spawnCutSparks(x, y, angle = 0) {

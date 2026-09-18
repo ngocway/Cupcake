@@ -792,6 +792,29 @@ export function ConveyorDropCreatorUI() {
                 if (uploadData.success && uploadData.url) {
                   return uploadData.url;
                 }
+              } else if (audioMode === "AUTO_TTS" && pair.word.trim()) {
+                try {
+                  const edgeRes = await fetch("/api/tts/edge", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: pair.word.trim(), voice: "en-US-AnaNeural", forceEdge: true }),
+                  });
+
+                  if (edgeRes.ok) {
+                    const audioBlob = await edgeRes.blob();
+                    if (audioBlob && audioBlob.size > 0) {
+                      const audioFile = new File([audioBlob], `tts-${pair.word.trim()}-${Date.now()}.mp3`, { type: "audio/mpeg" });
+                      const formData = new FormData();
+                      formData.append("file", audioFile);
+                      const uploadData = await uploadMedia(formData);
+                      if (uploadData.success && uploadData.url) {
+                        return uploadData.url;
+                      }
+                    }
+                  }
+                } catch (err) {
+                  console.warn("TTS synthesis & upload error:", err);
+                }
               }
               return pair.audioUrl;
             })(),

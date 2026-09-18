@@ -4,17 +4,41 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 
 /**
  * Synthesizes audio for a single word/phrase on the server side:
- * 1. ElevenLabs (Alice, high stability, child-friendly)
- * 2. Fallback to MsEdgeTTS (en-US-AnaNeural, fast, free)
+ * 1. Deepgram (Aura-2, ultra fast ~300ms, natural)
+ * 2. ElevenLabs (Alice, high stability, child-friendly)
+ * 3. Fallback to MsEdgeTTS (en-US-AnaNeural, fast, free)
  */
-async function synthesizeWordAudio(word: string): Promise<Buffer | null> {
+export async function synthesizeWordAudio(word: string): Promise<Buffer | null> {
   const cleanText = word.trim();
   if (!cleanText) return null;
+
+  // 1. Try Deepgram if configured
+  const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+  if (deepgramApiKey) {
+    try {
+      const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
+      const speed = process.env.DEEPGRAM_TTS_SPEED || "0.7";
+      const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&speed=${speed}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${deepgramApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: cleanText }),
+      });
+
+      if (response.ok) {
+        return Buffer.from(await response.arrayBuffer());
+      }
+    } catch {
+      // Fallback
+    }
+  }
 
   // Prepend silence padding ("... ") so hardware audio output has time to initialize
   const speechText = cleanText.startsWith("...") ? cleanText : `... ${cleanText}`;
 
-  // 1. Try ElevenLabs if configured
+  // 2. Try ElevenLabs if configured
   const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
   if (elevenLabsApiKey) {
     try {
@@ -45,7 +69,7 @@ async function synthesizeWordAudio(word: string): Promise<Buffer | null> {
     }
   }
 
-  // 2. Fallback to MsEdgeTTS (AnaNeural child voice)
+  // 3. Fallback to MsEdgeTTS (AnaNeural child voice)
   try {
     const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AnaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);

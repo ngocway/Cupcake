@@ -514,10 +514,30 @@
                 }
             }
         }
+        const textToSpeak = (card.word || '').trim();
+        if (textToSpeak) {
+            try {
+                const edgeAudio = new Audio(`/api/tts/edge?text=${encodeURIComponent(textToSpeak)}`);
+                edgeAudio.volume = 1;
+                edgeAudio.addEventListener('ended', restoreVolume);
+                edgeAudio.addEventListener('error', () => {
+                    tryBrowserSpeech(textToSpeak, restoreVolume);
+                });
+                await edgeAudio.play();
+                return;
+            } catch(edgeErr) {
+                tryBrowserSpeech(textToSpeak, restoreVolume);
+                return;
+            }
+        }
+        restoreVolume();
+    }
+
+    function tryBrowserSpeech(text, restoreVolume) {
         try {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                const u=new SpeechSynthesisUtterance(card.word);
+                const u=new SpeechSynthesisUtterance(text);
                 u.lang='en-US'; u.rate=0.85; u.pitch=1.1;
                 u.onend = restoreVolume;
                 u.onerror = restoreVolume;

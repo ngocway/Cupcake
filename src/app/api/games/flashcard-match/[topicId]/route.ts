@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { processTopicAudioInBackground } from "@/lib/server-topic-tts";
 
 export async function GET(
   request: Request,
@@ -24,6 +25,11 @@ export async function GET(
 
     if (matchTopic && matchTopic.items && matchTopic.items.length > 0) {
       const isImageImage = matchTopic.items.some((item) => Boolean(item.imageBUrl));
+      const hasMissingAudio = matchTopic.items.some((item) => !item.audioUrl && Boolean(item.word && item.word.trim()));
+      if (hasMissingAudio && (matchTopic.audioMode === "AUTO_TTS" || !matchTopic.audioMode)) {
+        processTopicAudioInBackground(matchTopic.id).catch(() => {});
+      }
+
       const cards = matchTopic.items.map((item) => ({
         id: item.id,
         roundIndex: item.roundIndex ?? 0,

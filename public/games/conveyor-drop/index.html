@@ -292,15 +292,34 @@
         ctx: null, soundEnabled: true,
         init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
         toggle() { this.soundEnabled = !this.soundEnabled; return this.soundEnabled; },
-        playAudioUrl(url) {
-            if (!this.soundEnabled || !url) return;
-            try {
-                const audio = new Audio(url);
-                audio.play().catch(() => {});
-            } catch(e) {}
+        playAudioUrl(url, fallbackText) {
+            if (!this.soundEnabled) return;
+            if (url) {
+                try {
+                    const audio = new Audio(url);
+                    audio.play().catch(() => {
+                        if (fallbackText) this.speak(fallbackText);
+                    });
+                    return;
+                } catch(e) {
+                    if (fallbackText) this.speak(fallbackText);
+                    return;
+                }
+            }
+            if (fallbackText) this.speak(fallbackText);
         },
         speak(text) {
             if (!this.soundEnabled || !text) return;
+            try {
+                const edgeAudio = new Audio(`/api/tts/edge?text=${encodeURIComponent(text)}`);
+                edgeAudio.play().catch(() => {
+                    this.speakBrowser(text);
+                });
+            } catch(e) {
+                this.speakBrowser(text);
+            }
+        },
+        speakBrowser(text) {
             try {
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
@@ -841,7 +860,7 @@
         handleCorrect(b, t, i) {
             AudioSys.play('correct'); t.trigger('success');
             if (b.data.audioUrl) {
-                AudioSys.playAudioUrl(b.data.audioUrl);
+                AudioSys.playAudioUrl(b.data.audioUrl, b.data.text);
             } else if (b.data.text) {
                 AudioSys.speak(b.data.text);
             }

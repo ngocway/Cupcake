@@ -12,10 +12,38 @@ const VOICE = "en-US-AnaNeural"; // Microsoft's child voice
  * Priority: Deepgram → ElevenLabs → MsEdgeTTS (fallback)
  * No auth required (student-facing).
  */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const text = searchParams.get("text");
+    const voice = searchParams.get("voice") || undefined;
+    const forceEdge = searchParams.get("forceEdge") === "true";
+
+    return await handleTTSRequest({ text, voice, forceEdge });
+  } catch (error: any) {
+    console.error("[Edge TTS GET] Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { text, voice, forceEdge } = await req.json();
+    const body = await req.json();
+    return await handleTTSRequest(body);
+  } catch (error: any) {
+    console.error("[Edge TTS POST] Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
 
+async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | null; voice?: string; forceEdge?: boolean }) {
+  try {
     if (!text || typeof text !== "string") {
       return new Response(JSON.stringify({ error: "text is required" }), {
         status: 400,
@@ -157,4 +185,6 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
+  }
 }
+
