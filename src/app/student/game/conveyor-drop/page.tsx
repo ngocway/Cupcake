@@ -67,6 +67,7 @@ function ConveyorDropGameContent() {
         src={`/games/conveyor-drop/index.html?topicId=${topicId || ""}`}
         className="w-full h-full flex-1 border-none block"
         title="Băng Chuyền Thả Khối Game"
+        referrerPolicy="no-referrer"
         sandbox="allow-scripts allow-same-origin"
         onLoad={handleIframeLoad}
       />

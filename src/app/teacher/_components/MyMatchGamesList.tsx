@@ -206,17 +206,37 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
                       title={item.word}
                     >
                       {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.word} className="w-10 h-10 object-contain rounded-lg" />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center px-1">
-                          <span className="text-[9px] font-black text-slate-700 dark:text-slate-200 truncate">{item.word}</span>
-                          {item.labelB && (
-                            <span className="text-[8px] font-bold text-sky-600 dark:text-sky-400 truncate">↔ {item.labelB}</span>
-                          )}
-                        </div>
-                      )}
+                        <img
+                          src={item.imageUrl.startsWith('http://') && typeof window !== 'undefined' && window.location.protocol === 'https:' ? item.imageUrl.replace('http://', 'https://') : item.imageUrl}
+                          alt={item.word}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const sibling = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (sibling) sibling.style.display = 'flex';
+                          }}
+                          className="w-10 h-10 object-contain rounded-lg"
+                        />
+                      ) : null}
+                      <div
+                        className="flex flex-col items-center justify-center px-1"
+                        style={{ display: item.imageUrl ? 'none' : 'flex' }}
+                      >
+                        <span className="text-[9px] font-black text-slate-700 dark:text-slate-200 truncate">{item.word}</span>
+                        {item.labelB && (
+                          <span className="text-[8px] font-bold text-sky-600 dark:text-sky-400 truncate">↔ {item.labelB}</span>
+                        )}
+                      </div>
                       {isImageImage && item.imageBUrl && (
-                        <img src={item.imageBUrl} alt="Image B" className="w-10 h-10 object-contain rounded-lg" />
+                        <img
+                          src={item.imageBUrl.startsWith('http://') && typeof window !== 'undefined' && window.location.protocol === 'https:' ? item.imageBUrl.replace('http://', 'https://') : item.imageBUrl}
+                          alt="Image B"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          className="w-10 h-10 object-contain rounded-lg"
+                        />
                       )}
                     </div>
                   ))}

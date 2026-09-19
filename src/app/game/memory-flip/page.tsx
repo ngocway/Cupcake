@@ -238,6 +238,7 @@ function MemoryGameContent() {
   const [isImageImageMode, setIsImageImageMode] = useState(false);
   const [rounds, setRounds] = useState<GameRoundData[]>([]);
   const [currentRoundIndex, setCurrentRoundIndex] = useState<number>(0);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string | number, boolean>>({});
 
   const [deck, setDeck] = useState<CardItem[]>([]);
   const [flippedIds, setFlippedIds] = useState<string[]>([]);
@@ -426,6 +427,7 @@ function MemoryGameContent() {
     setCurrentRoundIndex(roundIdx);
     setDeck(buildRoundDeck(targetRound, imgMode));
     setFlippedIds([]);
+    setFailedImageIds({});
     setMatchedCount(0);
     setIsRoundWon(false);
     setIsChecking(false);
@@ -1119,17 +1121,24 @@ function MemoryGameContent() {
 
                       {/* CARD FRONT */}
                       <div className="card-face-front">
-                        {card.cardType === 'IMAGE' && card.imageUrl ? (
+                        {card.cardType === 'IMAGE' && card.imageUrl && !failedImageIds[card.id] ? (
                           <div className="relative w-full h-full flex items-center justify-center bg-white rounded-[0.75cqw] overflow-hidden">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={card.imageUrl}
+                              src={card.imageUrl.startsWith('http://') && typeof window !== 'undefined' && window.location.protocol === 'https:' ? card.imageUrl.replace('http://', 'https://') : card.imageUrl}
                               alt={card.name || 'Card image'}
+                              referrerPolicy="no-referrer"
+                              onError={() => {
+                                setFailedImageIds((prev) => ({ ...prev, [card.id]: true }));
+                              }}
                               className="w-full h-full object-cover pointer-events-none select-none"
                             />
                           </div>
-                        ) : card.cardType === 'TEXT' || (!card.imageUrl && card.name) ? (
-                          <div className={`w-full h-full flex flex-col items-center justify-center p-2 text-center rounded-[0.75cqw] bg-gradient-to-br ${card.bgGradient}`}>
+                        ) : card.cardType === 'TEXT' || (!card.imageUrl && card.name) || failedImageIds[card.id] ? (
+                          <div className={`w-full h-full flex flex-col items-center justify-center p-2 text-center rounded-[0.75cqw] bg-gradient-to-br ${card.bgGradient || 'from-sky-100 to-blue-200'}`}>
+                            {failedImageIds[card.id] && (
+                              <span className="text-[1.8cqw] mb-0.5 select-none" title="Ảnh lỗi - Hiển thị chữ">🖼️</span>
+                            )}
                             <span className="text-[1.3cqw] font-black text-slate-800 uppercase tracking-wide leading-tight line-clamp-3">
                               {card.name || card.word}
                             </span>

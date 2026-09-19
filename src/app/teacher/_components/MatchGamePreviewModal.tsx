@@ -26,6 +26,7 @@ export function MatchGamePreviewModal({
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [matchedIds, setMatchedIds] = useState<string[]>([]);
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>({});
 
   const handlePlayAudio = (url?: string | null, word?: string) => {
     if (url) {
@@ -174,14 +175,19 @@ export function MatchGamePreviewModal({
                           : "bg-slate-50 dark:bg-slate-800 hover:border-purple-300 border-slate-200 dark:border-slate-700"
                       }`}
                     >
-                      {item.imageUrl ? (
+                      {item.imageUrl && !failedImageIds[item.id] ? (
                         <img
-                          src={item.imageUrl}
+                          src={item.imageUrl.startsWith('http://') && typeof window !== 'undefined' && window.location.protocol === 'https:' ? item.imageUrl.replace('http://', 'https://') : item.imageUrl}
                           alt={item.word}
+                          referrerPolicy="no-referrer"
+                          onError={() => setFailedImageIds((prev) => ({ ...prev, [item.id]: true }))}
                           className="w-full h-full object-contain"
                         />
                       ) : (
-                        <span className="text-xs font-bold text-slate-400">{item.word}</span>
+                        <div className="flex flex-col items-center justify-center p-1 text-center">
+                          <span className="text-lg mb-0.5">🖼️</span>
+                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 line-clamp-2">{item.word}</span>
+                        </div>
                       )}
                     </div>
                   );
