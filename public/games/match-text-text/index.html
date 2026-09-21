@@ -303,10 +303,6 @@
             gap: 8px;
         }
 
-        .card-word .word-icon {
-            font-size: 1.1rem;
-        }
-
         /* Card Themes */
         .theme-yellow { border-color: #feca57; background: #fff9db; color: #d97706; }
         .theme-pink   { border-color: #ff6b6b; background: #fff0f6; color: #e03131; }
@@ -970,7 +966,7 @@
                 topCard.appendChild(img);
             } else {
                 topCard.className = `match-card card-word theme-${theme.name}`;
-                topCard.innerHTML = `<span class="word-icon">${theme.icon}</span> <span>${item.word || 'Item'}</span>`;
+                topCard.innerHTML = `<span>${item.word || 'Item'}</span>`;
             }
 
             topCard.appendChild(dotBottom);
@@ -997,7 +993,7 @@
                 bottomCard.appendChild(img);
             } else {
                 bottomCard.className = `match-card card-word theme-${theme.name}`;
-                bottomCard.innerHTML = `<span class="word-icon">${theme.icon}</span> <span>${item.labelB || item.word || 'Word'}</span>`;
+                bottomCard.innerHTML = `<span>${item.labelB || item.word || 'Word'}</span>`;
             }
 
             bottomCard.appendChild(dotTop);
