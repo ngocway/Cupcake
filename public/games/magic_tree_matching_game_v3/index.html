@@ -12,10 +12,10 @@
 <body>
   <div class="app-shell">
     <main id="gameScene" class="scene" aria-label="Animal matching game">
-      <!-- Full Bleed Panoramic Background -->
-      <img class="bg-image" src="assets/background/background.png" alt="Magic tree background" />
+      <!-- Full Bleed Panoramic Background with Ambient Blur -->
+      <img class="bg-image bg-ambient" src="assets/background/background.png" alt="" />
 
-      <!-- Screen HUD (always pinned to top-right viewport) -->
+      <!-- Screen HUD (always pinned to viewport) -->
       <div class="screen-hud">
         <section class="hud score-hud" aria-label="Score board">
           <img src="assets/ui/score-panel.png" alt="" class="panel-img" />
@@ -32,6 +32,8 @@
 
       <!-- Background-aligned Game Board (1:1 with background tree and branches) -->
       <div class="game-board" id="gameBoard">
+        <!-- Crisp 1:1 Background Tree Scene Inside Board -->
+        <img class="board-bg" src="assets/background/background.png" alt="Magic tree background" />
         <!-- Hanging Animal Cards -->
         <div id="cardsLayer" class="cards-layer" aria-label="Animal choices"></div>
 

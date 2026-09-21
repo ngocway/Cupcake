@@ -756,14 +756,16 @@ function checkPointCut(x, y) {
 
   cardButtons.forEach(button => {
     const bRect = button.getBoundingClientRect();
-    const minX = bRect.left - sceneRect.left;
-    const maxX = bRect.right - sceneRect.left;
-    const minY = bRect.top - sceneRect.top;
+    const toleranceX = 14;
+    const toleranceY = 12;
+    const minX = bRect.left - sceneRect.left - toleranceX;
+    const maxX = bRect.right - sceneRect.left + toleranceX;
+    const minY = bRect.top - sceneRect.top - toleranceY;
     const maxY = bRect.bottom - sceneRect.top;
 
     if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
-      const ropeX = minX + bRect.width * 0.5;
-      const ropeY = minY + bRect.height * 0.28;
+      const ropeX = (bRect.left - sceneRect.left) + bRect.width * 0.5;
+      const ropeY = (bRect.top - sceneRect.top) + bRect.height * 0.28;
       cutCard(button, button.dataset.cardId, ropeX, ropeY, 0);
     }
   });

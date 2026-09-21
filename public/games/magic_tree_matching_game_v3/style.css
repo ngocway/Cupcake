@@ -31,17 +31,24 @@ button { font: inherit; }
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #bde9ff;
+  background: #8bd8ff;
   user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.bg-image {
+.bg-image.bg-ambient {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -5%;
+  width: 110%;
+  height: 110%;
   object-fit: cover;
   object-position: center center;
+  filter: blur(18px) brightness(0.92) saturate(1.15);
+  transform: scale(1.05);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .screen-hud {
@@ -54,15 +61,24 @@ button { font: inherit; }
 }
 
 .game-board {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: max(100vw, calc(100vh * 1916 / 821));
-  height: max(100vh, calc(100vw * 821 / 1916));
+  position: relative;
+  width: min(100vw, calc(100vh * 1916 / 821));
+  height: min(100vh, calc(100vw * 821 / 1916));
   aspect-ratio: 1916 / 821;
   pointer-events: none;
   z-index: 5;
+  filter: drop-shadow(0 12px 36px rgba(0, 15, 40, 0.35));
+  container-type: inline-size;
+}
+
+.board-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .hud,
@@ -116,9 +132,9 @@ button { font: inherit; }
 }
 
 .score-hud {
-  right: 6vw;
-  top: -10px;
-  width: clamp(105px, 11vw, 150px);
+  left: 136px;
+  top: 10px;
+  width: clamp(100px, 11vw, 138px);
   z-index: 36;
   pointer-events: auto;
 }
@@ -136,14 +152,14 @@ button { font: inherit; }
   line-height: 1.05;
 }
 .score-label {
-  font-size: clamp(12px, 1.25vw, 22px);
+  font-size: clamp(10px, 1vw, 16px);
   font-weight: 900;
   color: #4a2108;
   letter-spacing: 0.05em;
   text-shadow: 0 1px 0 rgba(255,255,255,0.7);
 }
 .score-value {
-  font-size: clamp(20px, 2.2vw, 38px);
+  font-size: clamp(17px, 1.8vw, 30px);
   font-weight: 900;
   color: #1d4ed8;
   text-shadow: 0 2px 0 #fff, 0 3px 6px rgba(0,0,0,0.25);
@@ -156,9 +172,9 @@ button { font: inherit; }
 }
 
 .sound-button {
-  right: 1.8vw;
-  top: 14px;
-  width: clamp(38px, 3.8vw, 52px);
+  left: calc(136px + clamp(100px, 11vw, 138px) + 10px);
+  top: 16px;
+  width: clamp(38px, 3.8vw, 46px);
   background: transparent;
   border: none;
   padding: 0;
@@ -788,10 +804,3 @@ button { font: inherit; }
   }
 }
 
-@media (max-width: 1100px) {
-  .card-button { width: 13.5%; }
-  .instruction-sign { width: 11.5%; }
-  .left-signpost { width: 13.8%; }
-  .answer-area { width: 35%; }
-  .mascot-area { width: 21%; }
-}
