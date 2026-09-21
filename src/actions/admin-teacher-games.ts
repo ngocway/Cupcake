@@ -303,6 +303,58 @@ function getBaseClassifiedTeacherGame(topic: {
     };
   }
 
+  if (
+    mode === "cut-rope" ||
+    name.toLowerCase().includes("cắt dây")
+  ) {
+    return {
+      id: topic.id,
+      title: name,
+      slug: topic.slug,
+      gameMode: mode,
+      group: "match",
+      groupLabel: "Nối cặp",
+      gameModeLabel: "Cắt Dây Ảnh - Chữ",
+      badge: "CẮT DÂY",
+      badgeBg: "bg-rose-500 text-white",
+      badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+      icon: "content_cut",
+      desc: "Học sinh dùng thao tác cắt dây để nối hình ảnh với từ vựng / câu tương ứng.",
+      imageUrl: "/images/games/flashcard-match.png",
+      itemCount: topic._count?.items ?? 0,
+      createdAt: topic.createdAt.toISOString(),
+      playUrl: `/student/game/cut-rope?topicId=${topic.id}`,
+      isPublished,
+      teacher: topic.teacher || null,
+    };
+  }
+
+  if (
+    mode === "train" ||
+    name.toLowerCase().includes("đoàn tàu")
+  ) {
+    return {
+      id: topic.id,
+      title: name,
+      slug: topic.slug,
+      gameMode: mode,
+      group: "match",
+      groupLabel: "Nối cặp",
+      gameModeLabel: "Nối Đoàn Tàu",
+      badge: "ĐOÀN TÀU",
+      badgeBg: "bg-amber-500 text-white",
+      badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+      icon: "train",
+      desc: "Học sinh ghép thẻ từ vựng vào đúng toa tàu có hình ảnh tương ứng.",
+      imageUrl: "/images/games/train-vocab.png",
+      itemCount: topic._count?.items ?? 0,
+      createdAt: topic.createdAt.toISOString(),
+      playUrl: `/student/game/train?topicId=${topic.id}`,
+      isPublished,
+      teacher: topic.teacher || null,
+    };
+  }
+
   const isImageText = name.toLowerCase().includes("ảnh - chữ") || name.toLowerCase().includes("ảnh-chữ");
   return {
     id: topic.id,

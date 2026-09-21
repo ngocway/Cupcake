@@ -66,6 +66,15 @@ const MATCH_GAMES: GameCard[] = [
     videoId: "",
     imageUrl: "/images/games/flashcard-match.png",
   },
+  {
+    id: "train-vocab",
+    title: "Nối Đoàn Tàu",
+    badge: "Đoàn Tàu",
+    badgeBg: "bg-amber-500 text-white",
+    desc: "Học sinh ghép thẻ từ vựng vào đúng toa tàu có hình ảnh tương ứng.",
+    videoId: "",
+    imageUrl: "/images/games/train-vocab.png",
+  },
 ];
 
 function getGameHref(game: GameCard) {
@@ -80,6 +89,9 @@ function getGameHref(game: GameCard) {
   }
   if (game.id === "cut-rope-image-text") {
     return "/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope";
+  }
+  if (game.id === "train-vocab") {
+    return "/teacher/games/match-image-text/create?type=image-text&gameMode=train";
   }
   return `/teacher/games/match-image-text/create?type=${game.id}`;
 }

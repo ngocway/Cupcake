@@ -117,30 +117,40 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
         /* Games Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">
           {topics.map((topic) => {
+            const isTrain = topic.gameMode === "train";
+            const isCutRope = topic.gameMode === "cut-rope";
             const isConveyorDrop = topic.gameMode === "conveyor-drop" || topic.game?.name?.includes("Băng Chuyền");
-            const isImageImage = !isConveyorDrop && topic.isImageImage;
-            const isTextText = !isConveyorDrop && !isImageImage && (topic.game?.name?.includes("Chữ - Chữ") || topic.items?.some((i: any) => Boolean(i.labelB && !i.imageUrl && !i.imageBUrl)));
-            const isLineDraw = !isConveyorDrop && topic.gameMode === "line";
+            const isImageImage = !isConveyorDrop && !isTrain && !isCutRope && topic.isImageImage;
+            const isTextText = !isConveyorDrop && !isTrain && !isCutRope && !isImageImage && (topic.game?.name?.includes("Chữ - Chữ") || topic.items?.some((i: any) => Boolean(i.labelB && !i.imageUrl && !i.imageBUrl)));
+            const isLineDraw = !isConveyorDrop && !isTrain && !isCutRope && topic.gameMode === "line";
 
-            const gamePath = isConveyorDrop
-              ? "/student/game/conveyor-drop"
-              : isLineDraw || isTextText
-                ? "/student/game/match-text-text"
-                : "/student/game/flashcard-match";
+            const gamePath = isTrain
+              ? "/student/game/train"
+              : isCutRope
+                ? "/student/game/cut-rope"
+                : isConveyorDrop
+                  ? "/student/game/conveyor-drop"
+                  : isLineDraw || isTextText
+                    ? "/student/game/match-text-text"
+                    : "/student/game/flashcard-match";
 
             return (
               <div
                 key={topic.id}
                 className={`rounded-3xl shadow-md hover:shadow-xl backdrop-blur-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group p-4 sm:p-5 gap-3.5 sm:gap-4 bg-white dark:bg-slate-900 ${
-                  isConveyorDrop
-                    ? "border border-cyan-300/80 dark:border-cyan-700/80 shadow-cyan-500/5 hover:shadow-cyan-500/15 hover:border-cyan-400"
-                    : isLineDraw
-                      ? "border border-violet-300/80 dark:border-violet-700/80 shadow-violet-500/5 hover:shadow-violet-500/15 hover:border-violet-400"
-                      : isImageImage
-                        ? "border border-emerald-300/80 dark:border-emerald-700/80 shadow-emerald-500/5 hover:shadow-emerald-500/15 hover:border-emerald-400"
-                        : isTextText
-                          ? "border border-sky-300/80 dark:border-sky-700/80 shadow-sky-500/5 hover:shadow-sky-500/15 hover:border-sky-400"
-                          : "border border-orange-300/80 dark:border-orange-700/80 shadow-orange-500/5 hover:shadow-orange-500/15 hover:border-orange-400"
+                  isTrain
+                    ? "border border-amber-300/80 dark:border-amber-700/80 shadow-amber-500/5 hover:shadow-amber-500/15 hover:border-amber-400"
+                    : isCutRope
+                      ? "border border-rose-300/80 dark:border-rose-700/80 shadow-rose-500/5 hover:shadow-rose-500/15 hover:border-rose-400"
+                      : isConveyorDrop
+                        ? "border border-cyan-300/80 dark:border-cyan-700/80 shadow-cyan-500/5 hover:shadow-cyan-500/15 hover:border-cyan-400"
+                        : isLineDraw
+                          ? "border border-violet-300/80 dark:border-violet-700/80 shadow-violet-500/5 hover:shadow-violet-500/15 hover:border-violet-400"
+                          : isImageImage
+                            ? "border border-emerald-300/80 dark:border-emerald-700/80 shadow-emerald-500/5 hover:shadow-emerald-500/15 hover:border-emerald-400"
+                            : isTextText
+                              ? "border border-sky-300/80 dark:border-sky-700/80 shadow-sky-500/5 hover:shadow-sky-500/15 hover:border-sky-400"
+                              : "border border-orange-300/80 dark:border-orange-700/80 shadow-orange-500/5 hover:shadow-orange-500/15 hover:border-orange-400"
                 }`}
               >
                 {/* Top Details */}
@@ -148,17 +158,21 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 ${
-                        isConveyorDrop
-                          ? "bg-cyan-500 text-white shadow-sm shadow-cyan-500/30"
-                          : isLineDraw
-                            ? "bg-violet-500 text-white shadow-sm shadow-violet-500/30"
-                            : isImageImage 
-                              ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30" 
-                              : isTextText
-                                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/30" 
-                                : "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+                        isTrain
+                          ? "bg-amber-500 text-white shadow-sm shadow-amber-500/30"
+                          : isCutRope
+                            ? "bg-rose-500 text-white shadow-sm shadow-rose-500/30"
+                            : isConveyorDrop
+                              ? "bg-cyan-500 text-white shadow-sm shadow-cyan-500/30"
+                              : isLineDraw
+                                ? "bg-violet-500 text-white shadow-sm shadow-violet-500/30"
+                                : isImageImage 
+                                  ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30" 
+                                  : isTextText
+                                    ? "bg-sky-500 text-white shadow-sm shadow-sky-500/30" 
+                                    : "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
                       }`}>
-                        {isConveyorDrop ? "Băng Chuyền" : isLineDraw ? "Nối Dây" : isImageImage ? "Ảnh - Ảnh" : isTextText ? "Chữ - Chữ" : "Ảnh - Chữ"}
+                        {isTrain ? "Đoàn Tàu" : isCutRope ? "Cắt Dây" : isConveyorDrop ? "Băng Chuyền" : isLineDraw ? "Nối Dây" : isImageImage ? "Ảnh - Ảnh" : isTextText ? "Chữ - Chữ" : "Ảnh - Chữ"}
                       </span>
 
                       {topic.createdAt && (
@@ -280,13 +294,17 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
 
                   <Link
                     href={
-                      isConveyorDrop
-                        ? `/teacher/games/conveyor-drop/create?topicId=${topic.id}`
-                        : isImageImage 
-                          ? `/teacher/games/match-image-text/create?type=image-image${isLineDraw ? '&gameMode=line' : ''}&topicId=${topic.id}`
-                          : isTextText
-                            ? `/teacher/games/match-image-text/create?type=text-text&topicId=${topic.id}`
-                            : `/teacher/games/match-image-text/create?${isLineDraw ? 'gameMode=line&' : ''}topicId=${topic.id}`
+                      isTrain
+                        ? `/teacher/games/match-image-text/create?type=image-text&gameMode=train&topicId=${topic.id}`
+                        : isCutRope
+                          ? `/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope&topicId=${topic.id}`
+                          : isConveyorDrop
+                            ? `/teacher/games/conveyor-drop/create?topicId=${topic.id}`
+                            : isImageImage 
+                              ? `/teacher/games/match-image-text/create?type=image-image${isLineDraw ? '&gameMode=line' : ''}&topicId=${topic.id}`
+                              : isTextText
+                                ? `/teacher/games/match-image-text/create?type=text-text&topicId=${topic.id}`
+                                : `/teacher/games/match-image-text/create?${isLineDraw ? 'gameMode=line&' : ''}topicId=${topic.id}`
                     }
                     className={`py-2 px-3 font-bold text-xs rounded-xl transition-all flex items-center gap-1 active:scale-95 cursor-pointer border ${
                       isConveyorDrop
@@ -378,11 +396,15 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
           topicId={shareTopic.id}
           gamePath={
             shareTopic.customGamePath ||
-            (shareTopic.gameMode === "conveyor-drop" || shareTopic.game?.name?.includes("Băng Chuyền")
-              ? "/student/game/conveyor-drop"
-              : shareTopic.gameMode === "line" || (!shareTopic.isImageImage && shareTopic.game?.name?.includes("Chữ - Chữ"))
-                ? "/student/game/match-text-text"
-                : "/student/game/flashcard-match")
+            (shareTopic.gameMode === "train"
+              ? "/student/game/train"
+              : shareTopic.gameMode === "cut-rope"
+                ? "/student/game/cut-rope"
+                : shareTopic.gameMode === "conveyor-drop" || shareTopic.game?.name?.includes("Băng Chuyền")
+                  ? "/student/game/conveyor-drop"
+                  : shareTopic.gameMode === "line" || (!shareTopic.isImageImage && shareTopic.game?.name?.includes("Chữ - Chữ"))
+                    ? "/student/game/match-text-text"
+                    : "/student/game/flashcard-match")
           }
         />
       )}

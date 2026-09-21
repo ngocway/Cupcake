@@ -57,7 +57,6 @@ export interface GameRound {
   pairs: CardPair[];
 }
 
-const MAX_PAIRS_PER_ROUND = 7;
 const MAX_ROUNDS = 10;
 const MAX_BULK_WORDS = 70;
 const MAX_TEXT_WORDS = 5;
@@ -88,6 +87,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
   const [currentGameMode, setCurrentGameMode] = useState<string>(() => searchParams?.get("gameMode") || "match");
+  const maxPairsPerRound = currentGameMode === "train" ? 4 : 7;
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
@@ -251,8 +251,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
   };
 
   const handleAddPair = () => {
-    if (pairs.length >= MAX_PAIRS_PER_ROUND) {
-      toast.error(`Vòng ${activeRoundIndex + 1} đã đạt tối đa 7 cặp thẻ. Vui lòng bấm [+ Thêm Vòng Mới] để tạo vòng tiếp theo!`);
+    if (pairs.length >= maxPairsPerRound) {
+      toast.error(
+        currentGameMode === "train"
+          ? `Vòng ${activeRoundIndex + 1} đã đạt tối đa 4 cặp thẻ (đủ 4 toa tàu). Vui lòng bấm [+ Thêm Vòng Mới] để tạo chuyến tàu tiếp theo!`
+          : `Vòng ${activeRoundIndex + 1} đã đạt tối đa 7 cặp thẻ. Vui lòng bấm [+ Thêm Vòng Mới] để tạo vòng tiếp theo!`
+      );
       return;
     }
     const newPair: CardPair = {
@@ -294,8 +298,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     const targetRound = rounds[targetRoundIndex];
     if (!targetRound) return;
 
-    if (targetRound.pairs.length >= MAX_PAIRS_PER_ROUND) {
-      toast.error(`${targetRound.title} đã có 7 cặp thẻ (đã đầy)!`, { position: "top-center" });
+    if (targetRound.pairs.length >= maxPairsPerRound) {
+      toast.error(
+        currentGameMode === "train"
+          ? `${targetRound.title} đã có 4 cặp thẻ (đủ 4 toa tàu)!`
+          : `${targetRound.title} đã có 7 cặp thẻ (đã đầy)!`,
+        { position: "top-center" }
+      );
       return;
     }
 
@@ -645,12 +654,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
 
-    // Auto calculate number of rounds (7 cards per round max, 10 rounds max)
+    // Auto calculate number of rounds (maxPairsPerRound per round, 10 rounds max)
     const newRounds: GameRound[] = [];
-    const totalRounds = Math.min(Math.ceil(words.length / MAX_PAIRS_PER_ROUND), MAX_ROUNDS);
+    const totalRounds = Math.min(Math.ceil(words.length / maxPairsPerRound), MAX_ROUNDS);
 
     for (let r = 0; r < totalRounds; r++) {
-      const roundWords = words.slice(r * MAX_PAIRS_PER_ROUND, (r + 1) * MAX_PAIRS_PER_ROUND);
+      const roundWords = words.slice(r * maxPairsPerRound, (r + 1) * maxPairsPerRound);
       const roundPairs: CardPair[] = roundWords.map((word, idx) => ({
         id: `pair-bulk-${r}-${idx}-${Date.now()}`,
         word,
@@ -698,10 +707,10 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
 
     let remainingPairs = [...generatedPairs];
 
-    // Điền tiếp vào vòng cuối cùng nếu vòng đó chưa đủ 7 thẻ
+    // Điền tiếp vào vòng cuối cùng nếu vòng đó chưa đủ số thẻ tối đa
     if (updatedRounds.length > 0) {
       const lastRound = updatedRounds[updatedRounds.length - 1];
-      const spaceLeft = MAX_PAIRS_PER_ROUND - lastRound.pairs.length;
+      const spaceLeft = maxPairsPerRound - lastRound.pairs.length;
       if (spaceLeft > 0) {
         const toAdd = remainingPairs.slice(0, spaceLeft);
         lastRound.pairs.push(
@@ -718,7 +727,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     // Nếu còn từ vựng chưa phân bổ, tạo thêm các vòng mới (tối đa 10 vòng)
     while (remainingPairs.length > 0 && updatedRounds.length < MAX_ROUNDS) {
       const roundIdx = updatedRounds.length;
-      const chunk = remainingPairs.slice(0, MAX_PAIRS_PER_ROUND);
+      const chunk = remainingPairs.slice(0, maxPairsPerRound);
       const newPairs: CardPair[] = chunk.map((item, idx) => ({
         id: `pair-ai-${roundIdx}-${Date.now()}-${idx}`,
         word: item.word,
@@ -731,7 +740,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         pairs: newPairs,
       });
 
-      remainingPairs = remainingPairs.slice(MAX_PAIRS_PER_ROUND);
+      remainingPairs = remainingPairs.slice(maxPairsPerRound);
     }
 
     if (updatedRounds.length === 0) {
@@ -763,12 +772,21 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       return;
     }
 
-    // Verification 1: Minimum 2 pairs per round
+    // Verification 1: Minimum 2 pairs per round and maximum pairs check
     for (let rIdx = 0; rIdx < rounds.length; rIdx++) {
       const r = rounds[rIdx];
       if (r.pairs.length < 2) {
         setActiveRoundIndex(rIdx);
         setValidationModalMessage(`${r.title} phải có ít nhất 2 cặp thẻ để học sinh nối. Vui lòng bấm [+ Thêm 1 cặp]!`);
+        return;
+      }
+      if (r.pairs.length > maxPairsPerRound) {
+        setActiveRoundIndex(rIdx);
+        setValidationModalMessage(
+          currentGameMode === "train"
+            ? `${r.title} đang có ${r.pairs.length} cặp thẻ (vượt quá tối đa 4 toa cho game Đoàn Tàu). Vui lòng chuyển bớt sang vòng khác hoặc xóa bớt!`
+            : `${r.title} đang có ${r.pairs.length} cặp thẻ (vượt quá tối đa 7 cặp thẻ). Vui lòng chuyển bớt sang vòng khác!`
+        );
         return;
       }
     }
@@ -988,9 +1006,11 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                 currentGameMode === "cut-rope"
                   ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                  : currentGameMode === "train"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                   : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800"
               }`}>
-                {currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
+                {currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : currentGameMode === "train" ? "Nối Đoàn Tàu" : "Nối Cặp Ảnh - Chữ"}
               </span>
               <span className="text-xs font-semibold text-slate-400">
                 {topicId ? "Chỉnh sửa bài tập" : "Thiết kế bài tập"}
@@ -998,18 +1018,18 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             </div>
             <h1 className="font-headline font-black text-2xl md:text-3xl text-slate-800 dark:text-white mt-1">
               {topicId 
-                ? (currentGameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Chỉnh sửa Game Cắt Ảnh - Chữ" : "Chỉnh sửa Game Nối Cặp Ảnh - Chữ")
-                : (currentGameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Tạo game cắt Ảnh-chữ" : "Tạo Game Nối Cặp Ảnh - Chữ")}
+                ? (currentGameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Chỉnh sửa Game Cắt Ảnh - Chữ" : currentGameMode === "train" ? "Chỉnh sửa Game Nối Đoàn Tàu" : "Chỉnh sửa Game Nối Cặp Ảnh - Chữ")
+                : (currentGameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Tạo game cắt Ảnh-chữ" : currentGameMode === "train" ? "Tạo mới Game Nối Đoàn Tàu" : "Tạo Game Nối Cặp Ảnh - Chữ")}
             </h1>
           </div>
         </div>
 
         <TeacherGameGuideButton
           game={{
-            id: currentGameMode === "line" ? "line-image-text" : currentGameMode === "cut-rope" ? "cut-rope-image-text" : "image-text",
-            title: currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ",
-            badge: currentGameMode === "line" ? "Nối Dây" : currentGameMode === "cut-rope" ? "Cắt Dây" : "Ảnh - Chữ",
-            badgeBg: currentGameMode === "line" ? "bg-violet-500 text-white" : currentGameMode === "cut-rope" ? "bg-rose-500 text-white" : "bg-orange-500 text-white",
+            id: currentGameMode === "line" ? "line-image-text" : currentGameMode === "cut-rope" ? "cut-rope-image-text" : currentGameMode === "train" ? "train-vocab" : "image-text",
+            title: currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : currentGameMode === "train" ? "Nối Đoàn Tàu" : "Nối Cặp Ảnh - Chữ",
+            badge: currentGameMode === "line" ? "Nối Dây" : currentGameMode === "cut-rope" ? "Cắt Dây" : currentGameMode === "train" ? "Đoàn Tàu" : "Ảnh - Chữ",
+            badgeBg: currentGameMode === "line" ? "bg-violet-500 text-white" : currentGameMode === "cut-rope" ? "bg-rose-500 text-white" : currentGameMode === "train" ? "bg-amber-500 text-white" : "bg-orange-500 text-white",
             createHref: "/teacher/games/match-image-text/create",
           }}
         />
@@ -1170,7 +1190,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                       activeRoundIndex === idx ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500"
                     }`}>
-                      {r.pairs.length}/{MAX_PAIRS_PER_ROUND}
+                      {r.pairs.length}/{maxPairsPerRound}
                     </span>
 
                     {rounds.length > 1 && (
@@ -1194,14 +1214,14 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                   className="px-3 py-2 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 hover:bg-purple-100 rounded-2xl text-xs font-bold border border-purple-200 dark:border-purple-800 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm Vòng Mới</span>
+                  <span>{currentGameMode === "train" ? "Thêm Chuyến Tàu Mới" : "Thêm Vòng Mới"}</span>
                 </button>
               </div>
 
               {/* Total Stats Badge */}
               <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-slate-400 shrink-0">
                 <Layers className="w-4 h-4 text-purple-500" />
-                <span>Tổng cộng: <strong className="text-slate-700 dark:text-slate-200">{rounds.reduce((acc, r) => acc + r.pairs.length, 0)} thẻ</strong> ({rounds.length} Vòng)</span>
+                <span>Tổng cộng: <strong className="text-slate-700 dark:text-slate-200">{rounds.reduce((acc, r) => acc + r.pairs.length, 0)} thẻ</strong> ({rounds.length} {currentGameMode === "train" ? "Chuyến tàu" : "Vòng"})</span>
               </div>
             </div>
 
@@ -1209,7 +1229,15 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
             <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 rounded-2xl border border-sky-200/60 dark:border-sky-800/60 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-200">
               <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
               <p className="leading-relaxed">
-                <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>7 cặp thẻ</strong> để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
+                {currentGameMode === "train" ? (
+                  <>
+                    <strong>Hướng dẫn phân bổ Chuyến tàu:</strong> Mỗi Vòng tương ứng với <strong>1 Chuyến tàu gồm tối đa 4 toa</strong> để hình ảnh và chữ hiển thị to rõ nhất cho bé. Khi Học sinh nối xong 4 toa của Vòng 1, đoàn tàu sẽ hú còi và tự động đón tiếp Vòng 2!
+                  </>
+                ) : (
+                  <>
+                    <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>7 cặp thẻ</strong> để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
+                  </>
+                )}
               </p>
             </div>
 
@@ -1381,17 +1409,19 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
               <div 
                 onClick={handleAddPair}
                 className={`group border-2 border-dashed border-sky-300 dark:border-sky-800 hover:border-sky-500 bg-sky-50/40 dark:bg-sky-950/20 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all cursor-pointer min-h-[260px] ${
-                  pairs.length >= MAX_PAIRS_PER_ROUND ? "opacity-50 pointer-events-none" : ""
+                  pairs.length >= maxPairsPerRound ? "opacity-50 pointer-events-none" : ""
                 }`}
               >
                 <div className="w-12 h-12 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-lg shadow-sky-500/30 group-hover:scale-110 transition-transform">
                   <Plus className="w-6 h-6 stroke-[3]" />
                 </div>
-                <span className="font-headline font-black text-sm text-sky-900 dark:text-sky-200">Thêm 1 cặp</span>
+                <span className="font-headline font-black text-sm text-sky-900 dark:text-sky-200">
+                  {currentGameMode === "train" ? "Thêm 1 toa" : "Thêm 1 cặp"}
+                </span>
                 <span className="text-[11px] font-bold text-sky-600/70 dark:text-sky-400/70">
-                  {pairs.length >= MAX_PAIRS_PER_ROUND 
-                    ? `Đã đủ ${MAX_PAIRS_PER_ROUND}/7 cặp cho ${currentRound.title}`
-                    : `Tạo cặp thứ ${pairs.length + 1} cho ${currentRound.title}`}
+                  {pairs.length >= maxPairsPerRound 
+                    ? `Đã đủ ${maxPairsPerRound}/${maxPairsPerRound} ${currentGameMode === "train" ? "toa" : "cặp"} cho ${currentRound.title}`
+                    : `Tạo ${currentGameMode === "train" ? "toa" : "cặp"} thứ ${pairs.length + 1} cho ${currentRound.title}`}
                 </span>
               </div>
             </div>
@@ -1422,7 +1452,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
           .map(w => w.trim())
           .filter(w => w.length > 0);
         const isOverLimit = parsedWords.length > MAX_BULK_WORDS;
-        const autoRoundsCount = Math.ceil(parsedWords.length / MAX_PAIRS_PER_ROUND);
+        const autoRoundsCount = Math.ceil(parsedWords.length / maxPairsPerRound);
 
         return (
           <div className="fixed inset-0 z-[200] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -1437,7 +1467,9 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                       Nhập nhanh nhiều từ vựng
                     </h3>
                     <p className="text-xs font-medium text-slate-400">
-                      Tối đa 50 từ. Hệ thống tự động chia thành các Vòng chơi (Mỗi vòng 7 từ).
+                      {currentGameMode === "train"
+                        ? `Tối đa ${MAX_BULK_WORDS} từ. Hệ thống tự động chia thành các Chuyến tàu (Mỗi vòng 4 toa tàu).`
+                        : `Tối đa ${MAX_BULK_WORDS} từ. Hệ thống tự động chia thành các Vòng chơi (Mỗi vòng 7 từ).`}
                     </p>
                   </div>
                 </div>
@@ -1454,7 +1486,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
               {parsedWords.length > 0 && !isOverLimit && (
                 <div className="p-3.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 rounded-2xl flex items-center gap-2.5 text-sky-900 dark:text-sky-300 text-xs font-bold">
                   <Sparkles className="w-4 h-4 shrink-0 text-sky-600" />
-                  <span>Tự động tạo <strong>{autoRoundsCount} Vòng chơi</strong> cho {parsedWords.length} từ vựng vừa nhập.</span>
+                  <span>Tự động tạo <strong>{autoRoundsCount} {currentGameMode === "train" ? "Chuyến tàu" : "Vòng chơi"}</strong> cho {parsedWords.length} từ vựng vừa nhập.</span>
                 </div>
               )}
 
@@ -1517,6 +1549,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         onClose={() => setShowAutoGenerateModal(false)}
         onApply={handleApplyAutoGenerated}
         initialTopic={title}
+        pairsPerRound={maxPairsPerRound}
       />
 
       {/* --- IMAGE SEARCH DRAWER / MODAL --- */}
@@ -1740,9 +1773,11 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
         title={title}
-        gameType={currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : "Nối Cặp Ảnh - Chữ"}
+        gameType={currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : currentGameMode === "train" ? "Nối Đoàn Tàu" : "Nối Cặp Ảnh - Chữ"}
         playUrl={
-          currentGameMode === "cut-rope"
+          currentGameMode === "train"
+            ? `/student/game/train?topicId=${savedTopicId || topicId}`
+            : currentGameMode === "cut-rope"
             ? `/student/game/cut-rope?topicId=${savedTopicId || topicId}`
             : `/student/game/flashcard-match?topicId=${savedTopicId || topicId}`
         }

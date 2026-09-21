@@ -27,6 +27,8 @@ export const TEACHER_GAME_CATEGORIES: Record<TeacherGameCategory, CategoryDefini
       "match-image-text",
       "match-image-image",
       "match-text-text",
+      "cut-rope",
+      "train",
     ],
   },
 

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#d6f0eb">
+  <title>Đoàn tàu từ vựng • Chuyến tàu học vui</title>
+  <!-- Google Fonts: Nunito & Quicksand -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <!-- Thanh các ga / chủ đề từ vựng -->
+    <div class="stations" id="stations" role="group" aria-label="Chọn chủ đề từ vựng">
+      <!-- Sẽ được app.js tạo động -->
+    </div>
+
+    <!-- Khung cảnh đoàn tàu và đường ray -->
+    <section class="playground" aria-label="Sân ga và đoàn tàu ghép từ">
+      <!-- Lớp mây hoạt hình trôi lững lờ trên bầu trời đồng quê -->
+      <div class="sky-clouds" aria-hidden="true">
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+      </div>
+
+      <!-- Khung nhìn đoàn tàu -->
+      <div class="train-viewport">
+        <div class="train" id="train">
+          <div id="cars" class="cars"></div>
+          
+          <!-- Đầu máy xe lửa chạy hơi nước -->
+          <div class="engine" id="engine">
+            <img class="engine-body" src="assets/train/locomotive.png" alt="Đầu máy xe lửa">
+            <img class="engine-wheel wheel-back" src="assets/train/wheel-engine.png" alt="">
+            <img class="engine-wheel wheel-front" src="assets/train/wheel-engine.png" alt="">
+            <div class="steam" aria-hidden="true">
+              <img src="assets/train/smoke-small.png" alt="" class="puff p1">
+              <img src="assets/train/smoke.png" alt="" class="puff p2">
+              <img src="assets/train/smoke-wide.png" alt="" class="puff p3">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Đường ray xe lửa -->
+      <div class="rail" aria-hidden="true"></div>
+    </section>
+
+    <!-- Khu vực thẻ chữ từ vựng -->
+    <section class="word-area" aria-label="Khu vực thẻ từ vựng">
+      <div class="words" id="words">
+        <!-- Các thẻ từ vựng sẽ được sinh động ở đây -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Vùng chứa pháo giấy khi tàu chuyển bánh -->
+  <div id="confetti-container" class="confetti-container" aria-hidden="true"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

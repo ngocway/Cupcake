@@ -1,0 +1,15 @@
+PHONG CÁCH
+Hoạt hình 2D vui tươi; đầu máy đỏ–xanh cổ vịt, toa vàng/teal/coral/tím; nền đồng quê xanh trời và xanh lá. Không nhân vật, không chữ được vẽ vào ảnh.
+
+CÁCH TẠO
+Ảnh raster được tạo bằng công cụ imagegen tích hợp; từng đối tượng được tạo riêng.
+Icon và các trạng thái giao diện được viết bằng SVG để rõ nét, dễ sửa màu và không méo chữ.
+Chữ được chèn bằng HTML. Chuyển động bằng CSS. Âm báo được tổng hợp bằng Web Audio.
+
+NHÓM PROMPT
+Background: one 16:9 cheerful 2D countryside railway station, blue sky, rolling hills, small station at upper right, open grassy foreground, no train, no track, no text, no characters.
+Locomotive: right-facing red/teal steam locomotive body only, no wheels, isolated transparent, flat side view, rounded playful 2D style.
+Wagons: same side-view wheel-free wagon body, large blank cream picture panel and lower blank word panel, transparent; yellow, teal, coral, purple variants.
+Wheels: one centered circular spoke wheel, charcoal tire, yellow or teal hub, side view, transparent.
+Rail: straight horizontal side-view railroad segment, seamless left/right, transparent.
+Steam: one white rounded puff, transparent; three silhouettes/sizes.

@@ -43,6 +43,7 @@ export interface AutoGenerateTopicModalProps {
   }) => void;
   initialTopic?: string;
   mode?: "IMAGE_TEXT" | "IMAGE_IMAGE";
+  pairsPerRound?: number;
 }
 
 const DIFFICULTY_LEVELS: {
@@ -55,19 +56,30 @@ const DIFFICULTY_LEVELS: {
   { id: "ADVANCED", label: "Cao" },
 ];
 
-const PRESET_COUNTS = [7, 14, 21];
-
 export function AutoGenerateTopicModal({
   isOpen,
   onClose,
   onApply,
   initialTopic = "",
   mode = "IMAGE_TEXT",
+  pairsPerRound = 7,
 }: AutoGenerateTopicModalProps) {
   const [inputMode, setInputMode] = useState<"TEXT" | "IMAGE">("TEXT");
   const [topic, setTopic] = useState(initialTopic);
   const [level, setLevel] = useState<TopicDifficultyLevel>("BASIC");
-  const [count, setCount] = useState<number>(7);
+  const [count, setCount] = useState<number>(pairsPerRound);
+
+  // Cập nhật số lượng mặc định khi mở modal hoặc pairsPerRound thay đổi
+  useEffect(() => {
+    if (isOpen) {
+      setCount(pairsPerRound);
+    }
+  }, [isOpen, pairsPerRound]);
+
+  const presetCounts = pairsPerRound === 4 
+    ? [4, 8, 12] 
+    : [pairsPerRound, pairsPerRound * 2, pairsPerRound * 3];
+
   const [imageStyle, setImageStyle] = useState<"CARTOON" | "REALISTIC">("CARTOON");
   
   // Image Upload & Vision State
@@ -549,7 +561,9 @@ export function AutoGenerateTopicModal({
                 Số lượng từ vựng
               </label>
               <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">
-                {count <= 7 ? "1 Vòng chơi" : `${Math.ceil(count / 7)} Vòng chơi (tối đa 7 từ/vòng)`}
+                {count <= pairsPerRound 
+                  ? `1 Vòng chơi (tối đa ${pairsPerRound} từ/vòng)` 
+                  : `${Math.ceil(count / pairsPerRound)} Vòng chơi (tối đa ${pairsPerRound} từ/vòng)`}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -563,7 +577,7 @@ export function AutoGenerateTopicModal({
                 className="w-24 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-center text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <div className="flex items-center gap-1.5 flex-1 overflow-x-auto">
-                {PRESET_COUNTS.map((preset) => (
+                {presetCounts.map((preset) => (
                   <button
                     key={preset}
                     type="button"
@@ -575,7 +589,7 @@ export function AutoGenerateTopicModal({
                         : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                     }`}
                   >
-                    {preset} từ ({preset / 7} vòng)
+                    {preset} từ ({Math.round(preset / pairsPerRound)} vòng)
                   </button>
                 ))}
               </div>
