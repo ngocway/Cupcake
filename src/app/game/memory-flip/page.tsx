@@ -35,6 +35,7 @@ import {
   Pizza,
   Loader2,
 } from 'lucide-react';
+import { ForcedLandscapeWrapper } from '@/components/games/ForcedLandscapeWrapper';
 import { getMatchImageTextGameDetailsAction } from '@/actions/match-image-text-actions';
 
 // Path constant for ocean_ui_web assets
@@ -669,8 +670,8 @@ function MemoryGameContent() {
         }
 
         .ocean-web-root {
-          width: 100vw;
-          height: 100vh;
+          width: 100%;
+          height: 100%;
           margin: 0;
           padding: 0;
           overflow: hidden;
@@ -680,27 +681,28 @@ function MemoryGameContent() {
         }
 
         .global-full-bg {
-          position: fixed;
+          position: absolute;
           inset: 0;
-          width: 100vw;
-          height: 100vh;
+          width: 100%;
+          height: 100%;
           object-fit: cover;
           z-index: 0;
         }
 
         .page {
-          width: 100vw;
-          height: 100vh;
+          width: 100%;
+          height: 100%;
           display: grid;
           place-items: center;
           overflow: hidden;
           position: relative;
           z-index: 1;
+          container-type: size;
         }
 
         .scene {
           position: relative;
-          width: min(100vw, calc(100vh * 1672 / 941));
+          width: min(100cqw, calc(100cqh * 1672 / 941));
           aspect-ratio: 1672/941;
           overflow: hidden;
           container-type: inline-size;
@@ -1250,7 +1252,13 @@ export default function OceanAquariumMemoryGamePage() {
         <span>Loading Game...</span>
       </div>
     }>
-      <MemoryGameContent />
+      <ForcedLandscapeWrapper
+        backHref="/teacher?tab=my-flip-games"
+        backLabel="Thoát Game"
+        bgColor="#35b8e5"
+      >
+        <MemoryGameContent />
+      </ForcedLandscapeWrapper>
     </Suspense>
   );
 }

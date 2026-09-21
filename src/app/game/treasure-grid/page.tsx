@@ -13,6 +13,7 @@ import {
   Loader2,
   Trophy,
 } from 'lucide-react';
+import { ForcedLandscapeWrapper } from '@/components/games/ForcedLandscapeWrapper';
 
 // Sample Questions Fallback
 export interface QuestionData {
@@ -712,8 +713,8 @@ function MysteryTreasureGridContent() {
   // Stage Scaling
   useEffect(() => {
     const handleResize = () => {
-      const vw = window.innerWidth || shellRef.current?.clientWidth || 1672;
-      const vh = window.innerHeight || shellRef.current?.clientHeight || 941;
+      const vw = shellRef.current?.clientWidth || window.innerWidth || 1672;
+      const vh = shellRef.current?.clientHeight || window.innerHeight || 941;
       const newScale = Math.min(vw / 1672, vh / 941);
       const newTopOffset = Math.max(0, (vh - 941 * newScale) / 2);
       setScale(newScale);
@@ -721,7 +722,15 @@ function MysteryTreasureGridContent() {
     };
     handleResize();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && shellRef.current) {
+      ro = new ResizeObserver(handleResize);
+      ro.observe(shellRef.current);
+    }
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      ro?.disconnect();
+    };
   }, []);
 
   // Preload core modal assets and question illustrations for instant smooth rendering
@@ -1348,9 +1357,9 @@ function MysteryTreasureGridContent() {
   return (
     <div
       ref={shellRef}
-      className="fixed inset-0 w-screen h-screen overflow-hidden flex justify-center items-start select-none"
+      className="w-full h-full overflow-hidden flex justify-center items-start select-none relative"
       style={{
-        background: "#0d5b8d url('/games/mystery-treasure-grid-assets/assets/webp/background-browser-wide.webp') center center / cover no-repeat fixed",
+        background: "#0d5b8d url('/games/mystery-treasure-grid-assets/assets/webp/background-browser-wide.webp') center center / cover no-repeat",
         fontFamily: '"Baloo 2", "Trebuchet MS", "Arial Rounded MT Bold", sans-serif',
       }}
     >
@@ -3190,7 +3199,13 @@ export default function MysteryTreasureGridPage() {
         </div>
       }
     >
-      <MysteryTreasureGridContent />
+      <ForcedLandscapeWrapper
+        backHref="/teacher?tab=my-quiz-games"
+        backLabel="Thoát Game"
+        bgColor="#0d5b8d"
+      >
+        <MysteryTreasureGridContent />
+      </ForcedLandscapeWrapper>
     </Suspense>
   );
 }

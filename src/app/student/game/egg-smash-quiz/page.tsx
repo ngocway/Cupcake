@@ -2,13 +2,18 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
 
 function EggSmashQuizGameContent() {
   const [isLoaded, setIsLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   return (
-    <div className="fixed inset-0 z-[100] w-screen h-screen bg-[#11111a] overflow-hidden flex flex-col">
+    <ForcedLandscapeWrapper
+      backHref="/teacher?tab=my-choice-games"
+      backLabel="Thoát Game"
+      bgColor="#11111a"
+    >
       {!isLoaded && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#11111a]">
           <Loader2 className="w-12 h-12 text-amber-400 animate-spin mb-4" />
@@ -25,7 +30,7 @@ function EggSmashQuizGameContent() {
         sandbox="allow-scripts allow-same-origin"
         onLoad={() => setIsLoaded(true)}
       />
-    </div>
+    </ForcedLandscapeWrapper>
   );
 }
 

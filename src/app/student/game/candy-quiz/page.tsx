@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
 
 function CandyQuizGameContent() {
   const searchParams = useSearchParams();
@@ -14,7 +14,11 @@ function CandyQuizGameContent() {
     : `/games/candy-grammar-sugar-jelly/index.html`;
 
   return (
-    <div className="fixed inset-0 z-[100] w-screen h-screen bg-[#43b9f5] overflow-hidden flex flex-col">
+    <ForcedLandscapeWrapper
+      backHref="/teacher?tab=my-quiz-games"
+      backLabel="Thoát Game"
+      bgColor="#43b9f5"
+    >
       {isLoading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#43b9f5]">
           <div className="relative">
@@ -35,7 +39,7 @@ function CandyQuizGameContent() {
         sandbox="allow-scripts allow-same-origin allow-popups"
         onLoad={() => setIsLoading(false)}
       />
-    </div>
+    </ForcedLandscapeWrapper>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
 
 function MatchTextTextGameContent() {
   const searchParams = useSearchParams();
@@ -10,7 +11,11 @@ function MatchTextTextGameContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   return (
-    <div className="fixed inset-0 z-[100] w-screen h-screen bg-[#a1c4fd] overflow-hidden flex flex-col">
+    <ForcedLandscapeWrapper
+      backHref="/teacher?tab=my-match-games"
+      backLabel="Thoát Game"
+      bgColor="#a1c4fd"
+    >
       {isLoading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#a1c4fd]">
           <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />
@@ -28,7 +33,7 @@ function MatchTextTextGameContent() {
         sandbox="allow-scripts allow-same-origin"
         onLoad={() => setIsLoading(false)}
       />
-    </div>
+    </ForcedLandscapeWrapper>
   );
 }
 

@@ -2,9 +2,10 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
 import { getTeacherChoiceGameByCodeAction } from "@/actions/teacher-choice-games";
+import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
 
 function prepareEggGameData(questions: ChoiceEggGame["questions"]) {
   return questions.map((q) => {
@@ -90,18 +91,11 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="fixed inset-0 z-[100] w-screen h-screen bg-[#11111a] overflow-hidden flex flex-col">
-      {/* Top Overlay Controls Bar */}
-      <div className="absolute top-4 left-4 z-30 flex items-center gap-3">
-        <Link
-          href="/teacher?tab=choice"
-          className="w-10 h-10 rounded-2xl bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all shadow-lg"
-          title="Quay về"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-      </div>
-
+    <ForcedLandscapeWrapper
+      backHref="/teacher?tab=my-choice-games"
+      backLabel="Thoát Game"
+      bgColor="#11111a"
+    >
       {!isIframeLoaded && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#11111a]">
           <Loader2 className="w-12 h-12 text-amber-400 animate-spin mb-4" />
@@ -118,6 +112,6 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
         sandbox="allow-scripts allow-same-origin"
         onLoad={() => setIsIframeLoaded(true)}
       />
-    </div>
+    </ForcedLandscapeWrapper>
   );
 }
