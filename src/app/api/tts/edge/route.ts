@@ -61,17 +61,45 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
 
     const targetVoice = voice || VOICE;
 
-    // 1. Try Deepgram TTS if API key is configured and not forceEdge
+    // 1. Primary: MsEdgeTTS (Child-friendly en-US-AnaNeural, clean audio, no padding)
+    try {
+      console.log(`[Edge TTS Route -> MsEdgeTTS] Synthesizing with voice=${targetVoice}: "${cleanText.substring(0, 30)}..."`);
+      const tts = new MsEdgeTTS();
+      await tts.setMetadata(targetVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+
+      const { audioStream } = tts.toStream(cleanText);
+
+      const chunks: Buffer[] = [];
+      for await (const chunk of audioStream) {
+        chunks.push(chunk as Buffer);
+      }
+      tts.close();
+
+      const audioBuffer = Buffer.concat(chunks);
+      if (audioBuffer && audioBuffer.length > 0) {
+        return new Response(audioBuffer, {
+          status: 200,
+          headers: {
+            "Content-Type": "audio/mpeg",
+            "Content-Length": audioBuffer.length.toString(),
+            "Cache-Control": "no-store",
+            "X-TTS-Provider": "msedge",
+          },
+        });
+      }
+    } catch (err: any) {
+      console.warn(`[Edge TTS Route] MsEdgeTTS synthesis failed, falling back to Deepgram:`, err.message || err);
+    }
+
+    // 2. Secondary Fallback: Deepgram (Aura-2, ultra fast ~300ms, natural)
     const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
-    if (deepgramApiKey && !forceEdge) {
+    if (deepgramApiKey) {
       try {
-        // Aura-2 supports speed param (range 0.7–1.5). Aura-1 does not.
         const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
-        const speed = process.env.DEEPGRAM_TTS_SPEED || "0.7";
-        console.log(`[Edge TTS Route -> Deepgram] Synthesizing with model=${model} speed=${speed}: "${cleanText.substring(0, 30)}..."`);
+        const speed = process.env.DEEPGRAM_TTS_SPEED || "0.8";
+        console.log(`[Edge TTS Route -> Deepgram Fallback] Synthesizing with model=${model} speed=${speed}: "${cleanText.substring(0, 30)}..."`);
 
         const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&speed=${speed}`, {
-
           method: "POST",
           headers: {
             "Authorization": `Token ${deepgramApiKey}`,
@@ -100,17 +128,17 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
       }
     }
 
-    // 2. Try ElevenLabs TTS if API key is configured (Secondary)
+    // 3. Final Fallback: ElevenLabs (Alice, high stability)
     const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
     if (elevenLabsApiKey) {
       try {
         const voiceId = process.env.ELEVENLABS_VOICE_ID || "Xb7hH8MSUJpSbSDYk0k2"; // Alice
         const stability = parseFloat(process.env.ELEVENLABS_STABILITY || "0.80");
-        const speed = parseFloat(process.env.ELEVENLABS_SPEED || "0.7");
+        const speed = parseFloat(process.env.ELEVENLABS_SPEED || "0.75");
         const useSpeakerBoost = process.env.ELEVENLABS_USE_SPEAKER_BOOST !== "false";
         const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_flash_v2";
 
-        console.log(`[Edge TTS Route -> ElevenLabs] Synthesizing: "${cleanText.substring(0, 30)}..."`);
+        console.log(`[Edge TTS Route -> ElevenLabs Fallback] Synthesizing: "${cleanText.substring(0, 30)}..."`);
 
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: "POST",
@@ -143,41 +171,14 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
           });
         } else {
           const errorText = await response.text();
-          console.warn(`[Edge TTS Route] ElevenLabs API failed, falling back to MsEdgeTTS:`, errorText);
+          console.error(`[Edge TTS Route] ElevenLabs API failed (${response.status}):`, errorText);
         }
       } catch (err: any) {
-        console.warn(`[Edge TTS Route] ElevenLabs synthesis failed, falling back to MsEdgeTTS:`, err.message);
+        console.error(`[Edge TTS Route] ElevenLabs synthesis failed:`, err.message);
       }
     }
 
-    // 3. Fallback to MsEdgeTTS
-    // Prepend silence padding ("... ") so hardware audio output has time to initialize before the first word
-    const speechText = cleanText.startsWith("...") ? cleanText : `... ${cleanText}`;
-    console.log(`[Edge TTS Route -> MsEdgeTTS] Synthesizing with voice=${targetVoice}: "${speechText.substring(0, 30)}..."`);
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(targetVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-
-    const { audioStream } = tts.toStream(speechText);
-
-    // Collect audio chunks then send as one response
-    const chunks: Buffer[] = [];
-    for await (const chunk of audioStream) {
-      chunks.push(chunk as Buffer);
-    }
-
-    tts.close();
-
-    const audioBuffer = Buffer.concat(chunks);
-
-    return new Response(audioBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.length.toString(),
-        "Cache-Control": "no-store",
-        "X-TTS-Provider": "msedge",
-      },
-    });
+    throw new Error("All TTS providers (MsEdgeTTS, Deepgram, ElevenLabs) failed");
   } catch (error: any) {
     console.error("[Edge TTS] Error:", error);
     return new Response(JSON.stringify({ error: error.message }), {

@@ -23,10 +23,10 @@ function CutRopeGameContent() {
     };
     window.addEventListener("message", handleMessage);
 
-    // Dự phòng tối đa 2.2 giây nếu mạng chậm
+    // Dự phòng tối đa 10 giây nếu mạng quá chậm hoặc lỗi kết nối
     const fallbackTimer = setTimeout(() => {
       setIsLoaded(true);
-    }, 2200);
+    }, 10000);
 
     return () => {
       window.removeEventListener("message", handleMessage);
@@ -42,8 +42,8 @@ function CutRopeGameContent() {
     >
       {/* Loading Skeleton với hiệu ứng fade-out mượt mà */}
       <div 
-        className={`absolute inset-0 z-20 flex flex-col items-center justify-center bg-gradient-to-b from-[#8bd8ff] to-[#d8f6ff] transition-opacity duration-300 pointer-events-none ${
-          isLoaded ? "opacity-0" : "opacity-100"
+        className={`absolute inset-0 z-20 flex flex-col items-center justify-center bg-gradient-to-b from-[#8bd8ff] to-[#d8f6ff] transition-opacity duration-300 ${
+          isLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       >
         <div className="relative flex items-center justify-center mb-4">
@@ -59,7 +59,7 @@ function CutRopeGameContent() {
       {/* Game Iframe */}
       <iframe
         ref={iframeRef}
-        src={`/games/magic_tree_matching_game_v3/index.html?topicId=${topicId || ""}`}
+        src={`/games/magic_tree_matching_game_v3/index.html?topicId=${topicId || ""}&v=3.1`}
         className="w-full h-full flex-1 border-none block"
         title="Game Cắt Dây Ảnh - Chữ"
         sandbox="allow-scripts allow-same-origin"

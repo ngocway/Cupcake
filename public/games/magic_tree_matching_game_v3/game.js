@@ -498,6 +498,15 @@ function renderCurrentTurn() {
     window.parent.postMessage({ type: 'CUT_ROPE_READY' }, '*');
   } catch (e) {}
 
+  // Ẩn màn hình nạp nội bộ mượt mà khi khung ảnh và dây thừng đã gắn lên cây
+  const loadingOverlay = document.getElementById('gameLoadingOverlay');
+  if (loadingOverlay && !loadingOverlay.classList.contains('fade-out')) {
+    loadingOverlay.classList.add('fade-out');
+    setTimeout(() => {
+      loadingOverlay.remove();
+    }, 450);
+  }
+
   // Phát âm thanh khi đổi từ mới (với delay nhẹ để hoạt ảnh xuất hiện)
   setTimeout(() => {
     playWordAudio(currentTarget);
@@ -854,13 +863,35 @@ if (exitButton) {
   });
 }
 
+// Hỗ trợ nạp trước ảnh vào bộ nhớ cache trình duyệt để khung ảnh hiển thị tức thì không bị chớp
+async function preloadRoundImages(cards) {
+  if (!Array.isArray(cards) || cards.length === 0) return;
+  const promises = cards.map(c => {
+    if (!c.imageUrl) return Promise.resolve();
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = resolve;
+      img.onerror = resolve;
+      img.src = c.imageUrl;
+    });
+  });
+  // Chờ tối đa 1.5s để nạp trước ảnh, nếu mạng quá chậm thì không chặn game
+  await Promise.race([
+    Promise.allSettled(promises),
+    new Promise(res => setTimeout(res, 1500))
+  ]);
+}
+
 // Support postMessage from parent wrapper if topic data is passed directly
-window.addEventListener('message', (event) => {
+window.addEventListener('message', async (event) => {
   if (event.data && event.data.type === 'INIT_GAME_DATA' && event.data.topicData) {
     const data = event.data.topicData;
     if (data.cards && data.cards.length > 0) {
       topicTitle = data.topicName || '';
       setupDynamicRounds(data.cards);
+      if (gameRounds.length > 0 && gameRounds[0].allCards) {
+        await preloadRoundImages(gameRounds[0].allCards);
+      }
       startGame();
     }
   }
@@ -886,6 +917,9 @@ async function initGame() {
   resizeSlashCanvas();
   requestAnimationFrame(renderSlashTrail);
   await loadGameData();
+  if (gameRounds.length > 0 && gameRounds[0].allCards) {
+    await preloadRoundImages(gameRounds[0].allCards);
+  }
   startGame();
 }
 

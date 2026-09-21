@@ -7,10 +7,19 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=3.1" />
 </head>
 <body>
   <div class="app-shell">
+    <!-- In-Game Loading Overlay (Prevents bare tree & pop-in glitch) -->
+    <div id="gameLoadingOverlay" class="game-loading-overlay">
+      <div class="game-loading-card">
+        <img src="assets/mascot/mascot-squirrel.png" alt="" class="loading-mascot" />
+        <div class="loading-spinner-ring"></div>
+        <div class="loading-title">Đang nạp cành cây và thẻ bài...</div>
+      </div>
+    </div>
+
     <main id="gameScene" class="scene" aria-label="Animal matching game">
       <!-- Full Bleed Panoramic Background -->
       <img class="bg-image" src="assets/background/background.png" alt="Magic tree background" />
@@ -46,7 +55,7 @@
           <!-- Layer 4: Word plaque (Click to replay pronunciation) -->
           <div id="plaqueWrap" class="plaque-wrap" role="button" tabindex="0" title="Bấm để nghe phát âm" aria-label="Nghe lại phát âm">
             <img class="plaque-img" src="assets/answer/answer-plaque.png" alt="" />
-            <div id="promptWord" class="prompt-word">CAT</div>
+            <div id="promptWord" class="prompt-word"></div>
           </div>
         </section>
 
@@ -86,6 +95,6 @@
     </main>
   </div>
 
-  <script src="game.js"></script>
+  <script src="game.js?v=3.1"></script>
 </body>
 </html>

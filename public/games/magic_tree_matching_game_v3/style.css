@@ -845,4 +845,81 @@ button { font: inherit; }
   }
 }
 
+/* In-Game Loading Overlay (Hardware-guaranteed coverage) */
+.game-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: linear-gradient(180deg, #7ad5ff 0%, #bdeeff 60%, #eaf8ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  transition: opacity 0.38s ease, visibility 0.38s ease;
+}
+
+.game-loading-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.game-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 22px 32px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 28px;
+  box-shadow: 0 16px 36px rgba(0, 70, 120, 0.18), inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  border: 3px solid rgba(255, 255, 255, 0.95);
+  animation: loadingFloat 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes loadingFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-8px); }
+}
+
+.loading-mascot {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
+  margin-bottom: 12px;
+  animation: squirrelWiggle 1.8s ease-in-out infinite;
+}
+
+@keyframes squirrelWiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.loading-spinner-ring {
+  width: 32px;
+  height: 32px;
+  border: 3.5px solid rgba(244, 63, 94, 0.2);
+  border-top-color: #f43f5e;
+  border-radius: 50%;
+  animation: spinLoader 0.75s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spinLoader {
+  to { transform: rotate(360deg); }
+}
+
+.loading-title {
+  font-family: 'Fredoka', var(--ui-font);
+  font-size: clamp(14px, 1.4vw, 18px);
+  font-weight: 900;
+  color: #1e3a5f;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
 
