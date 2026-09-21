@@ -25,7 +25,24 @@ async function searchPixabayImages(query: string, isCartoon = false) {
     if (res.ok) {
       const data = await res.json();
       if (data.hits && data.hits.length > 0) {
-        return data.hits.map((img: any, i: number) => ({
+        // Lọc và ưu tiên ảnh tỉ lệ vuông (1:1 hoặc 0.75 <= ratio <= 1.33)
+        const squareHits = data.hits.filter((img: any) => {
+          const w = img.imageWidth || img.webformatWidth;
+          const h = img.imageHeight || img.webformatHeight;
+          if (!w || !h) return true;
+          const r = w / h;
+          return r >= 0.75 && r <= 1.33;
+        });
+        const pool = squareHits.length > 0 ? squareHits : data.hits;
+        pool.sort((a: any, b: any) => {
+          const wa = a.imageWidth || a.webformatWidth || 1;
+          const ha = a.imageHeight || a.webformatHeight || 1;
+          const wb = b.imageWidth || b.webformatWidth || 1;
+          const hb = b.imageHeight || b.webformatHeight || 1;
+          return Math.abs(wa / ha - 1) - Math.abs(wb / hb - 1);
+        });
+
+        return pool.map((img: any, i: number) => ({
           id: `pixabay-img-${img.id || i}`,
           url: img.webformatURL || img.largeImageURL,
           thumb: img.previewURL || img.webformatURL,
@@ -44,8 +61,8 @@ async function searchUnsplashImages(query: string) {
   try {
     const accessKey = process.env.UNSPLASH_ACCESS_KEY;
     const url = accessKey
-      ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=30`
-      : `https://unsplash.com/napi/search/photos?query=${encodeURIComponent(query)}&per_page=30`;
+      ? `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&orientation=squarish&per_page=30`
+      : `https://unsplash.com/napi/search/photos?query=${encodeURIComponent(query)}&orientation=squarish&per_page=30`;
 
     const headers: Record<string, string> = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -83,7 +100,7 @@ async function searchPexelsImages(query: string) {
 
   try {
     const res = await fetch(
-      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=30`,
+      `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=square&per_page=30`,
       {
         headers: {
           Authorization: apiKey,
@@ -137,7 +154,7 @@ async function searchDDGImages(query: string) {
 
     if (!vqd) return [];
 
-    const imgRes = await fetch(`https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,,`, {
+    const imgRes = await fetch(`https://duckduckgo.com/i.js?q=${encodeURIComponent(query)}&o=json&vqd=${vqd}&f=,,layout:Square,`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "application/json, text/javascript, */*; q=0.01",
@@ -155,7 +172,22 @@ async function searchDDGImages(query: string) {
     if (imgRes.ok) {
       const data = await imgRes.json();
       if (data.results && data.results.length > 0) {
-        return data.results.slice(0, 50).map((img: any, i: number) => ({
+        // Lọc và sắp xếp ưu tiên ảnh vuông tỉ lệ 1:1
+        const squareResults = data.results.filter((img: any) => {
+          if (!img.width || !img.height) return true;
+          const r = img.width / img.height;
+          return r >= 0.75 && r <= 1.33;
+        });
+        const pool = squareResults.length > 0 ? squareResults : data.results;
+        pool.sort((a: any, b: any) => {
+          const wa = a.width || 1;
+          const ha = a.height || 1;
+          const wb = b.width || 1;
+          const hb = b.height || 1;
+          return Math.abs(wa / ha - 1) - Math.abs(wb / hb - 1);
+        });
+
+        return pool.slice(0, 50).map((img: any, i: number) => ({
           id: `ddg-img-${i}`,
           url: img.image,
           thumb: img.thumbnail || img.image,
@@ -172,7 +204,9 @@ async function searchDDGImages(query: string) {
 
 async function searchWebImages(query: string, isCartoon = false) {
   try {
-    const filterParam = isCartoon ? "&qft=+filterui:photo-clipart" : "&qft=+filterui:photo-photo";
+    const filterParam = isCartoon 
+      ? "&qft=+filterui:photo-clipart+filterui:aspect-square" 
+      : "&qft=+filterui:photo-photo+filterui:aspect-square";
     const searchQuery = isCartoon ? `${query} cartoon clipart` : query;
     const url = `https://www.bing.com/images/search?q=${encodeURIComponent(searchQuery)}${filterParam}&form=HDRSC2&first=1`;
     const res = await fetch(url, {
@@ -284,7 +318,7 @@ async function searchWikimediaImages(query: string, isCartoon = false) {
 // 6. Fallback Provider: Openverse (WordPress Foundation Creative Commons repository)
 async function searchOpenverseImages(query: string) {
   try {
-    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=30`;
+    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&aspect_ratio=square&page_size=30`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "CupcakesEducationalApp/1.0"

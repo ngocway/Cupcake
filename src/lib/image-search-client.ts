@@ -141,12 +141,30 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
     const pixabayType = isCartoon ? "illustration" : "photo";
     const pixabayQuery = isCartoon ? englishKeyword : englishKeyword;
     const pixabayRes = await fetch(
-      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(pixabayQuery)}&image_type=${pixabayType}&per_page=30&safesearch=true`
+      `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(pixabayQuery)}&image_type=${pixabayType}&per_page=50&safesearch=true`
     );
     if (pixabayRes.ok) {
       const data = await pixabayRes.json();
       if (data.hits && data.hits.length > 0) {
-        return data.hits.map((img: any, i: number) => ({
+        // Ưu tiên lọc ảnh tỉ lệ vuông (1:1 hoặc 0.75 <= ratio <= 1.33)
+        const squareHits = data.hits.filter((img: any) => {
+          const w = img.imageWidth || img.webformatWidth;
+          const h = img.imageHeight || img.webformatHeight;
+          if (!w || !h) return true;
+          const r = w / h;
+          return r >= 0.75 && r <= 1.33;
+        });
+
+        const pool = squareHits.length > 0 ? squareHits : data.hits;
+        pool.sort((a: any, b: any) => {
+          const wa = a.imageWidth || a.webformatWidth || 1;
+          const ha = a.imageHeight || a.webformatHeight || 1;
+          const wb = b.imageWidth || b.webformatWidth || 1;
+          const hb = b.imageHeight || b.webformatHeight || 1;
+          return Math.abs(wa / ha - 1) - Math.abs(wb / hb - 1);
+        });
+
+        return pool.map((img: any, i: number) => ({
           id: `pixabay-client-${img.id || i}`,
           url: img.webformatURL || img.largeImageURL,
           thumb: img.previewURL || img.webformatURL,
@@ -162,7 +180,8 @@ export async function searchImagesClient(query: string, style: "CARTOON" | "REAL
   // 2. Try Openverse API directly from Client Browser (User IP)
   try {
     const openverseQuery = isCartoon ? `${englishKeyword} cartoon clipart` : englishKeyword;
-    const ovRes = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(openverseQuery)}&page_size=30`);
+    // Lọc trực tiếp ảnh tỉ lệ vuông với aspect_ratio=square
+    const ovRes = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(openverseQuery)}&aspect_ratio=square&page_size=30`);
     if (ovRes.ok) {
       const data = await ovRes.json();
       if (data.results && data.results.length > 0) {
