@@ -59,6 +59,7 @@ import type {
 } from "@/types/candy-quiz";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
+import { AutoGenerateCandyQuizModal } from "@/components/games/AutoGenerateCandyQuizModal";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;
@@ -480,6 +481,143 @@ export function CandyQuizCreatorUI() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+
+  // AI Question Generation Modal State
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+  // Apply AI Generated Questions to Game
+  const handleApplyAiQuestions = ({
+    questions: newQuestions,
+    suggestedTitle,
+    allocationMode,
+    questionsPerRound = 5,
+  }: {
+    questions: QuizQuestion[];
+    suggestedTitle?: string;
+    allocationMode: "CURRENT_ROUND" | "NEW_ROUNDS";
+    questionsPerRound: number;
+  }) => {
+    if (!newQuestions || newQuestions.length === 0) return;
+
+    // Auto-fill title if currently empty
+    if (!title.trim() && suggestedTitle) {
+      setTitle(suggestedTitle);
+      setTitleError(false);
+    }
+
+    if (allocationMode === "CURRENT_ROUND") {
+      const isCurrentRoundBlank =
+        questions.length === 2 &&
+        !questions[0].question.trim() &&
+        !questions[1].question.trim();
+
+      if (isCurrentRoundBlank) {
+        const currentRoundSlice = newQuestions.slice(0, MAX_QUESTIONS_PER_ROUND);
+        const leftover = newQuestions.slice(MAX_QUESTIONS_PER_ROUND);
+
+        const updatedRounds = [...rounds];
+        updatedRounds[activeRoundIndex] = {
+          ...currentRound,
+          questions: currentRoundSlice,
+        };
+
+        if (leftover.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+          for (let i = 0; i < leftover.length; i += questionsPerRound) {
+            if (updatedRounds.length >= MAX_ROUNDS) break;
+            const chunk = leftover.slice(i, i + questionsPerRound);
+            updatedRounds.push({
+              id: `round-${Date.now()}-${updatedRounds.length + 1}`,
+              title: `Vòng ${updatedRounds.length + 1}`,
+              questions: chunk,
+            });
+          }
+        }
+
+        setRounds(updatedRounds);
+        toast.success(`Đã thêm ${newQuestions.length} câu hỏi vào vòng hiện tại!`);
+      } else {
+        const availableSlots = MAX_QUESTIONS_PER_ROUND - questions.length;
+        if (availableSlots <= 0) {
+          if (rounds.length >= MAX_ROUNDS) {
+            toast.error("Đã đạt giới hạn tối đa số vòng (10 vòng)!");
+            return;
+          }
+          const newRoundIndex = rounds.length;
+          setRounds([
+            ...rounds,
+            {
+              id: `round-${Date.now()}-${newRoundIndex + 1}`,
+              title: `Vòng ${newRoundIndex + 1}`,
+              questions: newQuestions.slice(0, MAX_QUESTIONS_PER_ROUND),
+            },
+          ]);
+          setActiveRoundIndex(newRoundIndex);
+          toast.success(`Vòng hiện tại đã đầy. Đã tạo Vòng ${newRoundIndex + 1} với ${newQuestions.length} câu hỏi!`);
+        } else {
+          const insertCurrent = newQuestions.slice(0, availableSlots);
+          const leftover = newQuestions.slice(availableSlots);
+
+          const updatedRounds = [...rounds];
+          updatedRounds[activeRoundIndex] = {
+            ...currentRound,
+            questions: [...questions, ...insertCurrent],
+          };
+
+          if (leftover.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+            for (let i = 0; i < leftover.length; i += questionsPerRound) {
+              if (updatedRounds.length >= MAX_ROUNDS) break;
+              const chunk = leftover.slice(i, i + questionsPerRound);
+              updatedRounds.push({
+                id: `round-${Date.now()}-${updatedRounds.length + 1}`,
+                title: `Vòng ${updatedRounds.length + 1}`,
+                questions: chunk,
+              });
+            }
+          }
+
+          setRounds(updatedRounds);
+          toast.success(`Đã chèn thêm ${newQuestions.length} câu hỏi thành công!`);
+        }
+      }
+    } else {
+      // NEW_ROUNDS allocation
+      const chunks: QuizQuestion[][] = [];
+      for (let i = 0; i < newQuestions.length; i += questionsPerRound) {
+        chunks.push(newQuestions.slice(i, i + questionsPerRound));
+      }
+
+      const isOnlyInitialEmptyRound =
+        rounds.length === 1 &&
+        rounds[0].questions.length === 2 &&
+        !rounds[0].questions[0].question.trim() &&
+        !rounds[0].questions[1].question.trim();
+
+      if (isOnlyInitialEmptyRound) {
+        const createdRounds: QuizRound[] = chunks.slice(0, MAX_ROUNDS).map((chunk, idx) => ({
+          id: `round-${Date.now()}-${idx + 1}`,
+          title: `Vòng ${idx + 1}`,
+          questions: chunk,
+        }));
+        setRounds(createdRounds);
+        setActiveRoundIndex(0);
+        toast.success(`Đã tạo ${createdRounds.length} vòng chơi mới với ${newQuestions.length} câu hỏi!`);
+      } else {
+        const availableRoundSlots = MAX_ROUNDS - rounds.length;
+        if (availableRoundSlots <= 0) {
+          toast.error("Đã đạt giới hạn số vòng tối đa (10 vòng)!");
+          return;
+        }
+        const createdRounds: QuizRound[] = chunks.slice(0, availableRoundSlots).map((chunk, idx) => ({
+          id: `round-${Date.now()}-${rounds.length + idx + 1}`,
+          title: `Vòng ${rounds.length + idx + 1}`,
+          questions: chunk,
+        }));
+        setRounds([...rounds, ...createdRounds]);
+        setActiveRoundIndex(rounds.length);
+        toast.success(`Đã tạo thêm ${createdRounds.length} vòng chơi mới!`);
+      }
+    }
+  };
 
   // Search Image Modal State
   const [searchImageModal, setSearchImageModal] = useState<{
@@ -1238,18 +1376,33 @@ export function CandyQuizCreatorUI() {
           )}
         </div>
 
-        {/* BULK UPLOAD BUTTON (Vibrant Neon Pink - Purple Gradient) */}
-        <button
-          type="button"
-          onClick={() => setIsBulkModalOpen(true)}
-          className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:via-rose-600 hover:to-purple-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-pink-500/25 hover:shadow-lg hover:shadow-pink-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-pink-400/30 shrink-0 cursor-pointer"
-          title="Tải câu hỏi hàng loạt cho bài tập này"
-        >
-          <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
-            <FileText className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span>Tải câu hỏi hàng loạt</span>
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* AI GENERATE BUTTON (Vibrant Purple - Indigo Gradient) */}
+          <button
+            type="button"
+            onClick={() => setIsAiModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:via-indigo-700 hover:to-purple-800 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-purple-400/30 shrink-0 cursor-pointer"
+            title="Tự động tạo câu hỏi trắc nghiệm bằng Trí tuệ nhân tạo (AI)"
+          >
+            <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            </div>
+            <span>Tạo bằng AI</span>
+          </button>
+
+          {/* BULK UPLOAD BUTTON (Vibrant Neon Pink - Purple Gradient) */}
+          <button
+            type="button"
+            onClick={() => setIsBulkModalOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:via-rose-600 hover:to-purple-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-pink-500/25 hover:shadow-lg hover:shadow-pink-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-pink-400/30 shrink-0 cursor-pointer"
+            title="Tải câu hỏi hàng loạt cho bài tập này"
+          >
+            <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+              <FileText className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span>Tải câu hỏi hàng loạt</span>
+          </button>
+        </div>
       </div>
 
       {/* QUESTIONS GRID SECTION */}
@@ -1634,6 +1787,15 @@ D. goes`
           options={rounds[0]?.questions[0]?.options || []}
         />
       </div>
+
+      {/* Auto Generate AI Modal */}
+      <AutoGenerateCandyQuizModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        onApply={handleApplyAiQuestions}
+        initialTopic={title}
+        currentRoundQuestionCount={questions.length}
+      />
 
       {/* Save Success Modal */}
       <GameSaveSuccessModal
