@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Nunito, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { SharedBackground } from "@/components/public/SharedBackground";
 import { Providers } from "@/components/Providers";
@@ -159,6 +160,22 @@ export default async function RootLayout({
             <GoogleAnalytics gaId={gaId} />
           </Suspense>
         )}
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-851765345"
+        />
+        <Script
+          id="google-ads-tag"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-851765345');
+            `,
+          }}
+        />
       </body>
     </html>
   );
