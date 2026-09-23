@@ -4,11 +4,13 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 function MatchTextTextGameContent() {
   const searchParams = useSearchParams();
   const topicId = searchParams.get("topicId");
   const [isLoading, setIsLoading] = useState(true);
+  const [hasStarted, setHasStarted] = useState(false);
 
   return (
     <ForcedLandscapeWrapper
@@ -16,6 +18,12 @@ function MatchTextTextGameContent() {
       backLabel="Thoát Game"
       bgColor="#a1c4fd"
     >
+      <GameStartOverlay
+        isOpen={!hasStarted}
+        onStart={() => setHasStarted(true)}
+        title="Nối Chữ Thần Tốc"
+        gameMode="match-text-text"
+      />
       {isLoading && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#a1c4fd]">
           <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />

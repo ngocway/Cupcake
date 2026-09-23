@@ -1,97 +1,59 @@
-"use client";
+import type { Metadata } from "next";
+import {
+  getGameTopicSeoData,
+  generateGameMetadata,
+  generateGameJsonLd,
+} from "@/lib/seo/game-seo-generator";
+import ConveyorDropGameClient from "./ConveyorDropGameClient";
 
-import { useEffect, useState, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
+export const revalidate = 3600;
+export const dynamicParams = true;
 
-function ConveyorDropGameContent() {
-  const searchParams = useSearchParams();
-  const topicId = searchParams.get("topicId");
-  const [topicData, setTopicData] = useState<any>(null);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  // Pre-fetch topic data immediately on page mount before or while iframe loads
-  useEffect(() => {
-    if (!topicId) {
-      setIsDataLoaded(true);
-      return;
-    }
-
-    let isMounted = true;
-    fetch(`/api/games/flashcard-match/${topicId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (isMounted) {
-          if (data.success && data.cards) {
-            setTopicData(data);
-          }
-          setIsDataLoaded(true);
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to preload topic data:", err);
-        if (isMounted) setIsDataLoaded(true);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [topicId]);
-
-  // PostMessage topicData into iframe as soon as it loads or updates
-  const handleIframeLoad = () => {
-    if (iframeRef.current && iframeRef.current.contentWindow && topicData) {
-      iframeRef.current.contentWindow.postMessage({ type: "INIT_GAME_DATA", topicData }, "*");
-    }
-  };
-
-  useEffect(() => {
-    if (iframeRef.current && iframeRef.current.contentWindow && topicData) {
-      iframeRef.current.contentWindow.postMessage({ type: "INIT_GAME_DATA", topicData }, "*");
-    }
-  }, [topicData]);
-
-  return (
-    <ForcedLandscapeWrapper
-      backHref="/teacher"
-      backLabel="Thoát Game"
-      bgColor="#11111a"
-    >
-      {!isDataLoaded && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#11111a]">
-          <Loader2 className="w-12 h-12 text-cyan-400 animate-spin mb-4" />
-          <span className="text-cyan-400 font-bold tracking-widest uppercase animate-pulse">
-            Đang nạp bài tập...
-          </span>
-        </div>
-      )}
-      <iframe
-        ref={iframeRef}
-        src={`/games/conveyor-drop/index.html?topicId=${topicId || ""}`}
-        className="w-full h-full flex-1 border-none block"
-        title="Băng Chuyền Thả Khối Game"
-        referrerPolicy="no-referrer"
-        sandbox="allow-scripts allow-same-origin"
-        onLoad={handleIframeLoad}
-      />
-    </ForcedLandscapeWrapper>
-  );
+interface PageProps {
+  searchParams: Promise<{ topicId?: string }>;
 }
 
-export default function ConveyorDropGamePage() {
-  const [mounted, setMounted] = useState(false);
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const { topicId } = await searchParams;
+  if (!topicId) {
+    return {
+      title: "Băng Chuyền Thả Chữ - Conveyor Drop | Dolcake",
+      description:
+        "Trò chơi băng chuyền thả từ vựng tiếng Anh tương tác nhanh nhẹn cho bé trên Dolcake.",
+    };
+  }
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const topic = await getGameTopicSeoData(topicId);
+  if (!topic) {
+    return {
+      title: "Băng Chuyền Thả Chữ | Dolcake",
+      description: "Trò chơi học từ vựng tiếng Anh cho học sinh trên Dolcake.",
+    };
+  }
 
-  if (!mounted) return null;
+  const canonicalUrl = `https://dolcake.com/student/game/conveyor-drop?topicId=${encodeURIComponent(topicId)}`;
+  return generateGameMetadata(topic, canonicalUrl);
+}
+
+export default async function ConveyorDropGamePage({ searchParams }: PageProps) {
+  const { topicId } = await searchParams;
+  const topic = topicId ? await getGameTopicSeoData(topicId) : null;
+  const canonicalUrl = topicId
+    ? `https://dolcake.com/student/game/conveyor-drop?topicId=${encodeURIComponent(topicId)}`
+    : "https://dolcake.com/student/game/conveyor-drop";
+  const jsonLd = topic ? generateGameJsonLd(topic, canonicalUrl) : null;
 
   return (
-    <Suspense fallback={<div className="fixed inset-0 bg-slate-950 flex items-center justify-center text-cyan-400 font-bold">Loading Game...</div>}>
-      <ConveyorDropGameContent />
-    </Suspense>
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <ConveyorDropGameClient />
+    </>
   );
 }

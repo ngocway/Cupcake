@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
 import { getTeacherChoiceGameByCodeAction } from "@/actions/teacher-choice-games";
 import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 function prepareEggGameData(questions: ChoiceEggGame["questions"]) {
   return questions.map((q) => {
@@ -26,6 +27,7 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
   const [game, setGame] = useState<ChoiceEggGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -103,6 +105,17 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
             Đang nạp Game Đập Trứng...
           </span>
         </div>
+      )}
+
+      {/* Start Screen Overlay */}
+      {isIframeLoaded && (
+        <GameStartOverlay
+          isOpen={!isStarted}
+          title={game.title}
+          gameMode="egg-smash"
+          questionCount={game.questionCount || game.questions?.length}
+          onStart={() => setIsStarted(true)}
+        />
       )}
 
       <iframe

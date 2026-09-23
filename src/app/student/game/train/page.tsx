@@ -4,12 +4,14 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 function TrainGameContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const topicId = searchParams.get("topicId");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -60,12 +62,24 @@ function TrainGameContent() {
         </span>
       </div>
 
+      {/* Start Screen Overlay */}
+      {isLoaded && (
+        <GameStartOverlay
+          isOpen={!isStarted}
+          title="Đoàn Tàu Từ Vựng"
+          gameMode="train"
+          onStart={() => setIsStarted(true)}
+          onClose={() => router.push("/teacher")}
+        />
+      )}
+
       {/* Game Iframe */}
       <iframe
         ref={iframeRef}
         src={`/games/Doan-tau-tu-vung/index.html?topicId=${topicId || ""}`}
         className="w-full h-full flex-1 border-none block"
-        title="Game Nối Đoàn Tàu"
+        title="Đoàn tàu từ vựng Game"
+        referrerPolicy="no-referrer"
         sandbox="allow-scripts allow-same-origin"
       />
     </ForcedLandscapeWrapper>
@@ -82,7 +96,7 @@ export default function TrainGamePage() {
   if (!mounted) return null;
 
   return (
-    <Suspense fallback={<div className="fixed inset-0 bg-[#bce7ee] flex items-center justify-center text-slate-800 font-bold">Đang tải game...</div>}>
+    <Suspense fallback={<div className="fixed inset-0 bg-[#bce7ee] flex items-center justify-center text-slate-800 font-bold">Loading Game...</div>}>
       <TrainGameContent />
     </Suspense>
   );

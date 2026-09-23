@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useState, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 function EggSmashQuizGameContent() {
+  const searchParams = useSearchParams();
+  const topicId = searchParams?.get("topicId");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const gameSrc = topicId
+    ? `/games/egg-smash-quiz-premium-ambient/index.html?topicId=${encodeURIComponent(topicId)}`
+    : "/games/egg-smash-quiz-premium-ambient/index.html";
 
   return (
     <ForcedLandscapeWrapper
@@ -22,9 +31,20 @@ function EggSmashQuizGameContent() {
           </span>
         </div>
       )}
+
+      {/* Start Screen Overlay */}
+      {isLoaded && (
+        <GameStartOverlay
+          isOpen={!isStarted}
+          title="Đập Trứng Chọn Đáp Án"
+          gameMode="egg-smash"
+          onStart={() => setIsStarted(true)}
+        />
+      )}
+
       <iframe
         ref={iframeRef}
-        src="/games/egg-smash-quiz-premium-ambient/index.html"
+        src={gameSrc}
         className="w-full h-full flex-1 border-none block"
         title="Egg Smash Quiz Game"
         sandbox="allow-scripts allow-same-origin"
@@ -44,7 +64,13 @@ export default function EggSmashQuizGamePage() {
   if (!mounted) return null;
 
   return (
-    <Suspense fallback={<div className="fixed inset-0 bg-slate-950 flex items-center justify-center text-amber-400 font-bold">Loading Game...</div>}>
+    <Suspense
+      fallback={
+        <div className="fixed inset-0 bg-slate-950 flex items-center justify-center text-amber-400 font-bold">
+          Loading Game...
+        </div>
+      }
+    >
       <EggSmashQuizGameContent />
     </Suspense>
   );

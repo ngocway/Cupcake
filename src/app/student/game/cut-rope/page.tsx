@@ -4,12 +4,14 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 function CutRopeGameContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const topicId = searchParams.get("topicId");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isStarted, setIsStarted] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -56,13 +58,26 @@ function CutRopeGameContent() {
         </span>
       </div>
 
+      {/* Start Screen Overlay */}
+      {isLoaded && (
+        <GameStartOverlay
+          isOpen={!isStarted}
+          title="Cây Phép Thuật Cắt Dây Nối Từ"
+          gameMode="cut-rope"
+          onStart={() => setIsStarted(true)}
+          onClose={() => router.push("/teacher")}
+        />
+      )}
+
       {/* Game Iframe */}
       <iframe
         ref={iframeRef}
-        src={`/games/magic_tree_matching_game_v3/index.html?topicId=${topicId || ""}&v=3.1`}
+        src={`/games/magic_tree_matching_game_v3/index.html?topicId=${topicId || ""}`}
         className="w-full h-full flex-1 border-none block"
-        title="Game Cắt Dây Ảnh - Chữ"
+        title="Magic Tree Matching Game"
+        referrerPolicy="no-referrer"
         sandbox="allow-scripts allow-same-origin"
+        onLoad={() => setIsLoaded(true)}
       />
     </ForcedLandscapeWrapper>
   );

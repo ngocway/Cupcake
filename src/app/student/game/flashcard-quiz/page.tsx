@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useContentStore } from "@/store/useContentStore";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 
 function FlashcardQuizGameContent() {
@@ -13,6 +14,7 @@ function FlashcardQuizGameContent() {
   const topicId = searchParams.get("topicId");
   const nativeLanguage = useContentStore((s) => s.nativeLanguage) || "vi";
   const [isLoading, setIsLoading] = useState(true);
+  const [hasStarted, setHasStarted] = useState(false);
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col">
@@ -26,6 +28,12 @@ function FlashcardQuizGameContent() {
 
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#f1f5f9] overflow-hidden relative">
+        <GameStartOverlay
+          isOpen={!hasStarted}
+          onStart={() => setHasStarted(true)}
+          title="Trắc Nghiệm Flashcard"
+          gameMode="candy-quiz"
+        />
         {isLoading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#f1f5f9]">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />

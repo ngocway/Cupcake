@@ -51,6 +51,38 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const [localSearch, setLocalSearch] = useState(search || "")
   const [isTeacherDomain, setIsTeacherDomain] = useState(false)
   const [teacherUrl, setTeacherUrl] = useState(process.env.NEXT_PUBLIC_TEACHER_URL || "https://teacher.dolcake.com")
+  const [currentLocale, setCurrentLocale] = useState<"vi" | "en">("vi")
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const getCookie = (name: string) => {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? match[2] : null;
+      };
+      const savedLocale = getCookie("NEXT_LOCALE") || localStorage.getItem("preferred-locale");
+      if (savedLocale === "vi" || savedLocale === "en") {
+        setCurrentLocale(savedLocale as "vi" | "en");
+      } else {
+        fetch("/api/locale")
+          .then((res) => res.json())
+          .then((data) => {
+            if (data?.locale === "vi" || data?.locale === "en") {
+              setCurrentLocale(data.locale);
+            }
+          })
+          .catch(() => {});
+      }
+
+      const handleLocaleChange = (e: any) => {
+        if (e.detail === "vi" || e.detail === "en") {
+          setCurrentLocale(e.detail);
+        }
+      };
+
+      window.addEventListener("locale-change", handleLocaleChange);
+      return () => window.removeEventListener("locale-change", handleLocaleChange);
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -94,8 +126,10 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
     }
   }
 
-  const isTeacher = session?.role === "TEACHER" || pathname.startsWith("/teacher") || isTeacherDomain
-  const dashboardHref = isTeacher ? "/teacher/dashboard" : "/student/dashboard"
+  const isTeacherAccount = session?.role === "TEACHER" || session?.role === "ADMIN"
+  const isTeacherSection = pathname.startsWith("/teacher") || isTeacherDomain
+  const isTeacher = isTeacherAccount || isTeacherSection
+  const dashboardHref = isTeacherAccount ? "/teacher" : "/student/dashboard"
 
   const isActive = (path: string) => pathname === path
 
@@ -114,7 +148,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           </svg>
         </button>
       <div className="flex items-center gap-2 sm:gap-4">
-        <Link href={pathname.startsWith("/teacher") ? "/teacher" : "/"} className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
+        <Link href="/" className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
           <img 
             src="/images/logo.png" 
             alt="Dolcake" 
@@ -139,18 +173,17 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
             </span>
             <span className="font-headline tracking-tight text-[11px] sm:text-xs">Quay về học</span>
           </Link>
-        ) : (
+        ) : isTeacherAccount ? (
           <Link 
             href="/teacher"
-            className="inline-flex items-center rounded-full transition-all duration-300 ease-out hover:scale-105 hover:shadow-lg hover:shadow-blue-500/40 hover:brightness-105 active:scale-95 active:brightness-90 ml-1 sm:ml-2 shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 shadow-md shadow-blue-500/25 active:scale-95 ml-1 sm:ml-2 shrink-0 group"
           >
-            <img 
-              src="/images/teacher_login_btn.png" 
-              alt="Teacher Login" 
-              className="h-9 sm:h-10 md:h-11 w-auto object-contain"
-            />
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300">
+              <span className="material-symbols-outlined text-[15px]">school</span>
+            </span>
+            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Bàn làm việc Giáo viên</span>
           </Link>
-        )}
+        ) : null}
       </div>
 
       <div className="flex items-center gap-6">
@@ -173,7 +206,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               onChange={e => setLocalSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleTriggerSearch()}
               className="bg-primary/5 border-transparent rounded-full py-3.5 pl-14 pr-8 text-sm font-bold focus:ring-4 focus:ring-primary/10 focus:bg-white focus:border-primary/20 w-80 transition-all duration-500 outline-none placeholder:text-primary/20" 
-              placeholder="Search lessons, assignments..." 
+              placeholder={currentLocale === "vi" ? "Tìm kiếm bài học, bài tập..." : "Search lessons, assignments..."} 
               type="text" 
             />
           </div>
@@ -203,13 +236,23 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
 
               {/* Dropdown Menu */}
               {isMenuOpen && (
-                <div className="absolute top-full right-0 mt-3 w-56 bg-white border border-primary/10 rounded-[24px] shadow-2xl py-2 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-5 py-4 border-b border-primary/10 mb-2">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{session.role || "MEMBER"}</p>
-                    <p className="font-bold text-sm text-on-surface truncate">{session.name}</p>
+                <div className="absolute top-full right-0 mt-3 w-64 bg-white border border-primary/10 rounded-[24px] shadow-2xl py-2 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-5 py-3.5 border-b border-primary/10 mb-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold text-sm text-on-surface truncate">{session.name}</p>
+                      {isTeacherSection ? (
+                        <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 font-black rounded-full border border-blue-200 uppercase tracking-wider shrink-0">
+                          TEACHER
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 font-black rounded-full border border-emerald-200 uppercase tracking-wider shrink-0">
+                          STUDENT
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-col">
-                    {isTeacher ? (
+                    {isTeacherSection ? (
                       <>
                         <TeacherLanguageSelector />
                         <div className="h-px bg-primary/10 my-1 mx-3" />
@@ -336,8 +379,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               )}
             </div>
           ) : (
-            <LoginButton defaultView="studentLogin" className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
-              Bắt đầu học
+            <LoginButton defaultView="role" className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
+              {currentLocale === "vi" ? "Đăng nhập" : "GET STARTED"}
             </LoginButton>
           )}
         </div>

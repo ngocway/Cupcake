@@ -43,7 +43,7 @@ export default function TeacherLoginPage() {
       } else if (res?.ok) {
         const searchParams = new URLSearchParams(window.location.search);
         const callbackUrl = searchParams.get("callbackUrl");
-        router.push(callbackUrl || "/teacher/dashboard");
+        router.push(callbackUrl || "/teacher");
         router.refresh();
       }
     } catch (err) {
@@ -70,7 +70,7 @@ export default function TeacherLoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    signIn("google", { callbackUrl: "/teacher/dashboard" });
+    signIn("google", { callbackUrl: "/teacher" });
   }
 
   return (

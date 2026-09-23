@@ -36,6 +36,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ForcedLandscapeWrapper } from '@/components/games/ForcedLandscapeWrapper';
+import { GameStartOverlay } from '@/components/games/GameStartOverlay';
 import { getMatchImageTextGameDetailsAction } from '@/actions/match-image-text-actions';
 
 // Path constant for ocean_ui_web assets
@@ -246,6 +247,7 @@ function MemoryGameContent() {
   const [moves, setMoves] = useState<number>(0);
   const [matchedCount, setMatchedCount] = useState<number>(0);
   const [seconds, setSeconds] = useState<number>(0);
+  const [hasStarted, setHasStarted] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isRoundWon, setIsRoundWon] = useState<boolean>(false);
   const [isGameWon, setIsGameWon] = useState<boolean>(false);
@@ -968,6 +970,20 @@ function MemoryGameContent() {
           {p.text}
         </div>
       ))}
+
+      {/* Start Screen Overlay */}
+      <GameStartOverlay
+        isOpen={!hasStarted && !isLoadingTopic}
+        title={topicTitle}
+        gameMode="flip"
+        questionCount={deck.length > 0 ? Math.floor(deck.length / 2) : undefined}
+        onStart={() => {
+          setHasStarted(true);
+        }}
+        onClose={() => {
+          if (typeof window !== "undefined") window.history.back();
+        }}
+      />
 
       {/* SCENE CONTAINER */}
       <main className="page">

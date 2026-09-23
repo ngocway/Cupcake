@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
+import { GameStartOverlay } from "@/components/games/GameStartOverlay"
 
 export default function PlaySentenceBuilderGamePage() {
   const params = useParams()
@@ -12,6 +13,7 @@ export default function PlaySentenceBuilderGamePage() {
   const age = searchParams.get("age") || "2-5"
   const [mounted, setMounted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasStarted, setHasStarted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -37,6 +39,12 @@ export default function PlaySentenceBuilderGamePage() {
 
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#fbc2eb] overflow-hidden relative">
+        <GameStartOverlay
+          isOpen={!hasStarted}
+          onStart={() => setHasStarted(true)}
+          title="Ghép Câu Tiếng Anh"
+          gameMode="sentence-builder"
+        />
         {isLoading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#fbc2eb]">
             <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />

@@ -47,9 +47,8 @@ export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
       } else if (res?.ok) {
         if (onSuccess) {
           onSuccess();
-        } else {
-          router.push("/teacher");
         }
+        router.push("/teacher");
         router.refresh();
       }
     } catch (err) {

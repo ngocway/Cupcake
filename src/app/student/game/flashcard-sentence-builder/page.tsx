@@ -4,12 +4,14 @@ import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 
 function FlashcardSentenceBuilderGameContent() {
   const searchParams = useSearchParams();
   const age = searchParams.get("age") || "2-5";
   const topicId = searchParams.get("topicId") || "";
   const [isLoading, setIsLoading] = useState(true);
+  const [hasStarted, setHasStarted] = useState(false);
 
   // Determine back link level
   let level = "kindergarten";
@@ -35,6 +37,12 @@ function FlashcardSentenceBuilderGameContent() {
 
       {/* Game Iframe */}
       <div className="flex-1 w-full bg-[#fbc2eb] overflow-hidden relative">
+        <GameStartOverlay
+          isOpen={!hasStarted}
+          onStart={() => setHasStarted(true)}
+          title="Ghép Câu Flashcard"
+          gameMode="sentence-builder"
+        />
         {isLoading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#fbc2eb]">
             <Loader2 className="w-12 h-12 text-white animate-spin mb-4" />

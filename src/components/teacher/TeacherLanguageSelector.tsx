@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface TeacherLanguageSelectorProps {
   initialLocale?: string | null;
@@ -10,6 +10,8 @@ interface TeacherLanguageSelectorProps {
 export function TeacherLanguageSelector({ initialLocale, onLocaleChange }: TeacherLanguageSelectorProps) {
   const [currentLocale, setCurrentLocale] = useState<string>(initialLocale || "vi");
   const [isSaving, setIsSaving] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!initialLocale) {
@@ -24,16 +26,31 @@ export function TeacherLanguageSelector({ initialLocale, onLocaleChange }: Teach
     }
   }, [initialLocale]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSelect = async (locale: "vi" | "en") => {
-    if (locale === currentLocale || isSaving) return;
+    if (locale === currentLocale || isSaving) {
+      setIsOpen(false);
+      return;
+    }
 
     setCurrentLocale(locale);
     setIsSaving(true);
+    setIsOpen(false);
 
     try {
       // Set cookie immediately for client
       document.cookie = `NEXT_LOCALE=${locale};path=/;max-age=31536000`;
       localStorage.setItem("preferred-locale", locale);
+      window.dispatchEvent(new CustomEvent("locale-change", { detail: locale }));
 
       await fetch("/api/locale", {
         method: "POST",
@@ -52,8 +69,8 @@ export function TeacherLanguageSelector({ initialLocale, onLocaleChange }: Teach
   };
 
   return (
-    <div className="px-5 py-2.5">
-      <div className="flex items-center justify-between mb-2">
+    <div className="px-4 py-2" ref={dropdownRef}>
+      <div className="flex items-center justify-between mb-1.5 px-1">
         <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-wider">
           Ngôn ngữ / Language
         </span>
@@ -62,60 +79,68 @@ export function TeacherLanguageSelector({ initialLocale, onLocaleChange }: Teach
         )}
       </div>
 
-      <div className="space-y-1">
-        {/* Option 1: Tiếng Việt */}
+      <div className="relative">
         <button
           type="button"
-          onClick={() => handleSelect("vi")}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-            currentLocale === "vi"
-              ? "bg-primary/10 text-primary font-black"
-              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-          }`}
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between px-3 py-2 bg-surface-container-low hover:bg-surface-container border border-primary/10 rounded-xl text-xs font-bold transition-all text-on-surface group"
         >
-          <div className="flex items-center gap-2.5">
-            <span className="text-base leading-none">🇻🇳</span>
-            <span>Tiếng Việt</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm leading-none">{currentLocale === "vi" ? "🇻🇳" : "🇬🇧"}</span>
+            <span className="font-extrabold text-[12px]">
+              {currentLocale === "vi" ? "Tiếng Việt" : "English"}
+            </span>
           </div>
-          <div
-            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-              currentLocale === "vi"
-                ? "border-primary bg-primary text-white"
-                : "border-on-surface-variant/30 bg-white"
+          <span
+            className={`material-symbols-outlined text-[18px] text-on-surface-variant/70 transition-transform duration-200 ${
+              isOpen ? "rotate-180" : ""
             }`}
           >
-            {currentLocale === "vi" && (
-              <span className="material-symbols-outlined text-[13px] font-black">check</span>
-            )}
-          </div>
+            expand_more
+          </span>
         </button>
 
-        {/* Option 2: English */}
-        <button
-          type="button"
-          onClick={() => handleSelect("en")}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-            currentLocale === "en"
-              ? "bg-primary/10 text-primary font-black"
-              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="text-base leading-none">🇬🇧</span>
-            <span>English</span>
+        {isOpen && (
+          <div className="mt-1 p-1 bg-white border border-primary/10 rounded-xl shadow-lg space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+            {/* Option 1: Tiếng Việt */}
+            <button
+              type="button"
+              onClick={() => handleSelect("vi")}
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                currentLocale === "vi"
+                  ? "bg-primary/10 text-primary font-black"
+                  : "text-on-surface-variant/80 hover:bg-surface-container-low hover:text-primary"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm leading-none">🇻🇳</span>
+                <span>Tiếng Việt</span>
+              </div>
+              {currentLocale === "vi" && (
+                <span className="material-symbols-outlined text-[15px] font-black">check</span>
+              )}
+            </button>
+
+            {/* Option 2: English */}
+            <button
+              type="button"
+              onClick={() => handleSelect("en")}
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                currentLocale === "en"
+                  ? "bg-primary/10 text-primary font-black"
+                  : "text-on-surface-variant/80 hover:bg-surface-container-low hover:text-primary"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm leading-none">🇬🇧</span>
+                <span>English</span>
+              </div>
+              {currentLocale === "en" && (
+                <span className="material-symbols-outlined text-[15px] font-black">check</span>
+              )}
+            </button>
           </div>
-          <div
-            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-              currentLocale === "en"
-                ? "border-primary bg-primary text-white"
-                : "border-on-surface-variant/30 bg-white"
-            }`}
-          >
-            {currentLocale === "en" && (
-              <span className="material-symbols-outlined text-[13px] font-black">check</span>
-            )}
-          </div>
-        </button>
+        )}
       </div>
     </div>
   );

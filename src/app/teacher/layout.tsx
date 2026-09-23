@@ -161,6 +161,19 @@ function TeacherProfile() {
           
           <div className="h-px bg-slate-100 dark:bg-slate-700 mx-3 mb-2" />
 
+          {/* Quick Switch to Student View */}
+          <div className="px-2 pb-2">
+            <Link 
+              href="/"
+              className="flex items-center gap-3 px-3.5 py-2.5 text-xs bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-extrabold rounded-xl transition-all border border-emerald-200/70 dark:border-emerald-800/60 shadow-sm group"
+            >
+              <BookOpen className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform stroke-[2.5px]" />
+              <span>Giao diện học tập (Học sinh)</span>
+            </Link>
+          </div>
+
+          <div className="h-px bg-slate-100 dark:bg-slate-700 mx-3 my-1" />
+
           {/* Group 1: Branding */}
           <Link 
             href="/teacher/profile"
@@ -303,7 +316,15 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Link 
+                href="/"
+                className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-bold transition-all border border-emerald-200/80 dark:border-emerald-800/60 shadow-sm hover:scale-105 active:scale-95 group"
+                title="Chuyển sang giao diện học tập của học sinh"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-emerald-600 group-hover:rotate-6 transition-transform stroke-[2.5px]" />
+                <span>Trang học tập</span>
+              </Link>
               <NotificationBell />
               <TeacherProfile />
             </div>

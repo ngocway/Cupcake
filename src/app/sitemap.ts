@@ -18,7 +18,7 @@ function isExcludedSlug(slug: string): boolean {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [lessons, assignments] = await Promise.all([
+  const [lessons, assignments, gameTopics] = await Promise.all([
     prisma.lesson.findMany({
       where: { deletedAt: null, isBlocked: false, slug: { not: null } },
       select: { id: true, slug: true, title: true, updatedAt: true, thumbnail: true },
@@ -27,6 +27,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     prisma.assignment.findMany({
       where: { deletedAt: null, isBlocked: false, status: "PUBLIC", slug: { not: null } },
       select: { id: true, slug: true, title: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.matchWordTopic.findMany({
+      where: {
+        name: { not: "" },
+        items: { some: {} },
+      },
+      select: { id: true, slug: true, name: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
   ]);
@@ -45,6 +53,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return true;
   });
 
+  const publishedGames = gameTopics.filter((g) => {
+    const slugOrId = g.slug || g.id;
+    if (!slugOrId) return false;
+    if (isExcludedSlug(slugOrId)) return false;
+    if (!g.name || g.name.length < 3) return false;
+    return true;
+  });
+
   const lessonUrls: MetadataRoute.Sitemap = publishedLessons.map((l) => ({
     url: `https://dolcake.com/public/lessons/${l.slug ?? l.id}`,
     lastModified: l.updatedAt,
@@ -57,6 +73,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: a.updatedAt,
     changeFrequency: "weekly",
     priority: 0.7,
+  }));
+
+  const gameUrls: MetadataRoute.Sitemap = publishedGames.map((g) => ({
+    url: `https://dolcake.com/public/games/${g.slug ?? g.id}`,
+    lastModified: g.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.8,
   }));
 
   // Grammar pages — generated from taxonomy, priority 0.9 (SEO landing pages)
@@ -117,6 +140,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const allDates = [
     ...publishedLessons.map((l) => l.updatedAt),
     ...publishedAssignments.map((a) => a.updatedAt),
+    ...publishedGames.map((g) => g.updatedAt),
   ];
   const latestUpdate = allDates.length > 0
     ? allDates.reduce((a, b) => (a > b ? a : b))
@@ -129,5 +153,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...exerciseUrls,
     ...lessonUrls,
     ...assignmentUrls,
+    ...gameUrls,
   ];
 }

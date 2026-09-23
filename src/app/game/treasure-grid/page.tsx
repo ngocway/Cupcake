@@ -14,6 +14,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { ForcedLandscapeWrapper } from '@/components/games/ForcedLandscapeWrapper';
+import { GameStartOverlay } from '@/components/games/GameStartOverlay';
 
 // Sample Questions Fallback
 export interface QuestionData {
@@ -575,6 +576,7 @@ function MysteryTreasureGridContent() {
   }, [displayTopicTitle]);
 
   // Gameplay State
+  const [isGameStarted, setIsGameStarted] = useState<boolean>(false);
   const [solvedSet, setSolvedSet] = useState<Set<number>>(new Set());
   const [revealedSlotsSet, setRevealedSlotsSet] = useState<Set<number>>(new Set());
   const [flyingStar, setFlyingStar] = useState<FlyingStar | null>(null);
@@ -2032,6 +2034,19 @@ function MysteryTreasureGridContent() {
           transform-origin: bottom center;
         }
       `}</style>
+
+      {/* Start Screen Overlay */}
+      <GameStartOverlay
+        isOpen={!isGameStarted && !isLoadingTopic}
+        title={displayTopicTitle}
+        gameMode="treasure-hunt"
+        questionCount={activeQuestions.length}
+        onStart={() => {
+          setIsGameStarted(true);
+          sounds.playOpen();
+        }}
+        onClose={() => router.push('/teacher?tab=my-quiz-games')}
+      />
 
       {/* 1672x941 Game Stage */}
       <div
