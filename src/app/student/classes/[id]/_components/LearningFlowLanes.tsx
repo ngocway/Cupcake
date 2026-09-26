@@ -255,11 +255,6 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {col.isReviewCol && (
-                      <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider bg-amber-500 text-white">
-                        🔁 Ôn tập
-                      </span>
-                    )}
                     <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight truncate">
                       {col.title}
                     </h3>
@@ -286,24 +281,13 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
                 )}
               </div>
 
-              {/* Cards — review column: amber ring badge; merged columns: section dividers */}
+              {/* Cards — review column & merged columns */}
               <div className="flex flex-col gap-3 sm:gap-3.5">
                 {col.isReviewCol ? (
-                  // ── Ôn tập column: mỗi card có amber ring + badge loại bài ──
+                  // ── Ôn tập column ──
                   col.sections[0].items.map((it) => (
-                    <div key={it.item.assignment.id} className="relative">
-                      <div className="absolute inset-0 rounded-md ring-2 ring-amber-400/70 dark:ring-amber-500/50 pointer-events-none z-10" />
-                      {/* Badge loại bài gốc (để phân biệt trong cột ôn tập) */}
-                      <div className="absolute -top-2 left-3 z-20 flex items-center gap-1 bg-amber-400 text-amber-950 text-[9px] font-black px-2 py-0.5 rounded-md shadow-sm">
-                        <RotateCcw className="w-2.5 h-2.5" />
-                        {it.kind === 'LESSON'    ? 'Lý thuyết' :
-                         it.kind === 'EXERCISE'  ? 'Bài tập'   :
-                         it.kind === 'FLASHCARD' ? 'Từ vựng'   :
-                         it.kind === 'READING'   ? 'Đọc hiểu'  :
-                         it.kind === 'BOOK'      ? 'Luyện nói' :
-                         it.kind === 'GAME'      ? 'Game'      : 'Ôn tập'}
-                      </div>
-                      <div className="pt-1">{renderCard(it)}</div>
+                    <div key={it.item.assignment.id}>
+                      {renderCard(it)}
                     </div>
                   ))
                 ) : (

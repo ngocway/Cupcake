@@ -70,11 +70,6 @@ export function GrammarLessonCard({
           <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-md backdrop-blur-sm border border-white/20 whitespace-nowrap">
             Grammar Lesson
           </span>
-          {isReview && (
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-amber-950 shadow-xs whitespace-nowrap">
-              Ôn bài
-            </span>
-          )}
           {item.isSubmitted && (
             <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-400 text-emerald-950 flex items-center gap-1 whitespace-nowrap shrink-0">
               <CheckCircle2 className="w-3 h-3" />
@@ -140,13 +135,6 @@ export function GrammarExerciseCard({
           sizes="95px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        {isReview && (
-          <div className="absolute top-1.5 left-1.5 z-10">
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase bg-amber-400 text-amber-950 shadow-sm">
-              Ôn
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Right Content */}
@@ -240,11 +228,6 @@ export function ReadingStoryCard({
           <span className={`${levelInfo.color} px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider shadow-md`}>
             {levelInfo.label}
           </span>
-          {isReview && (
-            <span className="bg-amber-400 text-amber-950 px-2 py-0.5 rounded-md text-[10px] font-black uppercase shadow-md">
-              Ôn bài
-            </span>
-          )}
         </div>
 
         {/* Completion status indicator */}
@@ -352,11 +335,6 @@ export function FlashcardLaneCard({
             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
               Flashcard
             </span>
-            {isReview && (
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-amber-950">
-                Ôn bài
-              </span>
-            )}
           </div>
           <h4 className="font-black text-sm sm:text-base text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-purple-600 transition-colors">
             {cleanTitle}
