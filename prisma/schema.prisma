@@ -122,6 +122,7 @@ model Class {
   isBlocked       Boolean           @default(false)
   announcements   Announcement[]
   assignments     AssignmentClass[]
+  assignmentGroups AssignmentGroup[]
   teacher         User              @relation("TeacherClasses", fields: [teacherId], references: [id])
   enrollments     ClassEnrollment[]
   assignedLessons LessonClass[]
@@ -226,17 +227,34 @@ model FlashcardItem {
 model AssignmentClass {
   assignmentId        String
   classId             String
-  assignedAt          DateTime   @default(now())
+  assignedAt          DateTime         @default(now())
   startDate           DateTime?
   dueDate             DateTime?
   timeLimit           Int?
-  maxAttempts         Int?       @default(1)
-  focusMode           Boolean    @default(false)
-  allowLateSubmission Boolean    @default(false)
-  assignment          Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  class               Class      @relation(fields: [classId], references: [id])
+  maxAttempts         Int?             @default(1)
+  focusMode           Boolean          @default(false)
+  allowLateSubmission Boolean          @default(false)
+  groupId             String?
+  group               AssignmentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  assignment          Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  class               Class            @relation(fields: [classId], references: [id])
 
   @@id([assignmentId, classId])
+  @@index([groupId])
+}
+
+model AssignmentGroup {
+  id          String            @id @default(cuid())
+  classId     String
+  title       String
+  orderIndex  Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  class       Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
+  assignments AssignmentClass[]
+
+  @@index([classId])
+  @@index([createdAt])
 }
 
 model Question {

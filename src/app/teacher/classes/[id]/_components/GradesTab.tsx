@@ -65,15 +65,33 @@ export function GradesTab({ classId }: { classId: string }) {
     data.assignments.forEach(a => {
       csv += `,"${a.title.replace(/"/g, '""')}"`;
     });
-    csv += '\n';
+    csv += ',"Điểm TB (Bài tập & Đọc)"\n';
 
     data.students.forEach(s => {
       csv += `"${s.name.replace(/"/g, '""')}","${s.email}","${s.pin || ''}"`;
       data.assignments.forEach(a => {
         const sub = s.submissions[a.id];
-        csv += `,${sub ? sub.score ?? 'Đã nộp' : '-'}`;
+        const isGradedType = a.materialType === 'EXERCISE' || a.materialType === 'READING';
+        if (!sub) {
+          csv += ',-';
+        } else if (sub.score !== null && isGradedType) {
+          csv += `,${sub.score}`;
+        } else {
+          csv += ',"Đã hoàn thành"';
+        }
       });
-      csv += '\n';
+
+      // Calculate GPA only for graded types
+      const scoredSubs = data.assignments
+        .filter(a => a.materialType === 'EXERCISE' || a.materialType === 'READING')
+        .map(a => s.submissions[a.id]?.score)
+        .filter((score): score is number => score !== null && score !== undefined);
+
+      const avgScore = scoredSubs.length > 0
+        ? (scoredSubs.reduce((sum, v) => sum + v, 0) / scoredSubs.length).toFixed(1)
+        : '-';
+
+      csv += `,${avgScore}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -132,11 +150,14 @@ export function GradesTab({ classId }: { classId: string }) {
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-[#f0f2f4] dark:border-gray-700 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse table-fixed min-w-[800px]">
+          <table className="w-full text-left border-collapse table-fixed min-w-[850px]">
             <thead>
               <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-[#f0f2f4] dark:border-gray-700">
                 <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider w-64 sticky left-0 z-10 bg-gray-50 dark:bg-gray-900/50 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                   Học sinh
+                </th>
+                <th className="px-4 py-4 text-xs font-black text-blue-700 dark:text-blue-300 uppercase tracking-wider text-center border-l border-[#f0f2f4] dark:border-gray-700 w-28 bg-blue-50/70 dark:bg-blue-950/30">
+                  Điểm TB
                 </th>
                 {data.assignments.map(a => (
                   <th key={a.id} className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider text-center border-l border-[#f0f2f4] dark:border-gray-700 min-w-[120px]">
@@ -146,48 +167,75 @@ export function GradesTab({ classId }: { classId: string }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f0f2f4] dark:divide-gray-700">
-              {filteredStudents.map(student => (
-                <tr key={student.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group">
-                  <td className="px-6 py-4 sticky left-0 z-10 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-sm text-[#111418] dark:text-white truncate">{student.name}</span>
-                      <span className="text-xs text-[#617589] truncate">{student.email}</span>
-                    </div>
-                  </td>
-                  {data.assignments.map(a => {
-                    const submission = student.submissions[a.id];
-                    return (
-                      <td key={a.id} className="px-6 py-4 text-center border-l border-[#f0f2f4] dark:border-gray-700">
-                        {submission ? (
-                          <Link 
-                            href={`/teacher/classes/${classId}/assignments/${a.id}?studentId=${student.id}`}
-                            className="inline-flex flex-col items-center hover:scale-110 transition-transform"
-                          >
-                            <span className={`text-sm font-extrabold ${submission.score !== null ? 'text-primary' : 'text-emerald-600'}`}>
-                              {submission.score !== null ? submission.score.toFixed(1) : 'Đã nộp'}
-                            </span>
-                            <span className="text-[10px] text-[#617589] opacity-0 group-hover:opacity-100 transition-opacity">Xem bài</span>
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-gray-300 dark:text-gray-600 font-medium">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {filteredStudents.map(student => {
+                // Calculate average score for this student (only graded types)
+                const scoredSubs = data.assignments
+                  .filter(a => a.materialType === 'EXERCISE' || a.materialType === 'READING')
+                  .map(a => student.submissions[a.id]?.score)
+                  .filter((score): score is number => score !== null && score !== undefined);
+
+                const avgScore = scoredSubs.length > 0
+                  ? (scoredSubs.reduce((sum, v) => sum + v, 0) / scoredSubs.length).toFixed(1)
+                  : '-';
+
+                return (
+                  <tr key={student.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group">
+                    <td className="px-6 py-4 sticky left-0 z-10 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm text-[#111418] dark:text-white truncate">{student.name}</span>
+                        <span className="text-xs text-[#617589] truncate">{student.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center border-l border-[#f0f2f4] dark:border-gray-700 bg-blue-50/30 dark:bg-blue-950/15">
+                      <span className="text-sm font-black text-blue-600 dark:text-blue-400">
+                        {avgScore !== '-' ? `${avgScore} đ` : '—'}
+                      </span>
+                    </td>
+                    {data.assignments.map(a => {
+                      const submission = student.submissions[a.id];
+                      const isGradedType = a.materialType === 'EXERCISE' || a.materialType === 'READING';
+                      return (
+                        <td key={a.id} className="px-6 py-4 text-center border-l border-[#f0f2f4] dark:border-gray-700">
+                          {submission ? (
+                            <Link 
+                              href={`/teacher/classes/${classId}/assignments/${a.id}?studentId=${student.id}`}
+                              className="inline-flex flex-col items-center hover:scale-105 transition-transform"
+                            >
+                              {submission.score !== null && isGradedType ? (
+                                <span className="text-sm font-black text-primary">
+                                  {submission.score.toFixed(1)} đ
+                                </span>
+                              ) : (
+                                <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                                  ✓ Hoàn thành
+                                </span>
+                              )}
+                              <span className="text-[10px] text-[#617589] opacity-0 group-hover:opacity-100 transition-opacity">Xem bài</span>
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-gray-300 dark:text-gray-600 font-medium">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
         
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-[#f0f2f4] dark:border-gray-700 flex items-center justify-between">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-[#f0f2f4] dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-[#617589]">Hiển thị {filteredStudents.length} học sinh</p>
-          <div className="flex items-center gap-4 text-xs font-medium text-[#617589]">
+          <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-[#617589]">
             <div className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-primary" /> Điểm số
+              <span className="size-2 rounded-full bg-primary" /> Điểm số (Bài tập & Đọc hiểu)
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-emerald-500" /> Chưa chấm (hoàn thành)
+              <span className="size-2 rounded-full bg-emerald-500" /> ✓ Hoàn thành (Lý thuyết, Flashcard, Sách, Game)
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-blue-500" /> Điểm TB: Chỉ tính trên Bài tập & Đọc hiểu
             </div>
           </div>
         </div>

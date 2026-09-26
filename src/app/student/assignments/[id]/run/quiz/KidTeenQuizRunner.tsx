@@ -24,12 +24,16 @@ import {
   Play,
   Clock,
   User,
+  Eye,
+  ArrowLeft,
+  Award,
 } from "lucide-react";
 
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LoginModal } from "@/components/LoginButton";
 import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 import { submitAssignmentReview } from "@/actions/reviews";
+import { completeSubmission } from "@/actions/submission-actions";
 import { toast } from "sonner";
 import { ReviewList } from "@/components/reviews/ReviewList";
 import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
@@ -607,6 +611,10 @@ interface Props {
   assignmentTranslationsPromise?: Promise<any>;
   isGuest?: boolean;
   cefrLevel?: string;
+  isReviewMode?: boolean;
+  submissionScore?: number | null;
+  isFromClass?: boolean;
+  autoStart?: boolean;
 }
 
 /** Resolves questionTranslationsPromise and renders ExplanationBlock with translations. 
@@ -795,6 +803,10 @@ export default function KidTeenQuizRunner({
   assignmentTranslationsPromise,
   isGuest = false,
   cefrLevel = "a1",
+  isReviewMode = false,
+  submissionScore = null,
+  isFromClass = false,
+  autoStart = false,
 }: Props) {
   const [activeQuestions, setActiveQuestions] = useState<any[]>(questions);
 
@@ -839,7 +851,27 @@ export default function KidTeenQuizRunner({
   const currentSegmentIndexRef = useRef<number>(0);
   const preloadedUrlsRef = useRef<string[]>([]);
   const preloadRequestIdRef = useRef<number>(0);
-  const [hasStarted, setHasStarted] = useState(false);
+  const isExerciseQuiz = !assignment?.materialType || assignment?.materialType === "EXERCISE";
+  const shouldShowReviewStartScreen = Boolean(isReviewMode && isExerciseQuiz);
+  const [hasStarted, setHasStarted] = useState(
+    autoStart ? true : (isReviewMode ? !shouldShowReviewStartScreen : false)
+  );
+
+  const handleStartReview = () => {
+    setHasStarted(true);
+    if (bgMusicRef.current && !isMuted) {
+      bgMusicRef.current.play().catch(() => {});
+    }
+  };
+
+  const handleBackToClass = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/student/classes");
+    }
+  };
+
   const [isHintPlaying, setIsHintPlaying] = useState(false);
   const [isTtsPlaying, setIsTtsPlaying] = useState(false);
   const [quizMode, setQuizMode] = useState<"practice" | "autoplay">("practice");
@@ -851,6 +883,12 @@ export default function KidTeenQuizRunner({
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+
+  useEffect(() => {
+    if (autoStart && bgMusicRef.current && !isMutedRef.current) {
+      bgMusicRef.current.play().catch(() => {});
+    }
+  }, [autoStart]);
 
   const handleStartQuiz = (mode: "practice" | "autoplay") => {
     setQuizMode(mode);
@@ -956,8 +994,67 @@ export default function KidTeenQuizRunner({
 
   // ── Core quiz state ──────────────────────────────────────
   const [answers, setAnswers] = useState(initialAnswers);
-  const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>({});
-  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
+  const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>(() => {
+    if (isReviewMode) {
+      const initialChecked: Record<string, boolean> = {};
+      (questions || []).forEach((q) => {
+        initialChecked[q.id] = true;
+      });
+      return initialChecked;
+    }
+    return {};
+  });
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>(() => {
+    if (isReviewMode) {
+      const initialExp: Record<string, boolean> = {};
+      (questions || []).forEach((q) => {
+        const status = getQuestionStatus(q, initialAnswers[q.id]);
+        if (status !== "correct") {
+          initialExp[q.id] = true;
+        }
+      });
+      return initialExp;
+    }
+    return {};
+  });
+
+  // Đồng bộ answers nếu initialAnswers thay đổi
+  useEffect(() => {
+    if (initialAnswers && Object.keys(initialAnswers).length > 0) {
+      setAnswers(initialAnswers);
+    }
+  }, [initialAnswers]);
+
+  // Cập nhật trạng thái review khi activeQuestions hoặc answers tải xong
+  useEffect(() => {
+    if (isReviewMode && activeQuestions && activeQuestions.length > 0) {
+      setCheckedQuestions((prev) => {
+        const next = { ...prev };
+        activeQuestions.forEach((q) => {
+          next[q.id] = true;
+        });
+        return next;
+      });
+      setExpandedExplanations((prev) => {
+        const next = { ...prev };
+        activeQuestions.forEach((q) => {
+          const status = getQuestionStatus(q, answers[q.id]);
+          if (status !== "correct") {
+            next[q.id] = true;
+          }
+        });
+        return next;
+      });
+      const correct = activeQuestions.filter((q) => getQuestionStatus(q, answers[q.id]) === "correct").length;
+      setScoreResult({ correct, total: activeQuestions.length });
+    }
+  }, [isReviewMode, activeQuestions, answers]);
+
+  const handleRetryAssignment = () => {
+    const identifier = assignment.slug || assignment.id;
+    const fromClassParam = isFromClass ? "&fromClass=true" : "";
+    router.push(`/student/assignments/${identifier}/run?direct=true&newAttempt=true${fromClassParam}`);
+  };
 
   // ── Kid/Teen navigation state ────────────────────────────
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -965,7 +1062,13 @@ export default function KidTeenQuizRunner({
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
   const [isAutoRevealing, setIsAutoRevealing] = useState(false);
-  const [scoreResult, setScoreResult] = useState<{ correct: number; total: number } | null>(null);
+  const [scoreResult, setScoreResult] = useState<{ correct: number; total: number } | null>(() => {
+    if (isReviewMode && questions && questions.length > 0) {
+      const correct = questions.filter((q) => getQuestionStatus(q, initialAnswers[q.id]) === "correct").length;
+      return { correct, total: questions.length };
+    }
+    return null;
+  });
   const [isShowingResultScreen, setIsShowingResultScreen] = useState(false);
 
   // ── Review state ─────────────────────────────────────────
@@ -1068,7 +1171,7 @@ export default function KidTeenQuizRunner({
 
   // ── Answer change ────────────────────────────────────────
   const handleAnswerChange = (q: any, value: any) => {
-    if (checkedQuestions[q.id]) return;
+    if (isReviewMode || checkedQuestions[q.id]) return;
 
     if (typeof window !== "undefined" && !isMuted) {
       const snd = new Audio("/sounds/click.wav");
@@ -1140,6 +1243,13 @@ export default function KidTeenQuizRunner({
         
         const correct = questions.filter((q) => getQuestionStatus(q, answers[q.id]) === "correct").length;
         setScoreResult({ correct, total: questions.length });
+
+        // Auto-complete and record submission in database if submissionId exists
+        if (submissionId) {
+          completeSubmission(submissionId, answers).catch((err) => {
+            console.error("Failed to auto-complete submission:", err);
+          });
+        }
 
         // Wait a brief moment after the last question is revealed before popping up the result screen
         setTimeout(() => {
@@ -1626,6 +1736,15 @@ export default function KidTeenQuizRunner({
           {/* Top colored strip */}
           <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500"></div>
 
+          {/* Close button (X) */}
+          <button
+            onClick={handleBackToClass}
+            className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
+            title="Đóng / Quay lại"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
           {/* Teacher avatar if available */}
           <div className="mb-6 flex justify-center">
             <React.Suspense fallback={<div className="w-20 h-20 rounded-full bg-purple-100 animate-pulse border-4 border-white shadow-md shrink-0" />}>
@@ -1633,54 +1752,123 @@ export default function KidTeenQuizRunner({
             </React.Suspense>
           </div>
 
-          <h4 className="text-purple-600 dark:text-purple-400 font-black text-xs uppercase tracking-[0.2em] mb-3">
-            ARE YOU READY?
-          </h4>
+          {shouldShowReviewStartScreen ? (
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-black text-xs uppercase tracking-widest mb-3 shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>BÀI TẬP ĐÃ HOÀN THÀNH</span>
+            </div>
+          ) : (
+            <h4 className="text-purple-600 dark:text-purple-400 font-black text-xs uppercase tracking-[0.2em] mb-3">
+              ARE YOU READY?
+            </h4>
+          )}
           
-          <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight uppercase italic mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight uppercase italic mb-4">
             {assignment.title || "QUIZ FOR LITTLE LEARNERS"}
           </h1>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 mb-8 text-slate-600 dark:text-slate-300 font-bold text-sm">
-            <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
-              <HelpCircle className="w-5 h-5 text-purple-500" />
-              {qCount} QUESTIONS
-            </div>
-            {assignment.timeLimit && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
-                <Clock className="w-5 h-5 text-purple-500" />
-                {assignment.timeLimit} MINUTES
+          {/* Previous result summary card (Gợi ý 1) */}
+          {shouldShowReviewStartScreen && (
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-6 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/60 to-sky-50/80 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-sky-950/40 border border-emerald-200/70 dark:border-emerald-800/50 shadow-xs w-full max-w-md">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 shadow-xs border border-emerald-100 dark:border-emerald-900/60">
+                <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Điểm:</span>
+                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                  {submissionScore !== null && submissionScore !== undefined
+                    ? `${Number(submissionScore.toFixed(1))} đ`
+                    : scoreResult
+                    ? `${Number(((scoreResult.correct / scoreResult.total) * 10).toFixed(1))} đ`
+                    : 'Đã nộp'}
+                </span>
               </div>
-            )}
-          </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center mt-4">
-            {/* Practice Mode Button */}
-            <button
-              onClick={() => handleStartQuiz("practice")}
-              className={`group relative px-8 py-4 w-full ${
-                assignment.lesson ? "sm:w-2/3" : "sm:w-1/2"
-              } rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200`}
-            >
-              <span className="flex items-center justify-center gap-2">
-                <Play className="w-5 h-5 fill-current text-purple-600" />
-                {assignment.lesson ? "Practice now" : "Practice Mode"}
-              </span>
-            </button>
+              {scoreResult && (
+                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 shadow-xs border border-teal-100 dark:border-teal-900/60">
+                  <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Đúng:</span>
+                  <span className="text-sm font-black text-teal-600 dark:text-teal-400">
+                    {scoreResult.correct}/{scoreResult.total} câu
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* Autoplay Mode Button (Only show if not linked to a lesson) */}
-            {!assignment.lesson && (
+          {!shouldShowReviewStartScreen && (
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-6 text-slate-600 dark:text-slate-300 font-bold text-sm">
+              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
+                <HelpCircle className="w-5 h-5 text-purple-500" />
+                {qCount} QUESTIONS
+              </div>
+              {assignment.timeLimit && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
+                  <Clock className="w-5 h-5 text-purple-500" />
+                  {assignment.timeLimit} MINUTES
+                </div>
+              )}
+            </div>
+          )}
+
+          {shouldShowReviewStartScreen ? (
+            /* 2 Action Buttons for Completed Exercise (Gợi ý 2) */
+            <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-lg justify-center mt-2">
+              {/* Review Button */}
               <button
-                onClick={() => handleStartQuiz("autoplay")}
-                className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                onClick={handleStartReview}
+                className="group relative px-6 py-4 w-full sm:w-1/2 rounded-3xl bg-white dark:bg-slate-800 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 border-2 border-emerald-500/40 hover:border-emerald-500 text-emerald-700 dark:text-emerald-300 font-black text-sm uppercase tracking-wider shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span>Review kết quả</span>
+              </button>
+
+              {/* Làm lại bài (Practise) Button */}
+              <button
+                onClick={handleRetryAssignment}
+                className="group relative px-6 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4 text-white group-hover:-rotate-90 transition-transform duration-300" />
+                <span>Làm lại (Practise)</span>
+              </button>
+            </div>
+          ) : (
+            /* Existing Start buttons when not yet completed */
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center mt-4">
+              {/* Practice Mode Button */}
+              <button
+                onClick={() => handleStartQuiz("practice")}
+                className={`group relative px-8 py-4 w-full ${
+                  (assignment.lesson || isFromClass) ? "sm:w-2/3" : "sm:w-1/2"
+                } rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200`}
               >
                 <span className="flex items-center justify-center gap-2">
-                  <Play className="w-5 h-5 fill-current text-white animate-pulse" />
-                  Autoplay Mode
+                  <Play className="w-5 h-5 fill-current text-purple-600" />
+                  {assignment.lesson ? "Practice now" : "Practice Mode"}
                 </span>
               </button>
-            )}
-          </div>
+
+              {/* Autoplay Mode Button (Only show if not linked to a lesson and NOT in class) */}
+              {!assignment.lesson && !isFromClass && (
+                <button
+                  onClick={() => handleStartQuiz("autoplay")}
+                  className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Play className="w-5 h-5 fill-current text-white animate-pulse" />
+                    Autoplay Mode
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Back to class link (Gợi ý 3) */}
+          <button
+            onClick={handleBackToClass}
+            className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors py-1 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Quay lại lớp học</span>
+          </button>
         </div>
       </div>
     );
@@ -1710,11 +1898,11 @@ export default function KidTeenQuizRunner({
       <SelectionTranslator />
       {/* ── MAIN CONTENT (Image Background) ── */}
       <div 
-        className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-44 lg:pt-6 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-44 lg:pt-16 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
         style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
-        {/* ── FLOATING TOP-LEFT CONTROLS (Logo & Mute Button) ── */}
-        <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2.5">
+        {/* ── FLOATING TOP-LEFT CONTROLS (Logo, Sound, Back & Retry) ── */}
+        <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2 sm:gap-2.5">
           {/* Dolcake Logo - về trang chủ */}
           <button
             onClick={() => router.push("/")}
@@ -1743,6 +1931,30 @@ export default function KidTeenQuizRunner({
               <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
             )}
           </button>
+
+          {/* Nút Về lớp học */}
+          {isFromClass && (
+            <button
+              onClick={handleBackToClass}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white/70 hover:bg-white text-slate-700 dark:text-slate-200 rounded-full border border-white/80 font-bold text-xs uppercase tracking-wider shadow-xs hover:shadow-md active:scale-95 transition-all cursor-pointer backdrop-blur-md"
+              title="Quay về lớp học"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0 text-slate-600 dark:text-slate-300" />
+              <span className="hidden sm:inline">Về lớp học</span>
+            </button>
+          )}
+
+          {/* Nút Làm lại bài - chỉ hiển thị khi đang Review */}
+          {isReviewMode && (
+            <button
+              onClick={handleRetryAssignment}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer"
+              title="Làm lại bài tập"
+            >
+              <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              <span>Làm lại</span>
+            </button>
+          )}
 
           <React.Suspense fallback={null}>
             <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
@@ -1943,7 +2155,7 @@ export default function KidTeenQuizRunner({
                   Review details
                 </button>
                 <button
-                  onClick={handleReset}
+                  onClick={handleRetryAssignment}
                   className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -2368,6 +2580,15 @@ export default function KidTeenQuizRunner({
                 >
                   <span className="hidden sm:inline">Next</span>
                   <ChevronRight className="w-5 h-5" />
+                </button>
+              ) : isReviewMode ? (
+                <button
+                  onClick={handleRetryAssignment}
+                  className="flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#9A89FF] bg-[#9A89FF] text-white hover:bg-[#8371f5] hover:border-[#8371f5] hover:text-white hover:shadow-lg active:scale-95 transition-all"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  <span className="hidden sm:inline">Làm lại bài</span>
+                  <span className="sm:hidden">Làm lại</span>
                 </button>
               ) : isAllChecked ? (
                 <button

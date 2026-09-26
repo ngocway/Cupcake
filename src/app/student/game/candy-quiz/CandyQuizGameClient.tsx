@@ -6,13 +6,31 @@ import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrappe
 import { GameStartOverlay } from "@/components/games/GameStartOverlay";
 import { getCandyQuizGameDetailsAction } from "@/actions/candy-quiz-actions";
 
+import { completeClassActivityAction } from "@/actions/activity-completion-actions";
+
 function CandyQuizGameContent() {
   const searchParams = useSearchParams();
   const topicId = searchParams.get("topicId");
+  const assignmentId = searchParams.get("assignmentId");
   const [isLoading, setIsLoading] = useState(true);
   const [isStarted, setIsStarted] = useState(false);
   const [topicTitle, setTopicTitle] = useState("Trắc nghiệm Kẹo Ngọt");
   const [questionCount, setQuestionCount] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "CANDY_GAME_PROGRESS" || event.data?.type === "GAME_PROGRESS") {
+        const { isPass, accuracy } = event.data;
+        if (assignmentId && (isPass || (typeof accuracy === "number" && accuracy >= 0.8))) {
+          completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+            console.error("Failed to complete candy game activity:", err);
+          });
+        }
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [assignmentId]);
 
   useEffect(() => {
     if (!topicId) return;

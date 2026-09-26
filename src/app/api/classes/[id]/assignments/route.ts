@@ -8,14 +8,18 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'TEACHER') {
+    const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+    if (!session || !isTeacher) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: classId } = await params;
 
     const cls = await prisma.class.findFirst({
-      where: { id: classId, teacherId: session.user.id },
+      where: { 
+        id: classId, 
+        ...(session.user.role === 'ADMIN' ? {} : { teacherId: session.user.id }) 
+      },
     });
 
     if (!cls) {
@@ -34,6 +38,7 @@ export async function GET(
         assignment: { deletedAt: null }
       },
       include: {
+        group: true,
         assignment: {
           include: {
             _count: {
@@ -59,16 +64,30 @@ export async function GET(
         ? Math.round((submittedCount / totalStudents) * 100)
         : 0;
 
+      let section: 'NEW' | 'REVIEW' = 'NEW';
+      if (a.instructions) {
+        try {
+          const meta = JSON.parse(a.instructions);
+          if (meta.section === 'REVIEW') section = 'REVIEW';
+        } catch {}
+      }
+
       return {
         id: a.id,
         title: a.title,
         materialType: a.materialType,
+        level: a.level,
+        instructions: a.instructions,
         deadline: a.deadline,
         isOpen,
         submittedCount,
         totalStudents,
         percentage,
         assignedAt: ac.assignedAt,
+        groupId: ac.groupId,
+        groupTitle: ac.group?.title || null,
+        groupCreatedAt: ac.group?.createdAt || null,
+        section,
       };
     });
 

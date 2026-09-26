@@ -7,7 +7,8 @@ export const getLessonBasic = cache(async (id: string) => {
   return fetchWithRedis(`lesson:basic:${id}`, 300, async () => {
     return prisma.lesson.findFirst({
       where: {
-        OR: [{ id }, { slug: id }]
+        // Accept: Lesson.id, Lesson.slug, OR the linked Assignment.id
+        OR: [{ id }, { slug: id }, { assignmentId: id }]
       },
       select: {
         id: true,

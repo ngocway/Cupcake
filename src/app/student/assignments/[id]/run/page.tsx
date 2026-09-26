@@ -92,6 +92,15 @@ async function SubmissionHistoryWrapper({
                     </p>
                   </div>
                 </div>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/student/assignments/${slug}/run/quiz?submissionId=${sub.id}&review=true`}
+                    className="px-4 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-2 transition-all shadow-sm"
+                  >
+                    <span>Xem lại chi tiết</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                </div>
               </div>
             )
           })}
@@ -115,9 +124,9 @@ export default async function StudentAssignmentLobbyPage({
   searchParams
 }: { 
   params: Promise<{ id: string }>,
-  searchParams: Promise<{ direct?: string }>
+  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; review?: string }>
 }) {
-  const [sessionData, { id: paramsId }, { direct }] = await Promise.all([
+  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, review }] = await Promise.all([
     auth(),
     params,
     searchParams
@@ -137,7 +146,7 @@ export default async function StudentAssignmentLobbyPage({
         id: true,
         submittedAt: true,
         attemptNumber: true,
-        answers: { select: { isCorrect: true } }  // Included here so SubmissionHistoryWrapper doesn't need to re-fetch
+        answers: { select: { isCorrect: true } }
       },
       orderBy: { attemptNumber: 'desc' }
     }),
@@ -151,9 +160,37 @@ export default async function StudentAssignmentLobbyPage({
   }
   const assignment = rawAssignment;
   
-  // Canonical redirect
-  if (id === assignment.id && assignment.slug && id !== assignment.slug) {
-    redirect(`/student/assignments/${assignment.slug}/run`);
+  // If assignment is a wrapper for Game / Book / Flashcard, redirect directly to playUrl
+  if (assignment.instructions) {
+    try {
+      const meta = JSON.parse(assignment.instructions);
+      if (meta?.playUrl) {
+        const separator = meta.playUrl.includes('?') ? '&' : '?';
+        const urlWithAssignment = meta.playUrl.includes('assignmentId=')
+          ? meta.playUrl
+          : `${meta.playUrl}${separator}assignmentId=${assignment.id}`;
+        redirect(urlWithAssignment);
+      }
+    } catch {}
+  }
+
+  // Detect whether this is for a student in class
+  let isFromClass = fromClass === "true" || !!classId;
+  if (!isFromClass) {
+    const assignedClass = await prisma.assignmentClass.findFirst({
+      where: {
+        assignmentId: assignment.id,
+        class: {
+          enrollments: {
+            some: { studentId: userId, status: "ACTIVE" }
+          }
+        }
+      },
+      select: { classId: true }
+    });
+    if (assignedClass) {
+      isFromClass = true;
+    }
   }
 
   const activeSubmission = allSubmissions.find(s => !s.submittedAt);
@@ -165,11 +202,11 @@ export default async function StudentAssignmentLobbyPage({
   const totalQuestions = assignment._count.questions;
   const maxScore = assignment.defaultPoints * totalQuestions;
 
-  // ── Always go directly to quiz (no lobby) ONLY if direct === "true" and attempts are left
   const identifier = assignment.slug || assignment.id;
-  if (activeSubmission) {
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
-  } else if (direct === "true" && hasAttemptsLeft && !isDeadlinePassed) {
+  const fromClassQuery = isFromClass ? "&fromClass=true" : "";
+
+  // 1. Khi bấm "Làm lại" (newAttempt === "true"): Luôn tạo lượt làm mới không giới hạn số lần
+  if (newAttempt === "true") {
     const nextAttemptNumber = completedCount + 1;
     const newSubmission = await prisma.submission.create({
       data: {
@@ -178,8 +215,44 @@ export default async function StudentAssignmentLobbyPage({
         attemptNumber: nextAttemptNumber
       }
     });
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}&autoStart=true`);
   }
+
+  // 2. Nếu đã hoàn thành bài (có completedSubmissions):
+  // Ưu tiên xem lại nếu:
+  // - URL có review === "true" (bấm từ thẻ lớp học đã làm)
+  // - HOẶC activeSubmission rỗng không có câu trả lời nào (do bấm làm lại rồi thoát ra)
+  const hasSubstantiveActive = Boolean(activeSubmission && activeSubmission.answers && activeSubmission.answers.length > 0);
+
+  if (completedSubmissions.length > 0 && (review === "true" || !hasSubstantiveActive)) {
+    // Dọn dẹp activeSubmission rỗng nếu có để không để lại rác trong DB
+    if (activeSubmission && (!activeSubmission.answers || activeSubmission.answers.length === 0)) {
+      try {
+        await prisma.submission.delete({ where: { id: activeSubmission.id } });
+      } catch {}
+    }
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}`);
+  }
+
+  // 3. Nếu có bài đang làm dở thực sự (đã trả lời ít nhất 1 câu): tiếp tục làm
+  if (activeSubmission) {
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}${fromClassQuery}`);
+  }
+
+  // 4. Fallback bài đã làm xong: Vào thẳng xem lại
+  if (completedSubmissions.length > 0) {
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}`);
+  }
+
+  // 4. Nếu chưa từng làm: Tạo bài làm lần 1 và vào thẳng trang quiz (có popup "ARE YOU READY?" với nút Practice Mode)!
+  const newSubmission = await prisma.submission.create({
+    data: {
+      assignmentId: assignment.id,
+      studentId: userId,
+      attemptNumber: 1
+    }
+  });
+  redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}`);
   const dateLocale = locale === "vi" ? vi : enUS;
 
   const _lobbyNormalizedLevel = (assignment.level || "").toLowerCase().split(",")[0].trim();
@@ -293,12 +366,8 @@ export default async function StudentAssignmentLobbyPage({
              <div className="flex flex-col items-center">
                 {activeSubmission ? (
                   <StartButton assignmentId={assignment.id} label={t("continue")} />
-                ) : (hasAttemptsLeft && !isDeadlinePassed) ? (
-                  <StartButton assignmentId={assignment.id} label={completedCount > 0 ? t("retry") : t("start")} />
                 ) : (
-                  <div className="px-10 py-3 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-xl font-black text-sm tracking-widest uppercase italic border border-slate-200/50 dark:border-slate-700/50 opacity-50 shadow-sm">
-                      {t("locked")}
-                  </div>
+                  <StartButton assignmentId={assignment.id} label={completedCount > 0 ? (t("retry") || "Làm lại") : (t("start") || "Bắt đầu")} />
                 )}
              </div>
           </div>

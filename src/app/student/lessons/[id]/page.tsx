@@ -20,6 +20,10 @@ import { LearningSidebar } from "@/app/student/_components/LearningSidebar";
 import { InlineReviewForm } from "./_components/InlineReviewForm";
 import { KeyVocabularyWidget, VocabItem } from "./_components/KeyVocabularyWidget";
 import dynamic from 'next/dynamic';
+import { cache } from 'react';
+
+// Cache auth() per request so multiple Suspense wrappers share one session lookup
+const getSession = cache(() => auth());
 
 const InteractiveReadingContent = dynamic(
   () => import('@/components/common/InteractiveReadingContent').then(mod => mod.InteractiveReadingContent),
@@ -40,7 +44,7 @@ async function LessonQuestionsSectionWrapper({ lessonId }: { lessonId: string })
   const data = await getLessonInlineQuestions(lessonId);
   if (!data || !data.questions || data.questions.length === 0) return null;
 
-  const session = await auth();
+  const session = await getSession();
   const isLoggedIn = !!session?.user?.id;
 
   return (
@@ -90,7 +94,7 @@ async function ReadingContentWrapper({ lessonId }: { lessonId: string }) {
 }
 
 async function ReviewsWrapper({ lessonId }: { lessonId: string }) {
-  const sessionData = await auth();
+  const sessionData = await getSession();
   const isLoggedIn = !!sessionData?.user?.id;
   const t = await getTranslations("student.lessonDetail");
   const reviews = await getLessonReviews(lessonId);
@@ -205,7 +209,7 @@ async function SidebarWrapper({ teacherId, lessonId }: { teacherId: string | nul
 }
 
 async function LessonActionsWrapper({ lessonId }: { lessonId: string }) {
-  const sessionData = await auth();
+  const sessionData = await getSession();
   const studentId = sessionData?.user?.id || "";
   
   let isBookmarked = false;
@@ -375,7 +379,7 @@ async function KeyVocabularyWrapper({ lessonId }: { lessonId: string }) {
 }
 
 async function LessonVideoPlayerWrapper({ lesson }: { lesson: any }) {
-  const sessionData = await auth();
+  const sessionData = await getSession();
   const studentId = sessionData?.user?.id || "";
 
   const getYoutubeId = (url: string | null) => {
@@ -399,14 +403,20 @@ async function LessonVideoPlayerWrapper({ lesson }: { lesson: any }) {
   );
 }
 
+import { LessonReadingTracker } from "@/components/lessons/LessonReadingTracker";
+
 // --- Main Page Component ---
 
 export default async function StudentLessonDetailPage({ 
-  params 
+  params,
+  searchParams,
 }: { 
-  params: Promise<{ id: string }> 
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ assignmentId?: string }>;
 }) {
   const { id } = await params;
+  const sParams = searchParams ? await searchParams : undefined;
+  const session = await getSession();
 
   const [lesson, t] = await Promise.all([
     getLessonBasic(id),
@@ -419,8 +429,22 @@ export default async function StudentLessonDetailPage({
     redirect(`/student/lessons/${lesson.slug}`);
   }
 
+  const assignmentId = sParams?.assignmentId || lesson.assignment?.id;
+  const isAlreadyCompleted = session?.user?.id && assignmentId
+    ? !!(await prisma.submission.findFirst({
+        where: { assignmentId, studentId: session.user.id, submittedAt: { not: null } },
+        select: { id: true },
+      }))
+    : false;
+
   return (
     <div className="min-h-screen font-body relative">
+      <Suspense fallback={null}>
+        <LessonReadingTracker
+          assignmentId={assignmentId}
+          initialCompleted={isAlreadyCompleted}
+        />
+      </Suspense>
 
       {/* ===== 3-column layout ===== */}
       <div className="relative pt-10 pb-16">

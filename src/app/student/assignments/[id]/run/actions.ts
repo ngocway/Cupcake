@@ -34,7 +34,7 @@ export async function startOrResumeAttempt(assignmentId: string) {
     redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}`);
   }
 
-  // Create new submission
+  // Create new submission (allow unlimited retry without max attempts limit)
   const completedCount = await prisma.submission.count({
     where: {
       assignmentId: assignment.id,
@@ -42,10 +42,6 @@ export async function startOrResumeAttempt(assignmentId: string) {
       submittedAt: { not: null }
     }
   });
-
-  if (completedCount >= assignment.maxAttempts) {
-    throw new Error("Maximum attempts reached.");
-  }
 
   const newSubmission = await prisma.submission.create({
     data: {

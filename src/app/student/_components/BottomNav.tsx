@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, BookOpen, ClipboardList, Users, TrendingUp } from 'lucide-react'
+import { BookOpen, ClipboardList, Bookmark, TrendingUp, GraduationCap } from 'lucide-react'
 
 const AUTH_PATHS = ['/student/login', '/student/signup', '/join']
 
@@ -19,22 +19,30 @@ interface BottomNavProps {
 export function BottomNav({ labels }: BottomNavProps) {
   const pathname = usePathname()
 
-  // Only show BottomNav on the student dashboard (home) page
-  const isDashboard = pathname === '/student/dashboard' || pathname === '/student'
-  if (!isDashboard) return null
+  // Only show BottomNav on main student portal pages (hide during quiz/game/run)
+  const isExcluded = pathname?.includes('/run') || pathname?.includes('/play') || pathname?.includes('/quiz') || pathname?.includes('/login') || pathname?.includes('/signup')
+  if (isExcluded) return null
+
+  const isVisible = pathname === '/student/classes' || pathname?.startsWith('/student/classes') ||
+                    pathname === '/student/dashboard' || pathname === '/student' ||
+                    pathname === '/student/lessons' || pathname?.startsWith('/student/lessons') ||
+                    pathname === '/student/assignments' || pathname?.startsWith('/student/assignments') ||
+                    pathname === '/student/bookmarks' || pathname === '/student/growth'
+
+  if (!isVisible) return null
 
   const navItems = [
-    { href: '/student/dashboard', icon: LayoutDashboard, label: labels.dash, strokeWidth: 2.5 },
+    { href: '/student/classes', icon: GraduationCap, label: 'Class', strokeWidth: 2.5 },
     { href: '/student/lessons', icon: BookOpen, label: labels.lessons, strokeWidth: 2 },
     { href: '/student/assignments', icon: ClipboardList, label: labels.work, strokeWidth: 2 },
-    { href: '/student/classes', icon: Users, label: labels.class, strokeWidth: 2 },
+    { href: '/student/bookmarks', icon: Bookmark, label: 'Đã lưu', strokeWidth: 2 },
     { href: '/student/growth', icon: TrendingUp, label: labels.growth, strokeWidth: 2 },
   ]
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center py-2 md:hidden z-50">
       {navItems.map((item) => {
-        const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+        const isActive = pathname === item.href || (item.href !== '/student' && pathname?.startsWith(item.href))
         const Icon = item.icon
         return (
           <Link

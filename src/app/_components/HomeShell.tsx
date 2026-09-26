@@ -82,7 +82,8 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
           id: session.user.id!,
           name: session.user.name ?? null,
           image: session.user.image ?? null,
-          role: (session.user as any).role ?? null
+          role: (session.user as any).role ?? null,
+          email: session.user.email ?? null,
         } : null}
         search={searchParams.get("search") || ""}
         setSearch={setSearch}

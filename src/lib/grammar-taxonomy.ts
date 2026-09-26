@@ -384,3 +384,186 @@ export function normalizeLevelId(raw: string | null | undefined): CefrLevel | nu
   if (first === "c1") return "c1";
   return null;
 }
+
+/**
+ * Short grammar formula / pattern for each lesson.
+ * Used in the ExerciseGrid grammar banner to give students a quick preview
+ * of the key rule before they start practicing.
+ */
+export const LESSON_FORMULAS: Record<string, string> = {
+  // ── Tenses ────────────────────────────────────────────────────────────────
+  "present-simple":             "S + V / V-s/es",
+  "present-continuous":         "S + am/is/are + V-ing",
+  "past-simple":                "S + V2 (did)",
+  "future-simple-will":         "S + will + V",
+  "be-going-to":                "S + am/is/are going to + V",
+  "past-continuous":            "S + was/were + V-ing",
+  "present-perfect":            "S + have/has + V3",
+  "present-perfect-continuous": "S + have/has been + V-ing",
+  "past-perfect":               "S + had + V3",
+  "future-continuous":          "S + will be + V-ing",
+  "past-perfect-continuous":    "S + had been + V-ing",
+  "future-perfect":             "S + will have + V3",
+  "future-perfect-continuous":  "S + will have been + V-ing",
+  "tenses-review":              "All tenses",
+
+  // ── Nouns ─────────────────────────────────────────────────────────────────
+  "singular-plural-nouns":      "cat → cats / box → boxes",
+  "countable-uncountable-nouns":"a/an + countable noun",
+  "proper-common-nouns":        "London (proper) / city (common)",
+  "collective-nouns":           "a team of / a flock of",
+  "possessive-nouns":           "John's book / the dog's tail",
+
+  // ── Pronouns ──────────────────────────────────────────────────────────────
+  "personal-pronouns":      "I, you, he, she, it, we, they",
+  "object-pronouns":        "me, you, him, her, it, us, them",
+  "possessive-pronouns":    "mine, yours, his, hers, ours",
+  "demonstrative-pronouns": "this / that / these / those",
+  "reflexive-pronouns":     "myself, yourself, himself...",
+  "indefinite-pronouns":    "someone, nothing, everywhere...",
+  "relative-pronouns":      "who, which, that, whose, whom",
+
+  // ── Articles & Determiners ────────────────────────────────────────────────
+  "a-an-the":                 "a cat / an apple / the sun",
+  "zero-article":             "I like music (no article)",
+  "this-that-these-those":    "this/that + singular noun",
+  "each-every":               "each/every + singular noun",
+  "either-neither":           "either...or / neither...nor",
+  "both":                     "both + plural noun / both...and",
+  "another-other-others":     "another / the other / others",
+
+  // ── Quantifiers ───────────────────────────────────────────────────────────
+  "some-any":           "some (affirmative) / any (negative/question)",
+  "much-many":          "much + uncountable / many + countable",
+  "few-a-few":          "few (almost none) / a few (some)",
+  "little-a-little":    "little (almost none) / a little (some)",
+  "a-lot-of-plenty-of": "a lot of / plenty of + noun",
+  "enough":             "enough + noun / adj + enough",
+  "too-much-too-many":  "too much + uncountable / too many + countable",
+
+  // ── Adjectives ────────────────────────────────────────────────────────────
+  "basic-adjectives":       "a big/small/happy... noun",
+  "position-of-adjectives": "adj + noun / noun + be + adj",
+  "order-of-adjectives":    "size → color → material → noun",
+  "participial-adjectives": "-ing (boring) / -ed (bored)",
+
+  // ── Adverbs ───────────────────────────────────────────────────────────────
+  "adverbs-frequency": "always / usually / often / never",
+  "adverbs-time":      "yesterday, now, soon, already",
+  "adverbs-place":     "here, there, inside, outside",
+  "adverbs-manner":    "adj + -ly → quickly, slowly",
+  "adverbs-degree":    "very / quite / too / enough",
+  "sentence-adverbs":  "Fortunately, / Clearly, ...",
+
+  // ── Comparison ────────────────────────────────────────────────────────────
+  "comparative":       "adj-er / more + adj + than",
+  "superlative":       "the + adj-est / the most + adj",
+  "as-as":             "as + adj + as",
+  "less-than":         "less + adj + than",
+  "the-more-the-more": "The more..., the more...",
+
+  // ── Verbs ─────────────────────────────────────────────────────────────────
+  "be-verb":              "am / is / are (+ complement)",
+  "action-verbs":         "run, jump, eat, write...",
+  "stative-verbs":        "know, like, believe (no -ing!)",
+  "verb-forms":           "V1 / V2 / V3 / V-ing",
+  "gerunds":              "V-ing as subject / object",
+  "infinitives":          "to + V (purpose / after adj)",
+  "gerunds-vs-infinitives":"enjoy + V-ing / want + to V",
+  "verb-patterns":        "V + obj + to V / V + that...",
+
+  // ── Modal Verbs ───────────────────────────────────────────────────────────
+  "can-cant":   "S + can / can't + V",
+  "could":      "S + could + V (past / polite)",
+  "should":     "S + should + V (advice)",
+  "must":       "S + must + V (obligation)",
+  "have-to":    "S + have to / has to + V",
+  "may-might":  "S + may / might + V (possibility)",
+  "would":      "S + would + V (conditional / polite)",
+  "need-neednt":"S + need / needn't + V",
+  "used-to":    "S + used to + V (past habit)",
+  "be-able-to": "S + am/is/are able to + V",
+  "ought-to":   "S + ought to + V (moral duty)",
+  "shall":      "S + shall + V (offer / suggestion)",
+
+  // ── Sentence Structure ────────────────────────────────────────────────────
+  "basic-sentence-structure": "S + V + O",
+  "there-is-there-are":       "There is + singular / There are + plural",
+  "word-order":               "S + V + O + Place + Time",
+  "subject-object":           "S (does) → V → O (receives)",
+  "sentence-types":           "declarative / interrogative / imperative",
+  "dummy-subject":            "It is + adj / There is + N",
+
+  // ── Questions ─────────────────────────────────────────────────────────────
+  "yes-no-questions":           "Do/Does/Did + S + V?",
+  "wh-questions":               "WH + aux + S + V?",
+  "question-tags":              "S + V, don't/isn't it?",
+  "indirect-questions":         "Can you tell me where S + V?",
+  "subject-questions":          "Who/What + V? (no do/does)",
+  "questions-with-prepositions":"Who with? / What for?",
+
+  // ── Negatives ────────────────────────────────────────────────────────────
+  "basic-negatives":  "S + don't/doesn't/didn't + V",
+  "double-negatives": "NOT: I didn't do nothing",
+
+  // ── Passive Voice ─────────────────────────────────────────────────────────
+  "passive-present-past": "S + is/are/was/were + V3",
+  "passive-all-tenses":   "S + be (any tense) + V3",
+
+  // ── Reported Speech ───────────────────────────────────────────────────────
+  "reported-statements": "He said (that) + S + V (backshift)",
+  "reported-questions":  "She asked if/what + S + V",
+  "reported-commands":   "He told me to + V",
+  "reporting-verbs":     "say, tell, ask, warn, suggest...",
+
+  // ── Conditionals ─────────────────────────────────────────────────────────
+  "zero-conditional":   "If + V, ... V (general truth)",
+  "first-conditional":  "If + V, ... will + V",
+  "second-conditional": "If + V2, ... would + V",
+  "third-conditional":  "If + had + V3, ... would have + V3",
+  "mixed-conditionals": "If + had + V3, ... would + V",
+
+  // ── Wish & Unreal ─────────────────────────────────────────────────────────
+  "wish":        "I wish + S + V2 / had + V3",
+  "if-only":     "If only + S + V2 (regret)",
+  "would-rather":"S + would rather + V (than V)",
+  "its-time":    "It's time + S + V2",
+
+  // ── Clauses ───────────────────────────────────────────────────────────────
+  "relative-clauses":         "N + who/which/that + V",
+  "noun-clauses":             "...that + S + V",
+  "adverb-clauses":           "when/because/if/although + S + V",
+  "reduced-relative-clauses": "N + V-ing / N + V3",
+  "participle-clauses":       "V-ing / V3, + main clause",
+
+  // ── Prepositions ──────────────────────────────────────────────────────────
+  "prepositions-time":     "at + time / on + day / in + month",
+  "prepositions-place":    "in / on / at (location)",
+  "prepositions-movement": "to, from, through, past, along",
+  "common-prepositions":   "in, on, at, by, for, with, of",
+
+  // ── Conjunctions ─────────────────────────────────────────────────────────
+  "and-but-or":           "A and B / A but B / A or B",
+  "because-so":           "because + reason / so + result",
+  "although-since-while": "Although S + V, S + V",
+  "therefore-however":    "...; however, / therefore, ...",
+  "moreover-in-addition": "Moreover, / In addition, / Consequently,",
+
+  // ── Subject–Verb Agreement ────────────────────────────────────────────────
+  "basic-agreement":       "He work-s / They work",
+  "either-or-neither-nor": "Either A or B + V (agree with B)",
+
+  // ── Advanced Grammar ─────────────────────────────────────────────────────
+  "inversion":       "Never had I seen...",
+  "cleft-sentences": "It is X that / what...",
+  "ellipsis":        "She can [do it], and he can too",
+  "subjunctive":     "I suggest he be... / If I were...",
+  "nominalisation":  "achieve → achievement",
+
+  // ── Writing Rules ─────────────────────────────────────────────────────────
+  "capitalization":     "London, Monday, English (proper nouns)",
+  "numbers-dates":      "5th May 2024 / twenty-one",
+  "basic-punctuation":  ". , ! ? : ; — (basic marks)",
+  "advanced-punctuation":"— ; \" \" ' ' (advanced marks)",
+};
+

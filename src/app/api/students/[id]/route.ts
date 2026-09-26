@@ -15,7 +15,8 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'TEACHER') {
+    const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+    if (!session || !isTeacher) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -63,7 +64,8 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'TEACHER') {
+    const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+    if (!session || !isTeacher) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

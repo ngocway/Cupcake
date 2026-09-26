@@ -10,10 +10,10 @@ export default async function StudentQuizPage({
   searchParams,
   params
 }: {
-  searchParams: Promise<{ submissionId: string }>;
+  searchParams: Promise<{ submissionId: string; review?: string; fromClass?: string; classId?: string; autoStart?: string }>;
   params: Promise<{ id: string }>;
 }) {
-  const [session, { submissionId }, { id: paramsId }] = await Promise.all([
+  const [session, { submissionId, review, fromClass, classId, autoStart }, { id: paramsId }] = await Promise.all([
     auth(),
     searchParams,
     params
@@ -36,11 +36,13 @@ export default async function StudentQuizPage({
           slug: true,
           tags: true,
           level: true,
+          materialType: true,
           grammarLesson: true,
           targetAudiences: true,
           lesson: { select: { id: true, targetAudiences: true } }
         }
-      }
+      },
+      answers: true
     }
   });
 
@@ -49,10 +51,39 @@ export default async function StudentQuizPage({
   }
 
   const assignmentCore = submission.assignment;
+  const isReviewMode = Boolean(submission.submittedAt || review === "true");
 
-  if (submission.submittedAt) {
-    const identifier = assignmentCore.slug || assignmentCore.id;
-    redirect(`/student/assignments/${identifier}/run`);
+  let isFromClass = fromClass === "true" || !!classId;
+  if (!isFromClass && userId) {
+    const assignedClass = await prisma.assignmentClass.findFirst({
+      where: {
+        assignmentId: assignmentCore.id,
+        class: {
+          enrollments: {
+            some: { studentId: userId, status: "ACTIVE" }
+          }
+        }
+      },
+      select: { classId: true }
+    });
+    if (assignedClass) {
+      isFromClass = true;
+    }
+  }
+
+  let initialAnswers: any = {};
+  if (submission.answers && submission.answers.length > 0) {
+    submission.answers.forEach((ans) => {
+      try {
+        initialAnswers[ans.questionId] = JSON.parse(ans.studentAnswer);
+      } catch {
+        initialAnswers[ans.questionId] = ans.studentAnswer;
+      }
+    });
+  } else if (submission.answersDraft) {
+    try {
+      initialAnswers = JSON.parse(submission.answersDraft as string);
+    } catch {}
   }
 
   // Luồng 2: Tải ngầm dữ liệu phụ (Teacher, Lesson, Nội dung đọc hiểu, Hướng dẫn...)
@@ -117,12 +148,16 @@ export default async function StudentQuizPage({
           submissionId={submissionId}
           questions={questions}
           cefrLevel={assignmentCore.level || "a1"}
-          initialAnswers={submission.answersDraft ? JSON.parse(submission.answersDraft as string) : {}}
+          initialAnswers={initialAnswers}
           extraDataPromise={resolvedExtraDataPromise}
           relatedAssignmentsPromise={relatedAssignmentsPromise}
           questionTranslationsPromise={questionTranslationsPromise}
           assignmentTranslationsPromise={assignmentTranslationsPromise}
           isGuest={!userId}
+          isReviewMode={isReviewMode}
+          submissionScore={submission.score}
+          isFromClass={isFromClass}
+          autoStart={autoStart === "true"}
        />
     </div>
   );

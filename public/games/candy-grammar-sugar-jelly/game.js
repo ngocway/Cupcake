@@ -95,6 +95,10 @@ const DEFAULT_GAME_DATA = [
   };
   let audioCtx = null;
   let autoAdvanceTimer = null;
+  let totalGameQuestions = 0;
+  gameRounds.forEach(r => { totalGameQuestions += (r.questions?.length || 0); });
+  let correctFirstTryCount = 0;
+  let currentQuestionAttempts = 0;
 
   function resizeCanvas() {
     if (!fireworksCanvas) return;
@@ -582,6 +586,9 @@ const DEFAULT_GAME_DATA = [
 
     if (idx === q.correct) {
       state.locked = true;
+      if (currentQuestionAttempts === 0) {
+        correctFirstTryCount++;
+      }
       card.classList.add('sugar-correct');
       cards.forEach(c => {
         c.disabled = true;
@@ -613,6 +620,7 @@ const DEFAULT_GAME_DATA = [
         }, 720);
       }
     } else {
+      currentQuestionAttempts++;
       state.locked = true;
       card.disabled = true;
       card.classList.add('jelly-wrong');
@@ -658,7 +666,23 @@ const DEFAULT_GAME_DATA = [
         correctSound();
         triggerFireworks(5000);
       }
+
+      // Post progress to parent container (checking for >= 80% correct)
+      try {
+        const accuracy = totalGameQuestions > 0 ? (correctFirstTryCount / totalGameQuestions) : 0;
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'CANDY_GAME_PROGRESS',
+            correctCount: correctFirstTryCount,
+            totalCount: totalGameQuestions,
+            accuracy: accuracy,
+            isPass: accuracy >= 0.8,
+            isAllComplete: state.roundIdx + 1 >= gameRounds.length
+          }, '*');
+        }
+      } catch (err) {}
     }
+    currentQuestionAttempts = 0;
   }
 
   function handleNextRound() {

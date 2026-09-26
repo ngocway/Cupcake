@@ -1,537 +1,193 @@
-"use client";
+import { notFound, redirect } from 'next/navigation';
+import { Suspense } from 'react';
+import { auth } from '@/auth';
+import prisma from '@/lib/prisma';
+import ClassDashboardClient, { type Student } from './_components/ClassDashboardClient';
+import type { Assignment } from './_components/AssignmentsTab';
+import ClassDetailLoading from './loading';
 
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { AddStudentModal } from './_components/AddStudentModal';
-import { StudentUpdateModal } from './_components/StudentUpdateModal';
-import { StudentNoteModal } from './_components/StudentNoteModal';
-import { ClassQRModal } from './_components/ClassQRModal';
-import { AssignmentsTab } from './_components/AssignmentsTab';
-import { GradesTab } from './_components/GradesTab';
-import { ClassFeedTab } from './_components/ClassFeedTab';
-import { updateEnrollmentStatus, removeEnrollment, bulkUpdateEnrollments, bulkRemoveEnrollments, toggleClassJoinability } from './actions';
-
-type Student = {
-  id: string;
-  name: string;
-  email: string;
-  status: string;
-  isManagedAccount: boolean;
-  pin?: string;
-  notes: string;
-};
-
-export default function ClassDashboard() {
-  const params = useParams();
-  const classId = params.id as string;
-
-  const [students, setStudents] = useState<Student[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [className, setClassName] = useState('Lớp học');
-  const [activeTab, setActiveTab] = useState<'feed' | 'students' | 'assignments' | 'grades'>('feed');
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Modal states
-  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
-  const [selectedStudentForUpdate, setSelectedStudentForUpdate] = useState<Student | null>(null);
-  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-  const [selectedStudentForNote, setSelectedStudentForNote] = useState<Student | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
-  const [openAssignmentCount, setOpenAssignmentCount] = useState(0);
-
-  // New states for Join Requests features
-  const [isJoinable, setIsJoinable] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  const handleCopyJoinLink = async () => {
-    const url = `${window.location.origin}/join/${joinCode}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch {
-      /* fallback: select input */ 
+async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    if (retries > 0 && (err?.message?.includes("Can't reach database") || err?.code === 'P1001' || err?.code === 'P2024')) {
+      console.warn(`[ClassPage] Database connection retry (${retries} left)...`);
+      await new Promise(r => setTimeout(r, 600));
+      return fetchWithRetry(fn, retries - 1);
     }
-  };
+    throw err;
+  }
+}
 
-  // Join code from DB
-  const [joinCode, setJoinCode] = useState('...');
-
-  const fetchStudents = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`/api/classes/${classId}/students`);
-      if (res.ok) {
-        const data = await res.json();
-        setStudents(data.students ?? []);
-        setJoinCode(data.class?.joinCode ?? '');
-        setClassName(data.class?.name ?? 'Lớp học');
-        if (data.class?.isJoinable !== undefined) {
-          setIsJoinable(data.class.isJoinable);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load students', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStudents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId]);
-
-  const toggleStudent = (id: string) => {
-    setSelectedStudents(prev => 
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
-  };
-
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchTerm.toLowerCase())
+async function ClassDashboardContent({
+  classId,
+  isTeacherAdmin,
+  teacherId,
+}: {
+  classId: string;
+  isTeacherAdmin: boolean;
+  teacherId: string;
+}) {
+  // Parallel server-side fetch (SSR) with automatic retry resilience
+  const [cls, enrollments, assignmentClasses, submissionCounts] = await fetchWithRetry(() =>
+    Promise.all([
+      // 1. Basic class info
+      prisma.class.findFirst({
+        where: {
+          id: classId,
+          ...(isTeacherAdmin ? {} : { teacherId }),
+        },
+        select: { id: true, name: true, joinCode: true, isJoinable: true, teacherId: true },
+      }),
+      // 2. Enrolled students
+      prisma.classEnrollment.findMany({
+        where: { classId },
+        select: {
+          status: true,
+          notes: true,
+          joinedAt: true,
+          student: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              isManagedAccount: true,
+              password: true,
+            },
+          },
+        },
+        orderBy: { joinedAt: 'asc' },
+      }),
+      // 3. Assignments (no heavy _count sub-query here)
+      prisma.assignmentClass.findMany({
+        where: { classId },
+        select: {
+          assignedAt: true,
+          groupId: true,
+          group: { select: { title: true, createdAt: true } },
+          assignment: {
+            select: {
+              id: true,
+              title: true,
+              materialType: true,
+              level: true,
+              instructions: true,
+              deadline: true,
+              deletedAt: true,
+            },
+          },
+        },
+        orderBy: { assignedAt: 'desc' },
+      }),
+      // 4. Submission counts in ONE grouped query instead of N sub-queries
+      prisma.submission.groupBy({
+        by: ['assignmentId'],
+        where: {
+          assignment: { targetClasses: { some: { classId } } },
+          submittedAt: { not: null },
+        },
+        _count: { assignmentId: true },
+      }),
+    ])
   );
 
-  const toggleAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedStudents(filteredStudents.map(s => s.id));
-    } else {
-      setSelectedStudents([]);
-    }
-  };
+  if (!cls) {
+    notFound();
+  }
 
-  const handleBulkAction = async (action: 'approve' | 'reject' | 'block' | 'unblock' | 'remove') => {
-    if (selectedStudents.length === 0) return;
-    setActionLoading(true);
-    try {
-      if (action === 'approve') await bulkUpdateEnrollments(classId, selectedStudents, 'ACTIVE');
-      else if (action === 'block') await bulkUpdateEnrollments(classId, selectedStudents, 'BLOCKED');
-      else if (action === 'unblock') await bulkUpdateEnrollments(classId, selectedStudents, 'ACTIVE');
-      else if (action === 'reject' || action === 'remove') await bulkRemoveEnrollments(classId, selectedStudents);
-      
-      setSelectedStudents([]);
-      await fetchStudents();
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  // Build a lookup map: assignmentId -> submitted count
+  const submissionCountMap = new Map(
+    submissionCounts.map((s) => [s.assignmentId, s._count.assignmentId])
+  );
 
-  const handleRowAction = async (studentId: string, action: 'approve' | 'reject' | 'block' | 'unblock' | 'remove') => {
-    setOpenMenuId(null);
-    setActionLoading(true);
-    try {
-      if (action === 'approve') await updateEnrollmentStatus(classId, studentId, 'ACTIVE');
-      else if (action === 'block') await updateEnrollmentStatus(classId, studentId, 'BLOCKED');
-      else if (action === 'unblock') await updateEnrollmentStatus(classId, studentId, 'ACTIVE');
-      else if (action === 'reject' || action === 'remove') await removeEnrollment(classId, studentId);
-      
-      await fetchStudents();
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const students: Student[] = enrollments.map((e) => ({
+    id: e.student.id,
+    name: e.student.name ?? '',
+    email: e.student.email ?? '',
+    status: e.status,
+    isManagedAccount: e.student.isManagedAccount,
+    pin: e.student.isManagedAccount ? e.student.password ?? '' : undefined,
+    notes: e.notes ?? '',
+  }));
 
-  const handleToggleJoinable = async () => {
-    const newState = !isJoinable;
-    setIsJoinable(newState); // optimistic update
-    await toggleClassJoinability(classId, newState);
-    fetchStudents();
-  };
+  const totalStudents = enrollments.length;
+  const now = new Date();
 
+  const assignments: Assignment[] = assignmentClasses
+    .filter((ac) => ac.assignment.deletedAt === null)
+    .map((ac) => {
+      const a = ac.assignment;
+      const isOpen = a.deadline ? new Date(a.deadline) > now : true;
+      const submittedCount = submissionCountMap.get(a.id) ?? 0;
+      const percentage = totalStudents > 0
+        ? Math.round((submittedCount / totalStudents) * 100)
+        : 0;
+
+      let section: 'NEW' | 'REVIEW' = 'NEW';
+      if (a.instructions) {
+        try {
+          const meta = JSON.parse(a.instructions);
+          if (meta.section === 'REVIEW') section = 'REVIEW';
+        } catch {}
+      }
+
+      return {
+        id: a.id,
+        title: a.title ?? '',
+        materialType: a.materialType as any,
+        level: a.level,
+        instructions: a.instructions,
+        deadline: a.deadline ? a.deadline.toISOString() : null,
+        isOpen,
+        submittedCount,
+        totalStudents,
+        percentage,
+        assignedAt: ac.assignedAt ? ac.assignedAt.toISOString() : null,
+        groupId: ac.groupId,
+        groupTitle: ac.group?.title || null,
+        groupCreatedAt: ac.group?.createdAt ? ac.group.createdAt.toISOString() : null,
+        section,
+      };
+    });
+
+  const initialOpenAssignmentCount = assignments.filter((a) => a.isOpen).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      
-      {/* Header & Breadcrumbs */}
-      <div className="flex flex-col gap-4">
-        <nav className="flex text-sm text-[#617589] dark:text-gray-400 gap-2 items-center">
-          <Link className="hover:text-primary transition-colors" href="/teacher/classes">Lớp học</Link>
-          <span className="material-symbols-outlined text-sm">chevron_right</span>
-          <span className="text-[#111418] dark:text-white font-medium">{className}</span>
-        </nav>
-        
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-extrabold tracking-tight">{className}</h1>
-            <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-[#617589]">
-              <span className="material-symbols-outlined text-[20px]">edit</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full text-sm font-bold border border-blue-100 dark:border-blue-800">
-              <span className="material-symbols-outlined text-[18px]">group</span>
-              {students.length} học sinh
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-full text-sm font-bold border border-orange-100 dark:border-orange-800">
-              <span className="material-symbols-outlined text-[18px]">assignment</span>
-              {openAssignmentCount} bài tập đang giao
-            </div>
-          </div>
-        </div>
-      </div>
+    <ClassDashboardClient
+      classId={cls.id}
+      initialClassName={cls.name}
+      initialJoinCode={cls.joinCode}
+      initialIsJoinable={cls.isJoinable}
+      initialStudents={students}
+      initialAssignments={assignments}
+      initialOpenAssignmentCount={initialOpenAssignmentCount}
+      isAdmin={isTeacherAdmin}
+    />
+  );
+}
 
-      {/* Tabs */}
-      <div className="border-b border-[#f0f2f4] dark:border-gray-800 -mt-2">
-        <nav className="flex gap-8">
-          <button onClick={() => setActiveTab('feed')} className={`py-4 text-sm transition-all ${activeTab === 'feed' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Bảng tin</button>
-          <button onClick={() => setActiveTab('students')} className={`py-4 text-sm transition-all ${activeTab === 'students' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Học sinh</button>
-          <button onClick={() => setActiveTab('assignments')} className={`py-4 text-sm transition-all ${activeTab === 'assignments' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Bài tập</button>
-          <button onClick={() => setActiveTab('grades')} className={`py-4 text-sm transition-all ${activeTab === 'grades' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}>Bảng điểm</button>
-        </nav>
-      </div>
+export default async function ClassPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const session = await auth();
+  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+  if (!session || !isTeacher) {
+    redirect('/login');
+  }
 
-      {/* Tab: FEED */}
-      {activeTab === 'feed' && (
-        <ClassFeedTab classId={classId} />
-      )}
+  const { id: classId } = await params;
+  const isTeacherAdmin = session.user.role === 'ADMIN';
+  const teacherId = session.user.id;
 
-      {/* Tab: STUDENTS */}
-      {activeTab === 'students' && (
-        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
-          
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-[#f0f2f4] dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex flex-col gap-1">
-              <h3 className="font-bold text-lg">Mã tham gia lớp học</h3>
-              <p className="text-sm text-[#617589]">Chia sẻ liên kết này để học sinh tự tham gia lớp học</p>
-            </div>
-            <div className="flex flex-1 max-w-xl items-center gap-3">
-              <div className="flex-1 relative">
-                <input 
-                  className="w-full bg-[#f0f2f4] dark:bg-gray-900 border-none rounded-xl py-2.5 pl-4 pr-20 text-sm font-medium focus:ring-primary/50" 
-                  readOnly 
-                  type="text" 
-                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/join/${joinCode}`}
-                />
-                <button
-                  onClick={handleCopyJoinLink}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 font-bold text-xs px-2 py-1 rounded transition-colors ${isCopied ? 'text-emerald-600' : 'text-primary hover:text-primary/80'}`}
-                >
-                  {isCopied ? 'Đã sao chép!' : 'Sao chép'}
-                </button>
-              </div>
-              <button
-                onClick={handleToggleJoinable}
-                className={`flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-[#f0f2f4] dark:border-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shrink-0 ${!isJoinable ? 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100' : 'text-[#617589]'}`}
-              >
-                <span className="material-symbols-outlined text-[20px]">{isJoinable ? 'lock_open' : 'lock'}</span>
-                {isJoinable ? 'Mở' : 'Khóa'}
-              </button>
-              <button
-                onClick={() => setIsQRModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-[#f0f2f4] dark:border-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 hover:border-primary/30 hover:text-primary transition-colors shrink-0"
-              >
-                <span className="material-symbols-outlined text-[20px]">qr_code_2</span>
-                Hiện mã QR
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#617589]">
-                <span className="material-symbols-outlined text-[20px]">search</span>
-              </div>
-              <input 
-                className="block w-full rounded-xl border border-[#f0f2f4] dark:border-gray-700 bg-white dark:bg-gray-800 py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50 transition-all" 
-                placeholder="Tìm tên học sinh..." 
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <button onClick={() => setIsAddStudentModalOpen(true)} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm shrink-0">
-              <span className="material-symbols-outlined text-[20px]">person_add</span>
-              <span>Thêm học sinh</span>
-            </button>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-[#f0f2f4] dark:border-gray-700 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  {selectedStudents.length === 0 ? (
-                    <tr className="default-header bg-gray-50 dark:bg-gray-900/50 border-b border-[#f0f2f4] dark:border-gray-700">
-                      <th className="px-6 py-4 w-10">
-                        <input 
-                          className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4" 
-                          type="checkbox"
-                          checked={false}
-                          onChange={toggleAll}
-                        />
-                      </th>
-                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Họ và tên</th>
-                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Mã PIN</th>
-                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Trạng thái</th>
-                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider">Ghi chú</th>
-                      <th className="px-6 py-4 text-xs font-bold text-[#617589] uppercase tracking-wider w-10"></th>
-                    </tr>
-                  ) : (
-                    <tr className="bulk-action-bar-active bg-blue-50 dark:bg-blue-900/40 border-b border-blue-100 dark:border-blue-800">
-                      <th className="px-6 py-3 w-10">
-                        <input 
-                          className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4 cursor-pointer" 
-                          type="checkbox"
-                          checked={selectedStudents.length === students.length}
-                          onChange={toggleAll}
-                        />
-                      </th>
-                      <th className="px-6 py-3" colSpan={5}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-primary">Đã chọn {selectedStudents.length} học sinh</span>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleBulkAction('approve')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
-                              <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                              <span>Duyệt</span>
-                            </button>
-                            <button onClick={() => handleBulkAction('unblock')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                              <span className="material-symbols-outlined text-[18px]">lock_open</span>
-                              <span>Gỡ chặn</span>
-                            </button>
-                            <button onClick={() => handleBulkAction('block')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-                              <span className="material-symbols-outlined text-[18px]">block</span>
-                              <span>Chặn</span>
-                            </button>
-                            <button onClick={() => handleBulkAction('remove')} disabled={actionLoading} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                              <span className="material-symbols-outlined text-[18px]">delete</span>
-                              <span>Từ chối / Xoá</span>
-                            </button>
-                          </div>
-                        </div>
-                      </th>
-                    </tr>
-                  )}
-                </thead>
-                <tbody className="divide-y divide-[#f0f2f4] dark:divide-gray-700">
-                  {isLoading ? (
-                    // Loading skeleton
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <tr key={i}>
-                        <td className="px-6 py-4"><div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
-                        <td className="px-6 py-4"><div className="h-4 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
-                        <td className="px-6 py-4"><div className="h-4 w-44 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
-                        <td className="px-6 py-4"><div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
-                        <td className="px-6 py-4"><div className="h-5 w-20 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" /></td>
-                        <td className="px-6 py-4"><div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" /></td>
-                      </tr>
-                    ))
-                  ) : filteredStudents.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-16 text-center">
-                        <div className="flex flex-col items-center gap-3 text-[#617589]">
-                          <span className="material-symbols-outlined text-[40px] opacity-40">group_off</span>
-                          <p className="font-medium">{searchTerm ? 'Không tìm thấy học sinh nào.' : 'Chưa có học sinh nào trong lớp.'}</p>
-                          {!searchTerm && (
-                            <button
-                              onClick={() => setIsAddStudentModalOpen(true)}
-                              className="text-primary font-semibold hover:underline text-sm"
-                            >
-                              + Thêm học sinh ngay
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredStudents.map(student => {
-                      const isSelected = selectedStudents.includes(student.id);
-                      return (
-                        <tr key={student.id} className={`transition-colors ${isSelected ? 'bg-blue-50/30 dark:bg-primary/5' : 'hover:bg-gray-50/50 dark:hover:bg-gray-700/30'}`}>
-                          <td className="px-6 py-4">
-                            <input 
-                              className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4 cursor-pointer" 
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleStudent(student.id)}
-                            />
-                          </td>
-                          <td className="px-6 py-4">
-                            <span 
-                              className="font-semibold text-sm cursor-pointer hover:text-primary hover:underline"
-                              onClick={() => setSelectedStudentForUpdate(student)}
-                            >
-                              {student.name}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-[#617589]">{student.email}</td>
-                          <td className="px-6 py-4">
-                            {student.isManagedAccount ? (
-                              <div className="flex items-center gap-2 text-[#617589]">
-                                <span className="font-mono pt-1 text-lg leading-none">••••</span>
-                                <button className="hover:text-primary transition-colors">
-                                  <span className="material-symbols-outlined text-[18px]">visibility</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-[#617589] italic">N/A</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">
-                            {student.status === 'ACTIVE' ? (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold status-registered">ĐÃ ĐĂNG KÝ</span>
-                            ) : student.status === 'PENDING' ? (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">CHỜ DUYỆT</span>
-                            ) : student.status === 'BLOCKED' ? (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700">BỊ CHẶN</span>
-                            ) : (
-                              <span className="px-2.5 py-1 rounded-full text-[11px] font-bold status-invited">ĐÃ MỜI</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 relative">
-                            <div className="flex items-center gap-2">
-                              {student.status === 'PENDING' && (
-                                <>
-                                  <button
-                                    onClick={() => handleRowAction(student.id, 'approve')}
-                                    disabled={actionLoading}
-                                    className="text-xs px-2 py-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded"
-                                  >
-                                    Duyệt
-                                  </button>
-                                  <button
-                                    onClick={() => handleRowAction(student.id, 'reject')}
-                                    disabled={actionLoading}
-                                    className="text-xs px-2 py-1 bg-red-100 text-red-700 hover:bg-red-200 font-bold rounded"
-                                  >
-                                    Từ chối
-                                  </button>
-                                </>
-                              )}
-                              {student.status === 'BLOCKED' && (
-                                <button
-                                  onClick={() => handleRowAction(student.id, 'unblock')}
-                                  disabled={actionLoading}
-                                  className="text-xs px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 font-bold rounded"
-                                >
-                                  Gỡ chặn
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => setSelectedStudentForNote(student)}
-                                className={`flex items-center justify-center p-1.5 rounded-lg transition-colors ${student.notes ? 'text-primary bg-primary/10' : 'text-[#617589] hover:bg-gray-100'}`}
-                                title={student.notes ? 'Xem ghi chú' : 'Thêm ghi chú'}
-                              >
-                                <span className="material-symbols-outlined text-[20px]">{student.notes ? 'speaker_notes' : 'note_add'}</span>
-                              </button>
-                              <button 
-                                onClick={() => setOpenMenuId(openMenuId === student.id ? null : student.id)}
-                                className="text-[#617589] hover:text-[#111418] dark:hover:text-white transition-colors"
-                              >
-                                <span className="material-symbols-outlined">more_horiz</span>
-                              </button>
-                              
-                              {/* Action Menu Dropdown */}
-                              {openMenuId === student.id && (
-                                <>
-                                  <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)}></div>
-                                  <div className="absolute right-6 top-10 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-20 py-1">
-                                    <button 
-                                      onClick={() => { setOpenMenuId(null); setSelectedStudentForUpdate(student); }}
-                                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700"
-                                    >
-                                      <span className="material-symbols-outlined text-[18px]">edit</span> Sửa thông tin
-                                    </button>
-                                    {student.status === 'ACTIVE' && (
-                                      <button 
-                                        onClick={() => handleRowAction(student.id, 'block')}
-                                        className="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-2 text-sm text-amber-600 font-medium border-t border-gray-50"
-                                      >
-                                        <span className="material-symbols-outlined text-[18px]">block</span> Chặn
-                                      </button>
-                                    )}
-                                    <button 
-                                      onClick={() => handleRowAction(student.id, 'remove')}
-                                      className="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-2 text-sm text-red-600 font-medium border-t border-gray-50"
-                                    >
-                                      <span className="material-symbols-outlined text-[18px]">person_remove</span> Xóa khỏi lớp
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-[#f0f2f4] dark:border-gray-700 flex items-center justify-between">
-              <p className="text-sm text-[#617589]">Hiển thị {filteredStudents.length} trong số {students.length} học sinh</p>
-              <div className="flex items-center gap-2">
-                <button className="p-1 rounded border border-[#f0f2f4] dark:border-gray-700 hover:bg-white transition-colors disabled:opacity-50" disabled>
-                  <span className="material-symbols-outlined text-sm">chevron_left</span>
-                </button>
-                <button className="size-8 rounded bg-primary text-white text-xs font-bold">1</button>
-                <button className="size-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-medium">2</button>
-                <button className="size-8 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-medium">3</button>
-                <button className="p-1 rounded border border-[#f0f2f4] dark:border-gray-700 hover:bg-white transition-colors">
-                  <span className="material-symbols-outlined text-sm">chevron_right</span>
-                </button>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-      )}
-
-      {/* Tab: ASSIGNMENTS */}
-      {activeTab === 'assignments' && (
-        <AssignmentsTab classId={classId} onOpenCountChange={setOpenAssignmentCount} />
-      )}
-
-      {/* Tab: GRADES */}
-      {activeTab === 'grades' && (
-        <GradesTab classId={classId} />
-      )}
-
-      <AddStudentModal 
-        isOpen={isAddStudentModalOpen} 
-        onClose={() => setIsAddStudentModalOpen(false)} 
-        classId={classId} 
-        onAddSuccess={() => {
-          setIsAddStudentModalOpen(false);
-          fetchStudents();
-        }} 
-      />
-
-      <StudentUpdateModal 
-        isOpen={!!selectedStudentForUpdate} 
-        onClose={() => setSelectedStudentForUpdate(null)} 
-        student={selectedStudentForUpdate} 
-        onUpdateSuccess={(updated) => {
-          setStudents(prev => prev.map(s =>
-            s.id === updated.id ? { ...s, name: updated.name, email: updated.email } : s
-          ));
-          setSelectedStudentForUpdate(null);
-        }}
-      />
-
-      <ClassQRModal
-        isOpen={isQRModalOpen}
-        onClose={() => setIsQRModalOpen(false)}
-        className={className}
-        joinCode={joinCode}
-      />
-
-      <StudentNoteModal
-        isOpen={!!selectedStudentForNote}
-        onClose={() => setSelectedStudentForNote(null)}
-        student={selectedStudentForNote}
+  return (
+    <Suspense fallback={<ClassDetailLoading />}>
+      <ClassDashboardContent
         classId={classId}
-        onSuccess={(newNotes) => {
-          setStudents(prev => prev.map(s => 
-            s.id === selectedStudentForNote?.id ? { ...s, notes: newNotes } : s
-          ));
-        }}
+        isTeacherAdmin={isTeacherAdmin}
+        teacherId={teacherId}
       />
-
-    </div>
+    </Suspense>
   );
 }

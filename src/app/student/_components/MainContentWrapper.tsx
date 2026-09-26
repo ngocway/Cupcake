@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
-import { useScrollDirection } from "@/hooks/useScrollDirection"
+import React from 'react'
+import { usePathname } from 'next/navigation'
 
 export function MainContentWrapper({ 
   children,
@@ -12,32 +11,23 @@ export function MainContentWrapper({
   isTeacher: boolean
 }) {
   const pathname = usePathname()
-  const { isHidden, isAtTop } = useScrollDirection()
-  const [mounted, setMounted] = useState(false)
+  const isFullscreenRunner = pathname?.includes('/run') || pathname?.includes('/quiz') || pathname?.includes('/play')
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  
-  const isLearningRoute = Boolean(
-    pathname &&
-    (
-      pathname.includes('/lessons/') ||
-      pathname.includes('/books') ||   // covers /student/books and /student/books/[id]
-      pathname.match(/\/(run|quiz|game)/)
+  if (isFullscreenRunner) {
+    return (
+      <main className="w-full max-w-none p-0 m-0 min-h-screen flex flex-col">
+        {children}
+      </main>
     )
-  )
+  }
 
-
-
-  const noSidebar = isLearningRoute || isTeacher
-
-  // Calculate top padding based on header visibility
-  const topPadding = mounted ? (isHidden ? 'pt-0' : 'pt-8') : 'pt-8'
+  const isClassRoute = pathname?.includes('/student/classes')
 
   return (
-    <main className={`${!noSidebar ? (isAtTop ? `md:ml-64 ${topPadding} px-6` : `md:ml-64 pt-0 px-6`) : 'w-full max-w-none pt-0 px-0'} pb-24 md:pb-0 transition-all duration-500 min-h-screen flex flex-col`}>
-      {children}
+    <main className="w-full max-w-none pt-0 px-4 sm:px-6 md:px-8 pb-24 md:pb-12 transition-all duration-300 min-h-screen flex flex-col">
+      <div className={`w-full flex-1 transition-all duration-300 ${isClassRoute ? "pt-2 sm:pt-3" : "pt-6 sm:pt-8"}`}>
+        {children}
+      </div>
     </main>
   )
 }

@@ -15,6 +15,7 @@ export const getAssignmentMeta = async (id: string) => {
         defaultPoints: true,
         focusMode: true,
         level: true,
+        instructions: true,
         _count: { select: { questions: true } }
       }
     });

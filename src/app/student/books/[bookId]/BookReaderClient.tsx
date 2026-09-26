@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { completeClassActivityAction } from "@/actions/activity-completion-actions";
 
 interface BookSlide {
   id: string;
@@ -64,6 +67,45 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   const [isPageCompleted, setIsPageCompleted] = useState(false);
   const [stars, setStars] = useState<FloatingStar[]>([]);
   const [scoreResult, setScoreResult] = useState<"excellent" | "good" | null>(null);
+
+  // Class assignment progress tracking (≥80% slides)
+  const searchParams = useSearchParams();
+  const assignmentId = searchParams?.get("assignmentId");
+  const [completedSlides, setCompletedSlides] = useState<Set<number>>(new Set());
+  const [assignmentCompleted, setAssignmentCompleted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setCompletedSlides((prev) => {
+      const next = new Set(prev);
+      next.add(currentPageIndex);
+
+      const ratio = next.size / book.slides.length;
+      if (ratio >= 0.8 && !assignmentCompleted && assignmentId) {
+        setAssignmentCompleted(true);
+        completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+          console.error("Failed to auto-complete book assignment:", err);
+        });
+      }
+      return next;
+    });
+  }, [currentPageIndex, book.slides.length, assignmentCompleted, assignmentId]);
+
+  useEffect(() => {
+    if (isPageCompleted) {
+      setCompletedSlides((prev) => {
+        const next = new Set(prev);
+        next.add(currentPageIndex);
+        const ratio = next.size / book.slides.length;
+        if (ratio >= 0.8 && !assignmentCompleted && assignmentId) {
+          setAssignmentCompleted(true);
+          completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+            console.error("Failed to auto-complete book assignment:", err);
+          });
+        }
+        return next;
+      });
+    }
+  }, [isPageCompleted, currentPageIndex, book.slides.length, assignmentCompleted, assignmentId]);
 
   // Mode: "reading" = listen only; "shadowing" = listen + record + grade
   const [mode, setMode] = useState<"reading" | "shadowing">("shadowing");
@@ -854,6 +896,24 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
             <h2 className="font-extrabold text-sm md:text-base text-amber-900 line-clamp-1 mt-0.5">
               {book.title}
             </h2>
+            {assignmentId && (
+              <div className="mt-1 flex justify-center">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border transition-all inline-flex items-center gap-1 ${
+                  assignmentCompleted || (completedSlides.size / book.slides.length >= 0.8)
+                    ? "bg-emerald-500 text-white border-emerald-400"
+                    : "bg-amber-100 text-amber-800 border-amber-300"
+                }`}>
+                  {assignmentCompleted || (completedSlides.size / book.slides.length >= 0.8) ? (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 text-white" />
+                      <span>Đã học {completedSlides.size}/{book.slides.length} trang (≥80%) • Đã hoàn thành!</span>
+                    </>
+                  ) : (
+                    <span>Tiến độ bài học: {completedSlides.size}/{book.slides.length} trang ({Math.round((completedSlides.size / book.slides.length) * 100)}% / 80%)</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Right side: Translate toggle (all screens) + Page counter (desktop only) */}

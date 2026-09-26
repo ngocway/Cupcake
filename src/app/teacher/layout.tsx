@@ -5,8 +5,7 @@ import { Lexend } from "next/font/google"
 import Link from "next/link"
 import React, { useState, useRef, useEffect } from "react"
 import { signOut, useSession, SessionProvider } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { Bell, BellOff, ClipboardList, UserPlus, Star, FileText, Eye, Settings, HelpCircle, LogOut, ShieldAlert, ArrowLeft, BookOpen, Search, LayoutGrid, GraduationCap, Archive, Clock, Share2, Trash2, Book } from "lucide-react"
+import { Bell, BellOff, ClipboardList, UserPlus, Star, FileText, Eye, Settings, HelpCircle, LogOut, BookOpen, Search, LayoutGrid, GraduationCap, Archive, Clock, Share2, Trash2, Book } from "lucide-react"
 import { useScrollDirection } from "@/hooks/useScrollDirection"
 
 const lexend = Lexend({
@@ -21,22 +20,43 @@ function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
 
-  const fetchNotifications = async () => {
+  const fetchUnreadCount = async () => {
     if (!session?.user?.id) return;
-    const { getMyNotifications, getUnreadCount } = await import("@/actions/notification-actions");
-    const [notifs, count] = await Promise.all([getMyNotifications(), getUnreadCount()]);
-    setNotifications(notifs as any[]);
-    setUnreadCount(count as number);
+    try {
+      const { getUnreadCount } = await import("@/actions/notification-actions");
+      const count = await getUnreadCount();
+      setUnreadCount(count as number);
+    } catch (err) {
+      console.error('Failed to get unread count', err);
+    }
+  };
+
+  const fetchFullNotifications = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const { getMyNotifications, getUnreadCount } = await import("@/actions/notification-actions");
+      const [notifs, count] = await Promise.all([getMyNotifications(), getUnreadCount()]);
+      setNotifications(notifs as any[]);
+      setUnreadCount(count as number);
+    } catch (err) {
+      console.error('Failed to get notifications', err);
+    }
   };
 
   useEffect(() => {
     if (session?.user?.id) {
-       fetchNotifications();
-       // Poll every 30 seconds for new notifications
-       const interval = setInterval(fetchNotifications, 30000);
+       fetchUnreadCount();
+       // Poll every 60 seconds for unread count badge only
+       const interval = setInterval(fetchUnreadCount, 60000);
        return () => clearInterval(interval);
     }
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (isOpen && session?.user?.id) {
+      fetchFullNotifications();
+    }
+  }, [isOpen, session?.user?.id]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -51,14 +71,14 @@ function NotificationBell() {
   const handleMarkAsRead = async (id: string, link?: string) => {
     const { markAsRead } = await import("@/actions/notification-actions");
     await markAsRead(id);
-    await fetchNotifications();
+    await fetchFullNotifications();
     if (link) window.location.href = link;
   };
 
   const handleMarkAllAsRead = async () => {
     const { markAllAsRead } = await import("@/actions/notification-actions");
     await markAllAsRead();
-    await fetchNotifications();
+    await fetchFullNotifications();
   };
 
   return (
@@ -161,14 +181,21 @@ function TeacherProfile() {
           
           <div className="h-px bg-slate-100 dark:bg-slate-700 mx-3 mb-2" />
 
-          {/* Quick Switch to Student View */}
-          <div className="px-2 pb-2">
+          {/* Quick Switch to Student View / Game Portal / Admin */}
+          <div className="px-2 pb-2 space-y-1.5">
             <Link 
               href="/"
               className="flex items-center gap-3 px-3.5 py-2.5 text-xs bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-extrabold rounded-xl transition-all border border-emerald-200/70 dark:border-emerald-800/60 shadow-sm group"
             >
               <BookOpen className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform stroke-[2.5px]" />
               <span>Giao diện học tập (Học sinh)</span>
+            </Link>
+            <Link 
+              href="/teacher"
+              className="flex items-center gap-3 px-3.5 py-2.5 text-xs bg-blue-50/90 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-extrabold rounded-xl transition-all border border-blue-200/70 dark:border-blue-800/60 shadow-sm group"
+            >
+              <LayoutGrid className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform stroke-[2.5px]" />
+              <span>Cổng Game & Bài tập</span>
             </Link>
           </div>
 
@@ -226,28 +253,6 @@ function TeacherProfile() {
   )
 }
 
-function AdminModeBanner({ mode }: { mode: 'TEACHER' | 'STUDENT' }) {
-  const router = useRouter()
-  const { isHidden } = useScrollDirection()
-  return (
-    <div className={`sticky top-0 z-[100] w-full bg-amber-500/90 backdrop-blur-md text-amber-950 flex items-center justify-between px-6 py-2.5 shadow-sm border-b border-amber-600/20 transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-full pointer-events-none' : 'translate-y-0'}`}>
-      <div className="flex items-center gap-2">
-        <ShieldAlert className="w-4 h-4 stroke-[2.5px]" />
-        <span className="text-xs font-black uppercase tracking-widest">
-          Admin đang xem giao diện {mode === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}
-        </span>
-      </div>
-      <button
-        onClick={() => router.push('/admin/staff')}
-        className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-950/10 hover:bg-amber-950/20 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all border border-amber-950/20"
-      >
-        <ArrowLeft className="w-4 h-4 stroke-[2.5px]" />
-        Thoát về Admin
-      </button>
-    </div>
-  )
-}
-
 function TeacherLayoutContent({ children, session, pathname }: { children: React.ReactNode, session: any, pathname: string }) {
   const IconMap: Record<string, any> = {
     grid_view: LayoutGrid,
@@ -280,7 +285,6 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
 
   return (
     <div className={`teacher-theme ${lexend.variable} font-display bg-[#f0f7ff] dark:bg-slate-900 text-slate-900 dark:text-white antialiased flex flex-col min-h-screen transition-colors duration-300`}>
-      {session?.user?.role === 'ADMIN' && <AdminModeBanner mode="TEACHER" />}
       {!isEditMode && (
         <header id="teacher-header" className={`sticky top-0 z-50 w-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 px-6 py-3 shadow-sm transition-transform duration-500 ease-in-out ${isHidden ? '-translate-y-[120%] pointer-events-none' : 'translate-y-0'}`}>
           <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">

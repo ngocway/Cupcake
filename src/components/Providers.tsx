@@ -77,10 +77,11 @@ const customStyles = `
 }
 `;
 
-export function Providers({ children, locale = "en", messages }: { 
+export function Providers({ children, locale = "en", messages, session }: { 
   children: React.ReactNode;
   locale?: string;
   messages?: any;
+  session?: any;
 }) {
   const [queryClient] = useState(
     () =>
@@ -106,7 +107,7 @@ export function Providers({ children, locale = "en", messages }: {
   }, []);
 
   return (
-    <SessionProvider>
+    <SessionProvider session={session}>
       <QueryClientProvider client={queryClient}>
         <NextIntlClientProvider 
           locale={locale} 

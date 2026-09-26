@@ -6,11 +6,12 @@ import { revalidatePath } from "next/cache";
 import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
 import { invalidateMaterialCache } from '@/lib/cached-queries';
 import crypto from 'crypto';
-import { MaterialStatus } from '@prisma/client';
+import { MaterialStatus, MaterialType, BookStatus } from '@prisma/client';
 import { after } from 'next/server';
 import { generateUniqueSlug } from '@/lib/slugify';
 import openai from "@/lib/openai";
 import { reindexAssignment, reindexLesson } from '@/lib/ai-embeddings';
+import { getTopicById, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 
 
 export async function generateMaterialThumbnail(assignment: { title: string; subject: string | null }, questions: any[]) {
@@ -1657,3 +1658,1375 @@ export async function alignAndWrapHtmlServer(htmlContent: string, whisperWords: 
 
   return parts.join('');
 }
+
+function mapAgeGroupToLevel(raw?: string | null): string {
+  if (!raw) return 'a1';
+  const l = raw.toLowerCase().trim();
+  if (l === '2-5' || l.includes('kindergarten') || l.includes('pre-a1') || l.includes('pre_a1')) return 'pre-a1';
+  if (l === '6-12' || l.includes('elementary') || l === 'a1') return 'a1';
+  if (l === 'teen' || l === 'a2') return 'a2';
+  if (l === 'readers' || l.includes('intermediate') || l === 'b1') return 'b1';
+  if (l === 'b2' || l.includes('upper_intermediate')) return 'b2';
+  if (l === 'c1' || l.includes('advanced')) return 'c1';
+  return l;
+}
+
+function getGamePlayUrl(topic: { id: string; gameMode?: string | null }) {
+  const mode = topic.gameMode;
+  if (mode === "train") return `/student/game/train?topicId=${topic.id}`;
+  if (mode === "cut-rope") return `/student/game/cut-rope?topicId=${topic.id}`;
+  if (mode === "conveyor-drop") return `/student/game/conveyor-drop?topicId=${topic.id}`;
+  if (mode === "match-text-text") return `/student/game/match-text-text?topicId=${topic.id}`;
+  if (mode === "choice") return `/student/game/egg-smash-quiz?topicId=${topic.id}`;
+  if (mode === "flip") return `/game/memory-flip?topicId=${topic.id}`;
+  if (mode === "candy-quiz") return `/student/game/candy-quiz?topicId=${topic.id}`;
+  if (mode === "shooter") return `/game/shooter-quiz?topicId=${topic.id}`;
+  if (mode === "treasure") return `/game/treasure-grid?topicId=${topic.id}`;
+  return `/student/game/flashcard-match?topicId=${topic.id}`;
+}
+
+export interface AssignableLibraryItem {
+  id: string;
+  rawId: string;
+  title: string;
+  type: 'GAME' | 'FLASHCARD' | 'READING' | 'GRAMMAR' | 'BOOK' | 'LESSON';
+  source: 'mine' | 'library';
+  level: string;
+  itemCount: number;
+  itemUnit: string;
+  thumbnail?: string | null;
+  createdAt: string;
+  isAssignment: boolean;
+  previewUrl: string;
+  playUrl: string;
+  section?: 'NEW' | 'REVIEW';
+}
+
+export async function getAssignableLibraryContentAction(): Promise<{
+  mine: AssignableLibraryItem[];
+  library: AssignableLibraryItem[];
+}> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const teacherId = session.user.id;
+
+  const [
+    myAssignments,
+    myGames,
+    libAssignments,
+    libGames,
+    libFlashcards,
+    libBooks
+  ] = await Promise.all([
+    prisma.assignment.findMany({
+      where: { teacherId, deletedAt: null },
+      include: {
+        _count: { select: { questions: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.matchWordTopic.findMany({
+      where: { teacherId },
+      include: {
+        _count: { select: { items: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.assignment.findMany({
+      where: { status: 'PUBLIC', deletedAt: null, teacherId: { not: teacherId } },
+      include: {
+        _count: { select: { questions: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    }),
+    prisma.matchWordTopic.findMany({
+      where: { teacherId: null },
+      include: {
+        _count: { select: { items: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 60
+    }),
+    prisma.flashcardTopic.findMany({
+      include: {
+        _count: { select: { flashcards: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 60
+    }),
+    prisma.readAlongBook.findMany({
+      where: { status: 'PUBLISHED' },
+      include: {
+        _count: { select: { slides: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 60
+    })
+  ]);
+
+  const mapAssignmentToItem = (a: any, source: 'mine' | 'library'): AssignableLibraryItem => {
+    let type: 'GAME' | 'FLASHCARD' | 'READING' | 'GRAMMAR' | 'BOOK' = 'GRAMMAR';
+    let playUrl = `/student/assignments/${a.id}/run`;
+    let previewUrl = `/teacher/materials/${a.id}/edit`;
+    let itemUnit = 'câu hỏi';
+    let itemCount = a._count?.questions || 0;
+
+    if (a.instructions) {
+      try {
+        const meta = JSON.parse(a.instructions);
+        if (meta.kind === 'GAME') {
+          type = 'GAME';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'mục';
+        } else if (meta.kind === 'BOOK') {
+          type = 'BOOK';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'trang';
+        } else if (meta.kind === 'FLASHCARD') {
+          type = 'FLASHCARD';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'thẻ từ';
+        }
+      } catch {}
+    }
+
+    if (type === 'GRAMMAR' && a.materialType === 'READING') {
+      type = 'READING';
+      itemUnit = 'câu hỏi';
+    } else if (type === 'GRAMMAR' && a.materialType === 'FLASHCARD') {
+      type = 'FLASHCARD';
+      itemUnit = 'thẻ từ';
+    }
+
+    return {
+      id: a.id,
+      rawId: a.id,
+      title: a.title,
+      type,
+      source,
+      level: mapAgeGroupToLevel(a.level),
+      itemCount,
+      itemUnit,
+      thumbnail: a.thumbnail || null,
+      createdAt: a.createdAt ? a.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: true,
+      previewUrl,
+      playUrl
+    };
+  };
+
+  const mineItems: AssignableLibraryItem[] = [
+    ...myAssignments.map(a => mapAssignmentToItem(a, 'mine')),
+    ...myGames.map(g => ({
+      id: `game_${g.id}`,
+      rawId: g.id,
+      title: g.name,
+      type: 'GAME' as const,
+      source: 'mine' as const,
+      level: mapAgeGroupToLevel(g.ageGroup),
+      itemCount: g._count?.items || 0,
+      itemUnit: 'từ/câu',
+      thumbnail: g.thumbnailUrl || null,
+      createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: false,
+      previewUrl: getGamePlayUrl(g),
+      playUrl: getGamePlayUrl(g),
+    }))
+  ];
+
+  const libraryItems: AssignableLibraryItem[] = [
+    ...libAssignments.map(a => mapAssignmentToItem(a, 'library')),
+    ...libGames.map(g => ({
+      id: `game_${g.id}`,
+      rawId: g.id,
+      title: g.name,
+      type: 'GAME' as const,
+      source: 'library' as const,
+      level: mapAgeGroupToLevel(g.ageGroup),
+      itemCount: g._count?.items || 0,
+      itemUnit: 'từ/câu',
+      thumbnail: g.thumbnailUrl || null,
+      createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: false,
+      previewUrl: getGamePlayUrl(g),
+      playUrl: getGamePlayUrl(g),
+    })),
+    ...libFlashcards.map(f => ({
+      id: `flashcard_${f.id}`,
+      rawId: f.id,
+      title: f.name,
+      type: 'FLASHCARD' as const,
+      source: 'library' as const,
+      level: mapAgeGroupToLevel(f.cefrLevel),
+      itemCount: f._count?.flashcards || 0,
+      itemUnit: 'thẻ từ',
+      thumbnail: f.iconUrl || null,
+      createdAt: f.createdAt ? f.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: false,
+      previewUrl: `/student/game/flashcard-match?topicId=${f.id}`,
+      playUrl: `/student/game/flashcard-match?topicId=${f.id}`,
+    })),
+    ...libBooks.map(b => ({
+      id: `book_${b.id}`,
+      rawId: b.id,
+      title: b.title,
+      type: 'BOOK' as const,
+      source: 'library' as const,
+      level: mapAgeGroupToLevel(b.level),
+      itemCount: b._count?.slides || 0,
+      itemUnit: 'trang',
+      thumbnail: b.thumbnailUrl || null,
+      createdAt: b.createdAt ? b.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: false,
+      previewUrl: `/student/books/${b.bookId || b.id}`,
+      playUrl: `/student/books/${b.bookId || b.id}`,
+    }))
+  ];
+
+  return {
+    mine: mineItems,
+    library: libraryItems
+  };
+}
+
+export async function assignLibraryItemToClassAction(
+  classId: string,
+  item: {
+    id: string;
+    rawId: string;
+    title: string;
+    type: string;
+    level?: string;
+    playUrl?: string;
+    isAssignment: boolean;
+  },
+  payload: any
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const teacherId = session.user.id;
+
+  let assignmentId = item.id;
+
+  if (!item.isAssignment) {
+    const existing = await prisma.assignment.findFirst({
+      where: {
+        teacherId,
+        deletedAt: null,
+        instructions: { contains: `"rawId":"${item.rawId}"` }
+      }
+    });
+
+    if (existing) {
+      assignmentId = existing.id;
+    } else {
+      const slug = await generateUniqueSlug(item.title || 'Assignment', 'assignment');
+      const matType: MaterialType = 
+        item.type === 'BOOK' || item.type === 'READING' ? 'READING' :
+        item.type === 'FLASHCARD' ? 'FLASHCARD' : 'EXERCISE';
+
+      const newAssignment = await prisma.assignment.create({
+        data: {
+          title: item.title,
+          slug,
+          materialType: matType,
+          status: 'PUBLIC',
+          teacherId,
+          level: item.level || 'a1',
+          subject: 'english',
+          instructions: JSON.stringify({
+            kind: item.type,
+            rawId: item.rawId,
+            playUrl: item.playUrl,
+          }),
+        }
+      });
+      assignmentId = newAssignment.id;
+    }
+  }
+
+  const updateData: any = { assignedAt: new Date() };
+  const createData: any = { assignmentId, classId, maxAttempts: 1 };
+
+  if (payload) {
+    if (payload.startDate) {
+      updateData.startDate = new Date(payload.startDate);
+      createData.startDate = new Date(payload.startDate);
+    }
+    if (payload.dueDate) {
+      updateData.dueDate = new Date(payload.dueDate);
+      createData.dueDate = new Date(payload.dueDate);
+    }
+    if (payload.timeLimit !== undefined) {
+      updateData.timeLimit = payload.timeLimit;
+      createData.timeLimit = payload.timeLimit;
+    }
+    if (payload.maxAttempts !== undefined) {
+      updateData.maxAttempts = payload.maxAttempts;
+      createData.maxAttempts = payload.maxAttempts;
+    }
+  }
+
+  await prisma.assignmentClass.upsert({
+    where: { assignmentId_classId: { assignmentId, classId } },
+    update: updateData,
+    create: createData
+  });
+
+  revalidatePath('/teacher/materials');
+  revalidatePath(`/teacher/classes/${classId}`);
+  return { success: true, assignmentId };
+}
+
+export async function assignBundleToClassAction(
+  classId: string,
+  groupTitle: string,
+  items: Array<{
+    id: string;
+    rawId: string;
+    title: string;
+    type: string;
+    level?: string;
+    playUrl?: string;
+    isAssignment: boolean;
+    section?: 'NEW' | 'REVIEW';
+  }>,
+  existingGroupId?: string
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const teacherId = session.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: { id: teacherId },
+    select: { id: true, role: true }
+  });
+  const isAdmin = user?.role === 'ADMIN';
+
+  const cls = await prisma.class.findFirst({
+    where: { 
+      id: classId,
+      ...(isAdmin ? {} : { teacherId })
+    }
+  });
+  if (!cls) throw new Error('Lớp học không tồn tại hoặc bạn không có quyền truy cập');
+
+  if (!items || items.length === 0) {
+    throw new Error('Vui lòng chọn ít nhất 1 bài tập để giao');
+  }
+
+  const title = (groupTitle || '').trim() || `Bài tập ngày ${new Date().toLocaleDateString('vi-VN')}`;
+
+  // 1. Get or Create AssignmentGroup
+  let group;
+  if (existingGroupId) {
+    group = await prisma.assignmentGroup.findUnique({ where: { id: existingGroupId } });
+    if (group && groupTitle && groupTitle.trim()) {
+      group = await prisma.assignmentGroup.update({
+        where: { id: existingGroupId },
+        data: { title: groupTitle.trim() }
+      });
+    }
+  }
+  if (!group) {
+    group = await prisma.assignmentGroup.create({
+      data: {
+        classId,
+        title,
+      }
+    });
+  }
+
+  // 2. Process all items and attach to this group
+  for (const item of items) {
+    let assignmentId = item.id;
+    const targetSection = item.section === 'REVIEW' ? 'REVIEW' : 'NEW';
+
+    if (!item.isAssignment) {
+      const existing = await prisma.assignment.findFirst({
+        where: {
+          teacherId,
+          deletedAt: null,
+          instructions: { contains: `"rawId":"${item.rawId}"` }
+        }
+      });
+
+      if (existing) {
+        assignmentId = existing.id;
+        let meta: any = {};
+        try { meta = JSON.parse(existing.instructions || '{}'); } catch {}
+        meta.section = targetSection;
+        await prisma.assignment.update({
+          where: { id: existing.id },
+          data: { instructions: JSON.stringify(meta) }
+        });
+      } else {
+        const slug = await generateUniqueSlug(item.title || 'Assignment', 'assignment');
+        const matType: MaterialType = 
+          item.type === 'BOOK' || item.type === 'READING' || item.type === 'LESSON' ? 'READING' :
+          item.type === 'FLASHCARD' ? 'FLASHCARD' : 'EXERCISE';
+
+        const newAssignment = await prisma.assignment.create({
+          data: {
+            title: item.title,
+            slug,
+            materialType: matType,
+            status: 'PUBLIC',
+            teacherId,
+            level: item.level || 'a1',
+            subject: 'english',
+            instructions: JSON.stringify({
+              kind: item.type,
+              rawId: item.rawId,
+              playUrl: item.playUrl,
+              section: targetSection,
+            }),
+          }
+        });
+        assignmentId = newAssignment.id;
+      }
+    } else {
+      // It is an existing assignment in database, update its section metadata
+      const a = await prisma.assignment.findUnique({ where: { id: item.id } });
+      if (a) {
+        let meta: any = {};
+        try { meta = JSON.parse(a.instructions || '{}'); } catch {}
+        meta.section = targetSection;
+        await prisma.assignment.update({
+          where: { id: item.id },
+          data: { instructions: JSON.stringify(meta) }
+        });
+      }
+    }
+
+    // Upsert into AssignmentClass with groupId and no deadlines
+    await prisma.assignmentClass.upsert({
+      where: { assignmentId_classId: { assignmentId, classId } },
+      update: {
+        assignedAt: new Date(),
+        groupId: group.id,
+        startDate: null,
+        dueDate: null,
+        timeLimit: null,
+        maxAttempts: null,
+      },
+      create: {
+        assignmentId,
+        classId,
+        assignedAt: new Date(),
+        groupId: group.id,
+        startDate: null,
+        dueDate: null,
+        timeLimit: null,
+        maxAttempts: null,
+      }
+    });
+  }
+
+  revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/student/classes/${classId}`);
+  return { success: true, groupId: group.id, count: items.length, title };
+}
+
+export async function markLessonViewedAction(assignmentId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const studentId = session.user.id;
+
+  const existing = await prisma.submission.findFirst({
+    where: { assignmentId, studentId, submittedAt: { not: null } }
+  });
+
+  if (!existing) {
+    await prisma.submission.create({
+      data: {
+        assignmentId,
+        studentId,
+        startedAt: new Date(),
+        submittedAt: new Date(),
+        score: null,
+        attemptNumber: 1,
+      }
+    });
+  }
+
+  return { success: true };
+}
+
+export async function renameAssignmentGroupAction(groupId: string, newTitle: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const group = await prisma.assignmentGroup.findUnique({
+    where: { id: groupId },
+    include: { class: true }
+  });
+  if (!group) throw new Error('Nhóm không tồn tại');
+
+  const isOwner = group.class.teacherId === session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  const updated = await prisma.assignmentGroup.update({
+    where: { id: groupId },
+    data: { title: newTitle.trim() }
+  });
+
+  revalidatePath(`/teacher/classes/${group.classId}`);
+  revalidatePath(`/student/classes/${group.classId}`);
+  return { success: true, title: updated.title };
+}
+
+export async function deleteAssignmentGroupAction(groupId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const group = await prisma.assignmentGroup.findUnique({
+    where: { id: groupId },
+    include: { class: true }
+  });
+  if (!group) throw new Error('Nhóm không tồn tại');
+
+  const isOwner = group.class.teacherId === session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  // Delete all class assignment connections for this group
+  await prisma.assignmentClass.deleteMany({
+    where: { groupId }
+  });
+
+  // Delete group
+  await prisma.assignmentGroup.delete({
+    where: { id: groupId }
+  });
+
+  revalidatePath(`/teacher/classes/${group.classId}`);
+  revalidatePath(`/student/classes/${group.classId}`);
+  return { success: true };
+}
+
+export async function resolveInternalLinkForAssignmentAction(
+  rawInput: string
+): Promise<AssignableLibraryItem | null> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const userId = session.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true }
+  });
+  const isAdmin = user?.role === 'ADMIN';
+
+  if (!rawInput || typeof rawInput !== 'string') return null;
+  const input = rawInput.trim();
+  if (!input) return null;
+
+  const mapAssignment = (a: any, source: 'mine' | 'library'): AssignableLibraryItem => {
+    let type: 'GAME' | 'FLASHCARD' | 'READING' | 'GRAMMAR' | 'BOOK' = 'GRAMMAR';
+    let playUrl = `/student/assignments/${a.id}/run`;
+    let previewUrl = `/teacher/materials/${a.id}/edit`;
+    let itemUnit = 'câu hỏi';
+    let itemCount = a._count?.questions || 0;
+
+    if (a.instructions) {
+      try {
+        const meta = JSON.parse(a.instructions);
+        if (meta.kind === 'GAME') {
+          type = 'GAME';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'mục';
+        } else if (meta.kind === 'BOOK') {
+          type = 'BOOK';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'trang';
+        } else if (meta.kind === 'FLASHCARD') {
+          type = 'FLASHCARD';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'thẻ từ';
+        }
+      } catch {}
+    }
+
+    if (type === 'GRAMMAR' && a.materialType === 'READING') {
+      type = 'READING';
+      itemUnit = 'câu hỏi';
+    } else if (type === 'GRAMMAR' && a.materialType === 'FLASHCARD') {
+      type = 'FLASHCARD';
+      itemUnit = 'thẻ từ';
+    }
+
+    return {
+      id: a.id,
+      rawId: a.id,
+      title: a.title,
+      type,
+      source,
+      level: mapAgeGroupToLevel(a.level),
+      itemCount,
+      itemUnit,
+      thumbnail: a.thumbnail || null,
+      createdAt: a.createdAt ? a.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: true,
+      previewUrl,
+      playUrl
+    };
+  };
+
+  // 1. Try URL parsing
+  let pathname = '';
+  let searchParams = new URLSearchParams();
+  try {
+    let urlStr = input;
+    if (!urlStr.startsWith('http://') && !urlStr.startsWith('https://')) {
+      if (urlStr.startsWith('/')) {
+        urlStr = `http://dummy.local${urlStr}`;
+      } else {
+        urlStr = `http://dummy.local/${urlStr}`;
+      }
+    }
+    const parsed = new URL(urlStr);
+    pathname = parsed.pathname.replace(/\/+$/, '');
+    searchParams = parsed.searchParams;
+  } catch {
+    pathname = input;
+  }
+
+  // Extract possible candidate keys from search params
+  const candidates: string[] = [];
+  const paramKeys = ['topicId', 'bookId', 'assignmentId', 'id', 'deckId', 'topic', 'slug'];
+  for (const k of paramKeys) {
+    const val = searchParams.get(k);
+    if (val && !candidates.includes(val)) candidates.push(val);
+  }
+
+  // Specific Route 1: Book / Read-along
+  // e.g. /student/books/:bookId, /admin/materials/read-along/:id, /read-along/:id
+  const bookMatch = pathname.match(/\/(?:student\/books|admin\/materials\/read-along|read-along)\/([^/]+)/i);
+  if (bookMatch && bookMatch[1]) {
+    const key = bookMatch[1];
+    const book = await prisma.readAlongBook.findFirst({
+      where: {
+        AND: [
+          { OR: [{ id: key }, { bookId: key }] },
+          ...(!isAdmin ? [{ status: BookStatus.PUBLISHED }] : [])
+        ]
+      },
+      include: { slides: { select: { id: true } } }
+    });
+    if (book) {
+      return {
+        id: `book_${book.id}`,
+        rawId: book.id,
+        title: book.title,
+        type: 'BOOK',
+        source: 'library',
+        level: mapAgeGroupToLevel(book.level),
+        itemCount: book.slides?.length || 0,
+        itemUnit: 'trang',
+        thumbnail: book.thumbnailUrl || null,
+        createdAt: book.createdAt ? book.createdAt.toISOString() : new Date().toISOString(),
+        isAssignment: false,
+        previewUrl: `/student/books/${book.bookId || book.id}`,
+        playUrl: `/student/books/${book.bookId || book.id}`,
+      };
+    }
+  }
+
+  // Specific Route 2: Assignment / Material / Exercise
+  // e.g. /student/assignments/:id(/run)?, /teacher/materials/:id(/edit)?, /admin/materials/:id(/edit)?
+  const assignMatch = pathname.match(/\/(?:student\/assignments|teacher\/materials|admin\/materials)\/([^/]+)/i);
+  if (assignMatch && assignMatch[1]) {
+    const key = assignMatch[1];
+    const assignment = await prisma.assignment.findFirst({
+      where: {
+        deletedAt: null,
+        AND: [
+          { OR: [{ id: key }, { slug: key }] },
+          ...(!isAdmin ? [{ OR: [{ teacherId: userId }, { status: MaterialStatus.PUBLIC }] }] : [])
+        ]
+      },
+      include: { _count: { select: { questions: true } } }
+    });
+    if (assignment) {
+      return mapAssignment(assignment, assignment.teacherId === userId ? 'mine' : 'library');
+    }
+  }
+
+  // Specific Route: Grammar Theory Lesson (/grammar/:topic/:lesson)
+  // e.g. /grammar/tenses/past-perfect-continuous
+  const grammarLessonMatch = pathname.match(/\/grammar\/([^/]+)\/([^/]+)/i);
+  if (grammarLessonMatch && grammarLessonMatch[1] && grammarLessonMatch[2]) {
+    const topicId = grammarLessonMatch[1];
+    const lessonId = grammarLessonMatch[2];
+    const topicCfg = getTopicById(topicId);
+    const lessonCfg = topicCfg?.lessons.find((l: any) => l.id === lessonId);
+    let label = lessonCfg?.label;
+    if (!label) {
+      label = lessonId.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+    const lvl = lessonCfg?.level || 'ALL';
+
+    return {
+      id: `lesson_grammar_${topicId}_${lessonId}`,
+      rawId: `grammar:${topicId}:${lessonId}`,
+      title: `Grammar lesson: ${label}`,
+      type: 'LESSON',
+      source: 'library',
+      level: mapAgeGroupToLevel(lvl),
+      itemCount: 1,
+      itemUnit: 'bài học',
+      thumbnail: null,
+      createdAt: new Date().toISOString(),
+      isAssignment: false,
+      previewUrl: `/grammar/${topicId}/${lessonId}`,
+      playUrl: `/grammar/${topicId}/${lessonId}`,
+    };
+  }
+
+  // Specific Route: Standard Lesson / Video / Reading Lesson
+  // e.g. /student/lessons/:id, /public/lessons/:id, /teacher/lessons/:id, /lessons/:id
+  const standardLessonMatch = pathname.match(/\/(?:student\/lessons|public\/lessons|teacher\/lessons|lessons)\/([^/]+)/i);
+  if (standardLessonMatch && standardLessonMatch[1]) {
+    const key = standardLessonMatch[1];
+    const lesson = await prisma.lesson.findFirst({
+      where: {
+        deletedAt: null,
+        AND: [
+          { OR: [{ id: key }, { slug: key }] },
+          ...(!isAdmin ? [{ OR: [{ teacherId: userId }, { isPremium: false }] }] : [])
+        ]
+      }
+    });
+    if (lesson) {
+      const displayTitle = lesson.title.startsWith('Grammar lesson:') || lesson.title.startsWith('Lesson:') || lesson.title.startsWith('Bài học:')
+        ? lesson.title
+        : `Grammar lesson: ${lesson.title}`;
+      return {
+        id: `lesson_${lesson.id}`,
+        rawId: lesson.id,
+        title: displayTitle,
+        type: 'LESSON',
+        source: lesson.teacherId === userId ? 'mine' : 'library',
+        level: mapAgeGroupToLevel(lesson.level || 'a1'),
+        itemCount: 1,
+        itemUnit: 'bài học',
+        thumbnail: lesson.thumbnail || null,
+        createdAt: lesson.createdAt ? lesson.createdAt.toISOString() : new Date().toISOString(),
+        isAssignment: false,
+        previewUrl: `/public/lessons/${lesson.slug || lesson.id}`,
+        playUrl: `/student/lessons/${lesson.id}`,
+      };
+    }
+  }
+
+  // Specific Route 3: Exercise by level/topic/slug or grammar
+  // e.g. /exercises/:level/:topic/:slug
+  const exerciseMatch = pathname.match(/\/exercises\/[^/]+\/[^/]+\/([^/]+)/i);
+  if (exerciseMatch && exerciseMatch[1]) {
+    const key = exerciseMatch[1];
+    const assignment = await prisma.assignment.findFirst({
+      where: {
+        deletedAt: null,
+        AND: [
+          { OR: [{ slug: key }, { id: key }] },
+          ...(!isAdmin ? [{ OR: [{ teacherId: userId }, { status: MaterialStatus.PUBLIC }] }] : [])
+        ]
+      },
+      include: { _count: { select: { questions: true } } }
+    });
+    if (assignment) {
+      return mapAssignment(assignment, assignment.teacherId === userId ? 'mine' : 'library');
+    }
+  }
+
+  // Specific Route 4: Flashcard game or topic
+  // e.g. /student/game/flashcard-(?:match|quiz|sentence-builder) or /flashcards/:id
+  const flashcardGameMatch = pathname.match(/\/(?:student\/game\/flashcard-(?:match|quiz|sentence-builder)|flashcards|admin\/flashcards)(?:\/([^/]+))?/i);
+  if (flashcardGameMatch) {
+    const directId = flashcardGameMatch[1];
+    const fcKey = directId || searchParams.get('topicId') || searchParams.get('id') || searchParams.get('deckId');
+    if (fcKey) {
+      const fcTopic = await prisma.flashcardTopic.findFirst({
+        where: { id: fcKey },
+        include: { _count: { select: { flashcards: true } } }
+      });
+      if (fcTopic) {
+        return {
+          id: `flashcard_${fcTopic.id}`,
+          rawId: fcTopic.id,
+          title: fcTopic.name,
+          type: 'FLASHCARD',
+          source: 'library',
+          level: mapAgeGroupToLevel(fcTopic.cefrLevel),
+          itemCount: fcTopic._count?.flashcards || 0,
+          itemUnit: 'thẻ từ',
+          thumbnail: fcTopic.iconUrl || null,
+          createdAt: fcTopic.createdAt ? fcTopic.createdAt.toISOString() : new Date().toISOString(),
+          isAssignment: false,
+          previewUrl: `/student/game/flashcard-match?topicId=${fcTopic.id}`,
+          playUrl: `/student/game/flashcard-match?topicId=${fcTopic.id}`,
+        };
+      }
+      const fcDeck = await prisma.flashcardDeck.findFirst({
+        where: { id: fcKey },
+        include: { assignment: { include: { _count: { select: { questions: true } } } } }
+      });
+      if (fcDeck && fcDeck.assignment) {
+        return mapAssignment(fcDeck.assignment, fcDeck.assignment.teacherId === userId ? 'mine' : 'library');
+      }
+    }
+  }
+
+  // Specific Route 5: Match Word & Minigames
+  const gameMatch = pathname.match(/\/(?:student\/game|game)\/([^/]+)/i);
+  if (gameMatch) {
+    const gKey = searchParams.get('topicId') || searchParams.get('id') || gameMatch[1];
+    if (gKey) {
+      const gTopic = await prisma.matchWordTopic.findFirst({
+        where: {
+          id: gKey,
+          AND: [
+            ...(!isAdmin ? [{ OR: [{ teacherId: userId }, { teacherId: null }] }] : [])
+          ]
+        },
+        include: { _count: { select: { items: true } } }
+      });
+      if (gTopic) {
+        return {
+          id: `game_${gTopic.id}`,
+          rawId: gTopic.id,
+          title: gTopic.name,
+          type: 'GAME',
+          source: gTopic.teacherId === userId ? 'mine' : 'library',
+          level: mapAgeGroupToLevel(gTopic.ageGroup),
+          itemCount: gTopic._count?.items || 0,
+          itemUnit: 'từ/câu',
+          thumbnail: gTopic.thumbnailUrl || null,
+          createdAt: gTopic.createdAt ? gTopic.createdAt.toISOString() : new Date().toISOString(),
+          isAssignment: false,
+          previewUrl: getGamePlayUrl(gTopic),
+          playUrl: getGamePlayUrl(gTopic),
+        };
+      }
+    }
+  }
+
+  // Generic Fallback by candidates
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length > 0) {
+    const lastSeg = segments[segments.length - 1];
+    if (!candidates.includes(lastSeg)) candidates.push(lastSeg);
+  }
+  if (!candidates.includes(input)) candidates.push(input);
+
+  for (const cand of candidates) {
+    if (!cand || cand.length < 3) continue;
+
+    // Check assignment
+    const a = await prisma.assignment.findFirst({
+      where: {
+        deletedAt: null,
+        AND: [
+          { OR: [{ id: cand }, { slug: cand }] },
+          ...(!isAdmin ? [{ OR: [{ teacherId: userId }, { status: MaterialStatus.PUBLIC }] }] : [])
+        ]
+      },
+      include: { _count: { select: { questions: true } } }
+    });
+    if (a) return mapAssignment(a, a.teacherId === userId ? 'mine' : 'library');
+
+    // Check readAlongBook
+    const b = await prisma.readAlongBook.findFirst({
+      where: {
+        AND: [
+          { OR: [{ id: cand }, { bookId: cand }] },
+          ...(!isAdmin ? [{ status: BookStatus.PUBLISHED }] : [])
+        ]
+      },
+      include: { slides: { select: { id: true } } }
+    });
+    if (b) {
+      return {
+        id: `book_${b.id}`,
+        rawId: b.id,
+        title: b.title,
+        type: 'BOOK',
+        source: 'library',
+        level: mapAgeGroupToLevel(b.level),
+        itemCount: b.slides?.length || 0,
+        itemUnit: 'trang',
+        thumbnail: b.thumbnailUrl || null,
+        createdAt: b.createdAt ? b.createdAt.toISOString() : new Date().toISOString(),
+        isAssignment: false,
+        previewUrl: `/student/books/${b.bookId || b.id}`,
+        playUrl: `/student/books/${b.bookId || b.id}`,
+      };
+    }
+
+    // Check matchWordTopic
+    const g = await prisma.matchWordTopic.findFirst({
+      where: {
+        id: cand,
+        AND: [
+          ...(!isAdmin ? [{ OR: [{ teacherId: userId }, { teacherId: null }] }] : [])
+        ]
+      },
+      include: { _count: { select: { items: true } } }
+    });
+    if (g) {
+      return {
+        id: `game_${g.id}`,
+        rawId: g.id,
+        title: g.name,
+        type: 'GAME',
+        source: g.teacherId === userId ? 'mine' : 'library',
+        level: mapAgeGroupToLevel(g.ageGroup),
+        itemCount: g._count?.items || 0,
+        itemUnit: 'từ/câu',
+        thumbnail: g.thumbnailUrl || null,
+        createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
+        isAssignment: false,
+        previewUrl: getGamePlayUrl(g),
+        playUrl: getGamePlayUrl(g),
+      };
+    }
+
+    // Check flashcardTopic
+    const fc = await prisma.flashcardTopic.findFirst({
+      where: { id: cand },
+      include: { _count: { select: { flashcards: true } } }
+    });
+    if (fc) {
+      return {
+        id: `flashcard_${fc.id}`,
+        rawId: fc.id,
+        title: fc.name,
+        type: 'FLASHCARD',
+        source: 'library',
+        level: mapAgeGroupToLevel(fc.cefrLevel),
+        itemCount: fc._count?.flashcards || 0,
+        itemUnit: 'thẻ từ',
+        thumbnail: fc.iconUrl || null,
+        createdAt: fc.createdAt ? fc.createdAt.toISOString() : new Date().toISOString(),
+        isAssignment: false,
+        previewUrl: `/student/game/flashcard-match?topicId=${fc.id}`,
+        playUrl: `/student/game/flashcard-match?topicId=${fc.id}`,
+      };
+    }
+  }
+
+  return null;
+}
+
+function isLikelyLinkOrIdString(input: string): boolean {
+  const trimmed = input.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return true;
+  if (trimmed.startsWith('/')) return true;
+  if (/^localhost(:\d+)?\//i.test(trimmed)) return true;
+  if (/^(student|teacher|admin|game|exercises|flashcards|read-along|grammar|lesson|lessons)\//i.test(trimmed)) return true;
+  if (/^c[a-z0-9]{24,32}$/i.test(trimmed)) return true;
+  return false;
+}
+
+export interface SearchAssignableParams {
+  query?: string;
+  contentType?: string;
+  level?: string;
+  source: 'mine' | 'library' | 'recent';
+  classId?: string;
+  limit?: number;
+}
+
+export interface SearchAssignableResult {
+  items: AssignableLibraryItem[];
+  isFromLink?: boolean;
+  linkError?: string | null;
+}
+
+export async function searchAssignableContentAction(
+  params: SearchAssignableParams
+): Promise<SearchAssignableResult> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const userId = session.user.id;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true }
+  });
+  const isAdmin = user?.role === 'ADMIN';
+
+  const q = (params.query || '').trim();
+  const contentType = params.contentType || 'ALL';
+  const level = params.level || 'ALL';
+  const source = params.source || 'mine';
+  const limit = Math.min(params.limit || 30, 60);
+
+  // Helper to map DB Assignment to AssignableLibraryItem
+  const mapAssignment = (a: any, src: 'mine' | 'library'): AssignableLibraryItem => {
+    let type: 'GAME' | 'FLASHCARD' | 'READING' | 'GRAMMAR' | 'BOOK' = 'GRAMMAR';
+    let playUrl = `/student/assignments/${a.id}/run`;
+    let previewUrl = `/teacher/materials/${a.id}/edit`;
+    let itemUnit = 'câu hỏi';
+    let itemCount = a._count?.questions || 0;
+    let section: 'NEW' | 'REVIEW' = 'NEW';
+
+    if (a.instructions) {
+      try {
+        const meta = JSON.parse(a.instructions);
+        if (meta.kind === 'GAME') {
+          type = 'GAME';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'mục';
+        } else if (meta.kind === 'BOOK') {
+          type = 'BOOK';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'trang';
+        } else if (meta.kind === 'FLASHCARD') {
+          type = 'FLASHCARD';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'thẻ từ';
+        }
+        if (meta.section) {
+          section = meta.section;
+        }
+      } catch {}
+    }
+
+    if (type === 'GRAMMAR' && a.materialType === 'READING') {
+      type = 'READING';
+      itemUnit = 'câu hỏi';
+    } else if (type === 'GRAMMAR' && a.materialType === 'FLASHCARD') {
+      type = 'FLASHCARD';
+      itemUnit = 'thẻ từ';
+    }
+
+    return {
+      id: a.id,
+      rawId: a.id,
+      title: a.title,
+      type,
+      source: src,
+      level: mapAgeGroupToLevel(a.level),
+      itemCount,
+      itemUnit,
+      thumbnail: a.thumbnail || null,
+      createdAt: a.createdAt ? a.createdAt.toISOString() : new Date().toISOString(),
+      isAssignment: true,
+      previewUrl,
+      playUrl,
+      section,
+    };
+  };
+
+  // Case 0: Source 'recent' - Fetch assignments previously assigned to this class or by this teacher
+  if (source === 'recent') {
+    const recentAssigned = await prisma.assignmentClass.findMany({
+      where: {
+        ...(params.classId ? { classId: params.classId } : { class: { teacherId: userId } }),
+        assignment: {
+          deletedAt: null,
+          ...(q ? { title: { contains: q, mode: 'insensitive' } } : {})
+        }
+      },
+      include: {
+        assignment: {
+          include: { _count: { select: { questions: true } } }
+        }
+      },
+      orderBy: { assignedAt: 'desc' },
+      take: limit * 2,
+    });
+
+    const seenIds = new Set<string>();
+    const recentItems: AssignableLibraryItem[] = [];
+    for (const ac of recentAssigned) {
+      if (!seenIds.has(ac.assignment.id)) {
+        seenIds.add(ac.assignment.id);
+        const mapped = mapAssignment(ac.assignment, ac.assignment.teacherId === userId ? 'mine' : 'library');
+        mapped.section = 'REVIEW';
+        recentItems.push(mapped);
+      }
+      if (recentItems.length >= limit) break;
+    }
+    return { items: recentItems };
+  }
+
+  // Case 1: Fast-path for Link or Direct ID
+  if (q && isLikelyLinkOrIdString(q)) {
+    const item = await resolveInternalLinkForAssignmentAction(q);
+    if (item) {
+      return { items: [item], isFromLink: true };
+    }
+    return {
+      items: [],
+      isFromLink: true,
+      linkError: 'Không tìm thấy bài tập, bài học hoặc trò chơi nào từ liên kết này. Vui lòng kiểm tra lại đường dẫn nội bộ hệ thống.'
+    };
+  }
+
+  const getLevelMatchConditions = (targetLevel: string) => {
+    if (targetLevel === 'ALL') return undefined;
+    const l = targetLevel.toLowerCase();
+    if (l === 'pre-a1') return ['pre-a1', 'pre_a1', '2-5', 'kindergarten'];
+    if (l === 'a1') return ['a1', '6-12', 'elementary'];
+    if (l === 'a2') return ['a2', 'teen'];
+    if (l === 'b1') return ['b1', 'readers', 'intermediate'];
+    if (l === 'b2') return ['b2', 'upper_intermediate'];
+    if (l === 'c1') return ['c1', 'advanced'];
+    return [l];
+  };
+
+  const levelValues = getLevelMatchConditions(level);
+  const results: AssignableLibraryItem[] = [];
+
+  const shouldSearchAssignments = ['ALL', 'GRAMMAR', 'READING', 'FLASHCARD'].includes(contentType);
+  const shouldSearchGames = ['ALL', 'GAME'].includes(contentType);
+  const shouldSearchFlashcards = ['ALL', 'FLASHCARD'].includes(contentType) && source === 'library';
+  const shouldSearchBooks = ['ALL', 'BOOK'].includes(contentType) && source === 'library';
+
+  const queries: Promise<void>[] = [];
+
+  // 1. Query Assignments
+  if (shouldSearchAssignments) {
+    const matTypeFilter =
+      contentType === 'READING' ? 'READING' :
+      contentType === 'FLASHCARD' ? 'FLASHCARD' :
+      contentType === 'GRAMMAR' ? 'EXERCISE' : undefined;
+
+    const assignWhere: any = {
+      deletedAt: null,
+      AND: []
+    };
+
+    if (source === 'mine') {
+      assignWhere.AND.push({ teacherId: userId });
+    } else {
+      assignWhere.AND.push(
+        isAdmin ? { status: 'PUBLIC' } : { status: 'PUBLIC', teacherId: { not: userId } }
+      );
+    }
+
+    if (matTypeFilter) {
+      assignWhere.AND.push({ materialType: matTypeFilter });
+    }
+
+    if (q) {
+      assignWhere.AND.push({ title: { contains: q, mode: 'insensitive' } });
+    }
+
+    if (levelValues) {
+      assignWhere.AND.push({ level: { in: levelValues } });
+    }
+
+    queries.push(
+      prisma.assignment.findMany({
+        where: assignWhere,
+        select: {
+          id: true,
+          title: true,
+          level: true,
+          materialType: true,
+          thumbnail: true,
+          createdAt: true,
+          instructions: true,
+          teacherId: true,
+          _count: { select: { questions: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }).then(list => {
+        list.forEach(a => {
+          results.push(mapAssignment(a, a.teacherId === userId ? 'mine' : 'library'));
+        });
+      })
+    );
+  }
+
+  // 2. Query MatchWord Topics (Games)
+  if (shouldSearchGames) {
+    const gameWhere: any = {
+      AND: []
+    };
+
+    if (source === 'mine') {
+      gameWhere.AND.push({ teacherId: userId });
+    } else {
+      gameWhere.AND.push({ teacherId: null });
+    }
+
+    if (q) {
+      gameWhere.AND.push({ name: { contains: q, mode: 'insensitive' } });
+    }
+
+    if (levelValues) {
+      gameWhere.AND.push({ ageGroup: { in: levelValues } });
+    }
+
+    queries.push(
+      prisma.matchWordTopic.findMany({
+        where: gameWhere,
+        select: {
+          id: true,
+          name: true,
+          ageGroup: true,
+          gameMode: true,
+          thumbnailUrl: true,
+          createdAt: true,
+          teacherId: true,
+          _count: { select: { items: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }).then(list => {
+        list.forEach(g => {
+          results.push({
+            id: `game_${g.id}`,
+            rawId: g.id,
+            title: g.name,
+            type: 'GAME',
+            source: g.teacherId === userId ? 'mine' : 'library',
+            level: mapAgeGroupToLevel(g.ageGroup),
+            itemCount: g._count?.items || 0,
+            itemUnit: 'từ/câu',
+            thumbnail: g.thumbnailUrl || null,
+            createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
+            isAssignment: false,
+            previewUrl: getGamePlayUrl(g),
+            playUrl: getGamePlayUrl(g)
+          });
+        });
+      })
+    );
+  }
+
+  // 3. Query Flashcard Topics (Library)
+  if (shouldSearchFlashcards) {
+    const fcWhere: any = { AND: [] };
+    if (q) fcWhere.AND.push({ name: { contains: q, mode: 'insensitive' } });
+    if (levelValues) fcWhere.AND.push({ cefrLevel: { in: levelValues } });
+
+    queries.push(
+      prisma.flashcardTopic.findMany({
+        where: fcWhere.AND.length > 0 ? fcWhere : undefined,
+        select: {
+          id: true,
+          name: true,
+          cefrLevel: true,
+          iconUrl: true,
+          createdAt: true,
+          _count: { select: { flashcards: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }).then(list => {
+        list.forEach(f => {
+          results.push({
+            id: `flashcard_${f.id}`,
+            rawId: f.id,
+            title: f.name,
+            type: 'FLASHCARD',
+            source: 'library',
+            level: mapAgeGroupToLevel(f.cefrLevel),
+            itemCount: f._count?.flashcards || 0,
+            itemUnit: 'thẻ từ',
+            thumbnail: f.iconUrl || null,
+            createdAt: f.createdAt ? f.createdAt.toISOString() : new Date().toISOString(),
+            isAssignment: false,
+            previewUrl: `/student/game/flashcard-match?topicId=${f.id}`,
+            playUrl: `/student/game/flashcard-match?topicId=${f.id}`
+          });
+        });
+      })
+    );
+  }
+
+  // 4. Query ReadAlong Books (Library)
+  if (shouldSearchBooks) {
+    const bookWhere: any = {
+      status: 'PUBLISHED',
+      AND: []
+    };
+    if (q) bookWhere.AND.push({ title: { contains: q, mode: 'insensitive' } });
+    if (levelValues) bookWhere.AND.push({ level: { in: levelValues } });
+
+    queries.push(
+      prisma.readAlongBook.findMany({
+        where: bookWhere.AND.length > 0 ? bookWhere : { status: 'PUBLISHED' },
+        select: {
+          id: true,
+          bookId: true,
+          title: true,
+          level: true,
+          thumbnailUrl: true,
+          createdAt: true,
+          _count: { select: { slides: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }).then(list => {
+        list.forEach(b => {
+          results.push({
+            id: `book_${b.id}`,
+            rawId: b.id,
+            title: b.title,
+            type: 'BOOK',
+            source: 'library',
+            level: mapAgeGroupToLevel(b.level),
+            itemCount: b._count?.slides || 0,
+            itemUnit: 'trang',
+            thumbnail: b.thumbnailUrl || null,
+            createdAt: b.createdAt ? b.createdAt.toISOString() : new Date().toISOString(),
+            isAssignment: false,
+            previewUrl: `/student/books/${b.bookId || b.id}`,
+            playUrl: `/student/books/${b.bookId || b.id}`
+          });
+        });
+      })
+    );
+  }
+
+  await Promise.all(queries);
+
+  // Sort by createdAt desc
+  results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return {
+    items: results.slice(0, limit),
+    isFromLink: false
+  };
+}
+

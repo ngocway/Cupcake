@@ -64,14 +64,7 @@ export default async function StudentClassesPage() {
   const pendingRequests = formattedEnrollments.filter(e => e.status === 'PENDING');
 
   return (
-    <div className="max-w-7xl mx-auto space-y-10">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">{t("title")}</h1>
-        <p className="text-on-surface-variant text-lg">
-          {t("subtitle")}
-        </p>
-      </div>
-
+    <div className="max-w-[1440px] w-full mx-auto pt-2 sm:pt-4">
       <ClassesClient 
         activeClasses={activeClasses} 
         pendingRequests={pendingRequests} 

@@ -9,14 +9,18 @@ export async function GET(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'TEACHER') {
+    const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+    if (!session || !isTeacher) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: classId } = await params;
 
     const cls = await prisma.class.findFirst({
-      where: { id: classId, teacherId: session.user.id },
+      where: { 
+        id: classId, 
+        ...(session.user.role === 'ADMIN' ? {} : { teacherId: session.user.id }) 
+      },
     });
 
     if (!cls) {
@@ -90,20 +94,78 @@ export async function POST(
 ) {
   try {
     const session = await auth();
-    if (!session || session.user?.role !== 'TEACHER') {
+    const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+    if (!session || !isTeacher) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: classId } = await params;
 
     const cls = await prisma.class.findFirst({
-      where: { id: classId, teacherId: session.user.id },
+      where: { 
+        id: classId, 
+        ...(session.user.role === 'ADMIN' ? {} : { teacherId: session.user.id }) 
+      },
     });
     if (!cls) {
       return NextResponse.json({ error: 'Lớp học không tồn tại' }, { status: 404 });
     }
 
     const body = await req.json();
+
+    // 1. Add students by Emails list (New streamlined method)
+    if (body.emails && Array.isArray(body.emails)) {
+      const emailList: string[] = body.emails
+        .map((e: unknown) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+        .filter((e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+      const uniqueEmails = Array.from(new Set(emailList));
+
+      if (uniqueEmails.length === 0) {
+        return NextResponse.json({ error: 'Không tìm thấy địa chỉ email hợp lệ nào.' }, { status: 400 });
+      }
+
+      const enrolled = await Promise.all(uniqueEmails.map(async (email) => {
+        let user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+          // Rule: Name is extracted from part before @ (e.g., "nam.tran" from "nam.tran@gmail.com")
+          const namePrefix = email.split('@')[0] || 'Học sinh';
+          user = await prisma.user.create({
+            data: {
+              name: namePrefix,
+              email,
+              role: 'STUDENT',
+              isManagedAccount: false,
+            },
+          });
+        }
+
+        // Upsert enrollment into class
+        await prisma.classEnrollment.upsert({
+          where: { studentId_classId: { studentId: user.id, classId } },
+          create: { studentId: user.id, classId, status: 'ACTIVE' },
+          update: { status: 'ACTIVE' },
+        });
+
+        // Send notification to student account
+        try {
+          const { createNotification } = await import('@/actions/notification-actions');
+          await createNotification(
+            user.id,
+            'ENROLLMENT_APPROVED',
+            'Bạn đã được thêm vào lớp học',
+            `Bạn đã được thêm vào lớp ${cls.name}.`,
+            `/student/classes/${classId}`
+          );
+        } catch {
+          // Non-blocking notification
+        }
+
+        return { id: user.id, name: user.name, email: user.email };
+      }));
+
+      return NextResponse.json({ success: true, count: enrolled.length, students: enrolled }, { status: 201 });
+    }
 
     // Bulk add
     if (body.students) {

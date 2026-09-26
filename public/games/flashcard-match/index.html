@@ -977,9 +977,20 @@
             document.getElementById('roundBannerEmoji').textContent = emojis[ri];
             document.getElementById('roundBannerTitle').textContent = msgs[ri];
             document.getElementById('roundBannerSub').textContent   = `Round ${roundNumber} complete! You matched all ${total} pairs!`;
-            nextBtn.textContent = 'NEXT ROUND ▶';
+            roundBanner.classList.add('show');
+
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'MATCH_GAME_PROGRESS',
+                    matchedCount: usedIds.size,
+                    totalCount: allCards.length,
+                    isCompleted: allCards.length > 0 && (usedIds.size >= allCards.length * 0.8)
+                }, '*');
+            }
+        } catch (e) {
+            console.error('Failed to postMessage:', e);
         }
-        roundBanner.classList.add('show');
     }
 
     document.getElementById('nextRoundBtn').addEventListener('click', () => {

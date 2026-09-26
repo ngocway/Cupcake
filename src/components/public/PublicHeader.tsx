@@ -18,7 +18,14 @@ const LANG_LABELS: Record<string, string> = {
 }
 
 interface PublicHeaderProps {
-  session: { id: string; name: string | null; image: string | null; role: string | null; studyAgeGroup?: string | null } | null
+  session: {
+    id: string
+    name: string | null
+    image: string | null
+    role: string | null
+    email?: string | null
+    studyAgeGroup?: string | null
+  } | null
   search?: string
   setSearch?: (val: string) => void
   isPendingSearch?: boolean
@@ -130,11 +137,15 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const isTeacherSection = pathname.startsWith("/teacher") || isTeacherDomain
   const isTeacher = isTeacherAccount || isTeacherSection
   const dashboardHref = isTeacherAccount ? "/teacher" : "/student/dashboard"
+  const isAdmin = session?.role?.toUpperCase() === "ADMIN" || session?.email === "admin@cupcakes.com"
 
-  const isActive = (path: string) => pathname === path
+  const isActive = (path: string) => pathname === path || (path !== "/" && path !== "/teacher" && pathname.startsWith(path + "/"))
+  const isClassesPage = pathname?.includes('/student/classes')
 
   return (
-    <nav className="relative mt-6 mx-auto z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] min-h-[56px] sm:min-h-[64px] bg-white/95 border border-primary/10 rounded-full shadow-2xl">
+    <nav className={`relative mx-auto z-50 flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4 w-[95%] max-w-[1440px] min-h-[56px] sm:min-h-[64px] bg-white/95 border border-primary/10 rounded-full shadow-2xl transition-all duration-300 ${
+      isClassesPage ? "mt-2 sm:mt-3 mb-6 sm:mb-8" : "mt-6"
+    }`}>
       {/* Hamburger button — mobile only */}
         <button
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
@@ -179,9 +190,9 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
             className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 shadow-md shadow-blue-500/25 active:scale-95 ml-1 sm:ml-2 shrink-0 group"
           >
             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300">
-              <span className="material-symbols-outlined text-[15px]">school</span>
+              <span className="material-symbols-outlined text-[15px]">sports_esports</span>
             </span>
-            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Bàn làm việc Giáo viên</span>
+            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Giáo viên tạo game</span>
           </Link>
         ) : null}
       </div>
@@ -239,14 +250,27 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                 <div className="absolute top-full right-0 mt-3 w-64 bg-white border border-primary/10 rounded-[24px] shadow-2xl py-2 z-[70] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                   <div className="px-5 py-3.5 border-b border-primary/10 mb-1">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-sm text-on-surface truncate">{session.name}</p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-on-surface truncate">{session.name}</p>
+                        {session.email && (
+                          <p className="text-[11px] text-on-surface-variant/60 truncate mt-0.5">{session.email}</p>
+                        )}
+                      </div>
                       {isTeacherSection ? (
-                        <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-700 font-black rounded-full border border-blue-200 uppercase tracking-wider shrink-0">
-                          TEACHER
+                        <span className={`text-[10px] px-2 py-0.5 font-black rounded-full border uppercase tracking-wider shrink-0 ${
+                          isAdmin 
+                            ? "bg-amber-50 text-amber-700 border-amber-200" 
+                            : "bg-blue-50 text-blue-700 border-blue-200"
+                        }`}>
+                          {isAdmin ? "ADMIN" : "TEACHER"}
                         </span>
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 font-black rounded-full border border-emerald-200 uppercase tracking-wider shrink-0">
-                          STUDENT
+                        <span className={`text-[10px] px-2 py-0.5 font-black rounded-full border uppercase tracking-wider shrink-0 ${
+                          isAdmin 
+                            ? "bg-amber-50 text-amber-700 border-amber-200" 
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}>
+                          {isAdmin ? "ADMIN" : "STUDENT"}
                         </span>
                       )}
                     </div>
@@ -254,6 +278,70 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                   <div className="flex flex-col">
                     {isTeacherSection ? (
                       <>
+                        {isAdmin && (
+                          <>
+                            <Link 
+                              href="/teacher/dashboard"
+                              onClick={() => setIsMenuOpen(false)}
+                              className={`w-full text-left px-5 py-2.5 text-xs font-bold transition-colors flex items-center gap-3 ${
+                                isActive('/teacher/dashboard') 
+                                  ? "bg-primary/5 text-primary" 
+                                  : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                              <span>Dashboard</span>
+                            </Link>
+                            <Link 
+                              href="/teacher/classes"
+                              onClick={() => setIsMenuOpen(false)}
+                              className={`w-full text-left px-5 py-2.5 text-xs font-bold transition-colors flex items-center gap-3 ${
+                                isActive('/teacher/classes') 
+                                  ? "bg-primary/5 text-primary" 
+                                  : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">school</span>
+                              <span>Lớp học</span>
+                            </Link>
+                            <Link 
+                              href="/teacher/lessons"
+                              onClick={() => setIsMenuOpen(false)}
+                              className={`w-full text-left px-5 py-2.5 text-xs font-bold transition-colors flex items-center gap-3 ${
+                                isActive('/teacher/lessons') 
+                                  ? "bg-primary/5 text-primary" 
+                                  : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">menu_book</span>
+                              <span>Bài học</span>
+                            </Link>
+                            <Link 
+                              href="/teacher/profile"
+                              onClick={() => setIsMenuOpen(false)}
+                              className={`w-full text-left px-5 py-2.5 text-xs font-bold transition-colors flex items-center gap-3 ${
+                                isActive('/teacher/profile') 
+                                  ? "bg-primary/5 text-primary" 
+                                  : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">contact_page</span>
+                              <span>Quản lý Portfolio</span>
+                            </Link>
+                            <Link 
+                              href="/teacher/settings"
+                              onClick={() => setIsMenuOpen(false)}
+                              className={`w-full text-left px-5 py-2.5 text-xs font-bold transition-colors flex items-center gap-3 ${
+                                isActive('/teacher/settings') 
+                                  ? "bg-primary/5 text-primary" 
+                                  : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">settings</span>
+                              <span>Cài đặt</span>
+                            </Link>
+                          </>
+                        )}
                         <TeacherLanguageSelector />
                         <div className="h-px bg-primary/10 my-1 mx-3" />
                         <button 
@@ -266,24 +354,48 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                       </>
                     ) : (
                       <>
-                        <Link 
-                          href={dashboardHref}
-                          onClick={() => setIsMenuOpen(false)}
-                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
-                            isActive(dashboardHref) 
-                              ? "bg-primary/5 text-primary" 
-                              : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[18px]">dashboard</span>
-                          <span>{t("dashboard")}</span>
-                        </Link>
+                        {isTeacherAccount ? (
+                          <Link 
+                            href={dashboardHref}
+                            onClick={() => setIsMenuOpen(false)}
+                            className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                              isActive(dashboardHref) 
+                                ? "bg-primary/5 text-primary" 
+                                : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                            <span>{t("dashboard")}</span>
+                          </Link>
+                        ) : (
+                          <div className="px-3 py-1">
+                            <Link 
+                              href="/student/classes"
+                              onClick={() => setIsMenuOpen(false)}
+                              className={`w-full text-left px-3.5 py-2.5 text-xs font-black transition-all flex items-center justify-between rounded-xl border group ${
+                                isActive('/student/classes') 
+                                  ? "bg-primary text-white border-primary shadow-sm shadow-primary/20" 
+                                  : "bg-emerald-50/90 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-100 border-emerald-200/90 dark:border-emerald-800/60 hover:bg-emerald-100/90 dark:hover:bg-emerald-900/60 hover:border-emerald-300"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className={`material-symbols-outlined text-[19px] font-bold transition-transform group-hover:scale-110 ${
+                                  isActive('/student/classes') ? "text-white" : "text-emerald-600 dark:text-emerald-400"
+                                }`}>school</span>
+                                <span className="font-extrabold text-[13px] tracking-tight">Class</span>
+                              </div>
+                              <span className={`material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5 ${
+                                isActive('/student/classes') ? "text-white/80" : "text-emerald-600/60 dark:text-emerald-400/60"
+                              }`}>chevron_right</span>
+                            </Link>
+                          </div>
+                        )}
                         <Link 
                           href={`/profile/${session.id}`}
                           onClick={() => setIsMenuOpen(false)}
-                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                          className={`w-full text-left px-5 py-3 text-xs font-medium transition-colors flex items-center gap-3 ${
                             isActive(`/profile/${session.id}`) 
-                              ? "bg-primary/5 text-primary" 
+                              ? "bg-primary/5 text-primary font-bold" 
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
@@ -296,9 +408,9 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                         <Link 
                           href="/student/my-learning/assignments"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                          className={`w-full text-left px-5 py-3 text-xs font-medium transition-colors flex items-center gap-3 ${
                             isActive('/student/my-learning/assignments') 
-                              ? "bg-primary/5 text-primary" 
+                              ? "bg-primary/5 text-primary font-bold" 
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
@@ -308,9 +420,9 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                         <Link 
                           href="/student/lessons?filter=completed"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                          className={`w-full text-left px-5 py-3 text-xs font-medium transition-colors flex items-center gap-3 ${
                             pathname.includes('/student/lessons') 
-                              ? "bg-primary/5 text-primary" 
+                              ? "bg-primary/5 text-primary font-bold" 
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
@@ -320,9 +432,9 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                         <Link 
                           href="/student/bookmarks"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                          className={`w-full text-left px-5 py-3 text-xs font-medium transition-colors flex items-center gap-3 ${
                             isActive('/student/bookmarks') 
-                              ? "bg-primary/5 text-primary" 
+                              ? "bg-primary/5 text-primary font-bold" 
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
@@ -332,9 +444,9 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                         <Link 
                           href="/student/my-reviews"
                           onClick={() => setIsMenuOpen(false)}
-                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 ${
+                          className={`w-full text-left px-5 py-3 text-xs font-medium transition-colors flex items-center gap-3 ${
                             isActive('/student/my-reviews') 
-                              ? "bg-primary/5 text-primary" 
+                              ? "bg-primary/5 text-primary font-bold" 
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >

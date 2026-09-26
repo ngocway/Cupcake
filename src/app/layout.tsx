@@ -11,6 +11,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Suspense } from "react";
 import PageViewTracker from "@/components/common/PageViewTracker";
 
+import { auth } from "@/auth";
+
 const nunito = Nunito({
   variable: "--font-nunito",
   subsets: ["latin"],
@@ -96,6 +98,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
   const locale = await getLocale();
   const messages = await getMessages();
   const gaId = process.env.NEXT_PUBLIC_GA_ID;
@@ -146,7 +149,7 @@ export default async function RootLayout({
       </head>
 
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <Providers locale={locale} messages={messages}>
+        <Providers session={session} locale={locale} messages={messages}>
           <SharedBackground />
           <Suspense fallback={null}>
             <PageViewTracker />

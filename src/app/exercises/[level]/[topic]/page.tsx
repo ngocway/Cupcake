@@ -4,7 +4,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { CEFR_LEVELS, getTopicById } from "@/lib/grammar-taxonomy";
+import { CEFR_LEVELS, getTopicById, LESSON_FORMULAS } from "@/lib/grammar-taxonomy";
 import { ChevronRight, BookOpen, ExternalLink } from "lucide-react";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { HomeSidebar } from "@/app/_components/HomeSidebar";
@@ -84,16 +84,16 @@ async function ExerciseListSection({
   const exercises = await fetchExercises(level, topic, userId);
 
   const LESSON_PILL_COLORS = [
-    { bg: "bg-emerald-500", text: "text-white", icon: "text-white" },
-    { bg: "bg-sky-500",     text: "text-white", icon: "text-white" },
-    { bg: "bg-violet-500", text: "text-white", icon: "text-white" },
-    { bg: "bg-amber-500",  text: "text-white", icon: "text-white" },
-    { bg: "bg-rose-500",   text: "text-white", icon: "text-white" },
-    { bg: "bg-teal-500",   text: "text-white", icon: "text-white" },
-    { bg: "bg-pink-500",   text: "text-white", icon: "text-white" },
-    { bg: "bg-orange-500", text: "text-white", icon: "text-white" },
-    { bg: "bg-indigo-500", text: "text-white", icon: "text-white" },
-    { bg: "bg-cyan-500",   text: "text-white", icon: "text-white" },
+    { bg: "bg-emerald-500", gradient: "from-emerald-300 via-emerald-400 to-teal-500",    text: "text-white", icon: "text-white" },
+    { bg: "bg-sky-500",     gradient: "from-sky-300 via-sky-400 to-blue-500",           text: "text-white", icon: "text-white" },
+    { bg: "bg-violet-500", gradient: "from-violet-300 via-violet-400 to-purple-500",   text: "text-white", icon: "text-white" },
+    { bg: "bg-amber-500",  gradient: "from-amber-300 via-amber-400 to-orange-400",     text: "text-white", icon: "text-white" },
+    { bg: "bg-rose-500",   gradient: "from-rose-300 via-rose-400 to-pink-500",         text: "text-white", icon: "text-white" },
+    { bg: "bg-teal-500",   gradient: "from-teal-300 via-teal-400 to-emerald-500",      text: "text-white", icon: "text-white" },
+    { bg: "bg-pink-500",   gradient: "from-pink-300 via-pink-400 to-rose-500",         text: "text-white", icon: "text-white" },
+    { bg: "bg-orange-500", gradient: "from-orange-300 via-orange-400 to-amber-500",    text: "text-white", icon: "text-white" },
+    { bg: "bg-indigo-500", gradient: "from-indigo-300 via-indigo-400 to-violet-500",   text: "text-white", icon: "text-white" },
+    { bg: "bg-cyan-500",   gradient: "from-cyan-300 via-cyan-400 to-sky-500",          text: "text-white", icon: "text-white" },
   ];
 
   let lessonColorIndex = 0;
@@ -137,21 +137,22 @@ async function ExerciseListSection({
                 <span className={pillColor.text}>{lesson.label}</span>
                 <ExternalLink className={`w-3 h-3 ${pillColor.icon} opacity-70`} />
               </Link>
-              <Link
-                href={`/grammar/${topic}/${lesson.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold text-amber-500 hover:text-amber-400 hover:underline underline-offset-2 shrink-0 transition-colors"
-              >
-                View grammar lesson
-              </Link>
+
               <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
               <span className="text-xs text-slate-400 font-medium shrink-0">{lessonExs.length} exercise{lessonExs.length !== 1 ? "s" : ""}</span>
             </div>
             {lessonExs.length === 0 ? (
               <p className="text-xs italic text-slate-400 pl-4 py-2">No practice exercises available yet.</p>
             ) : (
-              <ExerciseGrid exercises={lessonExs} isLoggedIn={isLoggedIn} />
+              <ExerciseGrid
+                exercises={lessonExs}
+                isLoggedIn={isLoggedIn}
+                grammarHref={`/grammar/${topic}/${lesson.id}`}
+                lessonLabel={lesson.label}
+                pillBg={pillColor.bg}
+                pillGradient={pillColor.gradient}
+                formula={LESSON_FORMULAS[lesson.id]}
+              />
             )}
           </div>
         );

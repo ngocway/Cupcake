@@ -17,8 +17,10 @@ import {
   Play,
   Loader2,
   Languages,
-  Keyboard
+  Keyboard,
+  CheckCircle2
 } from "lucide-react"
+import { completeClassActivityAction } from "@/actions/activity-completion-actions"
 
 // Định nghĩa kiểu dữ liệu
 interface Topic {
@@ -206,6 +208,34 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const [focusMode, setFocusMode] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [voicesLoaded, setVoicesLoaded] = useState<boolean>(false)
+
+  // Tracking lật thẻ cho bài tập được giao trong lớp (yêu cầu lật ít nhất 80% thẻ)
+  const assignmentId = searchParams?.get('assignmentId')
+  const [flippedIndices, setFlippedIndices] = useState<Set<number>>(new Set())
+  const [assignmentCompleted, setAssignmentCompleted] = useState<boolean>(false)
+
+  useEffect(() => {
+    setFlippedIndices(new Set())
+    setAssignmentCompleted(false)
+  }, [selectedTopic, selectedCategory])
+
+  useEffect(() => {
+    if (isFlipped && flashcards.length > 0) {
+      setFlippedIndices((prev) => {
+        const next = new Set(prev)
+        next.add(currentIndex)
+
+        const ratio = next.size / flashcards.length
+        if (ratio >= 0.8 && !assignmentCompleted && assignmentId) {
+          setAssignmentCompleted(true)
+          completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+            console.error("Failed to auto-complete flashcards:", err)
+          })
+        }
+        return next
+      })
+    }
+  }, [isFlipped, currentIndex, flashcards.length, assignmentCompleted, assignmentId])
   
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
   const currentLang = useContentStore(s => s.nativeLanguage)
@@ -1375,6 +1405,24 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
       {/* 2. Central Content: 3D Flip Card */}
       <main className="flex-1 flex flex-col justify-start md:justify-center items-center px-4 md:px-6 pt-24 sm:pt-24 md:pt-16 pb-4 md:pb-0 relative max-w-4xl mx-auto w-full">
+
+        {/* Assignment Progress Pill if opened from class */}
+        {assignmentId && flashcards.length > 0 && (
+          <div className={`mb-3 px-3.5 py-1.5 rounded-full text-xs font-black backdrop-blur-md border shadow-xs inline-flex items-center gap-1.5 transition-all duration-300 ${
+            assignmentCompleted || (flippedIndices.size / flashcards.length >= 0.8)
+              ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20'
+              : 'bg-white/90 dark:bg-slate-800/90 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+          }`}>
+            {assignmentCompleted || (flippedIndices.size / flashcards.length >= 0.8) ? (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                <span>Đã lật {flippedIndices.size}/{flashcards.length} thẻ (≥80%) • Đã hoàn thành!</span>
+              </>
+            ) : (
+              <span>Tiến độ bài học: {flippedIndices.size}/{flashcards.length} thẻ lật ({Math.round((flippedIndices.size / flashcards.length) * 100)}% / 80%)</span>
+            )}
+          </div>
+        )}
 
         {/* Hidden input for mobile keyboard support */}
         <input 

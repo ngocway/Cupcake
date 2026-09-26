@@ -6,7 +6,7 @@ import StudyClient from './StudyClient';
 
 export default async function TeacherStudyPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== 'TEACHER') {
+  if (!session?.user?.id || (session.user.role !== 'TEACHER' && session.user.role !== 'ADMIN')) {
     redirect('/login');
   }
 

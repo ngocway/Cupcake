@@ -6,10 +6,14 @@ import { revalidatePath } from 'next/cache';
 
 async function requireTeacherClass(classId: string) {
   const session = await auth();
-  if (!session || session.user?.role !== 'TEACHER') throw new Error("Unauthorized");
+  const isTeacher = session?.user?.role === 'TEACHER' || session?.user?.role === 'ADMIN';
+  if (!session || !isTeacher) throw new Error("Unauthorized");
   
   const cls = await prisma.class.findFirst({
-    where: { id: classId, teacherId: session.user.id },
+    where: { 
+      id: classId, 
+      ...(session.user.role === 'ADMIN' ? {} : { teacherId: session.user.id }) 
+    },
   });
   if (!cls) throw new Error("Class not found");
   
@@ -199,4 +203,23 @@ export async function remindPendingSubmissions(classId: string, assignmentId: st
   }
 
   return { success: true, count: pendingStudentIds.length };
+}
+
+export async function removeAssignmentFromClass(classId: string, assignmentId: string) {
+  const session = await auth();
+  if (!session || session.user.role !== 'ADMIN') {
+    throw new Error('Unauthorized: Chỉ ADMIN mới có quyền gỡ bài khỏi lớp.');
+  }
+
+  // Verify the class exists
+  const cls = await prisma.class.findUnique({ where: { id: classId }, select: { id: true } });
+  if (!cls) throw new Error('Class not found');
+
+  // Delete the AssignmentClass record (unlink assignment from this class)
+  await prisma.assignmentClass.deleteMany({
+    where: { classId, assignmentId },
+  });
+
+  revalidatePath(`/teacher/classes/${classId}`);
+  return { success: true };
 }
