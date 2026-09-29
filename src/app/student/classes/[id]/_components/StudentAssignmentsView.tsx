@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { 
   FolderOpen, 
@@ -20,6 +21,7 @@ import {
   Check,
   Lock,
   Award,
+  GraduationCap,
   X
 } from 'lucide-react';
 import { LearningFlowLanes } from './LearningFlowLanes';
@@ -78,18 +80,43 @@ export function StudentAssignmentsView({
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
-  const urlGroupId = searchParams.get('groupId') ?? initialGroupId;
-  const isViewAll = searchParams.get('viewAll') === 'true' || (initialViewAll && !searchParams.has('groupId'));
-
-  const activeGroupId = useMemo(() => {
-    if (urlGroupId && assignmentGroups.some((g) => g.id === urlGroupId)) {
-      return urlGroupId;
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(() => {
+    const paramGid = searchParams.get('groupId') ?? initialGroupId;
+    if (paramGid && assignmentGroups.some((g) => g.id === paramGid)) {
+      return paramGid;
     }
-    if (!isViewAll && assignmentGroups.length === 1 && !assignmentGroups[0].isLocked) {
+    const paramViewAll = searchParams.get('viewAll') === 'true' || initialViewAll;
+    if (!paramViewAll && assignmentGroups.length === 1 && !assignmentGroups[0].isLocked) {
       return assignmentGroups[0].id;
     }
     return null;
-  }, [urlGroupId, isViewAll, assignmentGroups]);
+  });
+
+  const [isViewAll, setIsViewAll] = useState<boolean>(() => {
+    return searchParams.get('viewAll') === 'true' || initialViewAll;
+  });
+
+  // Sync state if URL changes externally (e.g. browser back/forward)
+  React.useEffect(() => {
+    const handleLocationSync = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const gid = sp.get('groupId');
+      const vAll = sp.get('viewAll') === 'true';
+
+      if (gid && assignmentGroups.some(g => g.id === gid)) {
+        setSelectedGroupId(gid);
+        setIsViewAll(false);
+      } else if (vAll) {
+        setSelectedGroupId(null);
+        setIsViewAll(true);
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationSync);
+    return () => window.removeEventListener('popstate', handleLocationSync);
+  }, [assignmentGroups]);
+
+  const activeGroupId = selectedGroupId;
 
   const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,10 +162,16 @@ export function StudentAssignmentsView({
   }, [activeGroupId, assignmentGroups]);
 
   const handleSelectGroup = (groupId: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('groupId', groupId);
-    params.delete('viewAll');
-    router.push(`${pathname}?${params.toString()}`);
+    setSelectedGroupId(groupId);
+    setIsViewAll(false);
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set('groupId', groupId);
+      params.delete('viewAll');
+      const query = params.toString();
+      window.history.pushState(null, '', query ? `${pathname}?${query}` : pathname);
+    } catch {}
   };
 
   const handleGroupCardClick = (group: StudentAssignmentGroup) => {
@@ -150,13 +183,16 @@ export function StudentAssignmentsView({
   };
 
   const handleBackToGroupList = () => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('groupId');
-    if (assignmentGroups.length === 1) {
+    setSelectedGroupId(null);
+    setIsViewAll(true);
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.delete('groupId');
       params.set('viewAll', 'true');
-    }
-    const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+      const query = params.toString();
+      window.history.pushState(null, '', query ? `${pathname}?${query}` : pathname);
+    } catch {}
   };
 
   // Helper to parse kind, targetUrl and UI representation for an item
@@ -320,14 +356,23 @@ export function StudentAssignmentsView({
     if (activeGroup.isLocked) {
       return (
         <div className="space-y-6 animate-in fade-in duration-200">
-          <div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <button
+              type="button"
               onClick={handleBackToGroupList}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700 shadow-xs transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 stroke-[2.5px]" />
               <span>Quay lại danh sách nhóm bài</span>
             </button>
+
+            <Link
+              href="/student/classes"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+            >
+              <GraduationCap className="w-4 h-4 text-indigo-500" />
+              <span>Lớp học của tôi</span>
+            </Link>
           </div>
 
           <div className="p-8 sm:p-12 text-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-2 border-amber-300/80 dark:border-amber-900/60 rounded-[2rem] shadow-xl max-w-xl mx-auto space-y-6">
@@ -396,15 +441,24 @@ export function StudentAssignmentsView({
 
     return (
       <div className="space-y-6 animate-in fade-in duration-200">
-        {/* Back Button */}
-        <div>
+        {/* Top Navigation Bar */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <button
+            type="button"
             onClick={handleBackToGroupList}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700 shadow-xs transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 stroke-[2.5px]" />
             <span>Quay lại danh sách nhóm bài</span>
           </button>
+
+          <Link
+            href="/student/classes"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+          >
+            <GraduationCap className="w-4 h-4 text-indigo-500" />
+            <span>Lớp học của tôi</span>
+          </Link>
         </div>
 
         {/* Group Header Bento */}
