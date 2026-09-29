@@ -978,6 +978,7 @@
             document.getElementById('roundBannerTitle').textContent = msgs[ri];
             document.getElementById('roundBannerSub').textContent   = `Round ${roundNumber} complete! You matched all ${total} pairs!`;
             roundBanner.classList.add('show');
+        }
 
         try {
             if (window.parent && window.parent !== window) {
@@ -1115,7 +1116,7 @@
     // ──────────────────────────────────────────────
     //  Boot: fetch cards from API
     // ──────────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', async () => {
+    async function boot() {
         const loadingEl = document.getElementById('loadingOverlay');
         try {
             const res  = await fetch(`/api/games/flashcard-match/${topicId}`);
@@ -1136,7 +1137,13 @@
 
         loadingEl.style.opacity = '0';
         setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
     </script>
 </body>
 </html>
