@@ -56,7 +56,7 @@ export function GrammarLessonCard({
   cleanTitle,
   formula
 }: CardHelperProps) {
-  const displayFormula = formula || "S + V / V(s/es) + Object";
+  const displayFormula = formula;
 
   return (
     <Link
@@ -92,16 +92,18 @@ export function GrammarLessonCard({
       </div>
 
       {/* Formula Box */}
-      <div className="w-full z-10">
-        <div className="bg-white/95 dark:bg-slate-900/95 rounded-md px-4 py-2.5 shadow-md border border-white/60 text-center w-full">
-          <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mb-0.5">
-            CÔNG THỨC TRỌNG TÂM
-          </p>
-          <code className="text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-mono font-black break-words">
-            {displayFormula}
-          </code>
+      {displayFormula && (
+        <div className="w-full z-10">
+          <div className="bg-white/95 dark:bg-slate-900/95 rounded-md px-4 py-2.5 shadow-md border border-white/60 text-center w-full">
+            <p className="text-[9px] text-slate-400 font-extrabold uppercase tracking-widest mb-0.5">
+              CÔNG THỨC TRỌNG TÂM
+            </p>
+            <code className="text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-mono font-black break-words">
+              {displayFormula}
+            </code>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CTA Button */}
       <div className="z-10 w-full pt-1">
@@ -458,7 +460,7 @@ export function EducationalGameCard({
   itemCount
 }: CardHelperProps) {
   const count = itemCount || 20;
-  const thumbnail = item.assignment.thumbnail || "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=800";
+  const thumbnail = item.assignment.thumbnail || "/images/games/candy-quiz.jpg";
 
   return (
     <div className="group rounded-md hover:z-30 relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">

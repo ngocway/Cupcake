@@ -101,6 +101,7 @@ export async function GET(
         isHidden: ac.group?.isHidden ?? false,
         visibleFrom: ac.group?.visibleFrom || null,
         section,
+        thumbnail: a.thumbnail || null,
       };
     });
 

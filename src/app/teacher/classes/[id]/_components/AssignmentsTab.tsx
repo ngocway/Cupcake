@@ -56,6 +56,7 @@ export type Assignment = {
   isHidden?: boolean;
   visibleFrom?: string | null;
   section?: 'NEW' | 'REVIEW';
+  thumbnail?: string | null;
 };
 
 const TYPE_CONFIG: Record<string, { label: string; icon: string; bgClass: string; textClass: string; badgeClass: string }> = {
@@ -1144,9 +1145,16 @@ export function AssignmentsTab({
                   <div>
                     {/* Top Row: Icon + Badges + 3-dot Menu */}
                     <div className="flex items-start justify-between gap-3 mb-3.5">
-                      <div className={`size-12 ${config.bgClass} ${config.textClass} rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
-                        <span className="material-symbols-outlined text-2xl font-bold">{config.icon}</span>
-                      </div>
+                      {assignment.thumbnail ? (
+                        <div className="size-12 rounded-2xl overflow-hidden shrink-0 relative border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={assignment.thumbnail} alt={assignment.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className={`size-12 ${config.bgClass} ${config.textClass} rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                          <span className="material-symbols-outlined text-2xl font-bold">{config.icon}</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-1.5 flex-wrap justify-end">
                         {isReview && (

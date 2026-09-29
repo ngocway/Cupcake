@@ -269,9 +269,16 @@ export function AssignContentModal({
           </div>
         </div>
 
-        <div className={`size-12 ${config.bgClass} ${config.textClass} rounded-xl flex items-center justify-center shrink-0`}>
-          <span className="material-symbols-outlined text-2xl">{config.icon}</span>
-        </div>
+        {item.thumbnail ? (
+          <div className="size-12 rounded-xl overflow-hidden shrink-0 relative border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
+          </div>
+        ) : (
+          <div className={`size-12 ${config.bgClass} ${config.textClass} rounded-xl flex items-center justify-center shrink-0`}>
+            <span className="material-symbols-outlined text-2xl">{config.icon}</span>
+          </div>
+        )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">

@@ -1836,7 +1836,7 @@ export async function getAssignableLibraryContentAction(): Promise<{
       level: mapAgeGroupToLevel(g.ageGroup),
       itemCount: g._count?.items || 0,
       itemUnit: 'từ/câu',
-      thumbnail: g.thumbnailUrl || null,
+      thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
       createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
       isAssignment: false,
       previewUrl: getGamePlayUrl(g),
@@ -1855,7 +1855,7 @@ export async function getAssignableLibraryContentAction(): Promise<{
       level: mapAgeGroupToLevel(g.ageGroup),
       itemCount: g._count?.items || 0,
       itemUnit: 'từ/câu',
-      thumbnail: g.thumbnailUrl || null,
+      thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
       createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
       isAssignment: false,
       previewUrl: getGamePlayUrl(g),
@@ -1899,6 +1899,41 @@ export async function getAssignableLibraryContentAction(): Promise<{
   };
 }
 
+async function resolveItemThumbnail(item: { type: string; rawId: string; thumbnail?: string | null }): Promise<string | null> {
+  if (item.thumbnail && !item.thumbnail.includes('unsplash.com')) {
+    return item.thumbnail;
+  }
+  const typeUpper = (item.type || '').toUpperCase();
+  if (typeUpper === 'READING' || typeUpper === 'LESSON' || typeUpper === 'BOOK') {
+    const l = await prisma.lesson.findUnique({
+      where: { id: item.rawId },
+      select: { thumbnail: true }
+    });
+    if (l?.thumbnail) return l.thumbnail;
+  } else if (typeUpper === 'GAME') {
+    const t = await prisma.matchWordTopic.findUnique({
+      where: { id: item.rawId },
+      select: { thumbnailUrl: true, gameMode: true }
+    });
+    if (t?.thumbnailUrl) return t.thumbnailUrl;
+    if (t?.gameMode === 'shooter-quiz') return '/images/games/shooter-quiz.jpg';
+    return '/images/games/candy-quiz.jpg';
+  } else if (typeUpper === 'FLASHCARD') {
+    const f = await prisma.flashcardTopic.findUnique({
+      where: { id: item.rawId },
+      select: { iconUrl: true }
+    });
+    if (f?.iconUrl) return f.iconUrl;
+  } else if (typeUpper === 'EXERCISE' || typeUpper === 'GRAMMAR') {
+    const a = await prisma.assignment.findUnique({
+      where: { id: item.rawId },
+      select: { thumbnail: true }
+    });
+    if (a?.thumbnail) return a.thumbnail;
+  }
+  return item.thumbnail || null;
+}
+
 export async function assignLibraryItemToClassAction(
   classId: string,
   item: {
@@ -1908,6 +1943,7 @@ export async function assignLibraryItemToClassAction(
     type: string;
     level?: string;
     playUrl?: string;
+    thumbnail?: string | null;
     isAssignment: boolean;
   },
   payload: any
@@ -1917,6 +1953,7 @@ export async function assignLibraryItemToClassAction(
   const teacherId = session.user.id;
 
   let assignmentId = item.id;
+  const resolvedThumbnail = await resolveItemThumbnail(item);
 
   if (!item.isAssignment) {
     const existing = await prisma.assignment.findFirst({
@@ -1929,6 +1966,12 @@ export async function assignLibraryItemToClassAction(
 
     if (existing) {
       assignmentId = existing.id;
+      if (!existing.thumbnail || existing.thumbnail.includes('unsplash.com')) {
+        await prisma.assignment.update({
+          where: { id: existing.id },
+          data: { thumbnail: resolvedThumbnail }
+        });
+      }
     } else {
       const slug = await generateUniqueSlug(item.title || 'Assignment', 'assignment');
       const matType: MaterialType = 
@@ -1944,6 +1987,7 @@ export async function assignLibraryItemToClassAction(
           teacherId,
           level: item.level || 'a1',
           subject: 'english',
+          thumbnail: resolvedThumbnail,
           instructions: JSON.stringify({
             kind: item.type,
             rawId: item.rawId,
@@ -1952,6 +1996,16 @@ export async function assignLibraryItemToClassAction(
         }
       });
       assignmentId = newAssignment.id;
+    }
+  } else {
+    if (resolvedThumbnail) {
+      const existing = await prisma.assignment.findUnique({ where: { id: item.id } });
+      if (existing && (!existing.thumbnail || existing.thumbnail.includes('unsplash.com'))) {
+        await prisma.assignment.update({
+          where: { id: item.id },
+          data: { thumbnail: resolvedThumbnail }
+        });
+      }
     }
   }
 
@@ -1998,6 +2052,7 @@ export async function assignBundleToClassAction(
     type: string;
     level?: string;
     playUrl?: string;
+    thumbnail?: string | null;
     isAssignment: boolean;
     section?: 'NEW' | 'REVIEW';
   }>,
@@ -2098,6 +2153,7 @@ export async function assignBundleToClassAction(
   for (const item of items) {
     let assignmentId = item.id;
     const targetSection = item.section === 'REVIEW' ? 'REVIEW' : 'NEW';
+    const resolvedThumbnail = await resolveItemThumbnail(item);
 
     if (!item.isAssignment) {
       const existing = await prisma.assignment.findFirst({
@@ -2113,9 +2169,13 @@ export async function assignBundleToClassAction(
         let meta: any = {};
         try { meta = JSON.parse(existing.instructions || '{}'); } catch {}
         meta.section = targetSection;
+        const updateData: any = { instructions: JSON.stringify(meta) };
+        if (!existing.thumbnail || existing.thumbnail.includes('unsplash.com')) {
+          updateData.thumbnail = resolvedThumbnail;
+        }
         await prisma.assignment.update({
           where: { id: existing.id },
-          data: { instructions: JSON.stringify(meta) }
+          data: updateData
         });
       } else {
         const slug = await generateUniqueSlug(item.title || 'Assignment', 'assignment');
@@ -2132,6 +2192,7 @@ export async function assignBundleToClassAction(
             teacherId,
             level: item.level || 'a1',
             subject: 'english',
+            thumbnail: resolvedThumbnail,
             instructions: JSON.stringify({
               kind: item.type,
               rawId: item.rawId,
@@ -2143,15 +2204,19 @@ export async function assignBundleToClassAction(
         assignmentId = newAssignment.id;
       }
     } else {
-      // It is an existing assignment in database, update its section metadata
+      // It is an existing assignment in database, update its section metadata and thumbnail if needed
       const a = await prisma.assignment.findUnique({ where: { id: item.id } });
       if (a) {
         let meta: any = {};
         try { meta = JSON.parse(a.instructions || '{}'); } catch {}
         meta.section = targetSection;
+        const updateData: any = { instructions: JSON.stringify(meta) };
+        if ((!a.thumbnail || a.thumbnail.includes('unsplash.com')) && resolvedThumbnail) {
+          updateData.thumbnail = resolvedThumbnail;
+        }
         await prisma.assignment.update({
           where: { id: item.id },
-          data: { instructions: JSON.stringify(meta) }
+          data: updateData
         });
       }
     }
@@ -2730,18 +2795,21 @@ export async function resolveInternalLinkForAssignmentAction(
       }
     });
     if (lesson) {
-      const displayTitle = lesson.title.startsWith('Grammar lesson:') || lesson.title.startsWith('Lesson:') || lesson.title.startsWith('Bài học:')
+      const isReading = lesson.materialType === 'READING' || !lesson.materialType;
+      const type: 'READING' | 'LESSON' = isReading ? 'READING' : 'LESSON';
+      const defaultPrefix = isReading ? 'Reading:' : 'Grammar lesson:';
+      const displayTitle = lesson.title.startsWith('Grammar lesson:') || lesson.title.startsWith('Lesson:') || lesson.title.startsWith('Bài học:') || lesson.title.startsWith('Reading:') || lesson.title.startsWith('Bài đọc:')
         ? lesson.title
-        : `Grammar lesson: ${lesson.title}`;
+        : `${defaultPrefix} ${lesson.title}`;
       return {
-        id: `lesson_${lesson.id}`,
+        id: `${isReading ? 'reading' : 'lesson'}_${lesson.id}`,
         rawId: lesson.id,
         title: displayTitle,
-        type: 'LESSON',
+        type,
         source: lesson.teacherId === userId ? 'mine' : 'library',
         level: mapAgeGroupToLevel(lesson.level || 'a1'),
         itemCount: 1,
-        itemUnit: 'bài học',
+        itemUnit: isReading ? 'bài đọc' : 'bài học',
         thumbnail: lesson.thumbnail || null,
         createdAt: lesson.createdAt ? lesson.createdAt.toISOString() : new Date().toISOString(),
         isAssignment: false,
@@ -2833,7 +2901,7 @@ export async function resolveInternalLinkForAssignmentAction(
           level: mapAgeGroupToLevel(gTopic.ageGroup),
           itemCount: gTopic._count?.items || 0,
           itemUnit: 'từ/câu',
-          thumbnail: gTopic.thumbnailUrl || null,
+          thumbnail: gTopic.thumbnailUrl || (gTopic.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
           createdAt: gTopic.createdAt ? gTopic.createdAt.toISOString() : new Date().toISOString(),
           isAssignment: false,
           previewUrl: getGamePlayUrl(gTopic),
@@ -2915,7 +2983,7 @@ export async function resolveInternalLinkForAssignmentAction(
         level: mapAgeGroupToLevel(g.ageGroup),
         itemCount: g._count?.items || 0,
         itemUnit: 'từ/câu',
-        thumbnail: g.thumbnailUrl || null,
+        thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
         createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
         isAssignment: false,
         previewUrl: getGamePlayUrl(g),
@@ -3231,7 +3299,7 @@ export async function searchAssignableContentAction(
             level: mapAgeGroupToLevel(g.ageGroup),
             itemCount: g._count?.items || 0,
             itemUnit: 'từ/câu',
-            thumbnail: g.thumbnailUrl || null,
+            thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
             createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
             isAssignment: false,
             previewUrl: getGamePlayUrl(g),

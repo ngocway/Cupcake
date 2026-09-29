@@ -154,6 +154,59 @@ export default async function StudentClassDetailPage({
     });
   });
 
+  // 1.5 Pre-resolve accurate thumbnails matching HomepageFeed for reading / games / flashcards
+  const lessonRawIds: string[] = [];
+  const gameRawIds: string[] = [];
+  const flashcardRawIds: string[] = [];
+
+  rawAssignments.forEach((ac) => {
+    const thumb = ac.assignment.thumbnail;
+    const isUnsplash = !thumb || thumb.includes('unsplash.com');
+    if (isUnsplash && ac.assignment.instructions) {
+      try {
+        const meta = JSON.parse(ac.assignment.instructions);
+        const kind = (meta.kind || ac.assignment.materialType || '').toUpperCase();
+        if (meta.rawId) {
+          if (kind === 'READING' || kind === 'LESSON' || kind === 'BOOK') {
+            lessonRawIds.push(meta.rawId);
+          } else if (kind === 'GAME') {
+            gameRawIds.push(meta.rawId);
+          } else if (kind === 'FLASHCARD') {
+            flashcardRawIds.push(meta.rawId);
+          }
+        }
+      } catch {}
+    }
+  });
+
+  const [resolvedLessons, resolvedGames, resolvedFlashcards] = await Promise.all([
+    lessonRawIds.length > 0
+      ? prisma.lesson.findMany({
+          where: { id: { in: lessonRawIds } },
+          select: { id: true, thumbnail: true }
+        })
+      : Promise.resolve([]),
+    gameRawIds.length > 0
+      ? prisma.matchWordTopic.findMany({
+          where: { id: { in: gameRawIds } },
+          select: { id: true, thumbnailUrl: true, gameMode: true }
+        })
+      : Promise.resolve([]),
+    flashcardRawIds.length > 0
+      ? prisma.flashcardTopic.findMany({
+          where: { id: { in: flashcardRawIds } },
+          select: { id: true, iconUrl: true }
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const lessonThumbMap = new Map(resolvedLessons.filter(l => l.thumbnail).map(l => [l.id, l.thumbnail!]));
+  const gameThumbMap = new Map(resolvedGames.map(g => [
+    g.id, 
+    g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg')
+  ]));
+  const flashcardThumbMap = new Map(resolvedFlashcards.filter(f => f.iconUrl).map(f => [f.id, f.iconUrl!]));
+
   // 2. Attach items to groups (skip assignments belonging to hidden groups)
   rawAssignments.forEach((ac) => {
     const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
@@ -173,6 +226,28 @@ export default async function StudentClassDetailPage({
         items: [],
       });
     }
+
+    let finalThumbnail = ac.assignment.thumbnail;
+    if (!finalThumbnail || finalThumbnail.includes('unsplash.com')) {
+      if (ac.assignment.instructions) {
+        try {
+          const meta = JSON.parse(ac.assignment.instructions);
+          if (meta.rawId) {
+            if (lessonThumbMap.has(meta.rawId)) {
+              finalThumbnail = lessonThumbMap.get(meta.rawId)!;
+            } else if (gameThumbMap.has(meta.rawId)) {
+              finalThumbnail = gameThumbMap.get(meta.rawId)!;
+            } else if (flashcardThumbMap.has(meta.rawId)) {
+              finalThumbnail = flashcardThumbMap.get(meta.rawId)!;
+            }
+          }
+          if ((!finalThumbnail || finalThumbnail.includes('unsplash.com')) && (meta.kind === 'GAME' || meta.playUrl?.includes('/candy-quiz'))) {
+            finalThumbnail = '/images/games/candy-quiz.jpg';
+          }
+        } catch {}
+      }
+    }
+
     const isSubmitted = submittedAssignmentIds.has(ac.assignment.id);
     groupsMap.get(gId)!.items.push({
       assignment: {
@@ -182,7 +257,7 @@ export default async function StudentClassDetailPage({
         materialType: ac.assignment.materialType,
         level: ac.assignment.level,
         instructions: ac.assignment.instructions,
-        thumbnail: ac.assignment.thumbnail,
+        thumbnail: finalThumbnail,
         tags: ac.assignment.tags,
         teacher: ac.assignment.teacher,
         questionsCount: (ac.assignment as any)._count?.questions || 0,
@@ -285,40 +360,27 @@ export default async function StudentClassDetailPage({
   const completedAssignments = submissions.length;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12 pt-2 sm:pt-4">
-      {/* 1. HERO BENTO CARD */}
-      <ClassHeroBento
-        name={cls.name}
-        teacher={cls.teacher}
-        gradeLevel={cls.gradeLevel}
-        joinCode={cls.joinCode}
-        totalAssignments={totalAssignments}
-        completedAssignments={completedAssignments}
-        nextTask={nextTask}
-        joinedAt={enrollment.joinedAt ? enrollment.joinedAt.toISOString() : null}
-      />
-
-      {/* 2. MAIN BENTO GRID (Full width) */}
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Bài tập & Hoạt động lớp
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Danh sách bài học được giáo viên giao theo từng buổi
-          </p>
-        </div>
-
-        {/* Bento Group Cards or Drill-Down View */}
-        <Suspense fallback={<div className="h-64 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
-          <StudentAssignmentsView 
-            assignmentGroups={assignmentGroups} 
-            initialGroupId={initialGroupId}
-            initialViewAll={initialViewAll}
-            classId={id}
-          />
-        </Suspense>
-      </section>
+    <div className="max-w-7xl mx-auto pb-12 pt-2 sm:pt-4">
+      <Suspense fallback={<div className="h-64 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
+        <StudentAssignmentsView 
+          assignmentGroups={assignmentGroups} 
+          initialGroupId={initialGroupId}
+          initialViewAll={initialViewAll}
+          classId={id}
+          heroBanner={
+            <ClassHeroBento
+              name={cls.name}
+              teacher={cls.teacher}
+              gradeLevel={cls.gradeLevel}
+              joinCode={cls.joinCode}
+              totalAssignments={totalAssignments}
+              completedAssignments={completedAssignments}
+              nextTask={nextTask}
+              joinedAt={enrollment.joinedAt ? enrollment.joinedAt.toISOString() : null}
+            />
+          }
+        />
+      </Suspense>
     </div>
   );
 }

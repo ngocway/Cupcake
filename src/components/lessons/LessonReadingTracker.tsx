@@ -19,17 +19,26 @@ export function LessonReadingTracker({
   const searchParams = useSearchParams();
   const assignmentId = propAssignmentId || searchParams?.get("assignmentId");
 
-  const [activeSeconds, setActiveSeconds] = useState(0);
+  const [activeSeconds, setActiveSeconds] = useState(initialCompleted ? REQUIRED_SECONDS : 0);
   const [isCompleted, setIsCompleted] = useState(initialCompleted);
   const [isTabActive, setIsTabActive] = useState(true);
 
-  const activeSecondsRef = useRef(0);
+  const activeSecondsRef = useRef(initialCompleted ? REQUIRED_SECONDS : 0);
   const isCompletedRef = useRef(isCompleted);
-  const hasTriggeredRef = useRef(false);
+  const hasTriggeredRef = useRef(initialCompleted);
 
   useEffect(() => {
     isCompletedRef.current = isCompleted;
   }, [isCompleted]);
+
+  useEffect(() => {
+    if (initialCompleted) {
+      setIsCompleted(true);
+      setActiveSeconds(REQUIRED_SECONDS);
+      activeSecondsRef.current = REQUIRED_SECONDS;
+      hasTriggeredRef.current = true;
+    }
+  }, [initialCompleted]);
 
   // Track window visibility & focus to ensure only real active reading time is counted
   useEffect(() => {
@@ -59,23 +68,21 @@ export function LessonReadingTracker({
     const interval = setInterval(() => {
       // Only count when the tab is currently focused and visible
       if (document.visibilityState === "visible" && !document.hidden) {
-        setActiveSeconds((prev) => {
-          const next = prev + 1;
-          activeSecondsRef.current = next;
+        activeSecondsRef.current += 1;
+        const next = activeSecondsRef.current;
+        setActiveSeconds(next);
 
-          if (next >= REQUIRED_SECONDS && !hasTriggeredRef.current) {
-            hasTriggeredRef.current = true;
-            setIsCompleted(true);
+        if (next >= REQUIRED_SECONDS && !hasTriggeredRef.current) {
+          hasTriggeredRef.current = true;
+          setIsCompleted(true);
 
-            // Tự động ngầm ghi nhận hoàn thành vào database
-            if (assignmentId) {
-              completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
-                console.error("Failed to auto-complete lesson:", err);
-              });
-            }
+          // Tự động ngầm ghi nhận hoàn thành vào database
+          if (assignmentId) {
+            completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+              console.error("Failed to auto-complete lesson:", err);
+            });
           }
-          return next;
-        });
+        }
       }
     }, 1000);
 

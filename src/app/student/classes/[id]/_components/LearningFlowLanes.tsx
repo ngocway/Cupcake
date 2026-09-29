@@ -93,11 +93,13 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
         } catch {}
       }
 
-      // Material type fallbacks
-      if (kind === 'EXERCISE' || kind === 'GRAMMAR') {
-        if      (item.assignment.materialType === 'READING')   kind = 'READING';
-        else if (item.assignment.materialType === 'FLASHCARD') kind = 'FLASHCARD';
-        else                                                    kind = 'EXERCISE';
+      // Material type overrides & fallbacks
+      if (item.assignment.materialType === 'READING') {
+        kind = 'READING';
+      } else if (item.assignment.materialType === 'FLASHCARD') {
+        kind = 'FLASHCARD';
+      } else if (kind === 'EXERCISE' || kind === 'GRAMMAR') {
+        kind = 'EXERCISE';
       }
 
       // For in-class assignments, tag fromClass=true and direct=true
@@ -125,7 +127,7 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
       }
 
       const cleanTitle = item.assignment.title.replace(
-        /^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise):\s*/i, ''
+        /^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise|Reading|Bài đọc):\s*/i, ''
       );
 
       return { item, kind, targetUrl, isReview, cleanTitle, formula, itemCount };

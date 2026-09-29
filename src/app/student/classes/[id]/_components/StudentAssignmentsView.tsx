@@ -64,13 +64,15 @@ export interface StudentAssignmentsViewProps {
   initialGroupId?: string | null;
   initialViewAll?: boolean;
   classId?: string;
+  heroBanner?: React.ReactNode;
 }
 
 export function StudentAssignmentsView({ 
   assignmentGroups,
   initialGroupId = null,
   initialViewAll = false,
-  classId
+  classId,
+  heroBanner
 }: StudentAssignmentsViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -171,14 +173,12 @@ export function StudentAssignmentsView({
       } catch {}
     }
 
-    if (kind === 'GRAMMAR' || kind === 'EXERCISE') {
-      if (item.assignment.materialType === 'READING') {
-        kind = 'READING';
-      } else if (item.assignment.materialType === 'FLASHCARD') {
-        kind = 'FLASHCARD';
-      } else {
-        kind = 'EXERCISE';
-      }
+    if (item.assignment.materialType === 'READING') {
+      kind = 'READING';
+    } else if (item.assignment.materialType === 'FLASHCARD') {
+      kind = 'FLASHCARD';
+    } else if (kind === 'GRAMMAR' || kind === 'EXERCISE') {
+      kind = 'EXERCISE';
     }
 
     if (kind === 'EXERCISE' || kind === 'READING' || kind === 'GRAMMAR') {
@@ -242,7 +242,11 @@ export function StudentAssignmentsView({
     const counts: Record<string, number> = {};
     items.forEach((item) => {
       let kind = 'Grammar exercise';
-      if (item.assignment.instructions) {
+      if (item.assignment.materialType === 'READING') {
+        kind = 'Reading';
+      } else if (item.assignment.materialType === 'FLASHCARD') {
+        kind = 'Flashcard';
+      } else if (item.assignment.instructions) {
         try {
           const meta = JSON.parse(item.assignment.instructions);
           if (meta.kind === 'LESSON') kind = 'Grammar lesson';
@@ -252,10 +256,6 @@ export function StudentAssignmentsView({
           else if (meta.kind === 'BOOK') kind = 'Shadowing';
           else if (meta.kind === 'EXERCISE' || meta.kind === 'GRAMMAR') kind = 'Grammar exercise';
         } catch {}
-      } else if (item.assignment.materialType === 'READING') {
-        kind = 'Reading';
-      } else if (item.assignment.materialType === 'FLASHCARD') {
-        kind = 'Flashcard';
       }
       counts[kind] = (counts[kind] || 0) + 1;
     });
@@ -290,14 +290,27 @@ export function StudentAssignmentsView({
 
   if (assignmentGroups.length === 0) {
     return (
-      <div className="p-12 text-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-dashed border-slate-200/80 dark:border-slate-700/80 rounded-3xl shadow-xs space-y-3">
-        <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mx-auto text-slate-400">
-          <FolderOpen className="w-7 h-7 stroke-[1.8px]" />
-        </div>
-        <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-200">Chưa có bài tập nào</h3>
-        <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto leading-relaxed">
-          Giáo viên chưa giao bài tập cho lớp học này. Vui lòng quay lại sau hoặc liên hệ với giáo viên phụ trách nhé!
-        </p>
+      <div className="space-y-8">
+        {heroBanner}
+        <section className="space-y-6">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              Bài tập & Hoạt động lớp
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Danh sách bài học được giáo viên giao theo từng buổi
+            </p>
+          </div>
+          <div className="p-12 text-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-dashed border-slate-200/80 dark:border-slate-700/80 rounded-3xl shadow-xs space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mx-auto text-slate-400">
+              <FolderOpen className="w-7 h-7 stroke-[1.8px]" />
+            </div>
+            <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-200">Chưa có bài tập nào</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto leading-relaxed">
+              Giáo viên chưa giao bài tập cho lớp học này. Vui lòng quay lại sau hoặc liên hệ với giáo viên phụ trách nhé!
+            </p>
+          </div>
+        </section>
       </div>
     );
   }
@@ -458,8 +471,22 @@ export function StudentAssignmentsView({
 
   /* VIEW 2: BENTO GRID OF GROUP CARDS */
   return (
-    <div className="space-y-6">
-      {/* Filter and Search Bar */}
+    <div className="space-y-8">
+      {/* 1. HERO BENTO CARD */}
+      {heroBanner}
+
+      {/* 2. MAIN BENTO GRID */}
+      <section className="space-y-6">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            Bài tập & Hoạt động lớp
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Danh sách bài học được giáo viên giao theo từng buổi
+          </p>
+        </div>
+
+        {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Tabs */}
         <div className="flex items-center gap-1.5 p-1 bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
@@ -563,56 +590,40 @@ export function StudentAssignmentsView({
                 />
 
                 <div>
-                  {/* Top Bar: Icon + Status Pills */}
-                  <div className="flex items-start justify-between gap-3 mb-3.5">
-                    <div 
-                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-xs ${
-                        group.isLocked
-                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-300/60 group-hover:scale-105'
-                          : 'bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-violet-500/10 dark:from-blue-500/20 dark:to-violet-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white'
-                      }`}
-                    >
-                      {group.isLocked ? (
-                        <Lock className="w-5 h-5 stroke-[2.2px]" />
-                      ) : (
-                        <BookOpen className="w-5 h-5 stroke-[2px]" />
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {group.isLocked ? (
-                        <>
-                          <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/70 flex items-center gap-1 shadow-xs">
-                            <Lock className="w-3 h-3 inline" />
-                            Đang khóa
+                  {/* Status Pills */}
+                  <div className="flex items-center gap-1.5 flex-wrap mb-3.5">
+                    {group.isLocked ? (
+                      <>
+                        <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/70 flex items-center gap-1 shadow-xs">
+                          <Lock className="w-3 h-3 inline" />
+                          Đang khóa
+                        </span>
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                          {totalInGroup} bài
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
+                          {newCount} bài mới
+                        </span>
+                        {reviewCount > 0 && (
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800/50">
+                            {reviewCount} ôn bài
                           </span>
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                            {totalInGroup} bài
+                        )}
+                        {isAllCompleted ? (
+                          <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 inline" />
+                            Hoàn thành
                           </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
-                            {newCount} bài mới
+                        ) : (
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                            {completedInGroup}/{totalInGroup} bài
                           </span>
-                          {reviewCount > 0 && (
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800/50">
-                              {reviewCount} ôn bài
-                            </span>
-                          )}
-                          {isAllCompleted ? (
-                            <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 inline" />
-                              Hoàn thành
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                              {completedInGroup}/{totalInGroup} bài
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   {/* Group Title */}
@@ -633,7 +644,7 @@ export function StudentAssignmentsView({
 
                     {group.items.slice(0, 3).map((item) => {
                       const cfg = getItemConfig(item);
-                      const titleClean = item.assignment.title.replace(/^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise):\s*/i, '');
+                      const titleClean = item.assignment.title.replace(/^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise|Reading|Bài đọc):\s*/i, '');
 
                       return (
                         <div 
@@ -739,7 +750,11 @@ export function StudentAssignmentsView({
 
                       {/* Smart Bento CTA Button */}
                       <div className="pt-1">
-                        <div className="w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between bg-slate-100/90 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-600/60 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300">
+                        <div className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between transition-all duration-300 ${
+                          isAllCompleted
+                            ? 'bg-emerald-100/80 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-800/60 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md'
+                            : 'bg-blue-200/90 dark:bg-blue-900/50 text-blue-950 dark:text-blue-200 border border-blue-300 dark:border-blue-700/60 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md'
+                        }`}>
                           <span>
                             {isAllCompleted
                               ? 'Xem lại bài đã học' 
@@ -756,6 +771,7 @@ export function StudentAssignmentsView({
           })}
         </div>
       )}
+      </section>
 
       {/* MODAL: Locked Group Explanation */}
       {lockedGroupModal && (

@@ -86,6 +86,7 @@ async function ClassDashboardContent({
               instructions: true,
               deadline: true,
               deletedAt: true,
+              thumbnail: true,
             },
           },
         },
@@ -166,6 +167,7 @@ async function ClassDashboardContent({
         isHidden: ac.group?.isHidden ?? false,
         visibleFrom: ac.group?.visibleFrom ? ac.group.visibleFrom.toISOString() : null,
         section,
+        thumbnail: a.thumbnail || null,
       };
     });
 
