@@ -17,7 +17,10 @@ import {
   Search,
   Sparkles,
   ChevronRight,
-  Check
+  Check,
+  Lock,
+  Award,
+  X
 } from 'lucide-react';
 import { LearningFlowLanes } from './LearningFlowLanes';
 
@@ -44,6 +47,15 @@ export interface StudentAssignmentGroup {
   id: string;
   title: string;
   createdAt: string | null;
+  prerequisiteGroupId?: string | null;
+  prerequisiteGroupTitle?: string | null;
+  unlockThreshold?: number;
+  forceUnlocked?: boolean;
+  isLocked?: boolean;
+  lockReason?: string;
+  prerequisiteTotalCount?: number;
+  prerequisiteCompletedCount?: number;
+  prerequisitePercent?: number;
   items: StudentGroupItem[];
 }
 
@@ -71,7 +83,7 @@ export function StudentAssignmentsView({
     if (urlGroupId && assignmentGroups.some((g) => g.id === urlGroupId)) {
       return urlGroupId;
     }
-    if (!isViewAll && assignmentGroups.length === 1) {
+    if (!isViewAll && assignmentGroups.length === 1 && !assignmentGroups[0].isLocked) {
       return assignmentGroups[0].id;
     }
     return null;
@@ -79,6 +91,40 @@ export function StudentAssignmentsView({
 
   const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [lockedGroupModal, setLockedGroupModal] = useState<StudentAssignmentGroup | null>(null);
+  const [unlockedCelebration, setUnlockedCelebration] = useState<{ id: string; title: string } | null>(null);
+
+  // Check if routed with ?lockedGroup=...
+  React.useEffect(() => {
+    const lockedParam = searchParams.get('lockedGroup');
+    if (lockedParam) {
+      const g = assignmentGroups.find(x => x.id === lockedParam);
+      if (g) {
+        setLockedGroupModal(g);
+      }
+    }
+  }, [searchParams, assignmentGroups]);
+
+  // Check for newly unlocked groups to show celebration
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storageKey = `dolcake_unlocked_groups_${classId || 'default'}`;
+    let stored: string[] = [];
+    try {
+      stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    } catch {}
+
+    const newlyUnlocked = assignmentGroups.find(
+      g => g.prerequisiteGroupId && !g.isLocked && !stored.includes(g.id)
+    );
+
+    if (newlyUnlocked) {
+      setUnlockedCelebration({ id: newlyUnlocked.id, title: newlyUnlocked.title });
+      try {
+        localStorage.setItem(storageKey, JSON.stringify([...stored, newlyUnlocked.id]));
+      } catch {}
+    }
+  }, [assignmentGroups, classId]);
 
   const activeGroup = useMemo(() => {
     return activeGroupId 
@@ -91,6 +137,14 @@ export function StudentAssignmentsView({
     params.set('groupId', groupId);
     params.delete('viewAll');
     router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleGroupCardClick = (group: StudentAssignmentGroup) => {
+    if (group.isLocked) {
+      setLockedGroupModal(group);
+      return;
+    }
+    handleSelectGroup(group.id);
   };
 
   const handleBackToGroupList = () => {
@@ -250,6 +304,78 @@ export function StudentAssignmentsView({
 
   /* VIEW 1: DRILL-DOWN INTO SINGLE GROUP */
   if (activeGroup) {
+    if (activeGroup.isLocked) {
+      return (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div>
+            <button
+              onClick={handleBackToGroupList}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4 stroke-[2.5px]" />
+              <span>Quay lại danh sách nhóm bài</span>
+            </button>
+          </div>
+
+          <div className="p-8 sm:p-12 text-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-2 border-amber-300/80 dark:border-amber-900/60 rounded-[2rem] shadow-xl max-w-xl mx-auto space-y-6">
+            <div className="w-20 h-20 rounded-3xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md border border-amber-200 dark:border-amber-800">
+              <Lock className="w-10 h-10 stroke-[2px]" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold text-xs uppercase tracking-wider">
+                Nhóm bài đang tạm khóa
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                {activeGroup.title}
+              </h2>
+              <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed pt-1">
+                {activeGroup.lockReason}
+              </p>
+            </div>
+
+            {/* Prerequisite progress bar */}
+            <div className="bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-left max-w-md mx-auto space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-700 dark:text-slate-300 truncate">
+                  Tiến độ "{activeGroup.prerequisiteGroupTitle}":
+                </span>
+                <span className="text-amber-600 dark:text-amber-400 font-black shrink-0">
+                  {activeGroup.prerequisitePercent}% / {activeGroup.unlockThreshold}%
+                </span>
+              </div>
+              <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, activeGroup.prerequisitePercent || 0)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              {activeGroup.prerequisiteGroupId && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectGroup(activeGroup.prerequisiteGroupId!)}
+                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  <span>Vào làm nhóm "{activeGroup.prerequisiteGroupTitle}" →</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleBackToGroupList}
+                className="w-full sm:w-auto px-5 py-3 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Quay lại danh sách
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     const totalInGroup = activeGroup.items.length;
     const completedInGroup = activeGroup.items.filter(i => i.isSubmitted).length;
     const groupPercent = totalInGroup > 0 ? Math.round((completedInGroup / totalInGroup) * 100) : 0;
@@ -420,53 +546,83 @@ export function StudentAssignmentsView({
             return (
               <div
                 key={group.id}
-                onClick={() => handleSelectGroup(group.id)}
-                className="group relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/70 dark:border-slate-700/70 rounded-[1.75rem] p-6 hover:shadow-2xl hover:border-indigo-400/60 dark:hover:border-indigo-500/60 hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden shadow-xs"
+                onClick={() => handleGroupCardClick(group)}
+                className={`group relative backdrop-blur-xl rounded-[1.75rem] p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden shadow-xs ${
+                  group.isLocked
+                    ? 'bg-amber-50/25 dark:bg-amber-950/15 border-2 border-amber-200/80 dark:border-amber-900/50 hover:border-amber-400 dark:hover:border-amber-600'
+                    : 'bg-white/90 dark:bg-slate-800/90 border border-slate-200/70 dark:border-slate-700/70 hover:border-indigo-400/60 dark:hover:border-indigo-500/60'
+                }`}
               >
                 {/* Top Accent Gradient Bar */}
-                <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                <div 
+                  className={`absolute top-0 inset-x-0 h-1.5 transition-opacity ${
+                    group.isLocked
+                      ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 opacity-80 group-hover:opacity-100'
+                      : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 opacity-60 group-hover:opacity-100'
+                  }`} 
+                />
 
                 <div>
                   {/* Top Bar: Icon + Status Pills */}
                   <div className="flex items-start justify-between gap-3 mb-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-violet-500/10 dark:from-blue-500/20 dark:to-violet-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20 group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-xs">
-                      <BookOpen className="w-5 h-5 stroke-[2px]" />
+                    <div 
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 shadow-xs ${
+                        group.isLocked
+                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-300/60 group-hover:scale-105'
+                          : 'bg-gradient-to-tr from-blue-500/10 via-indigo-500/10 to-violet-500/10 dark:from-blue-500/20 dark:to-violet-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 group-hover:scale-105 group-hover:bg-indigo-600 group-hover:text-white'
+                      }`}
+                    >
+                      {group.isLocked ? (
+                        <Lock className="w-5 h-5 stroke-[2.2px]" />
+                      ) : (
+                        <BookOpen className="w-5 h-5 stroke-[2px]" />
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
-                        {newCount} bài mới
-                      </span>
-                      {reviewCount > 0 && (
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800/50">
-                          {reviewCount} ôn bài
-                        </span>
-                      )}
-                      {isAllCompleted ? (
-                        <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 inline" />
-                          Hoàn thành
-                        </span>
+                      {group.isLocked ? (
+                        <>
+                          <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/70 flex items-center gap-1 shadow-xs">
+                            <Lock className="w-3 h-3 inline" />
+                            Đang khóa
+                          </span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                            {totalInGroup} bài
+                          </span>
+                        </>
                       ) : (
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                          {completedInGroup}/{totalInGroup} bài
-                        </span>
+                        <>
+                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
+                            {newCount} bài mới
+                          </span>
+                          {reviewCount > 0 && (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800/50">
+                              {reviewCount} ôn bài
+                            </span>
+                          )}
+                          {isAllCompleted ? (
+                            <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 inline" />
+                              Hoàn thành
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                              {completedInGroup}/{totalInGroup} bài
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
 
                   {/* Group Title */}
-                  <h3 className="font-black text-lg text-slate-900 dark:text-white line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug">
+                  <h3 className={`font-black text-lg line-clamp-2 transition-colors leading-snug ${
+                    group.isLocked 
+                      ? 'text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400' 
+                      : 'text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+                  }`}>
                     {group.title}
                   </h3>
-
-                  {/* Assigned Date */}
-                  {group.createdAt && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1 font-medium">
-                      <Calendar className="w-3.5 h-3.5 inline text-slate-400" />
-                      Ngày giao: {new Date(group.createdAt).toLocaleDateString('vi-VN')}
-                    </p>
-                  )}
 
                   {/* Mini Task Capsules (Interactive Preview) */}
                   <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
@@ -529,43 +685,219 @@ export function StudentAssignmentsView({
 
                 {/* Progress & CTA Footer */}
                 <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
-                  {/* Progress info */}
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Tiến độ bài làm</span>
-                    <span className={`font-black ${isAllCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
-                      {completedInGroup}/{totalInGroup} bài ({groupPercent}%)
-                    </span>
-                  </div>
+                  {group.isLocked ? (
+                    <>
+                      {/* Locked progress info */}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium truncate">
+                          Mở sau &ldquo;{group.prerequisiteGroupTitle || 'nhóm trước'}&rdquo;
+                        </span>
+                      </div>
 
-                  {/* Segmented Step Bar (Stories style) */}
-                  <div className="flex items-center gap-1.5 w-full">
-                    {group.items.map((it, idx) => (
-                      <div 
-                        key={idx}
-                        className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                          it.isSubmitted 
-                            ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-xs' 
-                            : 'bg-slate-200/80 dark:bg-slate-700'
-                        }`}
-                      />
-                    ))}
-                  </div>
+                      {/* Locked Progress bar */}
+                      <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, group.prerequisitePercent || 0)}%` }}
+                        />
+                      </div>
 
-                  {/* Smart Bento CTA Button */}
-                  <div className="pt-1">
-                    <div className="w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between bg-slate-100/90 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-600/60 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300">
-                      <span>
-                        {isAllCompleted
-                          ? 'Xem lại bài đã học' 
-                          : `Vào làm bài (còn ${pendingInGroup} bài)`}
-                      </span>
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
-                    </div>
-                  </div>
+                      {/* Locked CTA Button */}
+                      <div className="pt-1">
+                        <div className="w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between bg-amber-100/80 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 group-hover:bg-amber-500 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-xs">
+                          <span className="flex items-center gap-1.5 truncate">
+                            <Lock className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">Đang bị khóa</span>
+                          </span>
+                          <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1.5 transition-transform duration-300" />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Normal progress info */}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 dark:text-slate-400 font-medium">Tiến độ bài làm</span>
+                        <span className={`font-black ${isAllCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                          {completedInGroup}/{totalInGroup} bài ({groupPercent}%)
+                        </span>
+                      </div>
+
+                      {/* Segmented Step Bar (Stories style) */}
+                      <div className="flex items-center gap-1.5 w-full">
+                        {group.items.map((it, idx) => (
+                          <div 
+                            key={idx}
+                            className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
+                              it.isSubmitted 
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-xs' 
+                                : 'bg-slate-200/80 dark:bg-slate-700'
+                            }`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Smart Bento CTA Button */}
+                      <div className="pt-1">
+                        <div className="w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between bg-slate-100/90 dark:bg-slate-700/60 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-600/60 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md transition-all duration-300">
+                          <span>
+                            {isAllCompleted
+                              ? 'Xem lại bài đã học' 
+                              : `Vào làm bài (còn ${pendingInGroup} bài)`}
+                          </span>
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* MODAL: Locked Group Explanation */}
+      {lockedGroupModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] border-2 border-amber-300 dark:border-amber-800/80 shadow-2xl p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setLockedGroupModal(null)}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md border border-amber-200 dark:border-amber-800">
+              <Lock className="w-8 h-8 stroke-[2.2px]" />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold text-[11px] uppercase tracking-wider">
+                Nhóm bài đang tạm khóa
+              </span>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white pt-1">
+                {lockedGroupModal.title}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed pt-1">
+                {lockedGroupModal.lockReason}
+              </p>
+            </div>
+
+            {/* Progress of Prerequisite */}
+            <div className="bg-slate-50 dark:bg-slate-800/70 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-left space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="text-slate-700 dark:text-slate-300 truncate">
+                  Tiến độ "{lockedGroupModal.prerequisiteGroupTitle}":
+                </span>
+                <span className="text-amber-600 dark:text-amber-400 font-black shrink-0">
+                  {lockedGroupModal.prerequisitePercent}% / {lockedGroupModal.unlockThreshold}%
+                </span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, lockedGroupModal.prerequisitePercent || 0)}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              {lockedGroupModal.prerequisiteGroupId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetPrereq = lockedGroupModal.prerequisiteGroupId!;
+                    setLockedGroupModal(null);
+                    handleSelectGroup(targetPrereq);
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  <span>Làm nhóm "{lockedGroupModal.prerequisiteGroupTitle}" ngay →</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setLockedGroupModal(null)}
+                className="w-full py-2.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Celebration Confetti Unlock Modal */}
+      {unlockedCelebration && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden">
+          <style>{`
+            @keyframes confettiFall {
+              0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+              100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+            }
+            .animate-confetti-particle {
+              animation: confettiFall 3s linear infinite;
+            }
+          `}</style>
+          {/* Confetti Particles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {[...Array(28)].map((_, i) => (
+              <span
+                key={i}
+                className="absolute block w-2.5 h-2.5 rounded-full animate-confetti-particle"
+                style={{
+                  left: `${(i * 3.5) + (i % 2 === 0 ? 1 : 2)}%`,
+                  top: `-20px`,
+                  backgroundColor: ['#f59e0b', '#3b82f6', '#ec4899', '#10b981', '#8b5cf6', '#ef4444'][i % 6],
+                  animationDelay: `${(i * 0.12).toFixed(2)}s`,
+                  animationDuration: `${2.2 + (i % 3) * 0.4}s`,
+                  transform: `rotate(${i * 24}deg)`
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-emerald-400 dark:border-emerald-600 shadow-2xl p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-300">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-400 to-teal-500 text-white flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30">
+              <Sparkles className="w-10 h-10 animate-pulse" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="px-3.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-black text-xs uppercase tracking-wider">
+                🎉 Mở khóa thành công!
+              </span>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white pt-1">
+                {unlockedCelebration.title}
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed pt-1">
+                Tuyệt vời! Bạn đã hoàn thành đủ chỉ tiêu bài học trước và chính thức mở khóa nhóm bài này. Hãy bắt đầu chinh phục ngay nào!
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const gid = unlockedCelebration.id;
+                  setUnlockedCelebration(null);
+                  handleSelectGroup(gid);
+                }}
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Khám phá nhóm bài này ngay</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnlockedCelebration(null)}
+                className="w-full py-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                Để sau
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

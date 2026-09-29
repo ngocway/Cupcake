@@ -38,7 +38,13 @@ export async function GET(
         assignment: { deletedAt: null }
       },
       include: {
-        group: true,
+        group: {
+          include: {
+            prerequisiteGroup: {
+              select: { id: true, title: true }
+            }
+          }
+        },
         assignment: {
           include: {
             _count: {
@@ -87,6 +93,11 @@ export async function GET(
         groupId: ac.groupId,
         groupTitle: ac.group?.title || null,
         groupCreatedAt: ac.group?.createdAt || null,
+        groupOrderIndex: ac.group?.orderIndex ?? 0,
+        prerequisiteGroupId: ac.group?.prerequisiteGroupId || null,
+        prerequisiteGroupTitle: ac.group?.prerequisiteGroup?.title || null,
+        unlockThreshold: ac.group?.unlockThreshold ?? 60,
+        forceUnlocked: ac.group?.forceUnlocked || false,
         section,
       };
     });

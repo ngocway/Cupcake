@@ -159,6 +159,53 @@ export default async function StudentAssignmentLobbyPage({
     return null;
   }
   const assignment = rawAssignment;
+
+  // Progression Check: If assignment belongs to a locked group for this student, redirect to class page with lockedGroup modal
+  const assignedClass = await prisma.assignmentClass.findFirst({
+    where: {
+      assignmentId: assignment.id,
+      class: {
+        enrollments: {
+          some: { studentId: userId, status: "ACTIVE" }
+        }
+      }
+    },
+    include: {
+      group: {
+        include: {
+          prerequisiteGroup: {
+            include: {
+              assignments: {
+                include: {
+                  assignment: {
+                    include: {
+                      submissions: {
+                        where: { studentId: userId, submittedAt: { not: null } },
+                        select: { id: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (assignedClass?.group?.prerequisiteGroup && !assignedClass.group.forceUnlocked) {
+    const prereqGroup = assignedClass.group.prerequisiteGroup;
+    const prereqItems = prereqGroup.assignments;
+    const prereqTotal = prereqItems.length;
+    const prereqCompleted = prereqItems.filter((item: any) => (item.assignment.submissions?.length ?? 0) > 0).length;
+    const prereqPercent = prereqTotal > 0 ? Math.round((prereqCompleted / prereqTotal) * 100) : 100;
+    const threshold = assignedClass.group.unlockThreshold ?? 60;
+
+    if (prereqPercent < threshold) {
+      redirect(`/student/classes/${assignedClass.classId}?lockedGroup=${assignedClass.group.id}`);
+    }
+  }
   
   // If assignment is a wrapper for Game / Book / Flashcard, redirect directly to playUrl
   if (assignment.instructions) {
@@ -175,23 +222,7 @@ export default async function StudentAssignmentLobbyPage({
   }
 
   // Detect whether this is for a student in class
-  let isFromClass = fromClass === "true" || !!classId;
-  if (!isFromClass) {
-    const assignedClass = await prisma.assignmentClass.findFirst({
-      where: {
-        assignmentId: assignment.id,
-        class: {
-          enrollments: {
-            some: { studentId: userId, status: "ACTIVE" }
-          }
-        }
-      },
-      select: { classId: true }
-    });
-    if (assignedClass) {
-      isFromClass = true;
-    }
-  }
+  const isFromClass = fromClass === "true" || !!classId || !!assignedClass;
 
   const activeSubmission = allSubmissions.find(s => !s.submittedAt);
   const completedSubmissions = allSubmissions.filter(s => !!s.submittedAt);

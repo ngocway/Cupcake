@@ -15,6 +15,7 @@ interface AssignContentModalProps {
   onAssigned?: () => void;
   initialGroupId?: string;
   initialGroupTitle?: string;
+  existingGroups?: { id: string; title: string }[];
 }
 
 function isLikelyLinkOrId(input: string): boolean {
@@ -78,7 +79,8 @@ export function AssignContentModal({
   onClose, 
   onAssigned,
   initialGroupId,
-  initialGroupTitle
+  initialGroupTitle,
+  existingGroups
 }: AssignContentModalProps) {
   const router = useRouter();
   
@@ -91,6 +93,10 @@ export function AssignContentModal({
     const year = today.getFullYear();
     return `Bài tập ngày ${day}/${month}/${year}`;
   });
+
+  // Progression prerequisite state
+  const [prerequisiteGroupId, setPrerequisiteGroupId] = useState<string>('');
+  const [unlockThreshold, setUnlockThreshold] = useState<number>(60);
 
   // Basket / Cart of selected assignments
   const [selectedItems, setSelectedItems] = useState<AssignableLibraryItem[]>([]);
@@ -189,7 +195,16 @@ export function AssignContentModal({
     if (selectedItems.length === 0) return;
     setIsAssigningBundle(true);
     try {
-      await assignBundleToClassAction(classId, groupTitle, selectedItems, initialGroupId);
+      await assignBundleToClassAction(
+        classId, 
+        groupTitle, 
+        selectedItems, 
+        initialGroupId,
+        !initialGroupId && prerequisiteGroupId ? {
+          prerequisiteGroupId,
+          unlockThreshold: Number(unlockThreshold) || 60
+        } : undefined
+      );
       onAssigned?.();
       onClose();
     } catch (err: any) {
@@ -352,20 +367,60 @@ export function AssignContentModal({
         </div>
 
         {/* TOP: Input Tên nhóm bài tập (Ngay đầu popup theo yêu cầu) */}
-        <div className="px-6 py-3.5 bg-gradient-to-r from-primary/5 via-blue-50/50 to-primary/5 dark:from-primary/10 dark:via-blue-950/20 dark:to-primary/10 border-b border-[#f0f2f4] dark:border-gray-800 flex flex-col sm:flex-row sm:items-center gap-2.5">
-          <div className="flex items-center gap-2 text-xs font-extrabold text-primary shrink-0 uppercase tracking-wider">
-            <span className="material-symbols-outlined text-[20px]">folder_special</span>
-            <span>Tên nhóm bài tập:</span>
+        <div className="px-6 py-3.5 bg-gradient-to-r from-primary/5 via-blue-50/50 to-primary/5 dark:from-primary/10 dark:via-blue-950/20 dark:to-primary/10 border-b border-[#f0f2f4] dark:border-gray-800 flex flex-col gap-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+            <div className="flex items-center gap-2 text-xs font-extrabold text-primary shrink-0 uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[20px]">folder_special</span>
+              <span>Tên nhóm bài tập:</span>
+            </div>
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={groupTitle}
+                onChange={(e) => setGroupTitle(e.target.value)}
+                placeholder="Nhập tên nhóm bài tập (vd: Bài tập ngày 25/09, Unit 1: Animals...)"
+                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-3.5 py-2 text-sm font-bold text-[#111418] dark:text-white outline-none transition-all placeholder:text-gray-400 placeholder:font-normal"
+              />
+            </div>
           </div>
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={groupTitle}
-              onChange={(e) => setGroupTitle(e.target.value)}
-              placeholder="Nhập tên nhóm bài tập (vd: Bài tập ngày 25/09, Unit 1: Animals...)"
-              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-3.5 py-2 text-sm font-bold text-[#111418] dark:text-white outline-none transition-all placeholder:text-gray-400 placeholder:font-normal"
-            />
-          </div>
+
+          {/* Progression Option (Optional Prerequisite Group) */}
+          {!initialGroupId && existingGroups && existingGroups.length > 0 && (
+            <div className="flex items-center gap-3 pt-1 text-xs flex-wrap border-t border-blue-100/60 dark:border-gray-700/60">
+              <div className="flex items-center gap-1.5 font-bold text-gray-700 dark:text-gray-300">
+                <span className="material-symbols-outlined text-amber-500 text-[18px]">lock</span>
+                <span>Điều kiện mở khóa:</span>
+              </div>
+              <select
+                value={prerequisiteGroupId}
+                onChange={(e) => setPrerequisiteGroupId(e.target.value)}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 outline-none cursor-pointer"
+              >
+                <option value="">Không có (Mở tự do ngay)</option>
+                {existingGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    Mở sau: {g.title}
+                  </option>
+                ))}
+              </select>
+
+              {prerequisiteGroupId && (
+                <div className="flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <span className="text-amber-800 dark:text-amber-300 font-medium">Khi học sinh đạt tối thiểu</span>
+                  <input
+                    type="number"
+                    min={10}
+                    max={100}
+                    step={5}
+                    value={unlockThreshold}
+                    onChange={(e) => setUnlockThreshold(Math.max(10, Math.min(100, Number(e.target.value) || 60)))}
+                    className="w-12 rounded bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 px-1 py-0.5 text-xs text-center font-black text-amber-600 outline-none"
+                  />
+                  <span className="text-amber-800 dark:text-amber-300 font-bold">% nhóm trước</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Source Tabs: Mine vs System Library vs Recent */}

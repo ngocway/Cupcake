@@ -244,17 +244,27 @@ model AssignmentClass {
 }
 
 model AssignmentGroup {
-  id          String            @id @default(cuid())
-  classId     String
-  title       String
-  orderIndex  Int               @default(0)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  class       Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
-  assignments AssignmentClass[]
+  id                   String            @id @default(cuid())
+  classId              String
+  title                String
+  orderIndex           Int               @default(0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  // Prerequisite progression relationship
+  prerequisiteGroupId  String?
+  prerequisiteGroup    AssignmentGroup?  @relation("GroupPrerequisites", fields: [prerequisiteGroupId], references: [id], onDelete: SetNull)
+  dependentGroups      AssignmentGroup[] @relation("GroupPrerequisites")
+
+  unlockThreshold      Int?              @default(60)
+  forceUnlocked        Boolean           @default(false)
+
+  class                Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
+  assignments          AssignmentClass[]
 
   @@index([classId])
   @@index([createdAt])
+  @@index([prerequisiteGroupId])
 }
 
 model Question {

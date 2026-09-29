@@ -2001,7 +2001,11 @@ export async function assignBundleToClassAction(
     isAssignment: boolean;
     section?: 'NEW' | 'REVIEW';
   }>,
-  existingGroupId?: string
+  existingGroupId?: string,
+  progressionOptions?: {
+    prerequisiteGroupId?: string | null;
+    unlockThreshold?: number | null;
+  }
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -2031,18 +2035,60 @@ export async function assignBundleToClassAction(
   let group;
   if (existingGroupId) {
     group = await prisma.assignmentGroup.findUnique({ where: { id: existingGroupId } });
-    if (group && groupTitle && groupTitle.trim()) {
-      group = await prisma.assignmentGroup.update({
-        where: { id: existingGroupId },
-        data: { title: groupTitle.trim() }
-      });
+    if (group) {
+      const updateData: any = {};
+      if (groupTitle && groupTitle.trim()) updateData.title = groupTitle.trim();
+      if (progressionOptions?.prerequisiteGroupId !== undefined) {
+        updateData.prerequisiteGroupId = progressionOptions.prerequisiteGroupId || null;
+      }
+      if (progressionOptions?.unlockThreshold !== undefined) {
+        updateData.unlockThreshold = progressionOptions.unlockThreshold ?? 60;
+      }
+      if (Object.keys(updateData).length > 0) {
+        group = await prisma.assignmentGroup.update({
+          where: { id: existingGroupId },
+          data: updateData
+        });
+      }
     }
   }
   if (!group) {
+    // Find existing groups in chronological order
+    const existingGroups = await prisma.assignmentGroup.findMany({
+      where: { classId },
+      orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, orderIndex: true, title: true }
+    });
+
+    // If existing groups have duplicate or unaligned orderIndex, normalize them
+    const hasDuplicateOrder = existingGroups.some((g, idx) => g.orderIndex !== idx);
+    if (hasDuplicateOrder && existingGroups.length > 0) {
+      await prisma.$transaction(
+        existingGroups.map((g, idx) =>
+          prisma.assignmentGroup.update({
+            where: { id: g.id },
+            data: { orderIndex: idx },
+          })
+        )
+      );
+    }
+
+    const nextOrderIndex = existingGroups.length;
+    const lastGroup = existingGroups.length > 0 ? existingGroups[existingGroups.length - 1] : null;
+
+    // Auto-chain: if not explicitly specified, new group requires completion of the preceding group
+    const prerequisiteGroupId =
+      progressionOptions?.prerequisiteGroupId !== undefined
+        ? (progressionOptions.prerequisiteGroupId || null)
+        : (lastGroup ? lastGroup.id : null);
+
     group = await prisma.assignmentGroup.create({
       data: {
         classId,
         title,
+        orderIndex: nextOrderIndex,
+        prerequisiteGroupId,
+        unlockThreshold: progressionOptions?.unlockThreshold ?? 60,
       }
     });
   }
@@ -2203,18 +2249,165 @@ export async function deleteAssignmentGroupAction(groupId: string) {
   const isAdmin = user?.role === 'ADMIN';
   if (!isOwner && !isAdmin) throw new Error('Unauthorized');
 
-  // Delete all class assignment connections for this group
-  await prisma.assignmentClass.deleteMany({
-    where: { groupId }
-  });
+  const bridgePrerequisiteGroupId = group.prerequisiteGroupId || null;
 
-  // Delete group
-  await prisma.assignmentGroup.delete({
-    where: { id: groupId }
+  await prisma.$transaction(async (tx) => {
+    // 1. Auto-Heal (Bridge the Gap): Any groups that required this group now require this group's prerequisite
+    await tx.assignmentGroup.updateMany({
+      where: { prerequisiteGroupId: groupId },
+      data: { prerequisiteGroupId: bridgePrerequisiteGroupId }
+    });
+
+    // 2. Delete all class assignment connections for this group
+    await tx.assignmentClass.deleteMany({
+      where: { groupId }
+    });
+
+    // 3. Delete the group itself
+    await tx.assignmentGroup.delete({
+      where: { id: groupId }
+    });
+
+    // 4. Re-index remaining groups sequentially (0, 1, 2...)
+    const remainingGroups = await tx.assignmentGroup.findMany({
+      where: { classId: group.classId },
+      orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true }
+    });
+
+    for (let i = 0; i < remainingGroups.length; i++) {
+      await tx.assignmentGroup.update({
+        where: { id: remainingGroups[i].id },
+        data: { orderIndex: i }
+      });
+    }
   });
 
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
+  return { success: true };
+}
+
+export async function updateAssignmentGroupProgressionAction(
+  groupId: string,
+  data: {
+    prerequisiteGroupId?: string | null;
+    unlockThreshold?: number | null;
+    forceUnlocked?: boolean;
+  }
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const group = await prisma.assignmentGroup.findUnique({
+    where: { id: groupId },
+    include: { class: true }
+  });
+  if (!group) throw new Error('Nhóm không tồn tại');
+
+  const isOwner = group.class.teacherId === session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  // Prevent circular dependency: prerequisiteGroupId cannot be the group itself
+  if (data.prerequisiteGroupId === groupId) {
+    throw new Error('Nhóm tiên quyết không thể là chính nhóm này');
+  }
+
+  const updated = await prisma.assignmentGroup.update({
+    where: { id: groupId },
+    data: {
+      prerequisiteGroupId: data.prerequisiteGroupId !== undefined ? (data.prerequisiteGroupId || null) : group.prerequisiteGroupId,
+      unlockThreshold: data.unlockThreshold !== undefined ? (data.unlockThreshold ?? 60) : group.unlockThreshold,
+      forceUnlocked: data.forceUnlocked !== undefined ? data.forceUnlocked : group.forceUnlocked,
+    }
+  });
+
+  revalidatePath(`/teacher/classes/${group.classId}`);
+  revalidatePath(`/student/classes/${group.classId}`);
+  return { success: true, group: updated };
+}
+
+export async function toggleForceUnlockAssignmentGroupAction(
+  groupId: string,
+  forceUnlocked: boolean
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const group = await prisma.assignmentGroup.findUnique({
+    where: { id: groupId },
+    include: { class: true }
+  });
+  if (!group) throw new Error('Nhóm không tồn tại');
+
+  const isOwner = group.class.teacherId === session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  const updated = await prisma.assignmentGroup.update({
+    where: { id: groupId },
+    data: { forceUnlocked }
+  });
+
+  revalidatePath(`/teacher/classes/${group.classId}`);
+  revalidatePath(`/student/classes/${group.classId}`);
+  return { success: true, forceUnlocked: updated.forceUnlocked };
+}
+
+export async function reorderAssignmentGroupsAction(
+  classId: string,
+  orderedGroupIds: string[]
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const cls = await prisma.class.findUnique({
+    where: { id: classId },
+    select: { teacherId: true },
+  });
+  if (!cls) throw new Error('Lớp học không tồn tại');
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isOwner = cls.teacherId === session.user.id;
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  // Filter out any ungrouped or invalid ids
+  const validIds = orderedGroupIds.filter((id) => id && !id.startsWith('ungrouped_'));
+  if (validIds.length === 0) return { success: true };
+
+  // Verify that these groups actually belong to this class
+  const existingGroups = await prisma.assignmentGroup.findMany({
+    where: {
+      classId,
+      id: { in: validIds },
+    },
+    select: { id: true },
+  });
+  const existingIdSet = new Set(existingGroups.map((g) => g.id));
+  const sanitizedGroupIds = validIds.filter((id) => existingIdSet.has(id));
+
+  // Auto-chain progression:
+  // Item 0: prerequisiteGroupId = null, orderIndex = 0
+  // Item i: prerequisiteGroupId = sanitizedGroupIds[i - 1], orderIndex = i
+  await prisma.$transaction(
+    sanitizedGroupIds.map((groupId, index) => {
+      const prerequisiteGroupId = index === 0 ? null : sanitizedGroupIds[index - 1];
+      return prisma.assignmentGroup.update({
+        where: { id: groupId },
+        data: {
+          orderIndex: index,
+          prerequisiteGroupId,
+        },
+      });
+    })
+  );
+
+  revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/student/classes/${classId}`);
   return { success: true };
 }
 

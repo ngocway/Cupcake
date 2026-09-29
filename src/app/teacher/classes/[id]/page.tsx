@@ -64,7 +64,17 @@ async function ClassDashboardContent({
         select: {
           assignedAt: true,
           groupId: true,
-          group: { select: { title: true, createdAt: true } },
+          group: { 
+            select: { 
+              title: true, 
+              createdAt: true,
+              orderIndex: true,
+              prerequisiteGroupId: true,
+              prerequisiteGroup: { select: { title: true } },
+              unlockThreshold: true,
+              forceUnlocked: true,
+            } 
+          },
           assignment: {
             select: {
               id: true,
@@ -146,6 +156,11 @@ async function ClassDashboardContent({
         groupId: ac.groupId,
         groupTitle: ac.group?.title || null,
         groupCreatedAt: ac.group?.createdAt ? ac.group.createdAt.toISOString() : null,
+        groupOrderIndex: ac.group?.orderIndex ?? 0,
+        prerequisiteGroupId: ac.group?.prerequisiteGroupId || null,
+        prerequisiteGroupTitle: ac.group?.prerequisiteGroup?.title || null,
+        unlockThreshold: ac.group?.unlockThreshold ?? 60,
+        forceUnlocked: ac.group?.forceUnlocked || false,
         section,
       };
     });

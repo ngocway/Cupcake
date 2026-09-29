@@ -20,6 +20,9 @@ import {
   Award
 } from 'lucide-react';
 import { StudentGroupItem } from './StudentAssignmentsView';
+import { CardTitleWithTooltip } from '@/components/ui/CardTitleWithTooltip';
+
+export { CardTitleWithTooltip };
 
 export interface CardHelperProps {
   item: StudentGroupItem;
@@ -58,11 +61,13 @@ export function GrammarLessonCard({
   return (
     <Link
       href={targetUrl}
-      className="group relative overflow-hidden rounded-md p-5 sm:p-6 flex flex-col items-center justify-between text-center gap-5 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border border-indigo-400/30 cursor-pointer w-full min-h-[300px]"
+      className="group relative rounded-md p-5 sm:p-6 flex flex-col items-center justify-between text-center gap-5 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 text-white shadow-lg hover:shadow-2xl hover:-translate-y-1 hover:z-30 transition-all duration-300 border border-indigo-400/30 cursor-pointer w-full min-h-[300px]"
     >
-      {/* Decorative ambient background blobs */}
-      <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-purple-400/20 blur-xl pointer-events-none" />
+      {/* Decorative ambient background blobs clipped inside */}
+      <div className="absolute inset-0 rounded-md overflow-hidden pointer-events-none">
+        <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/10 blur-2xl" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-purple-400/20 blur-xl" />
+      </div>
 
       {/* Top: Badges + Title */}
       <div className="space-y-2.5 z-10 w-full pt-1">
@@ -78,9 +83,12 @@ export function GrammarLessonCard({
           )}
         </div>
 
-        <h3 className="font-black text-lg sm:text-xl text-white tracking-tight leading-snug line-clamp-2 px-1">
-          {cleanTitle}
-        </h3>
+        <CardTitleWithTooltip
+          title={cleanTitle}
+          as="h3"
+          align="center"
+          className="font-black text-lg sm:text-xl text-white tracking-tight leading-snug line-clamp-2 px-1"
+        />
       </div>
 
       {/* Formula Box */}
@@ -124,10 +132,10 @@ export function GrammarExerciseCard({
   return (
     <Link
       href={targetUrl}
-      className="group flex flex-row rounded-md overflow-hidden bg-white dark:bg-slate-800/90 border border-slate-200/70 dark:border-slate-700/70 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer relative w-full"
+      className="group flex flex-row rounded-md bg-white dark:bg-slate-800/90 border border-slate-200/70 dark:border-slate-700/70 shadow-xs hover:shadow-lg hover:-translate-y-0.5 hover:z-30 transition-all duration-200 cursor-pointer relative w-full"
     >
       {/* 1:1 Square Thumbnail on left */}
-      <div className="relative shrink-0 aspect-square w-[85px] sm:w-[95px] overflow-hidden bg-slate-100 dark:bg-slate-700">
+      <div className="relative shrink-0 aspect-square w-[85px] sm:w-[95px] overflow-hidden rounded-l-md bg-slate-100 dark:bg-slate-700">
         <Image
           src={thumbnail}
           alt={cleanTitle}
@@ -157,9 +165,11 @@ export function GrammarExerciseCard({
           </div>
 
           {/* Title */}
-          <h4 className="text-slate-900 dark:text-slate-100 text-xs sm:text-sm font-black leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-            {cleanTitle}
-          </h4>
+          <CardTitleWithTooltip
+            title={cleanTitle}
+            as="h4"
+            className="text-slate-900 dark:text-slate-100 text-xs sm:text-sm font-black leading-snug line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+          />
         </div>
 
         {/* Footer: Level, Qs, and Submission Status */}
@@ -209,7 +219,7 @@ export function ReadingStoryCard({
   const wordCount = ((cleanTitle.length || 10) * 12 + 100) % 600 + 150;
 
   return (
-    <div className="relative w-full group">
+    <div className="relative w-full group hover:z-30">
       {/* Top Cover Image */}
       <Link 
         href={targetUrl} 
@@ -261,10 +271,12 @@ export function ReadingStoryCard({
         </div>
 
         {/* Title */}
-        <Link href={targetUrl}>
-          <h4 className="text-slate-900 dark:text-white text-base font-black leading-snug line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors mb-3">
-            {cleanTitle}
-          </h4>
+        <Link href={targetUrl} className="block mb-3">
+          <CardTitleWithTooltip
+            title={cleanTitle}
+            as="h4"
+            className="text-slate-900 dark:text-white text-base font-black leading-snug line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors"
+          />
         </Link>
 
         {/* Bottom stats row */}
@@ -314,16 +326,16 @@ export function FlashcardLaneCard({
   return (
     <Link
       href={targetUrl}
-      className={`group relative flex flex-col justify-between w-full p-4 sm:p-5 rounded-md border-2 overflow-hidden cursor-pointer transition-all duration-300 shadow-xs hover:shadow-xl hover:scale-[1.02] min-h-[140px] ${style.bg} ${style.border} ${style.hover}`}
+      className={`group relative flex flex-col justify-between w-full p-4 sm:p-5 rounded-md border-2 hover:z-30 cursor-pointer transition-all duration-300 shadow-xs hover:shadow-xl hover:scale-[1.02] min-h-[140px] ${style.bg} ${style.border} ${style.hover}`}
     >
-      {/* Ambient background blur blobs */}
-      <div className={`absolute -top-10 -right-10 w-24 h-24 ${style.dot} rounded-full blur-xl pointer-events-none`} />
-      <div className={`absolute -bottom-8 -left-8 w-20 h-20 ${style.dot} rounded-full blur-xl pointer-events-none`} />
-
-      {/* Ghost watermark */}
-      <span className="absolute -bottom-3 -right-3 text-5xl opacity-10 transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none pointer-events-none">
-        🧸
-      </span>
+      {/* Ambient background blur blobs & watermark clipped inside */}
+      <div className="absolute inset-0 rounded-md overflow-hidden pointer-events-none">
+        <div className={`absolute -top-10 -right-10 w-24 h-24 ${style.dot} rounded-full blur-xl`} />
+        <div className={`absolute -bottom-8 -left-8 w-20 h-20 ${style.dot} rounded-full blur-xl`} />
+        <span className="absolute -bottom-3 -right-3 text-5xl opacity-10 transform rotate-12 transition-transform duration-500 group-hover:scale-125 select-none">
+          🧸
+        </span>
+      </div>
 
       {/* Top: Icon + Title */}
       <div className="flex items-start gap-3 relative z-10 w-full">
@@ -336,9 +348,11 @@ export function FlashcardLaneCard({
               Flashcard
             </span>
           </div>
-          <h4 className="font-black text-sm sm:text-base text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-purple-600 transition-colors">
-            {cleanTitle}
-          </h4>
+          <CardTitleWithTooltip
+            title={cleanTitle}
+            as="h4"
+            className="font-black text-sm sm:text-base text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-purple-600 transition-colors"
+          />
         </div>
       </div>
 
@@ -378,9 +392,9 @@ export function BookShadowingCard({
   return (
     <Link
       href={targetUrl}
-      className="group flex flex-col rounded-md overflow-hidden bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+      className="group flex flex-col rounded-md hover:z-30 relative bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
     >
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-md bg-slate-100">
         <Image
           src={thumbnail}
           alt={cleanTitle}
@@ -410,9 +424,13 @@ export function BookShadowingCard({
           <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">
             Luyện phát âm & ngữ điệu
           </span>
-          <h4 className="font-black text-sm sm:text-base text-slate-800 dark:text-white leading-snug line-clamp-2 mt-1 group-hover:text-amber-600 transition-colors">
-            {cleanTitle}
-          </h4>
+          <div className="mt-1">
+            <CardTitleWithTooltip
+              title={cleanTitle}
+              as="h4"
+              className="font-black text-sm sm:text-base text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-amber-600 transition-colors"
+            />
+          </div>
         </div>
 
         <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
@@ -443,9 +461,9 @@ export function EducationalGameCard({
   const thumbnail = item.assignment.thumbnail || "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=800";
 
   return (
-    <div className="group rounded-md overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">
+    <div className="group rounded-md hover:z-30 relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">
       {/* Top Banner Image with Badges */}
-      <Link href={targetUrl} className="relative aspect-[16/10] w-full overflow-hidden block bg-slate-100 dark:bg-slate-800">
+      <Link href={targetUrl} className="relative aspect-[16/10] w-full overflow-hidden rounded-t-md block bg-slate-100 dark:bg-slate-800">
         <Image
           src={thumbnail}
           alt={cleanTitle}
@@ -487,9 +505,11 @@ export function EducationalGameCard({
       <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-4">
         <div>
           <Link href={targetUrl} className="block">
-            <h4 className="font-black text-base sm:text-lg text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-pink-600 transition-colors">
-              {cleanTitle}
-            </h4>
+            <CardTitleWithTooltip
+              title={cleanTitle}
+              as="h4"
+              className="font-black text-base sm:text-lg text-slate-800 dark:text-white leading-snug line-clamp-2 group-hover:text-pink-600 transition-colors"
+            />
           </Link>
           <p className="text-xs text-slate-400 mt-1 line-clamp-1">
             Vừa chơi vừa ôn tập từ vựng & ngữ pháp cực vui

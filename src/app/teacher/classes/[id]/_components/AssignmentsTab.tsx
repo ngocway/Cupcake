@@ -5,7 +5,31 @@ import Link from 'next/link';
 
 import { AssignContentModal } from './AssignContentModal';
 import { remindPendingSubmissions, removeAssignmentFromClass } from '../actions';
-import { renameAssignmentGroupAction, deleteAssignmentGroupAction } from '@/actions/material-actions';
+import { 
+  renameAssignmentGroupAction, 
+  deleteAssignmentGroupAction,
+  updateAssignmentGroupProgressionAction,
+  toggleForceUnlockAssignmentGroupAction,
+  reorderAssignmentGroupsAction,
+} from '@/actions/material-actions';
+import { CardTitleWithTooltip } from '@/components/ui/CardTitleWithTooltip';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export type Assignment = {
   id: string;
@@ -22,6 +46,11 @@ export type Assignment = {
   groupId?: string | null;
   groupTitle?: string | null;
   groupCreatedAt?: string | null;
+  groupOrderIndex?: number;
+  prerequisiteGroupId?: string | null;
+  prerequisiteGroupTitle?: string | null;
+  unlockThreshold?: number;
+  forceUnlocked?: boolean;
   section?: 'NEW' | 'REVIEW';
 };
 
@@ -45,6 +74,180 @@ function formatDeadline(deadline: string | null) {
   return `${day}/${month}/${year} - ${hours}:${minutes}`;
 }
 
+function SortableCompactGroupCard({
+  group,
+  stepNumber,
+  isUngrouped,
+  isDragDisabled,
+  onCardClick,
+  renderDropdown,
+}: {
+  group: {
+    id: string;
+    title: string;
+    prerequisiteGroupId?: string | null;
+    prerequisiteGroupTitle?: string | null;
+    unlockThreshold?: number;
+    forceUnlocked?: boolean;
+    items: Assignment[];
+  };
+  stepNumber?: number;
+  isUngrouped?: boolean;
+  isDragDisabled?: boolean;
+  onCardClick: () => void;
+  renderDropdown: () => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: group.id,
+    disabled: isDragDisabled || isUngrouped,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const totalItems = group.items.length;
+  const avgPercentage = totalItems > 0
+    ? Math.round(group.items.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / totalItems)
+    : 0;
+
+  const isFirstStep = stepNumber === 1;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={onCardClick}
+      className={`group relative bg-white dark:bg-gray-800 rounded-2xl border p-4 shadow-2xs hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        isDragging
+          ? 'z-50 opacity-90 shadow-2xl ring-2 ring-primary scale-[1.03] border-primary'
+          : isFirstStep && !isUngrouped
+          ? 'border-emerald-200/80 dark:border-emerald-900/50 hover:border-emerald-500'
+          : 'border-[#f0f2f4] dark:border-gray-700/80 hover:border-primary/50'
+      }`}
+    >
+      <div>
+        {/* Top bar: Drag Handle + Folder Icon + Badge count + Step badge + 3-dot menu */}
+        <div className="flex items-center justify-between gap-1.5 mb-2.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {/* Drag Handle */}
+            {!isUngrouped && (
+              <button
+                type="button"
+                {...attributes}
+                {...listeners}
+                disabled={isDragDisabled}
+                title={isDragDisabled ? 'Không thể kéo khi đang lọc/tìm kiếm' : 'Giữ để kéo thả sắp xếp lộ trình mở khóa'}
+                className={`size-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shrink-0 ${
+                  isDragDisabled ? 'opacity-30 cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="material-symbols-outlined text-[18px]">drag_indicator</span>
+              </button>
+            )}
+
+            <div
+              className={`size-8 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                isFirstStep && !isUngrouped
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px] font-bold">folder</span>
+            </div>
+
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 shrink-0">
+              {totalItems} bài
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Step badge */}
+            {!isUngrouped && stepNumber !== undefined && (
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-tight shrink-0 flex items-center gap-0.5 border ${
+                  isFirstStep
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px]">
+                  {isFirstStep ? 'lock_open' : 'lock'}
+                </span>
+                <span>#{stepNumber}</span>
+              </span>
+            )}
+            {renderDropdown()}
+          </div>
+        </div>
+
+        {/* Tiêu đề nhóm bài */}
+        <CardTitleWithTooltip
+          title={group.title}
+          as="h3"
+          className="text-sm font-black text-[#111418] dark:text-white line-clamp-2 group-hover:text-primary transition-colors leading-snug"
+        />
+
+        {/* Condition details */}
+        {!isUngrouped && (
+          <div className="mt-2 text-[11px] font-medium leading-tight">
+            {isFirstStep ? (
+              <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-semibold">
+                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                Mở tự do đầu tiên
+              </span>
+            ) : (
+              <div className="flex flex-col gap-0.5">
+                <span
+                  className="text-amber-700 dark:text-amber-400 flex items-center gap-1 line-clamp-1"
+                  title={`Mở sau khi hoàn thành ≥ ${group.unlockThreshold ?? 60}% "${group.prerequisiteGroupTitle || 'Nhóm trước'}"`}
+                >
+                  <span className="material-symbols-outlined text-[14px] shrink-0">lock</span>
+                  <span className="truncate">
+                    Sau: {group.prerequisiteGroupTitle || `Chặng #${stepNumber! - 1}`}
+                  </span>
+                  <span className="font-bold shrink-0">({group.unlockThreshold ?? 60}%)</span>
+                </span>
+                {group.forceUnlocked && (
+                  <span className="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[12px]">lock_open</span>
+                    Đang mở cả lớp
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer: Mini Progress Bar + % */}
+      <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700/60">
+        <div className="flex items-center justify-between text-[11px] font-bold text-[#617589] mb-1">
+          <span className="text-[10px]">Tiến độ nộp bài</span>
+          <span className="text-primary font-black text-[10px]">{avgPercentage}%</span>
+        </div>
+        <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-300 ${
+              isFirstStep && !isUngrouped ? 'bg-emerald-500' : 'bg-primary'
+            }`}
+            style={{ width: `${avgPercentage}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AssignmentsTab({
   classId,
   onOpenCountChange,
@@ -64,6 +267,9 @@ export function AssignmentsTab({
   // Drill-down view state: when not null, shows that group's details
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
+  // View mode for group cards: 'expanded' (3 cols) | 'compact' (5 cols)
+  const [viewMode, setViewMode] = useState<'expanded' | 'compact'>('expanded');
+
   // Group 3-dot menu and assignment 3-dot menu
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string | null>(null);
   const [openAssignmentMenuId, setOpenAssignmentMenuId] = useState<string | null>(null);
@@ -82,6 +288,17 @@ export function AssignmentsTab({
     newTitle: string;
   } | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
+
+  // Progression modal state
+  const [progressionModal, setProgressionModal] = useState<{
+    open: boolean;
+    groupId: string;
+    groupTitle: string;
+    prerequisiteGroupId: string | null;
+    unlockThreshold: number;
+    forceUnlocked: boolean;
+  } | null>(null);
+  const [isSavingProgression, setIsSavingProgression] = useState(false);
 
   // Success Toast & Remind state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -148,12 +365,30 @@ export function AssignmentsTab({
     });
   }, [assignments, searchTerm, statusFilter]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const isDragDisabled = searchTerm.trim().length > 0 || statusFilter !== 'all';
+
   // Group assignments by Group (or legacy ungrouped)
   const groupedAssignments = useMemo(() => {
     const map = new Map<string, {
       id: string;
       title: string;
+      orderIndex: number;
       createdAt: string | null;
+      prerequisiteGroupId?: string | null;
+      prerequisiteGroupTitle?: string | null;
+      unlockThreshold?: number;
+      forceUnlocked?: boolean;
       items: Assignment[];
     }>();
 
@@ -164,15 +399,98 @@ export function AssignmentsTab({
         map.set(gId, {
           id: gId,
           title: gTitle,
+          orderIndex: a.groupOrderIndex ?? 0,
           createdAt: a.groupCreatedAt || null,
+          prerequisiteGroupId: a.prerequisiteGroupId || null,
+          prerequisiteGroupTitle: a.prerequisiteGroupTitle || null,
+          unlockThreshold: a.unlockThreshold ?? 60,
+          forceUnlocked: !!a.forceUnlocked,
           items: [],
         });
       }
       map.get(gId)!.items.push(a);
     });
 
-    return Array.from(map.values());
+    const groups = Array.from(map.values());
+    groups.sort((a, b) => {
+      const isAUngrouped = a.id.startsWith('ungrouped_');
+      const isBUngrouped = b.id.startsWith('ungrouped_');
+      if (isAUngrouped && !isBUngrouped) return 1;
+      if (!isAUngrouped && isBUngrouped) return -1;
+      if ((a.orderIndex ?? 0) !== (b.orderIndex ?? 0)) {
+        return (a.orderIndex ?? 0) - (b.orderIndex ?? 0);
+      }
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
+
+    return groups;
   }, [filtered]);
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || isDragDisabled) return;
+
+    // Filter only real groups (exclude ungrouped)
+    const sortableGroups = groupedAssignments.filter((g) => !g.id.startsWith('ungrouped_'));
+    const oldIndex = sortableGroups.findIndex((g) => g.id === active.id);
+    const newIndex = sortableGroups.findIndex((g) => g.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+    const reordered = arrayMove(sortableGroups, oldIndex, newIndex);
+
+    // Compute updated order & auto-chain prerequisite relationships:
+    // Index 0: prerequisiteGroupId = null, prerequisiteGroupTitle = null
+    // Index i: prerequisiteGroupId = reordered[i - 1].id, prerequisiteGroupTitle = reordered[i - 1].title
+    const updatedMetaMap = new Map<string, {
+      orderIndex: number;
+      prerequisiteGroupId: string | null;
+      prerequisiteGroupTitle: string | null;
+    }>();
+
+    reordered.forEach((g, idx) => {
+      const prereq = idx === 0 ? null : reordered[idx - 1];
+      updatedMetaMap.set(g.id, {
+        orderIndex: idx,
+        prerequisiteGroupId: prereq ? prereq.id : null,
+        prerequisiteGroupTitle: prereq ? prereq.title : null,
+      });
+    });
+
+    // Optimistically update local assignments state
+    setAssignments((prevAssignments) =>
+      prevAssignments.map((a) => {
+        if (a.groupId && updatedMetaMap.has(a.groupId)) {
+          const meta = updatedMetaMap.get(a.groupId)!;
+          return {
+            ...a,
+            groupOrderIndex: meta.orderIndex,
+            prerequisiteGroupId: meta.prerequisiteGroupId,
+            prerequisiteGroupTitle: meta.prerequisiteGroupTitle,
+          };
+        }
+        return a;
+      })
+    );
+
+    setToastMessage('Đang lưu lộ trình mở khóa các nhóm bài...');
+    setShowSuccessToast(true);
+
+    try {
+      await reorderAssignmentGroupsAction(
+        classId,
+        reordered.map((g) => g.id)
+      );
+      setToastMessage('Đã lưu thứ tự và điều kiện mở khóa bài tập!');
+      setTimeout(() => setShowSuccessToast(false), 3000);
+    } catch (err: any) {
+      console.error('Failed to reorder groups', err);
+      alert('Không thể lưu thứ tự nhóm bài: ' + (err?.message || 'Có lỗi xảy ra'));
+      await fetchAssignments();
+    }
+  };
 
   // Find active group if in drill-down mode
   const activeGroup = useMemo(() => {
@@ -260,6 +578,39 @@ export function AssignmentsTab({
     }
   };
 
+  const handleSaveProgression = async () => {
+    if (!progressionModal) return;
+    setIsSavingProgression(true);
+    try {
+      await updateAssignmentGroupProgressionAction(progressionModal.groupId, {
+        prerequisiteGroupId: progressionModal.prerequisiteGroupId || null,
+        unlockThreshold: Number(progressionModal.unlockThreshold) || 60,
+        forceUnlocked: progressionModal.forceUnlocked
+      });
+      setToastMessage('Đã cập nhật điều kiện mở khóa nhóm bài!');
+      setShowSuccessToast(true);
+      setProgressionModal(null);
+      await fetchAssignments();
+      setTimeout(() => setShowSuccessToast(false), 3000);
+    } catch (err: any) {
+      alert('Cập nhật thất bại: ' + (err?.message || 'Có lỗi xảy ra'));
+    } finally {
+      setIsSavingProgression(false);
+    }
+  };
+
+  const handleToggleForceUnlock = async (groupId: string, currentForceUnlocked: boolean) => {
+    try {
+      await toggleForceUnlockAssignmentGroupAction(groupId, !currentForceUnlocked);
+      setToastMessage(!currentForceUnlocked ? 'Đã mở khóa ngay cho cả lớp!' : 'Đã khóa lại theo tiến độ!');
+      setShowSuccessToast(true);
+      await fetchAssignments();
+      setTimeout(() => setShowSuccessToast(false), 3000);
+    } catch (err: any) {
+      alert('Thao tác thất bại: ' + (err?.message || 'Có lỗi xảy ra'));
+    }
+  };
+
   // Helper to calculate kind breakdown in group
   const getGroupKindBreakdown = (items: Assignment[]) => {
     const counts: Record<string, number> = {};
@@ -284,6 +635,101 @@ export function AssignmentsTab({
     });
   };
 
+  const renderGroupDropdown = (group: {
+    id: string;
+    title: string;
+    prerequisiteGroupId?: string | null;
+    unlockThreshold?: number;
+    forceUnlocked?: boolean;
+  }, isCompact = false) => {
+    return (
+      <div 
+        className="relative shrink-0"
+        ref={openGroupMenuId === group.id ? groupMenuRef : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Tùy chọn nhóm"
+          className={`${isCompact ? 'size-7' : 'size-8'} hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full flex items-center justify-center text-[#617589] hover:text-[#111418] dark:hover:text-white transition-colors cursor-pointer`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenGroupMenuId(openGroupMenuId === group.id ? null : group.id);
+          }}
+        >
+          <span className={`material-symbols-outlined ${isCompact ? 'text-[18px]' : 'text-[20px]'}`}>more_vert</span>
+        </button>
+
+        {openGroupMenuId === group.id && (
+          <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-30 animate-in fade-in zoom-in-95 duration-150">
+            {!group.id.startsWith('ungrouped_') && (
+              <>
+                <button
+                  onClick={() => {
+                    setOpenGroupMenuId(null);
+                    setProgressionModal({
+                      open: true,
+                      groupId: group.id,
+                      groupTitle: group.title,
+                      prerequisiteGroupId: group.prerequisiteGroupId || null,
+                      unlockThreshold: group.unlockThreshold ?? 60,
+                      forceUnlocked: !!group.forceUnlocked
+                    });
+                  }}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors text-left cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">lock_clock</span>
+                  <span>Điều kiện mở khóa</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setOpenGroupMenuId(null);
+                    handleToggleForceUnlock(group.id, !!group.forceUnlocked);
+                  }}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-gray-500">
+                    {group.forceUnlocked ? 'lock' : 'lock_open'}
+                  </span>
+                  <span>{group.forceUnlocked ? 'Khóa lại theo tiến độ' : 'Mở khóa ngay cho cả lớp'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setOpenGroupMenuId(null);
+                    setRenameModal({ open: true, groupId: group.id, newTitle: group.title });
+                  }}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left cursor-pointer border-t border-gray-100 dark:border-gray-750"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-gray-500">edit</span>
+                  <span>Đổi tên nhóm</span>
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => {
+                setOpenGroupMenuId(null);
+                setAssignModalState({ open: true, groupId: group.id, groupTitle: group.title });
+              }}
+              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>Thêm bài vào nhóm này</span>
+            </button>
+            {!group.id.startsWith('ungrouped_') && (
+              <button
+                onClick={() => handleDeleteGroup(group.id, group.title)}
+                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-left cursor-pointer border-t border-gray-100 dark:border-gray-750"
+              >
+                <span className="material-symbols-outlined text-[18px]">delete</span>
+                <span>Xóa nhóm bài tập</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
       
@@ -305,13 +751,45 @@ export function AssignmentsTab({
                 />
               </div>
             </div>
-            <button 
-              onClick={() => setAssignModalState({ open: true })}
-              className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-primary/90 transition-all active:scale-95 shrink-0 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">add</span>
-              <span>Giao nhóm bài mới</span>
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Toggle chế độ xem: Mở rộng (3 cột) / Thu gọn (5 cột) */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xs">
+                <button
+                  type="button"
+                  title="Chế độ Mở rộng (3 cột)"
+                  onClick={() => setViewMode('expanded')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'expanded'
+                      ? 'bg-white dark:bg-gray-700 text-primary shadow-xs'
+                      : 'text-[#617589] hover:text-[#111418] dark:hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                  <span className="hidden sm:inline">Mở rộng</span>
+                </button>
+                <button
+                  type="button"
+                  title="Chế độ Thu gọn (5 cột)"
+                  onClick={() => setViewMode('compact')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    viewMode === 'compact'
+                      ? 'bg-white dark:bg-gray-700 text-primary shadow-xs'
+                      : 'text-[#617589] hover:text-[#111418] dark:hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">view_compact</span>
+                  <span className="hidden sm:inline">Thu gọn</span>
+                </button>
+              </div>
+
+              <button 
+                onClick={() => setAssignModalState({ open: true })}
+                className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md hover:bg-primary/90 transition-all active:scale-95 shrink-0 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">add</span>
+                <span>Giao nhóm bài mới</span>
+              </button>
+            </div>
           </div>
 
           {/* Status Tabs */}
@@ -359,6 +837,20 @@ export function AssignmentsTab({
                     <span>Đổi tên nhóm</span>
                   </button>
                   <button
+                    onClick={() => setProgressionModal({
+                      open: true,
+                      groupId: activeGroup.id,
+                      groupTitle: activeGroup.title,
+                      prerequisiteGroupId: activeGroup.prerequisiteGroupId || null,
+                      unlockThreshold: activeGroup.unlockThreshold ?? 60,
+                      forceUnlocked: !!activeGroup.forceUnlocked
+                    })}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">lock_clock</span>
+                    <span>Điều kiện mở</span>
+                  </button>
+                  <button
                     onClick={() => handleDeleteGroup(activeGroup.id, activeGroup.title)}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-gray-800 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer shadow-xs"
                   >
@@ -398,6 +890,24 @@ export function AssignmentsTab({
                       <span className="material-symbols-outlined text-[15px]">calendar_today</span>
                       Ngày giao: {new Date(activeGroup.createdAt).toLocaleDateString('vi-VN')}
                     </p>
+                  )}
+                  {activeGroup.prerequisiteGroupId && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100/60 dark:border-gray-700/60 text-xs flex-wrap">
+                      <span className="material-symbols-outlined text-[16px] text-amber-500">lock</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">
+                        Điều kiện mở khóa: Hoàn thành ≥ <strong className="text-amber-600">{activeGroup.unlockThreshold}%</strong> nhóm &ldquo;<strong>{activeGroup.prerequisiteGroupTitle}</strong>&rdquo;
+                      </span>
+                      {activeGroup.forceUnlocked ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">lock_open</span>
+                          Đang mở khóa cả lớp
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200">
+                          Khóa theo tiến độ
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -456,7 +966,7 @@ export function AssignmentsTab({
               return (
                 <div
                   key={assignment.id}
-                  className={`bg-white dark:bg-gray-800 rounded-3xl border p-5 sm:p-6 flex flex-col justify-between shadow-xs hover:shadow-xl transition-all duration-200 group relative ${
+                  className={`bg-white dark:bg-gray-800 rounded-3xl border p-5 sm:p-6 flex flex-col justify-between shadow-xs hover:shadow-xl hover:z-30 transition-all duration-200 group relative ${
                     isReview 
                       ? 'border-amber-200/80 dark:border-amber-900/50 hover:border-amber-400' 
                       : 'border-[#f0f2f4] dark:border-gray-700/80 hover:border-primary/40'
@@ -542,9 +1052,13 @@ export function AssignmentsTab({
                     </div>
 
                     {/* Title */}
-                    <h4 className="text-base font-extrabold text-[#111418] dark:text-white line-clamp-2 mt-2 group-hover:text-primary transition-colors">
-                      {displayTitle}
-                    </h4>
+                    <div className="mt-2">
+                      <CardTitleWithTooltip
+                        title={displayTitle}
+                        as="h4"
+                        className="text-base font-extrabold text-[#111418] dark:text-white line-clamp-2 group-hover:text-primary transition-colors"
+                      />
+                    </div>
 
                     {/* Deadline */}
                     <div className="flex items-center gap-1.5 text-xs text-[#617589] mt-2 font-medium">
@@ -629,16 +1143,22 @@ export function AssignmentsTab({
         <div>
           {isLoading ? (
             /* Loading skeletons in grid */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-3xl border border-[#f0f2f4] dark:border-gray-700 p-6 shadow-sm space-y-4">
+            <div className={
+              viewMode === 'compact'
+                ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3.5"
+                : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            }>
+              {Array.from({ length: viewMode === 'compact' ? 5 : 3 }).map((_, i) => (
+                <div key={i} className={`bg-white dark:bg-gray-800 rounded-3xl border border-[#f0f2f4] dark:border-gray-700 shadow-sm ${viewMode === 'compact' ? 'p-4 space-y-3' : 'p-6 space-y-4'}`}>
                   <div className="flex items-center justify-between">
-                    <div className="size-12 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
-                    <div className="h-6 w-16 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+                    <div className={`${viewMode === 'compact' ? 'size-8 rounded-xl' : 'size-12 rounded-2xl'} bg-gray-200 dark:bg-gray-700 animate-pulse`} />
+                    <div className="h-5 w-14 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
                   </div>
-                  <div className="h-6 w-3/4 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
-                  <div className="h-4 w-1/2 bg-gray-100 dark:bg-gray-750 rounded animate-pulse" />
-                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mt-4" />
+                  <div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+                  {viewMode === 'expanded' && (
+                    <div className="h-4 w-1/2 bg-gray-100 dark:bg-gray-750 rounded animate-pulse" />
+                  )}
+                  <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse mt-3" />
                 </div>
               ))}
             </div>
@@ -655,7 +1175,66 @@ export function AssignmentsTab({
                 <p className="text-xs text-[#617589]">Bấm nút &quot;Giao nhóm bài mới&quot; để tạo nhóm và giao bài cho học sinh.</p>
               </div>
             </div>
+          ) : viewMode === 'compact' ? (
+            <div>
+              {/* Helper & Guidance Banners */}
+              {isDragDisabled ? (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40 rounded-2xl text-xs text-amber-800 dark:text-amber-300 font-medium mb-4 animate-in fade-in duration-200">
+                  <span className="material-symbols-outlined text-[18px] text-amber-600">info</span>
+                  <span>Đang lọc hoặc tìm kiếm — Tạm thời tắt tính năng kéo thả sắp xếp lộ trình. Hãy xóa tìm kiếm để sắp xếp.</span>
+                </div>
+              ) : groupedAssignments.filter((g) => !g.id.startsWith('ungrouped_')).length > 1 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-blue-50/70 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl text-xs text-blue-800 dark:text-blue-300 font-medium mb-4 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-primary">drag_indicator</span>
+                    <span>
+                      <strong>Lộ trình mở khóa:</strong> Kéo giữ biểu tượng <strong>⋮⋮</strong> trên thẻ để đổi thứ tự. Nhóm sau sẽ tự động khóa và chỉ mở khi học sinh hoàn thành nhóm trước.
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-primary dark:text-blue-400 bg-white/80 dark:bg-gray-800/80 px-2.5 py-1 rounded-lg border border-blue-100 dark:border-gray-750 shrink-0">
+                    Tự động liên kết chuỗi
+                  </span>
+                </div>
+              ) : null}
+
+              {/* Compact Drag & Drop Grid */}
+              <DndContext
+                id="assignment-groups-dnd"
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={groupedAssignments.filter((g) => !g.id.startsWith('ungrouped_')).map((g) => g.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3.5">
+                    {(() => {
+                      let stepCount = 0;
+                      return groupedAssignments.map((group) => {
+                        const isUngrouped = group.id.startsWith('ungrouped_');
+                        if (!isUngrouped) stepCount += 1;
+                        const stepNumber = !isUngrouped ? stepCount : undefined;
+
+                        return (
+                          <SortableCompactGroupCard
+                            key={group.id}
+                            group={group}
+                            stepNumber={stepNumber}
+                            isUngrouped={isUngrouped}
+                            isDragDisabled={isDragDisabled}
+                            onCardClick={() => setActiveGroupId(group.id)}
+                            renderDropdown={() => renderGroupDropdown(group, true)}
+                          />
+                        );
+                      });
+                    })()}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
           ) : (
+            /* VIEW: EXPANDED (3 CỘT) */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {groupedAssignments.map((group) => {
                 const totalItems = group.items.length;
@@ -678,6 +1257,18 @@ export function AssignmentsTab({
                         </div>
 
                         <div className="flex items-center gap-1.5 flex-wrap">
+                          {group.forceUnlocked ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">lock_open</span>
+                              Mở cả lớp
+                            </span>
+                          ) : group.prerequisiteGroupId ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">lock</span>
+                              Mở sau ({group.unlockThreshold}%)
+                            </span>
+                          ) : null}
+
                           <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300">
                             {group.items.filter(i => {
                               try { return JSON.parse(i.instructions || '{}').section !== 'REVIEW'; } catch { return true; }
@@ -694,65 +1285,16 @@ export function AssignmentsTab({
                           )}
 
                           {/* 3-dot action menu for group */}
-                          <div 
-                            className="relative"
-                            ref={openGroupMenuId === group.id ? groupMenuRef : undefined}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              type="button"
-                              className="size-8 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full flex items-center justify-center text-[#617589] hover:text-[#111418] dark:hover:text-white transition-colors cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenGroupMenuId(openGroupMenuId === group.id ? null : group.id);
-                              }}
-                            >
-                              <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                            </button>
-
-                            {openGroupMenuId === group.id && (
-                              <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-30 animate-in fade-in zoom-in-95 duration-150">
-                                {!group.id.startsWith('ungrouped_') && (
-                                  <button
-                                    onClick={() => {
-                                      setOpenGroupMenuId(null);
-                                      setRenameModal({ open: true, groupId: group.id, newTitle: group.title });
-                                    }}
-                                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left cursor-pointer"
-                                  >
-                                    <span className="material-symbols-outlined text-[18px] text-gray-500">edit</span>
-                                    <span>Đổi tên nhóm</span>
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => {
-                                    setOpenGroupMenuId(null);
-                                    setAssignModalState({ open: true, groupId: group.id, groupTitle: group.title });
-                                  }}
-                                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left cursor-pointer"
-                                >
-                                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
-                                  <span>Thêm bài vào nhóm này</span>
-                                </button>
-                                {!group.id.startsWith('ungrouped_') && (
-                                  <button
-                                    onClick={() => handleDeleteGroup(group.id, group.title)}
-                                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-left cursor-pointer border-t border-gray-100 dark:border-gray-750"
-                                  >
-                                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                                    <span>Xóa nhóm bài tập</span>
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
+                          {renderGroupDropdown(group, false)}
                         </div>
                       </div>
 
                       {/* Group Title */}
-                      <h3 className="text-lg font-black text-[#111418] dark:text-white line-clamp-2 group-hover:text-primary transition-colors">
-                        {group.title}
-                      </h3>
+                      <CardTitleWithTooltip
+                        title={group.title}
+                        as="h3"
+                        className="text-lg font-black text-[#111418] dark:text-white line-clamp-2 group-hover:text-primary transition-colors"
+                      />
 
                       {/* Date */}
                       {group.createdAt && (
@@ -760,6 +1302,16 @@ export function AssignmentsTab({
                           <span className="material-symbols-outlined text-[14px]">calendar_today</span>
                           Ngày giao: {new Date(group.createdAt).toLocaleDateString('vi-VN')}
                         </p>
+                      )}
+
+                      {/* Prerequisite info banner if set */}
+                      {group.prerequisiteGroupId && (
+                        <div className="mt-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-2.5 py-1.5 rounded-xl border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-1.5 font-medium">
+                          <span className="material-symbols-outlined text-[15px] text-amber-600">lock</span>
+                          <span className="truncate">
+                            Mở sau &ldquo;{group.prerequisiteGroupTitle || 'Nhóm trước'}&rdquo; (≥ {group.unlockThreshold}%)
+                          </span>
+                        </div>
                       )}
 
                       {/* Kinds badges breakdown */}
@@ -810,6 +1362,10 @@ export function AssignmentsTab({
           classId={classId} 
           initialGroupId={assignModalState.groupId}
           initialGroupTitle={assignModalState.groupTitle}
+          existingGroups={groupedAssignments
+            .filter(g => !g.id.startsWith('ungrouped_') && g.id !== assignModalState.groupId)
+            .map(g => ({ id: g.id, title: g.title }))
+          }
           onClose={() => setAssignModalState({ open: false })} 
           onAssigned={() => {
             fetchAssignments();
@@ -861,6 +1417,118 @@ export function AssignmentsTab({
                 className="px-5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
               >
                 {isRenaming ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Thiết lập điều kiện mở khóa */}
+      {progressionModal?.open && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="size-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-2xl font-bold">lock_clock</span>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#111418] dark:text-white">
+                  Điều kiện mở khóa nhóm bài
+                </h3>
+                <p className="text-xs text-[#617589] line-clamp-1">
+                  {progressionModal.groupTitle}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Nhóm bài học tiên quyết:
+                </label>
+                <select
+                  value={progressionModal.prerequisiteGroupId || ''}
+                  onChange={(e) => setProgressionModal({
+                    ...progressionModal,
+                    prerequisiteGroupId: e.target.value || null
+                  })}
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2.5 text-xs font-semibold outline-none focus:ring-2 focus:ring-amber-500/30 text-[#111418] dark:text-white transition-all cursor-pointer"
+                >
+                  <option value="">Không có (Mở tự do ngay)</option>
+                  {groupedAssignments
+                    .filter((g) => g.id !== progressionModal.groupId && !g.id.startsWith('ungrouped_'))
+                    .map((g) => (
+                      <option key={g.id} value={g.id}>
+                        Mở sau: {g.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {progressionModal.prerequisiteGroupId && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Tỷ lệ hoàn thành tối thiểu của nhóm trước:
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min={10}
+                      max={100}
+                      step={5}
+                      value={progressionModal.unlockThreshold}
+                      onChange={(e) => setProgressionModal({
+                        ...progressionModal,
+                        unlockThreshold: Math.max(10, Math.min(100, Number(e.target.value) || 60))
+                      })}
+                      className="w-20 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-center font-black text-amber-600 outline-none focus:ring-2 focus:ring-amber-500/30"
+                    />
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">%</span>
+                    <span className="text-xs text-[#617589]">
+                      (Mặc định 60% — học sinh nộp đủ số bài sẽ tự mở)
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={progressionModal.forceUnlocked}
+                    onChange={(e) => setProgressionModal({
+                      ...progressionModal,
+                      forceUnlocked: e.target.checked
+                    })}
+                    className="size-4 rounded text-primary focus:ring-primary/30 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-[#111418] dark:text-white block">
+                      Mở khóa ngay cho cả lớp (Thủ công)
+                    </span>
+                    <span className="text-[11px] text-[#617589] block">
+                      Bỏ qua điều kiện tiến độ, tất cả học sinh đều được làm ngay
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setProgressionModal(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isSavingProgression}
+                onClick={handleSaveProgression}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                {isSavingProgression ? 'Đang lưu...' : 'Lưu cài đặt'}
               </button>
             </div>
           </div>

@@ -27,8 +27,8 @@ export default async function StudentClassDetailPage({
   const initialViewAll = (resolvedSearchParams as any)?.viewAll === 'true';
   const userId = session.user.id;
 
-  // Fetch enrollment + class + teacher, rawAssignments, and submissions all in parallel (Zero Waterfall)
-  const [enrollment, rawAssignments, submissions] = await Promise.all([
+  // Fetch enrollment + class + teacher, rawAssignments, submissions, and allGroups all in parallel (Zero Waterfall)
+  const [enrollment, rawAssignments, submissions, allGroups] = await Promise.all([
     prisma.classEnrollment.findUnique({
       where: { studentId_classId: { studentId: userId, classId: id } },
       include: {
@@ -79,6 +79,15 @@ export default async function StudentClassDetailPage({
         submittedAt: { not: null }
       },
       select: { assignmentId: true, score: true }
+    }),
+    prisma.assignmentGroup.findMany({
+      where: { classId: id },
+      include: {
+        prerequisiteGroup: {
+          select: { id: true, title: true }
+        }
+      },
+      orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }]
     })
   ]);
 
@@ -114,9 +123,109 @@ export default async function StudentClassDetailPage({
     ])
   );
 
-  // Find next uncompleted task for quick resume CTA
+  // Group assignments by Group (or ungrouped legacy)
+  const groupsMap = new Map<string, StudentAssignmentGroup>();
+
+  // 1. Pre-populate with all known groups in class to maintain progression metadata and order
+  allGroups.forEach((g) => {
+    groupsMap.set(g.id, {
+      id: g.id,
+      title: g.title,
+      createdAt: g.createdAt ? g.createdAt.toISOString() : null,
+      prerequisiteGroupId: g.prerequisiteGroupId || null,
+      prerequisiteGroupTitle: g.prerequisiteGroup?.title || null,
+      unlockThreshold: g.unlockThreshold ?? 60,
+      forceUnlocked: g.forceUnlocked || false,
+      items: [],
+    });
+  });
+
+  // 2. Attach items to groups
+  rawAssignments.forEach((ac) => {
+    const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
+    const gTitle = ac.group?.title || 'Bài tập / Hoạt động khác';
+    if (!groupsMap.has(gId)) {
+      groupsMap.set(gId, {
+        id: gId,
+        title: gTitle,
+        createdAt: ac.group?.createdAt ? ac.group.createdAt.toISOString() : (ac.assignedAt ? ac.assignedAt.toISOString() : null),
+        prerequisiteGroupId: null,
+        prerequisiteGroupTitle: null,
+        unlockThreshold: 60,
+        forceUnlocked: false,
+        items: [],
+      });
+    }
+    const isSubmitted = submittedAssignmentIds.has(ac.assignment.id);
+    groupsMap.get(gId)!.items.push({
+      assignment: {
+        id: ac.assignment.id,
+        slug: ac.assignment.slug,
+        title: ac.assignment.title,
+        materialType: ac.assignment.materialType,
+        level: ac.assignment.level,
+        instructions: ac.assignment.instructions,
+        thumbnail: ac.assignment.thumbnail,
+        tags: ac.assignment.tags,
+        teacher: ac.assignment.teacher,
+        questionsCount: (ac.assignment as any)._count?.questions || 0,
+      },
+      assignedAt: ac.assignedAt ? ac.assignedAt.toISOString() : new Date().toISOString(),
+      dueDate: ac.dueDate ? ac.dueDate.toISOString() : null,
+      isSubmitted,
+      score: submissionScoreMap.get(ac.assignment.id) ?? null,
+    });
+  });
+
+  const assignmentGroups = Array.from(groupsMap.values());
+
+  // 3. Compute group completion stats
+  const groupStatsMap = new Map<string, { total: number; completed: number; percent: number }>();
+  assignmentGroups.forEach((g) => {
+    const total = g.items.length;
+    const completed = g.items.filter((i) => i.isSubmitted).length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
+    groupStatsMap.set(g.id, { total, completed, percent });
+  });
+
+  // 4. Calculate locked / unlock progression status per group
+  assignmentGroups.forEach((g) => {
+    if (g.forceUnlocked || !g.prerequisiteGroupId) {
+      g.isLocked = false;
+      return;
+    }
+
+    const prereqStats = groupStatsMap.get(g.prerequisiteGroupId);
+    const threshold = g.unlockThreshold ?? 60;
+
+    if (!prereqStats || prereqStats.total === 0) {
+      g.isLocked = false;
+      return;
+    }
+
+    g.prerequisiteTotalCount = prereqStats.total;
+    g.prerequisiteCompletedCount = prereqStats.completed;
+    g.prerequisitePercent = prereqStats.percent;
+
+    const neededCount = Math.ceil(prereqStats.total * (threshold / 100));
+    const remainingCount = Math.max(0, neededCount - prereqStats.completed);
+
+    if (prereqStats.percent < threshold) {
+      g.isLocked = true;
+      g.lockReason = `Cần hoàn thành tối thiểu ${threshold}% (${neededCount}/${prereqStats.total} bài) của "${g.prerequisiteGroupTitle || 'nhóm trước'}". Bạn đã hoàn thành ${prereqStats.completed}/${prereqStats.total} bài (${prereqStats.percent}%) — Còn thiếu ${remainingCount} bài để mở khóa.`;
+    } else {
+      g.isLocked = false;
+    }
+  });
+
+  // 5. Find next uncompleted task for quick resume CTA (Only from unlocked groups)
   let nextTask: { id: string; title: string; kind: string; targetUrl: string } | null = null;
-  const uncompleted = rawAssignments.find(ac => !submittedAssignmentIds.has(ac.assignment.id));
+  const uncompleted = rawAssignments.find((ac) => {
+    if (submittedAssignmentIds.has(ac.assignment.id)) return false;
+    const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
+    const grp = groupsMap.get(gId);
+    return !grp?.isLocked;
+  });
   if (uncompleted) {
     let targetUrl = `/student/assignments/${uncompleted.assignment.id}/run`;
     let kind = 'Bài tập';
@@ -153,42 +262,6 @@ export default async function StudentClassDetailPage({
     };
   }
 
-  // Group assignments by Group (or ungrouped legacy)
-  const groupsMap = new Map<string, StudentAssignmentGroup>();
-
-  rawAssignments.forEach((ac) => {
-    const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
-    const gTitle = ac.group?.title || 'Bài tập / Hoạt động khác';
-    if (!groupsMap.has(gId)) {
-      groupsMap.set(gId, {
-        id: gId,
-        title: gTitle,
-        createdAt: ac.group?.createdAt ? ac.group.createdAt.toISOString() : (ac.assignedAt ? ac.assignedAt.toISOString() : null),
-        items: [],
-      });
-    }
-    const isSubmitted = submittedAssignmentIds.has(ac.assignment.id);
-    groupsMap.get(gId)!.items.push({
-      assignment: {
-        id: ac.assignment.id,
-        slug: ac.assignment.slug,
-        title: ac.assignment.title,
-        materialType: ac.assignment.materialType,
-        level: ac.assignment.level,
-        instructions: ac.assignment.instructions,
-        thumbnail: ac.assignment.thumbnail,
-        tags: ac.assignment.tags,
-        teacher: ac.assignment.teacher,
-        questionsCount: (ac.assignment as any)._count?.questions || 0,
-      },
-      assignedAt: ac.assignedAt ? ac.assignedAt.toISOString() : new Date().toISOString(),
-      dueDate: ac.dueDate ? ac.dueDate.toISOString() : null,
-      isSubmitted,
-      score: submissionScoreMap.get(ac.assignment.id) ?? null,
-    });
-  });
-
-  const assignmentGroups = Array.from(groupsMap.values());
   const totalAssignments = rawAssignments.length;
   const completedAssignments = submissions.length;
 
