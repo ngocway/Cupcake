@@ -2089,6 +2089,7 @@ export async function assignBundleToClassAction(
         orderIndex: nextOrderIndex,
         prerequisiteGroupId,
         unlockThreshold: progressionOptions?.unlockThreshold ?? 60,
+        isHidden: true,
       }
     });
   }
@@ -2408,6 +2409,121 @@ export async function reorderAssignmentGroupsAction(
 
   revalidatePath(`/teacher/classes/${classId}`);
   revalidatePath(`/student/classes/${classId}`);
+  return { success: true };
+}
+
+export async function toggleGroupVisibilityAction(
+  groupId: string,
+  isHidden: boolean,
+  forceUnlockDependents?: boolean
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const group = await prisma.assignmentGroup.findUnique({
+    where: { id: groupId },
+    include: { class: true }
+  });
+  if (!group) throw new Error('Nhóm không tồn tại');
+
+  const isOwner = group.class.teacherId === session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  // When hiding: check R1/R11 — are there visible groups that depend on this one?
+  if (isHidden) {
+    const dependentVisible = await prisma.assignmentGroup.findMany({
+      where: {
+        prerequisiteGroupId: groupId,
+        isHidden: false,
+      },
+      select: { id: true, title: true, forceUnlocked: true }
+    });
+
+    const affectedGroups = dependentVisible.filter(g => !g.forceUnlocked);
+
+    if (affectedGroups.length > 0 && !forceUnlockDependents) {
+      // Return warning — UI should show confirmation dialog
+      return {
+        success: false,
+        warning: true,
+        affectedGroups: affectedGroups.map(g => ({ id: g.id, title: g.title })),
+        message: `Nhóm "${group.title}" đang là tiên quyết của ${affectedGroups.map(g => `"${g.title}"`).join(', ')}. Bạn muốn tự động mở khóa các nhóm đó không?`
+      };
+    }
+
+    // If forceUnlockDependents is true, auto-unlock affected groups
+    if (affectedGroups.length > 0 && forceUnlockDependents) {
+      await prisma.assignmentGroup.updateMany({
+        where: { id: { in: affectedGroups.map(g => g.id) } },
+        data: { forceUnlocked: true }
+      });
+    }
+  }
+
+  await prisma.assignmentGroup.update({
+    where: { id: groupId },
+    data: {
+      isHidden,
+      // When showing immediately, clear scheduled visibleFrom
+      ...(isHidden === false ? { visibleFrom: null } : {})
+    }
+  });
+
+  revalidatePath(`/teacher/classes/${group.classId}`);
+  revalidatePath(`/student/classes/${group.classId}`);
+  return { success: true };
+}
+
+export async function scheduleGroupVisibilityAction(
+  groupId: string,
+  visibleFrom: string | null
+) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const group = await prisma.assignmentGroup.findUnique({
+    where: { id: groupId },
+    include: { class: true }
+  });
+  if (!group) throw new Error('Nhóm không tồn tại');
+
+  const isOwner = group.class.teacherId === session.user.id;
+  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
+  const isAdmin = user?.role === 'ADMIN';
+  if (!isOwner && !isAdmin) throw new Error('Unauthorized');
+
+  const parsedDate = visibleFrom ? new Date(visibleFrom) : null;
+
+  // R5: If this group has a prerequisite, ensure visibleFrom >= prerequisite's visibleFrom
+  if (parsedDate && group.prerequisiteGroupId) {
+    const prereq = await prisma.assignmentGroup.findUnique({
+      where: { id: group.prerequisiteGroupId },
+      select: { visibleFrom: true, title: true, isHidden: true }
+    });
+    if (prereq?.visibleFrom && parsedDate < prereq.visibleFrom) {
+      throw new Error(
+        `Lịch hiển thị phải sau hoặc bằng nhóm tiên quyết "${prereq.title}" (${prereq.visibleFrom.toLocaleDateString('vi-VN')} ${prereq.visibleFrom.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})`
+      );
+    }
+  }
+
+  // R7: If visibleFrom is in the past, treat as show immediately
+  const now = new Date();
+  const isInPast = parsedDate && parsedDate <= now;
+
+  await prisma.assignmentGroup.update({
+    where: { id: groupId },
+    data: {
+      // R6: Setting schedule auto-clears isHidden
+      isHidden: false,
+      visibleFrom: isInPast ? null : parsedDate,
+    }
+  });
+
+  revalidatePath(`/teacher/classes/${group.classId}`);
+  revalidatePath(`/student/classes/${group.classId}`);
   return { success: true };
 }
 

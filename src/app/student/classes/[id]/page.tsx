@@ -127,22 +127,39 @@ export default async function StudentClassDetailPage({
   const groupsMap = new Map<string, StudentAssignmentGroup>();
 
   // 1. Pre-populate with all known groups in class to maintain progression metadata and order
+  // Filter out hidden groups: isHidden=true or visibleFrom in the future
+  const now = new Date();
+  const hiddenGroupIds = new Set<string>(
+    allGroups
+      .filter((g) => g.isHidden || (g.visibleFrom && g.visibleFrom > now))
+      .map((g) => g.id)
+  );
+
   allGroups.forEach((g) => {
+    // Skip groups that are hidden or not yet scheduled to be visible
+    if (hiddenGroupIds.has(g.id)) {
+      return;
+    }
+
     groupsMap.set(g.id, {
       id: g.id,
       title: g.title,
       createdAt: g.createdAt ? g.createdAt.toISOString() : null,
-      prerequisiteGroupId: g.prerequisiteGroupId || null,
-      prerequisiteGroupTitle: g.prerequisiteGroup?.title || null,
+      // If prerequisite is hidden, treat as no prerequisite (group is effectively unlocked)
+      prerequisiteGroupId: g.prerequisiteGroupId && !hiddenGroupIds.has(g.prerequisiteGroupId) ? g.prerequisiteGroupId : null,
+      prerequisiteGroupTitle: g.prerequisiteGroupId && !hiddenGroupIds.has(g.prerequisiteGroupId) ? (g.prerequisiteGroup?.title || null) : null,
       unlockThreshold: g.unlockThreshold ?? 60,
       forceUnlocked: g.forceUnlocked || false,
       items: [],
     });
   });
 
-  // 2. Attach items to groups
+  // 2. Attach items to groups (skip assignments belonging to hidden groups)
   rawAssignments.forEach((ac) => {
     const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
+    // Skip assignments belonging to hidden groups
+    if (ac.groupId && hiddenGroupIds.has(ac.groupId)) return;
+
     const gTitle = ac.group?.title || 'Bài tập / Hoạt động khác';
     if (!groupsMap.has(gId)) {
       groupsMap.set(gId, {
@@ -177,7 +194,8 @@ export default async function StudentClassDetailPage({
     });
   });
 
-  const assignmentGroups = Array.from(groupsMap.values());
+  // Filter out empty groups so students never see empty 0-item groups
+  const assignmentGroups = Array.from(groupsMap.values()).filter((g) => g.items.length > 0);
 
   // 3. Compute group completion stats
   const groupStatsMap = new Map<string, { total: number; completed: number; percent: number }>();
@@ -222,9 +240,10 @@ export default async function StudentClassDetailPage({
   let nextTask: { id: string; title: string; kind: string; targetUrl: string } | null = null;
   const uncompleted = rawAssignments.find((ac) => {
     if (submittedAssignmentIds.has(ac.assignment.id)) return false;
+    if (ac.groupId && hiddenGroupIds.has(ac.groupId)) return false;
     const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
     const grp = groupsMap.get(gId);
-    return !grp?.isLocked;
+    return grp && !grp.isLocked;
   });
   if (uncompleted) {
     let targetUrl = `/student/assignments/${uncompleted.assignment.id}/run`;

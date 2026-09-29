@@ -11,6 +11,8 @@ import {
   updateAssignmentGroupProgressionAction,
   toggleForceUnlockAssignmentGroupAction,
   reorderAssignmentGroupsAction,
+  toggleGroupVisibilityAction,
+  scheduleGroupVisibilityAction,
 } from '@/actions/material-actions';
 import { CardTitleWithTooltip } from '@/components/ui/CardTitleWithTooltip';
 import {
@@ -51,6 +53,8 @@ export type Assignment = {
   prerequisiteGroupTitle?: string | null;
   unlockThreshold?: number;
   forceUnlocked?: boolean;
+  isHidden?: boolean;
+  visibleFrom?: string | null;
   section?: 'NEW' | 'REVIEW';
 };
 
@@ -89,6 +93,8 @@ function SortableCompactGroupCard({
     prerequisiteGroupTitle?: string | null;
     unlockThreshold?: number;
     forceUnlocked?: boolean;
+    isHidden?: boolean;
+    visibleFrom?: string | null;
     items: Assignment[];
   };
   stepNumber?: number;
@@ -121,25 +127,31 @@ function SortableCompactGroupCard({
 
   const isFirstStep = stepNumber === 1;
 
+  // Visibility state
+  const isGroupHidden = !!group.isHidden;
+  const isScheduledFuture = !isGroupHidden && !!group.visibleFrom && new Date(group.visibleFrom) > new Date();
+  const isEffectivelyHidden = isGroupHidden || isScheduledFuture;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       onClick={onCardClick}
-      className={`group relative bg-white dark:bg-gray-800 rounded-2xl border p-4 shadow-2xs hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+      className={`group relative bg-white dark:bg-gray-800 rounded-[5px] border p-4 shadow-2xs hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
         isDragging
           ? 'z-50 opacity-90 shadow-2xl ring-2 ring-primary scale-[1.03] border-primary'
+          : isEffectivelyHidden
+          ? 'opacity-50 grayscale border-gray-200 dark:border-gray-700 hover:opacity-75 hover:grayscale-0'
           : isFirstStep && !isUngrouped
           ? 'border-emerald-200/80 dark:border-emerald-900/50 hover:border-emerald-500'
           : 'border-[#f0f2f4] dark:border-gray-700/80 hover:border-primary/50'
       }`}
     >
       <div>
-        {/* Top bar: Drag Handle + Folder Icon + Badge count + Step badge + 3-dot menu */}
-        <div className="flex items-center justify-between gap-1.5 mb-2.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {/* Drag Handle */}
-            {!isUngrouped && (
+        {/* Top bar — Row 1: Drag Handle (left) + 3-dot menu (right) */}
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center">
+            {!isUngrouped ? (
               <button
                 type="button"
                 {...attributes}
@@ -153,41 +165,76 @@ function SortableCompactGroupCard({
               >
                 <span className="material-symbols-outlined text-[18px]">drag_indicator</span>
               </button>
+            ) : (
+              <div className="size-7" />
             )}
-
-            <div
-              className={`size-8 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
-                isFirstStep && !isUngrouped
-                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
-                  : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[18px] font-bold">folder</span>
-            </div>
-
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 shrink-0">
-              {totalItems} bài
-            </span>
           </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {/* Step badge */}
-            {!isUngrouped && stepNumber !== undefined && (
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-tight shrink-0 flex items-center gap-0.5 border ${
-                  isFirstStep
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
-                    : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[13px]">
-                  {isFirstStep ? 'lock_open' : 'lock'}
-                </span>
-                <span>#{stepNumber}</span>
-              </span>
-            )}
+          <div onClick={(e) => e.stopPropagation()}>
             {renderDropdown()}
           </div>
+        </div>
+
+        {/* Top bar — Row 2: Folder icon + badge count + step badge */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+          <div
+            className={`size-8 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+              isFirstStep && !isUngrouped
+                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                : 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-400'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px] font-bold">folder</span>
+          </div>
+
+          <span className="px-2 py-0.5 rounded-[5px] text-[10px] font-extrabold bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300 shrink-0">
+            {totalItems} bài
+          </span>
+
+          {!isUngrouped && stepNumber !== undefined && (
+            <span
+              className={`px-2 py-0.5 rounded-[5px] text-[10px] font-black tracking-tight shrink-0 flex items-center gap-0.5 border ${
+                isFirstStep
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px]">
+                {isFirstStep ? 'lock_open' : 'lock'}
+              </span>
+              <span>#{stepNumber}</span>
+            </span>
+          )}
+
+          {/* Visibility badge */}
+          {!isUngrouped && (
+            <span
+              className={`px-2 py-0.5 rounded-[5px] text-[10px] font-bold shrink-0 flex items-center gap-0.5 border ${
+                isGroupHidden
+                  ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600'
+                  : isScheduledFuture
+                  ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+                  : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+              }`}
+              title={
+                isGroupHidden
+                  ? 'Học sinh không thấy nhóm này'
+                  : isScheduledFuture
+                  ? `Tự động hiện lúc ${new Date(group.visibleFrom!).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+                  : 'Đang hiển thị với học sinh'
+              }
+            >
+              <span className="material-symbols-outlined text-[12px]">
+                {isGroupHidden ? 'visibility_off' : isScheduledFuture ? 'schedule' : 'visibility'}
+              </span>
+              <span>
+                {isGroupHidden
+                  ? 'Ẩn'
+                  : isScheduledFuture
+                  ? new Date(group.visibleFrom!).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                  : 'Hiện'}
+              </span>
+            </span>
+          )}
         </div>
 
         {/* Tiêu đề nhóm bài */}
@@ -312,6 +359,24 @@ export function AssignmentsTab({
   } | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
 
+  // Visibility warning dialog (R11: hiding a prerequisite group)
+  const [visibilityWarning, setVisibilityWarning] = useState<{
+    groupId: string;
+    groupTitle: string;
+    affectedGroups: { id: string; title: string }[];
+    message: string;
+  } | null>(null);
+
+  // Schedule modal for visibleFrom
+  const [scheduleModal, setScheduleModal] = useState<{
+    open: boolean;
+    groupId: string;
+    groupTitle: string;
+    currentVisibleFrom: string | null;
+  } | null>(null);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [isSavingVisibility, setIsSavingVisibility] = useState(false);
+
   const groupMenuRef = useRef<HTMLDivElement>(null);
   const assignmentMenuRef = useRef<HTMLDivElement>(null);
 
@@ -389,6 +454,8 @@ export function AssignmentsTab({
       prerequisiteGroupTitle?: string | null;
       unlockThreshold?: number;
       forceUnlocked?: boolean;
+      isHidden?: boolean;
+      visibleFrom?: string | null;
       items: Assignment[];
     }>();
 
@@ -405,6 +472,8 @@ export function AssignmentsTab({
           prerequisiteGroupTitle: a.prerequisiteGroupTitle || null,
           unlockThreshold: a.unlockThreshold ?? 60,
           forceUnlocked: !!a.forceUnlocked,
+          isHidden: !!a.isHidden,
+          visibleFrom: a.visibleFrom || null,
           items: [],
         });
       }
@@ -635,12 +704,57 @@ export function AssignmentsTab({
     });
   };
 
+  // Visibility handlers
+  const handleToggleVisibility = async (groupId: string, hide: boolean, forceUnlock = false) => {
+    setIsSavingVisibility(true);
+    try {
+      const result = await toggleGroupVisibilityAction(groupId, hide, forceUnlock);
+      if (result.warning && !forceUnlock) {
+        // Show warning dialog
+        setVisibilityWarning({
+          groupId,
+          groupTitle: (result as any).affectedGroups?.[0]?.title || '',
+          affectedGroups: (result as any).affectedGroups || [],
+          message: (result as any).message || '',
+        });
+        return;
+      }
+      setToastMessage(hide ? 'Đã ẩn nhóm bài tập' : 'Đã hiển thị nhóm bài tập');
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      await fetchAssignments();
+    } catch (err: any) {
+      alert(err.message || 'Có lỗi xảy ra');
+    } finally {
+      setIsSavingVisibility(false);
+    }
+  };
+
+  const handleScheduleVisibility = async (groupId: string, visibleFrom: string | null) => {
+    setIsSavingVisibility(true);
+    try {
+      await scheduleGroupVisibilityAction(groupId, visibleFrom);
+      setScheduleModal(null);
+      setScheduleDate('');
+      setToastMessage(visibleFrom ? 'Đã đặt lịch hiển thị nhóm bài tập' : 'Đã xóa lịch hiển thị');
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
+      await fetchAssignments();
+    } catch (err: any) {
+      alert(err.message || 'Có lỗi xảy ra');
+    } finally {
+      setIsSavingVisibility(false);
+    }
+  };
+
   const renderGroupDropdown = (group: {
     id: string;
     title: string;
     prerequisiteGroupId?: string | null;
     unlockThreshold?: number;
     forceUnlocked?: boolean;
+    isHidden?: boolean;
+    visibleFrom?: string | null;
   }, isCompact = false) => {
     return (
       <div 
@@ -662,6 +776,61 @@ export function AssignmentsTab({
 
         {openGroupMenuId === group.id && (
           <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 py-2 z-30 animate-in fade-in zoom-in-95 duration-150">
+            {/* Visibility controls */}
+            {!group.id.startsWith('ungrouped_') && (
+              <>
+                {/* Show now / Hide toggle */}
+                {group.isHidden ? (
+                  <button
+                    onClick={() => {
+                      setOpenGroupMenuId(null);
+                      handleToggleVisibility(group.id, false);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors text-left cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">visibility</span>
+                    <span>Hiện ngay</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setOpenGroupMenuId(null);
+                      handleToggleVisibility(group.id, true);
+                    }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">visibility_off</span>
+                    <span>Ẩn nhóm</span>
+                  </button>
+                )}
+
+                {/* Schedule visibility */}
+                <button
+                  onClick={() => {
+                    setOpenGroupMenuId(null);
+                    setScheduleModal({
+                      open: true,
+                      groupId: group.id,
+                      groupTitle: group.title,
+                      currentVisibleFrom: group.visibleFrom || null,
+                    });
+                    // Pre-fill date
+                    if (group.visibleFrom) {
+                      const d = new Date(group.visibleFrom);
+                      const localISO = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                      setScheduleDate(localISO);
+                    } else {
+                      setScheduleDate('');
+                    }
+                  }}
+                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors text-left cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">schedule</span>
+                  <span>Đặt lịch hiển thị</span>
+                </button>
+                <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+              </>
+            )}
             {!group.id.startsWith('ungrouped_') && (
               <>
                 <button
@@ -1243,11 +1412,20 @@ export function AssignmentsTab({
                   : 0;
                 const kinds = getGroupKindBreakdown(group.items);
 
+                // Visibility state (same logic as compact card)
+                const isGroupHidden = !!group.isHidden;
+                const isScheduledFuture = !isGroupHidden && !!group.visibleFrom && new Date(group.visibleFrom) > new Date();
+                const isEffectivelyHidden = isGroupHidden || isScheduledFuture;
+
                 return (
                   <div
                     key={group.id}
                     onClick={() => setActiveGroupId(group.id)}
-                    className="group relative bg-white dark:bg-gray-800 rounded-3xl border border-[#f0f2f4] dark:border-gray-700/80 hover:border-primary/40 dark:hover:border-primary/40 p-6 shadow-xs hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between"
+                    className={`group relative bg-white dark:bg-gray-800 rounded-3xl border p-6 shadow-xs hover:shadow-xl transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                      isEffectivelyHidden
+                        ? 'opacity-50 grayscale border-gray-200 dark:border-gray-700 hover:opacity-75 hover:grayscale-0'
+                        : 'border-[#f0f2f4] dark:border-gray-700/80 hover:border-primary/40 dark:hover:border-primary/40'
+                    }`}
                   >
                     <div>
                       {/* Top Header of Card: Folder Icon, Item Count Badge, 3-dot Menu */}
@@ -1257,6 +1435,35 @@ export function AssignmentsTab({
                         </div>
 
                         <div className="flex items-center gap-1.5 flex-wrap">
+                          {/* Visibility badge */}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-0.5 border ${
+                              isGroupHidden
+                                ? 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600'
+                                : isScheduledFuture
+                                ? 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800'
+                                : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                            }`}
+                            title={
+                              isGroupHidden
+                                ? 'Học sinh không thấy nhóm này'
+                                : isScheduledFuture
+                                ? `Tự động hiện lúc ${new Date(group.visibleFrom!).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+                                : 'Đang hiển thị với học sinh'
+                            }
+                          >
+                            <span className="material-symbols-outlined text-[12px]">
+                              {isGroupHidden ? 'visibility_off' : isScheduledFuture ? 'schedule' : 'visibility'}
+                            </span>
+                            <span>
+                              {isGroupHidden
+                                ? 'Ẩn'
+                                : isScheduledFuture
+                                ? new Date(group.visibleFrom!).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                : 'Hiện'}
+                            </span>
+                          </span>
+
                           {group.forceUnlocked ? (
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 flex items-center gap-1">
                               <span className="material-symbols-outlined text-[13px]">lock_open</span>
@@ -1365,6 +1572,7 @@ export function AssignmentsTab({
           existingGroups={groupedAssignments
             .filter(g => !g.id.startsWith('ungrouped_') && g.id !== assignModalState.groupId)
             .map(g => ({ id: g.id, title: g.title }))
+            .reverse()
           }
           onClose={() => setAssignModalState({ open: false })} 
           onAssigned={() => {
@@ -1583,6 +1791,133 @@ export function AssignmentsTab({
                     Xác nhận gỡ bài
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Đặt lịch hiển thị nhóm bài */}
+      {scheduleModal?.open && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="size-11 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">schedule</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-[#111418] dark:text-white">
+                  Đặt lịch hiển thị
+                </h3>
+                <p className="text-xs text-[#617589]">
+                  {scheduleModal.groupTitle}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#617589] mb-3">
+              Nhóm bài sẽ tự động hiện với học sinh vào thời gian bạn chọn.
+              Khi đặt lịch, nhóm sẽ chuyển sang trạng thái &ldquo;chờ hiện&rdquo; (không còn ẩn).
+            </p>
+
+            <input
+              type="datetime-local"
+              value={scheduleDate}
+              onChange={(e) => setScheduleDate(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-purple-400/40 text-[#111418] dark:text-white transition-all"
+            />
+
+            {scheduleModal.currentVisibleFrom && (
+              <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">info</span>
+                Lịch hiện tại: {new Date(scheduleModal.currentVisibleFrom).toLocaleString('vi-VN')}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between mt-5">
+              <div>
+                {scheduleModal.currentVisibleFrom && (
+                  <button
+                    type="button"
+                    onClick={() => handleScheduleVisibility(scheduleModal.groupId, null)}
+                    disabled={isSavingVisibility}
+                    className="px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
+                  >
+                    Xóa lịch
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setScheduleModal(null); setScheduleDate(''); }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingVisibility || !scheduleDate}
+                  onClick={() => handleScheduleVisibility(scheduleModal.groupId, scheduleDate)}
+                  className="px-5 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+                >
+                  {isSavingVisibility ? 'Đang lưu...' : 'Lưu lịch'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog: Cảnh báo ẩn nhóm (R11) */}
+      {visibilityWarning && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="size-11 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">warning</span>
+              </div>
+              <h3 className="text-lg font-bold text-[#111418] dark:text-white">
+                Cảnh báo ẩn nhóm
+              </h3>
+            </div>
+
+            <p className="text-sm text-[#617589] mb-3 leading-relaxed">
+              {visibilityWarning.message}
+            </p>
+
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 mb-4 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs font-bold text-amber-800 dark:text-amber-300 mb-1.5">
+                Nhóm bị ảnh hưởng:
+              </p>
+              <ul className="space-y-1">
+                {visibilityWarning.affectedGroups.map(g => (
+                  <li key={g.id} className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[13px]">folder</span>
+                    {g.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setVisibilityWarning(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#617589] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isSavingVisibility}
+                onClick={async () => {
+                  setVisibilityWarning(null);
+                  await handleToggleVisibility(visibilityWarning.groupId, true, true);
+                }}
+                className="px-5 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition-all active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                {isSavingVisibility ? 'Đang lưu...' : 'Ẩn + Mở khóa'}
               </button>
             </div>
           </div>

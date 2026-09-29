@@ -73,6 +73,8 @@ async function ClassDashboardContent({
               prerequisiteGroup: { select: { title: true } },
               unlockThreshold: true,
               forceUnlocked: true,
+              isHidden: true,
+              visibleFrom: true,
             } 
           },
           assignment: {
@@ -161,6 +163,8 @@ async function ClassDashboardContent({
         prerequisiteGroupTitle: ac.group?.prerequisiteGroup?.title || null,
         unlockThreshold: ac.group?.unlockThreshold ?? 60,
         forceUnlocked: ac.group?.forceUnlocked || false,
+        isHidden: ac.group?.isHidden ?? false,
+        visibleFrom: ac.group?.visibleFrom ? ac.group.visibleFrom.toISOString() : null,
         section,
       };
     });

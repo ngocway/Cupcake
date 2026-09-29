@@ -259,6 +259,10 @@ model AssignmentGroup {
   unlockThreshold      Int?              @default(60)
   forceUnlocked        Boolean           @default(false)
 
+  // Visibility control
+  isHidden             Boolean           @default(true)
+  visibleFrom          DateTime?
+
   class                Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
   assignments          AssignmentClass[]
 

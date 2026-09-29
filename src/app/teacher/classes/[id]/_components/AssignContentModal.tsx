@@ -95,7 +95,9 @@ export function AssignContentModal({
   });
 
   // Progression prerequisite state
-  const [prerequisiteGroupId, setPrerequisiteGroupId] = useState<string>('');
+  const [prerequisiteGroupId, setPrerequisiteGroupId] = useState<string>(
+    () => (existingGroups && existingGroups.length > 0 && !initialGroupId) ? existingGroups[0].id : ''
+  );
   const [unlockThreshold, setUnlockThreshold] = useState<number>(60);
 
   // Basket / Cart of selected assignments

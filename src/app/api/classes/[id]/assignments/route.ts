@@ -41,7 +41,7 @@ export async function GET(
         group: {
           include: {
             prerequisiteGroup: {
-              select: { id: true, title: true }
+              select: { id: true, title: true, visibleFrom: true }
             }
           }
         },
@@ -98,6 +98,8 @@ export async function GET(
         prerequisiteGroupTitle: ac.group?.prerequisiteGroup?.title || null,
         unlockThreshold: ac.group?.unlockThreshold ?? 60,
         forceUnlocked: ac.group?.forceUnlocked || false,
+        isHidden: ac.group?.isHidden ?? false,
+        visibleFrom: ac.group?.visibleFrom || null,
         section,
       };
     });
