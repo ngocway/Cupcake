@@ -12,6 +12,7 @@ import { InstructionsBlock } from "@/components/common/InstructionsBlock";
 
 interface Props {
   params: Promise<{ topic: string; lesson: string }>;
+  searchParams?: Promise<{ fromClass?: string; embedded?: string }>;
 }
 
 async function getGrammarPageData(topicId: string, lessonId: string) {
@@ -89,8 +90,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function GrammarLessonPage({ params }: Props) {
-  const { topic, lesson } = await params;
+export default async function GrammarLessonPage({ params, searchParams }: Props) {
+  const [{ topic, lesson }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ? searchParams : Promise.resolve({})
+  ]);
+
+  const isEmbedded = (resolvedSearchParams as any)?.embedded === 'true' || (resolvedSearchParams as any)?.fromClass === 'true';
 
   const topicCfg = getTopicById(topic);
   const lessonCfg = topicCfg?.lessons.find((l) => l.id === lesson);
@@ -162,76 +168,83 @@ export default async function GrammarLessonPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="w-full pb-24 px-4 md:px-8 max-w-[1400px] mx-auto">
-        {/* Breadcrumb */}
-        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-slate-400 flex-wrap pt-2 mb-6">
-          <Link href="/?tab=exercises" className="hover:text-primary transition-colors font-medium">
-            Grammar Exercises
-          </Link>
-          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-          <Link href={`/exercises/${lessonCfg.level}/${topic}`} className="hover:text-primary transition-colors font-medium">
-            {topicCfg.icon} {topicCfg.label}
-          </Link>
-          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-          <span className="font-semibold text-slate-700 dark:text-slate-200">{lessonCfg.label}</span>
-        </nav>
+      <div className={`w-full ${isEmbedded ? "pb-6 max-w-none px-2 sm:px-3 pt-2" : "pb-24 px-4 md:px-8 max-w-[1400px]"} mx-auto`}>
+        {/* Breadcrumb (Hidden when embedded in class) */}
+        {!isEmbedded && (
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-sm text-slate-400 flex-wrap pt-2 mb-6">
+            <Link href="/?tab=exercises" className="hover:text-primary transition-colors font-medium">
+              Grammar Exercises
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+            <Link href={`/exercises/${lessonCfg.level}/${topic}`} className="hover:text-primary transition-colors font-medium">
+              {topicCfg.icon} {topicCfg.label}
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+            <span className="font-semibold text-slate-700 dark:text-slate-200">{lessonCfg.label}</span>
+          </nav>
+        )}
 
-        {/* Hero */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${lvlCfg.bg} ${lvlCfg.color} border ${lvlCfg.border}`}>
-              {lessonCfg.level.toUpperCase()}
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              <BookOpen className="w-3 h-3" />
-              {topicCfg.label}
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-slate-100 leading-tight mb-3">
-            {lessonCfg.label}
-          </h1>
-          {/* Reading time + Last updated */}
-          <div className="flex items-center gap-4 flex-wrap text-xs text-slate-400">
-            {readingMins && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                ~{readingMins} min read
+        {/* Hero (Hidden when embedded in class) */}
+        {!isEmbedded && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${lvlCfg.bg} ${lvlCfg.color} border ${lvlCfg.border}`}>
+                {lessonCfg.level.toUpperCase()}
               </span>
-            )}
-            {lastUpdated && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" />
-                Updated {lastUpdated}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <BookOpen className="w-3 h-3" />
+                {topicCfg.label}
               </span>
-            )}
-            <span className="flex items-center gap-1">
-              <BookOpen className="w-3.5 h-3.5" />
-              {relatedExercises.length} practice exercise{relatedExercises.length !== 1 ? "s" : ""}
-            </span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-slate-100 leading-tight mb-3">
+              {lessonCfg.label}
+            </h1>
+            {/* Reading time + Last updated */}
+            <div className="flex items-center gap-4 flex-wrap text-xs text-slate-400">
+              {readingMins && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  ~{readingMins} min read
+                </span>
+              )}
+              {lastUpdated && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Updated {lastUpdated}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <BookOpen className="w-3.5 h-3.5" />
+                {relatedExercises.length} practice exercise{relatedExercises.length !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Main layout */}
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
+        <div className={`flex flex-col lg:flex-row ${isEmbedded ? "gap-0" : "gap-8"} items-start w-full`}>
           {/* Left — grammar content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 w-full">
             {grammarLesson?.instructions ? (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="p-6 md:p-8">
+              <div className={isEmbedded ? "w-full" : "bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden"}>
+                <div className={isEmbedded ? "p-0 sm:p-1" : "p-6 md:p-8"}>
                   <InstructionsBlock
                     instructions={grammarLesson.instructions || ""}
                     instructionsTranslations={grammarLesson.instructionsTranslations as any}
                     isLoggedIn={false}
-                    proseClassName="prose prose-slate max-w-none dark:prose-invert
+                    togglePlacement={isEmbedded ? "inside-corner" : "top-row"}
+                    proseClassName={`prose prose-slate max-w-none dark:prose-invert
                       [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
                       [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
                       [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
-                      [&_div]:rounded-lg"
+                      [&_div]:rounded-lg
+                      ${isEmbedded ? "[&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4" : ""}
+                    `}
                   />
 
                   {/* FAQ Section */}
                   {faqItems.length > 0 && (
-                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+                    <div className={`mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 ${isEmbedded ? "px-1" : ""}`}>
                       <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 mb-4">
                         ❓ Frequently Asked Questions
                       </h2>
@@ -264,7 +277,7 @@ export default async function GrammarLessonPage({ params }: Props) {
 
             {/* Internal linking — other lessons in this topic */}
             {siblingLessons.length > 0 && (
-              <div className="mt-8">
+              <div className={`mt-8 ${isEmbedded ? "px-1" : ""}`}>
                 <h2 className="text-base font-black text-slate-700 dark:text-slate-200 mb-3">
                   Other {topicCfg.label} lessons
                 </h2>
@@ -274,7 +287,7 @@ export default async function GrammarLessonPage({ params }: Props) {
                     return (
                       <Link
                         key={sib.id}
-                        href={`/grammar/${topic}/${sib.id}`}
+                        href={`/grammar/${topic}/${sib.id}${isEmbedded ? '?embedded=true&fromClass=true' : ''}`}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:shadow-sm ${sibLvl.bg} ${sibLvl.color} ${sibLvl.border}`}
                       >
                         {sib.label}
@@ -286,39 +299,41 @@ export default async function GrammarLessonPage({ params }: Props) {
             )}
           </div>
 
-          {/* Right — related exercises */}
-          <div className="w-full lg:w-[380px] shrink-0">
-            <div className="sticky top-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-black text-slate-800 dark:text-slate-100 text-lg">
-                  Practice Exercises
-                </h2>
-                <span className="text-xs font-semibold text-slate-400">
-                  {relatedExercises.length} exercise{relatedExercises.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              {relatedExercises.length === 0 ? (
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center">
-                  <p className="text-3xl mb-3">📭</p>
-                  <p className="text-sm text-slate-500">No exercises yet for this lesson.</p>
+          {/* Right — related exercises (Hidden when embedded in classroom) */}
+          {!isEmbedded && (
+            <div className="w-full lg:w-[380px] shrink-0">
+              <div className="sticky top-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-black text-slate-800 dark:text-slate-100 text-lg">
+                    Practice Exercises
+                  </h2>
+                  <span className="text-xs font-semibold text-slate-400">
+                    {relatedExercises.length} exercise{relatedExercises.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {relatedExercises.map((ex) => (
-                    <ExerciseCardHorizontal key={ex.id} item={ex} isLoggedIn={false} />
-                  ))}
-                </div>
-              )}
+                {relatedExercises.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center">
+                    <p className="text-3xl mb-3">📭</p>
+                    <p className="text-sm text-slate-500">No exercises yet for this lesson.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {relatedExercises.map((ex) => (
+                      <ExerciseCardHorizontal key={ex.id} item={ex} isLoggedIn={false} />
+                    ))}
+                  </div>
+                )}
 
-              <Link
-                href={`/exercises/${lessonCfg.level}/${topic}`}
-                className="mt-5 flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity"
-              >
-                View all {topicCfg.label} exercises
-                <ExternalLink className="w-4 h-4" />
-              </Link>
+                <Link
+                  href={`/exercises/${lessonCfg.level}/${topic}`}
+                  className="mt-5 flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-primary text-white font-bold text-sm hover:opacity-90 transition-opacity"
+                >
+                  View all {topicCfg.label} exercises
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </HomeShell>

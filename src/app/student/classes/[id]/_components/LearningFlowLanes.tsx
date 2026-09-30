@@ -17,6 +17,7 @@ import {
   Mic
 } from 'lucide-react';
 import { StudentGroupItem } from './StudentAssignmentsView';
+import { LESSON_FORMULAS } from '@/lib/grammar-taxonomy';
 import { 
   GrammarLessonCard, 
   GrammarExerciseCard, 
@@ -93,13 +94,64 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
         } catch {}
       }
 
-      // Material type overrides & fallbacks
-      if (item.assignment.materialType === 'READING') {
+      // Material type overrides & fallbacks:
+      // A Grammar Lesson must always remain 'LESSON' and belong to Grammar lane
+      const isGrammarLesson = 
+        kind === 'LESSON' || 
+        targetUrl.includes('/grammar/') || 
+        item.assignment.title.toLowerCase().startsWith('grammar lesson') ||
+        item.assignment.title.toLowerCase().startsWith('lý thuyết:');
+
+      if (isGrammarLesson) {
+        kind = 'LESSON';
+      } else if (item.assignment.materialType === 'READING') {
         kind = 'READING';
       } else if (item.assignment.materialType === 'FLASHCARD') {
         kind = 'FLASHCARD';
       } else if (kind === 'EXERCISE' || kind === 'GRAMMAR') {
         kind = 'EXERCISE';
+      }
+
+      // Auto-extract formula if missing from LESSON_FORMULAS
+      if (!formula && (kind === 'LESSON' || isGrammarLesson)) {
+        let lessonKey = '';
+        if (item.assignment.instructions) {
+          try {
+            const meta = JSON.parse(item.assignment.instructions);
+            if (meta.rawId) {
+              const parts = meta.rawId.split(':');
+              lessonKey = parts[parts.length - 1];
+            }
+            if (!lessonKey && meta.playUrl) {
+              const parts = meta.playUrl.split('/').filter(Boolean);
+              lessonKey = parts[parts.length - 1];
+            }
+          } catch {}
+        }
+        if (!lessonKey && targetUrl) {
+          const parts = targetUrl.split('/').filter(Boolean);
+          lessonKey = parts[parts.length - 1].split('?')[0];
+        }
+        if (lessonKey && LESSON_FORMULAS[lessonKey]) {
+          formula = LESSON_FORMULAS[lessonKey];
+        }
+        if (!formula) {
+          const cleanKey = item.assignment.title
+            .toLowerCase()
+            .replace(/^(grammar lesson|lý thuyết|bài học):\s*/i, '')
+            .trim()
+            .replace(/\s+/g, '-');
+          if (LESSON_FORMULAS[cleanKey]) {
+            formula = LESSON_FORMULAS[cleanKey];
+          } else {
+            for (const [k, f] of Object.entries(LESSON_FORMULAS)) {
+              if (cleanKey.includes(k) || (item.assignment.slug && item.assignment.slug.includes(k))) {
+                formula = f;
+                break;
+              }
+            }
+          }
+        }
       }
 
       // For in-class assignments, tag fromClass=true and direct=true

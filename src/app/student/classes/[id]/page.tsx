@@ -5,14 +5,157 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentAssignmentsView, StudentAssignmentGroup } from './_components/StudentAssignmentsView';
+import { sortGroupItems } from './_utils/assignmentOrder';
 import { ClassHeroBento } from './_components/ClassHeroBento';
+
+import { fetchWithRedis } from '@/lib/cached-queries';
+import { prewarmAssignmentsData } from '@/app/student/assignments/[id]/run/data';
+
+async function getStudentClassDetailData(userId: string, classId: string) {
+  return fetchWithRedis(`student:class-detail:${userId}:${classId}`, 60, async () => {
+    // 1. Fetch enrollment, rawAssignments, allGroups, allEnrolledClasses in parallel
+    const [enrollment, rawAssignments, allGroups, allEnrolledClasses] = await Promise.all([
+      prisma.classEnrollment.findUnique({
+        where: { studentId_classId: { studentId: userId, classId } },
+        include: {
+          class: {
+            include: {
+              teacher: {
+                select: { name: true, email: true, image: true }
+              }
+            }
+          }
+        }
+      }),
+      prisma.assignmentClass.findMany({
+        where: { classId },
+        include: {
+          group: {
+            select: { id: true, title: true, createdAt: true }
+          },
+          assignment: {
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              materialType: true,
+              level: true,
+              instructions: true,
+              thumbnail: true,
+              tags: true,
+              teacher: {
+                select: { id: true, name: true, image: true }
+              },
+              _count: {
+                select: { questions: true }
+              }
+            }
+          }
+        },
+        orderBy: { assignedAt: 'desc' }
+      }),
+      prisma.assignmentGroup.findMany({
+        where: { classId },
+        include: {
+          prerequisiteGroup: {
+            select: { id: true, title: true }
+          }
+        },
+        orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }]
+      }),
+      prisma.classEnrollment.findMany({
+        where: { studentId: userId, status: 'ACTIVE' },
+        select: {
+          class: {
+            select: {
+              id: true,
+              name: true,
+              gradeLevel: true,
+            }
+          }
+        },
+        orderBy: { joinedAt: 'desc' }
+      })
+    ]);
+
+    // 2. Fetch submissions directly with indexed assignmentId in list (Fast Index Scan)
+    const assignmentIds = rawAssignments.map(a => a.assignmentId);
+    const submissions = assignmentIds.length > 0
+      ? await prisma.submission.findMany({
+          where: {
+            studentId: userId,
+            assignmentId: { in: assignmentIds },
+            submittedAt: { not: null }
+          },
+          select: { assignmentId: true, score: true }
+        })
+      : [];
+
+    // 3. Pre-resolve accurate thumbnails matching HomepageFeed for reading / games / flashcards
+    const lessonRawIds: string[] = [];
+    const gameRawIds: string[] = [];
+    const flashcardRawIds: string[] = [];
+
+    rawAssignments.forEach((ac) => {
+      const thumb = ac.assignment.thumbnail;
+      const isUnsplash = !thumb || thumb.includes('unsplash.com');
+      if (isUnsplash && ac.assignment.instructions) {
+        try {
+          const meta = JSON.parse(ac.assignment.instructions);
+          const kind = (meta.kind || ac.assignment.materialType || '').toUpperCase();
+          if (meta.rawId) {
+            if (kind === 'READING' || kind === 'LESSON' || kind === 'BOOK') {
+              lessonRawIds.push(meta.rawId);
+            } else if (kind === 'GAME') {
+              gameRawIds.push(meta.rawId);
+            } else if (kind === 'FLASHCARD') {
+              flashcardRawIds.push(meta.rawId);
+            }
+          }
+        } catch {}
+      }
+    });
+
+    const [resolvedLessons, resolvedGames, resolvedFlashcards] = await Promise.all([
+      lessonRawIds.length > 0
+        ? prisma.lesson.findMany({
+            where: { id: { in: lessonRawIds } },
+            select: { id: true, thumbnail: true }
+          })
+        : Promise.resolve([]),
+      gameRawIds.length > 0
+        ? prisma.matchWordTopic.findMany({
+            where: { id: { in: gameRawIds } },
+            select: { id: true, thumbnailUrl: true, gameMode: true }
+          })
+        : Promise.resolve([]),
+      flashcardRawIds.length > 0
+        ? prisma.flashcardTopic.findMany({
+            where: { id: { in: flashcardRawIds } },
+            select: { id: true, iconUrl: true }
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      enrollment,
+      rawAssignments,
+      submissions,
+      allGroups,
+      allEnrolledClasses,
+      resolvedLessons,
+      resolvedGames,
+      resolvedFlashcards
+    };
+  });
+}
 
 export default async function StudentClassDetailPage({ 
   params,
   searchParams
 }: { 
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ groupId?: string; viewAll?: string }>;
+  searchParams?: Promise<{ groupId?: string; viewAll?: string; assignmentId?: string; tab?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -25,71 +168,32 @@ export default async function StudentClassDetailPage({
   ]);
   const initialGroupId = (resolvedSearchParams as any)?.groupId || null;
   const initialViewAll = (resolvedSearchParams as any)?.viewAll === 'true';
+  const initialAssignmentId = (resolvedSearchParams as any)?.assignmentId || null;
+  const initialTab = (resolvedSearchParams as any)?.tab || null;
   const userId = session.user.id;
 
-  // Fetch enrollment + class + teacher, rawAssignments, submissions, and allGroups all in parallel (Zero Waterfall)
-  const [enrollment, rawAssignments, submissions, allGroups] = await Promise.all([
-    prisma.classEnrollment.findUnique({
-      where: { studentId_classId: { studentId: userId, classId: id } },
-      include: {
-        class: {
-          include: {
-            teacher: {
-              select: { name: true, email: true, image: true }
-            }
-          }
-        }
-      }
-    }),
-    prisma.assignmentClass.findMany({
-      where: { classId: id },
-      include: {
-        group: {
-          select: { id: true, title: true, createdAt: true }
-        },
-        assignment: {
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            materialType: true,
-            level: true,
-            instructions: true,
-            thumbnail: true,
-            tags: true,
-            teacher: {
-              select: { id: true, name: true, image: true }
-            },
-            _count: {
-              select: { questions: true }
-            }
-          }
-        }
-      },
-      orderBy: { assignedAt: 'desc' }
-    }),
-    prisma.submission.findMany({
-      where: {
-        studentId: userId,
-        assignment: {
-          targetClasses: {
-            some: { classId: id }
-          }
-        },
-        submittedAt: { not: null }
-      },
-      select: { assignmentId: true, score: true }
-    }),
-    prisma.assignmentGroup.findMany({
-      where: { classId: id },
-      include: {
-        prerequisiteGroup: {
-          select: { id: true, title: true }
-        }
-      },
-      orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }]
-    })
-  ]);
+  // Cached fetch with Redis + optimized indexed submissions query
+  const {
+    enrollment,
+    rawAssignments,
+    submissions,
+    allGroups,
+    allEnrolledClasses,
+    resolvedLessons,
+    resolvedGames,
+    resolvedFlashcards
+  } = await getStudentClassDetailData(userId, id);
+
+  // Pre-warm question & translation caches in Redis for assignments in the class (non-blocking)
+  if (rawAssignments && rawAssignments.length > 0) {
+    const exerciseIds = rawAssignments
+      .filter((a: any) => a.assignment?.materialType === 'EXERCISE' || a.assignment?.materialType === 'GRAMMAR')
+      .map((a: any) => a.assignment?.id)
+      .filter(Boolean);
+    if (exerciseIds.length > 0) {
+      prewarmAssignmentsData(exerciseIds);
+    }
+  }
 
   const cls = enrollment?.class;
 
@@ -113,9 +217,9 @@ export default async function StudentClassDetailPage({
     );
   }
 
-  const submittedAssignmentIds = new Set(submissions.map(s => s.assignmentId));
+  const submittedAssignmentIds = new Set(submissions.map((s: any) => s.assignmentId));
   const submissionScoreMap = new Map(
-    submissions.map(s => [
+    submissions.map((s: any) => [
       s.assignmentId,
       s.score !== null && s.score !== undefined
         ? (typeof s.score === 'number' ? Number(s.score.toFixed(1)) : s.score)
@@ -131,11 +235,11 @@ export default async function StudentClassDetailPage({
   const now = new Date();
   const hiddenGroupIds = new Set<string>(
     allGroups
-      .filter((g) => g.isHidden || (g.visibleFrom && g.visibleFrom > now))
-      .map((g) => g.id)
+      .filter((g: any) => g.isHidden || (g.visibleFrom && new Date(g.visibleFrom) > now))
+      .map((g: any) => g.id)
   );
 
-  allGroups.forEach((g) => {
+  allGroups.forEach((g: any) => {
     // Skip groups that are hidden or not yet scheduled to be visible
     if (hiddenGroupIds.has(g.id)) {
       return;
@@ -144,7 +248,7 @@ export default async function StudentClassDetailPage({
     groupsMap.set(g.id, {
       id: g.id,
       title: g.title,
-      createdAt: g.createdAt ? g.createdAt.toISOString() : null,
+      createdAt: g.createdAt ? new Date(g.createdAt).toISOString() : null,
       // If prerequisite is hidden, treat as no prerequisite (group is effectively unlocked)
       prerequisiteGroupId: g.prerequisiteGroupId && !hiddenGroupIds.has(g.prerequisiteGroupId) ? g.prerequisiteGroupId : null,
       prerequisiteGroupTitle: g.prerequisiteGroupId && !hiddenGroupIds.has(g.prerequisiteGroupId) ? (g.prerequisiteGroup?.title || null) : null,
@@ -154,58 +258,12 @@ export default async function StudentClassDetailPage({
     });
   });
 
-  // 1.5 Pre-resolve accurate thumbnails matching HomepageFeed for reading / games / flashcards
-  const lessonRawIds: string[] = [];
-  const gameRawIds: string[] = [];
-  const flashcardRawIds: string[] = [];
-
-  rawAssignments.forEach((ac) => {
-    const thumb = ac.assignment.thumbnail;
-    const isUnsplash = !thumb || thumb.includes('unsplash.com');
-    if (isUnsplash && ac.assignment.instructions) {
-      try {
-        const meta = JSON.parse(ac.assignment.instructions);
-        const kind = (meta.kind || ac.assignment.materialType || '').toUpperCase();
-        if (meta.rawId) {
-          if (kind === 'READING' || kind === 'LESSON' || kind === 'BOOK') {
-            lessonRawIds.push(meta.rawId);
-          } else if (kind === 'GAME') {
-            gameRawIds.push(meta.rawId);
-          } else if (kind === 'FLASHCARD') {
-            flashcardRawIds.push(meta.rawId);
-          }
-        }
-      } catch {}
-    }
-  });
-
-  const [resolvedLessons, resolvedGames, resolvedFlashcards] = await Promise.all([
-    lessonRawIds.length > 0
-      ? prisma.lesson.findMany({
-          where: { id: { in: lessonRawIds } },
-          select: { id: true, thumbnail: true }
-        })
-      : Promise.resolve([]),
-    gameRawIds.length > 0
-      ? prisma.matchWordTopic.findMany({
-          where: { id: { in: gameRawIds } },
-          select: { id: true, thumbnailUrl: true, gameMode: true }
-        })
-      : Promise.resolve([]),
-    flashcardRawIds.length > 0
-      ? prisma.flashcardTopic.findMany({
-          where: { id: { in: flashcardRawIds } },
-          select: { id: true, iconUrl: true }
-        })
-      : Promise.resolve([]),
-  ]);
-
-  const lessonThumbMap = new Map(resolvedLessons.filter(l => l.thumbnail).map(l => [l.id, l.thumbnail!]));
-  const gameThumbMap = new Map(resolvedGames.map(g => [
+  const lessonThumbMap = new Map(resolvedLessons.filter((l: any) => l.thumbnail).map((l: any) => [l.id, l.thumbnail!]));
+  const gameThumbMap = new Map(resolvedGames.map((g: any) => [
     g.id, 
     g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg')
   ]));
-  const flashcardThumbMap = new Map(resolvedFlashcards.filter(f => f.iconUrl).map(f => [f.id, f.iconUrl!]));
+  const flashcardThumbMap = new Map(resolvedFlashcards.filter((f: any) => f.iconUrl).map((f: any) => [f.id, f.iconUrl!]));
 
   // 2. Attach items to groups (skip assignments belonging to hidden groups)
   rawAssignments.forEach((ac) => {
@@ -218,7 +276,7 @@ export default async function StudentClassDetailPage({
       groupsMap.set(gId, {
         id: gId,
         title: gTitle,
-        createdAt: ac.group?.createdAt ? ac.group.createdAt.toISOString() : (ac.assignedAt ? ac.assignedAt.toISOString() : null),
+        createdAt: ac.group?.createdAt ? new Date(ac.group.createdAt).toISOString() : (ac.assignedAt ? new Date(ac.assignedAt).toISOString() : null),
         prerequisiteGroupId: null,
         prerequisiteGroupTitle: null,
         unlockThreshold: 60,
@@ -262,8 +320,8 @@ export default async function StudentClassDetailPage({
         teacher: ac.assignment.teacher,
         questionsCount: (ac.assignment as any)._count?.questions || 0,
       },
-      assignedAt: ac.assignedAt ? ac.assignedAt.toISOString() : new Date().toISOString(),
-      dueDate: ac.dueDate ? ac.dueDate.toISOString() : null,
+      assignedAt: ac.assignedAt ? new Date(ac.assignedAt).toISOString() : new Date().toISOString(),
+      dueDate: ac.dueDate ? new Date(ac.dueDate).toISOString() : null,
       isSubmitted,
       score: submissionScoreMap.get(ac.assignment.id) ?? null,
     });
@@ -271,6 +329,12 @@ export default async function StudentClassDetailPage({
 
   // Filter out empty groups so students never see empty 0-item groups
   const assignmentGroups = Array.from(groupsMap.values()).filter((g) => g.items.length > 0);
+
+  // Sắp xếp các bài học trong từng nhóm theo Lộ trình học tập chuẩn (Phương án 1):
+  // Lý thuyết ➔ Từ vựng ➔ Bài tập ➔ Đọc & Nói ➔ Trò chơi ➔ Ôn tập
+  assignmentGroups.forEach((g) => {
+    g.items = sortGroupItems(g.items);
+  });
 
   // 3. Compute group completion stats
   const groupStatsMap = new Map<string, { total: number; completed: number; percent: number }>();
@@ -311,29 +375,43 @@ export default async function StudentClassDetailPage({
     }
   });
 
-  // 5. Find next uncompleted task for quick resume CTA (Only from unlocked groups)
+  // 5. Find next uncompleted task for quick resume CTA (Only from unlocked groups in roadmap order)
   let nextTask: { id: string; title: string; kind: string; targetUrl: string } | null = null;
-  const uncompleted = rawAssignments.find((ac) => {
-    if (submittedAssignmentIds.has(ac.assignment.id)) return false;
-    if (ac.groupId && hiddenGroupIds.has(ac.groupId)) return false;
-    const gId = ac.groupId || `ungrouped_${ac.group?.title || 'general'}`;
-    const grp = groupsMap.get(gId);
-    return grp && !grp.isLocked;
-  });
-  if (uncompleted) {
-    let targetUrl = `/student/assignments/${uncompleted.assignment.id}/run`;
+  let uncompletedItem: any = null;
+  for (const grp of assignmentGroups) {
+    if (grp.isLocked) continue;
+    const found = grp.items.find((i) => !i.isSubmitted);
+    if (found) {
+      uncompletedItem = found;
+      break;
+    }
+  }
+
+  if (uncompletedItem) {
+    let targetUrl = `/student/assignments/${uncompletedItem.assignment.id}/run`;
     let kind = 'Bài tập';
-    if (uncompleted.assignment.instructions) {
+    if (uncompletedItem.assignment.instructions) {
       try {
-        const meta = JSON.parse(uncompleted.assignment.instructions);
+        const meta = JSON.parse(uncompletedItem.assignment.instructions);
         if (meta.playUrl) targetUrl = meta.playUrl;
-        if (meta.kind) {
-          if (meta.kind === 'LESSON') kind = 'Lý thuyết';
-          else if (meta.kind === 'EXERCISE' || meta.kind === 'GRAMMAR') kind = 'Bài tập';
-          else if (meta.kind === 'GAME') kind = 'Trò chơi';
-          else if (meta.kind === 'FLASHCARD') kind = 'Flashcard';
-          else if (meta.kind === 'READING') kind = 'Bài đọc';
-          else if (meta.kind === 'BOOK') kind = 'Shadowing';
+        const isLesson = 
+          meta.kind === 'LESSON' || 
+          targetUrl.includes('/grammar/') || 
+          uncompletedItem.assignment.title.toLowerCase().startsWith('grammar lesson') ||
+          uncompletedItem.assignment.title.toLowerCase().startsWith('lý thuyết:');
+
+        if (isLesson) {
+          kind = 'Lý thuyết';
+        } else if (meta.kind === 'EXERCISE' || meta.kind === 'GRAMMAR') {
+          kind = 'Bài tập';
+        } else if (meta.kind === 'GAME') {
+          kind = 'Trò chơi';
+        } else if (meta.kind === 'FLASHCARD') {
+          kind = 'Flashcard';
+        } else if (meta.kind === 'READING') {
+          kind = 'Bài đọc';
+        } else if (meta.kind === 'BOOK') {
+          kind = 'Shadowing';
         }
       } catch {}
     }
@@ -349,8 +427,8 @@ export default async function StudentClassDetailPage({
     }
 
     nextTask = {
-      id: uncompleted.assignment.id,
-      title: uncompleted.assignment.title.replace(/^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise):\s*/i, ''),
+      id: uncompletedItem.assignment.id,
+      title: uncompletedItem.assignment.title.replace(/^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise):\s*/i, ''),
       kind,
       targetUrl,
     };
@@ -360,27 +438,41 @@ export default async function StudentClassDetailPage({
   const completedAssignments = submissions.length;
 
   return (
-    <div className="max-w-7xl mx-auto pb-12 pt-2 sm:pt-4">
-      <Suspense fallback={<div className="h-64 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
-        <StudentAssignmentsView 
-          assignmentGroups={assignmentGroups} 
-          initialGroupId={initialGroupId}
-          initialViewAll={initialViewAll}
-          classId={id}
-          heroBanner={
-            <ClassHeroBento
-              name={cls.name}
-              teacher={cls.teacher}
-              gradeLevel={cls.gradeLevel}
-              joinCode={cls.joinCode}
-              totalAssignments={totalAssignments}
-              completedAssignments={completedAssignments}
-              nextTask={nextTask}
-              joinedAt={enrollment.joinedAt ? enrollment.joinedAt.toISOString() : null}
-            />
-          }
-        />
-      </Suspense>
+    <div className="relative min-h-screen">
+      {/* Nền trắng riêng biệt cho trang lớp học này (chống nhấp nháy SSR) */}
+      <div className="fixed inset-0 -z-40 bg-white dark:bg-slate-950 pointer-events-none" />
+      <div className="max-w-[1700px] w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pb-12 pt-3 sm:pt-4 relative z-0">
+        <Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
+          <StudentAssignmentsView 
+            assignmentGroups={assignmentGroups} 
+            initialGroupId={initialGroupId}
+            initialViewAll={initialViewAll}
+            initialAssignmentId={initialAssignmentId}
+            initialTab={initialTab}
+            classId={id}
+            currentClass={{
+              id: cls.id,
+              name: cls.name,
+              gradeLevel: cls.gradeLevel,
+              joinCode: cls.joinCode,
+              teacher: cls.teacher
+            }}
+            enrolledClasses={allEnrolledClasses.map(e => e.class)}
+            heroBanner={
+              <ClassHeroBento
+                name={cls.name}
+                teacher={cls.teacher}
+                gradeLevel={cls.gradeLevel}
+                joinCode={cls.joinCode}
+                totalAssignments={totalAssignments}
+                completedAssignments={completedAssignments}
+                nextTask={nextTask}
+                joinedAt={enrollment.joinedAt ? new Date(enrollment.joinedAt).toISOString() : null}
+              />
+            }
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

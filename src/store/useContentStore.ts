@@ -87,6 +87,13 @@ interface ContentState {
   setBooksForLevel: (key: string, items: any[]) => void
   setBooksLevelLoading: (key: string, loading: boolean) => void
 
+  // Student classes cache (prefetched, persists across tab switches)
+  studentClasses: { activeClasses: any[]; pendingRequests: any[] } | null
+  studentClassesLoaded: boolean
+  studentClassesLoading: boolean
+  setStudentClasses: (data: { activeClasses: any[]; pendingRequests: any[] } | null) => void
+  setStudentClassesLoading: (val: boolean) => void
+
   // Flashcard quick-start cache — cards prefetched from homepage popup
   // Consumed once by FlashcardsClient then cleared
   pendingFlashcards: { topicId: string; cards: any[]; mode: string } | null
@@ -162,6 +169,12 @@ export const useContentStore = create<ContentState>((set, get) => ({
   setBooksLevelLoading: (key, loading) => set((s) => ({
     booksLevelLoading: { ...s.booksLevelLoading, [key]: loading }
   })),
+
+  studentClasses: null,
+  studentClassesLoaded: false,
+  studentClassesLoading: false,
+  setStudentClasses: (data) => set({ studentClasses: data, studentClassesLoaded: true }),
+  setStudentClassesLoading: (val) => set({ studentClassesLoading: val }),
 
   pendingFlashcards: null,
   setPendingFlashcards: (data) => set({ pendingFlashcards: data }),

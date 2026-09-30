@@ -24,6 +24,7 @@ import {
 
 import { LevelPillSelector } from "@/components/public/LevelPillSelector"
 import { StudentGamesHub } from "@/components/public/StudentGamesHub"
+import { StudentClassesTab } from "@/components/public/classes/StudentClassesTab"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1021,6 +1022,21 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Prefetch student classes on mount for logged in students
+  const studentClassesLoaded = useContentStore(s => (s as any).studentClassesLoaded);
+  const setStudentClasses    = useContentStore(s => (s as any).setStudentClasses);
+
+  useEffect(() => {
+    if (!isLoggedIn || studentClassesLoaded) return;
+    fetch("/api/student/classes")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) setStudentClasses(data);
+      })
+      .catch(console.error);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, studentClassesLoaded]);
+
 
 
   // Store states and actions
@@ -1182,12 +1198,12 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const isLearner = currentAgeGroup === "learner" || currentAgeGroup.toLowerCase().includes("learner") || currentAgeGroup.toLowerCase().includes("adult");
 
   // Determine dynamic tabs array based on current age group
-  // "shadowing" is always included — it's a universal tab not tied to age group
+  // "shadowing" and "classes" are always included — universal tabs not tied to age group
   const tabs = useMemo(() => {
-    if (isKindergarten) return ["games", "flashcards", "shadowing"];
-    if (isKid || isTeen) return ["games", "flashcards", "lessons", "exercises", "shadowing"];
-    if (isLearner) return ["games", "lessons", "exercises", "flashcards", "shadowing"];
-    return ["games", "lessons", "exercises", "flashcards", "shadowing"]; // Fallback
+    if (isKindergarten) return ["classes", "games", "flashcards", "shadowing"];
+    if (isKid || isTeen) return ["classes", "games", "flashcards", "lessons", "exercises", "shadowing"];
+    if (isLearner) return ["classes", "games", "lessons", "exercises", "flashcards", "shadowing"];
+    return ["classes", "games", "lessons", "exercises", "flashcards", "shadowing"]; // Fallback
   }, [isKindergarten, isKid, isTeen, isLearner]);
 
   // Sync activeTab with available tabs (reset if current tab not available for this age group)
@@ -1701,7 +1717,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
       {/* Lists */}
       <div className="relative">
-        {studySubject === "english" && !isKindergarten && activeTab !== "games" && (
+        {studySubject === "english" && !isKindergarten && activeTab !== "games" && activeTab !== "classes" && (
           <LevelPillSelector activeTab={activeTab} />
         )}
 
@@ -1711,7 +1727,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
           </div>
         )}
         <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
-          {activeTab === "flashcards" ? (
+          {activeTab === "classes" ? (
+            <StudentClassesTab isLoggedIn={isLoggedIn} locale={locale} />
+          ) : activeTab === "flashcards" ? (
             isFlashcardsLoading
               ? <FlashcardSkeleton />
               : <Suspense fallback={<FlashcardSkeleton />}><FlashcardTopicBrowser topics={filteredFlashcards} initialLevel={normalizedStudyLevel || "a1"} /></Suspense>

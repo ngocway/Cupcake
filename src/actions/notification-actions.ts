@@ -3,8 +3,13 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { fetchWithRedis } from '@/lib/cached-queries';
+import { redis } from '@/lib/redis';
 
 export async function createNotification(userId: string, type: string, title: string, message: string, link?: string) {
+  try {
+    await redis.del(`user:unread-count:${userId}`);
+  } catch {}
   return await prisma.notification.create({
     data: {
       userId,
@@ -45,17 +50,23 @@ export async function getUnreadCount() {
   const session = await auth();
   if (!session?.user?.id) return 0;
 
-  return await prisma.notification.count({
-    where: {
-      userId: session.user.id,
-      isRead: false
-    }
+  return fetchWithRedis(`user:unread-count:${session.user.id}`, 30, async () => {
+    return prisma.notification.count({
+      where: {
+        userId: session.user.id,
+        isRead: false
+      }
+    });
   });
 }
 
 export async function markAsRead(id: string) {
   const session = await auth();
   if (!session?.user?.id) return { success: false };
+
+  try {
+    await redis.del(`user:unread-count:${session.user.id}`);
+  } catch {}
 
   await prisma.notification.update({
     where: {
@@ -74,6 +85,10 @@ export async function markAsRead(id: string) {
 export async function markAllAsRead() {
   const session = await auth();
   if (!session?.user?.id) return { success: false };
+
+  try {
+    await redis.del(`user:unread-count:${session.user.id}`);
+  } catch {}
 
   await prisma.notification.updateMany({
     where: {

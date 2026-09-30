@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation"
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations } from "next-intl"
 import { TeacherLanguageSelector } from "@/components/teacher/TeacherLanguageSelector"
+import { StudentClassHeader } from "./StudentClassHeader"
 
 const LANG_LABELS: Record<string, string> = {
   vi: "Tiếng Việt", th: "ภาษาไทย", id: "Bahasa Indonesia",
@@ -125,7 +126,20 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
     }
   }, [])
 
-  if (isDetailOrRunPage) return null;
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("embedded") === "true") {
+      setIsEmbedded(true);
+    }
+  }, []);
+
+  if (isDetailOrRunPage || isEmbedded) return null;
+
+  // Chuyên biệt cho trang chi tiết lớp học (/student/classes/[id]): Render Header theo phong cách phẳng Anhngu24h
+  const isStudentClassDetail = pathname?.startsWith('/student/classes/') && pathname !== '/student/classes';
+  if (isStudentClassDetail) {
+    return <StudentClassHeader session={session} />;
+  }
 
   const handleTriggerSearch = () => {
     if (setSearch && localSearch !== (search || "")) {

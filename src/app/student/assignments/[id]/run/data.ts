@@ -319,3 +319,20 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
   });
 };
 
+/** Pre-warm questions and translations into Redis Cache in background */
+export const prewarmAssignmentsData = async (assignmentIds: string[]) => {
+  if (!assignmentIds || assignmentIds.length === 0) return;
+  // Non-blocking fire-and-forget
+  Promise.all(
+    assignmentIds.slice(0, 8).map(async (id) => {
+      try {
+        await Promise.all([
+          getCachedAssignmentQuestions(id),
+          getQuestionTranslationMap(id),
+          getAssignmentTranslations(id),
+        ]);
+      } catch {}
+    })
+  ).catch(() => {});
+};
+

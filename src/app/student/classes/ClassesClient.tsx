@@ -148,6 +148,7 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
                 key={item.id} 
                 href={`/student/classes/${item.id}`}
                 prefetch={true}
+                onMouseEnter={() => router.prefetch(`/student/classes/${item.id}`)}
                 onClick={() => setEnteringClassId(item.id)}
                 className={`group relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-2 border-white/80 dark:border-slate-700/80 rounded-[28px] sm:rounded-[32px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 flex flex-col justify-between cursor-pointer block no-underline text-inherit ${
                   enteringClassId === item.id ? "ring-2 ring-blue-500/80 pointer-events-none" : ""

@@ -124,9 +124,9 @@ export default async function StudentAssignmentLobbyPage({
   searchParams
 }: { 
   params: Promise<{ id: string }>,
-  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; review?: string }>
+  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; review?: string; embedded?: string }>
 }) {
-  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, review }] = await Promise.all([
+  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, review, embedded }] = await Promise.all([
     auth(),
     params,
     searchParams
@@ -213,9 +213,12 @@ export default async function StudentAssignmentLobbyPage({
       const meta = JSON.parse(assignment.instructions);
       if (meta?.playUrl) {
         const separator = meta.playUrl.includes('?') ? '&' : '?';
-        const urlWithAssignment = meta.playUrl.includes('assignmentId=')
+        let urlWithAssignment = meta.playUrl.includes('assignmentId=')
           ? meta.playUrl
           : `${meta.playUrl}${separator}assignmentId=${assignment.id}`;
+        if (embedded === "true" && !urlWithAssignment.includes('embedded=true')) {
+          urlWithAssignment += `${urlWithAssignment.includes('?') ? '&' : '?'}embedded=true`;
+        }
         redirect(urlWithAssignment);
       }
     } catch {}
@@ -235,6 +238,7 @@ export default async function StudentAssignmentLobbyPage({
 
   const identifier = assignment.slug || assignment.id;
   const fromClassQuery = isFromClass ? "&fromClass=true" : "";
+  const embeddedQuery = embedded === "true" ? "&embedded=true" : "";
 
   // 1. Khi bấm "Làm lại" (newAttempt === "true"): Luôn tạo lượt làm mới không giới hạn số lần
   if (newAttempt === "true") {
@@ -246,7 +250,7 @@ export default async function StudentAssignmentLobbyPage({
         attemptNumber: nextAttemptNumber
       }
     });
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}&autoStart=true`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}${embeddedQuery}&autoStart=true`);
   }
 
   // 2. Nếu đã hoàn thành bài (có completedSubmissions):
@@ -262,17 +266,17 @@ export default async function StudentAssignmentLobbyPage({
         await prisma.submission.delete({ where: { id: activeSubmission.id } });
       } catch {}
     }
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}${embeddedQuery}`);
   }
 
   // 3. Nếu có bài đang làm dở thực sự (đã trả lời ít nhất 1 câu): tiếp tục làm
   if (activeSubmission) {
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}${fromClassQuery}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}${fromClassQuery}${embeddedQuery}`);
   }
 
   // 4. Fallback bài đã làm xong: Vào thẳng xem lại
   if (completedSubmissions.length > 0) {
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}${embeddedQuery}`);
   }
 
   // 4. Nếu chưa từng làm: Tạo bài làm lần 1 và vào thẳng trang quiz (có popup "ARE YOU READY?" với nút Practice Mode)!
@@ -283,7 +287,7 @@ export default async function StudentAssignmentLobbyPage({
       attemptNumber: 1
     }
   });
-  redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}`);
+  redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}${embeddedQuery}`);
   const dateLocale = locale === "vi" ? vi : enUS;
 
   const _lobbyNormalizedLevel = (assignment.level || "").toLowerCase().split(",")[0].trim();

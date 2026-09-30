@@ -833,6 +833,18 @@ export default function KidTeenQuizRunner({
   const router = useRouter();
   const [, startTransition] = useTransition();
 
+  useEffect(() => {
+    if (isReviewMode && typeof window !== "undefined" && window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({
+          type: "ACTIVITY_COMPLETED",
+          assignmentId: assignment?.id,
+          score: submissionScore
+        }, "*");
+      } catch {}
+    }
+  }, [isReviewMode, assignment?.id, submissionScore]);
+
   // B1 and above get the green gradient background; A1/A2 keep the cartoon image.
   // The 'level' field in DB stores various formats: "b1", "b1,b1,b1", "intermediate", "upper_intermediate", etc.
   const _normalizedLevel = (cefrLevel || "").toLowerCase().split(",")[0].trim();
@@ -1080,8 +1092,9 @@ export default function KidTeenQuizRunner({
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-  // Warm up the Edge TTS API route in the background on mount
+  // Warm up the Edge TTS API route in the background on mount (standalone only)
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("embedded=true")) return;
     fetch("/api/tts/edge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

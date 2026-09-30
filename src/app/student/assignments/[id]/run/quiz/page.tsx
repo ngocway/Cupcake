@@ -10,10 +10,10 @@ export default async function StudentQuizPage({
   searchParams,
   params
 }: {
-  searchParams: Promise<{ submissionId: string; review?: string; fromClass?: string; classId?: string; autoStart?: string }>;
+  searchParams: Promise<{ submissionId: string; review?: string; fromClass?: string; classId?: string; autoStart?: string; embedded?: string }>;
   params: Promise<{ id: string }>;
 }) {
-  const [session, { submissionId, review, fromClass, classId, autoStart }, { id: paramsId }] = await Promise.all([
+  const [session, { submissionId, review, fromClass, classId, autoStart, embedded }, { id: paramsId }] = await Promise.all([
     auth(),
     searchParams,
     params
@@ -22,14 +22,77 @@ export default async function StudentQuizPage({
   if (!session?.user?.id) redirect("/student/login");
   const userId = session.user.id;
 
-  if (!submissionId) {
-    redirect(`/student/assignments/${paramsId}/run`);
-  }
+  const isClassMode = embedded === "true" || fromClass === "true" || !!classId;
 
-  const submission = await prisma.submission.findUnique({
-    where: { id: submissionId },
-    include: { 
-      assignment: {
+  // 1. Kick off cached questions and translations immediately in parallel
+  const questionsPromise = getCachedAssignmentQuestions(paramsId);
+  const questionTranslationsPromise = getQuestionTranslationMap(paramsId);
+  const assignmentTranslationsPromise = getAssignmentTranslations(paramsId);
+
+  // In embedded classroom mode, students don't need external related recommendations
+  const relatedAssignmentsPromise = isClassMode
+    ? Promise.resolve([])
+    : getRelatedAssignmentsCached(paramsId, null, []);
+
+  // 2. Fetch or create submission with assignment in a fast path
+  let targetSubmissionId = submissionId;
+  let submission: any = null;
+
+  if (targetSubmissionId) {
+    submission = await prisma.submission.findUnique({
+      where: { id: targetSubmissionId },
+      include: { 
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            tags: true,
+            level: true,
+            materialType: true,
+            grammarLesson: true,
+            targetAudiences: true,
+            lesson: { select: { id: true, targetAudiences: true } }
+          }
+        },
+        answers: true
+      }
+    });
+  } else {
+    // Fast path: find existing submission directly with paramsId (matches ID or slug)
+    const existing = await prisma.submission.findFirst({
+      where: {
+        studentId: userId,
+        OR: [
+          { assignmentId: paramsId },
+          { assignment: { slug: paramsId } }
+        ]
+      },
+      orderBy: { startedAt: "desc" },
+      include: {
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            tags: true,
+            level: true,
+            materialType: true,
+            grammarLesson: true,
+            targetAudiences: true,
+            lesson: { select: { id: true, targetAudiences: true } }
+          }
+        },
+        answers: true
+      }
+    });
+
+    if (existing) {
+      submission = existing;
+    } else {
+      // Create new submission: resolve assignment
+      const assignmentRecord = await prisma.assignment.findFirst({
+        where: { OR: [{ id: paramsId }, { slug: paramsId }] },
         select: {
           id: true,
           title: true,
@@ -41,10 +104,29 @@ export default async function StudentQuizPage({
           targetAudiences: true,
           lesson: { select: { id: true, targetAudiences: true } }
         }
-      },
-      answers: true
+      });
+      if (!assignmentRecord) notFound();
+
+      const created = await prisma.submission.create({
+        data: {
+          assignmentId: assignmentRecord.id,
+          studentId: userId,
+          attemptNumber: 1
+        },
+        select: { id: true }
+      });
+
+      submission = {
+        id: created.id,
+        assignmentId: assignmentRecord.id,
+        studentId: userId,
+        assignment: assignmentRecord,
+        answers: [],
+        score: null,
+        submittedAt: null
+      };
     }
-  });
+  }
 
   if (!submission || submission.studentId !== userId || !submission.assignment) {
     notFound();
@@ -52,28 +134,11 @@ export default async function StudentQuizPage({
 
   const assignmentCore = submission.assignment;
   const isReviewMode = Boolean(submission.submittedAt || review === "true");
-
-  let isFromClass = fromClass === "true" || !!classId;
-  if (!isFromClass && userId) {
-    const assignedClass = await prisma.assignmentClass.findFirst({
-      where: {
-        assignmentId: assignmentCore.id,
-        class: {
-          enrollments: {
-            some: { studentId: userId, status: "ACTIVE" }
-          }
-        }
-      },
-      select: { classId: true }
-    });
-    if (assignedClass) {
-      isFromClass = true;
-    }
-  }
+  const isFromClass = isClassMode;
 
   let initialAnswers: any = {};
   if (submission.answers && submission.answers.length > 0) {
-    submission.answers.forEach((ans) => {
+    submission.answers.forEach((ans: any) => {
       try {
         initialAnswers[ans.questionId] = JSON.parse(ans.studentAnswer);
       } catch {
@@ -116,14 +181,7 @@ export default async function StudentQuizPage({
     }
   });
 
-  const relatedAssignmentsPromise = getRelatedAssignmentsCached(
-    assignmentCore.id,
-    assignmentCore.tags,
-    assignmentCore.targetAudiences as string[]
-  );
-  const questions = await getCachedAssignmentQuestions(assignmentCore.id);
-  const questionTranslationsPromise = getQuestionTranslationMap(assignmentCore.id);
-  const assignmentTranslationsPromise = getAssignmentTranslations(assignmentCore.id);
+  const questions = await questionsPromise;
 
   // Wrap to fetch grammar instructions dynamically if grammarLesson is present
   const getExtraDataWithGrammar = async () => {
@@ -142,7 +200,7 @@ export default async function StudentQuizPage({
   const resolvedExtraDataPromise = getExtraDataWithGrammar();
 
   return (
-    <div className="min-h-screen w-full max-w-none">
+    <div className={`w-full max-w-none ${embedded === "true" ? "min-h-0 bg-transparent" : "min-h-screen"}`}>
        <KidTeenQuizRunner 
           assignment={assignmentCore as any}
           submissionId={submissionId}

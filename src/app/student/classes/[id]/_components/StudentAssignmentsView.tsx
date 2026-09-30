@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { 
@@ -18,13 +18,28 @@ import {
   Search,
   Sparkles,
   ChevronRight,
+  ChevronDown,
   Check,
   Lock,
   Award,
   GraduationCap,
-  X
+  X,
+  Volume2,
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  ExternalLink,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronsUpDown,
+  Flame,
+  Star
 } from 'lucide-react';
-import { LearningFlowLanes } from './LearningFlowLanes';
+import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems } from '../_utils/assignmentOrder';
+export type { ActivityStage };
+export { STAGE_ROADMAP_ORDER, sortGroupItems };
 
 export interface StudentGroupItem {
   assignment: {
@@ -65,870 +80,1249 @@ export interface StudentAssignmentsViewProps {
   assignmentGroups: StudentAssignmentGroup[];
   initialGroupId?: string | null;
   initialViewAll?: boolean;
+  initialAssignmentId?: string | null;
+  initialTab?: string | null;
   classId?: string;
+  currentClass?: {
+    id: string;
+    name: string;
+    gradeLevel?: string | null;
+    joinCode?: string | null;
+    teacher?: any;
+  };
+  enrolledClasses?: {
+    id: string;
+    name: string;
+    gradeLevel?: string | null;
+  }[];
   heroBanner?: React.ReactNode;
 }
+
+
+
+export interface ParsedItemConfig {
+  item: StudentGroupItem;
+  targetUrl: string;
+  embeddedUrl: string;
+  kind: string;
+  stage: ActivityStage;
+  stageLabel: string;
+  cleanTitle: string;
+  isReview: boolean;
+  iconNode: React.ReactNode;
+  badgeClass: string;
+  pillColor: string;
+}
+
+/** Helper to format score to at most 1 decimal place (e.g. 9.333333333333334 -> "9.3", 10 -> "10") */
+export function formatScore(score: number | null | undefined): string {
+  if (typeof score !== 'number' || isNaN(score)) return '';
+  const rounded = Math.round(score * 10) / 10;
+  return rounded.toString();
+}
+
+/** Helper to parse metadata and URLs for each student assignment item */
+export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
+  let targetUrl = `/student/assignments/${item.assignment.id}/run`;
+  let kind = 'EXERCISE';
+  let isReview = false;
+
+  if (item.assignment.instructions) {
+    try {
+      const meta = JSON.parse(item.assignment.instructions);
+      if (meta.playUrl) targetUrl = meta.playUrl;
+      if (meta.kind) kind = meta.kind;
+      if (meta.section === 'REVIEW' || meta.isReview) isReview = true;
+    } catch {}
+  }
+
+  const isGrammarLesson = 
+    kind === 'LESSON' || 
+    targetUrl.includes('/grammar/') || 
+    item.assignment.title.toLowerCase().startsWith('grammar lesson') ||
+    item.assignment.title.toLowerCase().startsWith('lý thuyết:');
+
+  if (isGrammarLesson) {
+    kind = 'LESSON';
+  } else if (item.assignment.materialType === 'READING') {
+    kind = 'READING';
+  } else if (item.assignment.materialType === 'FLASHCARD') {
+    kind = 'FLASHCARD';
+  } else if (kind === 'GRAMMAR' || kind === 'EXERCISE') {
+    kind = 'EXERCISE';
+  }
+
+  // Ensure routing query params & direct one-hop targetUrl for exercises
+  if (kind === 'EXERCISE') {
+    if (targetUrl.endsWith('/run')) {
+      targetUrl = `/student/assignments/${item.assignment.id}/run/quiz`;
+    }
+    if (!targetUrl.includes('direct=true')) {
+      const separator = targetUrl.includes('?') ? '&' : '?';
+      targetUrl = `${targetUrl}${separator}direct=true`;
+    }
+  } else if (kind === 'READING' || kind === 'GRAMMAR') {
+    if (!targetUrl.includes('direct=true')) {
+      const separator = targetUrl.includes('?') ? '&' : '?';
+      targetUrl = `${targetUrl}${separator}direct=true`;
+    }
+  }
+  if (!targetUrl.includes('fromClass=true')) {
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    targetUrl = `${targetUrl}${separator}fromClass=true`;
+  }
+  if (targetUrl && !targetUrl.includes('assignmentId=')) {
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    targetUrl = `${targetUrl}${separator}assignmentId=${item.assignment.id}`;
+  }
+
+  // Create embedded URL with embedded=true
+  const embedSeparator = targetUrl.includes('?') ? '&' : '?';
+  const embeddedUrl = `${targetUrl}${embedSeparator}embedded=true`;
+
+  const cleanTitle = item.assignment.title.replace(
+    /^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise|Reading|Bài đọc):\s*/i, ''
+  );
+
+  // Determine stage
+  let stage: ActivityStage = 'exercise';
+  let stageLabel = 'Bài tập';
+  let iconNode = <ClipboardList className="w-4 h-4 stroke-[2px]" />;
+  let badgeClass = 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60';
+  let pillColor = 'bg-blue-500';
+
+  if (isReview) {
+    stage = 'review';
+    stageLabel = 'Ôn tập';
+    iconNode = <RotateCcw className="w-4 h-4 stroke-[2px]" />;
+    badgeClass = 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/60';
+    pillColor = 'bg-amber-500';
+  } else if (kind === 'LESSON') {
+    stage = 'lesson';
+    stageLabel = 'Lý thuyết';
+    iconNode = <BookOpen className="w-4 h-4 stroke-[2px]" />;
+    badgeClass = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/60';
+    pillColor = 'bg-indigo-500';
+  } else if (kind === 'GAME') {
+    stage = 'game';
+    stageLabel = 'Game';
+    iconNode = <Gamepad2 className="w-4 h-4 stroke-[2px]" />;
+    badgeClass = 'bg-pink-50 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 border-pink-200/60 dark:border-pink-800/60';
+    pillColor = 'bg-pink-500';
+  } else if (kind === 'READING') {
+    stage = 'reading';
+    stageLabel = 'Đọc hiểu';
+    iconNode = <BookText className="w-4 h-4 stroke-[2px]" />;
+    badgeClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/60';
+    pillColor = 'bg-emerald-500';
+  } else if (kind === 'BOOK') {
+    stage = 'reading';
+    stageLabel = 'Shadowing';
+    iconNode = <Volume2 className="w-4 h-4 stroke-[2px]" />;
+    badgeClass = 'bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 border-teal-200/60 dark:border-teal-800/60';
+    pillColor = 'bg-teal-500';
+  } else if (kind === 'FLASHCARD') {
+    stage = 'flashcard';
+    stageLabel = 'Từ vựng';
+    iconNode = <Layers className="w-4 h-4 stroke-[2px]" />;
+    badgeClass = 'bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200/60 dark:border-purple-800/60';
+    pillColor = 'bg-purple-500';
+  }
+
+  return {
+    item,
+    targetUrl,
+    embeddedUrl,
+    kind,
+    stage,
+    stageLabel,
+    cleanTitle,
+    isReview,
+    iconNode,
+    badgeClass,
+    pillColor,
+  };
+}
+
+
 
 export function StudentAssignmentsView({ 
   assignmentGroups,
   initialGroupId = null,
   initialViewAll = false,
+  initialAssignmentId = null,
+  initialTab = null,
   classId,
+  currentClass,
+  enrolledClasses = [],
   heroBanner
 }: StudentAssignmentsViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(() => {
-    const paramGid = searchParams.get('groupId') ?? initialGroupId;
-    if (paramGid && assignmentGroups.some((g) => g.id === paramGid)) {
-      return paramGid;
-    }
-    const paramViewAll = searchParams.get('viewAll') === 'true' || initialViewAll;
-    if (!paramViewAll && assignmentGroups.length === 1 && !assignmentGroups[0].isLocked) {
-      return assignmentGroups[0].id;
-    }
-    return null;
-  });
+  // Sidebar collapse state (default false to prevent SSR hydration mismatch)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
-  const [isViewAll, setIsViewAll] = useState<boolean>(() => {
-    return searchParams.get('viewAll') === 'true' || initialViewAll;
-  });
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('dolcake_classroom_sidebar_collapsed');
+      if (saved === 'true') {
+        setIsSidebarCollapsed(true);
+      }
+    } catch {}
+  }, []);
 
-  // Sync state if URL changes externally (e.g. browser back/forward)
-  React.useEffect(() => {
-    const handleLocationSync = () => {
-      const sp = new URLSearchParams(window.location.search);
-      const gid = sp.get('groupId');
-      const vAll = sp.get('viewAll') === 'true';
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('dolcake_classroom_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
-      if (gid && assignmentGroups.some(g => g.id === gid)) {
-        setSelectedGroupId(gid);
-        setIsViewAll(false);
-      } else if (vAll) {
-        setSelectedGroupId(null);
-        setIsViewAll(true);
+  // Fullscreen / Zen mode for Canvas (Area 3)
+  const [isZenMode, setIsZenMode] = useState(false);
+
+  // Class Switcher Dropdown state
+  const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
+  const classDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (classDropdownRef.current && !classDropdownRef.current.contains(e.target as Node)) {
+        setIsClassDropdownOpen(false);
       }
     };
+    window.addEventListener('mousedown', handleOutsideClick);
+    return () => window.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
-    window.addEventListener('popstate', handleLocationSync);
-    return () => window.removeEventListener('popstate', handleLocationSync);
-  }, [assignmentGroups]);
+  // Real-time Submissions state (allows optimistic updates on completion)
+  const [submissionsState, setSubmissionsState] = useState<Record<string, { isSubmitted: boolean; score: number | null }>>(() => {
+    const initialMap: Record<string, { isSubmitted: boolean; score: number | null }> = {};
+    assignmentGroups.forEach(g => {
+      g.items.forEach(it => {
+        initialMap[it.assignment.id] = {
+          isSubmitted: it.isSubmitted,
+          score: it.score ?? null,
+        };
+      });
+    });
+    return initialMap;
+  });
 
-  const activeGroupId = selectedGroupId;
-
-  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'completed'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Locked modal & Unlocked celebration states
   const [lockedGroupModal, setLockedGroupModal] = useState<StudentAssignmentGroup | null>(null);
   const [unlockedCelebration, setUnlockedCelebration] = useState<{ id: string; title: string } | null>(null);
 
-  // Check if routed with ?lockedGroup=...
-  React.useEffect(() => {
-    const lockedParam = searchParams.get('lockedGroup');
-    if (lockedParam) {
-      const g = assignmentGroups.find(x => x.id === lockedParam);
-      if (g) {
-        setLockedGroupModal(g);
-      }
+  // Search query in Area 1
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Selected Group ID
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
+    const paramGid = searchParams.get('groupId') ?? initialGroupId;
+    if (paramGid && assignmentGroups.some(g => g.id === paramGid)) {
+      return paramGid;
     }
-  }, [searchParams, assignmentGroups]);
-
-  // Check for newly unlocked groups to show celebration
-  React.useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storageKey = `dolcake_unlocked_groups_${classId || 'default'}`;
-    let stored: string[] = [];
-    try {
-      stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    } catch {}
-
-    const newlyUnlocked = assignmentGroups.find(
-      g => g.prerequisiteGroupId && !g.isLocked && !stored.includes(g.id)
-    );
-
-    if (newlyUnlocked) {
-      setUnlockedCelebration({ id: newlyUnlocked.id, title: newlyUnlocked.title });
-      try {
-        localStorage.setItem(storageKey, JSON.stringify([...stored, newlyUnlocked.id]));
-      } catch {}
+    const paramAid = searchParams.get('assignmentId') ?? initialAssignmentId;
+    if (paramAid) {
+      const foundGrp = assignmentGroups.find(g => g.items.some(i => i.assignment.id === paramAid));
+      if (foundGrp) return foundGrp.id;
     }
-  }, [assignmentGroups, classId]);
+    const firstUnlocked = assignmentGroups.find(g => !g.isLocked && g.items.length > 0);
+    return firstUnlocked?.id || assignmentGroups[0]?.id || '';
+  });
 
+  // Expanded Groups in Accordion Tree (Area 1)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    assignmentGroups.forEach(g => {
+      initial[g.id] = true; // Default expand all groups for easy navigation
+    });
+    return initial;
+  });
+
+  const toggleGroupExpand = (groupId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
+
+  // Active Group object
   const activeGroup = useMemo(() => {
-    return activeGroupId 
-      ? assignmentGroups.find((g) => g.id === activeGroupId) || null
-      : null;
-  }, [activeGroupId, assignmentGroups]);
+    return assignmentGroups.find(g => g.id === selectedGroupId) || assignmentGroups[0] || null;
+  }, [assignmentGroups, selectedGroupId]);
 
-  const handleSelectGroup = (groupId: string) => {
-    setSelectedGroupId(groupId);
-    setIsViewAll(false);
+  // Parsed items for active group
+  const activeGroupParsedItems = useMemo<ParsedItemConfig[]>(() => {
+    if (!activeGroup) return [];
+    return activeGroup.items.map(parseItemConfig);
+  }, [activeGroup]);
 
+  // Selected Assignment ID
+  const [activeAssignmentId, setActiveAssignmentId] = useState<string>(() => {
+    const paramAid = searchParams.get('assignmentId') ?? initialAssignmentId;
+    if (paramAid && activeGroup?.items.some(i => i.assignment.id === paramAid)) {
+      return paramAid;
+    }
+    // Look in activeGroup items: prefer first uncompleted
+    const firstUncompleted = activeGroup?.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
+    return firstUncompleted?.assignment.id || activeGroup?.items[0]?.assignment.id || '';
+  });
+
+  // Active Item Config
+  const activeItemConfig = useMemo(() => {
+    return activeGroupParsedItems.find(p => p.item.assignment.id === activeAssignmentId) || activeGroupParsedItems[0] || null;
+  }, [activeGroupParsedItems, activeAssignmentId]);
+
+  // Stage Tabs available in active group
+  const availableStages = useMemo(() => {
+    if (!activeGroupParsedItems.length) return [];
+    const stageOrder: ActivityStage[] = ['lesson', 'flashcard', 'exercise', 'reading', 'game', 'review', 'other'];
+    const stageMeta: Record<ActivityStage, { label: string; icon: React.ReactNode }> = {
+      lesson: { label: 'Lý thuyết', icon: <BookOpen className="w-4 h-4" /> },
+      flashcard: { label: 'Từ vựng', icon: <Layers className="w-4 h-4" /> },
+      exercise: { label: 'Bài tập', icon: <ClipboardList className="w-4 h-4" /> },
+      reading: { label: 'Đọc & Nói', icon: <BookText className="w-4 h-4" /> },
+      game: { label: 'Trò chơi', icon: <Gamepad2 className="w-4 h-4" /> },
+      review: { label: 'Ôn tập', icon: <RotateCcw className="w-4 h-4" /> },
+      other: { label: 'Khác', icon: <Sparkles className="w-4 h-4" /> },
+    };
+
+    const stagesMap = new Map<ActivityStage, ParsedItemConfig[]>();
+    activeGroupParsedItems.forEach(it => {
+      const list = stagesMap.get(it.stage) || [];
+      list.push(it);
+      stagesMap.set(it.stage, list);
+    });
+
+    return stageOrder
+      .filter(s => (stagesMap.get(s)?.length || 0) > 0)
+      .map(stageId => ({
+        id: stageId,
+        label: stageMeta[stageId].label,
+        icon: stageMeta[stageId].icon,
+        items: stagesMap.get(stageId) || [],
+      }));
+  }, [activeGroupParsedItems]);
+
+  // Active Stage Tab in Area 2
+  const [activeStageId, setActiveStageId] = useState<ActivityStage>(() => {
+    const paramTab = (searchParams.get('tab') ?? initialTab) as ActivityStage;
+    if (paramTab && availableStages.some(s => s.id === paramTab)) {
+      return paramTab;
+    }
+    return activeItemConfig?.stage || availableStages[0]?.id || 'exercise';
+  });
+
+  // Sync active stage with active item when active item changes
+  useEffect(() => {
+    if (activeItemConfig && activeItemConfig.stage !== activeStageId) {
+      setActiveStageId(activeItemConfig.stage);
+    }
+  }, [activeItemConfig]);
+
+  // Current stage items
+  const currentStageItems = useMemo(() => {
+    const foundStage = availableStages.find(s => s.id === activeStageId);
+    return foundStage?.items || [];
+  }, [availableStages, activeStageId]);
+
+  // Synchronize URL query params
+  const updateQueryParams = (groupId: string, assignmentId: string, stageId: string) => {
     try {
       const params = new URLSearchParams(window.location.search);
       params.set('groupId', groupId);
+      params.set('assignmentId', assignmentId);
+      params.set('tab', stageId);
       params.delete('viewAll');
       const query = params.toString();
       window.history.pushState(null, '', query ? `${pathname}?${query}` : pathname);
     } catch {}
   };
 
-  const handleGroupCardClick = (group: StudentAssignmentGroup) => {
-    if (group.isLocked) {
-      setLockedGroupModal(group);
+  // Switch to a new Group
+  const handleSelectGroup = (groupId: string) => {
+    const grp = assignmentGroups.find(g => g.id === groupId);
+    if (!grp) return;
+
+    if (grp.isLocked) {
+      setLockedGroupModal(grp);
       return;
     }
-    handleSelectGroup(group.id);
+
+    setSelectedGroupId(groupId);
+    // Ensure expanded
+    setExpandedGroups(prev => ({ ...prev, [groupId]: true }));
+
+    // Pick first uncompleted item or first item
+    const uncompleted = grp.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
+    const chosen = uncompleted || grp.items[0];
+
+    if (chosen) {
+      const cfg = parseItemConfig(chosen);
+      setActiveAssignmentId(chosen.assignment.id);
+      setActiveStageId(cfg.stage);
+      updateQueryParams(groupId, chosen.assignment.id, cfg.stage);
+    } else {
+      updateQueryParams(groupId, '', '');
+    }
   };
 
-  const handleBackToGroupList = () => {
-    setSelectedGroupId(null);
-    setIsViewAll(true);
+  // Switch to a new Assignment
+  const handleSelectAssignment = (item: StudentGroupItem, parentGroupId: string) => {
+    const grp = assignmentGroups.find(g => g.id === parentGroupId);
+    if (grp?.isLocked) {
+      setLockedGroupModal(grp);
+      return;
+    }
 
-    try {
-      const params = new URLSearchParams(window.location.search);
-      params.delete('groupId');
-      params.set('viewAll', 'true');
-      const query = params.toString();
-      window.history.pushState(null, '', query ? `${pathname}?${query}` : pathname);
-    } catch {}
+    const cfg = parseItemConfig(item);
+    setSelectedGroupId(parentGroupId);
+    setActiveAssignmentId(item.assignment.id);
+    setActiveStageId(cfg.stage);
+    updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
   };
 
-  // Helper to parse kind, targetUrl and UI representation for an item
-  const getItemConfig = (item: StudentGroupItem) => {
-    let targetUrl = `/student/assignments/${item.assignment.id}/run`;
-    let kind = 'EXERCISE';
-    let label = 'Grammar exercise';
+  // Switch Stage Tab (Area 2)
+  const handleSelectStageTab = (stageId: ActivityStage) => {
+    setActiveStageId(stageId);
+    const stageObj = availableStages.find(s => s.id === stageId);
+    if (stageObj && stageObj.items.length > 0) {
+      // If currently selected item is already in this stage, keep it; else select first item in stage
+      const itemInStage = stageObj.items.find(i => i.item.assignment.id === activeAssignmentId);
+      const chosenItem = itemInStage || stageObj.items[0];
+      setActiveAssignmentId(chosenItem.item.assignment.id);
+      updateQueryParams(selectedGroupId, chosenItem.item.assignment.id, stageId);
+    }
+  };
 
-    if (item.assignment.instructions) {
-      try {
-        const meta = JSON.parse(item.assignment.instructions);
-        if (meta.playUrl) targetUrl = meta.playUrl;
-        if (meta.kind) kind = meta.kind;
-      } catch {}
+  // Next Activity CTA
+  const handleNextActivity = () => {
+    if (!activeGroup) return;
+
+    // Find index of current item in activeGroup
+    const currentIndex = activeGroup.items.findIndex(i => i.assignment.id === activeAssignmentId);
+    if (currentIndex >= 0 && currentIndex < activeGroup.items.length - 1) {
+      // Next item in current group
+      const nextItem = activeGroup.items[currentIndex + 1];
+      handleSelectAssignment(nextItem, activeGroup.id);
+      return;
     }
 
-    if (item.assignment.materialType === 'READING') {
-      kind = 'READING';
-    } else if (item.assignment.materialType === 'FLASHCARD') {
-      kind = 'FLASHCARD';
-    } else if (kind === 'GRAMMAR' || kind === 'EXERCISE') {
-      kind = 'EXERCISE';
-    }
-
-    if (kind === 'EXERCISE' || kind === 'READING' || kind === 'GRAMMAR') {
-      if (!targetUrl.includes('direct=true')) {
-        const separator = targetUrl.includes('?') ? '&' : '?';
-        targetUrl = `${targetUrl}${separator}direct=true`;
+    // Try finding next unlocked group
+    const currentGroupIndex = assignmentGroups.findIndex(g => g.id === activeGroup.id);
+    if (currentGroupIndex >= 0 && currentGroupIndex < assignmentGroups.length - 1) {
+      const nextGroup = assignmentGroups[currentGroupIndex + 1];
+      if (!nextGroup.isLocked && nextGroup.items.length > 0) {
+        handleSelectGroup(nextGroup.id);
       }
     }
-    if (!targetUrl.includes('fromClass=true')) {
-      const separator = targetUrl.includes('?') ? '&' : '?';
-      targetUrl = `${targetUrl}${separator}fromClass=true`;
-    }
-
-    if (targetUrl && !targetUrl.includes('assignmentId=')) {
-      const separator = targetUrl.includes('?') ? '&' : '?';
-      targetUrl = `${targetUrl}${separator}assignmentId=${item.assignment.id}`;
-    }
-
-    let iconNode = <ClipboardList className="w-5 h-5 stroke-[1.8px]" />;
-    let boxClass = 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-    let badgeClass = 'bg-blue-100/80 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60';
-    label = 'Grammar exercise';
-
-    if (kind === 'LESSON') {
-      iconNode = <BookOpen className="w-5 h-5 stroke-[1.8px]" />;
-      boxClass = 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
-      badgeClass = 'bg-indigo-100/80 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60';
-      label = 'Grammar lesson';
-    } else if (kind === 'EXERCISE') {
-      iconNode = <ClipboardList className="w-5 h-5 stroke-[1.8px]" />;
-      boxClass = 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-      badgeClass = 'bg-blue-100/80 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60';
-      label = 'Grammar exercise';
-    } else if (kind === 'GAME') {
-      iconNode = <Gamepad2 className="w-5 h-5 stroke-[1.8px]" />;
-      boxClass = 'bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400';
-      badgeClass = 'bg-pink-100/80 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 border border-pink-200/60 dark:border-pink-800/60';
-      label = 'Game';
-    } else if (kind === 'BOOK') {
-      iconNode = <BookOpen className="w-5 h-5 stroke-[1.8px]" />;
-      boxClass = 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
-      badgeClass = 'bg-amber-100/80 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60';
-      label = 'Shadowing';
-    } else if (kind === 'FLASHCARD') {
-      iconNode = <Layers className="w-5 h-5 stroke-[1.8px]" />;
-      boxClass = 'bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
-      badgeClass = 'bg-purple-100/80 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60';
-      label = 'Flashcard';
-    } else if (kind === 'READING') {
-      iconNode = <BookText className="w-5 h-5 stroke-[1.8px]" />;
-      boxClass = 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
-      badgeClass = 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60';
-      label = 'Reading';
-    }
-
-    return { targetUrl, kind, label, iconNode, boxClass, badgeClass };
   };
 
-  // Helper to count kinds breakdown in group
-  const getKindBreakdown = (items: StudentGroupItem[]) => {
-    const counts: Record<string, number> = {};
-    items.forEach((item) => {
-      let kind = 'Grammar exercise';
-      if (item.assignment.materialType === 'READING') {
-        kind = 'Reading';
-      } else if (item.assignment.materialType === 'FLASHCARD') {
-        kind = 'Flashcard';
-      } else if (item.assignment.instructions) {
-        try {
-          const meta = JSON.parse(item.assignment.instructions);
-          if (meta.kind === 'LESSON') kind = 'Grammar lesson';
-          else if (meta.kind === 'GAME') kind = 'Game';
-          else if (meta.kind === 'FLASHCARD') kind = 'Flashcard';
-          else if (meta.kind === 'READING') kind = 'Reading';
-          else if (meta.kind === 'BOOK') kind = 'Shadowing';
-          else if (meta.kind === 'EXERCISE' || meta.kind === 'GRAMMAR') kind = 'Grammar exercise';
-        } catch {}
+  // Listen to message events from iframe (game / quiz completion)
+  useEffect(() => {
+    const handleWindowMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data) return;
+
+      if (
+        data.type === 'ACTIVITY_COMPLETED' ||
+        data.type === 'CANDY_GAME_PROGRESS' || 
+        data.type === 'GAME_PROGRESS' ||
+        data.type === 'QUIZ_SUBMITTED'
+      ) {
+        const targetAid = data.assignmentId || activeAssignmentId;
+        const score = typeof data.score === 'number' ? data.score : null;
+        if (targetAid) {
+          setSubmissionsState(prev => ({
+            ...prev,
+            [targetAid]: { isSubmitted: true, score: score ?? prev[targetAid]?.score ?? null }
+          }));
+        }
       }
-      counts[kind] = (counts[kind] || 0) + 1;
+    };
+
+    window.addEventListener('message', handleWindowMessage);
+    return () => window.removeEventListener('message', handleWindowMessage);
+  }, [activeAssignmentId]);
+
+  // Multi-Iframe Tab Caching: Keeps previously opened activity iframes mounted in DOM
+  const MAX_IFRAME_POOL = 6;
+
+  const [cachedIframes, setCachedIframes] = useState<Record<string, { id: string; url: string; title: string }>>(() => {
+    if (activeItemConfig) {
+      return {
+        [activeItemConfig.item.assignment.id]: {
+          id: activeItemConfig.item.assignment.id,
+          url: activeItemConfig.embeddedUrl,
+          title: activeItemConfig.cleanTitle,
+        }
+      };
+    }
+    return {};
+  });
+  const [loadedIframes, setLoadedIframes] = useState<Record<string, boolean>>({});
+  const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
+  const prevClassIdRef = useRef<string>(classId);
+
+  // Preload an assignment item into the iframe pool (LRU limited)
+  const preloadAssignment = useCallback((item: StudentGroupItem) => {
+    if (!item?.assignment?.id || item.assignment.id.startsWith('locked_')) return;
+    const aid = item.assignment.id;
+    const cfg = parseItemConfig(item);
+
+    setCachedIframes(prev => {
+      if (prev[aid]) return prev;
+      const entries = Object.entries(prev);
+      let nextEntries = entries;
+      if (entries.length >= MAX_IFRAME_POOL) {
+        // Drop the oldest entry that is NOT currently active
+        const dropIndex = entries.findIndex(([id]) => id !== activeAssignmentId);
+        if (dropIndex >= 0) {
+          nextEntries = entries.filter((_, idx) => idx !== dropIndex);
+        }
+      }
+      return {
+        ...Object.fromEntries(nextEntries),
+        [aid]: { id: aid, url: cfg.embeddedUrl, title: cfg.cleanTitle }
+      };
     });
+  }, [activeAssignmentId]);
 
-    return Object.entries(counts).map(([label, count]) => ({ label, count }));
-  };
+  useEffect(() => {
+    if (activeItemConfig) {
+      const aid = activeItemConfig.item.assignment.id;
+      const url = activeItemConfig.embeddedUrl;
+      setCachedIframes(prev => {
+        if (prev[aid] && prev[aid].url === url) return prev;
+        const entries = Object.entries(prev);
+        let nextEntries = entries;
+        if (entries.length >= MAX_IFRAME_POOL) {
+          const dropIndex = entries.findIndex(([id]) => id !== aid);
+          if (dropIndex >= 0) {
+            nextEntries = entries.filter((_, idx) => idx !== dropIndex);
+          }
+        }
+        return {
+          ...Object.fromEntries(nextEntries),
+          [aid]: { id: aid, url, title: activeItemConfig.cleanTitle }
+        };
+      });
+    }
+  }, [activeItemConfig?.item.assignment.id, activeItemConfig?.embeddedUrl, activeItemConfig?.cleanTitle]);
 
-  // Filter groups
-  const filteredGroups = useMemo(() => {
-    return assignmentGroups.filter((group) => {
-      const totalInGroup = group.items.length;
-      const completedInGroup = group.items.filter(i => i.isSubmitted).length;
-      const isCompleted = totalInGroup > 0 && completedInGroup === totalInGroup;
-
-      if (filterTab === 'completed' && !isCompleted) return false;
-      if (filterTab === 'pending' && isCompleted) return false;
-
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchTitle = group.title.toLowerCase().includes(query);
-        const matchItem = group.items.some(i => i.assignment.title.toLowerCase().includes(query));
-        if (!matchTitle && !matchItem) return false;
+  // Next-in-line Preloading: When current assignment finishes loading, silently prefetch the next assignment
+  useEffect(() => {
+    if (!activeGroup || !activeAssignmentId || !loadedIframes[activeAssignmentId]) return;
+    const currentIndex = activeGroup.items.findIndex(i => i.assignment.id === activeAssignmentId);
+    if (currentIndex >= 0 && currentIndex < activeGroup.items.length - 1) {
+      const nextItem = activeGroup.items[currentIndex + 1];
+      if (nextItem && !nextItem.assignment.id.startsWith('locked_')) {
+        preloadAssignment(nextItem);
       }
+    }
+  }, [activeGroup, activeAssignmentId, loadedIframes, preloadAssignment]);
 
-      return true;
+  // Proactive group preloading: prefetch top 2-3 items of active group after mount
+  useEffect(() => {
+    if (!activeGroup?.items?.length) return;
+    const timer = setTimeout(() => {
+      activeGroup.items.slice(0, 3).forEach(item => {
+        if (!item.assignment.id.startsWith('locked_')) {
+          preloadAssignment(item);
+        }
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [selectedGroupId, activeGroup, preloadAssignment]);
+
+  // Reset cache only when classId actually changes (switching between different classes)
+  useEffect(() => {
+    if (prevClassIdRef.current !== classId) {
+      prevClassIdRef.current = classId;
+      setCachedIframes(activeItemConfig ? {
+        [activeItemConfig.item.assignment.id]: {
+          id: activeItemConfig.item.assignment.id,
+          url: activeItemConfig.embeddedUrl,
+          title: activeItemConfig.cleanTitle,
+        }
+      } : {});
+      setLoadedIframes({});
+      iframeRefs.current = {};
+    }
+  }, [classId, activeItemConfig]);
+
+  // Guaranteed iframe pool: ensures activeItemConfig is always rendered even before effect tick
+  const renderedIframes = useMemo(() => {
+    const pool = { ...cachedIframes };
+    if (activeItemConfig && !pool[activeItemConfig.item.assignment.id]) {
+      pool[activeItemConfig.item.assignment.id] = {
+        id: activeItemConfig.item.assignment.id,
+        url: activeItemConfig.embeddedUrl,
+        title: activeItemConfig.cleanTitle,
+      };
+    }
+    return pool;
+  }, [cachedIframes, activeItemConfig]);
+
+  const isCurrentIframeLoading = activeItemConfig 
+    ? !loadedIframes[activeItemConfig.item.assignment.id]
+    : false;
+
+  // Overall student progress calculation
+  const overallStats = useMemo(() => {
+    let total = 0;
+    let completed = 0;
+    assignmentGroups.forEach(g => {
+      g.items.forEach(it => {
+        total++;
+        if (submissionsState[it.assignment.id]?.isSubmitted) {
+          completed++;
+        }
+      });
     });
-  }, [assignmentGroups, filterTab, searchQuery]);
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { total, completed, percent };
+  }, [assignmentGroups, submissionsState]);
 
-  const totalGroupsCount = assignmentGroups.length;
-  const completedGroupsCount = assignmentGroups.filter(g => g.items.length > 0 && g.items.every(i => i.isSubmitted)).length;
-  const pendingGroupsCount = totalGroupsCount - completedGroupsCount;
+  // Filter groups in tree based on search query
+  const searchFilteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return assignmentGroups;
+    const q = searchQuery.toLowerCase().trim();
+    return assignmentGroups.map(group => {
+      const matchGroup = group.title.toLowerCase().includes(q);
+      const matchingItems = group.items.filter(it => it.assignment.title.toLowerCase().includes(q));
+      if (matchGroup || matchingItems.length > 0) {
+        return {
+          ...group,
+          items: matchGroup ? group.items : matchingItems,
+        };
+      }
+      return null;
+    }).filter(Boolean) as StudentAssignmentGroup[];
+  }, [assignmentGroups, searchQuery]);
+
+  // Current active submission status
+  const currentSubmission = activeItemConfig ? submissionsState[activeItemConfig.item.assignment.id] : null;
+  const isCurrentSubmitted = currentSubmission?.isSubmitted;
+  const currentScore = currentSubmission?.score;
 
   if (assignmentGroups.length === 0) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         {heroBanner}
-        <section className="space-y-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-              Bài tập & Hoạt động lớp
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Danh sách bài học được giáo viên giao theo từng buổi
-            </p>
+        <div className="p-12 text-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-dashed border-slate-200/80 dark:border-slate-700/80 rounded-3xl shadow-xs space-y-3">
+          <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mx-auto text-slate-400">
+            <FolderOpen className="w-7 h-7 stroke-[1.8px]" />
           </div>
-          <div className="p-12 text-center bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-dashed border-slate-200/80 dark:border-slate-700/80 rounded-3xl shadow-xs space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center mx-auto text-slate-400">
-              <FolderOpen className="w-7 h-7 stroke-[1.8px]" />
-            </div>
-            <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-200">Chưa có bài tập nào</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto leading-relaxed">
-              Giáo viên chưa giao bài tập cho lớp học này. Vui lòng quay lại sau hoặc liên hệ với giáo viên phụ trách nhé!
-            </p>
-          </div>
-        </section>
+          <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-200">Chưa có bài tập nào</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-xs max-w-sm mx-auto leading-relaxed">
+            Giáo viên chưa giao bài tập cho lớp học này. Vui lòng quay lại sau nhé!
+          </p>
+        </div>
       </div>
     );
   }
 
-  /* VIEW 1: DRILL-DOWN INTO SINGLE GROUP */
-  if (activeGroup) {
-    if (activeGroup.isLocked) {
-      return (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <button
-              type="button"
-              onClick={handleBackToGroupList}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700 shadow-xs transition-all cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4 stroke-[2.5px]" />
-              <span>Quay lại danh sách nhóm bài</span>
-            </button>
-
-            <Link
-              href="/student/classes"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-            >
-              <GraduationCap className="w-4 h-4 text-indigo-500" />
-              <span>Lớp học của tôi</span>
-            </Link>
-          </div>
-
-          <div className="p-8 sm:p-12 text-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-2 border-amber-300/80 dark:border-amber-900/60 rounded-[2rem] shadow-xl max-w-xl mx-auto space-y-6">
-            <div className="w-20 h-20 rounded-3xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md border border-amber-200 dark:border-amber-800">
-              <Lock className="w-10 h-10 stroke-[2px]" />
-            </div>
-
-            <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold text-xs uppercase tracking-wider">
-                Nhóm bài đang tạm khóa
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-                {activeGroup.title}
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed pt-1">
-                {activeGroup.lockReason}
-              </p>
-            </div>
-
-            {/* Prerequisite progress bar */}
-            <div className="bg-slate-50 dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-left max-w-md mx-auto space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 dark:text-slate-300 truncate">
-                  Tiến độ "{activeGroup.prerequisiteGroupTitle}":
-                </span>
-                <span className="text-amber-600 dark:text-amber-400 font-black shrink-0">
-                  {activeGroup.prerequisitePercent}% / {activeGroup.unlockThreshold}%
-                </span>
-              </div>
-              <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, activeGroup.prerequisitePercent || 0)}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              {activeGroup.prerequisiteGroupId && (
-                <button
-                  type="button"
-                  onClick={() => handleSelectGroup(activeGroup.prerequisiteGroupId!)}
-                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <FolderOpen className="w-4 h-4" />
-                  <span>Vào làm nhóm "{activeGroup.prerequisiteGroupTitle}" →</span>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleBackToGroupList}
-                className="w-full sm:w-auto px-5 py-3 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
-              >
-                Quay lại danh sách
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const totalInGroup = activeGroup.items.length;
-    const completedInGroup = activeGroup.items.filter(i => i.isSubmitted).length;
-    const groupPercent = totalInGroup > 0 ? Math.round((completedInGroup / totalInGroup) * 100) : 0;
-    const isAllCompleted = totalInGroup > 0 && completedInGroup === totalInGroup;
-
-    return (
-      <div className="space-y-6 animate-in fade-in duration-200">
-        {/* Top Navigation Bar */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={handleBackToGroupList}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 bg-white/80 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/80 dark:border-slate-700 shadow-xs transition-all cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 stroke-[2.5px]" />
-            <span>Quay lại danh sách nhóm bài</span>
-          </button>
-
-          <Link
-            href="/student/classes"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-          >
-            <GraduationCap className="w-4 h-4 text-indigo-500" />
-            <span>Lớp học của tôi</span>
-          </Link>
-        </div>
-
-        {/* Group Header Bento */}
-        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/60 rounded-[1.75rem] p-6 sm:p-7 shadow-xs">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
-                <FolderOpen className="w-7 h-7 stroke-[2px]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                    {activeGroup.title}
-                  </h2>
-                  <span className="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200/50">
-                    {totalInGroup} bài học
-                  </span>
-                </div>
-                {activeGroup.createdAt && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1 font-medium">
-                    <Calendar className="w-3.5 h-3.5 inline text-slate-400" />
-                    Ngày giao: {new Date(activeGroup.createdAt).toLocaleDateString('vi-VN')}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Progress summary indicator */}
-            <div className="bg-slate-50 dark:bg-slate-900/60 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-700/60">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className={`text-xs font-black flex items-center gap-1.5 ${
-                  isAllCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'
-                }`}>
-                  {isAllCompleted ? (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 inline" />
-                      Hoàn thành toàn bộ ({completedInGroup}/{totalInGroup})
-                    </>
-                  ) : (
-                    <>
-                      <CircleDashed className="w-4 h-4 inline" />
-                      Tiến độ: {completedInGroup}/{totalInGroup} đã làm ({groupPercent}%)
-                    </>
-                  )}
-                </span>
-              </div>
-              <div className="w-40 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    isAllCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'
-                  }`}
-                  style={{ width: `${groupPercent}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Child Items: Rendered into Pedagogical Learning Flow Lanes */}
-        <LearningFlowLanes items={activeGroup.items} />
-      </div>
-    );
-  }
-
-  /* VIEW 2: BENTO GRID OF GROUP CARDS */
   return (
-    <div className="space-y-8">
-      {/* 1. HERO BENTO CARD */}
-      {heroBanner}
+    <div className={`w-full transition-all duration-300 ${isZenMode ? 'fixed inset-0 z-[100] bg-slate-950 p-2 sm:p-4 overflow-hidden' : 'space-y-4'}`}>
+      
+      {/* ── UNIFIED 3-AREA WORKSPACE ── */}
+      <div className={`flex flex-col lg:flex-row items-stretch gap-4 sm:gap-5 w-full ${isZenMode ? 'h-full' : 'min-h-[820px]'}`}>
 
-      {/* 2. MAIN BENTO GRID */}
-      <section className="space-y-6">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            Bài tập & Hoạt động lớp
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Danh sách bài học được giáo viên giao theo từng buổi
-          </p>
-        </div>
+        {/* ══════════════════════════════════════════════════════════════════
+            KHU VỰC 1: SIDEBAR CÂY ĐIỀU HƯỚNG (Hierarchy Tree Drawer)
+            ══════════════════════════════════════════════════════════════════ */}
+        {!isZenMode && !isSidebarCollapsed && (
+          /* Khi mở menu: Hiển thị sidebar đầy đủ. Khi thu gọn: Ẩn hoàn toàn để khung bài làm chiếm 100% mép trái */
+          <aside className="w-full lg:w-[330px] xl:w-[360px] transition-all duration-300 flex flex-col shrink-0 animate-in fade-in slide-in-from-left-3 duration-200">
+              <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-[1.75rem] shadow-sm flex flex-col h-full overflow-hidden max-h-[860px]">
+                
+                {/* 1.1 Header: Class Selector & Collapse Toggle */}
+                <div className="p-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 relative">
+                  <div className="relative flex-1 min-w-0" ref={classDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsClassDropdownOpen(prev => !prev)}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/70 dark:hover:bg-slate-700/60 transition-colors text-left group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                          <GraduationCap className="w-4 h-4 stroke-[2.2px]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">Lớp học hiện tại</p>
+                          <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                            {currentClass?.name || 'Lớp học của tôi'}
+                          </h4>
+                        </div>
+                      </div>
+                      <ChevronsUpDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+                    </button>
 
-        {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
-          <button
-            type="button"
-            onClick={() => setFilterTab('all')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              filterTab === 'all'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Tất cả ({totalGroupsCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab('pending')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              filterTab === 'pending'
-                ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Cần làm ({pendingGroupsCount})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterTab('completed')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              filterTab === 'completed'
-                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Đã xong ({completedGroupsCount})
-          </button>
-        </div>
-
-        {/* Search input (if there are groups) */}
-        {assignmentGroups.length > 1 && (
-          <div className="relative min-w-[200px]">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo tên bài..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-xs text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Filtered Empty State */}
-      {filteredGroups.length === 0 ? (
-        <div className="p-10 text-center bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl space-y-2">
-          <p className="text-slate-500 dark:text-slate-400 text-xs font-medium">
-            Không tìm thấy nhóm bài tập nào phù hợp với bộ lọc.
-          </p>
-          <button
-            type="button"
-            onClick={() => { setFilterTab('all'); setSearchQuery(''); }}
-            className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-          >
-            Đặt lại bộ lọc
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filteredGroups.map((group) => {
-            const totalInGroup = group.items.length;
-            const completedInGroup = group.items.filter(i => i.isSubmitted).length;
-            const groupPercent = totalInGroup > 0 ? Math.round((completedInGroup / totalInGroup) * 100) : 0;
-            const isAllCompleted = totalInGroup > 0 && completedInGroup === totalInGroup;
-            const pendingInGroup = totalInGroup - completedInGroup;
-
-            const newCount = group.items.filter(i => {
-              try { return JSON.parse(i.assignment.instructions || '{}').section !== 'REVIEW'; } catch { return true; }
-            }).length;
-            const reviewCount = group.items.filter(i => {
-              try { return JSON.parse(i.assignment.instructions || '{}').section === 'REVIEW'; } catch { return false; }
-            }).length;
-
-            return (
-              <div
-                key={group.id}
-                onClick={() => handleGroupCardClick(group)}
-                className={`group relative backdrop-blur-xl rounded-[1.75rem] p-6 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden shadow-xs ${
-                  group.isLocked
-                    ? 'bg-amber-50/25 dark:bg-amber-950/15 border-2 border-amber-200/80 dark:border-amber-900/50 hover:border-amber-400 dark:hover:border-amber-600'
-                    : 'bg-white/90 dark:bg-slate-800/90 border border-slate-200/70 dark:border-slate-700/70 hover:border-indigo-400/60 dark:hover:border-indigo-500/60'
-                }`}
-              >
-                {/* Top Accent Gradient Bar */}
-                <div 
-                  className={`absolute top-0 inset-x-0 h-1.5 transition-opacity ${
-                    group.isLocked
-                      ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 opacity-80 group-hover:opacity-100'
-                      : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 opacity-60 group-hover:opacity-100'
-                  }`} 
-                />
-
-                <div>
-                  {/* Status Pills */}
-                  <div className="flex items-center gap-1.5 flex-wrap mb-3.5">
-                    {group.isLocked ? (
-                      <>
-                        <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300/70 flex items-center gap-1 shadow-xs">
-                          <Lock className="w-3 h-3 inline" />
-                          Đang khóa
-                        </span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                          {totalInGroup} bài
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/50">
-                          {newCount} bài mới
-                        </span>
-                        {reviewCount > 0 && (
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800/50">
-                            {reviewCount} ôn bài
-                          </span>
-                        )}
-                        {isAllCompleted ? (
-                          <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/70 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 inline" />
-                            Hoàn thành
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                            {completedInGroup}/{totalInGroup} bài
-                          </span>
-                        )}
-                      </>
+                    {/* Class Dropdown */}
+                    {isClassDropdownOpen && enrolledClasses.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-200">
+                        <p className="text-[10px] font-bold text-slate-400 px-3 py-1 uppercase tracking-wider">Đổi lớp học:</p>
+                        {enrolledClasses.map(cls => (
+                          <Link
+                            key={cls.id}
+                            href={`/student/classes/${cls.id}`}
+                            onClick={() => setIsClassDropdownOpen(false)}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                              cls.id === currentClass?.id 
+                                ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-black' 
+                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60'
+                            }`}
+                          >
+                            <span className="truncate">{cls.name}</span>
+                            {cls.id === currentClass?.id && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                          </Link>
+                        ))}
+                      </div>
                     )}
                   </div>
 
-                  {/* Group Title */}
-                  <h3 className={`font-black text-lg line-clamp-2 transition-colors leading-snug ${
-                    group.isLocked 
-                      ? 'text-slate-700 dark:text-slate-300 group-hover:text-amber-600 dark:group-hover:text-amber-400' 
-                      : 'text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
-                  }`}>
-                    {group.title}
-                  </h3>
+                  <button
+                    type="button"
+                    onClick={toggleSidebar}
+                    title="Thu gọn menu"
+                    className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                  >
+                    <PanelLeftClose className="w-4 h-4 stroke-[2px]" />
+                  </button>
+                </div>
 
-                  {/* Mini Task Capsules (Interactive Preview) */}
-                  <div className="mt-4 pt-3.5 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                      <span>Lộ trình bài học</span>
-                      <span>{totalInGroup} bài</span>
+                {/* Sidebar Content (Search Box & Accordion Tree) */}
+                <div className="flex-1 flex flex-col min-h-0">
+                  {/* 1.2 Search Box */}
+                  <div className="p-3 border-b border-slate-100 dark:border-slate-800/80">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input 
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Tìm bài học..."
+                        className="w-full pl-9 pr-8 py-2 bg-slate-100/70 dark:bg-slate-800/70 text-slate-800 dark:text-white placeholder-slate-400 text-xs rounded-xl border border-transparent focus:border-blue-500/50 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
+                  </div>
 
-                    {group.items.slice(0, 3).map((item) => {
-                      const cfg = getItemConfig(item);
-                      const titleClean = item.assignment.title.replace(/^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise|Reading|Bài đọc):\s*/i, '');
+                  {/* 1.4 Hierarchical Accordion Tree (Groups & Assignments) */}
+                  <div className="flex-1 overflow-y-auto p-2 space-y-2.5 custom-scrollbar">
+                    {searchFilteredGroups.map((group, groupIdx) => {
+                      const totalInGrp = group.items.length;
+                      const completedInGrp = group.items.filter(i => submissionsState[i.assignment.id]?.isSubmitted).length;
+                      const isGrpActive = group.id === selectedGroupId;
+                      const isExpanded = expandedGroups[group.id] ?? true;
 
                       return (
                         <div 
-                          key={item.assignment.id} 
-                          className="flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl bg-slate-50/90 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/80 hover:bg-white dark:hover:bg-slate-800 transition-all text-xs"
+                          key={group.id}
+                          className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                            isGrpActive 
+                              ? 'border-blue-200 dark:border-blue-800/60 bg-blue-50/20 dark:bg-blue-950/20' 
+                              : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-800/30'
+                          }`}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-5 h-5 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xs border border-slate-100 dark:border-slate-700">
-                              {cfg.kind === 'GAME' ? (
-                                <Gamepad2 className="w-3 h-3 text-pink-500" />
-                              ) : cfg.kind === 'LESSON' ? (
-                                <BookOpen className="w-3 h-3 text-indigo-500" />
-                              ) : cfg.kind === 'READING' ? (
-                                <BookText className="w-3 h-3 text-emerald-500" />
-                              ) : cfg.kind === 'FLASHCARD' ? (
-                                <Layers className="w-3 h-3 text-purple-500" />
+                          {/* Group Header Row */}
+                          <div
+                            onClick={() => handleSelectGroup(group.id)}
+                            onMouseEnter={() => {
+                              if (!group.isLocked && group.items[0]) {
+                                preloadAssignment(group.items[0]);
+                              }
+                            }}
+                            className={`flex items-center justify-between gap-2 p-3 text-left transition-colors cursor-pointer select-none ${
+                              isGrpActive 
+                                ? 'bg-blue-100/40 dark:bg-blue-900/30 text-blue-950 dark:text-blue-100' 
+                                : 'hover:bg-slate-100/60 dark:hover:bg-slate-800/60 text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <button
+                                type="button"
+                                onClick={(e) => toggleGroupExpand(group.id, e)}
+                                className="w-5 h-5 rounded-md hover:bg-slate-200/60 dark:hover:bg-slate-700/60 flex items-center justify-center text-slate-400 transition-colors shrink-0"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="w-3.5 h-3.5 stroke-[2.5px]" />
+                                ) : (
+                                  <ChevronRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                                )}
+                              </button>
+
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-black truncate leading-tight">
+                                  {group.title}
+                                </h4>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {group.isLocked ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-[10px] font-black">
+                                  <Lock className="w-3 h-3" /> Khóa
+                                </span>
                               ) : (
-                                <ClipboardList className="w-3 h-3 text-blue-500" />
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                                  completedInGrp === totalInGrp && totalInGrp > 0
+                                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black'
+                                    : 'bg-slate-200/70 dark:bg-slate-700/70 text-slate-600 dark:text-slate-400'
+                                }`}>
+                                  {completedInGrp}/{totalInGrp}
+                                </span>
                               )}
                             </div>
-                            <span className="truncate font-semibold text-slate-800 dark:text-slate-200">
-                              {titleClean}
-                            </span>
                           </div>
 
-                          {item.isSubmitted ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100/80 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-[10px] shrink-0">
-                              <Check className="w-2.5 h-2.5 stroke-[3px]" />
-                              Xong
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 font-semibold text-[10px] shrink-0 border border-amber-200/50">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                              Chưa làm
-                            </span>
+                          {/* Children Items (Level 3: Assignments in Group) */}
+                          {isExpanded && !group.isLocked && (
+                            <div className="py-1 px-1.5 space-y-1 border-t border-slate-100 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60">
+                              {group.items.map((item) => {
+                                const parsed = parseItemConfig(item);
+                                const isItemActive = item.assignment.id === activeAssignmentId;
+                                const isSubmitted = submissionsState[item.assignment.id]?.isSubmitted;
+                                const itemScore = submissionsState[item.assignment.id]?.score;
+
+                                return (
+                                  <button
+                                    key={item.assignment.id}
+                                    type="button"
+                                    onClick={() => handleSelectAssignment(item, group.id)}
+                                    onMouseEnter={() => preloadAssignment(item)}
+                                    className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                                      isItemActive
+                                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/20 translate-x-1'
+                                        : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                                        isItemActive 
+                                          ? 'bg-white/20 text-white' 
+                                          : parsed.badgeClass
+                                      }`}>
+                                        {parsed.iconNode}
+                                      </div>
+                                      <span className="truncate leading-snug">
+                                        {parsed.cleanTitle}
+                                      </span>
+                                    </div>
+
+                                    <div className="shrink-0 flex items-center gap-1">
+                                      {isSubmitted ? (
+                                        <div className={`flex items-center gap-1 text-[10px] font-black ${
+                                          isItemActive ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'
+                                        }`}>
+                                          {typeof itemScore === 'number' && (
+                                            <span>{formatScore(itemScore)}</span>
+                                          )}
+                                          <CheckCircle2 className="w-3.5 h-3.5" />
+                                        </div>
+                                      ) : (
+                                        <CircleDashed className={`w-3.5 h-3.5 ${
+                                          isItemActive ? 'text-white/60' : 'text-slate-300 dark:text-slate-600'
+                                        }`} />
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              </div>
+            </aside>
+        )}
 
-                    {group.items.length > 3 && (
-                      <div className="px-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 pt-0.5">
-                        <Sparkles className="w-3 h-3" />
-                        <span>+{group.items.length - 3} hoạt động học tập khác...</span>
+        {/* ══════════════════════════════════════════════════════════════════
+            KHU VỰC 2 & 3: MAIN VIEW (Header + Stage Tabs + Embedded Canvas)
+            ══════════════════════════════════════════════════════════════════ */}
+        <main className="flex-1 flex flex-col min-w-0 gap-3 sm:gap-4 transition-all duration-300">
+          
+          {/* ════════════════════════════════════════════════════════════════
+              KHU VỰC 2: TOP ACTION BAR & STAGES TABS (Chặng học tập)
+              ════════════════════════════════════════════════════════════════ */}
+          {!isSidebarCollapsed && (
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-[1.75rem] p-4 sm:p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
+              
+              {/* Top row: Breadcrumb, Title & Global Action CTAs */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  {/* Breadcrumb */}
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 mb-1 flex-wrap">
+                    <span>{currentClass?.name || 'Lớp học'}</span>
+                    <span>/</span>
+                    <span className="text-slate-600 dark:text-slate-300 truncate">{activeGroup?.title}</span>
+                  </div>
+
+                  {/* Active Activity Title */}
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                      {activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
+                    </h2>
+
+                    {/* Status Badges */}
+                    {activeItemConfig && (
+                      <div className="flex items-center gap-1.5">
+                        {isCurrentSubmitted ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] border border-emerald-200/60 dark:border-emerald-800/60">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{typeof currentScore === 'number' ? formatScore(currentScore) : 'Đã làm'}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-extrabold text-[11px]">
+                            <CircleDashed className="w-3.5 h-3.5" /> Chưa làm
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {/* Progress & CTA Footer */}
-                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-3">
-                  {group.isLocked ? (
-                    <>
-                      {/* Locked progress info */}
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 dark:text-slate-400 font-medium truncate">
-                          Mở sau &ldquo;{group.prerequisiteGroupTitle || 'nhóm trước'}&rdquo;
-                        </span>
-                      </div>
-
-                      {/* Locked Progress bar */}
-                      <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(100, group.prerequisitePercent || 0)}%` }}
-                        />
-                      </div>
-
-                      {/* Locked CTA Button */}
-                      <div className="pt-1">
-                        <div className="w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between bg-amber-100/80 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/60 group-hover:bg-amber-500 group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-xs">
-                          <span className="flex items-center gap-1.5 truncate">
-                            <Lock className="w-3.5 h-3.5 shrink-0" />
-                            <span className="truncate">Đang bị khóa</span>
-                          </span>
-                          <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1.5 transition-transform duration-300" />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Normal progress info */}
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 dark:text-slate-400 font-medium">Tiến độ bài làm</span>
-                        <span className={`font-black ${isAllCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>
-                          {completedInGroup}/{totalInGroup} bài ({groupPercent}%)
-                        </span>
-                      </div>
-
-                      {/* Segmented Step Bar (Stories style) */}
-                      <div className="flex items-center gap-1.5 w-full">
-                        {group.items.map((it, idx) => (
-                          <div 
-                            key={idx}
-                            className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                              it.isSubmitted 
-                                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-xs' 
-                                : 'bg-slate-200/80 dark:bg-slate-700'
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      {/* Smart Bento CTA Button */}
-                      <div className="pt-1">
-                        <div className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-between transition-all duration-300 ${
-                          isAllCompleted
-                            ? 'bg-emerald-100/80 dark:bg-emerald-950/50 text-emerald-900 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-800/60 group-hover:bg-emerald-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md'
-                            : 'bg-blue-200/90 dark:bg-blue-900/50 text-blue-950 dark:text-blue-200 border border-blue-300 dark:border-blue-700/60 group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:border-transparent group-hover:shadow-md'
-                        }`}>
-                          <span>
-                            {isAllCompleted
-                              ? 'Xem lại bài đã học' 
-                              : `Vào làm bài (còn ${pendingInGroup} bài)`}
-                          </span>
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
-            );
-          })}
-        </div>
-      )}
-      </section>
 
-      {/* MODAL: Locked Group Explanation */}
+            {/* Bottom row: Stages Tabs (Các chặng: Ôn tập, Ngữ pháp, Bài tập, Game, Đọc hiểu...) */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              
+              {/* Stages Tabs list */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+                {availableStages.map(stage => {
+                  const isActiveStage = stage.id === activeStageId;
+                  const completedInStage = stage.items.filter(i => submissionsState[i.item.assignment.id]?.isSubmitted).length;
+                  const isStageAllDone = stage.items.length > 0 && completedInStage === stage.items.length;
+
+                  return (
+                    <button
+                      key={stage.id}
+                      type="button"
+                      onClick={() => handleSelectStageTab(stage.id)}
+                      onMouseEnter={() => {
+                        if (stage.items[0]) preloadAssignment(stage.items[0].item);
+                      }}
+                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                        isActiveStage
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]'
+                          : 'bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <span className="shrink-0">{stage.icon}</span>
+                      <span>{stage.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                        isActiveStage 
+                          ? 'bg-white/25 text-white' 
+                          : isStageAllDone 
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
+                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                      }`}>
+                        {stage.items.length}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Sub-selector pills if current stage has 2+ items */}
+              {currentStageItems.length > 1 && (
+                <div className="flex items-center gap-1 overflow-x-auto py-0.5 custom-scrollbar">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Các bài:</span>
+                  {currentStageItems.map((stItem, idx) => {
+                    const isSelected = stItem.item.assignment.id === activeAssignmentId;
+                    const isSub = submissionsState[stItem.item.assignment.id]?.isSubmitted;
+
+                    return (
+                      <button
+                        key={stItem.item.assignment.id}
+                        type="button"
+                        onClick={() => handleSelectAssignment(stItem.item, selectedGroupId)}
+                        onMouseEnter={() => preloadAssignment(stItem.item)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                          isSelected
+                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-xs'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        <span>Bài {idx + 1}</span>
+                        {isSub && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+          )}
+
+          {/* ════════════════════════════════════════════════════════════════
+              KHU VỰC 3: MAIN EMBEDDED ACTIVITY CANVAS
+              ════════════════════════════════════════════════════════════════ */}
+          <div className={`relative flex-1 bg-white dark:bg-slate-900 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden flex flex-col transition-all duration-300 ${
+            isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
+          }`}>
+            
+            {/* Top Toolbar of Canvas */}
+            <div className="px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="truncate">
+                  {activeItemConfig?.stageLabel}: {activeItemConfig?.cleanTitle}
+                </span>
+                {/* If collapsed, show small status badge right in toolbar */}
+                {isSidebarCollapsed && activeItemConfig && (
+                  <span className="ml-1.5 shrink-0">
+                    {isCurrentSubmitted ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] border border-emerald-200/60">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>{typeof currentScore === 'number' ? formatScore(currentScore) : 'Đã làm'}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 font-extrabold text-[10px]">
+                        Chưa làm
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Toggle Focus Mode button */}
+                {!isZenMode && (
+                  <button
+                    type="button"
+                    title={isSidebarCollapsed ? "Mở lại menu bài học & thanh điều hướng" : "Thu gọn menu & thanh trên để tối đa khung làm bài"}
+                    onClick={toggleSidebar}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer font-bold text-xs ${
+                      isSidebarCollapsed 
+                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 hover:bg-blue-100 shadow-xs' 
+                        : 'hover:bg-slate-200/60 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {isSidebarCollapsed ? (
+                      <>
+                        <PanelLeftOpen className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Mở thanh điều hướng</span>
+                      </>
+                    ) : (
+                      <>
+                        <PanelLeftClose className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Thu gọn</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Embedded Iframe Container */}
+            <div className="relative flex-1 w-full h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+              {/* Smooth Top Progress Bar (YouTube/GitHub style) */}
+              {isCurrentIframeLoading && (
+                <div className="absolute top-0 left-0 right-0 z-30 h-1 overflow-hidden bg-slate-200/50 dark:bg-slate-800">
+                  <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 w-full animate-pulse" />
+                </div>
+              )}
+
+              {/* Zero White Screen Lesson Skeleton Loader */}
+              {isCurrentIframeLoading && activeItemConfig && (
+                <div className="absolute inset-0 z-20 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xs flex flex-col p-4 sm:p-8 animate-in fade-in duration-150 overflow-y-auto custom-scrollbar">
+                  <div className="max-w-3xl w-full mx-auto space-y-5">
+                    {/* Header info badge */}
+                    <div className="flex items-center gap-3 sm:gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
+                      <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 shadow-xs">
+                        {activeItemConfig.iconNode}
+                      </div>
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${activeItemConfig.badgeClass}`}>
+                            {activeItemConfig.stageLabel}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-bold">Đang nạp bài học...</span>
+                        </div>
+                        <p className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 truncate">
+                          {activeItemConfig.cleanTitle}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/60 text-xs font-bold shrink-0">
+                        <div className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                        <span className="hidden sm:inline">Chuẩn bị nội dung...</span>
+                      </div>
+                    </div>
+
+                    {/* Content skeleton simulation */}
+                    <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-5 animate-pulse">
+                      <div className="space-y-2.5">
+                        <div className="h-5 w-3/4 rounded-lg bg-slate-200 dark:bg-slate-800" />
+                        <div className="h-4 w-1/2 rounded-lg bg-slate-100 dark:bg-slate-800/60" />
+                      </div>
+                      
+                      <div className="h-32 sm:h-40 w-full rounded-2xl bg-slate-100/80 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
+                        <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center">
+                          <Sparkles className="w-5 h-5 animate-spin" />
+                        </div>
+                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                          Đang chuẩn bị câu hỏi & âm thanh bài học
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Khung bài học sẽ hiển thị ngay khi nạp xong
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
+                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
+                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
+                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Multi-iframe Pool (Tab Caching + Preloaded Pool) */}
+              {Object.keys(renderedIframes).length > 0 ? (
+                Object.values(renderedIframes).map(cItem => {
+                  const isActive = activeItemConfig?.item.assignment.id === cItem.id;
+                  const isLoaded = Boolean(loadedIframes[cItem.id]);
+                  return (
+                    <iframe
+                      key={cItem.id}
+                      ref={el => {
+                        iframeRefs.current[cItem.id] = el;
+                        if (isActive) iframeRef.current = el;
+                      }}
+                      src={cItem.url}
+                      onLoad={() => {
+                        setLoadedIframes(prev => ({ ...prev, [cItem.id]: true }));
+                      }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; microphone; fullscreen"
+                      className={`w-full h-full border-0 rounded-b-[1.75rem] min-h-[580px] lg:min-h-[660px] transition-opacity duration-300 ${
+                        isActive && isLoaded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                      }`}
+                      style={{
+                        position: isActive ? 'relative' : 'absolute',
+                        top: 0,
+                        left: 0,
+                        zIndex: isActive ? 1 : 0,
+                        visibility: isActive ? 'visible' : 'hidden',
+                        display: 'block'
+                      }}
+                    />
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-400">
+                  <BookOpen className="w-12 h-12 stroke-[1.5px] mb-3 text-slate-300" />
+                  <p className="font-bold text-sm">Vui lòng chọn một bài học từ menu bên trái.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          LOCKED GROUP MODAL (Giải thích điều kiện mở khóa nhóm)
+          ══════════════════════════════════════════════════════════════════ */}
       {lockedGroupModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] border-2 border-amber-300 dark:border-amber-800/80 shadow-2xl p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] border-2 border-amber-300 dark:border-amber-800 shadow-2xl p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-200">
             <button
+              type="button"
               onClick={() => setLockedGroupModal(null)}
-              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md border border-amber-200 dark:border-amber-800">
-              <Lock className="w-8 h-8 stroke-[2.2px]" />
+            <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md">
+              <Lock className="w-8 h-8 stroke-[2px]" />
             </div>
 
-            <div className="space-y-1.5">
-              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-extrabold text-[11px] uppercase tracking-wider">
+            <div className="space-y-2">
+              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-black text-[11px] uppercase tracking-wider">
                 Nhóm bài đang tạm khóa
               </span>
               <h3 className="text-xl font-black text-slate-900 dark:text-white pt-1">
                 {lockedGroupModal.title}
               </h3>
               <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed pt-1">
-                {lockedGroupModal.lockReason}
+                {lockedGroupModal.lockReason || 'Bạn cần hoàn thành nhóm bài trước để mở khóa nhóm bài này.'}
               </p>
             </div>
 
-            {/* Progress of Prerequisite */}
-            <div className="bg-slate-50 dark:bg-slate-800/70 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-left space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="text-slate-700 dark:text-slate-300 truncate">
-                  Tiến độ "{lockedGroupModal.prerequisiteGroupTitle}":
-                </span>
-                <span className="text-amber-600 dark:text-amber-400 font-black shrink-0">
-                  {lockedGroupModal.prerequisitePercent}% / {lockedGroupModal.unlockThreshold}%
-                </span>
+            {/* Prerequisite progress bar */}
+            {lockedGroupModal.prerequisiteGroupId && (
+              <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 text-left space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-slate-700 dark:text-slate-300 truncate">
+                    Tiến độ "{lockedGroupModal.prerequisiteGroupTitle}":
+                  </span>
+                  <span className="text-amber-600 dark:text-amber-400 font-black shrink-0">
+                    {lockedGroupModal.prerequisitePercent}% / {lockedGroupModal.unlockThreshold}%
+                  </span>
+                </div>
+                <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, lockedGroupModal.prerequisitePercent || 0)}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, lockedGroupModal.prerequisitePercent || 0)}%` }}
-                />
-              </div>
-            </div>
+            )}
 
             <div className="flex flex-col gap-2 pt-2">
               {lockedGroupModal.prerequisiteGroupId && (
                 <button
                   type="button"
                   onClick={() => {
-                    const targetPrereq = lockedGroupModal.prerequisiteGroupId!;
+                    const prereqId = lockedGroupModal.prerequisiteGroupId!;
                     setLockedGroupModal(null);
-                    handleSelectGroup(targetPrereq);
+                    handleSelectGroup(prereqId);
                   }}
                   className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <FolderOpen className="w-4 h-4" />
-                  <span>Làm nhóm "{lockedGroupModal.prerequisiteGroupTitle}" ngay →</span>
+                  <span>Vào làm nhóm trước ngay →</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setLockedGroupModal(null)}
-                className="w-full py-2.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                className="w-full py-2.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold text-xs rounded-xl transition-all cursor-pointer"
               >
-                Đã hiểu
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: Celebration Confetti Unlock Modal */}
+      {/* ══════════════════════════════════════════════════════════════════
+          UNLOCKED CELEBRATION MODAL (Ăn mừng mở khóa thành công)
+          ══════════════════════════════════════════════════════════════════ */}
       {unlockedCelebration && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden">
-          <style>{`
-            @keyframes confettiFall {
-              0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-              100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-            }
-            .animate-confetti-particle {
-              animation: confettiFall 3s linear infinite;
-            }
-          `}</style>
-          {/* Confetti Particles */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {[...Array(28)].map((_, i) => (
-              <span
-                key={i}
-                className="absolute block w-2.5 h-2.5 rounded-full animate-confetti-particle"
-                style={{
-                  left: `${(i * 3.5) + (i % 2 === 0 ? 1 : 2)}%`,
-                  top: `-20px`,
-                  backgroundColor: ['#f59e0b', '#3b82f6', '#ec4899', '#10b981', '#8b5cf6', '#ef4444'][i % 6],
-                  animationDelay: `${(i * 0.12).toFixed(2)}s`,
-                  animationDuration: `${2.2 + (i % 3) * 0.4}s`,
-                  transform: `rotate(${i * 24}deg)`
-                }}
-              />
-            ))}
-          </div>
-
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-emerald-400 dark:border-emerald-600 shadow-2xl p-6 sm:p-8 text-center space-y-5 animate-in zoom-in-95 duration-300">
             <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-400 to-teal-500 text-white flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30">
               <Sparkles className="w-10 h-10 animate-pulse" />
@@ -970,6 +1364,7 @@ export function StudentAssignmentsView({
           </div>
         </div>
       )}
+
     </div>
   );
 }

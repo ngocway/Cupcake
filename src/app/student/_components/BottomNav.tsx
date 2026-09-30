@@ -1,5 +1,6 @@
 'use client'
 
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { BookOpen, ClipboardList, Bookmark, TrendingUp, GraduationCap } from 'lucide-react'
@@ -18,9 +19,23 @@ interface BottomNavProps {
 
 export function BottomNav({ labels }: BottomNavProps) {
   const pathname = usePathname()
+  const [isEmbedded, setIsEmbedded] = useState(false)
 
-  // Only show BottomNav on main student portal pages (hide during quiz/game/run)
-  const isExcluded = pathname?.includes('/run') || pathname?.includes('/play') || pathname?.includes('/quiz') || pathname?.includes('/login') || pathname?.includes('/signup')
+  useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === 'true') {
+      setIsEmbedded(true)
+    }
+  }, [])
+
+  // Only show BottomNav on main student portal pages (hide during quiz/game/run or embedded iframe)
+  const isExcluded = 
+    pathname?.includes('/run') || 
+    pathname?.includes('/play') || 
+    pathname?.includes('/quiz') || 
+    pathname?.includes('/login') || 
+    pathname?.includes('/signup') || 
+    (pathname?.includes('/books/') && pathname !== '/student/books') ||
+    isEmbedded
   if (isExcluded) return null
 
   const isVisible = pathname === '/student/classes' || pathname?.startsWith('/student/classes') ||

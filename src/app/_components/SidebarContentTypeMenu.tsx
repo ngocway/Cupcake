@@ -48,6 +48,19 @@ export function SidebarContentTypeMenu() {
 
   const pathname = usePathname();
 
+  const studentClassesLoaded = useContentStore((s) => (s as any).studentClassesLoaded);
+  const setStudentClasses = useContentStore((s) => (s as any).setStudentClasses);
+
+  const prefetchClasses = () => {
+    if (!session?.user || studentClassesLoaded) return;
+    fetch("/api/student/classes")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setStudentClasses(data);
+      })
+      .catch(() => {});
+  };
+
   // Helper check if a tab is locked for Kindergarten users
   const isTabLocked = (tabId: string) => {
     return isKindergarten && (tabId === "lessons" || tabId === "exercises" || tabId === "shadowing");
@@ -215,6 +228,13 @@ export function SidebarContentTypeMenu() {
         .cefr-redesign-tile.story:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: book-float-anim 0.8s ease-in-out infinite;
         }
+        @keyframes cap-bounce {
+          0%, 100% { transform: translateY(0) rotate(0); }
+          50% { transform: translateY(-4px) rotate(-6deg); }
+        }
+        .cefr-redesign-tile.classes:hover .cefr-redesign-tile-icon .material-symbols-rounded {
+          animation: cap-bounce 0.6s ease-in-out infinite;
+        }
 
         .cefr-redesign-tile-top {
           display: flex;
@@ -267,6 +287,11 @@ export function SidebarContentTypeMenu() {
         .cefr-redesign-tile.story { background: #FFE0CC !important; }
         .cefr-redesign-tile.story .cefr-redesign-tile-icon { color: #E26D33; }
         .cefr-redesign-tile.story .cefr-redesign-tile-label { color: #E26D33; }
+
+        .cefr-redesign-tile.classes { background: #FFF3D6 !important; }
+        .cefr-redesign-tile.classes .cefr-redesign-tile-icon { color: #E58A1F; }
+        .cefr-redesign-tile.classes .cefr-redesign-tile-label { color: #C26C08; }
+        .cefr-redesign-tile.classes.active { border-color: #E58A1F; box-shadow: 0 0 10px rgba(229, 138, 31, 0.25); }
 
         /* Locked Tile Overlay Styles */
         .cefr-redesign-tile.locked-tile {
@@ -359,6 +384,22 @@ export function SidebarContentTypeMenu() {
             {locale === "vi" ? "Luyện tập nhanh" : "Quick Practice"}
           </p>
           <div className="cefr-redesign-tile-grid">
+            {/* Classes (Lớp học) - First */}
+            <div
+              onClick={() => handleSelectTab("classes")}
+              onMouseEnter={prefetchClasses}
+              className={`cefr-redesign-tile classes ${activeTab === "classes" ? "active" : ""}`}
+            >
+              <div className="cefr-redesign-tile-top">
+                <div className="cefr-redesign-tile-icon">
+                  <span className="material-symbols-rounded">school</span>
+                </div>
+              </div>
+              <p className="cefr-redesign-tile-label">
+                {locale === "vi" ? "Lớp học" : "Class"}
+              </p>
+            </div>
+
             {/* Games */}
             <div
               onClick={() => handleSelectTab("games")}

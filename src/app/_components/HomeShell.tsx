@@ -52,6 +52,15 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
   };
 
   const isTeacherPage = pathname.startsWith('/teacher');
+  const isEmbedded = searchParams?.get('embedded') === 'true';
+
+  if (isEmbedded) {
+    return (
+      <div className="text-foreground min-h-screen font-body p-0 bg-white dark:bg-slate-900">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div className={`text-foreground min-h-screen font-body selection:bg-primary/20 relative z-0 ${isTeacherPage ? 'bg-[#f8fafc]' : 'bg-[#e2f0e7]'}`}>

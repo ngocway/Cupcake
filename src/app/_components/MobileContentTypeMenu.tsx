@@ -23,6 +23,7 @@ export function MobileContentTypeMenu() {
 
   // Determine active tab from URL path or Zustand store
   const activeTab = useMemo(() => {
+    if (pathname.includes("/student/classes")) return "classes";
     if (pathname.includes("/exercises") || pathname.includes("/grammar")) return "exercises";
     if (pathname.includes("/lessons") || pathname.includes("/books") || pathname.includes("/public/lessons")) return "lessons";
     if (pathname.includes("/flashcards") || pathname.includes("/student/flashcards")) return "flashcards";
@@ -72,6 +73,13 @@ export function MobileContentTypeMenu() {
   };
 
   const items = [
+    {
+      id: "classes",
+      label: locale === "vi" ? "Lớp học" : "Class",
+      icon: "school",
+      bgClass: "bg-[#FFF3D6] text-[#C26C08] border-[#E58A1F]",
+      activeStyle: "border-[#E58A1F] ring-2 ring-[#E58A1F]/40 shadow-md scale-[1.03]",
+    },
     {
       id: "games",
       label: locale === "vi" ? "Trò chơi" : "Games",

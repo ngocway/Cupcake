@@ -12,6 +12,14 @@ export function SharedBackground() {
 
   if (!mounted) return null
 
+  // Chuyển sang nền trắng chỉ áp dụng riêng cho trang chi tiết lớp học học sinh (/student/classes/[id])
+  const isStudentClassDetail = pathname?.startsWith('/student/classes/') && pathname !== '/student/classes'
+  if (isStudentClassDetail) {
+    return (
+      <div className="fixed inset-0 -z-50 bg-white dark:bg-slate-950 pointer-events-none transition-colors duration-500" />
+    )
+  }
+
   const isHomepage = pathname === "/"
 
   return (
