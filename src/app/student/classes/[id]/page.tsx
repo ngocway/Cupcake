@@ -7,12 +7,13 @@ import { Lock } from 'lucide-react';
 import { StudentAssignmentsView, StudentAssignmentGroup } from './_components/StudentAssignmentsView';
 import { sortGroupItems } from './_utils/assignmentOrder';
 import { ClassHeroBento } from './_components/ClassHeroBento';
+import StudentClassDetailLoading from './loading';
 
 import { fetchWithRedis } from '@/lib/cached-queries';
 import { prewarmAssignmentsData } from '@/app/student/assignments/[id]/run/data';
 
 async function getStudentClassDetailData(userId: string, classId: string) {
-  return fetchWithRedis(`student:class-detail:${userId}:${classId}`, 60, async () => {
+  return fetchWithRedis(`student:class-detail:${userId}:${classId}`, 900, async () => {
     // 1. Fetch enrollment, rawAssignments, allGroups, allEnrolledClasses in parallel
     const [enrollment, rawAssignments, allGroups, allEnrolledClasses] = await Promise.all([
       prisma.classEnrollment.findUnique({
@@ -78,16 +79,17 @@ async function getStudentClassDetailData(userId: string, classId: string) {
       })
     ]);
 
-    // 2. Fetch submissions directly with indexed assignmentId in list (Fast Index Scan)
+    // 2. Fetch submissions directly with indexed assignmentId in list, strictly scoped to this class
     const assignmentIds = rawAssignments.map(a => a.assignmentId);
     const submissions = assignmentIds.length > 0
       ? await prisma.submission.findMany({
           where: {
             studentId: userId,
+            classId: id,
             assignmentId: { in: assignmentIds },
             submittedAt: { not: null }
           },
-          select: { assignmentId: true, score: true }
+          select: { assignmentId: true, groupId: true, score: true }
         })
       : [];
 
@@ -150,27 +152,19 @@ async function getStudentClassDetailData(userId: string, classId: string) {
   });
 }
 
-export default async function StudentClassDetailPage({ 
-  params,
+async function StudentClassDetailContent({ 
+  id,
+  userId,
   searchParams
 }: { 
-  params: Promise<{ id: string }>;
-  searchParams?: Promise<{ groupId?: string; viewAll?: string; assignmentId?: string; tab?: string }>;
+  id: string;
+  userId: string;
+  searchParams?: { groupId?: string; viewAll?: string; assignmentId?: string; tab?: string };
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    redirect('/login');
-  }
-
-  const [{ id }, resolvedSearchParams] = await Promise.all([
-    params,
-    searchParams ? searchParams : Promise.resolve({})
-  ]);
-  const initialGroupId = (resolvedSearchParams as any)?.groupId || null;
-  const initialViewAll = (resolvedSearchParams as any)?.viewAll === 'true';
-  const initialAssignmentId = (resolvedSearchParams as any)?.assignmentId || null;
-  const initialTab = (resolvedSearchParams as any)?.tab || null;
-  const userId = session.user.id;
+  const initialGroupId = (searchParams as any)?.groupId || null;
+  const initialViewAll = (searchParams as any)?.viewAll === 'true';
+  const initialAssignmentId = (searchParams as any)?.assignmentId || null;
+  const initialTab = (searchParams as any)?.tab || null;
 
   // Cached fetch with Redis + optimized indexed submissions query
   const {
@@ -217,15 +211,20 @@ export default async function StudentClassDetailPage({
     );
   }
 
-  const submittedAssignmentIds = new Set(submissions.map((s: any) => s.assignmentId));
-  const submissionScoreMap = new Map(
-    submissions.map((s: any) => [
-      s.assignmentId,
-      s.score !== null && s.score !== undefined
-        ? (typeof s.score === 'number' ? Number(s.score.toFixed(1)) : s.score)
-        : null,
-    ])
+  const submittedGroupKeys = new Set(
+    submissions.map((s: any) => (s.groupId ? `${s.assignmentId}_${s.groupId}` : s.assignmentId))
   );
+  const submittedAssignmentIds = new Set(submissions.map((s: any) => s.assignmentId));
+  const submissionScoreMap = new Map<string, number | null>();
+  submissions.forEach((s: any) => {
+    const val = s.score !== null && s.score !== undefined
+      ? (typeof s.score === 'number' ? Number(s.score.toFixed(1)) : s.score)
+      : null;
+    if (s.groupId) {
+      submissionScoreMap.set(`${s.assignmentId}_${s.groupId}`, val);
+    }
+    submissionScoreMap.set(s.assignmentId, val);
+  });
 
   // Group assignments by Group (or ungrouped legacy)
   const groupsMap = new Map<string, StudentAssignmentGroup>();
@@ -306,8 +305,17 @@ export default async function StudentClassDetailPage({
       }
     }
 
-    const isSubmitted = submittedAssignmentIds.has(ac.assignment.id);
+    const groupKey = ac.groupId ? `${ac.assignment.id}_${ac.groupId}` : null;
+    const isSubmitted = (groupKey && submittedGroupKeys.has(groupKey))
+      || submittedAssignmentIds.has(ac.assignment.id);
+
+    const score = (groupKey && submissionScoreMap.has(groupKey))
+      ? (submissionScoreMap.get(groupKey) ?? null)
+      : (submissionScoreMap.get(ac.assignment.id) ?? null);
+
     groupsMap.get(gId)!.items.push({
+      classId: id,
+      groupId: gId,
       assignment: {
         id: ac.assignment.id,
         slug: ac.assignment.slug,
@@ -323,7 +331,7 @@ export default async function StudentClassDetailPage({
       assignedAt: ac.assignedAt ? new Date(ac.assignedAt).toISOString() : new Date().toISOString(),
       dueDate: ac.dueDate ? new Date(ac.dueDate).toISOString() : null,
       isSubmitted,
-      score: submissionScoreMap.get(ac.assignment.id) ?? null,
+      score,
     });
   });
 
@@ -438,38 +446,64 @@ export default async function StudentClassDetailPage({
   const completedAssignments = submissions.length;
 
   return (
+    <StudentAssignmentsView 
+      assignmentGroups={assignmentGroups} 
+      initialGroupId={initialGroupId}
+      initialViewAll={initialViewAll}
+      initialAssignmentId={initialAssignmentId}
+      initialTab={initialTab}
+      classId={id}
+      currentClass={{
+        id: cls.id,
+        name: cls.name,
+        gradeLevel: cls.gradeLevel,
+        joinCode: cls.joinCode,
+        teacher: cls.teacher
+      }}
+      enrolledClasses={allEnrolledClasses.map(e => e.class)}
+      heroBanner={
+        <ClassHeroBento
+          name={cls.name}
+          teacher={cls.teacher}
+          gradeLevel={cls.gradeLevel}
+          joinCode={cls.joinCode}
+          totalAssignments={totalAssignments}
+          completedAssignments={completedAssignments}
+          nextTask={nextTask}
+          joinedAt={enrollment.joinedAt ? new Date(enrollment.joinedAt).toISOString() : null}
+        />
+      }
+    />
+  );
+}
+
+export default async function StudentClassDetailPage({ 
+  params,
+  searchParams
+}: { 
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ groupId?: string; viewAll?: string; assignmentId?: string; tab?: string }>;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
+
+  const [{ id }, resolvedSearchParams] = await Promise.all([
+    params,
+    searchParams ? searchParams : Promise.resolve({})
+  ]);
+
+  return (
     <div className="relative min-h-screen">
       {/* Nền trắng riêng biệt cho trang lớp học này (chống nhấp nháy SSR) */}
       <div className="fixed inset-0 -z-40 bg-white dark:bg-slate-950 pointer-events-none" />
       <div className="max-w-[1700px] w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pb-12 pt-3 sm:pt-4 relative z-0">
-        <Suspense fallback={<div className="h-96 animate-pulse bg-slate-100 dark:bg-slate-800 rounded-3xl" />}>
-          <StudentAssignmentsView 
-            assignmentGroups={assignmentGroups} 
-            initialGroupId={initialGroupId}
-            initialViewAll={initialViewAll}
-            initialAssignmentId={initialAssignmentId}
-            initialTab={initialTab}
-            classId={id}
-            currentClass={{
-              id: cls.id,
-              name: cls.name,
-              gradeLevel: cls.gradeLevel,
-              joinCode: cls.joinCode,
-              teacher: cls.teacher
-            }}
-            enrolledClasses={allEnrolledClasses.map(e => e.class)}
-            heroBanner={
-              <ClassHeroBento
-                name={cls.name}
-                teacher={cls.teacher}
-                gradeLevel={cls.gradeLevel}
-                joinCode={cls.joinCode}
-                totalAssignments={totalAssignments}
-                completedAssignments={completedAssignments}
-                nextTask={nextTask}
-                joinedAt={enrollment.joinedAt ? new Date(enrollment.joinedAt).toISOString() : null}
-              />
-            }
+        <Suspense fallback={<StudentClassDetailLoading />}>
+          <StudentClassDetailContent 
+            id={id} 
+            userId={session.user.id} 
+            searchParams={(resolvedSearchParams as any) || {}} 
           />
         </Suspense>
       </div>

@@ -615,6 +615,9 @@ interface Props {
   submissionScore?: number | null;
   isFromClass?: boolean;
   autoStart?: boolean;
+  onComplete?: (score: number, assignmentId: string) => void;
+  onRetry?: () => void;
+  isEmbeddedInCanvas?: boolean;
 }
 
 /** Resolves questionTranslationsPromise and renders ExplanationBlock with translations. 
@@ -807,6 +810,9 @@ export default function KidTeenQuizRunner({
   submissionScore = null,
   isFromClass = false,
   autoStart = false,
+  onComplete,
+  onRetry,
+  isEmbeddedInCanvas = false,
 }: Props) {
   const [activeQuestions, setActiveQuestions] = useState<any[]>(questions);
 
@@ -833,17 +839,27 @@ export default function KidTeenQuizRunner({
   const router = useRouter();
   const [, startTransition] = useTransition();
 
+  const hasNotifiedReviewCompleteRef = useRef(false);
+
   useEffect(() => {
-    if (isReviewMode && typeof window !== "undefined" && window.parent && window.parent !== window) {
-      try {
-        window.parent.postMessage({
-          type: "ACTIVITY_COMPLETED",
-          assignmentId: assignment?.id,
-          score: submissionScore
-        }, "*");
-      } catch {}
+    if (isReviewMode && !hasNotifiedReviewCompleteRef.current) {
+      hasNotifiedReviewCompleteRef.current = true;
+      if (onComplete && assignment?.id && submissionScore !== null && submissionScore !== undefined) {
+        setTimeout(() => {
+          onComplete(submissionScore, assignment.id);
+        }, 0);
+      }
+      if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({
+            type: "ACTIVITY_COMPLETED",
+            assignmentId: assignment?.id,
+            score: submissionScore
+          }, "*");
+        } catch {}
+      }
     }
-  }, [isReviewMode, assignment?.id, submissionScore]);
+  }, [isReviewMode, assignment?.id, submissionScore, onComplete]);
 
   // B1 and above get the green gradient background; A1/A2 keep the cartoon image.
   // The 'level' field in DB stores various formats: "b1", "b1,b1,b1", "intermediate", "upper_intermediate", etc.
@@ -910,9 +926,9 @@ export default function KidTeenQuizRunner({
     }
   };
 
-  // ── Background Music ─────────────────────────────────────
+  // ── Background Music (disabled when embedded in class assignment canvas) ──
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isEmbeddedInCanvas) return;
 
     const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
     bgMusic.loop = true;
@@ -945,7 +961,7 @@ export default function KidTeenQuizRunner({
       window.removeEventListener("mousedown", playMusic);
       window.removeEventListener("keydown", playMusic);
     };
-  }, []);
+  }, [isEmbeddedInCanvas]);
 
   // Listen to Hint audio play/pause events to track if hint is playing
   useEffect(() => {
@@ -1063,6 +1079,10 @@ export default function KidTeenQuizRunner({
   }, [isReviewMode, activeQuestions, answers]);
 
   const handleRetryAssignment = () => {
+    if (onRetry) {
+      onRetry();
+      return;
+    }
     const identifier = assignment.slug || assignment.id;
     const fromClassParam = isFromClass ? "&fromClass=true" : "";
     router.push(`/student/assignments/${identifier}/run?direct=true&newAttempt=true${fromClassParam}`);
@@ -1256,6 +1276,11 @@ export default function KidTeenQuizRunner({
         
         const correct = questions.filter((q) => getQuestionStatus(q, answers[q.id]) === "correct").length;
         setScoreResult({ correct, total: questions.length });
+
+        const calculatedScore = questions.length > 0 ? (correct / questions.length) * 10 : 10;
+        if (onComplete && assignment?.id) {
+          onComplete(calculatedScore, assignment.id);
+        }
 
         // Auto-complete and record submission in database if submissionId exists
         if (submissionId) {
@@ -1724,7 +1749,7 @@ export default function KidTeenQuizRunner({
     const qCount = assignment._count?.questions ?? activeQuestions.length;
     return (
       <div 
-        className={`min-h-screen font-body flex flex-col items-center justify-center p-6 w-full relative ${
+        className={`${isEmbeddedInCanvas ? 'h-full min-h-[580px] lg:min-h-[660px]' : 'min-h-screen'} font-body flex flex-col items-center justify-center p-6 w-full relative ${
           isHighLevel
             ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
             : "bg-cover bg-center bg-[#8cd2f6]"
@@ -1750,13 +1775,15 @@ export default function KidTeenQuizRunner({
           <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500"></div>
 
           {/* Close button (X) */}
-          <button
-            onClick={handleBackToClass}
-            className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
-            title="Đóng / Quay lại"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {!isEmbeddedInCanvas && (
+            <button
+              onClick={handleBackToClass}
+              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
+              title="Đóng / Quay lại"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Teacher avatar if available */}
           <div className="mb-6 flex justify-center">
@@ -1893,7 +1920,7 @@ export default function KidTeenQuizRunner({
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div className={`min-h-screen font-body flex flex-col ${
+    <div className={`${isEmbeddedInCanvas ? 'h-full min-h-[580px] lg:min-h-[660px]' : 'min-h-screen'} font-body flex flex-col ${
       isHighLevel
         ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
         : "bg-[#8cd2f6]"
@@ -1901,11 +1928,11 @@ export default function KidTeenQuizRunner({
       {/* B1+ floating decorative blobs */}
       {isHighLevel && (
         <>
-          <div className="fixed top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none -z-0" style={{ animationDuration:'10s' }} />
-          <div className="fixed bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none -z-0" style={{ animationDuration:'12s' }} />
-          <div className="fixed top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none -z-0" style={{ animationDuration:'15s' }} />
-          <div className="fixed top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none -z-0" style={{ animationDuration:'8s' }} />
-          <div className="fixed bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none -z-0" style={{ animationDuration:'10s' }} />
+          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none -z-0`} style={{ animationDuration:'10s' }} />
+          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none -z-0`} style={{ animationDuration:'12s' }} />
+          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none -z-0`} style={{ animationDuration:'15s' }} />
+          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none -z-0`} style={{ animationDuration:'8s' }} />
+          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none -z-0`} style={{ animationDuration:'10s' }} />
         </>
       )}
       <SelectionTranslator />
@@ -1917,36 +1944,40 @@ export default function KidTeenQuizRunner({
         {/* ── FLOATING TOP-LEFT CONTROLS (Logo, Sound, Back & Retry) ── */}
         <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2 sm:gap-2.5">
           {/* Dolcake Logo - về trang chủ */}
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-md hover:bg-white/80 transition-all active:scale-95 group"
-            title="Về trang chủ"
-          >
-            <img
-              src="/images/logo.png"
-              alt="Dolcake"
-              className="w-7 h-7 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
-            />
-            <div className="flex flex-col text-left">
-              <span className="font-headline font-black text-base tracking-tighter text-primary leading-none">Dolcake</span>
-              <span className="text-[7px] font-black text-primary/60 tracking-[0.3em] uppercase hidden sm:block">Student Portal</span>
-            </div>
-          </button>
+          {!isEmbeddedInCanvas && (
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-md hover:bg-white/80 transition-all active:scale-95 group"
+              title="Về trang chủ"
+            >
+              <img
+                src="/images/logo.png"
+                alt="Dolcake"
+                className="w-7 h-7 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
+              />
+              <div className="flex flex-col text-left">
+                <span className="font-headline font-black text-base tracking-tighter text-primary leading-none">Dolcake</span>
+                <span className="text-[7px] font-black text-primary/60 tracking-[0.3em] uppercase hidden sm:block">Student Portal</span>
+              </div>
+            </button>
+          )}
 
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className="flex items-center justify-center p-2 bg-white/60 backdrop-blur-md text-purple-600 rounded-full border border-white/80 hover:bg-white/80 transition-all active:scale-95 shadow-md"
-            title={isMuted ? "Unmute music" : "Mute music"}
-          >
-            {isMuted ? (
-              <VolumeX className="w-5 h-5 text-rose-500" />
-            ) : (
-              <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
-            )}
-          </button>
+          {!isEmbeddedInCanvas && (
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className="flex items-center justify-center p-2 bg-white/60 backdrop-blur-md text-purple-600 rounded-full border border-white/80 hover:bg-white/80 transition-all active:scale-95 shadow-md"
+              title={isMuted ? "Unmute music" : "Mute music"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5 text-rose-500" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
+              )}
+            </button>
+          )}
 
           {/* Nút Về lớp học */}
-          {isFromClass && (
+          {isFromClass && !isEmbeddedInCanvas && (
             <button
               onClick={handleBackToClass}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white/70 hover:bg-white text-slate-700 dark:text-slate-200 rounded-full border border-white/80 font-bold text-xs uppercase tracking-wider shadow-xs hover:shadow-md active:scale-95 transition-all cursor-pointer backdrop-blur-md"

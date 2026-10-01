@@ -8,6 +8,7 @@ interface CompleteActivityParams {
   assignmentId: string;
   score?: number | null;
   classId?: string;
+  groupId?: string;
 }
 
 /**
@@ -18,6 +19,7 @@ export async function completeClassActivityAction({
   assignmentId,
   score = null,
   classId,
+  groupId,
 }: CompleteActivityParams) {
   try {
     const session = await auth();
@@ -34,6 +36,8 @@ export async function completeClassActivityAction({
       where: {
         assignmentId,
         studentId,
+        classId: classId || undefined,
+        groupId: groupId || undefined,
         submittedAt: { not: null },
       },
     });
@@ -41,13 +45,19 @@ export async function completeClassActivityAction({
     if (!existing) {
       // Tìm số lần làm trước đó nếu có
       const previousCount = await prisma.submission.count({
-        where: { assignmentId, studentId },
+        where: { 
+          assignmentId, 
+          studentId,
+          classId: classId || undefined 
+        },
       });
 
       await prisma.submission.create({
         data: {
           assignmentId,
           studentId,
+          classId: classId || null,
+          groupId: groupId || null,
           startedAt: new Date(),
           submittedAt: new Date(),
           score: score !== undefined ? score : null,
@@ -61,6 +71,8 @@ export async function completeClassActivityAction({
         data: {
           score,
           submittedAt: new Date(),
+          ...(classId && !existing.classId ? { classId } : {}),
+          ...(groupId && !existing.groupId ? { groupId } : {}),
         },
       });
     }

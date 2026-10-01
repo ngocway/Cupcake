@@ -106,7 +106,7 @@ export function AssignContentModal({
   const [creating, setCreating] = useState(false);
 
   // Tabs & filters
-  const [activeSource, setActiveSource] = useState<'mine' | 'library' | 'recent'>('mine');
+  const [activeSource, setActiveSource] = useState<'mine' | 'library' | 'recent'>('library');
   const [searchTerm, setSearchTerm] = useState('');
   const [contentType, setContentType] = useState('ALL');
   const [level, setLevel] = useState('ALL');
@@ -167,7 +167,7 @@ export function AssignContentModal({
         level: effectiveLevel,
         source: effectiveSource,
         classId,
-        limit: 30
+        limit: 50
       });
       setHasSearched(true);
       setIsFromLink(!!res.isFromLink);
@@ -288,6 +288,21 @@ export function AssignContentModal({
             <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
               {formatLevelBadge(item.level)}
             </span>
+            {item.badgeLabel && (
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
+                item.badgeLabel === 'Giáo viên tạo'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                  : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300'
+              }`}>
+                {item.badgeLabel === 'Giáo viên tạo' && <span className="material-symbols-outlined text-[13px]">person_check</span>}
+                {item.badgeLabel}
+              </span>
+            )}
+            {item.authorName && (
+              <span className="text-[11px] text-[#617589] dark:text-gray-400 font-medium">
+                Bởi {item.authorName}
+              </span>
+            )}
             {isFromLinkMatch && (
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300 flex items-center gap-1 border border-blue-200 dark:border-blue-800">
                 <span className="material-symbols-outlined text-[13px]">link</span>

@@ -78,6 +78,7 @@ export async function GET(
     // Get all submissions for these students and these assignments
     const submissions = await prisma.submission.findMany({
       where: {
+        classId: id,
         studentId: { in: studentIds },
         assignmentId: { in: assignmentIds },
         submittedAt: { not: null }

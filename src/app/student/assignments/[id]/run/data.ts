@@ -127,6 +127,103 @@ export const getAssignmentTranslations = async (assignmentId: string) => {
   });
 };
 
+/**
+ * Cached Quiz Runner Template (Static questions, translations, instructions, teacher meta).
+ * Shared across ALL students and cached in Redis with 1h TTL.
+ */
+export const getCachedQuizRunnerTemplate = async (assignmentId: string) => {
+  return fetchWithRedis(`assignment:runner-template:v2:${assignmentId}`, 3600, async () => {
+    // 1. Lean query without expensive _count aggregations
+    const assignmentRecord = await prisma.assignment.findFirst({
+      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        tags: true,
+        level: true,
+        materialType: true,
+        grammarLesson: true,
+        targetAudiences: true,
+        readingText: true,
+        instructions: true,
+        instructionsImageUrl: true,
+        videoUrl: true,
+        audioUrl: true,
+        teacher: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            professionalTitle: true,
+            bio: true,
+            isPortfolioPublished: true,
+          }
+        },
+        lesson: {
+          select: {
+            id: true,
+            videoUrl: true,
+            audioUrl: true,
+            targetAudiences: true
+          }
+        }
+      }
+    });
+
+    if (!assignmentRecord) return null;
+    const actualAssignmentId = assignmentRecord.id;
+
+    // 2. Parallel fetch questions, translations & extra grammar instructions
+    const [questions, questionTranslations, assignmentTranslations, grammarLesson] = await Promise.all([
+      getCachedAssignmentQuestions(actualAssignmentId),
+      getQuestionTranslationMap(actualAssignmentId),
+      getAssignmentTranslations(actualAssignmentId),
+      assignmentRecord.grammarLesson 
+        ? prisma.grammarLesson.findUnique({
+            where: { id: assignmentRecord.grammarLesson },
+            select: { instructions: true }
+          })
+        : Promise.resolve(null)
+    ]);
+
+    let instructions = assignmentRecord.instructions;
+    if (grammarLesson?.instructions) {
+      instructions = grammarLesson.instructions;
+    }
+
+    const extraData = {
+      readingText: assignmentRecord.readingText,
+      instructions,
+      instructionsImageUrl: assignmentRecord.instructionsImageUrl,
+      videoUrl: assignmentRecord.videoUrl,
+      audioUrl: assignmentRecord.audioUrl,
+      teacher: assignmentRecord.teacher,
+      lesson: assignmentRecord.lesson,
+      favoriteAssignments: []
+    };
+
+    return {
+      actualAssignmentId,
+      assignment: {
+        id: assignmentRecord.id,
+        title: assignmentRecord.title,
+        slug: assignmentRecord.slug,
+        tags: assignmentRecord.tags,
+        level: assignmentRecord.level,
+        materialType: assignmentRecord.materialType,
+        grammarLesson: assignmentRecord.grammarLesson,
+        targetAudiences: assignmentRecord.targetAudiences,
+        _count: { questions: questions.length }
+      },
+      questions,
+      questionTranslations,
+      assignmentTranslations,
+      extraData
+    };
+  });
+};
+
 
 export const getRelatedAssignmentsCached = async (assignmentId: string, assignmentTags: string | null, targetAudiences: string[]) => {
   return fetchWithRedis(`assignment:related:v2:${assignmentId}`, 900, async () => {

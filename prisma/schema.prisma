@@ -126,6 +126,7 @@ model Class {
   teacher         User              @relation("TeacherClasses", fields: [teacherId], references: [id])
   enrollments     ClassEnrollment[]
   assignedLessons LessonClass[]
+  submissions     Submission[]
 }
 
 model ClassEnrollment {
@@ -240,6 +241,8 @@ model AssignmentClass {
   class               Class            @relation(fields: [classId], references: [id])
 
   @@id([assignmentId, classId])
+  @@index([classId, assignedAt(sort: Desc)])
+  @@index([classId])
   @@index([groupId])
 }
 
@@ -265,6 +268,7 @@ model AssignmentGroup {
 
   class                Class             @relation(fields: [classId], references: [id], onDelete: Cascade)
   assignments          AssignmentClass[]
+  submissions          Submission[]
 
   @@index([classId])
   @@index([createdAt])
@@ -316,6 +320,8 @@ model Submission {
   id             String             @id @default(cuid())
   assignmentId   String
   studentId      String
+  classId        String?
+  groupId        String?
   startedAt      DateTime           @default(now())
   submittedAt    DateTime?
   attemptNumber  Int                @default(1)
@@ -326,10 +332,16 @@ model Submission {
   feedback       String?
   assignment     Assignment         @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   student        User               @relation(fields: [studentId], references: [id])
+  class          Class?             @relation(fields: [classId], references: [id], onDelete: SetNull)
+  group          AssignmentGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
   answers        SubmissionAnswer[]
 
   @@index([assignmentId])
   @@index([studentId])
+  @@index([studentId, assignmentId])
+  @@index([classId])
+  @@index([groupId])
+  @@index([studentId, assignmentId, classId])
 }
 
 model SubmissionAnswer {

@@ -28,6 +28,9 @@ function GlobalLoaderContent() {
       // Ignore links that open in a new tab
       if (anchor.target === "_blank") return;
 
+      // Ignore links with local loaders that opt out of the global overlay
+      if (anchor.hasAttribute("data-no-global-loader") || anchor.closest("[data-no-global-loader]")) return;
+
       // Ignore non-http/https protocols (mailto:, tel:, javascript:)
       if (!targetUrl.protocol.startsWith("http")) return;
 

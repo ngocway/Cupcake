@@ -1676,13 +1676,21 @@ function getGamePlayUrl(topic: { id: string; gameMode?: string | null }) {
   if (mode === "train") return `/student/game/train?topicId=${topic.id}`;
   if (mode === "cut-rope") return `/student/game/cut-rope?topicId=${topic.id}`;
   if (mode === "conveyor-drop") return `/student/game/conveyor-drop?topicId=${topic.id}`;
-  if (mode === "match-text-text") return `/student/game/match-text-text?topicId=${topic.id}`;
-  if (mode === "choice") return `/student/game/egg-smash-quiz?topicId=${topic.id}`;
+  if (mode === "match-text-text" || mode === "line") return `/student/game/match-text-text?topicId=${topic.id}`;
+  if (mode === "choice" || mode === "choice-egg") return `/student/game/egg-smash-quiz?topicId=${topic.id}`;
+  if (mode === "choice-shooter" || mode === "shooter-quiz" || mode === "shooter") return `/game/shooter-quiz?topicId=${topic.id}`;
   if (mode === "flip") return `/game/memory-flip?topicId=${topic.id}`;
   if (mode === "candy-quiz") return `/student/game/candy-quiz?topicId=${topic.id}`;
-  if (mode === "shooter") return `/game/shooter-quiz?topicId=${topic.id}`;
-  if (mode === "treasure") return `/game/treasure-grid?topicId=${topic.id}`;
-  return `/student/game/flashcard-match?topicId=${topic.id}`;
+  if (mode === "treasure-hunt" || mode === "treasure") return `/student/game/treasure-hunt?topicId=${topic.id}`;
+  return `/student/game/match-words?topicId=${topic.id}`;
+}
+
+function mapCefrToAgeParam(cefr?: string | null): string {
+  const c = (cefr || '').toLowerCase();
+  if (c === 'pre-a1' || c === '2-5' || c === 'kindergarten') return '2-5';
+  if (c === 'a1' || c === '6-12' || c === 'kid') return '6-12';
+  if (c === 'a2' || c === 'teen') return 'teen';
+  return 'readers';
 }
 
 export interface AssignableLibraryItem {
@@ -1700,6 +1708,8 @@ export interface AssignableLibraryItem {
   previewUrl: string;
   playUrl: string;
   section?: 'NEW' | 'REVIEW';
+  authorName?: string | null;
+  badgeLabel?: string | null;
 }
 
 export async function getAssignableLibraryContentAction(): Promise<{
@@ -1975,7 +1985,7 @@ export async function assignLibraryItemToClassAction(
     } else {
       const slug = await generateUniqueSlug(item.title || 'Assignment', 'assignment');
       const matType: MaterialType = 
-        item.type === 'BOOK' || item.type === 'READING' ? 'READING' :
+        item.type === 'BOOK' || item.type === 'READING' || item.type === 'LESSON' ? 'READING' :
         item.type === 'FLASHCARD' ? 'FLASHCARD' : 'EXERCISE';
 
       const newAssignment = await prisma.assignment.create({
@@ -2250,13 +2260,19 @@ export async function assignBundleToClassAction(
   return { success: true, groupId: group.id, count: items.length, title };
 }
 
-export async function markLessonViewedAction(assignmentId: string) {
+export async function markLessonViewedAction(assignmentId: string, classId?: string, groupId?: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error('Unauthorized');
   const studentId = session.user.id;
 
   const existing = await prisma.submission.findFirst({
-    where: { assignmentId, studentId, submittedAt: { not: null } }
+    where: { 
+      assignmentId, 
+      studentId, 
+      classId: classId || undefined,
+      groupId: groupId || undefined,
+      submittedAt: { not: null } 
+    }
   });
 
   if (!existing) {
@@ -2264,6 +2280,8 @@ export async function markLessonViewedAction(assignmentId: string) {
       data: {
         assignmentId,
         studentId,
+        classId: classId || null,
+        groupId: groupId || null,
         startedAt: new Date(),
         submittedAt: new Date(),
         score: null,
@@ -3096,6 +3114,13 @@ export async function searchAssignableContentAction(
             previewUrl = meta.playUrl;
           }
           itemUnit = 'thẻ từ';
+        } else if (meta.kind === 'LESSON') {
+          type = 'LESSON';
+          if (meta.playUrl) {
+            playUrl = meta.playUrl;
+            previewUrl = meta.playUrl;
+          }
+          itemUnit = 'bài học';
         }
         if (meta.section) {
           section = meta.section;
@@ -3109,6 +3134,9 @@ export async function searchAssignableContentAction(
     } else if (type === 'GRAMMAR' && a.materialType === 'FLASHCARD') {
       type = 'FLASHCARD';
       itemUnit = 'thẻ từ';
+    } else if (type === 'GRAMMAR' && (a.materialType === 'LESSON' || (a.title && (a.title.toLowerCase().startsWith('grammar lesson:') || a.title.toLowerCase().startsWith('lý thuyết:'))))) {
+      type = 'LESSON';
+      itemUnit = 'bài học';
     }
 
     return {
@@ -3128,6 +3156,20 @@ export async function searchAssignableContentAction(
       section,
     };
   };
+
+  const getLevelMatchConditions = (targetLevel: string) => {
+    if (targetLevel === 'ALL') return undefined;
+    const l = targetLevel.toLowerCase();
+    if (l === 'pre-a1') return ['pre-a1', 'pre_a1', 'pre-a1-a1', '2-5', 'kids-2-5', 'kindergarten'];
+    if (l === 'a1') return ['a1', '6-12', 'elementary', 'pre-a1-a1'];
+    if (l === 'a2') return ['a2', 'teen'];
+    if (l === 'b1') return ['b1', 'readers', 'intermediate'];
+    if (l === 'b2') return ['b2', 'upper_intermediate'];
+    if (l === 'c1') return ['c1', 'advanced'];
+    return [l];
+  };
+
+  const levelValues = getLevelMatchConditions(level);
 
   // Case 0: Source 'recent' - Fetch assignments previously assigned to this class or by this teacher
   if (source === 'recent') {
@@ -3154,6 +3196,8 @@ export async function searchAssignableContentAction(
       if (!seenIds.has(ac.assignment.id)) {
         seenIds.add(ac.assignment.id);
         const mapped = mapAssignment(ac.assignment, ac.assignment.teacherId === userId ? 'mine' : 'library');
+        if (contentType !== 'ALL' && mapped.type !== contentType) continue;
+        if (levelValues && mapped.level && !levelValues.some(v => (mapped.level || '').toLowerCase().includes(v))) continue;
         mapped.section = 'REVIEW';
         recentItems.push(mapped);
       }
@@ -3175,34 +3219,34 @@ export async function searchAssignableContentAction(
     };
   }
 
-  const getLevelMatchConditions = (targetLevel: string) => {
-    if (targetLevel === 'ALL') return undefined;
-    const l = targetLevel.toLowerCase();
-    if (l === 'pre-a1') return ['pre-a1', 'pre_a1', '2-5', 'kindergarten'];
-    if (l === 'a1') return ['a1', '6-12', 'elementary'];
-    if (l === 'a2') return ['a2', 'teen'];
-    if (l === 'b1') return ['b1', 'readers', 'intermediate'];
-    if (l === 'b2') return ['b2', 'upper_intermediate'];
-    if (l === 'c1') return ['c1', 'advanced'];
-    return [l];
-  };
-
-  const levelValues = getLevelMatchConditions(level);
   const results: AssignableLibraryItem[] = [];
 
-  const shouldSearchAssignments = ['ALL', 'GRAMMAR', 'READING', 'FLASHCARD'].includes(contentType);
+  const buildLevelFilter = (field: string = 'level') => {
+    if (!levelValues || levelValues.length === 0) return undefined;
+    return {
+      OR: [
+        { [field]: { in: levelValues } },
+        ...levelValues.map(v => ({ [field]: { contains: v, mode: 'insensitive' as const } }))
+      ]
+    };
+  };
+
+  const shouldSearchAssignments = ['ALL', 'GRAMMAR', 'READING', 'FLASHCARD', 'LESSON', 'BOOK', 'GAME'].includes(contentType);
   const shouldSearchGames = ['ALL', 'GAME'].includes(contentType);
   const shouldSearchFlashcards = ['ALL', 'FLASHCARD'].includes(contentType) && source === 'library';
   const shouldSearchBooks = ['ALL', 'BOOK'].includes(contentType) && source === 'library';
+  const shouldSearchLessons = ['ALL', 'LESSON'].includes(contentType);
 
   const queries: Promise<void>[] = [];
 
   // 1. Query Assignments
   if (shouldSearchAssignments) {
-    const matTypeFilter =
-      contentType === 'READING' ? 'READING' :
-      contentType === 'FLASHCARD' ? 'FLASHCARD' :
-      contentType === 'GRAMMAR' ? 'EXERCISE' : undefined;
+    const isLessonSearch = contentType === 'LESSON';
+    const isBookSearch = contentType === 'BOOK';
+    const isGameSearch = contentType === 'GAME';
+    const isFlashcardSearch = contentType === 'FLASHCARD';
+    const isReadingSearch = contentType === 'READING';
+    const isGrammarSearch = contentType === 'GRAMMAR';
 
     const assignWhere: any = {
       deletedAt: null,
@@ -3217,16 +3261,62 @@ export async function searchAssignableContentAction(
       );
     }
 
-    if (matTypeFilter) {
-      assignWhere.AND.push({ materialType: matTypeFilter });
+    if (isLessonSearch) {
+      assignWhere.AND.push({
+        OR: [
+          { instructions: { contains: '"kind":"LESSON"' } },
+          { title: { startsWith: 'Grammar lesson', mode: 'insensitive' } },
+          { title: { startsWith: 'Lý thuyết:', mode: 'insensitive' } }
+        ]
+      });
+    } else if (isBookSearch) {
+      assignWhere.AND.push({
+        instructions: { contains: '"kind":"BOOK"' }
+      });
+    } else if (isGameSearch) {
+      assignWhere.AND.push({
+        instructions: { contains: '"kind":"GAME"' }
+      });
+    } else if (isFlashcardSearch) {
+      assignWhere.AND.push({
+        OR: [
+          { materialType: 'FLASHCARD' },
+          { instructions: { contains: '"kind":"FLASHCARD"' } }
+        ]
+      });
+    } else if (isReadingSearch) {
+      assignWhere.AND.push({
+        materialType: 'READING',
+        NOT: [
+          { instructions: { contains: '"kind":"BOOK"' } },
+          { instructions: { contains: '"kind":"LESSON"' } },
+          { instructions: { contains: '"kind":"GAME"' } },
+          { instructions: { contains: '"kind":"FLASHCARD"' } },
+          { title: { startsWith: 'Grammar lesson', mode: 'insensitive' } },
+          { title: { startsWith: 'Lý thuyết:', mode: 'insensitive' } }
+        ]
+      });
+    } else if (isGrammarSearch) {
+      assignWhere.AND.push({
+        materialType: 'EXERCISE',
+        NOT: [
+          { instructions: { contains: '"kind":"GAME"' } },
+          { instructions: { contains: '"kind":"LESSON"' } },
+          { instructions: { contains: '"kind":"BOOK"' } },
+          { instructions: { contains: '"kind":"FLASHCARD"' } },
+          { title: { startsWith: 'Grammar lesson', mode: 'insensitive' } },
+          { title: { startsWith: 'Lý thuyết:', mode: 'insensitive' } }
+        ]
+      });
     }
 
     if (q) {
       assignWhere.AND.push({ title: { contains: q, mode: 'insensitive' } });
     }
 
-    if (levelValues) {
-      assignWhere.AND.push({ level: { in: levelValues } });
+    const lvlFilter = buildLevelFilter('level');
+    if (lvlFilter) {
+      assignWhere.AND.push(lvlFilter);
     }
 
     queries.push(
@@ -3262,15 +3352,37 @@ export async function searchAssignableContentAction(
     if (source === 'mine') {
       gameWhere.AND.push({ teacherId: userId });
     } else {
-      gameWhere.AND.push({ teacherId: null });
+      let publishedIds: string[] = [];
+      try {
+        const setting = await prisma.systemSetting.findUnique({
+          where: { key: "published_teacher_games" },
+        });
+        if (setting?.value && typeof setting.value === 'object' && Array.isArray((setting.value as any).publishedIds)) {
+          publishedIds = (setting.value as any).publishedIds;
+        }
+      } catch (err) {
+        console.error('Error fetching published teacher games:', err);
+      }
+
+      if (publishedIds.length > 0) {
+        gameWhere.AND.push({
+          OR: [
+            { teacherId: null },
+            { id: { in: publishedIds } }
+          ]
+        });
+      } else {
+        gameWhere.AND.push({ teacherId: null });
+      }
     }
 
     if (q) {
       gameWhere.AND.push({ name: { contains: q, mode: 'insensitive' } });
     }
 
-    if (levelValues) {
-      gameWhere.AND.push({ ageGroup: { in: levelValues } });
+    const gameLvlFilter = buildLevelFilter('ageGroup');
+    if (gameLvlFilter) {
+      gameWhere.AND.push(gameLvlFilter);
     }
 
     queries.push(
@@ -3284,12 +3396,21 @@ export async function searchAssignableContentAction(
           thumbnailUrl: true,
           createdAt: true,
           teacherId: true,
+          teacher: {
+            select: {
+              name: true,
+            }
+          },
           _count: { select: { items: true } }
         },
         orderBy: { createdAt: 'desc' },
         take: limit
       }).then(list => {
         list.forEach(g => {
+          const isTeacherGame = !!g.teacherId;
+          const authorName = isTeacherGame ? (g.teacher?.name || 'Giáo viên') : null;
+          const badgeLabel = isTeacherGame ? 'Giáo viên tạo' : null;
+
           results.push({
             id: `game_${g.id}`,
             rawId: g.id,
@@ -3299,22 +3420,25 @@ export async function searchAssignableContentAction(
             level: mapAgeGroupToLevel(g.ageGroup),
             itemCount: g._count?.items || 0,
             itemUnit: 'từ/câu',
-            thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
+            thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' || g.gameMode === 'choice-shooter' ? '/images/games/shooter-quiz.jpg' : g.gameMode === 'train' ? '/images/games/train-vocab.png' : '/images/games/candy-quiz.jpg'),
             createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
             isAssignment: false,
             previewUrl: getGamePlayUrl(g),
-            playUrl: getGamePlayUrl(g)
+            playUrl: getGamePlayUrl(g),
+            authorName,
+            badgeLabel,
           });
         });
       })
     );
   }
 
-  // 3. Query Flashcard Topics (Library)
+  // 3. Query Flashcard Topics (Library) - Groups 1, 2, 3: Flashcard Match, Sentence Builder, Flashcard Quiz
   if (shouldSearchFlashcards) {
     const fcWhere: any = { AND: [] };
     if (q) fcWhere.AND.push({ name: { contains: q, mode: 'insensitive' } });
-    if (levelValues) fcWhere.AND.push({ cefrLevel: { in: levelValues } });
+    const fcLvlFilter = buildLevelFilter('cefrLevel');
+    if (fcLvlFilter) fcWhere.AND.push(fcLvlFilter);
 
     queries.push(
       prisma.flashcardTopic.findMany({
@@ -3331,20 +3455,104 @@ export async function searchAssignableContentAction(
         take: limit
       }).then(list => {
         list.forEach(f => {
+          const ageParam = mapCefrToAgeParam(f.cefrLevel);
+          const lvl = mapAgeGroupToLevel(f.cefrLevel);
+          const count = f._count?.flashcards || 0;
+          const created = f.createdAt ? f.createdAt.toISOString() : new Date().toISOString();
+
+          // Group 1: Flashcard Match (Lật thẻ)
           results.push({
-            id: `flashcard_${f.id}`,
-            rawId: f.id,
-            title: f.name,
+            id: `flashcard_match_${f.id}`,
+            rawId: `flashcard_match:${f.id}`,
+            title: `Lật thẻ: ${f.name}`,
             type: 'FLASHCARD',
             source: 'library',
-            level: mapAgeGroupToLevel(f.cefrLevel),
-            itemCount: f._count?.flashcards || 0,
+            level: lvl,
+            itemCount: count,
             itemUnit: 'thẻ từ',
-            thumbnail: f.iconUrl || null,
-            createdAt: f.createdAt ? f.createdAt.toISOString() : new Date().toISOString(),
+            thumbnail: f.iconUrl || '/images/games/flashcard-match.png',
+            createdAt: created,
             isAssignment: false,
             previewUrl: `/student/game/flashcard-match?topicId=${f.id}`,
-            playUrl: `/student/game/flashcard-match?topicId=${f.id}`
+            playUrl: `/student/game/flashcard-match?topicId=${f.id}`,
+            badgeLabel: 'Lật thẻ',
+          });
+
+          // Group 2: Sentence Builder (Flashcards - Ghép câu)
+          results.push({
+            id: `flashcard_sb_${f.id}`,
+            rawId: `flashcard_sb:${f.id}`,
+            title: `Ghép câu: ${f.name}`,
+            type: 'FLASHCARD',
+            source: 'library',
+            level: lvl,
+            itemCount: count,
+            itemUnit: 'câu',
+            thumbnail: '/images/games/flashcard-sentence-builder.png',
+            createdAt: created,
+            isAssignment: false,
+            previewUrl: `/student/game/flashcard-sentence-builder?topicId=${f.id}&age=${ageParam}`,
+            playUrl: `/student/game/flashcard-sentence-builder?topicId=${f.id}&age=${ageParam}`,
+            badgeLabel: 'Ghép câu',
+          });
+
+          // Group 3: Flashcard Quiz (Đố vui)
+          results.push({
+            id: `flashcard_quiz_${f.id}`,
+            rawId: `flashcard_quiz:${f.id}`,
+            title: `Đố vui: ${f.name}`,
+            type: 'FLASHCARD',
+            source: 'library',
+            level: lvl,
+            itemCount: count,
+            itemUnit: 'câu hỏi',
+            thumbnail: '/images/games/flashcard-quiz.png',
+            createdAt: created,
+            isAssignment: false,
+            previewUrl: `/student/game/flashcard-quiz?age=${ageParam}&topicId=${f.id}`,
+            playUrl: `/student/game/flashcard-quiz?age=${ageParam}&topicId=${f.id}`,
+            badgeLabel: 'Đố vui',
+          });
+        });
+      })
+    );
+
+    // Also include SentenceBuilderGame (26 games)
+    const sbWhere: any = { AND: [] };
+    if (q) sbWhere.AND.push({ name: { contains: q, mode: 'insensitive' } });
+    const sbLvlFilter = buildLevelFilter('ageGroup');
+    if (sbLvlFilter) sbWhere.AND.push(sbLvlFilter);
+
+    queries.push(
+      prisma.sentenceBuilderGame.findMany({
+        where: sbWhere.AND.length > 0 ? sbWhere : undefined,
+        select: {
+          id: true,
+          name: true,
+          ageGroup: true,
+          thumbnailUrl: true,
+          createdAt: true,
+          _count: { select: { questions: true } }
+        },
+        orderBy: { order: 'asc' },
+        take: limit
+      }).then(sbList => {
+        sbList.forEach(sb => {
+          results.push({
+            id: `sb_game_${sb.id}`,
+            rawId: `sb_game:${sb.id}`,
+            title: `Ghép câu: ${sb.name}`,
+            type: 'FLASHCARD',
+            source: 'library',
+            level: mapAgeGroupToLevel(sb.ageGroup),
+            itemCount: sb._count?.questions || 0,
+            itemUnit: 'câu',
+            thumbnail: sb.thumbnailUrl || '/images/games/sentence-builder.png',
+            createdAt: sb.createdAt ? sb.createdAt.toISOString() : new Date().toISOString(),
+            isAssignment: false,
+            previewUrl: `/student/game/sentence-builder/${sb.id}?age=${sb.ageGroup || '6-12'}`,
+            playUrl: `/student/game/sentence-builder/${sb.id}?age=${sb.ageGroup || '6-12'}`,
+            badgeLabel: 'Ghép câu',
           });
         });
       })
@@ -3358,7 +3566,8 @@ export async function searchAssignableContentAction(
       AND: []
     };
     if (q) bookWhere.AND.push({ title: { contains: q, mode: 'insensitive' } });
-    if (levelValues) bookWhere.AND.push({ level: { in: levelValues } });
+    const bookLvlFilter = buildLevelFilter('level');
+    if (bookLvlFilter) bookWhere.AND.push(bookLvlFilter);
 
     queries.push(
       prisma.readAlongBook.findMany({
@@ -3396,13 +3605,151 @@ export async function searchAssignableContentAction(
     );
   }
 
+  // 5. Query Grammar Lessons (Library from Taxonomy + DB Lessons)
+  if (shouldSearchLessons) {
+    if (source === 'library') {
+      // Search built-in Grammar Taxonomy lessons
+      let addedTaxonomyCount = 0;
+      const maxTaxonomy = contentType === 'LESSON' ? limit : (q ? 15 : 6);
+
+      for (const topic of GRAMMAR_TOPICS) {
+        for (const lesson of topic.lessons) {
+          if (addedTaxonomyCount >= maxTaxonomy) break;
+
+          // Check CEFR level
+          if (levelValues) {
+            const matchesLevel = levelValues.some(v => lesson.level.toLowerCase().includes(v));
+            if (!matchesLevel) continue;
+          }
+
+          // Check search query
+          if (q) {
+            const qLower = q.toLowerCase();
+            const matches =
+              lesson.label.toLowerCase().includes(qLower) ||
+              lesson.id.toLowerCase().includes(qLower) ||
+              topic.label.toLowerCase().includes(qLower) ||
+              topic.labelVi.toLowerCase().includes(qLower);
+            if (!matches) continue;
+          }
+
+          addedTaxonomyCount++;
+          results.push({
+            id: `lesson_grammar_${topic.id}_${lesson.id}`,
+            rawId: `grammar:${topic.id}:${lesson.id}`,
+            title: `Grammar lesson: ${lesson.label}`,
+            type: 'LESSON',
+            source: 'library',
+            level: mapAgeGroupToLevel(lesson.level),
+            itemCount: 1,
+            itemUnit: 'bài học',
+            thumbnail: null,
+            createdAt: new Date().toISOString(),
+            isAssignment: false,
+            previewUrl: `/grammar/${topic.id}/${lesson.id}`,
+            playUrl: `/grammar/${topic.id}/${lesson.id}`,
+          });
+        }
+      }
+    }
+
+    // Also query database Lessons (created by teachers or admin)
+    const lessonWhere: any = {
+      deletedAt: null,
+      AND: []
+    };
+
+    if (source === 'mine') {
+      lessonWhere.AND.push({ teacherId: userId });
+    } else {
+      lessonWhere.AND.push(
+        isAdmin ? {} : { OR: [{ teacherId: null }, { isPremium: false }] }
+      );
+    }
+
+    if (contentType === 'LESSON') {
+      lessonWhere.AND.push({
+        OR: [
+          { materialType: 'LESSON' },
+          { title: { startsWith: 'Grammar lesson', mode: 'insensitive' } },
+          { title: { startsWith: 'Lesson:', mode: 'insensitive' } },
+          { title: { startsWith: 'Lý thuyết:', mode: 'insensitive' } }
+        ]
+      });
+    }
+
+    if (q) {
+      lessonWhere.AND.push({ title: { contains: q, mode: 'insensitive' } });
+    }
+
+    const dbLessonLvlFilter = buildLevelFilter('level');
+    if (dbLessonLvlFilter) {
+      lessonWhere.AND.push(dbLessonLvlFilter);
+    }
+
+    queries.push(
+      prisma.lesson.findMany({
+        where: lessonWhere.AND.length > 0 ? lessonWhere : { deletedAt: null },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          level: true,
+          thumbnail: true,
+          createdAt: true,
+          teacherId: true,
+          materialType: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      }).then(list => {
+        list.forEach(l => {
+          const displayTitle = l.title.startsWith('Grammar lesson:') || l.title.startsWith('Lesson:') || l.title.startsWith('Bài học:') || l.title.startsWith('Lý thuyết:')
+            ? l.title
+            : `Grammar lesson: ${l.title}`;
+          results.push({
+            id: `lesson_${l.id}`,
+            rawId: l.id,
+            title: displayTitle,
+            type: 'LESSON',
+            source: l.teacherId === userId ? 'mine' : 'library',
+            level: mapAgeGroupToLevel(l.level || 'a1'),
+            itemCount: 1,
+            itemUnit: 'bài học',
+            thumbnail: l.thumbnail || null,
+            createdAt: l.createdAt ? l.createdAt.toISOString() : new Date().toISOString(),
+            isAssignment: false,
+            previewUrl: `/student/lessons/${l.id}`,
+            playUrl: `/student/lessons/${l.id}`,
+          });
+        });
+      })
+    );
+  }
+
   await Promise.all(queries);
 
+  // Strict type filter (exclude mismatched types)
+  const filteredResults = contentType === 'ALL'
+    ? results
+    : results.filter(item => item.type === contentType);
+
+  // Deduplicate items by type + (rawId or id)
+  const seenKeys = new Set<string>();
+  const uniqueResults: AssignableLibraryItem[] = [];
+  for (const item of filteredResults) {
+    const key = `${item.type}_${item.rawId || item.id}`;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      uniqueResults.push(item);
+    }
+  }
+
   // Sort by createdAt desc
-  results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  uniqueResults.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return {
-    items: results.slice(0, limit),
+    items: uniqueResults.slice(0, limit),
     isFromLink: false
   };
 }

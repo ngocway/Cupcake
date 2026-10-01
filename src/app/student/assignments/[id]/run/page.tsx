@@ -124,9 +124,9 @@ export default async function StudentAssignmentLobbyPage({
   searchParams
 }: { 
   params: Promise<{ id: string }>,
-  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; review?: string; embedded?: string }>
+  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; groupId?: string; review?: string; embedded?: string }>
 }) {
-  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, review, embedded }] = await Promise.all([
+  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, groupId, review, embedded }] = await Promise.all([
     auth(),
     params,
     searchParams
@@ -139,9 +139,14 @@ export default async function StudentAssignmentLobbyPage({
   // Hướng 1 & 4: Parallel queries + Meta-only fetch (Cực nhanh)
   const [rawAssignment, allSubmissions, t, locale] = await Promise.all([
     getAssignmentMeta(id),
-    // Fetch submissions once with answers included — reused for both status check and history display
+    // Fetch submissions scoped to class/group if accessed from class
     prisma.submission.findMany({
-      where: { assignmentId: id, studentId: userId },
+      where: { 
+        assignmentId: id, 
+        studentId: userId,
+        classId: classId || undefined,
+        groupId: groupId || undefined
+      },
       select: {
         id: true,
         submittedAt: true,
@@ -239,6 +244,7 @@ export default async function StudentAssignmentLobbyPage({
   const identifier = assignment.slug || assignment.id;
   const fromClassQuery = isFromClass ? "&fromClass=true" : "";
   const embeddedQuery = embedded === "true" ? "&embedded=true" : "";
+  const classParams = `${fromClassQuery}${embeddedQuery}${classId ? `&classId=${classId}` : ''}${groupId ? `&groupId=${groupId}` : ''}`;
 
   // 1. Khi bấm "Làm lại" (newAttempt === "true"): Luôn tạo lượt làm mới không giới hạn số lần
   if (newAttempt === "true") {
@@ -247,10 +253,12 @@ export default async function StudentAssignmentLobbyPage({
       data: {
         assignmentId: assignment.id,
         studentId: userId,
+        classId: classId || null,
+        groupId: groupId || null,
         attemptNumber: nextAttemptNumber
       }
     });
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}${embeddedQuery}&autoStart=true`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${classParams}&autoStart=true`);
   }
 
   // 2. Nếu đã hoàn thành bài (có completedSubmissions):
@@ -266,17 +274,17 @@ export default async function StudentAssignmentLobbyPage({
         await prisma.submission.delete({ where: { id: activeSubmission.id } });
       } catch {}
     }
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}${embeddedQuery}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${classParams}`);
   }
 
   // 3. Nếu có bài đang làm dở thực sự (đã trả lời ít nhất 1 câu): tiếp tục làm
   if (activeSubmission) {
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}${fromClassQuery}${embeddedQuery}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}${classParams}`);
   }
 
   // 4. Fallback bài đã làm xong: Vào thẳng xem lại
   if (completedSubmissions.length > 0) {
-    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${fromClassQuery}${embeddedQuery}`);
+    redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${completedSubmissions[0].id}&review=true${classParams}`);
   }
 
   // 4. Nếu chưa từng làm: Tạo bài làm lần 1 và vào thẳng trang quiz (có popup "ARE YOU READY?" với nút Practice Mode)!
@@ -284,10 +292,12 @@ export default async function StudentAssignmentLobbyPage({
     data: {
       assignmentId: assignment.id,
       studentId: userId,
+      classId: classId || null,
+      groupId: groupId || null,
       attemptNumber: 1
     }
   });
-  redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${fromClassQuery}${embeddedQuery}`);
+  redirect(`/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${classParams}`);
   const dateLocale = locale === "vi" ? vi : enUS;
 
   const _lobbyNormalizedLevel = (assignment.level || "").toLowerCase().split(",")[0].trim();

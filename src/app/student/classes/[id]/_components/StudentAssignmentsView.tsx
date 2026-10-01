@@ -38,6 +38,18 @@ import {
   Star
 } from 'lucide-react';
 import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems } from '../_utils/assignmentOrder';
+import { EmbeddedQuizContainer } from './EmbeddedQuizContainer';
+import { EmbeddedGrammarContainer } from './EmbeddedGrammarContainer';
+import { EmbeddedBookContainer } from './EmbeddedBookContainer';
+import { EmbeddedGameContainer } from './EmbeddedGameContainer';
+import { AssignmentIconWithProgress } from './AssignmentIconWithProgress';
+import { 
+  prefetchAssignmentData,
+  useAssignmentPreloadProgress,
+  queueGroupForPreload,
+  promoteAssignmentPriority,
+  isAssignmentCached
+} from '../_utils/assignmentCache';
 export type { ActivityStage };
 export { STAGE_ROADMAP_ORDER, sortGroupItems };
 
@@ -58,6 +70,8 @@ export interface StudentGroupItem {
   dueDate?: string | null;
   isSubmitted: boolean;
   score?: number | null;
+  classId?: string;
+  groupId?: string;
 }
 
 export interface StudentAssignmentGroup {
@@ -175,6 +189,14 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     const separator = targetUrl.includes('?') ? '&' : '?';
     targetUrl = `${targetUrl}${separator}assignmentId=${item.assignment.id}`;
   }
+  if (item.classId && !targetUrl.includes('classId=')) {
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    targetUrl = `${targetUrl}${separator}classId=${item.classId}`;
+  }
+  if (item.groupId && !targetUrl.includes('groupId=')) {
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    targetUrl = `${targetUrl}${separator}groupId=${item.groupId}`;
+  }
 
   // Create embedded URL with embedded=true
   const embedSeparator = targetUrl.includes('?') ? '&' : '?';
@@ -260,7 +282,6 @@ export function StudentAssignmentsView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   // Sidebar collapse state (default false to prevent SSR hydration mismatch)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
@@ -337,6 +358,9 @@ export function StudentAssignmentsView({
     return firstUnlocked?.id || assignmentGroups[0]?.id || '';
   });
 
+  // Real-time preload progress of assignments in background queue
+  const preloadProgress = useAssignmentPreloadProgress();
+
   // Expanded Groups in Accordion Tree (Area 1)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -348,10 +372,19 @@ export function StudentAssignmentsView({
 
   const toggleGroupExpand = (groupId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
+    setExpandedGroups(prev => {
+      const willBeExpanded = !prev[groupId];
+      if (willBeExpanded) {
+        const grp = assignmentGroups.find(g => g.id === groupId);
+        if (grp && !grp.isLocked && grp.items.length > 0) {
+          queueGroupForPreload(grp.items, activeAssignmentId);
+        }
+      }
+      return {
+        ...prev,
+        [groupId]: willBeExpanded,
+      };
+    });
   };
 
   // Active Group object
@@ -465,6 +498,10 @@ export function StudentAssignmentsView({
     const uncompleted = grp.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
     const chosen = uncompleted || grp.items[0];
 
+    if (grp.items.length > 0) {
+      queueGroupForPreload(grp.items, chosen?.assignment?.id);
+    }
+
     if (chosen) {
       const cfg = parseItemConfig(chosen);
       setActiveAssignmentId(chosen.assignment.id);
@@ -482,6 +519,15 @@ export function StudentAssignmentsView({
       setLockedGroupModal(grp);
       return;
     }
+
+    const aid = item.assignment.id;
+    const progress = preloadProgress[aid] ?? 0;
+    const isReady = aid === activeAssignmentId || progress >= 100 || isAssignmentCached(aid);
+    if (!isReady) {
+      return; // Do nothing if not yet loaded and ready
+    }
+
+    promoteAssignmentPriority(item.assignment.id);
 
     const cfg = parseItemConfig(item);
     setSelectedGroupId(parentGroupId);
@@ -526,7 +572,26 @@ export function StudentAssignmentsView({
     }
   };
 
-  // Listen to message events from iframe (game / quiz completion)
+  // Completion handler to update assignment submission status and score in parent state
+  const handleActivityComplete = useCallback((score: number | null, assignmentId: string) => {
+    const roundedScore = typeof score === 'number' ? Math.round(score * 10) / 10 : null;
+    setSubmissionsState(prev => {
+      const current = prev[assignmentId];
+      const newScore = roundedScore ?? current?.score ?? null;
+      if (current?.isSubmitted && current?.score === newScore) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [assignmentId]: {
+          isSubmitted: true,
+          score: newScore
+        }
+      };
+    });
+  }, []);
+
+  // Listen to message events (e.g. from interactive game iframe or background processes)
   useEffect(() => {
     const handleWindowMessage = (event: MessageEvent) => {
       const data = event.data;
@@ -536,145 +601,108 @@ export function StudentAssignmentsView({
         data.type === 'ACTIVITY_COMPLETED' ||
         data.type === 'CANDY_GAME_PROGRESS' || 
         data.type === 'GAME_PROGRESS' ||
+        data.type === 'MATCH_GAME_PROGRESS' ||
         data.type === 'QUIZ_SUBMITTED'
       ) {
         const targetAid = data.assignmentId || activeAssignmentId;
         const score = typeof data.score === 'number' ? data.score : null;
         if (targetAid) {
-          setSubmissionsState(prev => ({
-            ...prev,
-            [targetAid]: { isSubmitted: true, score: score ?? prev[targetAid]?.score ?? null }
-          }));
+          handleActivityComplete(score, targetAid);
         }
       }
     };
 
     window.addEventListener('message', handleWindowMessage);
     return () => window.removeEventListener('message', handleWindowMessage);
-  }, [activeAssignmentId]);
+  }, [activeAssignmentId, handleActivityComplete]);
 
-  // Multi-Iframe Tab Caching: Keeps previously opened activity iframes mounted in DOM
-  const MAX_IFRAME_POOL = 6;
+  // Instant preloader: Silently pre-fetches assignment data into memory
+  const preloadAssignment = useCallback((item: StudentGroupItem) => {
+    prefetchAssignmentData(item);
+  }, []);
 
-  const [cachedIframes, setCachedIframes] = useState<Record<string, { id: string; url: string; title: string }>>(() => {
+  // Smart background preload: Preload all items in active group via concurrency-limited queue
+  useEffect(() => {
+    if (activeGroup && !activeGroup.isLocked && activeGroup.items.length > 0) {
+      queueGroupForPreload(activeGroup.items, activeAssignmentId);
+    }
+  }, [activeGroup?.id, activeAssignmentId]);
+
+  // Initial mount preload: Preload all default-expanded groups
+  useEffect(() => {
+    assignmentGroups.forEach(grp => {
+      if (expandedGroups[grp.id] && !grp.isLocked && grp.items.length > 0) {
+        queueGroupForPreload(grp.items, activeAssignmentId);
+      }
+    });
+  }, []);
+
+  // Keep-Alive Pool: Preserves visited component instances and their user progress in DOM
+  const [visitedConfigs, setVisitedConfigs] = useState<Record<string, ParsedItemConfig>>(() => {
     if (activeItemConfig) {
-      return {
-        [activeItemConfig.item.assignment.id]: {
-          id: activeItemConfig.item.assignment.id,
-          url: activeItemConfig.embeddedUrl,
-          title: activeItemConfig.cleanTitle,
-        }
-      };
+      return { [activeItemConfig.item.assignment.id]: activeItemConfig };
     }
     return {};
   });
-  const [loadedIframes, setLoadedIframes] = useState<Record<string, boolean>>({});
-  const iframeRefs = useRef<Record<string, HTMLIFrameElement | null>>({});
-  const prevClassIdRef = useRef<string>(classId);
-
-  // Preload an assignment item into the iframe pool (LRU limited)
-  const preloadAssignment = useCallback((item: StudentGroupItem) => {
-    if (!item?.assignment?.id || item.assignment.id.startsWith('locked_')) return;
-    const aid = item.assignment.id;
-    const cfg = parseItemConfig(item);
-
-    setCachedIframes(prev => {
-      if (prev[aid]) return prev;
-      const entries = Object.entries(prev);
-      let nextEntries = entries;
-      if (entries.length >= MAX_IFRAME_POOL) {
-        // Drop the oldest entry that is NOT currently active
-        const dropIndex = entries.findIndex(([id]) => id !== activeAssignmentId);
-        if (dropIndex >= 0) {
-          nextEntries = entries.filter((_, idx) => idx !== dropIndex);
-        }
-      }
-      return {
-        ...Object.fromEntries(nextEntries),
-        [aid]: { id: aid, url: cfg.embeddedUrl, title: cfg.cleanTitle }
-      };
-    });
-  }, [activeAssignmentId]);
 
   useEffect(() => {
     if (activeItemConfig) {
       const aid = activeItemConfig.item.assignment.id;
-      const url = activeItemConfig.embeddedUrl;
-      setCachedIframes(prev => {
-        if (prev[aid] && prev[aid].url === url) return prev;
-        const entries = Object.entries(prev);
-        let nextEntries = entries;
-        if (entries.length >= MAX_IFRAME_POOL) {
-          const dropIndex = entries.findIndex(([id]) => id !== aid);
-          if (dropIndex >= 0) {
-            nextEntries = entries.filter((_, idx) => idx !== dropIndex);
-          }
-        }
+      setVisitedConfigs(prev => {
+        if (prev[aid]) return prev;
         return {
-          ...Object.fromEntries(nextEntries),
-          [aid]: { id: aid, url, title: activeItemConfig.cleanTitle }
+          ...prev,
+          [aid]: activeItemConfig,
         };
       });
     }
-  }, [activeItemConfig?.item.assignment.id, activeItemConfig?.embeddedUrl, activeItemConfig?.cleanTitle]);
+  }, [activeItemConfig]);
 
-  // Next-in-line Preloading: When current assignment finishes loading, silently prefetch the next assignment
+  // When switching groups, reset pool to the new active item
   useEffect(() => {
-    if (!activeGroup || !activeAssignmentId || !loadedIframes[activeAssignmentId]) return;
-    const currentIndex = activeGroup.items.findIndex(i => i.assignment.id === activeAssignmentId);
-    if (currentIndex >= 0 && currentIndex < activeGroup.items.length - 1) {
-      const nextItem = activeGroup.items[currentIndex + 1];
-      if (nextItem && !nextItem.assignment.id.startsWith('locked_')) {
-        preloadAssignment(nextItem);
-      }
+    if (activeItemConfig) {
+      setVisitedConfigs({ [activeItemConfig.item.assignment.id]: activeItemConfig });
     }
-  }, [activeGroup, activeAssignmentId, loadedIframes, preloadAssignment]);
+  }, [selectedGroupId]);
 
-  // Proactive group preloading: prefetch top 2-3 items of active group after mount
-  useEffect(() => {
-    if (!activeGroup?.items?.length) return;
-    const timer = setTimeout(() => {
-      activeGroup.items.slice(0, 3).forEach(item => {
-        if (!item.assignment.id.startsWith('locked_')) {
-          preloadAssignment(item);
-        }
-      });
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [selectedGroupId, activeGroup, preloadAssignment]);
+  const currentItemKind = activeItemConfig ? parseItemConfig(activeItemConfig.item).kind : null;
+  const currentItemStage = activeItemConfig?.stage;
 
-  // Reset cache only when classId actually changes (switching between different classes)
-  useEffect(() => {
-    if (prevClassIdRef.current !== classId) {
-      prevClassIdRef.current = classId;
-      setCachedIframes(activeItemConfig ? {
-        [activeItemConfig.item.assignment.id]: {
-          id: activeItemConfig.item.assignment.id,
-          url: activeItemConfig.embeddedUrl,
-          title: activeItemConfig.cleanTitle,
-        }
-      } : {});
-      setLoadedIframes({});
-      iframeRefs.current = {};
-    }
-  }, [classId, activeItemConfig]);
+  // Activity classification for instant native rendering (Prioritize Game & Lesson before Book & Quiz)
+  const isCurrentGame = Boolean(
+    activeItemConfig && (
+      currentItemKind === 'GAME' ||
+      currentItemStage === 'game' ||
+      activeItemConfig.item.assignment.materialType === 'GAME' ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/game/') ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/games/')
+    )
+  );
 
-  // Guaranteed iframe pool: ensures activeItemConfig is always rendered even before effect tick
-  const renderedIframes = useMemo(() => {
-    const pool = { ...cachedIframes };
-    if (activeItemConfig && !pool[activeItemConfig.item.assignment.id]) {
-      pool[activeItemConfig.item.assignment.id] = {
-        id: activeItemConfig.item.assignment.id,
-        url: activeItemConfig.embeddedUrl,
-        title: activeItemConfig.cleanTitle,
-      };
-    }
-    return pool;
-  }, [cachedIframes, activeItemConfig]);
+  const isCurrentLesson = Boolean(
+    activeItemConfig && !isCurrentGame && (
+      currentItemKind === 'LESSON' ||
+      currentItemStage === 'lesson' ||
+      activeItemConfig.item.assignment.materialType === 'LESSON' ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/grammar/') ||
+      activeItemConfig.item.assignment.title.toLowerCase().startsWith('grammar lesson') ||
+      activeItemConfig.item.assignment.title.toLowerCase().startsWith('lý thuyết:')
+    )
+  );
 
-  const isCurrentIframeLoading = activeItemConfig 
-    ? !loadedIframes[activeItemConfig.item.assignment.id]
-    : false;
+  const isCurrentBook = Boolean(
+    activeItemConfig && !isCurrentGame && !isCurrentLesson && (
+      currentItemKind === 'READING' ||
+      currentItemKind === 'BOOK' ||
+      currentItemStage === 'reading' ||
+      activeItemConfig.item.assignment.materialType === 'READING' ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/student/books/')
+    )
+  );
+
+  const isCurrentQuiz = Boolean(
+    activeItemConfig && !isCurrentGame && !isCurrentLesson && !isCurrentBook
+  );
 
   // Overall student progress calculation
   const overallStats = useMemo(() => {
@@ -901,27 +929,38 @@ export function StudentAssignmentsView({
                                 const isItemActive = item.assignment.id === activeAssignmentId;
                                 const isSubmitted = submissionsState[item.assignment.id]?.isSubmitted;
                                 const itemScore = submissionsState[item.assignment.id]?.score;
+                                const itemProgress = preloadProgress[item.assignment.id] ?? 0;
+                                const isItemReady = isItemActive || itemProgress >= 100 || isAssignmentCached(item.assignment.id);
 
                                 return (
                                   <button
                                     key={item.assignment.id}
                                     type="button"
-                                    onClick={() => handleSelectAssignment(item, group.id)}
+                                    aria-disabled={!isItemReady}
+                                    onClick={(e) => {
+                                      if (!isItemReady) {
+                                        e.preventDefault();
+                                        return;
+                                      }
+                                      handleSelectAssignment(item, group.id);
+                                    }}
                                     onMouseEnter={() => preloadAssignment(item)}
-                                    className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                                    title={!isItemReady ? 'Đang chuẩn bị dữ liệu...' : undefined}
+                                    className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${
                                       isItemActive
-                                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/20 translate-x-1'
-                                        : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300'
+                                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/20 translate-x-1 cursor-pointer'
+                                        : isItemReady
+                                          ? 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 cursor-pointer active:scale-[0.99]'
+                                          : 'opacity-55 text-slate-400 dark:text-slate-500 cursor-wait select-none'
                                     }`}
                                   >
                                     <div className="flex items-center gap-2.5 min-w-0">
-                                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                                        isItemActive 
-                                          ? 'bg-white/20 text-white' 
-                                          : parsed.badgeClass
-                                      }`}>
-                                        {parsed.iconNode}
-                                      </div>
+                                      <AssignmentIconWithProgress
+                                        progress={itemProgress}
+                                        isItemActive={isItemActive}
+                                        badgeClass={parsed.badgeClass}
+                                        iconNode={parsed.iconNode}
+                                      />
                                       <span className="truncate leading-snug">
                                         {parsed.cleanTitle}
                                       </span>
@@ -939,7 +978,11 @@ export function StudentAssignmentsView({
                                         </div>
                                       ) : (
                                         <CircleDashed className={`w-3.5 h-3.5 ${
-                                          isItemActive ? 'text-white/60' : 'text-slate-300 dark:text-slate-600'
+                                          isItemActive 
+                                            ? 'text-white/60' 
+                                            : !isItemReady && itemProgress > 0
+                                              ? 'text-blue-400 dark:text-blue-500 animate-pulse'
+                                              : 'text-slate-300 dark:text-slate-600'
                                         }`} />
                                       )}
                                     </div>
@@ -1050,17 +1093,28 @@ export function StudentAssignmentsView({
                   {currentStageItems.map((stItem, idx) => {
                     const isSelected = stItem.item.assignment.id === activeAssignmentId;
                     const isSub = submissionsState[stItem.item.assignment.id]?.isSubmitted;
+                    const stProgress = preloadProgress[stItem.item.assignment.id] ?? 0;
+                    const isStReady = isSelected || stProgress >= 100 || isAssignmentCached(stItem.item.assignment.id);
 
                     return (
                       <button
                         key={stItem.item.assignment.id}
                         type="button"
-                        onClick={() => handleSelectAssignment(stItem.item, selectedGroupId)}
+                        aria-disabled={!isStReady}
+                        onClick={(e) => {
+                          if (!isStReady) {
+                            e.preventDefault();
+                            return;
+                          }
+                          handleSelectAssignment(stItem.item, selectedGroupId);
+                        }}
                         onMouseEnter={() => preloadAssignment(stItem.item)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap border ${
                           isSelected
-                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-xs'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 border-slate-200 dark:border-slate-700'
+                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-xs cursor-pointer'
+                            : isStReady
+                              ? 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 border-slate-200 dark:border-slate-700 cursor-pointer'
+                              : 'bg-slate-100/60 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border-dashed border-slate-200 dark:border-slate-800 cursor-wait opacity-55'
                         }`}
                       >
                         <span>Bài {idx + 1}</span>
@@ -1134,100 +1188,83 @@ export function StudentAssignmentsView({
               </div>
             </div>
 
-            {/* Embedded Iframe Container */}
+            {/* Embedded Activity Canvas (Keep-Alive Pool: 100% Native & 0ms Instant Switch) */}
             <div className="relative flex-1 w-full h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-              {/* Smooth Top Progress Bar (YouTube/GitHub style) */}
-              {isCurrentIframeLoading && (
-                <div className="absolute top-0 left-0 right-0 z-30 h-1 overflow-hidden bg-slate-200/50 dark:bg-slate-800">
-                  <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 w-full animate-pulse" />
-                </div>
-              )}
+              {Object.keys(visitedConfigs).length > 0 ? (
+                Object.values(visitedConfigs).map((cfg) => {
+                  const aid = cfg.item.assignment.id;
+                  const isActive = activeAssignmentId === aid;
+                  const itemKind = parseItemConfig(cfg.item).kind;
+                  const itemStage = cfg.stage;
 
-              {/* Zero White Screen Lesson Skeleton Loader */}
-              {isCurrentIframeLoading && activeItemConfig && (
-                <div className="absolute inset-0 z-20 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-xs flex flex-col p-4 sm:p-8 animate-in fade-in duration-150 overflow-y-auto custom-scrollbar">
-                  <div className="max-w-3xl w-full mx-auto space-y-5">
-                    {/* Header info badge */}
-                    <div className="flex items-center gap-3 sm:gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                      <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0 shadow-xs">
-                        {activeItemConfig.iconNode}
-                      </div>
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${activeItemConfig.badgeClass}`}>
-                            {activeItemConfig.stageLabel}
-                          </span>
-                          <span className="text-[11px] text-slate-400 font-bold">Đang nạp bài học...</span>
-                        </div>
-                        <p className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 truncate">
-                          {activeItemConfig.cleanTitle}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/60 text-xs font-bold shrink-0">
-                        <div className="w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
-                        <span className="hidden sm:inline">Chuẩn bị nội dung...</span>
-                      </div>
-                    </div>
+                  const isGame = Boolean(
+                    itemKind === 'GAME' ||
+                    itemStage === 'game' ||
+                    cfg.item.assignment.materialType === 'GAME' ||
+                    parseItemConfig(cfg.item).targetUrl.includes('/game/') ||
+                    parseItemConfig(cfg.item).targetUrl.includes('/games/')
+                  );
 
-                    {/* Content skeleton simulation */}
-                    <div className="p-6 sm:p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-5 animate-pulse">
-                      <div className="space-y-2.5">
-                        <div className="h-5 w-3/4 rounded-lg bg-slate-200 dark:bg-slate-800" />
-                        <div className="h-4 w-1/2 rounded-lg bg-slate-100 dark:bg-slate-800/60" />
-                      </div>
-                      
-                      <div className="h-32 sm:h-40 w-full rounded-2xl bg-slate-100/80 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
-                        <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center">
-                          <Sparkles className="w-5 h-5 animate-spin" />
-                        </div>
-                        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                          Đang chuẩn bị câu hỏi & âm thanh bài học
-                        </p>
-                        <p className="text-[11px] text-slate-400">
-                          Khung bài học sẽ hiển thị ngay khi nạp xong
-                        </p>
-                      </div>
+                  const isLesson = Boolean(
+                    !isGame && (
+                      itemKind === 'LESSON' ||
+                      itemStage === 'lesson' ||
+                      cfg.item.assignment.materialType === 'LESSON' ||
+                      parseItemConfig(cfg.item).targetUrl.includes('/grammar/') ||
+                      cfg.item.assignment.title.toLowerCase().startsWith('grammar lesson') ||
+                      cfg.item.assignment.title.toLowerCase().startsWith('lý thuyết:')
+                    )
+                  );
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
-                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
-                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
-                        <div className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                  const isBook = Boolean(
+                    !isGame && !isLesson && (
+                      itemKind === 'READING' ||
+                      itemKind === 'BOOK' ||
+                      itemStage === 'reading' ||
+                      cfg.item.assignment.materialType === 'READING' ||
+                      parseItemConfig(cfg.item).targetUrl.includes('/student/books/')
+                    )
+                  );
 
-              {/* Multi-iframe Pool (Tab Caching + Preloaded Pool) */}
-              {Object.keys(renderedIframes).length > 0 ? (
-                Object.values(renderedIframes).map(cItem => {
-                  const isActive = activeItemConfig?.item.assignment.id === cItem.id;
-                  const isLoaded = Boolean(loadedIframes[cItem.id]);
+                  const isQuiz = Boolean(!isGame && !isLesson && !isBook);
+
                   return (
-                    <iframe
-                      key={cItem.id}
-                      ref={el => {
-                        iframeRefs.current[cItem.id] = el;
-                        if (isActive) iframeRef.current = el;
-                      }}
-                      src={cItem.url}
-                      onLoad={() => {
-                        setLoadedIframes(prev => ({ ...prev, [cItem.id]: true }));
-                      }}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; microphone; fullscreen"
-                      className={`w-full h-full border-0 rounded-b-[1.75rem] min-h-[580px] lg:min-h-[660px] transition-opacity duration-300 ${
-                        isActive && isLoaded ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    <div
+                      key={aid}
+                      className={`w-full h-full ${
+                        isActive
+                          ? 'relative block opacity-100 z-10'
+                          : 'absolute inset-0 pointer-events-none opacity-0 z-0'
                       }`}
-                      style={{
-                        position: isActive ? 'relative' : 'absolute',
-                        top: 0,
-                        left: 0,
-                        zIndex: isActive ? 1 : 0,
-                        visibility: isActive ? 'visible' : 'hidden',
-                        display: 'block'
-                      }}
-                    />
+                      style={{ display: isActive ? 'block' : 'none' }}
+                    >
+                      {isGame ? (
+                        <EmbeddedGameContainer
+                          assignment={cfg.item.assignment}
+                          onComplete={handleActivityComplete}
+                        />
+                      ) : isLesson ? (
+                        <EmbeddedGrammarContainer
+                          assignmentId={aid}
+                          classId={classId}
+                          groupId={cfg.item.groupId}
+                          onComplete={handleActivityComplete}
+                          onNextActivity={handleNextActivity}
+                        />
+                      ) : isBook ? (
+                        <EmbeddedBookContainer
+                          assignmentId={aid}
+                          onComplete={handleActivityComplete}
+                        />
+                      ) : (
+                        <EmbeddedQuizContainer
+                          assignmentId={aid}
+                          classId={classId}
+                          groupId={cfg.item.groupId}
+                          onComplete={handleActivityComplete}
+                        />
+                      )}
+                    </div>
                   );
                 })
               ) : (

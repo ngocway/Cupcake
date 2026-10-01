@@ -5,6 +5,7 @@ import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper
 import { PublicHeader } from "@/components/public/PublicHeader"
 import { BottomNav } from "@/app/student/_components/BottomNav"
 import { getTranslations } from "next-intl/server"
+import { fetchWithRedis } from "@/lib/cached-queries"
 import prisma from "@/lib/prisma"
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -26,11 +27,17 @@ export default async function StudentLayout({ children }: { children: React.Reac
 
   let studyAgeGroup = null;
   if (session.user.id) {
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { studyAgeGroup: true }
-    });
-    studyAgeGroup = dbUser?.studyAgeGroup;
+    studyAgeGroup = await fetchWithRedis(
+      `user:study-age-group:${session.user.id}`,
+      3600,
+      async () => {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { studyAgeGroup: true }
+        });
+        return dbUser?.studyAgeGroup ?? null;
+      }
+    );
   }
 
   const publicSession = {

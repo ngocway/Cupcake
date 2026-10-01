@@ -10,10 +10,10 @@ export default async function StudentQuizPage({
   searchParams,
   params
 }: {
-  searchParams: Promise<{ submissionId: string; review?: string; fromClass?: string; classId?: string; autoStart?: string; embedded?: string }>;
+  searchParams: Promise<{ submissionId: string; review?: string; fromClass?: string; classId?: string; groupId?: string; autoStart?: string; embedded?: string }>;
   params: Promise<{ id: string }>;
 }) {
-  const [session, { submissionId, review, fromClass, classId, autoStart, embedded }, { id: paramsId }] = await Promise.all([
+  const [session, { submissionId, review, fromClass, classId, groupId, autoStart, embedded }, { id: paramsId }] = await Promise.all([
     auth(),
     searchParams,
     params
@@ -63,6 +63,8 @@ export default async function StudentQuizPage({
     const existing = await prisma.submission.findFirst({
       where: {
         studentId: userId,
+        classId: classId || undefined,
+        groupId: groupId || undefined,
         OR: [
           { assignmentId: paramsId },
           { assignment: { slug: paramsId } }
@@ -111,6 +113,8 @@ export default async function StudentQuizPage({
         data: {
           assignmentId: assignmentRecord.id,
           studentId: userId,
+          classId: classId || null,
+          groupId: groupId || null,
           attemptNumber: 1
         },
         select: { id: true }

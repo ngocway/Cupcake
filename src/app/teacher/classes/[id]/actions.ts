@@ -175,6 +175,7 @@ export async function remindPendingSubmissions(classId: string, assignmentId: st
   const submissions = await prisma.submission.findMany({
     where: { 
       assignmentId, 
+      classId,
       studentId: { in: enrolledStudents.map(e => e.studentId) },
       submittedAt: { not: null }
     },

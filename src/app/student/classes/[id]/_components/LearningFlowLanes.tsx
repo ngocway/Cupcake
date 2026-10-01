@@ -177,6 +177,14 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
         const separator = targetUrl.includes('?') ? '&' : '?';
         targetUrl = `${targetUrl}${separator}assignmentId=${item.assignment.id}`;
       }
+      if (item.classId && !targetUrl.includes('classId=')) {
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        targetUrl = `${targetUrl}${separator}classId=${item.classId}`;
+      }
+      if (item.groupId && !targetUrl.includes('groupId=')) {
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        targetUrl = `${targetUrl}${separator}groupId=${item.groupId}`;
+      }
 
       const cleanTitle = item.assignment.title.replace(
         /^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise|Reading|Bài đọc):\s*/i, ''

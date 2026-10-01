@@ -24,19 +24,38 @@ export async function POST(
     return new NextResponse("Assignment not found", { status: 404 });
   }
 
+  let classId: string | undefined;
+  let groupId: string | undefined;
+  try {
+    const body = await request.json();
+    classId = body.classId;
+    groupId = body.groupId;
+  } catch {}
+  if (!classId) {
+    const url = new URL(request.url);
+    classId = url.searchParams.get("classId") || undefined;
+    groupId = url.searchParams.get("groupId") || undefined;
+  }
+
   // 2. Check for active submission or count completed attempts
   const submissions = await prisma.submission.findMany({
-    where: { assignmentId: assignment.id, studentId: userId },
+    where: { 
+      assignmentId: assignment.id, 
+      studentId: userId,
+      classId: classId || undefined,
+      groupId: groupId || undefined
+    },
     select: { id: true, submittedAt: true, attemptNumber: true },
     orderBy: { attemptNumber: "desc" }
   });
 
   const activeSubmission = submissions.find((s) => !s.submittedAt);
   const identifier = assignment.slug || assignment.id;
+  const qStr = `${classId ? `&classId=${classId}` : ''}${groupId ? `&groupId=${groupId}` : ''}`;
 
   if (activeSubmission) {
     return NextResponse.json({ 
-      redirectUrl: `/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}` 
+      redirectUrl: `/student/assignments/${identifier}/run/quiz?submissionId=${activeSubmission.id}${qStr}` 
     });
   }
 
@@ -51,11 +70,13 @@ export async function POST(
     data: {
       assignmentId: assignment.id,
       studentId: userId,
+      classId: classId || null,
+      groupId: groupId || null,
       attemptNumber: completedCount + 1
     }
   });
 
   return NextResponse.json({ 
-    redirectUrl: `/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}` 
+    redirectUrl: `/student/assignments/${identifier}/run/quiz?submissionId=${newSubmission.id}${qStr}` 
   });
 }

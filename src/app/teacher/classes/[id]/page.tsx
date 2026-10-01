@@ -92,11 +92,11 @@ async function ClassDashboardContent({
         },
         orderBy: { assignedAt: 'desc' },
       }),
-      // 4. Submission counts in ONE grouped query instead of N sub-queries
+      // 4. Submission counts in ONE grouped query scoped strictly to this class
       prisma.submission.groupBy({
-        by: ['assignmentId'],
+        by: ['assignmentId', 'groupId'],
         where: {
-          assignment: { targetClasses: { some: { classId } } },
+          classId,
           submittedAt: { not: null },
         },
         _count: { assignmentId: true },
@@ -108,10 +108,17 @@ async function ClassDashboardContent({
     notFound();
   }
 
-  // Build a lookup map: assignmentId -> submitted count
-  const submissionCountMap = new Map(
-    submissionCounts.map((s) => [s.assignmentId, s._count.assignmentId])
-  );
+  // Build lookup maps for fast access
+  const groupCountMap = new Map<string, number>();
+  const classAssignmentCountMap = new Map<string, number>();
+
+  for (const s of submissionCounts) {
+    if (s.groupId) {
+      groupCountMap.set(`${s.assignmentId}_${s.groupId}`, s._count.assignmentId);
+    }
+    const current = classAssignmentCountMap.get(s.assignmentId) ?? 0;
+    classAssignmentCountMap.set(s.assignmentId, current + s._count.assignmentId);
+  }
 
   const students: Student[] = enrollments.map((e) => ({
     id: e.student.id,
@@ -131,7 +138,10 @@ async function ClassDashboardContent({
     .map((ac) => {
       const a = ac.assignment;
       const isOpen = a.deadline ? new Date(a.deadline) > now : true;
-      const submittedCount = submissionCountMap.get(a.id) ?? 0;
+      const groupKey = ac.groupId ? `${a.id}_${ac.groupId}` : null;
+      const submittedCount = (groupKey && groupCountMap.has(groupKey))
+        ? (groupCountMap.get(groupKey) ?? 0)
+        : (classAssignmentCountMap.get(a.id) ?? 0);
       const percentage = totalStudents > 0
         ? Math.round((submittedCount / totalStudents) * 100)
         : 0;

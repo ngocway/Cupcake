@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { completeClassActivityAction } from "@/actions/activity-completion-actions";
 
@@ -26,6 +25,9 @@ interface BookWithSlides {
 
 interface BookReaderClientProps {
   book: BookWithSlides;
+  assignmentId?: string;
+  onComplete?: (score: number | null, assignmentId: string) => void;
+  isEmbeddedInCanvas?: boolean;
 }
 
 const isSpeechSynthesisSupported = typeof window !== "undefined" && !!window.speechSynthesis;
@@ -53,7 +55,12 @@ interface FloatingStar {
 
 const STAR_COLORS = ["#fbbf24", "#f59e0b", "#3b82f6", "#10b981", "#ec4899", "#8b5cf6"];
 
-export default function BookReaderClient({ book }: BookReaderClientProps) {
+export default function BookReaderClient({ 
+  book,
+  assignmentId: propAssignmentId,
+  onComplete,
+  isEmbeddedInCanvas = false,
+}: BookReaderClientProps) {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [words, setWords] = useState<WordToken[]>([]);
   
@@ -68,45 +75,6 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   const [stars, setStars] = useState<FloatingStar[]>([]);
   const [scoreResult, setScoreResult] = useState<"excellent" | "good" | null>(null);
 
-  // Class assignment progress tracking (≥80% slides)
-  const searchParams = useSearchParams();
-  const assignmentId = searchParams?.get("assignmentId");
-  const [completedSlides, setCompletedSlides] = useState<Set<number>>(new Set());
-  const [assignmentCompleted, setAssignmentCompleted] = useState<boolean>(false);
-
-  useEffect(() => {
-    setCompletedSlides((prev) => {
-      const next = new Set(prev);
-      next.add(currentPageIndex);
-
-      const ratio = next.size / book.slides.length;
-      if (ratio >= 0.8 && !assignmentCompleted && assignmentId) {
-        setAssignmentCompleted(true);
-        completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
-          console.error("Failed to auto-complete book assignment:", err);
-        });
-      }
-      return next;
-    });
-  }, [currentPageIndex, book.slides.length, assignmentCompleted, assignmentId]);
-
-  useEffect(() => {
-    if (isPageCompleted) {
-      setCompletedSlides((prev) => {
-        const next = new Set(prev);
-        next.add(currentPageIndex);
-        const ratio = next.size / book.slides.length;
-        if (ratio >= 0.8 && !assignmentCompleted && assignmentId) {
-          setAssignmentCompleted(true);
-          completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
-            console.error("Failed to auto-complete book assignment:", err);
-          });
-        }
-        return next;
-      });
-    }
-  }, [isPageCompleted, currentPageIndex, book.slides.length, assignmentCompleted, assignmentId]);
-
   // Mode: "reading" = listen only; "shadowing" = listen + record + grade
   const [mode, setMode] = useState<"reading" | "shadowing">("shadowing");
 
@@ -116,6 +84,32 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   }, [mode]);
 
   const [showModeSelector, setShowModeSelector] = useState(true);
+
+  // Class assignment progress tracking: Hoàn thành khi học sinh tới được trang cuối cùng
+  const searchParams = useSearchParams();
+  const assignmentId = propAssignmentId || searchParams?.get("assignmentId");
+  const [assignmentCompleted, setAssignmentCompleted] = useState<boolean>(false);
+  const hasTriggeredCompleteRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const totalSlides = book.slides.length;
+    if (totalSlides === 0 || !assignmentId) return;
+
+    // Chỉ hoàn thành khi đã vào đọc sách (!showModeSelector) và tới được trang cuối cùng
+    const isAtLastSlide = currentPageIndex === totalSlides - 1;
+    if (!showModeSelector && isAtLastSlide && !assignmentCompleted && !hasTriggeredCompleteRef.current) {
+      hasTriggeredCompleteRef.current = true;
+      setAssignmentCompleted(true);
+      if (onComplete) {
+        setTimeout(() => {
+          onComplete(10, assignmentId);
+        }, 0);
+      }
+      completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+        console.error("Failed to auto-complete book assignment:", err);
+      });
+    }
+  }, [showModeSelector, currentPageIndex, book.slides.length, assignmentCompleted, assignmentId, onComplete]);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerAutoAdvance = () => {
@@ -872,23 +866,25 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
   const progressPercent = ((currentPageIndex + 1) / book.slides.length) * 100;
 
   return (
-    <div className="h-screen w-screen bg-gradient-to-tr from-amber-100 via-pink-50 to-sky-100 text-slate-800 flex flex-col justify-between select-none relative overflow-hidden font-body">
+    <div className={`${isEmbeddedInCanvas ? "w-full h-full min-h-[580px] lg:min-h-[660px]" : "h-screen w-screen"} bg-gradient-to-tr from-amber-100 via-pink-50 to-sky-100 text-slate-800 flex flex-col justify-between select-none relative overflow-hidden font-body`}>
       
       {/* 1. Header Toolbar */}
       <div className="w-full shrink-0 bg-white/90 border-b-4 border-amber-200/50 backdrop-blur-md z-10 relative">
         {/* Single row: Back | Title | Translate toggle (mobile) / Page counter (desktop) */}
         <div className="flex items-center justify-between px-3 md:px-6 py-2">
           {/* Back Button */}
-          <Link
-            href="/student/books"
-            onClick={() => {
-              stopListening();
-              if (isSpeechSynthesisSupported) window.speechSynthesis.cancel();
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-800 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm shrink-0"
-          >
-            <span className="material-symbols-outlined text-[14px]">arrow_back</span>
-          </Link>
+          {!isEmbeddedInCanvas && (
+            <Link
+              href="/student/books"
+              onClick={() => {
+                stopListening();
+                if (isSpeechSynthesisSupported) window.speechSynthesis.cancel();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-800 rounded-full transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm shrink-0"
+            >
+              <span className="material-symbols-outlined text-[14px]">arrow_back</span>
+            </Link>
+          )}
 
           {/* Book Title — centered */}
           <div className="flex-1 text-center px-2 min-w-0">
@@ -896,24 +892,6 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
             <h2 className="font-extrabold text-sm md:text-base text-amber-900 line-clamp-1 mt-0.5">
               {book.title}
             </h2>
-            {assignmentId && (
-              <div className="mt-1 flex justify-center">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border transition-all inline-flex items-center gap-1 ${
-                  assignmentCompleted || (completedSlides.size / book.slides.length >= 0.8)
-                    ? "bg-emerald-500 text-white border-emerald-400"
-                    : "bg-amber-100 text-amber-800 border-amber-300"
-                }`}>
-                  {assignmentCompleted || (completedSlides.size / book.slides.length >= 0.8) ? (
-                    <>
-                      <CheckCircle2 className="w-3 h-3 text-white" />
-                      <span>Đã học {completedSlides.size}/{book.slides.length} trang (≥80%) • Đã hoàn thành!</span>
-                    </>
-                  ) : (
-                    <span>Tiến độ bài học: {completedSlides.size}/{book.slides.length} trang ({Math.round((completedSlides.size / book.slides.length) * 100)}% / 80%)</span>
-                  )}
-                </span>
-              </div>
-            )}
           </div>
 
           {/* Right side: Translate toggle (all screens) + Page counter (desktop only) */}
@@ -1136,7 +1114,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       </div>
 
       {/* 3. Control & Mic Bar */}
-      <div className="fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto w-full h-20 flex flex-col items-center justify-center shrink-0 bg-white/95 backdrop-blur-md border-t border-amber-200/50 z-50 pb-safe">
+      <div className={`${isEmbeddedInCanvas ? "relative bottom-auto left-auto right-auto" : "fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto"} w-full h-20 flex flex-col items-center justify-center shrink-0 bg-white/95 backdrop-blur-md border-t border-amber-200/50 z-20 pb-safe`}>
 
         {/* Status label */}
         <p className={`text-[10px] font-bold mb-1.5 transition-colors duration-300 ${
@@ -1271,19 +1249,21 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
       `}</style>
 
       {showModeSelector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md">
-          <div className="bg-white/90 border border-white/20 shadow-2xl rounded-3xl p-6 max-w-xs w-[90%] text-center transform scale-100 transition-all duration-300">
+        <div className={`${isEmbeddedInCanvas ? "absolute inset-0" : "fixed inset-0"} z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md`}>
+          <div className="bg-white/95 dark:bg-slate-900/95 border border-white/40 dark:border-slate-800 shadow-2xl rounded-3xl p-6 max-w-xs w-[90%] text-center transform scale-100 transition-all duration-300">
             <div className="flex flex-col gap-4">
-              <button
-                onClick={() => {
-                  setMode("reading");
-                  setShowModeSelector(false);
-                }}
-                className="w-full py-4 px-6 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 hover:bg-amber-200 font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined">menu_book</span>
-                Listen to Story
-              </button>
+              {!isEmbeddedInCanvas && (
+                <button
+                  onClick={() => {
+                    setMode("reading");
+                    setShowModeSelector(false);
+                  }}
+                  className="w-full py-4 px-6 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 hover:bg-amber-200 font-bold transition-all duration-200 hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined">menu_book</span>
+                  Listen to Story
+                </button>
+              )}
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => {
@@ -1295,7 +1275,7 @@ export default function BookReaderClient({ book }: BookReaderClientProps) {
                   <span className="material-symbols-outlined">mic</span>
                   Practice Shadowing
                 </button>
-                <p className="text-xs text-slate-500 font-medium leading-normal px-2 text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-normal px-2 text-center">
                   Turn on your microphone to practice shadowing after the audio finishes on each page.
                 </p>
               </div>
