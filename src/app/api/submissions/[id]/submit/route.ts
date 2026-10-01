@@ -199,6 +199,15 @@ export async function POST(
       return sub
     })
 
+    if (updated.classId) {
+      try {
+        const { invalidateStudentClassDetailCache } = await import('@/lib/cached-queries');
+        await invalidateStudentClassDetailCache(updated.classId, updated.studentId);
+      } catch (err) {
+        console.warn("[SUBMISSION_SUBMIT] Failed to invalidate student class detail cache:", err);
+      }
+    }
+
     return NextResponse.json({
       status: 200,
       message: "Nộp bài thành công!",

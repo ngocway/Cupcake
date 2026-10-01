@@ -343,8 +343,8 @@ export function StudentAssignmentsView({
   // Search query in Area 1
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Selected Group ID
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
+  // Determine target group to open on initial load (closest in-progress or uncompleted)
+  const initialTargetGroupId = useMemo(() => {
     const paramGid = searchParams.get('groupId') ?? initialGroupId;
     if (paramGid && assignmentGroups.some(g => g.id === paramGid)) {
       return paramGid;
@@ -354,36 +354,63 @@ export function StudentAssignmentsView({
       const foundGrp = assignmentGroups.find(g => g.items.some(i => i.assignment.id === paramAid));
       if (foundGrp) return foundGrp.id;
     }
-    const firstUnlocked = assignmentGroups.find(g => !g.isLocked && g.items.length > 0);
-    return firstUnlocked?.id || assignmentGroups[0]?.id || '';
-  });
+
+    // 1. Nhóm đang làm dở (in-progress): !isLocked, có bài đã làm và còn bài chưa làm
+    const inProgress = assignmentGroups.find(g => {
+      if (g.isLocked || g.items.length === 0) return false;
+      const completed = g.items.filter(i => submissionsState[i.assignment.id]?.isSubmitted).length;
+      return completed > 0 && completed < g.items.length;
+    });
+    if (inProgress) return inProgress.id;
+
+    // 2. Nhóm chưa làm kế tiếp mà không bị khóa (!isLocked, 0 bài đã làm)
+    const notStarted = assignmentGroups.find(g => {
+      if (g.isLocked || g.items.length === 0) return false;
+      const completed = g.items.filter(i => submissionsState[i.assignment.id]?.isSubmitted).length;
+      return completed === 0;
+    });
+    if (notStarted) return notStarted.id;
+
+    // 3. Nếu đã hoàn thành tất cả: chọn nhóm mở mới nhất (cuối danh sách)
+    const unlockedGroups = assignmentGroups.filter(g => !g.isLocked && g.items.length > 0);
+    if (unlockedGroups.length > 0) {
+      return unlockedGroups[unlockedGroups.length - 1].id;
+    }
+
+    return assignmentGroups[0]?.id || '';
+  }, [assignmentGroups, searchParams, initialGroupId, initialAssignmentId, submissionsState]);
+
+  // Selected Group ID
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => initialTargetGroupId);
 
   // Real-time preload progress of assignments in background queue
   const preloadProgress = useAssignmentPreloadProgress();
 
-  // Expanded Groups in Accordion Tree (Area 1)
+  // Expanded Groups in Accordion Tree (Single Accordion: Only target group is expanded by default)
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    assignmentGroups.forEach(g => {
-      initial[g.id] = true; // Default expand all groups for easy navigation
-    });
-    return initial;
+    return initialTargetGroupId ? { [initialTargetGroupId]: true } : {};
   });
 
+  // Single Accordion: Toggle expand for a group. If expanding, collapse all other groups.
   const toggleGroupExpand = (groupId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    const grp = assignmentGroups.find(g => g.id === groupId);
+    if (grp?.isLocked) {
+      setLockedGroupModal(grp);
+      return;
+    }
+
     setExpandedGroups(prev => {
-      const willBeExpanded = !prev[groupId];
-      if (willBeExpanded) {
-        const grp = assignmentGroups.find(g => g.id === groupId);
-        if (grp && !grp.isLocked && grp.items.length > 0) {
-          queueGroupForPreload(grp.items, activeAssignmentId);
-        }
+      const isCurrentlyExpanded = !!prev[groupId];
+      if (isCurrentlyExpanded) {
+        // Collapse if already open
+        return {};
       }
-      return {
-        ...prev,
-        [groupId]: willBeExpanded,
-      };
+      // Single Accordion: Expand ONLY this group and queue preload
+      if (grp && grp.items.length > 0) {
+        queueGroupForPreload(grp.items, activeAssignmentId);
+      }
+      return { [groupId]: true };
     });
   };
 
@@ -398,15 +425,16 @@ export function StudentAssignmentsView({
     return activeGroup.items.map(parseItemConfig);
   }, [activeGroup]);
 
-  // Selected Assignment ID
+  // Selected Assignment ID: prefer first uncompleted item in the active target group
   const [activeAssignmentId, setActiveAssignmentId] = useState<string>(() => {
     const paramAid = searchParams.get('assignmentId') ?? initialAssignmentId;
-    if (paramAid && activeGroup?.items.some(i => i.assignment.id === paramAid)) {
+    const initialGrp = assignmentGroups.find(g => g.id === initialTargetGroupId) || assignmentGroups[0];
+    if (paramAid && initialGrp?.items.some(i => i.assignment.id === paramAid)) {
       return paramAid;
     }
-    // Look in activeGroup items: prefer first uncompleted
-    const firstUncompleted = activeGroup?.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
-    return firstUncompleted?.assignment.id || activeGroup?.items[0]?.assignment.id || '';
+    // Prefer first uncompleted item in the target group
+    const firstUncompleted = initialGrp?.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
+    return firstUncompleted?.assignment.id || initialGrp?.items[0]?.assignment.id || '';
   });
 
   // Active Item Config
@@ -461,11 +489,6 @@ export function StudentAssignmentsView({
     }
   }, [activeItemConfig]);
 
-  // Current stage items
-  const currentStageItems = useMemo(() => {
-    const foundStage = availableStages.find(s => s.id === activeStageId);
-    return foundStage?.items || [];
-  }, [availableStages, activeStageId]);
 
   // Synchronize URL query params
   const updateQueryParams = (groupId: string, assignmentId: string, stageId: string) => {
@@ -491,8 +514,8 @@ export function StudentAssignmentsView({
     }
 
     setSelectedGroupId(groupId);
-    // Ensure expanded
-    setExpandedGroups(prev => ({ ...prev, [groupId]: true }));
+    // Single Accordion: Only this group is expanded
+    setExpandedGroups({ [groupId]: true });
 
     // Pick first uncompleted item or first item
     const uncompleted = grp.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
@@ -531,6 +554,7 @@ export function StudentAssignmentsView({
 
     const cfg = parseItemConfig(item);
     setSelectedGroupId(parentGroupId);
+    setExpandedGroups({ [parentGroupId]: true });
     setActiveAssignmentId(item.assignment.id);
     setActiveStageId(cfg.stage);
     updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
@@ -627,15 +651,6 @@ export function StudentAssignmentsView({
       queueGroupForPreload(activeGroup.items, activeAssignmentId);
     }
   }, [activeGroup?.id, activeAssignmentId]);
-
-  // Initial mount preload: Preload all default-expanded groups
-  useEffect(() => {
-    assignmentGroups.forEach(grp => {
-      if (expandedGroups[grp.id] && !grp.isLocked && grp.items.length > 0) {
-        queueGroupForPreload(grp.items, activeAssignmentId);
-      }
-    });
-  }, []);
 
   // Keep-Alive Pool: Preserves visited component instances and their user progress in DOM
   const [visitedConfigs, setVisitedConfigs] = useState<Record<string, ParsedItemConfig>>(() => {
@@ -859,7 +874,7 @@ export function StudentAssignmentsView({
                       const totalInGrp = group.items.length;
                       const completedInGrp = group.items.filter(i => submissionsState[i.assignment.id]?.isSubmitted).length;
                       const isGrpActive = group.id === selectedGroupId;
-                      const isExpanded = expandedGroups[group.id] ?? true;
+                      const isExpanded = !!expandedGroups[group.id];
 
                       return (
                         <div 
@@ -874,8 +889,9 @@ export function StudentAssignmentsView({
                           <div
                             onClick={() => handleSelectGroup(group.id)}
                             onMouseEnter={() => {
-                              if (!group.isLocked && group.items[0]) {
+                              if (!group.isLocked && group.items.length > 0) {
                                 preloadAssignment(group.items[0]);
+                                queueGroupForPreload(group.items);
                               }
                             }}
                             className={`flex items-center justify-between gap-2 p-3 text-left transition-colors cursor-pointer select-none ${
@@ -1047,10 +1063,8 @@ export function StudentAssignmentsView({
               </div>
 
             {/* Bottom row: Stages Tabs (Các chặng: Ôn tập, Ngữ pháp, Bài tập, Game, Đọc hiểu...) */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-              
-              {/* Stages Tabs list */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center gap-1.5 overflow-x-auto min-w-0 custom-scrollbar">
                 {availableStages.map(stage => {
                   const isActiveStage = stage.id === activeStageId;
                   const completedInStage = stage.items.filter(i => submissionsState[i.item.assignment.id]?.isSubmitted).length;
@@ -1086,43 +1100,17 @@ export function StudentAssignmentsView({
                 })}
               </div>
 
-              {/* Sub-selector pills if current stage has 2+ items */}
-              {currentStageItems.length > 1 && (
-                <div className="flex items-center gap-1 overflow-x-auto py-0.5 custom-scrollbar">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1">Các bài:</span>
-                  {currentStageItems.map((stItem, idx) => {
-                    const isSelected = stItem.item.assignment.id === activeAssignmentId;
-                    const isSub = submissionsState[stItem.item.assignment.id]?.isSubmitted;
-                    const stProgress = preloadProgress[stItem.item.assignment.id] ?? 0;
-                    const isStReady = isSelected || stProgress >= 100 || isAssignmentCached(stItem.item.assignment.id);
-
-                    return (
-                      <button
-                        key={stItem.item.assignment.id}
-                        type="button"
-                        aria-disabled={!isStReady}
-                        onClick={(e) => {
-                          if (!isStReady) {
-                            e.preventDefault();
-                            return;
-                          }
-                          handleSelectAssignment(stItem.item, selectedGroupId);
-                        }}
-                        onMouseEnter={() => preloadAssignment(stItem.item)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap border ${
-                          isSelected
-                            ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 shadow-xs cursor-pointer'
-                            : isStReady
-                              ? 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 border-slate-200 dark:border-slate-700 cursor-pointer'
-                              : 'bg-slate-100/60 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border-dashed border-slate-200 dark:border-slate-800 cursor-wait opacity-55'
-                        }`}
-                      >
-                        <span>Bài {idx + 1}</span>
-                        {isSub && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* Toggle Focus / Thu gọn button moved to Area 2 */}
+              {!isZenMode && (
+                <button
+                  type="button"
+                  title="Thu gọn menu & thanh trên để tối đa khung làm bài"
+                  onClick={toggleSidebar}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-bold text-xs transition-all cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
+                >
+                  <PanelLeftClose className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Thu gọn</span>
+                </button>
               )}
             </div>
           </div>
@@ -1135,58 +1123,18 @@ export function StudentAssignmentsView({
             isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
           }`}>
             
-            {/* Top Toolbar of Canvas */}
-            <div className="px-4 py-2.5 bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold min-w-0">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="truncate">
-                  {activeItemConfig?.stageLabel}: {activeItemConfig?.cleanTitle}
-                </span>
-                {/* If collapsed, show small status badge right in toolbar */}
-                {isSidebarCollapsed && activeItemConfig && (
-                  <span className="ml-1.5 shrink-0">
-                    {isCurrentSubmitted ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-[10px] border border-emerald-200/60">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        <span>{typeof currentScore === 'number' ? formatScore(currentScore) : 'Đã làm'}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 font-extrabold text-[10px]">
-                        Chưa làm
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Toggle Focus Mode button */}
-                {!isZenMode && (
-                  <button
-                    type="button"
-                    title={isSidebarCollapsed ? "Mở lại menu bài học & thanh điều hướng" : "Thu gọn menu & thanh trên để tối đa khung làm bài"}
-                    onClick={toggleSidebar}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all cursor-pointer font-bold text-xs ${
-                      isSidebarCollapsed 
-                        ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 hover:bg-blue-100 shadow-xs' 
-                        : 'hover:bg-slate-200/60 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    {isSidebarCollapsed ? (
-                      <>
-                        <PanelLeftOpen className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Mở thanh điều hướng</span>
-                      </>
-                    ) : (
-                      <>
-                        <PanelLeftClose className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Thu gọn</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
+            {/* Floating Expand button when sidebar is collapsed (moved to top-right) */}
+            {isSidebarCollapsed && !isZenMode && (
+              <button
+                type="button"
+                title="Mở lại menu bài học & thanh điều hướng"
+                onClick={toggleSidebar}
+                className="absolute top-3 right-3 sm:right-4 z-30 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-blue-600 dark:text-blue-400 border border-slate-200/80 dark:border-slate-700/80 shadow-md hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all cursor-pointer hover:scale-105 active:scale-95"
+              >
+                <PanelLeftOpen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mở thanh điều hướng</span>
+              </button>
+            )}
 
             {/* Embedded Activity Canvas (Keep-Alive Pool: 100% Native & 0ms Instant Switch) */}
             <div className="relative flex-1 w-full h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">

@@ -255,20 +255,21 @@ function SortableCompactGroupCard({
               </span>
             ) : (
               <div className="flex flex-col gap-0.5">
-                <span
-                  className="text-amber-700 dark:text-amber-400 flex items-center gap-1 line-clamp-1"
-                  title={`Mở sau khi hoàn thành ≥ ${group.unlockThreshold ?? 60}% "${group.prerequisiteGroupTitle || 'Nhóm trước'}"`}
-                >
-                  <span className="material-symbols-outlined text-[14px] shrink-0">lock</span>
-                  <span className="truncate">
-                    Sau: {group.prerequisiteGroupTitle || `Chặng #${stepNumber! - 1}`}
-                  </span>
-                  <span className="font-bold shrink-0">({group.unlockThreshold ?? 60}%)</span>
-                </span>
-                {group.forceUnlocked && (
-                  <span className="text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-0.5">
-                    <span className="material-symbols-outlined text-[12px]">lock_open</span>
+                {group.forceUnlocked ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 text-[11px] font-bold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">lock_open</span>
                     Đang mở cả lớp
+                  </span>
+                ) : (
+                  <span
+                    className="text-amber-700 dark:text-amber-400 flex items-center gap-1 line-clamp-1"
+                    title={`Mở sau khi hoàn thành ≥ ${group.unlockThreshold ?? 60}% "${group.prerequisiteGroupTitle || 'Nhóm trước'}"`}
+                  >
+                    <span className="material-symbols-outlined text-[14px] shrink-0">lock</span>
+                    <span className="truncate">
+                      Sau: {group.prerequisiteGroupTitle || `Chặng #${stepNumber! - 1}`}
+                    </span>
+                    <span className="font-bold shrink-0">({group.unlockThreshold ?? 60}%)</span>
                   </span>
                 )}
               </div>
@@ -1063,9 +1064,11 @@ export function AssignmentsTab({
                   )}
                   {activeGroup.prerequisiteGroupId && (
                     <div className="flex items-center gap-2 mt-2 pt-2 border-t border-blue-100/60 dark:border-gray-700/60 text-xs flex-wrap">
-                      <span className="material-symbols-outlined text-[16px] text-amber-500">lock</span>
+                      <span className={`material-symbols-outlined text-[16px] ${activeGroup.forceUnlocked ? 'text-emerald-600' : 'text-amber-500'}`}>
+                        {activeGroup.forceUnlocked ? 'lock_open' : 'lock'}
+                      </span>
                       <span className="text-gray-700 dark:text-gray-300 font-medium">
-                        Điều kiện mở khóa: Hoàn thành ≥ <strong className="text-amber-600">{activeGroup.unlockThreshold}%</strong> nhóm &ldquo;<strong>{activeGroup.prerequisiteGroupTitle}</strong>&rdquo;
+                        Điều kiện mở khóa: Hoàn thành ≥ <strong className={activeGroup.forceUnlocked ? 'text-emerald-600' : 'text-amber-600'}>{activeGroup.unlockThreshold}%</strong> nhóm &ldquo;<strong>{activeGroup.prerequisiteGroupTitle}</strong>&rdquo;
                       </span>
                       {activeGroup.forceUnlocked ? (
                         <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 flex items-center gap-1">
@@ -1521,12 +1524,21 @@ export function AssignmentsTab({
 
                       {/* Prerequisite info banner if set */}
                       {group.prerequisiteGroupId && (
-                        <div className="mt-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-2.5 py-1.5 rounded-xl border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-1.5 font-medium">
-                          <span className="material-symbols-outlined text-[15px] text-amber-600">lock</span>
-                          <span className="truncate">
-                            Mở sau &ldquo;{group.prerequisiteGroupTitle || 'Nhóm trước'}&rdquo; (≥ {group.unlockThreshold}%)
-                          </span>
-                        </div>
+                        group.forceUnlocked ? (
+                          <div className="mt-2 text-xs text-emerald-800 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/30 px-2.5 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/50 flex items-center gap-1.5 font-medium">
+                            <span className="material-symbols-outlined text-[15px] text-emerald-600">lock_open</span>
+                            <span className="truncate">
+                              Đã mở tự do cho cả lớp (Bỏ qua điều kiện tiến độ)
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="mt-2 text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-2.5 py-1.5 rounded-xl border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-1.5 font-medium">
+                            <span className="material-symbols-outlined text-[15px] text-amber-600">lock</span>
+                            <span className="truncate">
+                              Mở sau &ldquo;{group.prerequisiteGroupTitle || 'Nhóm trước'}&rdquo; (≥ {group.unlockThreshold}%)
+                            </span>
+                          </div>
+                        )
                       )}
 
                       {/* Kinds badges breakdown */}

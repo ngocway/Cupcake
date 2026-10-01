@@ -3,7 +3,7 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
-import { invalidateStudentClassesCache } from '@/lib/cached-queries';
+import { invalidateStudentClassesCache, invalidateStudentClassDetailCache } from '@/lib/cached-queries';
 
 async function requireTeacherClass(classId: string) {
   const session = await auth();
@@ -226,6 +226,8 @@ export async function removeAssignmentFromClass(classId: string, assignmentId: s
     where: { classId, assignmentId },
   });
 
+  await invalidateStudentClassDetailCache(classId);
   revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/student/classes/${classId}`);
   return { success: true };
 }

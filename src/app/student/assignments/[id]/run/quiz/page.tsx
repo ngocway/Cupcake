@@ -185,7 +185,22 @@ export default async function StudentQuizPage({
     }
   });
 
-  const questions = await questionsPromise;
+  let questions = await questionsPromise;
+  if (!questions || questions.length === 0) {
+    questions = await getCachedAssignmentQuestions(assignmentCore.id);
+  }
+
+  let resolvedQuestionTranslationsPromise = questionTranslationsPromise;
+  let resolvedAssignmentTranslationsPromise = assignmentTranslationsPromise;
+  if (paramsId !== assignmentCore.id) {
+    resolvedQuestionTranslationsPromise = getQuestionTranslationMap(assignmentCore.id);
+    resolvedAssignmentTranslationsPromise = getAssignmentTranslations(assignmentCore.id);
+  }
+
+  const assignmentWithCount = {
+    ...assignmentCore,
+    _count: { questions: questions.length }
+  };
 
   // Wrap to fetch grammar instructions dynamically if grammarLesson is present
   const getExtraDataWithGrammar = async () => {
@@ -206,15 +221,15 @@ export default async function StudentQuizPage({
   return (
     <div className={`w-full max-w-none ${embedded === "true" ? "min-h-0 bg-transparent" : "min-h-screen"}`}>
        <KidTeenQuizRunner 
-          assignment={assignmentCore as any}
+          assignment={assignmentWithCount as any}
           submissionId={submissionId}
           questions={questions}
           cefrLevel={assignmentCore.level || "a1"}
           initialAnswers={initialAnswers}
           extraDataPromise={resolvedExtraDataPromise}
           relatedAssignmentsPromise={relatedAssignmentsPromise}
-          questionTranslationsPromise={questionTranslationsPromise}
-          assignmentTranslationsPromise={assignmentTranslationsPromise}
+          questionTranslationsPromise={resolvedQuestionTranslationsPromise}
+          assignmentTranslationsPromise={resolvedAssignmentTranslationsPromise}
           isGuest={!userId}
           isReviewMode={isReviewMode}
           submissionScore={submission.score}

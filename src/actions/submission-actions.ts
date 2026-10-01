@@ -194,6 +194,13 @@ export async function completeSubmission(submissionId: string, answers: any) {
       }
     })
 
+    if (submission.classId) {
+      const { invalidateStudentClassDetailCache } = await import('@/lib/cached-queries');
+      await invalidateStudentClassDetailCache(submission.classId, submission.studentId);
+      revalidatePath(`/student/classes/${submission.classId}`);
+      revalidatePath(`/teacher/classes/${submission.classId}`);
+    }
+
     revalidatePath(`/student/my-learning/assignments`)
     return { success: true, score: final_score }
 

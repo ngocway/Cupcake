@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { invalidateStudentClassDetailCache } from "@/lib/cached-queries";
 
 interface CompleteActivityParams {
   assignmentId: string;
@@ -78,6 +79,7 @@ export async function completeClassActivityAction({
     }
 
     if (classId) {
+      await invalidateStudentClassDetailCache(classId, studentId);
       revalidatePath(`/student/classes/${classId}`);
       revalidatePath(`/teacher/classes/${classId}`);
     }

@@ -85,6 +85,18 @@ export default function BookReaderClient({
 
   const [showModeSelector, setShowModeSelector] = useState(true);
 
+  // Client hydration safe speech recognition check
+  const [isMounted, setIsMounted] = useState(false);
+  const [hasSpeechRecognition, setHasSpeechRecognition] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setHasSpeechRecognition(
+      typeof window !== "undefined" &&
+      (!!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition)
+    );
+  }, []);
+
   // Class assignment progress tracking: Hoàn thành khi học sinh tới được trang cuối cùng
   const searchParams = useSearchParams();
   const assignmentId = propAssignmentId || searchParams?.get("assignmentId");
@@ -1117,7 +1129,9 @@ export default function BookReaderClient({
       <div className={`${isEmbeddedInCanvas ? "relative bottom-auto left-auto right-auto" : "fixed bottom-0 left-0 right-0 md:relative md:bottom-auto md:left-auto md:right-auto"} w-full h-20 flex flex-col items-center justify-center shrink-0 bg-white/95 backdrop-blur-md border-t border-amber-200/50 z-20 pb-safe`}>
 
         {/* Status label */}
-        <p className={`text-[10px] font-bold mb-1.5 transition-colors duration-300 ${
+        <p
+          suppressHydrationWarning
+          className={`text-[10px] font-bold mb-1.5 transition-colors duration-300 ${
           isPageCompleted
             ? "text-emerald-600"
             : isTtsSpeaking
@@ -1134,7 +1148,7 @@ export default function BookReaderClient({
             ? "🎙️ Listening..."
             : mode === "reading"
             ? "📖 Reading mode — listen along"
-            : isSpeechRecognitionSupported
+            : !isMounted || hasSpeechRecognition
             ? "Read after the audio finishes..."
             : "Speech recognition not supported"}
         </p>
@@ -1155,7 +1169,7 @@ export default function BookReaderClient({
             {mode === "shadowing" && (
               <button
                 onClick={toggleListening}
-                disabled={isTtsSpeaking || !isSpeechRecognitionSupported || isPageCompleted}
+                disabled={isTtsSpeaking || (isMounted && !hasSpeechRecognition) || isPageCompleted}
                 className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg transform transition-all duration-300 disabled:cursor-not-allowed ${
                   isPageCompleted
                     ? "bg-emerald-500 shadow-emerald-500/30 scale-95"

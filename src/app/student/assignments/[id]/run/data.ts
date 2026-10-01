@@ -78,16 +78,24 @@ export const getAssignmentReviews = async (assignmentId: string) => {
 export const prewarmAssignmentQuestions = async (assignmentId: string) => {
   // Hàm này chỉ gọi để Prisma cache lại query câu hỏi
   return prisma.question.findMany({
-    where: { assignmentId },
+    where: {
+      assignment: {
+        OR: [{ id: assignmentId }, { slug: assignmentId }]
+      }
+    },
     orderBy: { orderIndex: "asc" },
     select: { id: true } // Chỉ lấy ID để nhẹ, nhưng đủ để warm up DB cache
   });
 };
 
 export const getCachedAssignmentQuestions = async (assignmentId: string) => {
-  return fetchWithRedis(`assignment:questions:${assignmentId}`, 3600, async () => {
+  return fetchWithRedis(`assignment:questions:v2:${assignmentId}`, 3600, async () => {
     return prisma.question.findMany({
-      where: { assignmentId },
+      where: {
+        assignment: {
+          OR: [{ id: assignmentId }, { slug: assignmentId }]
+        }
+      },
       orderBy: { orderIndex: 'asc' }
     });
   });
@@ -97,9 +105,12 @@ export const getCachedAssignmentQuestions = async (assignmentId: string) => {
  *  Returns a map: { [questionId]: { vi, th, id } | null }
  */
 export const getQuestionTranslationMap = async (assignmentId: string) => {
-  return fetchWithRedis(`assignment:question-translations:${assignmentId}`, 3600, async () => {
+  return fetchWithRedis(`assignment:question-translations:v2:${assignmentId}`, 3600, async () => {
     const rows = await prisma.$queryRawUnsafe<Array<{ id: string; explanationTranslations: any }>>(
-      `SELECT id, "explanationTranslations" FROM "Question" WHERE "assignmentId" = $1`,
+      `SELECT q.id, q."explanationTranslations" 
+       FROM "Question" q 
+       JOIN "Assignment" a ON q."assignmentId" = a.id 
+       WHERE a.id = $1 OR a.slug = $1`,
       assignmentId
     );
     const map: Record<string, any> = {};
@@ -111,9 +122,9 @@ export const getQuestionTranslationMap = async (assignmentId: string) => {
 };
 
 export const getAssignmentTranslations = async (assignmentId: string) => {
-  return fetchWithRedis(`assignment:translations:v3:${assignmentId}`, 3600, async () => {
-    const ass = await prisma.assignment.findUnique({
-      where: { id: assignmentId },
+  return fetchWithRedis(`assignment:translations:v4:${assignmentId}`, 3600, async () => {
+    const ass = await prisma.assignment.findFirst({
+      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
       select: { grammarLesson: true, instructionsTranslations: true }
     });
     if (ass?.grammarLesson) {

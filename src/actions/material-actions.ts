@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from "next/cache";
 import { syncToHomepageFeed, removeFromHomepageFeed } from "@/lib/feed-sync";
-import { invalidateMaterialCache } from '@/lib/cached-queries';
+import { invalidateMaterialCache, invalidateStudentClassDetailCache } from '@/lib/cached-queries';
 import crypto from 'crypto';
 import { MaterialStatus, MaterialType, BookStatus } from '@prisma/client';
 import { after } from 'next/server';
@@ -837,6 +837,9 @@ export async function unassignMaterialFromClass(assignmentId: string, classId: s
     }
   });
 
+  await invalidateStudentClassDetailCache(classId);
+  revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/student/classes/${classId}`);
   revalidatePath('/teacher/materials');
   revalidatePath('/teacher/dashboard');
   return { success: true };
@@ -2255,6 +2258,7 @@ export async function assignBundleToClassAction(
     });
   }
 
+  await invalidateStudentClassDetailCache(classId);
   revalidatePath(`/teacher/classes/${classId}`);
   revalidatePath(`/student/classes/${classId}`);
   return { success: true, groupId: group.id, count: items.length, title };
@@ -2288,6 +2292,11 @@ export async function markLessonViewedAction(assignmentId: string, classId?: str
         attemptNumber: 1,
       }
     });
+
+    if (classId) {
+      await invalidateStudentClassDetailCache(classId, studentId);
+      revalidatePath(`/student/classes/${classId}`);
+    }
   }
 
   return { success: true };
@@ -2313,6 +2322,7 @@ export async function renameAssignmentGroupAction(groupId: string, newTitle: str
     data: { title: newTitle.trim() }
   });
 
+  await invalidateStudentClassDetailCache(group.classId);
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
   return { success: true, title: updated.title };
@@ -2367,6 +2377,7 @@ export async function deleteAssignmentGroupAction(groupId: string) {
     }
   });
 
+  await invalidateStudentClassDetailCache(group.classId);
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
   return { success: true };
@@ -2408,6 +2419,7 @@ export async function updateAssignmentGroupProgressionAction(
     }
   });
 
+  await invalidateStudentClassDetailCache(group.classId);
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
   return { success: true, group: updated };
@@ -2436,6 +2448,7 @@ export async function toggleForceUnlockAssignmentGroupAction(
     data: { forceUnlocked }
   });
 
+  await invalidateStudentClassDetailCache(group.classId);
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
   return { success: true, forceUnlocked: updated.forceUnlocked };
@@ -2490,6 +2503,7 @@ export async function reorderAssignmentGroupsAction(
     })
   );
 
+  await invalidateStudentClassDetailCache(classId);
   revalidatePath(`/teacher/classes/${classId}`);
   revalidatePath(`/student/classes/${classId}`);
   return { success: true };
@@ -2554,6 +2568,7 @@ export async function toggleGroupVisibilityAction(
     }
   });
 
+  await invalidateStudentClassDetailCache(group.classId);
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
   return { success: true };
@@ -2605,6 +2620,7 @@ export async function scheduleGroupVisibilityAction(
     }
   });
 
+  await invalidateStudentClassDetailCache(group.classId);
   revalidatePath(`/teacher/classes/${group.classId}`);
   revalidatePath(`/student/classes/${group.classId}`);
   return { success: true };

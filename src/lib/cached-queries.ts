@@ -333,3 +333,28 @@ export async function invalidateStudentClassesCache(userId: string) {
   }
 }
 
+export async function invalidateStudentClassDetailCache(classId: string, studentId?: string) {
+  try {
+    if (studentId) {
+      await redis.del(`student:class-detail:${studentId}:${classId}`);
+    } else {
+      const enrollments = await prisma.classEnrollment.findMany({
+        where: { classId },
+        select: { studentId: true }
+      });
+      const keys = enrollments.map(e => `student:class-detail:${e.studentId}:${classId}`);
+      if (keys.length > 0) {
+        await Promise.all(keys.map(k => redis.del(k)));
+      }
+      try {
+        const scannedKeys = await redis.keys(`student:class-detail:*:${classId}`);
+        if (scannedKeys.length > 0) {
+          await Promise.all(scannedKeys.map(k => redis.del(k)));
+        }
+      } catch {}
+    }
+  } catch (e) {
+    console.warn("[invalidateStudentClassDetailCache] Failed to invalidate cache for class:", classId, e);
+  }
+}
+
