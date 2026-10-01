@@ -36,6 +36,7 @@ interface Props {
     flashcards?: Promise<any[]>
     kindergartenGames?: Promise<any[]>
     teacherGames?: Promise<any[]>
+    studentClasses?: Promise<{ activeClasses: any[], pendingRequests: any[] }>
   }
   searchParams: any
   initialUserType?: string
@@ -44,6 +45,7 @@ interface Props {
   initialStudyAgeGroup?: string
   initialStudyLevel?: string
   onboardingConfig?: any
+  initialIsLoggedIn?: boolean
 }
 
 // ─── Skeletons ────────────────────────────────────────────────────────────────
@@ -957,15 +959,25 @@ function MobileSubjectBar({ subjects, activeSubject, onSelect, isPending }: { su
   );
 }
 
-export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "", onboardingConfig: serverOnboardingConfig }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "", onboardingConfig: serverOnboardingConfig, initialIsLoggedIn }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const isLoggedIn = !!session
+  const isLoggedIn = initialIsLoggedIn !== undefined ? initialIsLoggedIn : !!session
   const t = useTranslations("home")
   const nt = useTranslations("nav")
   const locale = useLocale()
+
+  // Student classes — read from Zustand store
+  const setStudentClasses    = useContentStore(s => (s as any).setStudentClasses);
+  const studentClassesLoaded = useContentStore(s => (s as any).studentClassesLoaded);
+
+  // SSR seed: unwrap server-fetched student classes and populate store on first render.
+  const ssrStudentClasses = use(promises.studentClasses ?? Promise.resolve(null)) as any;
+  if (!studentClassesLoaded && ssrStudentClasses) {
+    setStudentClasses(ssrStudentClasses);
+  }
 
   // Flashcard topics — read from Zustand store (persists across tab switches, no re-fetch on remount)
   const allFlashcardTopics    = useContentStore(s => (s as any).flashcardTopics) as any[];
@@ -1022,10 +1034,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Prefetch student classes on mount for logged in students
-  const studentClassesLoaded = useContentStore(s => (s as any).studentClassesLoaded);
-  const setStudentClasses    = useContentStore(s => (s as any).setStudentClasses);
-
+  // Fallback prefetch student classes on mount for logged in students if not hydrated from SSR
   useEffect(() => {
     if (!isLoggedIn || studentClassesLoaded) return;
     fetch("/api/student/classes")

@@ -85,7 +85,7 @@ async function getStudentClassDetailData(userId: string, classId: string) {
       ? await prisma.submission.findMany({
           where: {
             studentId: userId,
-            classId: id,
+            classId,
             assignmentId: { in: assignmentIds },
             submittedAt: { not: null }
           },

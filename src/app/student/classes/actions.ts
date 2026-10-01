@@ -3,7 +3,7 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
-import { fetchWithRedis } from '@/lib/cached-queries';
+import { fetchWithRedis, invalidateStudentClassesCache } from '@/lib/cached-queries';
 
 export async function cancelJoinRequest(classId: string) {
   const session = await auth();
@@ -22,6 +22,7 @@ export async function cancelJoinRequest(classId: string) {
     });
     
     // Invalidate caches
+    await invalidateStudentClassesCache(studentId);
     revalidatePath('/student/classes');
     revalidatePath('/student/dashboard');
     return { success: true };

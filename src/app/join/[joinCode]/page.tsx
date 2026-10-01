@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { invalidateStudentClassesCache } from '@/lib/cached-queries';
 import Link from 'next/link';
 
 export default async function JoinClassPage({ params }: { params: Promise<{ joinCode: string }> }) {
@@ -137,6 +138,7 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
       }
     });
 
+    await invalidateStudentClassesCache(userId);
     revalidatePath(`/join/${joinCode}`);
   }
 

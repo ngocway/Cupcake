@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { LandingPage } from "@/components/public/LandingPage"
 import { HomeShell } from "./_components/HomeShell"
 import { HomeSidebar } from "./_components/HomeSidebar"
-import { getCachedAssignments, getCachedLessons } from "@/lib/cached-queries"
+import { getCachedAssignments, getCachedLessons, getCachedStudentClasses } from "@/lib/cached-queries"
 import { cookies } from "next/headers"
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
@@ -138,6 +138,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const lessonsPromise     = getCachedLessons(queryParams);
   const flashcardsPromise  = getCachedFlashcardTopics();
   const teacherGamesPromise = getPublishedTeacherGamesAction();
+  const studentClassesPromise = isStudentSession
+    ? getCachedStudentClasses(session.user.id)
+    : Promise.resolve({ activeClasses: [], pendingRequests: [] });
 
   return (
     <HomeShell>
@@ -163,7 +166,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
                 flashcards: flashcardsPromise,
                 kindergartenGames: STATIC_KINDERGARTEN_GAMES,
                 teacherGames: teacherGamesPromise,
+                studentClasses: studentClassesPromise,
               }}
+              initialIsLoggedIn={!!session?.user?.id}
               searchParams={params}
               initialUserType={initialUserType}
               hasUserPreference={hasUserPreference}

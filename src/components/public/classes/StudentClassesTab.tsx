@@ -58,8 +58,11 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
 
+  const isFetchingRef = React.useRef(false);
+
   const fetchClasses = async (isBackground = false) => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!isBackground) setIsLoading(true);
     setError(null);
     try {
@@ -75,20 +78,16 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
         setError(err?.message || 'Có lỗi xảy ra khi tải danh sách lớp học');
       }
     } finally {
+      isFetchingRef.current = false;
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isLoggedIn) {
-      if (!cachedData) {
-        fetchClasses(false);
-      } else {
-        // Silent background update (SWR)
-        fetchClasses(true);
-      }
+    if (isLoggedIn && !cachedData) {
+      fetchClasses(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, cachedData]);
 
   const handleCancelRequest = async (classId: string) => {
     setCancelingId(classId);

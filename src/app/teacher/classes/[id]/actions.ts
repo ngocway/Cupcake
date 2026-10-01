@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { invalidateStudentClassesCache } from '@/lib/cached-queries';
 
 async function requireTeacherClass(classId: string) {
   const session = await auth();
@@ -39,6 +40,7 @@ export async function updateEnrollmentStatus(classId: string, studentId: string,
     );
   }
 
+  await invalidateStudentClassesCache(studentId);
   revalidatePath(`/teacher/classes/${classId}`);
   return { success: true };
 }
@@ -50,6 +52,7 @@ export async function removeEnrollment(classId: string, studentId: string) {
     where: { studentId_classId: { studentId, classId } },
   });
 
+  await invalidateStudentClassesCache(studentId);
   revalidatePath(`/teacher/classes/${classId}`);
   return { success: true };
 }
@@ -75,6 +78,7 @@ export async function bulkUpdateEnrollments(classId: string, studentIds: string[
     }
   }
 
+  await Promise.all(studentIds.map(id => invalidateStudentClassesCache(id)));
   revalidatePath(`/teacher/classes/${classId}`);
   return { success: true };
 }
@@ -86,6 +90,7 @@ export async function bulkRemoveEnrollments(classId: string, studentIds: string[
     where: { classId, studentId: { in: studentIds } },
   });
 
+  await Promise.all(studentIds.map(id => invalidateStudentClassesCache(id)));
   revalidatePath(`/teacher/classes/${classId}`);
   return { success: true };
 }

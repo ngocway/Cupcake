@@ -264,3 +264,72 @@ export async function invalidateMaterialCache(assignmentId: string) {
   }
 }
 
+export async function getCachedStudentClasses(userId: string): Promise<{ activeClasses: any[]; pendingRequests: any[] }> {
+  // Use Redis cache (TTL 24 hours = 86400s) with active invalidation
+  return fetchWithRedis(`student:classes:${userId}`, 86400, async () => {
+    try {
+      const rows: any[] = await prisma.$queryRawUnsafe(`
+        SELECT 
+          ce."classId" as "id", 
+          ce."status", 
+          ce."joinedAt",
+          c."id" as "classId",
+          c."name" as "className",
+          COALESCE(u."name", u."email") as "teacherName",
+          (SELECT COUNT(*)::int FROM "AssignmentClass" ac WHERE ac."classId" = c."id") AS "totalAssignments",
+          CASE 
+            WHEN ce."status" = 'ACTIVE' THEN (
+              SELECT COUNT(*)::int 
+              FROM "AssignmentClass" ac 
+              WHERE ac."classId" = c."id" 
+                AND (ac."dueDate" IS NULL OR ac."dueDate" > NOW())
+            )
+            ELSE 0 
+          END AS "pendingCount"
+        FROM "ClassEnrollment" ce
+        JOIN "Class" c ON ce."classId" = c."id"
+        LEFT JOIN "User" u ON c."teacherId" = u."id"
+        WHERE ce."studentId" = $1
+        ORDER BY ce."joinedAt" DESC
+      `, userId);
+
+      const activeClasses: any[] = [];
+      const pendingRequests: any[] = [];
+
+      for (const row of rows) {
+        const item = {
+          id: row.id,
+          status: row.status,
+          joinedAt: row.joinedAt,
+          class: {
+            id: row.classId,
+            name: row.className,
+            teacherName: row.teacherName || 'Teacher',
+            totalAssignments: Number(row.totalAssignments) || 0
+          },
+          pendingCount: Number(row.pendingCount) || 0
+        };
+
+        if (row.status === 'ACTIVE') {
+          activeClasses.push(item);
+        } else if (row.status === 'PENDING') {
+          pendingRequests.push(item);
+        }
+      }
+
+      return { activeClasses, pendingRequests };
+    } catch (err) {
+      console.error("[getCachedStudentClasses] Error fetching student classes:", err);
+      return { activeClasses: [], pendingRequests: [] };
+    }
+  });
+}
+
+export async function invalidateStudentClassesCache(userId: string) {
+  try {
+    await redis.del(`student:classes:${userId}`);
+  } catch (e) {
+    console.warn("[invalidateStudentClassesCache] Failed to delete cache for:", userId, e);
+  }
+}
+
