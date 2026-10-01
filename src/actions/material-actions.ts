@@ -3083,7 +3083,7 @@ export async function searchAssignableContentAction(
 
   // Helper to map DB Assignment to AssignableLibraryItem
   const mapAssignment = (a: any, src: 'mine' | 'library'): AssignableLibraryItem => {
-    let type: 'GAME' | 'FLASHCARD' | 'READING' | 'GRAMMAR' | 'BOOK' = 'GRAMMAR';
+    let type: AssignableLibraryItem['type'] = 'GRAMMAR';
     let playUrl = `/student/assignments/${a.id}/run`;
     let previewUrl = `/teacher/materials/${a.id}/edit`;
     let itemUnit = 'câu hỏi';
