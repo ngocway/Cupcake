@@ -21,6 +21,7 @@ export default async function StudentQuizPage({
 
   if (!session?.user?.id) redirect("/student/login");
   const userId = session.user.id;
+  const isAdmin = session.user.role === "ADMIN";
 
   const isClassMode = embedded === "true" || fromClass === "true" || !!classId;
 
@@ -235,6 +236,7 @@ export default async function StudentQuizPage({
           submissionScore={submission.score}
           isFromClass={isFromClass}
           autoStart={autoStart === "true"}
+          isAdmin={isAdmin}
        />
     </div>
   );

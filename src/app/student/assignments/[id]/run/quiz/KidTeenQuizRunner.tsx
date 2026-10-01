@@ -618,6 +618,7 @@ interface Props {
   onComplete?: (score: number, assignmentId: string) => void;
   onRetry?: () => void;
   isEmbeddedInCanvas?: boolean;
+  isAdmin?: boolean;
 }
 
 /** Resolves questionTranslationsPromise and renders ExplanationBlock with translations. 
@@ -813,6 +814,7 @@ export default function KidTeenQuizRunner({
   onComplete,
   onRetry,
   isEmbeddedInCanvas = false,
+  isAdmin = false,
 }: Props) {
   const [activeQuestions, setActiveQuestions] = useState<any[]>(questions);
 
@@ -1871,30 +1873,41 @@ export default function KidTeenQuizRunner({
               </button>
             </div>
           ) : (
-            /* Existing Start buttons when not yet completed */
+            /* Start buttons */
             <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center mt-4">
-              {/* Practice Mode Button */}
-              <button
-                onClick={() => handleStartQuiz("practice")}
-                className={`group relative px-8 py-4 w-full ${
-                  (assignment.lesson || isFromClass) ? "sm:w-2/3" : "sm:w-1/2"
-                } rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200`}
-              >
-                <span className="flex items-center justify-center gap-2">
-                  <Play className="w-5 h-5 fill-current text-purple-600" />
-                  {assignment.lesson ? "Practice now" : "Practice Mode"}
-                </span>
-              </button>
+              {isAdmin ? (
+                <>
+                  {/* Practice Mode Button (Admin only) */}
+                  <button
+                    onClick={() => handleStartQuiz("practice")}
+                    className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <Play className="w-5 h-5 fill-current text-purple-600" />
+                      Practice Mode
+                    </span>
+                  </button>
 
-              {/* Autoplay Mode Button (Only show if not linked to a lesson and NOT in class) */}
-              {!assignment.lesson && !isFromClass && (
+                  {/* Autoplay Mode Button (Admin only) */}
+                  <button
+                    onClick={() => handleStartQuiz("autoplay")}
+                    className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <Play className="w-5 h-5 fill-current text-white animate-pulse" />
+                      Autoplay Mode
+                    </span>
+                  </button>
+                </>
+              ) : (
+                /* Regular users (Students, Teachers, Guests): Only Practice now */
                 <button
-                  onClick={() => handleStartQuiz("autoplay")}
-                  className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
+                  onClick={() => handleStartQuiz("practice")}
+                  className="group relative px-8 py-4 w-full sm:w-2/3 max-w-sm rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200"
                 >
                   <span className="flex items-center justify-center gap-2">
-                    <Play className="w-5 h-5 fill-current text-white animate-pulse" />
-                    Autoplay Mode
+                    <Play className="w-5 h-5 fill-current text-purple-600" />
+                    Practice now
                   </span>
                 </button>
               )}
