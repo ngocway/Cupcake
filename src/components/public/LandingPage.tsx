@@ -973,22 +973,26 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const setStudentClasses    = useContentStore(s => (s as any).setStudentClasses);
   const studentClassesLoaded = useContentStore(s => (s as any).studentClassesLoaded);
 
-  // SSR seed: unwrap server-fetched student classes and populate store on first render.
+  // SSR seed: unwrap server-fetched student classes and populate store on mount
   const ssrStudentClasses = use(promises.studentClasses ?? Promise.resolve(null)) as any;
-  if (!studentClassesLoaded && ssrStudentClasses) {
-    setStudentClasses(ssrStudentClasses);
-  }
+  useEffect(() => {
+    if (!studentClassesLoaded && ssrStudentClasses) {
+      setStudentClasses(ssrStudentClasses);
+    }
+  }, [studentClassesLoaded, ssrStudentClasses, setStudentClasses]);
 
   // Flashcard topics — read from Zustand store (persists across tab switches, no re-fetch on remount)
   const allFlashcardTopics    = useContentStore(s => (s as any).flashcardTopics) as any[];
   const flashcardTopicsLoaded = useContentStore(s => (s as any).flashcardTopicsLoaded) as boolean;
   const setFlashcardTopics    = useContentStore(s => (s as any).setFlashcardTopics);
 
-  // SSR seed: unwrap server-fetched flashcard topics and populate the store on first render.
+  // SSR seed: unwrap server-fetched flashcard topics and populate the store on mount
   const ssrFlashcardTopics = use(promises.flashcards ?? Promise.resolve([])) as any[];
-  if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
-    setFlashcardTopics(ssrFlashcardTopics);
-  }
+  useEffect(() => {
+    if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
+      setFlashcardTopics(ssrFlashcardTopics);
+    }
+  }, [flashcardTopicsLoaded, ssrFlashcardTopics, setFlashcardTopics]);
 
   // Teacher-created games unwrap
   const ssrTeacherGames = use(promises.teacherGames ?? Promise.resolve([])) as any[];
@@ -1003,7 +1007,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const exerciseCountsLoaded   = useContentStore(s => (s as any).exerciseCountsLoaded) as boolean;
 
   // Active tab — read directly from Zustand store (instant, no re-mount)
-  const activeTab    = useContentStore((s) => (s as any).activeTab) || "games";
+  const activeTab    = useContentStore((s) => (s as any).activeTab) || "lessons";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   // On first mount: initialize store from URL so bookmarks/direct links still work
@@ -1218,7 +1222,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   // Sync activeTab with available tabs (reset if current tab not available for this age group)
   useEffect(() => {
     if (!tabs.includes(activeTab)) {
-      setActiveTab(tabs[0]);
+      setActiveTab(tabs.includes("games") ? "games" : tabs[0]);
     }
   }, [tabs, activeTab]);
 

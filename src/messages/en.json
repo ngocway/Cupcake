@@ -179,7 +179,10 @@
       "guestSubmitConfirm": "Please log in to submit and save results. Go to login page?",
       "submitConfirm": "Are you sure you want to submit?",
       "matchingLeftColumn": "Question Column",
-      "matchingRightColumn": "Answer Column"
+      "matchingRightColumn": "Answer Column",
+      "retry": "Retry",
+      "retryAssignment": "Retry assignment",
+      "reviewDetails": "Review details"
     },
     "review": {
       "thankYou": "Thank you!",

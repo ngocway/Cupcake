@@ -158,6 +158,56 @@
   animation: leaf-sway 3s ease-in-out infinite;
 }
 
+/* Mouse Scroll Indicator Animations */
+@keyframes mouse-breathe {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 4px 12px rgba(245, 158, 11, 0.45));
+  }
+  50% {
+    transform: scale(1.18);
+    filter: drop-shadow(0 6px 22px rgba(245, 158, 11, 0.75));
+  }
+}
+
+@keyframes mouse-wheel-scroll {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  55% {
+    opacity: 0.9;
+    transform: translateY(7px);
+  }
+  85%, 100% {
+    opacity: 0;
+    transform: translateY(13px);
+  }
+}
+
+@keyframes mouse-chevron-bob {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
+}
+
+.animate-mouse-breathe {
+  animation: mouse-breathe 2.2s ease-in-out infinite;
+}
+
+.animate-mouse-wheel {
+  animation: mouse-wheel-scroll 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-chevron-bob {
+  animation: mouse-chevron-bob 1.6s ease-in-out infinite;
+}
+
 /* Utilities */
 @utility glass {
   @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-white/10;

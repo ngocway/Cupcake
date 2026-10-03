@@ -27,6 +27,7 @@ export function EmbeddedGrammarContainer({
   const [isLoading, setIsLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const loadData = useCallback(async (force = false) => {
     const existing = getCachedGrammarData(assignmentId);
@@ -59,6 +60,7 @@ export function EmbeddedGrammarContainer({
   const handleMarkComplete = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       const res = await completeGrammarLesson(assignmentId, classId, groupId);
       if (res.success) {
@@ -68,9 +70,12 @@ export function EmbeddedGrammarContainer({
         if (onComplete) {
           onComplete(10, assignmentId);
         }
+      } else {
+        setSubmitError('Không thể hoàn thành bài học. Vui lòng thử lại.');
       }
     } catch (err: any) {
       console.error('Failed to complete grammar lesson:', err);
+      setSubmitError(err?.message || 'Có lỗi xảy ra khi hoàn thành bài học.');
     } finally {
       setIsSubmitting(false);
     }
@@ -194,6 +199,13 @@ export function EmbeddedGrammarContainer({
             </div>
           )}
         </div>
+
+        {submitError && (
+          <div className="flex items-center gap-2.5 p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-bold animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
         {/* Bottom Completion Card */}
         <div className="p-6 rounded-[2rem] bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-900 dark:via-indigo-950/20 dark:to-slate-900 border border-indigo-100 dark:border-indigo-900/40 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">

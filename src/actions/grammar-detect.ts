@@ -14,31 +14,75 @@ function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Common aliases mapping
+const COMMON_ALIASES: Record<string, { topic: string; lesson: string; level: CefrLevel }> = {
+  "simple present": { topic: "tenses", lesson: "present-simple", level: "a1" },
+  "simple past": { topic: "tenses", lesson: "past-simple", level: "a2" },
+  "simple future": { topic: "tenses", lesson: "future-simple-will", level: "a2" },
+  "present progressive": { topic: "tenses", lesson: "present-continuous", level: "a1" },
+  "past progressive": { topic: "tenses", lesson: "past-continuous", level: "b1" },
+};
+
 // --- String match ---
 function stringMatch(title: string): GrammarDetectResult | null {
   const normTitle = normalize(title);
+  if (!normTitle) return null;
 
-  // Try to match lesson label first (most specific)
+  // 1. Check common grammatical aliases first
+  for (const [alias, match] of Object.entries(COMMON_ALIASES)) {
+    const aliasRegex = new RegExp(`\\b${alias}\\b`, "i");
+    if (aliasRegex.test(normTitle)) {
+      return {
+        level: match.level,
+        grammarTopic: match.topic,
+        grammarLesson: match.lesson,
+        confidence: "exact",
+      };
+    }
+  }
+
+  const hasGrammarContext = /\b(grammar|lesson|exercise|exercises|practice|rule|rules|quiz|tense|tenses|test)\b/i.test(normTitle);
+
+  // 2. Try to match lesson label (most specific)
   for (const topic of GRAMMAR_TOPICS) {
     for (const lesson of topic.lessons) {
       const normLesson = normalize(lesson.label);
-      if (normTitle.includes(normLesson) || normLesson.includes(normTitle.split(" ").slice(0, 3).join(" "))) {
-        return {
-          level: lesson.level,
-          grammarTopic: topic.id,
-          grammarLesson: lesson.id,
-          confidence: "exact",
-        };
+      const isSingleWord = !normLesson.includes(" ");
+
+      if (isSingleWord) {
+        // Guard against greedy false positives: require exact match, start of title, or explicit grammar context
+        const startsWithLesson = normTitle === normLesson || normTitle.startsWith(`${normLesson} `);
+        const containsLessonWithContext = hasGrammarContext && new RegExp(`\\b${normLesson}\\b`, "i").test(normTitle);
+        if (startsWithLesson || containsLessonWithContext) {
+          return {
+            level: lesson.level,
+            grammarTopic: topic.id,
+            grammarLesson: lesson.id,
+            confidence: "exact",
+          };
+        }
+      } else {
+        const regex = new RegExp(`\\b${normLesson}\\b`, "i");
+        if (regex.test(normTitle)) {
+          return {
+            level: lesson.level,
+            grammarTopic: topic.id,
+            grammarLesson: lesson.id,
+            confidence: "exact",
+          };
+        }
       }
     }
   }
 
-  // Try topic label match
+  // 3. Try topic label match
   for (const topic of GRAMMAR_TOPICS) {
     const normTopic = normalize(topic.label);
     const normTopicVi = normalize(topic.labelVi);
-    if (normTitle.includes(normTopic) || normTitle.includes(normTopicVi)) {
-      // Pick the first lesson with any level as hint
+    const topicRegex = new RegExp(`\\b${normTopic}\\b`, "i");
+    const topicViRegex = new RegExp(`\\b${normTopicVi}\\b`, "i");
+
+    if (topicRegex.test(normTitle) || topicViRegex.test(normTitle)) {
       const firstLesson = topic.lessons[0];
       return {
         level: firstLesson?.level ?? "a1",

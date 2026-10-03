@@ -2001,15 +2001,15 @@ export default function KidTeenQuizRunner({
             </button>
           )}
 
-          {/* Nút Làm lại bài - chỉ hiển thị khi đang Review */}
-          {isReviewMode && (
+          {/* Nút Làm lại bài - chỉ hiển thị khi đang Review chi tiết câu hỏi (ẩn khi đang ở màn hình kết quả) */}
+          {isReviewMode && !isShowingResultScreen && (
             <button
               onClick={handleRetryAssignment}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer"
-              title="Làm lại bài tập"
+              title={t("retry") || "Làm lại"}
             >
               <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-              <span>Làm lại</span>
+              <span>{t("retry") || "Làm lại"}</span>
             </button>
           )}
 
@@ -2209,14 +2209,14 @@ export default function KidTeenQuizRunner({
                   className="px-6 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <Info className="w-4 h-4" />
-                  Review details
+                  {t("reviewDetails") || "Review details"}
                 </button>
                 <button
                   onClick={handleRetryAssignment}
                   className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  Retry assignment
+                  {t("retryAssignment") || "Retry assignment"}
                 </button>
               </div>
             </div>
@@ -2644,8 +2644,8 @@ export default function KidTeenQuizRunner({
                   className="flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#9A89FF] bg-[#9A89FF] text-white hover:bg-[#8371f5] hover:border-[#8371f5] hover:text-white hover:shadow-lg active:scale-95 transition-all"
                 >
                   <RotateCcw className="w-5 h-5" />
-                  <span className="hidden sm:inline">Làm lại bài</span>
-                  <span className="sm:hidden">Làm lại</span>
+                  <span className="hidden sm:inline">{t("retryAssignment") || "Làm lại bài"}</span>
+                  <span className="sm:hidden">{t("retry") || "Làm lại"}</span>
                 </button>
               ) : isAllChecked ? (
                 <button

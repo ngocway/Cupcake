@@ -4,7 +4,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { CEFR_LEVELS, getTopicById, LESSON_FORMULAS } from "@/lib/grammar-taxonomy";
+import { CEFR_LEVELS, getTopicById, LESSON_FORMULAS, getDbLevelVariants } from "@/lib/grammar-taxonomy";
 import { ChevronRight, BookOpen, ExternalLink } from "lucide-react";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { HomeSidebar } from "@/app/_components/HomeSidebar";
@@ -19,9 +19,10 @@ export async function generateMetadata({ params }: Props) {
   const { level, topic } = await params;
   const topicCfg = getTopicById(topic);
   const lvlCfg = CEFR_LEVELS.find((l) => l.id === level);
+  if (!topicCfg || !lvlCfg) notFound();
   return {
-    title: `${topicCfg?.label ?? topic} — ${lvlCfg?.label ?? level.toUpperCase()} Exercises | Dolcake`,
-    description: `Practice ${topicCfg?.label ?? topic} grammar exercises at ${lvlCfg?.label ?? level} level.`,
+    title: `${topicCfg.label} — ${lvlCfg.label} Exercises | Dolcake`,
+    description: `Practice ${topicCfg.label} grammar exercises at ${lvlCfg.label} level.`,
   };
 }
 
@@ -31,7 +32,7 @@ async function fetchExercises(level: string, topicId: string, userId?: string) {
     status: "PUBLIC" as const,
     deletedAt: null as null,
     grammarTopic: topicId,
-    level: { in: [level, level.toUpperCase()] },
+    level: { in: getDbLevelVariants(level) },
   };
 
   if (userId) {

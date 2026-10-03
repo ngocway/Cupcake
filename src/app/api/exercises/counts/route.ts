@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { normalizeLevelId } from "@/lib/grammar-taxonomy";
 
 export const runtime = "nodejs";
 export const revalidate = 300; // cache 5 minutes
@@ -25,8 +26,8 @@ export async function GET() {
   const counts: Record<string, number> = {};
   for (const row of rows) {
     if (!row.grammarTopic || !row.level) continue;
-    // Normalize level to lowercase
-    const lvl = row.level.toLowerCase();
+    const lvl = normalizeLevelId(row.level);
+    if (!lvl) continue;
     const key = `${row.grammarTopic}_${lvl}`;
     counts[key] = (counts[key] ?? 0) + row._count.id;
   }

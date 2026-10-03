@@ -13,7 +13,7 @@ export function MobileContentTypeMenu() {
   const locale = useLocale();
 
   const studyAgeGroup = useContentStore((s) => (s as any).studyAgeGroup) || "";
-  const activeTabStore = useContentStore((s) => (s as any).activeTab) || "games";
+  const activeTabStore = useContentStore((s) => (s as any).activeTab) || "lessons";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   const isKindergarten = useMemo(() => {

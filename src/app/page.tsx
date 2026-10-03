@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { LandingPage } from "@/components/public/LandingPage"
 import { HomeShell } from "./_components/HomeShell"
 import { HomeSidebar } from "./_components/HomeSidebar"
+import { HomeHeroSplit } from "./_components/HomeHeroSplit"
 import { getCachedAssignments, getCachedLessons, getCachedStudentClasses } from "@/lib/cached-queries"
 import { cookies } from "next/headers"
 import { auth } from "@/auth"
@@ -143,8 +144,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     : Promise.resolve({ activeClasses: [], pendingRequests: [] });
 
   return (
-    <HomeShell>
-      <div className="w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
+    <HomeShell hideHeader={true}>
+      <HomeHeroSplit initialSession={session} />
+      <div id="content-explore-section" className="w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
         <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
 
         <main className="w-full flex-1 space-y-2 lg:space-y-12 min-w-0">

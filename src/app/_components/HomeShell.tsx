@@ -1,7 +1,7 @@
 
 "use client"
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { SessionContext } from 'next-auth/react';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
@@ -9,8 +9,9 @@ import { useContentStore } from '@/store/useContentStore';
 
 import { MobileContentTypeMenu } from './MobileContentTypeMenu';
 
-function HomeShellContent({ children }: { children?: React.ReactNode }) {
-  const { data: session } = useSession();
+function HomeShellContent({ children, hideHeader }: { children?: React.ReactNode; hideHeader?: boolean }) {
+  const sessionContext = React.useContext(SessionContext);
+  const session = sessionContext?.data;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -86,20 +87,24 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
           </>
         )}
       </div>
-      <PublicHeader 
-        session={session ? {
-          id: session.user.id!,
-          name: session.user.name ?? null,
-          image: session.user.image ?? null,
-          role: (session.user as any).role ?? null,
-          email: session.user.email ?? null,
-        } : null}
-        search={searchParams.get("search") || ""}
-        setSearch={setSearch}
-        isPendingSearch={isPending}
-      />
-      <MobileContentTypeMenu />
-      <div className={`relative transition-all duration-500 ease-in-out ${isPending || isFiltering ? "opacity-60 pointer-events-none" : ""} pt-0 lg:pt-2`}>
+      {!hideHeader && (
+        <>
+          <PublicHeader 
+            session={session ? {
+              id: session.user.id!,
+              name: session.user.name ?? null,
+              image: session.user.image ?? null,
+              role: (session.user as any).role ?? null,
+              email: session.user.email ?? null,
+            } : null}
+            search={searchParams.get("search") || ""}
+            setSearch={setSearch}
+            isPendingSearch={isPending}
+          />
+          <MobileContentTypeMenu />
+        </>
+      )}
+      <div className={`relative transition-all duration-500 ease-in-out ${isPending || isFiltering ? "opacity-60 pointer-events-none" : ""} ${hideHeader ? "pt-0" : "pt-0 lg:pt-2"}`}>
         {(isPending || isFiltering) && (
           <div className="fixed inset-0 z-[999] flex items-center justify-center bg-transparent pointer-events-none">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin shadow-md" />
@@ -117,10 +122,10 @@ function HomeShellContent({ children }: { children?: React.ReactNode }) {
   );
 }
 
-export function HomeShell({ children }: { children?: React.ReactNode }) {
+export function HomeShell({ children, hideHeader }: { children?: React.ReactNode; hideHeader?: boolean }) {
   return (
     <React.Suspense fallback={<HomeLoadingSkeleton />}>
-      <HomeShellContent>
+      <HomeShellContent hideHeader={hideHeader}>
         {children}
       </HomeShellContent>
     </React.Suspense>

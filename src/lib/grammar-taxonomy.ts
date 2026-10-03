@@ -377,12 +377,33 @@ export function normalizeLevelId(raw: string | null | undefined): CefrLevel | nu
   if (!raw) return null;
   // Take first token if comma-separated, lowercase
   const first = raw.split(",")[0].trim().toLowerCase();
-  if (first === "pre-a1-a1" || first === "pre-a1" || first === "a1") return "a1";
+  if (first === "pre-a1-a1" || first === "pre-a1" || first === "a1" || first === "beginner") return "a1";
   if (first === "a2" || first === "elementary") return "a2";
-  if (first === "b1") return "b1";
-  if (first === "b2") return "b2";
-  if (first === "c1") return "c1";
+  if (first === "b1" || first === "intermediate") return "b1";
+  if (first === "b2" || first === "upper-intermediate" || first === "upper_intermediate") return "b2";
+  if (first === "c1" || first === "advanced") return "c1";
   return null;
+}
+
+/** Get all raw level strings in DB that map to this CEFR level */
+export function getDbLevelVariants(level: string): string[] {
+  const lvl = level.toLowerCase();
+  if (lvl === "a1" || lvl === "pre-a1" || lvl === "pre-a1-a1") {
+    return ["a1", "A1", "pre-a1", "PRE-A1", "pre-a1-a1", "PRE-A1-A1", "pre-a1-a1,pre-a1-a1"];
+  }
+  if (lvl === "a2" || lvl === "elementary") {
+    return ["a2", "A2", "elementary", "ELEMENTARY"];
+  }
+  if (lvl === "b1" || lvl === "intermediate") {
+    return ["b1", "B1", "intermediate", "INTERMEDIATE"];
+  }
+  if (lvl === "b2" || lvl === "upper-intermediate") {
+    return ["b2", "B2", "upper-intermediate", "UPPER-INTERMEDIATE", "upper_intermediate"];
+  }
+  if (lvl === "c1" || lvl === "advanced") {
+    return ["c1", "C1", "advanced", "ADVANCED"];
+  }
+  return [lvl, lvl.toUpperCase()];
 }
 
 /**

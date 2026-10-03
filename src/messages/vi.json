@@ -179,7 +179,10 @@
       "guestSubmitConfirm": "Vui lòng đăng nhập để nộp bài và lưu kết quả. Chuyển đến trang đăng nhập?",
       "submitConfirm": "Bạn có chắc chắn muốn nộp bài không?",
       "matchingLeftColumn": "Cột vế hỏi",
-      "matchingRightColumn": "Cột trả lời"
+      "matchingRightColumn": "Cột trả lời",
+      "retry": "Làm lại",
+      "retryAssignment": "Làm lại bài",
+      "reviewDetails": "Xem chi tiết"
     },
     "review": {
       "thankYou": "Cảm ơn bạn!",

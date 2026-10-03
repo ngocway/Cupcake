@@ -42,7 +42,7 @@ export function SidebarContentTypeMenu() {
   const checkAndRequireOnboarding = useContentStore((s) => (s as any).checkAndRequireOnboarding);
 
   // Read activeTab from Zustand store (instant, no server round-trip)
-  const activeTab = useContentStore((s) => (s as any).activeTab) || "games";
+  const activeTab = useContentStore((s) => (s as any).activeTab) || "lessons";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
   const setMobileSidebarOpen = useContentStore((s) => (s as any).setMobileSidebarOpen);
 

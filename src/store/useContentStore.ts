@@ -141,7 +141,7 @@ export const useContentStore = create<ContentState>((set, get) => ({
   selectedCategoryId: "",
   selectedSubCategoryId: "",
 
-  activeTab: "games",
+  activeTab: "lessons",
   setActiveTab: (val) => set({ activeTab: val }),
 
   lessonsPerLevel: {},

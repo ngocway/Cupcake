@@ -63,11 +63,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { topic, lesson } = await params;
   const topicCfg = getTopicById(topic);
   const lessonCfg = topicCfg?.lessons.find((l) => l.id === lesson);
-  if (!topicCfg || !lessonCfg) return { title: "Grammar | Dolcake" };
+  if (!topicCfg || !lessonCfg) notFound();
 
   const canonicalPath = `/grammar/${topic}/${lesson}`;
   // SEO-optimised title: keyword-rich, natural
-  const title = `${lessonCfg.label} Tense: Rules, Examples & Exercises | Dolcake`;
+  const title = `${lessonCfg.label}: Rules, Examples & Exercises`;
   const description = `Master the ${lessonCfg.label} with clear rules, grammar formulas, example sentences, memory tips, and ${lessonCfg.level.toUpperCase()} practice exercises. Free interactive English learning on Dolcake.`;
 
   return {

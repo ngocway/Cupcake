@@ -9,9 +9,9 @@ export const contentType = "image/png";
 export default async function Image({
   params,
 }: {
-  params: { topic: string; lesson: string };
+  params: Promise<{ topic: string; lesson: string }>;
 }) {
-  const { topic, lesson } = params;
+  const { topic, lesson } = await params;
   const topicCfg = getTopicById(topic);
   const lessonCfg = topicCfg?.lessons.find((l) => l.id === lesson);
 
@@ -76,6 +76,8 @@ export default async function Image({
         {/* Topic + Level badges */}
         <div style={{ display: "flex", gap: 12, marginBottom: 28 }}>
           <div style={{
+            display: "flex",
+            alignItems: "center",
             background: lc.bg,
             color: lc.text,
             borderRadius: 100,
@@ -87,6 +89,8 @@ export default async function Image({
             {level}
           </div>
           <div style={{
+            display: "flex",
+            alignItems: "center",
             background: "#f1f5f9",
             color: "#475569",
             borderRadius: 100,
@@ -94,12 +98,13 @@ export default async function Image({
             fontSize: 16,
             fontWeight: 700,
           }}>
-            {topicIcon} {topicLabel}
+            {`${topicIcon} ${topicLabel}`}
           </div>
         </div>
 
         {/* Main title */}
         <div style={{
+          display: "flex",
           fontSize: 72,
           fontWeight: 900,
           color: "#1e293b",
@@ -112,6 +117,7 @@ export default async function Image({
 
         {/* Subtitle */}
         <div style={{
+          display: "flex",
           fontSize: 26,
           color: "#64748b",
           fontWeight: 500,
