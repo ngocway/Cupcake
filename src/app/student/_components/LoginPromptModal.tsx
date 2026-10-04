@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { X } from "lucide-react";
+import { CenteredLoginLoader } from "@/components/shared/CenteredLoginLoader";
 
 interface LoginPromptModalProps {
   isOpen: boolean;
@@ -9,13 +11,22 @@ interface LoginPromptModalProps {
 }
 
 export function LoginPromptModal({ isOpen, onClose }: LoginPromptModalProps) {
+  const [isPending, setIsPending] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleGoogleLogin = () => {
+    setIsPending(true);
+    document.cookie = "login_role_intent=STUDENT; path=/; max-age=300";
+    signIn("google").catch(() => setIsPending(false));
+  };
 
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
     >
+      <CenteredLoginLoader isVisible={isPending} color="emerald" />
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
@@ -53,8 +64,9 @@ export function LoginPromptModal({ isOpen, onClose }: LoginPromptModalProps) {
 
           {/* Google Sign In Button */}
           <button
-            onClick={() => signIn("google")}
-            className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl font-black text-sm text-slate-700 dark:text-white hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100 dark:hover:shadow-violet-900/20 transition-all duration-200 group"
+            onClick={handleGoogleLogin}
+            disabled={isPending}
+            className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-2xl font-black text-sm text-slate-700 dark:text-white hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100 dark:hover:shadow-violet-900/20 transition-all duration-200 group disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {/* Google Icon */}
             <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">

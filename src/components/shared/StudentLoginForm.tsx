@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { registerStudent, resetPassword } from "@/actions/auth-actions"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight, User, HelpCircle } from "lucide-react"
+import { CenteredLoginLoader } from "@/components/shared/CenteredLoginLoader"
 
 export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
@@ -53,7 +54,7 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
         } else {
           const searchParams = new URLSearchParams(window.location.search);
           const callbackUrl = searchParams.get("callbackUrl");
-          router.push(callbackUrl || "/student/assignments");
+          router.push(callbackUrl || "/");
         }
         router.refresh();
       }
@@ -91,7 +92,11 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
           const signInRes = await signIn("credentials", { email, password, redirect: false });
           if (signInRes?.ok) {
             if (onSuccess) onSuccess();
-            else router.push("/student/assignments");
+            else {
+              const searchParams = new URLSearchParams(window.location.search);
+              const callbackUrl = searchParams.get("callbackUrl");
+              router.push(callbackUrl || "/");
+            }
             router.refresh();
           } else {
              setMode("login");
@@ -122,6 +127,7 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   }
 
   const handleGoogleLogin = () => {
+    setIsPending(true);
     document.cookie = "login_role_intent=STUDENT; path=/; max-age=300";
 
     const searchParams = new URLSearchParams(window.location.search);
@@ -129,14 +135,15 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
     
     let callbackUrl = existingCallbackUrl || window.location.pathname + window.location.search;
     if (callbackUrl.includes('/login')) {
-      callbackUrl = '/student/assignments';
+      callbackUrl = '/';
     }
     
-    signIn("google", { callbackUrl });
+    signIn("google", { callbackUrl }).catch(() => setIsPending(false));
   }
 
   return (
     <div className="max-w-md w-full mx-auto relative z-10 p-2">
+      <CenteredLoginLoader isVisible={isPending} color="emerald" />
       <div className="md:hidden mb-12 flex flex-col items-center">
         <img 
           src="/images/logo.png" 
@@ -187,7 +194,7 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
             <p className="text-on-surface-variant font-medium">{t("loginSubtitle")}</p>
           </div>
 
-          <button type="button" onClick={handleGoogleLogin} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-white border border-outline-variant/30 rounded-2xl font-bold text-on-surface hover:bg-surface-container-low hover:-translate-y-0.5 hover:shadow-md transition-all duration-300">
+          <button type="button" onClick={handleGoogleLogin} disabled={isPending} className="w-full py-4 px-6 mb-8 flex items-center justify-center gap-3 bg-white border border-outline-variant/30 rounded-2xl font-bold text-on-surface hover:bg-surface-container-low hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>

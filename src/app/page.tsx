@@ -143,10 +143,17 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     ? getCachedStudentClasses(session.user.id)
     : Promise.resolve({ activeClasses: [], pendingRequests: [] });
 
+  const isLoggedIn = !!session?.user?.id;
+
   return (
-    <HomeShell hideHeader={true}>
-      <HomeHeroSplit initialSession={session} />
-      <div id="content-explore-section" className="w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
+    <HomeShell hideHeader={!isLoggedIn}>
+      {!isLoggedIn && <HomeHeroSplit initialSession={session} />}
+      <div 
+        id="content-explore-section" 
+        className={`w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto relative z-30 ${
+          !isLoggedIn ? "-mt-10 sm:-mt-14 lg:-mt-16" : "pt-4 sm:pt-6 lg:pt-8"
+        }`}
+      >
         <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
 
         <main className="w-full flex-1 space-y-2 lg:space-y-12 min-w-0">

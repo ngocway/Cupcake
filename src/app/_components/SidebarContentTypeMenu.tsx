@@ -42,7 +42,7 @@ export function SidebarContentTypeMenu() {
   const checkAndRequireOnboarding = useContentStore((s) => (s as any).checkAndRequireOnboarding);
 
   // Read activeTab from Zustand store (instant, no server round-trip)
-  const activeTab = useContentStore((s) => (s as any).activeTab) || "lessons";
+  const activeTab = useContentStore((s) => (s as any).activeTab) || "classes";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
   const setMobileSidebarOpen = useContentStore((s) => (s as any).setMobileSidebarOpen);
 
@@ -119,14 +119,19 @@ export function SidebarContentTypeMenu() {
     // If not on home page, navigate home first, then set tab
     if (pathname !== "/") {
       setActiveTab(tabId);
-      router.push(`/`, { scroll: false });
+      router.push(tabId === "classes" ? `/` : `/?tab=${tabId}`, { scroll: false });
       return;
     }
     // On home page: instant store update + sync URL without triggering re-render
     setActiveTab(tabId);
     const p = new URLSearchParams(window.location.search);
-    p.set("tab", tabId);
-    history.replaceState(null, "", `?${p.toString()}`);
+    if (tabId === "classes") {
+      p.delete("tab");
+    } else {
+      p.set("tab", tabId);
+    }
+    const qs = p.toString();
+    history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
   };
 
   const handleConfirmSwitch = () => {
