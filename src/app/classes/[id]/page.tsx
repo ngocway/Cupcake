@@ -60,48 +60,41 @@ export default async function ClassDetailPage({
       });
 
       if (dbClass) {
-        // Construct a dynamic PublicClassDetail from database
-        classData = {
-          id: dbClass.id,
+        // Construct bilingual dynamic PublicClassDetail from database
+        const viContent = {
           title: dbClass.name,
           shortDescription: `Lớp học tiếng Anh ${dbClass.gradeLevel || 'tiểu học'} tương tác sinh động cùng giáo viên.`,
           heroDescription: `Cùng ${dbClass.teacher?.name || 'giáo viên'} khám phá kho bài tập, flashcard và minigame tiếng Anh chất lượng cao mỗi ngày!`,
           subjectBadge: `Lớp ${dbClass.gradeLevel || 'Tiểu học'}`,
-          subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
           typeBadge: '🔥 Miễn phí',
-          typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
-          thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
-          rating: 4.9,
-          reviewsCount: 30,
           studentsCount: `${dbClass._count.enrollments || 15}+ học viên`,
           lessonsCount: dbClass._count.assignments || 12,
           duration: '4 tuần',
           language: 'Tiếng Anh & Tiếng Việt (Song ngữ trợ giảng)',
-          btnGradient: 'from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] shadow-cyan-500/25',
           whatYouLearn: [
             {
-              iconType: 'sparkles',
+              iconType: 'sparkles' as const,
               title: 'Từ vựng & Ngữ pháp trọng tâm',
               description: 'Nắm vững kiến thức cốt lõi theo từng chủ đề bài học của lớp.',
-              colorScheme: 'amber',
+              colorScheme: 'amber' as const,
             },
             {
-              iconType: 'message',
+              iconType: 'message' as const,
               title: 'Giao tiếp phản xạ',
               description: 'Luyện tập hội thoại và phản xạ ngôn ngữ tự nhiên.',
-              colorScheme: 'sky',
+              colorScheme: 'sky' as const,
             },
             {
-              iconType: 'game',
+              iconType: 'game' as const,
               title: 'Trò chơi tương tác',
               description: 'Củng cố kiến thức qua các mini games vui nhộn.',
-              colorScheme: 'purple',
+              colorScheme: 'purple' as const,
             },
             {
-              iconType: 'trophy',
+              iconType: 'trophy' as const,
               title: 'Huy hiệu thành tích',
               description: 'Theo dõi tiến trình học tập và nhận sao thưởng mỗi ngày.',
-              colorScheme: 'yellow',
+              colorScheme: 'yellow' as const,
             },
           ],
           units: [
@@ -154,6 +147,107 @@ export default async function ClassDetailPage({
               content: '“Lớp học tổ chức rất khoa học, bé nhà mình rất hào hứng học mỗi ngày.”',
             },
           ],
+        };
+
+        const enContent = {
+          title: dbClass.name,
+          shortDescription: `Interactive English class for grade ${dbClass.gradeLevel || 'Primary'} with teacher guidance.`,
+          heroDescription: `Join ${dbClass.teacher?.name || 'teacher'} to explore high-quality English exercises, flashcards, and minigames every day!`,
+          subjectBadge: `Grade ${dbClass.gradeLevel || 'Primary'}`,
+          typeBadge: '🔥 Free',
+          studentsCount: `${dbClass._count.enrollments || 15}+ students`,
+          lessonsCount: dbClass._count.assignments || 12,
+          duration: '4 weeks',
+          language: 'English & Bilingual Support',
+          whatYouLearn: [
+            {
+              iconType: 'sparkles' as const,
+              title: 'Core Vocabulary & Grammar',
+              description: 'Master core knowledge across all curriculum topics.',
+              colorScheme: 'amber' as const,
+            },
+            {
+              iconType: 'message' as const,
+              title: 'Reflexive Communication',
+              description: 'Practice interactive dialogues and natural language reflexes.',
+              colorScheme: 'sky' as const,
+            },
+            {
+              iconType: 'game' as const,
+              title: 'Gamified Learning',
+              description: 'Reinforce concepts with fun, engaging mini-games.',
+              colorScheme: 'purple' as const,
+            },
+            {
+              iconType: 'trophy' as const,
+              title: 'Achievements & Badges',
+              description: 'Track learning progress and earn reward stars daily.',
+              colorScheme: 'yellow' as const,
+            },
+          ],
+          units: [
+            {
+              id: 'unit-1',
+              unitIndex: 1,
+              title: 'Unit 1: Getting Started & Basics',
+              lessonsCount: 3,
+              isFreeTrial: true,
+              lessons: [
+                {
+                  id: 'u1-l1',
+                  lessonIndex: 1,
+                  title: 'Lesson 1: Course Introduction & Goals',
+                  type: 'Video & Phonics',
+                  isTrial: true,
+                },
+                {
+                  id: 'u1-l2',
+                  lessonIndex: 2,
+                  title: 'Lesson 2: Core Vocabulary',
+                  type: 'Flashcard Game',
+                  isTrial: false,
+                },
+                {
+                  id: 'u1-l3',
+                  lessonIndex: 3,
+                  title: 'Lesson 3: Warmup Challenge',
+                  type: 'Quiz Arena',
+                  isTrial: false,
+                },
+              ],
+            },
+          ],
+          teacher: {
+            name: dbClass.teacher?.name || 'Lead Teacher',
+            role: 'Homeroom English Teacher',
+            avatar: dbClass.teacher?.image || '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+            degree: 'Bachelor of English Education',
+            experience: 'Experienced in primary English education',
+            quote: '“Learning English with joy and confidence unlocks a bright future for every child.”',
+          },
+          reviews: [
+            {
+              id: 'r1',
+              author: 'Student Parent',
+              avatar: '/images/avatars/adult.png',
+              stars: 5,
+              timeAgo: 'Recently',
+              content: '“The class structure is engaging and keeps my child excited to learn every single day.”',
+            },
+          ],
+        };
+
+        classData = {
+          id: dbClass.id,
+          thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+          subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
+          typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
+          rating: 4.9,
+          reviewsCount: 30,
+          btnGradient: 'from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] shadow-cyan-500/25',
+          en: enContent,
+          vi: viContent,
+          ...viContent,
         };
       }
     } catch (e) {

@@ -30,7 +30,7 @@ describe("Grammar Lesson Page Metadata", () => {
     expect(metadata.description).toContain("A1 practice exercises");
     expect(metadata.alternates?.canonical).toBe("/grammar/tenses/present-simple");
     expect(metadata.openGraph?.url).toBe("https://dolcake.com/grammar/tenses/present-simple");
-    expect(metadata.openGraph?.type).toBe("article");
+    expect((metadata.openGraph as any)?.type).toBe("article");
   });
 
   it("should return fallback title when topic or lesson is invalid", async () => {
