@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { SessionContext } from 'next-auth/react'
 import { useContentStore } from '@/store/useContentStore'
-import { GraduationCap, ArrowRight, ChevronDown } from 'lucide-react'
+import { GraduationCap, ArrowRight } from 'lucide-react'
 
 const STUDENT_CARDS = [
   {
@@ -78,13 +78,13 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
   }
 
   return (
-    <section className="relative w-full overflow-hidden mb-4 lg:mb-8 bg-transparent">
-      {/* Dual Realm Hero Background with Smooth Bottom Fade Transition (Hướng 1) */}
+    <section className="relative w-full overflow-hidden mb-0 bg-transparent">
+      {/* Dual Realm Hero Background with Smooth Bottom Fade Transition */}
       <div 
         className="absolute inset-0 pointer-events-none overflow-hidden"
         style={{
-          maskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 78%, transparent 100%)',
+          maskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 75%, transparent 100%)',
         }}
       >
         {/* Mobile Base Sky Blue */}
@@ -93,40 +93,16 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         {/* Desktop S-Curve Layer with SVG Gradient Fade */}
         <div className="absolute inset-0 hidden lg:block overflow-hidden">
           <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 1000 600" fill="none">
-            <defs>
-              {/* Teacher Realm Dark Navy Vertical Fade Gradient */}
-              <linearGradient id="teacherRealmGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#131938" stopOpacity="1" />
-                <stop offset="60%" stopColor="#131938" stopOpacity="1" />
-                <stop offset="85%" stopColor="#131938" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#131938" stopOpacity="0" />
-              </linearGradient>
-
-              {/* S-Curve Boundary Luminous Stroke Fade */}
-              <linearGradient id="curveLineGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(255, 255, 255, 0.15)" />
-                <stop offset="65%" stopColor="rgba(255, 255, 255, 0.15)" />
-                <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
-              </linearGradient>
-            </defs>
-
             {/* Left Student Realm */}
             <path 
               d="M 0 0 L 500 0 C 450 200, 550 400, 500 600 L 0 600 Z" 
               fill="#e0f2fe" 
             />
 
-            {/* Right Dark Indigo Realm with Watercolor Bleed Bottom Fade */}
+            {/* Right Dark Indigo Realm */}
             <path 
               d="M 500 0 C 450 200, 550 400, 500 600 L 1000 600 L 1000 0 Z" 
-              fill="url(#teacherRealmGradient)" 
-            />
-
-            {/* Subtle luminous border line along the curve fading at the bottom */}
-            <path 
-              d="M 500 0 C 450 200, 550 400, 500 600" 
-              stroke="url(#curveLineGradient)" 
-              strokeWidth="3" 
+              fill="#131938" 
             />
           </svg>
 
@@ -135,19 +111,14 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         </div>
       </div>
 
-      {/* Ambient Gradient Wash blending into page background #e2f0e7 */}
-      <div className="absolute bottom-0 left-0 right-0 h-20 sm:h-24 pointer-events-none z-[5] bg-gradient-to-b from-transparent via-[#e2f0e7]/50 to-[#e2f0e7]" />
-
       {/* Brand Logo Dolcake - Pushed to the far top-left edge */}
       <div className="absolute top-4 sm:top-5 lg:top-6 left-4 sm:left-6 lg:left-8 z-30">
         <Link href="/" className="inline-flex items-center gap-2.5 group">
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white/95 backdrop-blur-md p-2 shadow-md border border-white/80 flex items-center justify-center group-hover:scale-105 group-hover:rotate-6 transition-all duration-300">
-            <img 
-              src="/images/logo.png" 
-              alt="Dolcake" 
-              className="w-full h-full object-contain" 
-            />
-          </div>
+          <img 
+            src="/images/logo.png" 
+            alt="Dolcake" 
+            className="w-9 h-9 sm:w-10 sm:h-10 object-contain group-hover:scale-105 group-hover:rotate-6 transition-transform duration-300 shrink-0" 
+          />
           <div className="flex flex-col text-left">
             <span className="font-headline font-black text-2xl sm:text-[26px] tracking-tight text-slate-800 leading-none">Dolcake</span>
             <span className="text-[9px] font-black text-sky-700/60 tracking-[0.2em] uppercase mt-0.5">LEARN & TEACH</span>
@@ -155,21 +126,21 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         </Link>
       </div>
 
-      {/* Main Content Container: 2 Centered Halves (Adaptive Dynamic Spacing) - Elevated to z-20 above background wash */}
-      <div className="relative z-20 w-full flex flex-col lg:flex-row items-stretch min-h-[620px] lg:min-h-[clamp(640px,80vh,880px)]">
+      {/* Main Content Container: 2 Centered Halves (Adaptive Dynamic Spacing) - Elevated to z-20 with room for overlapping cards */}
+      <div className="relative z-20 w-full flex flex-col lg:flex-row items-stretch min-h-[620px] lg:min-h-[clamp(640px,80vh,880px)] pb-16 sm:pb-20 lg:pb-24">
         
         {/* ========================================================================= */}
         {/* 1. KHÔNG GIAN HỌC SINH (NỬA TRÁI - STUDENT REALM)                         */}
         {/* ========================================================================= */}
         <div className="relative w-full lg:w-1/2 px-6 sm:px-10 lg:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10">
           
-          {/* Top Title Group: Teacher Realm */}
+          {/* Top Title Group: Student Realm */}
           <div className="w-full max-w-[480px] mx-auto flex flex-col items-center pt-10 sm:pt-12 lg:pt-8 mb-6">
             <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-[#1e293b] tracking-tight font-headline">
-              Teacher Realm
+              Student Realm
             </h2>
             <p className="text-slate-600 text-xs sm:text-sm font-semibold mt-1">
-              Interactive game studio creation showcase
+              Compact visual with sunshine accents
             </p>
           </div>
 
@@ -228,9 +199,9 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
             >
               <span>
                 {isStudent 
-                  ? "Vào Không Gian Học Của Bạn" 
+                  ? "Enter Your Learning Space" 
                   : isTeacher 
-                    ? "Không Gian Học Sinh" 
+                    ? "Student Realm" 
                     : "Student Login"}
               </span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
@@ -250,15 +221,15 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         {/* ========================================================================= */}
         {/* 2. KHÔNG GIAN GIÁO VIÊN (NỬA PHẢI - TEACHER REALM)                         */}
         {/* ========================================================================= */}
-        <div className="relative w-full lg:w-1/2 px-6 sm:px-10 lg:px-6 xl:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10 text-white bg-gradient-to-b from-[#131938] via-[#131938] to-transparent lg:bg-transparent">
+        <div className="relative w-full lg:w-1/2 px-6 sm:px-10 lg:px-6 xl:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10 text-white max-lg:bg-gradient-to-b max-lg:from-[#131938] max-lg:via-[#131938] max-lg:to-transparent lg:bg-transparent lg:[background-image:none]">
           
-          {/* Top Title Group: Student Realm */}
+          {/* Top Title Group: Teacher Realm */}
           <div className="w-full max-w-[700px] mx-auto flex flex-col items-center pt-2 sm:pt-4 lg:pt-8 mb-3 sm:mb-4">
             <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-white tracking-tight font-headline">
-              Student Realm
+              Teacher Realm
             </h2>
             <p className="text-indigo-200/70 text-xs sm:text-sm font-semibold mt-1">
-              Compact visual with sunshine accents
+              Interactive game studio creation showcase
             </p>
           </div>
 
@@ -310,9 +281,9 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
               <GraduationCap className="w-5 h-5 text-indigo-300 group-hover:text-indigo-200 group-hover:rotate-12 transition-transform" />
               <span>
                 {isTeacher 
-                  ? "Vào Phòng Giáo Viên" 
+                  ? "Enter Teacher Lounge" 
                   : isStudent 
-                    ? "Phòng Giáo Viên" 
+                    ? "Teacher Lounge" 
                     : "Teacher Login"}
               </span>
               <ArrowRight className="w-4 h-4 text-indigo-300/80 group-hover:text-white group-hover:translate-x-1.5 transition-transform" />
@@ -323,7 +294,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
       </div>
 
       {/* Floating Minimalist Mouse Scroll Indicator */}
-      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-30 hidden sm:flex flex-col items-center pointer-events-auto">
+      <div className="absolute bottom-20 sm:bottom-24 lg:bottom-28 left-1/2 -translate-x-1/2 z-40 hidden sm:flex flex-col items-center pointer-events-auto">
         <button
           onClick={handleScrollDown}
           className="group flex flex-col items-center gap-2 cursor-pointer animate-mouse-breathe hover:scale-110 active:scale-95 transition-transform duration-300"
@@ -335,9 +306,6 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
             {/* Smooth Scrolling Wheel Indicator */}
             <div className="w-[9px] h-[18px] rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.95)] animate-mouse-wheel" />
           </div>
-
-          {/* Golden Chevron Arrow Indicator */}
-          <ChevronDown className="w-6 h-6 text-amber-400 group-hover:text-amber-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] transition-colors duration-300 -mt-0.5 animate-chevron-bob" />
         </button>
       </div>
     </section>

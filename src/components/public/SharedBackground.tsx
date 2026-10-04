@@ -12,11 +12,11 @@ export function SharedBackground() {
 
   if (!mounted) return null
 
-  // Chuyển sang nền trắng chỉ áp dụng riêng cho trang chi tiết lớp học học sinh (/student/classes/[id])
-  const isStudentClassDetail = pathname?.startsWith('/student/classes/') && pathname !== '/student/classes'
-  if (isStudentClassDetail) {
+  // Chuyển sang nền sáng sạch cho trang chi tiết lớp học (/student/classes/[id] và /classes/[id])
+  const isClassDetailPage = (pathname?.startsWith('/student/classes/') && pathname !== '/student/classes') || pathname?.startsWith('/classes/')
+  if (isClassDetailPage) {
     return (
-      <div className="fixed inset-0 -z-50 bg-white dark:bg-slate-950 pointer-events-none transition-colors duration-500" />
+      <div className="fixed inset-0 -z-50 bg-[#F8FAFC] dark:bg-slate-950 pointer-events-none transition-colors duration-500" />
     )
   }
 

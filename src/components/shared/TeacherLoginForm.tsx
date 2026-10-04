@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { resetPassword } from "@/actions/auth-actions"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
+import { CenteredLoginLoader } from "@/components/shared/CenteredLoginLoader"
 
 export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const [mode, setMode] = useState<"login" | "forgot">("login");
@@ -75,13 +76,15 @@ export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   }
 
   const handleGoogleLogin = () => {
+    setIsPending(true);
     // Set role intent in cookie for NextAuth server callback verification
     document.cookie = "login_role_intent=TEACHER; path=/; max-age=300; SameSite=Lax";
-    signIn("google", { callbackUrl: "/teacher" });
+    signIn("google", { callbackUrl: "/teacher" }).catch(() => setIsPending(false));
   }
 
   return (
     <div className="max-w-md w-full mx-auto relative z-10 p-2">
+      <CenteredLoginLoader isVisible={isPending} color="purple" />
       <div className="mb-6 flex flex-col items-center text-center">
         <div className="w-14 h-14 bg-purple-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200 mb-3">
           <span className="material-symbols-outlined text-[32px]">co_present</span>
@@ -117,7 +120,8 @@ export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
           <button 
             type="button" 
             onClick={handleGoogleLogin} 
-            className="w-full py-3.5 px-6 mb-6 flex items-center justify-center gap-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 border-purple-100 shadow-sm"
+            disabled={isPending}
+            className="w-full py-3.5 px-6 mb-6 flex items-center justify-center gap-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 border-purple-100 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>

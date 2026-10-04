@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { cancelJoinRequest } from '@/app/student/classes/actions';
 import {
@@ -14,11 +15,90 @@ import {
   Sparkles,
   X,
   LogIn,
-  School,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  Users,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 
 import { useContentStore } from '@/store/useContentStore';
+
+type PublicClassItem = {
+  id: string;
+  title: string;
+  description: string;
+  subjectBadge: string;
+  subjectBadgeClass: string;
+  typeBadge: string;
+  typeBadgeClass: string;
+  thumbnail: string;
+  teacher: {
+    name: string;
+    avatar: string;
+    role: string;
+  };
+  lessonsCount: number;
+  studentsCount: string;
+  btnGradient: string;
+};
+
+const PUBLIC_CLASSES: PublicClassItem[] = [
+  {
+    id: 'english-adventure-club',
+    title: 'English Adventure Club',
+    description: 'Học tiếng Anh qua truyện kể, trò chơi và các thử thách vui nhộn mỗi ngày.',
+    subjectBadge: 'English • Lớp 2-3',
+    subjectBadgeClass: 'bg-[#dcfce7]/95 text-[#14532d] border-[#86efac]/70',
+    typeBadge: '🔥 Miễn phí',
+    typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+    teacher: {
+      name: 'Ms. Jessica Nguyen',
+      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      role: 'Giáo viên',
+    },
+    lessonsCount: 20,
+    studentsCount: '120+ học viên',
+    btnGradient: 'from-[#2dd4bf] to-[#06b6d4] hover:from-[#14b8a6] hover:to-[#0891b2] shadow-teal-500/20',
+  },
+  {
+    id: 'phonics-happy-reading',
+    title: 'Phonics & Happy Reading',
+    description: 'Làm quen phonics, phát âm chuẩn và xây dựng thói quen đọc tiếng Anh tự tin.',
+    subjectBadge: 'Phonics • Lớp 1-2',
+    subjectBadgeClass: 'bg-[#ffedd5]/95 text-[#7c2d12] border-[#fdba74]/70',
+    typeBadge: '🔥 Hot',
+    typeBadgeClass: 'bg-[#fee2e2]/95 text-[#991b1b] border-[#fca5a5]/70',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
+    teacher: {
+      name: 'Ms. Anna Pham',
+      avatar: '/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+      role: 'Giáo viên',
+    },
+    lessonsCount: 12,
+    studentsCount: '85+ học viên',
+    btnGradient: 'from-[#fb923c] to-[#f43f5e] hover:from-[#f97316] hover:to-[#e11d48] shadow-rose-500/20',
+  },
+  {
+    id: 'little-speaking-stars',
+    title: 'Little Speaking Stars',
+    description: 'Luyện phản xạ giao tiếp qua hội thoại, đóng vai và các chủ đề gần gũi với bé.',
+    subjectBadge: 'Speaking • Lớp 3-5',
+    subjectBadgeClass: 'bg-[#ede9fe]/95 text-[#4c1d95] border-[#c4b5fd]/70',
+    typeBadge: '🔥 Miễn phí',
+    typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
+    teacher: {
+      name: 'Mr. David Tran',
+      avatar: '/assests/Classes/avatars/teacher-avatar-mr-david.png',
+      role: 'Giáo viên',
+    },
+    lessonsCount: 18,
+    studentsCount: '200+ học viên',
+    btnGradient: 'from-[#a855f7] to-[#6366f1] hover:from-[#9333ea] hover:to-[#4f46e5] shadow-indigo-500/20',
+  },
+];
 
 type FormattedClassInfo = {
   id: string;
@@ -32,6 +112,395 @@ type FormattedClassInfo = {
   };
   pendingCount: number;
 };
+
+// Helper: match enrolled class with rich public class artwork / avatar / badge
+function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherName?: string }) {
+  const cId = (clsItem.id || '').toLowerCase();
+  const cName = (clsItem.name || '').toLowerCase();
+
+  const match = PUBLIC_CLASSES.find((p) => {
+    const pId = p.id.toLowerCase();
+    const pTitle = p.title.toLowerCase();
+    return (
+      pId === cId ||
+      pTitle === cName ||
+      (cName.length > 0 && pTitle.includes(cName)) ||
+      (cName.length > 0 && cName.includes(pTitle))
+    );
+  });
+
+  if (match) return match;
+
+  return {
+    id: clsItem.id || 'custom-class',
+    title: clsItem.name || 'Lớp học Dolcake',
+    description: '',
+    subjectBadge: 'English • Lớp học',
+    subjectBadgeClass: 'bg-[#dcfce7]/95 text-[#14532d] border-[#86efac]/70',
+    typeBadge: '',
+    typeBadgeClass: '',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+    teacher: {
+      name: clsItem.teacherName || 'Giáo viên Dolcake',
+      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      role: 'Giáo viên',
+    },
+    lessonsCount: 15,
+    studentsCount: '30+ học viên',
+    btnGradient: 'from-blue-600 to-indigo-600',
+  };
+}
+
+interface EnrolledClassRowCardProps {
+  item: FormattedClassInfo;
+  isVi: boolean;
+  enteringClassId: string | null;
+  onEnter: (id: string) => void;
+}
+
+// Sub-component 1: Horizontal Row Card for Enrolled Classes (Stacks vertically on mobile)
+function EnrolledClassRowCard({
+  item,
+  isVi,
+  enteringClassId,
+  onEnter,
+}: EnrolledClassRowCardProps) {
+  const matched = findMatchingPublicClass(item.class);
+  const totalAssignments = item.class.totalAssignments > 0 
+    ? item.class.totalAssignments 
+    : (matched.lessonsCount || 10);
+  const pendingCount = item.pendingCount ?? 0;
+  const completedCount = Math.max(0, totalAssignments - pendingCount);
+  const progressPercent = totalAssignments > 0 
+    ? Math.min(100, Math.round((completedCount / totalAssignments) * 100))
+    : 100;
+
+  const isCompleted = progressPercent === 100 || pendingCount === 0;
+  const isOnePending = pendingCount === 1;
+
+  const targetClassId = item.class.id || item.id;
+  const classUrl = `/student/classes/${targetClassId}`;
+
+  return (
+    <div
+      className={`group bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500/60 shadow-xs hover:shadow-lg transition-all duration-300 p-3.5 sm:p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-5 ${
+        enteringClassId === targetClassId ? 'ring-2 ring-blue-500/80 pointer-events-none' : ''
+      }`}
+    >
+      {/* 1. Thumbnail with Subject Badge */}
+      <Link
+        href={classUrl}
+        onClick={() => onEnter(targetClassId)}
+        className="relative w-full md:w-36 lg:w-44 h-44 sm:h-48 md:h-24 lg:h-28 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-900 block cursor-pointer"
+      >
+        <Image
+          src={matched.thumbnail}
+          alt={matched.title}
+          fill
+          sizes="(max-width: 768px) 100vw, 180px"
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        {/* Subject Badge */}
+        <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
+          <span
+            className={`px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-tight shadow-xs border backdrop-blur-md ${matched.subjectBadgeClass}`}
+          >
+            {matched.subjectBadge}
+          </span>
+        </div>
+      </Link>
+
+      {/* 2. Title & Teacher Info */}
+      <div className="flex-1 min-w-0 md:min-w-[170px] lg:min-w-[210px] flex flex-col justify-center">
+        <Link
+          href={classUrl}
+          onClick={() => onEnter(targetClassId)}
+          className="block"
+        >
+          <h3 className="font-headline font-black text-slate-900 dark:text-white text-base sm:text-lg leading-tight line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            {item.class.name || matched.title}
+          </h3>
+        </Link>
+        <div className="flex items-center gap-2 mt-2">
+          <div className="relative size-6 sm:size-7 rounded-full overflow-hidden border border-white dark:border-slate-700 shadow-2xs shrink-0">
+            <Image
+              src={matched.teacher.avatar}
+              alt={matched.teacher.name}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">
+            {item.class.teacherName || matched.teacher.name}
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Progress Bar */}
+      <div className="w-full md:w-44 lg:w-56 shrink-0 flex flex-col justify-center">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">
+          <span className="text-slate-500 dark:text-slate-400">
+            {isVi ? 'Tiến độ:' : 'Progress:'}
+          </span>
+          <span className="font-extrabold text-slate-700 dark:text-slate-200">
+            {completedCount}/{totalAssignments} {isVi ? 'bài' : 'lessons'} ({progressPercent}%)
+          </span>
+        </div>
+        <div className="w-full h-2.5 rounded-full bg-slate-100 dark:bg-slate-700/80 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              isCompleted
+                ? 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+            }`}
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* 4. Alert / To-do Chip */}
+      <div className="w-full md:w-52 lg:w-60 shrink-0">
+        {isCompleted ? (
+          <div className="px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center gap-2.5">
+            <div className="size-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-emerald-800 dark:text-emerald-200 leading-tight truncate">
+                {isVi ? '✓ Đã xong hết bài' : '✓ All caught up'}
+              </p>
+              <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 leading-tight mt-0.5 truncate">
+                {isVi ? 'Tuyệt vời! Tiếp tục ôn tập nhé!' : 'Great job! Keep reviewing!'}
+              </p>
+            </div>
+          </div>
+        ) : isOnePending ? (
+          <div className="px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-800/50 flex items-center gap-2.5">
+            <div className="size-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4 stroke-[2.5]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-rose-800 dark:text-rose-200 leading-tight truncate">
+                {isVi ? '⏰ 1 bài tập cần nộp' : '⏰ 1 task due soon'}
+              </p>
+              <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 leading-tight mt-0.5 truncate">
+                {isVi ? 'Hạn nộp: hôm nay 23:59' : 'Due today 23:59'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200/80 dark:border-orange-800/50 flex items-center gap-2.5">
+            <div className="size-8 rounded-lg bg-orange-100 dark:bg-orange-900/60 text-orange-600 dark:text-orange-400 flex items-center justify-center shrink-0">
+              <Flame className="w-4 h-4 fill-orange-500 text-orange-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-orange-800 dark:text-orange-200 leading-tight truncate">
+                🔥 {pendingCount} {isVi ? 'bài mới' : 'new tasks'}
+              </p>
+              <p className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 leading-tight mt-0.5 truncate">
+                {isVi ? 'Hãy tiếp tục học để khám phá nhé!' : 'Continue learning now!'}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 5. Action Button */}
+      <div className="w-full md:w-auto shrink-0 min-w-[130px]">
+        <Link
+          href={classUrl}
+          prefetch={true}
+          onClick={() => onEnter(targetClassId)}
+          className={`w-full py-2.5 sm:py-3 px-4 rounded-xl sm:rounded-2xl text-white font-black text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer ${
+            isCompleted
+              ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-teal-500/20'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/20'
+          }`}
+        >
+          {enteringClassId === targetClassId ? (
+            <>
+              <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
+              <span>{isVi ? 'Đang vào...' : 'Entering...'}</span>
+            </>
+          ) : (
+            <>
+              <span>
+                {isCompleted
+                  ? isVi ? 'Vào lớp học' : 'Enter Class'
+                  : isVi ? 'Tiếp tục học' : 'Continue'}
+              </span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </>
+          )}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// Sub-component 2: Showcase Public Class Card
+interface PublicClassCardProps {
+  cls: PublicClassItem;
+  isLoggedIn: boolean;
+  onPreview?: (cls: PublicClassItem) => void;
+}
+
+function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
+  const targetUrl = isLoggedIn
+    ? `/classes/${cls.id}`
+    : `/login?callbackUrl=/classes/${cls.id}`;
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-[28px] sm:rounded-[32px] overflow-hidden border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group">
+      {/* Thumbnail Container with Badges */}
+      <Link
+        href={`/classes/${cls.id}`}
+        className="relative w-full aspect-[16/10] overflow-hidden rounded-t-[28px] sm:rounded-t-[32px] bg-slate-100 dark:bg-slate-900 block cursor-pointer"
+      >
+        <Image
+          src={cls.thumbnail}
+          alt={cls.title}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+
+        {/* Badges on Top */}
+        <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10 pointer-events-none">
+          <span
+            className={`px-3 py-1 rounded-full text-xs sm:text-[13px] font-black tracking-tight shadow-sm border backdrop-blur-md ${cls.subjectBadgeClass}`}
+          >
+            {cls.subjectBadge}
+          </span>
+          <span
+            className={`px-2.5 py-1 rounded-full text-xs sm:text-[13px] font-black tracking-tight shadow-sm border backdrop-blur-md ${cls.typeBadgeClass}`}
+          >
+            {cls.typeBadge}
+          </span>
+        </div>
+      </Link>
+
+      {/* Card Body */}
+      <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
+        <div>
+          <Link href={`/classes/${cls.id}`} className="block">
+            <h3 className="font-headline font-black text-slate-900 dark:text-white text-lg sm:text-[19px] leading-tight line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              {cls.title}
+            </h3>
+          </Link>
+          <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed mt-2 mb-4 line-clamp-2 min-h-[38px]">
+            {cls.description}
+          </p>
+
+          {/* Teacher Info */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative size-10 rounded-full overflow-hidden border-2 border-white dark:border-slate-700 shadow-xs shrink-0">
+              <Image
+                src={cls.teacher.avatar}
+                alt={cls.teacher.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="flex flex-col text-left min-w-0">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-tight">
+                {cls.teacher.role}
+              </span>
+              <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+                {cls.teacher.name}
+              </span>
+            </div>
+          </div>
+
+          {/* Stat Chips */}
+          <div className="flex items-center gap-2 mb-5">
+            <span className="px-3 py-1.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 text-xs font-bold flex items-center gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>{cls.lessonsCount} bài học</span>
+            </span>
+            <span className="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 text-xs font-bold flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              <span>{cls.studentsCount}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-1.5 pt-1">
+          <Link
+            href={targetUrl}
+            className={`w-full py-3 px-4 rounded-2xl bg-gradient-to-r ${cls.btnGradient} text-white font-black text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer`}
+          >
+            {isLoggedIn ? (
+              <>
+                <Sparkles className="w-4 h-4 stroke-[2.5]" />
+                <span>Tham gia lớp</span>
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4 stroke-[2.5]" />
+                <span>Tham gia lớp</span>
+              </>
+            )}
+          </Link>
+
+          <Link
+            href={`/classes/${cls.id}`}
+            className="w-full py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Xem chi tiết</span>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Sub-component 3: Join With Code Card
+function JoinWithCodeCard({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="relative rounded-[28px] sm:rounded-[32px] border-2 border-dashed border-purple-200 dark:border-purple-800/80 hover:border-purple-400 bg-gradient-to-b from-[#fbfaff] via-[#f7f5ff] to-[#f3f0ff] dark:from-slate-800/80 dark:to-slate-900/80 p-6 sm:p-7 flex flex-col items-center justify-between text-center overflow-hidden hover:shadow-lg transition-all duration-300 group min-h-[380px]">
+      {/* Soft decorative star graphics */}
+      <div className="absolute top-4 left-4 text-purple-300/60 text-lg pointer-events-none select-none animate-pulse">✦</div>
+      <div className="absolute top-7 right-5 text-amber-300/80 text-xl pointer-events-none select-none">★</div>
+      <div className="absolute bottom-16 left-5 text-amber-400/80 text-sm pointer-events-none select-none">★</div>
+      <div className="absolute bottom-7 right-4 text-purple-300/70 text-lg pointer-events-none select-none">✦</div>
+
+      {/* Key Graphic Icon */}
+      <div className="w-full flex justify-center pt-2 sm:pt-4 mb-2">
+        <div className="relative w-28 h-28 sm:w-32 sm:h-32 transition-transform duration-300 group-hover:scale-105">
+          <Image
+            src="/assests/Classes/icons/join-with-code-key.png"
+            alt="Tham gia bằng mã code"
+            fill
+            className="object-contain"
+          />
+        </div>
+      </div>
+
+      {/* Title & Desc */}
+      <div className="flex-1 flex flex-col items-center justify-center mb-6">
+        <h3 className="text-xl sm:text-2xl font-black text-[#1e1b4b] dark:text-white font-headline leading-tight mb-2.5">
+          Tham gia bằng<br />mã code
+        </h3>
+        <p className="text-xs sm:text-[13px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-[210px] mx-auto">
+          Bạn đã có mã lớp từ giáo viên? Nhập mã để tìm và tham gia lớp học.
+        </p>
+      </div>
+
+      {/* CTA Button */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="w-full py-3.5 px-5 rounded-2xl bg-white hover:bg-purple-50 text-[#7c3aed] font-black text-sm shadow-md shadow-purple-500/10 border border-purple-100 hover:border-purple-200 transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+      >
+        <Plus className="w-4 h-4 stroke-[3]" />
+        <span>Nhập mã lớp</span>
+      </button>
+    </div>
+  );
+}
 
 interface StudentClassesTabProps {
   isLoggedIn: boolean;
@@ -57,6 +526,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
   // Modal join class
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [selectedClassDetail, setSelectedClassDetail] = useState<PublicClassItem | null>(null);
 
   const isFetchingRef = React.useRef(false);
 
@@ -114,65 +584,178 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
     router.push(`/join/${code}`);
   };
 
-  const gradients = [
-    'from-blue-600 via-indigo-500 to-violet-600',
-    'from-amber-400 via-orange-500 to-rose-500',
-    'from-emerald-400 via-teal-500 to-sky-500',
-    'from-fuchsia-500 via-purple-500 to-blue-500',
-    'from-cyan-400 via-sky-500 to-indigo-600'
-  ];
-
-  // 1. Trạng thái khách (Chưa đăng nhập) - Cách A thân thiện
+  // 1. Trạng thái khách (Chưa đăng nhập) - 3 Card Lớp Khám Phá + 1 Khung Tham Gia Bằng Mã Code
   if (!isLoggedIn) {
     return (
-      <div className="w-full py-10 px-4 flex flex-col items-center justify-center animate-in fade-in duration-500">
-        <div className="max-w-lg w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl border-2 border-amber-200/80 dark:border-amber-700/50 rounded-[36px] p-8 sm:p-10 shadow-xl shadow-amber-500/5 flex flex-col items-center text-center relative overflow-hidden">
-          {/* Faint decorative background circle */}
-          <div className="absolute -top-16 -right-16 w-40 h-40 bg-amber-200/40 dark:bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-emerald-200/40 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="w-full animate-in fade-in duration-300">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
+          {PUBLIC_CLASSES.map((cls) => (
+            <PublicClassCard
+              key={cls.id}
+              cls={cls}
+              isLoggedIn={false}
+              onPreview={setSelectedClassDetail}
+            />
+          ))}
 
-          {/* Cute mascot / icon container */}
-          <div className="size-24 rounded-3xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-950/40 dark:to-orange-950/30 border-2 border-amber-300/60 dark:border-amber-600/40 flex items-center justify-center mb-6 shadow-inner relative group">
-            <span className="material-symbols-rounded !text-5xl text-amber-600 transition-transform group-hover:scale-110">
-              school
-            </span>
-            <div className="absolute -top-1.5 -right-1.5 size-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs shadow-md">
-              ✨
+          {/* CARD 4: Tham gia bằng mã code */}
+          <JoinWithCodeCard onOpen={() => setIsJoinModalOpen(true)} />
+        </div>
+
+        {/* Join Class Code Modal */}
+        {isJoinModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-700 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-10 rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center">
+                    <GraduationCap className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    {isVi ? 'Tham gia lớp học' : 'Join Classroom'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsJoinModalOpen(false);
+                    setJoinCodeInput('');
+                  }}
+                  className="size-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleJoinSubmit} className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                    {isVi ? 'Mã lớp học (6 ký tự)' : 'Class Code (6 characters)'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ví dụ: 2KDC6D"
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                    maxLength={10}
+                    autoFocus
+                    className="w-full text-center text-2xl font-mono font-black tracking-widest py-3 px-4 rounded-2xl border-2 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none uppercase bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsJoinModalOpen(false);
+                      setJoinCodeInput('');
+                    }}
+                    className="flex-1 py-3 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  >
+                    {isVi ? 'Hủy' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!joinCodeInput.trim()}
+                    className="flex-1 py-3 rounded-2xl font-black text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {isVi ? 'Vào lớp 🚀' : 'Join Class 🚀'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
+        )}
 
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white font-headline tracking-tight mb-3">
-            {isVi ? 'Lớp học của tôi' : 'My Classroom'}
-          </h2>
+        {/* Class Detail Preview Modal */}
+        {selectedClassDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-[32px] max-w-lg w-full shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden space-y-0 animate-in zoom-in-95 duration-200">
+              <div className="relative w-full aspect-[16/9]">
+                <Image
+                  src={selectedClassDetail.thumbnail}
+                  alt={selectedClassDetail.title}
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
+                  <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md border ${selectedClassDetail.subjectBadgeClass}`}>
+                    {selectedClassDetail.subjectBadge}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedClassDetail(null)}
+                    className="size-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
 
-          <p className="text-sm sm:text-base font-semibold text-slate-600 dark:text-slate-300 max-w-sm mb-6 leading-relaxed">
-            {isVi
-              ? 'Đăng nhập để xem danh sách lớp học và làm bài tập từ thầy cô.'
-              : 'Sign in to view your enrolled classes and do assignments assigned by your teacher.'}
-          </p>
+              <div className="p-6 space-y-5">
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-headline">
+                    {selectedClassDetail.title}
+                  </h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed font-medium">
+                    {selectedClassDetail.description}
+                  </p>
+                </div>
 
-          {/* Gamified perk pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-8 max-w-sm">
-            <span className="px-3.5 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold">
-              🎒 {isVi ? 'Tham gia lớp thầy cô' : 'Join classes'}
-            </span>
-            <span className="px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
-              📝 {isVi ? 'Nhận bài tập mới' : 'New assignments'}
-            </span>
-            <span className="px-3.5 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs font-bold">
-              🏆 {isVi ? 'Theo dõi điểm số' : 'Track progress'}
-            </span>
+                <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/60">
+                  <div className="relative size-12 rounded-full overflow-hidden border-2 border-white shadow-xs shrink-0">
+                    <Image
+                      src={selectedClassDetail.teacher.avatar}
+                      alt={selectedClassDetail.teacher.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 block uppercase">
+                      {selectedClassDetail.teacher.role}
+                    </span>
+                    <span className="text-base font-bold text-slate-800 dark:text-slate-200">
+                      {selectedClassDetail.teacher.name}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-500 font-black">✓</span>
+                    <span>{selectedClassDetail.lessonsCount} bài học lộ trình tiêu chuẩn</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-500 font-black">✓</span>
+                    <span>Trò chơi tương tác & Flashcard ôn tập vui nhộn</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-500 font-black">✓</span>
+                    <span>Nhận bài tập và chấm điểm trực tiếp từ thầy cô</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedClassDetail(null)}
+                    className="flex-1 py-3 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <Link
+                    href="/login?callbackUrl=/"
+                    className={`flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r ${selectedClassDetail.btnGradient} text-white font-black text-sm shadow-lg text-center flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95`}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Đăng nhập để vào</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <Link
-            href="/login?callbackUrl=/?tab=classes"
-            className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm tracking-wide shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/35 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2.5"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>{isVi ? 'Đăng nhập ngay' : 'Sign In Now'}</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+        )}
       </div>
     );
   }
@@ -185,24 +768,19 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
           <div className="h-7 w-48 bg-slate-200 dark:bg-slate-700 rounded-xl" />
           <div className="h-9 w-36 bg-slate-200 dark:bg-slate-700 rounded-xl" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-white/70 dark:bg-slate-800/70 border-2 border-slate-200 dark:border-slate-700 rounded-[28px] overflow-hidden flex flex-col justify-between h-[340px]"
+              className="bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-3xl p-5 flex flex-col md:flex-row items-center gap-4 h-32"
             >
-              <div className="h-28 bg-slate-200 dark:bg-slate-700 w-full" />
-              <div className="p-5 space-y-4 flex-1">
-                <div className="h-5 w-3/4 bg-slate-200 dark:bg-slate-700 rounded-lg" />
-                <div className="h-4 w-1/2 bg-slate-200 dark:bg-slate-700 rounded-lg" />
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <div className="h-12 bg-slate-100 dark:bg-slate-700/60 rounded-xl" />
-                  <div className="h-12 bg-slate-100 dark:bg-slate-700/60 rounded-xl" />
-                </div>
+              <div className="w-40 h-24 bg-slate-200 dark:bg-slate-700 rounded-2xl shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-5 w-48 bg-slate-200 dark:bg-slate-700 rounded-md" />
+                <div className="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded-md" />
               </div>
-              <div className="p-5 pt-0">
-                <div className="h-11 bg-slate-200 dark:bg-slate-700 rounded-xl w-full" />
-              </div>
+              <div className="w-48 h-10 bg-slate-200 dark:bg-slate-700 rounded-xl" />
+              <div className="w-32 h-10 bg-slate-200 dark:bg-slate-700 rounded-xl" />
             </div>
           ))}
         </div>
@@ -227,234 +805,167 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
     );
   }
 
-  const hasAnyClasses = activeClasses.length > 0 || pendingRequests.length > 0;
+  // =========================================================
+  // FILTERING LOGIC: Ẩn các lớp học sinh ĐÃ tham gia
+  // =========================================================
+  const enrolledClassIds = new Set(
+    activeClasses.flatMap((ac) => [
+      ac.id?.toLowerCase(),
+      ac.class?.id?.toLowerCase(),
+    ]).filter(Boolean)
+  );
+  const enrolledClassNames = new Set(
+    activeClasses
+      .map((ac) => ac.class?.name?.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  const recommendedClasses = PUBLIC_CLASSES.filter((pub) => {
+    const isIdMatch = enrolledClassIds.has(pub.id.toLowerCase());
+    const isTitleMatch = enrolledClassNames.has(pub.title.trim().toLowerCase());
+    return !isIdMatch && !isTitleMatch;
+  });
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
-      {/* Header bar with Quick Join Button */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="space-y-8 sm:space-y-10 animate-in fade-in duration-300">
+      {/* ========================================================= */}
+      {/* KHU VỰC 1: LỚP HỌC CỦA TÔI (ENROLLED CLASSES)             */}
+      {/* ========================================================= */}
+      <section className="space-y-5">
+        {/* Header bar */}
         <div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-headline tracking-tight flex items-center gap-2.5">
-            <span className="material-symbols-rounded !text-3xl text-amber-500">school</span>
+            <span className="material-symbols-rounded !text-3xl text-blue-600">school</span>
             {isVi ? 'Lớp học của tôi' : 'My Classes'}
           </h2>
           <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             {isVi
               ? 'Theo dõi bài tập và tham gia các lớp học của bạn'
-              : 'Track your assignments and join teacher classes'}
+              : 'Track your assignments and continue learning'}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsJoinModalOpen(true)}
-          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm tracking-wide shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2 cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4 stroke-[3]" />
-          <span>{isVi ? 'Tham gia lớp mới' : 'Join New Class'}</span>
-        </button>
-      </div>
+        {/* Pending Requests Section */}
+        {pendingRequests.length > 0 && (
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm font-black text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Hourglass className="w-4 h-4 animate-spin text-amber-500" style={{ animationDuration: '4s' }} />
+                {isVi ? 'Đang chờ duyệt' : 'Pending Approval'}
+              </span>
+              <span className="h-5 px-2 bg-amber-100 text-amber-700 text-xs rounded-full flex items-center justify-center font-bold">
+                {pendingRequests.length}
+              </span>
+            </div>
 
-      {/* Pending Requests Section */}
-      {pendingRequests.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm font-black text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
-              <Hourglass className="w-4 h-4 animate-spin text-amber-500" style={{ animationDuration: '4s' }} />
-              {isVi ? 'Đang chờ duyệt' : 'Pending Approval'}
-            </span>
-            <span className="h-5 px-2 bg-amber-100 text-amber-700 text-xs rounded-full flex items-center justify-center font-bold">
-              {pendingRequests.length}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-            {pendingRequests.map((item) => (
-              <div
-                key={item.id}
-                className="relative p-5 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-2 border-amber-200/80 dark:border-amber-700/50 rounded-[28px] shadow-xs flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 rounded-full">
-                      {isVi ? 'Chờ duyệt' : 'Pending'}
-                    </span>
-                    <span className="text-[11px] font-bold text-amber-600">
-                      {isVi ? 'Chờ giáo viên' : 'Waiting teacher'}
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white line-clamp-1 mb-1">
-                    {item.class.name}
-                  </h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    {isVi ? 'Giáo viên' : 'Teacher'}: {item.class.teacherName}
-                  </p>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-amber-100 dark:border-amber-900/40">
-                  <button
-                    onClick={() => handleCancelRequest(item.id)}
-                    disabled={cancelingId === item.id}
-                    className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
-                  >
-                    {cancelingId === item.id
-                      ? isVi
-                        ? 'Đang hủy...'
-                        : 'Canceling...'
-                      : isVi
-                      ? 'Hủy yêu cầu'
-                      : 'Cancel request'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Active Classes Grid */}
-      <section>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
-          {activeClasses.map((item, i) => {
-            const bgGradient = gradients[i % gradients.length];
-            const hasPending = item.pendingCount > 0;
-
-            return (
-              <Link
-                key={item.id}
-                href={`/student/classes/${item.id}`}
-                prefetch={true}
-                data-no-global-loader="true"
-                onMouseEnter={() => router.prefetch(`/student/classes/${item.id}`)}
-                onClick={() => setEnteringClassId(item.id)}
-                className={`group relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl border-2 border-white/80 dark:border-slate-700/80 rounded-[28px] sm:rounded-[32px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 flex flex-col justify-between cursor-pointer block no-underline text-inherit ${
-                  enteringClassId === item.id ? 'ring-2 ring-blue-500/80 pointer-events-none' : ''
-                }`}
-              >
-                {/* Playful Banner Header */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
+              {pendingRequests.map((item) => (
                 <div
-                  className={`h-28 sm:h-32 w-full bg-gradient-to-br ${bgGradient} p-4 sm:p-5 relative overflow-hidden flex flex-col justify-between`}
+                  key={item.id}
+                  className="relative p-5 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-2 border-amber-200/80 dark:border-amber-700/50 rounded-[28px] shadow-xs flex flex-col justify-between"
                 >
-                  {/* Decorative faint background watermark */}
-                  <div className="absolute right-0 bottom-0 opacity-20 translate-x-3 translate-y-3 pointer-events-none group-hover:scale-110 transition-transform duration-500">
-                    <GraduationCap className="w-32 h-32 text-white stroke-[1.5px] -rotate-12" />
-                  </div>
-                  <div className="absolute -left-6 -top-6 w-24 h-24 bg-white/15 rounded-full blur-xl pointer-events-none" />
-
-                  {/* Top Pill Badges */}
-                  <div className="flex items-center justify-between z-10 w-full">
-                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      {isVi ? 'Lớp học' : 'Class'}
-                    </span>
-
-                    {hasPending ? (
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black bg-white/95 text-rose-600 shadow-md flex items-center gap-1 border border-rose-100 animate-pulse">
-                        <Flame className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-                        {item.pendingCount} {isVi ? 'bài mới' : 'new'}
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black bg-white/95 text-emerald-600 shadow-md flex items-center gap-1 border border-emerald-100">
-                        <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
-                        {isVi ? 'Đã xong' : 'All done'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Class Info & Metrics */}
-                <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between gap-5">
                   <div>
-                    <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
+                    <div className="flex items-start justify-between mb-3">
+                      <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 rounded-full">
+                        {isVi ? 'Chờ duyệt' : 'Pending'}
+                      </span>
+                      <span className="text-[11px] font-bold text-amber-600">
+                        {isVi ? 'Chờ giáo viên' : 'Waiting teacher'}
+                      </span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white line-clamp-1 mb-1">
                       {item.class.name}
                     </h3>
-                    <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-1.5">
-                      <span className="size-5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center text-[11px] shrink-0">
-                        👩‍🏫
-                      </span>
-                      <span className="truncate">
-                        {isVi ? 'GV' : 'Teacher'}:{' '}
-                        <strong className="text-slate-700 dark:text-slate-200">
-                          {item.class.teacherName}
-                        </strong>
-                      </span>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      {isVi ? 'Giáo viên' : 'Teacher'}: {item.class.teacherName}
                     </p>
                   </div>
 
-                  {/* Gamified Stat Chips */}
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                    <div className="bg-rose-50/80 dark:bg-rose-950/20 border border-rose-100/80 dark:border-rose-900/30 p-2.5 sm:p-3 rounded-2xl flex items-center gap-2 sm:gap-2.5 min-w-0">
-                      <div className="size-8 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-                        <Flame className="w-4 h-4 fill-rose-500 text-rose-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-extrabold text-rose-400 uppercase tracking-wider leading-none mb-1 truncate">
-                          {isVi ? 'Chờ làm' : 'To Do'}
-                        </p>
-                        <p className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-none truncate">
-                          {item.pendingCount} {isVi ? 'bài' : ''}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100/80 dark:border-blue-900/30 p-2.5 sm:p-3 rounded-2xl flex items-center gap-2 sm:gap-2.5 min-w-0">
-                      <div className="size-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-                        <BookOpen className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-extrabold text-blue-400 uppercase tracking-wider leading-none mb-1 truncate">
-                          {isVi ? 'Tổng số' : 'Total'}
-                        </p>
-                        <p className="font-black text-slate-900 dark:text-white text-sm sm:text-base leading-none truncate">
-                          {item.class.totalAssignments} {isVi ? 'bài' : ''}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Playful CTA Button */}
-                  <div
-                    className={`w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-500/30 group-hover:from-blue-700 group-hover:to-indigo-700 flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
-                      enteringClassId === item.id ? 'from-blue-700 to-indigo-800 opacity-95' : ''
-                    }`}
-                  >
-                    {enteringClassId === item.id ? (
-                      <>
-                        <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
-                        <span>{isVi ? 'Đang vào lớp...' : 'Entering...'}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{isVi ? 'Vào lớp học ngay' : 'Enter Class'}</span>
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-                      </>
-                    )}
+                  <div className="mt-4 pt-3 border-t border-amber-100 dark:border-amber-900/40">
+                    <button
+                      onClick={() => handleCancelRequest(item.id)}
+                      disabled={cancelingId === item.id}
+                      className="w-full py-2 text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {cancelingId === item.id
+                        ? isVi
+                          ? 'Đang hủy...'
+                          : 'Canceling...'
+                        : isVi
+                        ? 'Hủy yêu cầu'
+                        : 'Cancel request'}
+                    </button>
                   </div>
                 </div>
-              </Link>
-            );
-          })}
-
-          {/* Dashed Join New Class Card */}
-          <div
-            onClick={() => setIsJoinModalOpen(true)}
-            className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500/80 bg-white/40 dark:bg-slate-800/40 hover:bg-white/90 dark:hover:bg-slate-800/90 rounded-[28px] sm:rounded-[32px] p-6 sm:p-7 flex flex-col items-center justify-center text-center group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 shadow-xs min-h-[300px]"
-          >
-            <div className="size-14 sm:size-16 rounded-2xl sm:rounded-3xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm">
-              <Plus className="w-7 h-7 sm:w-8 sm:h-8 stroke-[2.5px]" />
+              ))}
             </div>
-            <h3 className="text-lg sm:text-xl font-extrabold text-slate-800 dark:text-white group-hover:text-blue-600 transition-colors mb-1.5">
-              {isVi ? 'Tham gia lớp mới' : 'Join a Class'}
-            </h3>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 max-w-xs mb-5">
-              {isVi
-                ? 'Nhập mã tham gia (Join Code) 6 ký tự do thầy cô cung cấp để vào lớp.'
-                : 'Enter the 6-character Join Code provided by your teacher to join.'}
-            </p>
-            <span className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40 text-slate-700 dark:text-slate-300 group-hover:text-blue-600 font-extrabold text-xs transition-colors border border-slate-200/60 dark:border-slate-600">
-              + {isVi ? 'Nhập mã tham gia' : 'Enter Join Code'}
-            </span>
           </div>
+        )}
+
+        {/* Enrolled Classes List (Horizontal Row Cards) */}
+        {activeClasses.length > 0 ? (
+          <div className="space-y-4">
+            {activeClasses.map((item) => (
+              <EnrolledClassRowCard
+                key={item.id || item.class.id}
+                item={item}
+                isVi={isVi}
+                enteringClassId={enteringClassId}
+                onEnter={(id) => setEnteringClassId(id)}
+              />
+            ))}
+          </div>
+        ) : (
+          /* Empty State if student hasn't joined any classes yet */
+          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-700 p-8 sm:p-10 text-center flex flex-col items-center justify-center shadow-xs">
+            <div className="size-16 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mb-3.5">
+              <BookOpen className="w-8 h-8" />
+            </div>
+            <h4 className="text-base sm:text-lg font-black text-slate-800 dark:text-white mb-1.5">
+              {isVi ? 'Bạn chưa tham gia lớp học nào' : "You haven't joined any classes yet"}
+            </h4>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md font-medium leading-relaxed">
+              {isVi
+                ? 'Bạn chưa tham gia lớp học nào. Hãy khám phá và đăng ký các lớp học gợi ý bên dưới nhé!'
+                : 'Explore and enroll in the recommended classes below to start learning!'}
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* ========================================================= */}
+      {/* KHU VỰC 2: KHÁM PHÁ THÊM CÁC LỚP HỌC (SHOWCASE / RECOMMENDED)*/}
+      {/* ========================================================= */}
+      <section className="pt-6 sm:pt-8 border-t border-slate-200/80 dark:border-slate-800 space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500 fill-amber-400" />
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-headline">
+                {isVi ? 'Khám phá thêm các lớp học' : 'Explore More Classes'}
+              </h3>
+            </div>
+            <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+              {isVi
+                ? 'Đăng ký tham gia ngay để nhận bài học và tương tác cùng thầy cô'
+                : 'Join interactive classes with teachers and start learning today'}
+            </p>
+          </div>
+        </div>
+
+        {/* Grid of recommended classes (filtered) + Join with code card */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
+          {recommendedClasses.map((cls) => (
+            <PublicClassCard
+              key={cls.id}
+              cls={cls}
+              isLoggedIn={true}
+              onPreview={setSelectedClassDetail}
+            />
+          ))}
+
+          {/* CARD: Tham gia bằng mã code */}
+          <JoinWithCodeCard onOpen={() => setIsJoinModalOpen(true)} />
         </div>
       </section>
 
@@ -519,6 +1030,96 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Class Detail Preview Modal */}
+      {selectedClassDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-[32px] max-w-lg w-full shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden space-y-0 animate-in zoom-in-95 duration-200">
+            <div className="relative w-full aspect-[16/9]">
+              <Image
+                src={selectedClassDetail.thumbnail}
+                alt={selectedClassDetail.title}
+                fill
+                className="object-cover"
+              />
+              <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
+                <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md border ${selectedClassDetail.subjectBadgeClass}`}>
+                  {selectedClassDetail.subjectBadge}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassDetail(null)}
+                  className="size-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-headline">
+                  {selectedClassDetail.title}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed font-medium">
+                  {selectedClassDetail.description}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/60">
+                <div className="relative size-12 rounded-full overflow-hidden border-2 border-white shadow-xs shrink-0">
+                  <Image
+                    src={selectedClassDetail.teacher.avatar}
+                    alt={selectedClassDetail.teacher.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-400 block uppercase">
+                    {selectedClassDetail.teacher.role}
+                  </span>
+                  <span className="text-base font-bold text-slate-800 dark:text-slate-200">
+                    {selectedClassDetail.teacher.name}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-500 font-black">✓</span>
+                  <span>{selectedClassDetail.lessonsCount} bài học lộ trình tiêu chuẩn</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-500 font-black">✓</span>
+                  <span>Trò chơi tương tác & Flashcard ôn tập vui nhộn</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-500 font-black">✓</span>
+                  <span>Nhận bài tập và chấm điểm trực tiếp từ thầy cô</span>
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassDetail(null)}
+                  className="flex-1 py-3 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+                <Link
+                  href={`/classes/${selectedClassDetail.id}`}
+                  className={`flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r ${selectedClassDetail.btnGradient} text-white font-black text-sm shadow-lg text-center flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Tham gia lớp học</span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -1007,14 +1007,21 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const exerciseCountsLoaded   = useContentStore(s => (s as any).exerciseCountsLoaded) as boolean;
 
   // Active tab — read directly from Zustand store (instant, no re-mount)
-  const activeTab    = useContentStore((s) => (s as any).activeTab) || "lessons";
+  const activeTab    = useContentStore((s) => (s as any).activeTab) || "classes";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   // On first mount: initialize store from URL so bookmarks/direct links still work
   useEffect(() => {
     const urlTab = searchParams.tab;
-    if (urlTab && urlTab !== activeTab) {
-      setActiveTab(urlTab);
+    if (urlTab) {
+      if (urlTab !== activeTab) {
+        setActiveTab(urlTab);
+      }
+    } else {
+      // Default on home page is "classes"
+      if (activeTab !== "classes") {
+        setActiveTab("classes");
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1554,8 +1561,13 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     if (tab === activeTab) return
     setActiveTab(tab)
     const p = new URLSearchParams(window.location.search)
-    p.set("tab", tab)
-    window.history.pushState(null, "", `?${p.toString()}`)
+    if (tab === "classes") {
+      p.delete("tab")
+    } else {
+      p.set("tab", tab)
+    }
+    const qs = p.toString()
+    window.history.pushState(null, "", qs ? `?${qs}` : window.location.pathname)
   }
 
   const handleClearSearch = useCallback(() => {

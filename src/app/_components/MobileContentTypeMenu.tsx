@@ -13,7 +13,7 @@ export function MobileContentTypeMenu() {
   const locale = useLocale();
 
   const studyAgeGroup = useContentStore((s) => (s as any).studyAgeGroup) || "";
-  const activeTabStore = useContentStore((s) => (s as any).activeTab) || "lessons";
+  const activeTabStore = useContentStore((s) => (s as any).activeTab) || "classes";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   const isKindergarten = useMemo(() => {
@@ -31,7 +31,7 @@ export function MobileContentTypeMenu() {
     if (pathname.includes("/game")) return "games";
     
     // On home page or default
-    return searchParams.get("tab") || activeTabStore;
+    return searchParams.get("tab") || activeTabStore || "classes";
   }, [pathname, searchParams, activeTabStore]);
 
   const checkAndRequireOnboarding = useContentStore((s) => (s as any).checkAndRequireOnboarding);
@@ -64,11 +64,16 @@ export function MobileContentTypeMenu() {
 
     setActiveTab(tabId);
     if (pathname !== "/") {
-      router.push(`/?tab=${tabId}`, { scroll: false });
+      router.push(tabId === "classes" ? `/` : `/?tab=${tabId}`, { scroll: false });
     } else {
       const p = new URLSearchParams(window.location.search);
-      p.set("tab", tabId);
-      history.replaceState(null, "", `?${p.toString()}`);
+      if (tabId === "classes") {
+        p.delete("tab");
+      } else {
+        p.set("tab", tabId);
+      }
+      const qs = p.toString();
+      history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
     }
   };
 
