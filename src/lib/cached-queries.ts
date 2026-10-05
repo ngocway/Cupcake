@@ -275,17 +275,39 @@ export async function getCachedStudentClasses(userId: string): Promise<{ activeC
           ce."joinedAt",
           c."id" as "classId",
           c."name" as "className",
+          c."thumbnail" as "classThumbnail",
+          c."gradeLevel" as "gradeLevel",
           COALESCE(u."name", u."email") as "teacherName",
+          u."image" as "teacherAvatar",
           (SELECT COUNT(*)::int FROM "AssignmentClass" ac WHERE ac."classId" = c."id") AS "totalAssignments",
+          (
+            SELECT COUNT(DISTINCT s."assignmentId")::int
+            FROM "Submission" s
+            JOIN "AssignmentClass" ac ON s."assignmentId" = ac."assignmentId" AND ac."classId" = c."id"
+            WHERE s."studentId" = ce."studentId" AND s."submittedAt" IS NOT NULL
+          ) AS "completedAssignments",
           CASE 
             WHEN ce."status" = 'ACTIVE' THEN (
-              SELECT COUNT(*)::int 
-              FROM "AssignmentClass" ac 
-              WHERE ac."classId" = c."id" 
-                AND (ac."dueDate" IS NULL OR ac."dueDate" > NOW())
+              GREATEST(0, 
+                (SELECT COUNT(*)::int FROM "AssignmentClass" ac WHERE ac."classId" = c."id") - 
+                (
+                  SELECT COUNT(DISTINCT s."assignmentId")::int
+                  FROM "Submission" s
+                  JOIN "AssignmentClass" ac ON s."assignmentId" = ac."assignmentId" AND ac."classId" = c."id"
+                  WHERE s."studentId" = ce."studentId" AND s."submittedAt" IS NOT NULL
+                )
+              )
             )
             ELSE 0 
-          END AS "pendingCount"
+          END AS "pendingCount",
+          (
+            SELECT MIN(ac."dueDate")
+            FROM "AssignmentClass" ac
+            LEFT JOIN "Submission" s ON s."assignmentId" = ac."assignmentId" AND s."studentId" = ce."studentId" AND s."submittedAt" IS NOT NULL
+            WHERE ac."classId" = c."id"
+              AND ac."dueDate" > NOW()
+              AND s."id" IS NULL
+          ) AS "nearestDueDate"
         FROM "ClassEnrollment" ce
         JOIN "Class" c ON ce."classId" = c."id"
         LEFT JOIN "User" u ON c."teacherId" = u."id"
@@ -304,10 +326,15 @@ export async function getCachedStudentClasses(userId: string): Promise<{ activeC
           class: {
             id: row.classId,
             name: row.className,
+            thumbnail: row.classThumbnail,
+            gradeLevel: row.gradeLevel,
             teacherName: row.teacherName || 'Teacher',
-            totalAssignments: Number(row.totalAssignments) || 0
+            teacherAvatar: row.teacherAvatar,
+            totalAssignments: Number(row.totalAssignments) || 0,
+            completedAssignments: Number(row.completedAssignments) || 0,
           },
-          pendingCount: Number(row.pendingCount) || 0
+          pendingCount: Number(row.pendingCount) || 0,
+          nearestDueDate: row.nearestDueDate ? new Date(row.nearestDueDate).toISOString() : null,
         };
 
         if (row.status === 'ACTIVE') {
@@ -323,6 +350,126 @@ export async function getCachedStudentClasses(userId: string): Promise<{ activeC
       return { activeClasses: [], pendingRequests: [] };
     }
   });
+}
+
+export type PublicClassItemType = {
+  id: string;
+  title: string;
+  description: string;
+  gradeLevel: string | null;
+  subjectBadge: string;
+  subjectBadgeClass: string;
+  typeBadge: string;
+  typeBadgeClass: string;
+  thumbnail: string;
+  rating: number;
+  reviewsCount: number;
+  studentsCount: string;
+  lessonsCount: number;
+  btnGradient: string;
+  teacher: {
+    name: string;
+    avatar: string;
+    role: string;
+  };
+};
+
+export async function getCachedPublicClasses(): Promise<PublicClassItemType[]> {
+  return fetchWithRedis('public:classes:catalog:v2', 3600, async () => {
+    try {
+      const classes = await prisma.class.findMany({
+        where: {
+          deletedAt: null,
+          isBlocked: false,
+          isJoinable: true,
+        },
+        include: {
+          teacher: {
+            select: {
+              name: true,
+              image: true,
+              email: true,
+              professionalTitle: true,
+            },
+          },
+          _count: {
+            select: {
+              enrollments: true,
+              assignments: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 20,
+      });
+
+      const palettes = [
+        {
+          subjectBadgeClass: 'bg-[#dcfce7] text-[#15803d] border-[#86efac]',
+          typeBadgeClass: 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]',
+          typeBadge: '🔥 Miễn phí',
+          btnGradient: 'from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] shadow-cyan-500/25',
+          fallbackThumb: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+        },
+        {
+          subjectBadgeClass: 'bg-[#ffedd5] text-[#c2410c] border-[#fdba74]',
+          typeBadgeClass: 'bg-[#fee2e2] text-[#b91c1c] border-[#fca5a5]',
+          typeBadge: '🔥 Hot',
+          btnGradient: 'from-[#f97316] to-[#f43f5e] hover:from-[#ea580c] hover:to-[#e11d48] shadow-rose-500/25',
+          fallbackThumb: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+        },
+        {
+          subjectBadgeClass: 'bg-[#ede9fe] text-[#6d28d9] border-[#c4b5fd]',
+          typeBadgeClass: 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]',
+          typeBadge: '🔥 Mới mở',
+          btnGradient: 'from-[#8b5cf6] to-[#6366f1] hover:from-[#7c3aed] hover:to-[#4f46e5] shadow-indigo-500/25',
+          fallbackThumb: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+        },
+      ];
+
+      return classes.map((c, index) => {
+        const palette = palettes[index % palettes.length];
+        const grade = c.gradeLevel ? `Lớp ${c.gradeLevel}` : 'Tiểu học';
+        const teacherName = c.teacher?.name || 'Giáo viên Dolcake';
+        const teacherAvatar = c.teacher?.image || '/assests/Classes/avatars/teacher-avatar-ms-jessica.png';
+
+        return {
+          id: c.id,
+          title: c.name,
+          description: c.description || `Lớp học tiếng Anh ${grade} tương tác sinh động cùng giáo viên ${teacherName}.`,
+          gradeLevel: c.gradeLevel,
+          subjectBadge: `English • ${grade}`,
+          subjectBadgeClass: palette.subjectBadgeClass,
+          typeBadge: palette.typeBadge,
+          typeBadgeClass: palette.typeBadgeClass,
+          thumbnail: c.thumbnail || palette.fallbackThumb,
+          rating: 5.0,
+          reviewsCount: Math.max(12, (c._count.enrollments || 0) * 3 + 6),
+          studentsCount: `${Math.max(15, c._count.enrollments || 0)}+ học viên`,
+          lessonsCount: Math.max(8, c._count.assignments || 0),
+          btnGradient: palette.btnGradient,
+          teacher: {
+            name: teacherName,
+            avatar: teacherAvatar,
+            role: c.teacher?.professionalTitle || 'Giáo viên chủ nhiệm',
+          },
+        };
+      });
+    } catch (err) {
+      console.error('[getCachedPublicClasses] Error:', err);
+      return [];
+    }
+  });
+}
+
+export async function invalidatePublicClassesCache() {
+  try {
+    await redis.del('public:classes:catalog:v2');
+  } catch (e) {
+    console.warn("[invalidatePublicClassesCache] Failed to delete cache:", e);
+  }
 }
 
 export async function invalidateStudentClassesCache(userId: string) {

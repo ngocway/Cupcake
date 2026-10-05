@@ -47,26 +47,26 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
   {
     id: 'english-adventure-club',
     title: 'English Adventure Club',
-    description: 'Học tiếng Anh qua truyện kể, trò chơi và các thử thách vui nhộn mỗi ngày.',
-    subjectBadge: 'English • Lớp 2-3',
+    description: 'Learn English through storytelling, interactive games, and joyful daily challenges.',
+    subjectBadge: 'English • Grades 2-3',
     subjectBadgeClass: 'bg-[#dcfce7]/95 text-[#14532d] border-[#86efac]/70',
-    typeBadge: '🔥 Miễn phí',
+    typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
     teacher: {
       name: 'Ms. Jessica Nguyen',
       avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
-      role: 'Giáo viên',
+      role: 'Teacher',
     },
     lessonsCount: 20,
-    studentsCount: '120+ học viên',
+    studentsCount: '120+ students',
     btnGradient: 'from-[#2dd4bf] to-[#06b6d4] hover:from-[#14b8a6] hover:to-[#0891b2] shadow-teal-500/20',
   },
   {
     id: 'phonics-happy-reading',
     title: 'Phonics & Happy Reading',
-    description: 'Làm quen phonics, phát âm chuẩn và xây dựng thói quen đọc tiếng Anh tự tin.',
-    subjectBadge: 'Phonics • Lớp 1-2',
+    description: 'Master phonics, correct pronunciation, and build confident reading habits.',
+    subjectBadge: 'Phonics • Grades 1-2',
     subjectBadgeClass: 'bg-[#ffedd5]/95 text-[#7c2d12] border-[#fdba74]/70',
     typeBadge: '🔥 Hot',
     typeBadgeClass: 'bg-[#fee2e2]/95 text-[#991b1b] border-[#fca5a5]/70',
@@ -74,28 +74,28 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     teacher: {
       name: 'Ms. Anna Pham',
       avatar: '/assests/Classes/avatars/teacher-avatar-ms-anna.png',
-      role: 'Giáo viên',
+      role: 'Teacher',
     },
     lessonsCount: 12,
-    studentsCount: '85+ học viên',
+    studentsCount: '85+ students',
     btnGradient: 'from-[#fb923c] to-[#f43f5e] hover:from-[#f97316] hover:to-[#e11d48] shadow-rose-500/20',
   },
   {
     id: 'little-speaking-stars',
     title: 'Little Speaking Stars',
-    description: 'Luyện phản xạ giao tiếp qua hội thoại, đóng vai và các chủ đề gần gũi với bé.',
-    subjectBadge: 'Speaking • Lớp 3-5',
+    description: 'Boost conversation skills through role-playing, dialogues, and kid-friendly topics.',
+    subjectBadge: 'Speaking • Grades 3-5',
     subjectBadgeClass: 'bg-[#ede9fe]/95 text-[#4c1d95] border-[#c4b5fd]/70',
-    typeBadge: '🔥 Miễn phí',
+    typeBadge: '✨ Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
     teacher: {
       name: 'Mr. David Tran',
       avatar: '/assests/Classes/avatars/teacher-avatar-mr-david.png',
-      role: 'Giáo viên',
+      role: 'Teacher',
     },
     lessonsCount: 18,
-    studentsCount: '200+ học viên',
+    studentsCount: '200+ students',
     btnGradient: 'from-[#a855f7] to-[#6366f1] hover:from-[#9333ea] hover:to-[#4f46e5] shadow-indigo-500/20',
   },
 ];
@@ -107,10 +107,15 @@ type FormattedClassInfo = {
   class: {
     id: string;
     name: string;
+    thumbnail?: string | null;
+    gradeLevel?: string | null;
     teacherName: string;
+    teacherAvatar?: string | null;
     totalAssignments: number;
+    completedAssignments?: number;
   };
   pendingCount: number;
+  nearestDueDate?: string | null;
 };
 
 // Helper: match enrolled class with rich public class artwork / avatar / badge
@@ -139,7 +144,7 @@ function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherN
     subjectBadgeClass: 'bg-[#dcfce7]/95 text-[#14532d] border-[#86efac]/70',
     typeBadge: '',
     typeBadgeClass: '',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
     teacher: {
       name: clsItem.teacherName || 'Giáo viên Dolcake',
       avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
@@ -166,48 +171,42 @@ function EnrolledClassRowCard({
   onEnter,
 }: EnrolledClassRowCardProps) {
   const matched = findMatchingPublicClass(item.class);
-  const totalAssignments = item.class.totalAssignments > 0 
-    ? item.class.totalAssignments 
-    : (matched.lessonsCount || 10);
-  const pendingCount = item.pendingCount ?? 0;
-  const completedCount = Math.max(0, totalAssignments - pendingCount);
+  const totalAssignments = item.class.totalAssignments;
+  const completedCount = item.class.completedAssignments ?? Math.max(0, totalAssignments - (item.pendingCount ?? 0));
+  const pendingCount = item.pendingCount ?? Math.max(0, totalAssignments - completedCount);
   const progressPercent = totalAssignments > 0 
     ? Math.min(100, Math.round((completedCount / totalAssignments) * 100))
-    : 100;
+    : (totalAssignments === 0 ? 100 : 0);
 
-  const isCompleted = progressPercent === 100 || pendingCount === 0;
+  const isCompleted = totalAssignments > 0 ? (completedCount >= totalAssignments || pendingCount === 0) : true;
   const isOnePending = pendingCount === 1;
 
   const targetClassId = item.class.id || item.id;
   const classUrl = `/student/classes/${targetClassId}`;
 
+  // Real thumbnail and teacher avatar from database
+  const thumbnailSrc = item.class.thumbnail || matched.thumbnail;
+  const teacherAvatar = item.class.teacherAvatar || matched.teacher.avatar;
+
   return (
     <div
-      className={`group bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500/60 shadow-xs hover:shadow-lg transition-all duration-300 p-3.5 sm:p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-5 ${
+      className={`group bg-white dark:bg-slate-800 rounded-2xl sm:rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500/60 shadow-xs hover:shadow-lg transition-all duration-300 p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-5 ${
         enteringClassId === targetClassId ? 'ring-2 ring-blue-500/80 pointer-events-none' : ''
       }`}
     >
-      {/* 1. Thumbnail with Subject Badge */}
+      {/* 1. Thumbnail */}
       <Link
         href={classUrl}
         onClick={() => onEnter(targetClassId)}
-        className="relative w-full md:w-36 lg:w-44 h-44 sm:h-48 md:h-24 lg:h-28 rounded-xl sm:rounded-2xl overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-900 block cursor-pointer"
+        className="relative w-full md:w-36 lg:w-44 h-44 sm:h-48 md:h-24 lg:h-28 rounded-lg sm:rounded-[12px] overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/60 block cursor-pointer"
       >
         <Image
-          src={matched.thumbnail}
-          alt={matched.title}
+          src={thumbnailSrc}
+          alt={item.class.name || matched.title}
           fill
           sizes="(max-width: 768px) 100vw, 180px"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        {/* Subject Badge */}
-        <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-[11px] font-black tracking-tight shadow-xs border backdrop-blur-md ${matched.subjectBadgeClass}`}
-          >
-            {matched.subjectBadge}
-          </span>
-        </div>
       </Link>
 
       {/* 2. Title & Teacher Info */}
@@ -224,8 +223,8 @@ function EnrolledClassRowCard({
         <div className="flex items-center gap-2 mt-2">
           <div className="relative size-6 sm:size-7 rounded-full overflow-hidden border border-white dark:border-slate-700 shadow-2xs shrink-0">
             <Image
-              src={matched.teacher.avatar}
-              alt={matched.teacher.name}
+              src={teacherAvatar}
+              alt={item.class.teacherName || matched.teacher.name}
               fill
               className="object-cover"
             />
@@ -284,7 +283,9 @@ function EnrolledClassRowCard({
                 {isVi ? '⏰ 1 bài tập cần nộp' : '⏰ 1 task due soon'}
               </p>
               <p className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 leading-tight mt-0.5 truncate">
-                {isVi ? 'Hạn nộp: hôm nay 23:59' : 'Due today 23:59'}
+                {item.nearestDueDate
+                  ? `${isVi ? 'Hạn nộp: ' : 'Due: '}${new Date(item.nearestDueDate).toLocaleDateString(isVi ? 'vi-VN' : 'en-US', { hour: '2-digit', minute: '2-digit', month: 'numeric', day: 'numeric' })}`
+                  : (isVi ? 'Hãy hoàn thành sớm nhé!' : 'Complete soon!')}
               </p>
             </div>
           </div>
@@ -348,7 +349,7 @@ interface PublicClassCardProps {
 function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
   const targetUrl = isLoggedIn
     ? `/classes/${cls.id}`
-    : `/login?callbackUrl=/classes/${cls.id}`;
+    : `/student/login?callbackUrl=/classes/${cls.id}`;
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-[28px] sm:rounded-[32px] overflow-hidden border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group">
@@ -416,7 +417,7 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
           <div className="flex items-center gap-2 mb-5">
             <span className="px-3 py-1.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 text-xs font-bold flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5" />
-              <span>{cls.lessonsCount} bài học</span>
+              <span>{cls.lessonsCount} lessons</span>
             </span>
             <span className="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 text-xs font-bold flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5" />
@@ -429,19 +430,10 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
         <div className="space-y-1.5 pt-1">
           <Link
             href={targetUrl}
-            className={`w-full py-3 px-4 rounded-2xl bg-gradient-to-r ${cls.btnGradient} text-white font-black text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer`}
+            className={`w-full py-3 px-4 rounded-2xl bg-gradient-to-r ${cls.btnGradient || 'from-blue-600 to-indigo-600 shadow-blue-500/20'} text-white font-black text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer`}
           >
-            {isLoggedIn ? (
-              <>
-                <Sparkles className="w-4 h-4 stroke-[2.5]" />
-                <span>Tham gia lớp</span>
-              </>
-            ) : (
-              <>
-                <LogIn className="w-4 h-4 stroke-[2.5]" />
-                <span>Tham gia lớp</span>
-              </>
-            )}
+            <Sparkles className="w-4 h-4 stroke-[2.5]" />
+            <span>Join Class</span>
           </Link>
 
           <Link
@@ -449,7 +441,7 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
             className="w-full py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5" />
-            <span>Xem chi tiết</span>
+            <span>View Details</span>
           </Link>
         </div>
       </div>
@@ -472,7 +464,7 @@ function JoinWithCodeCard({ onOpen }: { onOpen: () => void }) {
         <div className="relative w-28 h-28 sm:w-32 sm:h-32 transition-transform duration-300 group-hover:scale-105">
           <Image
             src="/assests/Classes/icons/join-with-code-key.png"
-            alt="Tham gia bằng mã code"
+            alt="Join with Code"
             fill
             className="object-contain"
           />
@@ -482,10 +474,10 @@ function JoinWithCodeCard({ onOpen }: { onOpen: () => void }) {
       {/* Title & Desc */}
       <div className="flex-1 flex flex-col items-center justify-center mb-6">
         <h3 className="text-xl sm:text-2xl font-black text-[#1e1b4b] dark:text-white font-headline leading-tight mb-2.5">
-          Tham gia bằng<br />mã code
+          Join with<br />Code
         </h3>
         <p className="text-xs sm:text-[13px] font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-[210px] mx-auto">
-          Bạn đã có mã lớp từ giáo viên? Nhập mã để tìm và tham gia lớp học.
+          Have a class code from your teacher? Enter it to find and join your classroom.
         </p>
       </div>
 
@@ -496,7 +488,7 @@ function JoinWithCodeCard({ onOpen }: { onOpen: () => void }) {
         className="w-full py-3.5 px-5 rounded-2xl bg-white hover:bg-purple-50 text-[#7c3aed] font-black text-sm shadow-md shadow-purple-500/10 border border-purple-100 hover:border-purple-200 transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
       >
         <Plus className="w-4 h-4 stroke-[3]" />
-        <span>Nhập mã lớp</span>
+        <span>+ Enter Code</span>
       </button>
     </div>
   );
@@ -531,7 +523,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
   const isFetchingRef = React.useRef(false);
 
   const fetchClasses = async (isBackground = false) => {
-    if (!isLoggedIn || isFetchingRef.current) return;
+    if (isFetchingRef.current) return;
     isFetchingRef.current = true;
     if (!isBackground) setIsLoading(true);
     setError(null);
@@ -584,7 +576,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
     router.push(`/join/${code}`);
   };
 
-  // 1. Trạng thái khách (Chưa đăng nhập) - 3 Card Lớp Khám Phá + 1 Khung Tham Gia Bằng Mã Code
+  // 1. Trạng thái khách (Chưa đăng nhập) - 3 Card Lớp Khám Phá Mẫu + 1 Khung Tham Gia Bằng Mã Code
   if (!isLoggedIn) {
     return (
       <div className="w-full animate-in fade-in duration-300">
@@ -724,15 +716,15 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
                 <div className="space-y-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-500 font-black">✓</span>
-                    <span>{selectedClassDetail.lessonsCount} bài học lộ trình tiêu chuẩn</span>
+                    <span>{selectedClassDetail.lessonsCount} standard roadmap lessons</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-500 font-black">✓</span>
-                    <span>Trò chơi tương tác & Flashcard ôn tập vui nhộn</span>
+                    <span>Interactive games & review flashcards</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-500 font-black">✓</span>
-                    <span>Nhận bài tập và chấm điểm trực tiếp từ thầy cô</span>
+                    <span>Assignments & teacher feedback</span>
                   </div>
                 </div>
 
@@ -742,14 +734,14 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
                     onClick={() => setSelectedClassDetail(null)}
                     className="flex-1 py-3 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                   >
-                    Đóng
+                    Close
                   </button>
                   <Link
-                    href="/login?callbackUrl=/"
+                    href={`/student/login?callbackUrl=/classes/${selectedClassDetail.id}`}
                     className={`flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r ${selectedClassDetail.btnGradient} text-white font-black text-sm shadow-lg text-center flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95`}
                   >
                     <LogIn className="w-4 h-4" />
-                    <span>Đăng nhập để vào</span>
+                    <span>Sign in to join</span>
                   </Link>
                 </div>
               </div>
@@ -820,11 +812,8 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
       .filter(Boolean)
   );
 
-  const recommendedClasses = PUBLIC_CLASSES.filter((pub) => {
-    const isIdMatch = enrolledClassIds.has(pub.id.toLowerCase());
-    const isTitleMatch = enrolledClassNames.has(pub.title.trim().toLowerCase());
-    return !isIdMatch && !isTitleMatch;
-  });
+  // Khám phá thêm các lớp học: Cố định chính xác 3 lớp học mẫu tiêu biểu
+  const recommendedClasses: PublicClassItem[] = PUBLIC_CLASSES;
 
   return (
     <div className="space-y-8 sm:space-y-10 animate-in fade-in duration-300">
@@ -1091,15 +1080,15 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
               <div className="space-y-2 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-500 font-black">✓</span>
-                  <span>{selectedClassDetail.lessonsCount} bài học lộ trình tiêu chuẩn</span>
+                  <span>{selectedClassDetail.lessonsCount} standard roadmap lessons</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-500 font-black">✓</span>
-                  <span>Trò chơi tương tác & Flashcard ôn tập vui nhộn</span>
+                  <span>Interactive games & review flashcards</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-emerald-500 font-black">✓</span>
-                  <span>Nhận bài tập và chấm điểm trực tiếp từ thầy cô</span>
+                  <span>Assignments & teacher feedback</span>
                 </div>
               </div>
 
@@ -1109,14 +1098,14 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
                   onClick={() => setSelectedClassDetail(null)}
                   className="flex-1 py-3 rounded-2xl font-bold text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 >
-                  Đóng
+                  Close
                 </button>
                 <Link
                   href={`/classes/${selectedClassDetail.id}`}
                   className={`flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r ${selectedClassDetail.btnGradient} text-white font-black text-sm shadow-lg text-center flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95`}
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Tham gia lớp học</span>
+                  <span>Join Class</span>
                 </Link>
               </div>
             </div>

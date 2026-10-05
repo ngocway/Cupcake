@@ -59,6 +59,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: '/login',
+        destination: '/student/login',
+        permanent: false,
+      },
       // SEO: renamed slug redirects (permanent 301)
       {
         source: '/public/lessons/my-family-9919',

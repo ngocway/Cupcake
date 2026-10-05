@@ -239,7 +239,7 @@ export default async function ClassDetailPage({
 
         classData = {
           id: dbClass.id,
-          thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+          thumbnail: dbClass.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
           subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
           typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
           rating: 4.9,

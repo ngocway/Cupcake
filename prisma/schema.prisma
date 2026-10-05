@@ -113,6 +113,7 @@ model Class {
   name            String
   description     String?
   gradeLevel      String?
+  thumbnail       String?
   classCode       String            @unique
   joinCode        String            @unique
   isJoinable      Boolean           @default(true)

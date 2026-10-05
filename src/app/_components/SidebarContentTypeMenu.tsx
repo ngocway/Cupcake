@@ -66,6 +66,16 @@ export function SidebarContentTypeMenu() {
     return isKindergarten && (tabId === "lessons" || tabId === "exercises" || tabId === "shadowing");
   };
 
+  // Sync activeTab from URL searchParams (e.g. browser Back / Forward navigation)
+  useEffect(() => {
+    if (pathname === "/") {
+      const urlTab = searchParams.get("tab") || "classes";
+      if (urlTab !== activeTab) {
+        setActiveTab(urlTab);
+      }
+    }
+  }, [pathname, searchParams, activeTab, setActiveTab]);
+
   // Direct URL protection check on mount / searchParams change
   useEffect(() => {
     const urlTab = searchParams.get("tab");
@@ -74,14 +84,14 @@ export function SidebarContentTypeMenu() {
         setActiveTab("games");
         const p = new URLSearchParams(window.location.search);
         p.set("tab", "games");
-        history.replaceState(null, "", `?${p.toString()}`);
+        window.history.replaceState(window.history.state, "", `?${p.toString()}`);
         if (setFilterModalOpen) setFilterModalOpen(true);
       } else if (isKindergarten && isTabLocked(urlTab)) {
         setIsRestrictionModalOpen(true);
         setActiveTab("games");
         const p = new URLSearchParams(window.location.search);
         p.set("tab", "games");
-        history.replaceState(null, "", `?${p.toString()}`);
+        window.history.replaceState(window.history.state, "", `?${p.toString()}`);
       }
     }
   }, [isKindergarten, studyAgeGroup, searchParams]);
@@ -98,7 +108,7 @@ export function SidebarContentTypeMenu() {
           } else {
             const p = new URLSearchParams(window.location.search);
             p.set("tab", tabId);
-            history.replaceState(null, "", `?${p.toString()}`);
+            window.history.replaceState(window.history.state, "", `?${p.toString()}`);
           }
         });
       } else if (setFilterModalOpen) {
@@ -131,7 +141,8 @@ export function SidebarContentTypeMenu() {
       p.set("tab", tabId);
     }
     const qs = p.toString();
-    history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+    const targetUrl = qs ? `?${qs}` : window.location.pathname;
+    window.history.replaceState(window.history.state, "", targetUrl);
   };
 
   const handleConfirmSwitch = () => {

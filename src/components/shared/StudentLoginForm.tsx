@@ -54,7 +54,7 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
         } else {
           const searchParams = new URLSearchParams(window.location.search);
           const callbackUrl = searchParams.get("callbackUrl");
-          router.push(callbackUrl || "/");
+          router.replace(callbackUrl || "/");
         }
         router.refresh();
       }
@@ -95,7 +95,7 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
             else {
               const searchParams = new URLSearchParams(window.location.search);
               const callbackUrl = searchParams.get("callbackUrl");
-              router.push(callbackUrl || "/");
+              router.replace(callbackUrl || "/");
             }
             router.refresh();
           } else {

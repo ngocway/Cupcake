@@ -241,7 +241,7 @@ export function StudentClassHeader({ session }: StudentClassHeaderProps) {
             </div>
           ) : (
             <Link
-              href="/login"
+              href="/student/login"
               className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
             >
               Đăng nhập

@@ -24,6 +24,7 @@ import {
   Heart,
   Lock,
   ArrowRight,
+  ArrowLeft,
   X,
   Volume2,
 } from 'lucide-react';
@@ -182,26 +183,44 @@ export function ClassDetailClient({ classData }: Props) {
       {/* ─── TOP BREADCRUMB ─────────────────────────────────────────────────── */}
       <div className="w-full border-b border-slate-200/60 bg-white/70 backdrop-blur-sm sticky top-0 z-30">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-          <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
-            <Link 
-              href="/" 
-              className="hover:text-cyan-700 flex items-center gap-1.5 transition-colors"
-              title={labels.breadcrumbHome}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push('/');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs hover:-translate-x-0.5"
+              title="Back"
             >
-              <Home className="w-4 h-4 text-slate-400 hover:text-cyan-700" />
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-            <Link 
-              href="/" 
-              className="hover:text-cyan-700 transition-colors font-medium text-slate-600"
-            >
-              {labels.breadcrumbClasses}
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
-            <span className="text-slate-900 font-bold truncate max-w-[180px] sm:max-w-xs md:max-w-md">
-              {content.title}
-            </span>
-          </nav>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+
+            <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
+              <Link 
+                href="/" 
+                className="hover:text-cyan-700 flex items-center gap-1.5 transition-colors"
+                title={labels.breadcrumbHome}
+              >
+                <Home className="w-4 h-4 text-slate-400 hover:text-cyan-700" />
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+              <Link 
+                href="/" 
+                className="hover:text-cyan-700 transition-colors font-medium text-slate-600"
+              >
+                {labels.breadcrumbClasses}
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
+              <span className="text-slate-900 font-bold truncate max-w-[180px] sm:max-w-xs md:max-w-md">
+                {content.title}
+              </span>
+            </nav>
+          </div>
         </div>
       </div>
 

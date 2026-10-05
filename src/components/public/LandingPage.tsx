@@ -1552,9 +1552,9 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
   // ── Sync URL → state (e.g. browser Back button) ───────────────────────────
   useEffect(() => {
-    const tab  = currentParams.get("tab")
-    if (tab  && tab  !== activeTab)  setActiveTab(tab)
-  }, [currentParams]) // eslint-disable-line react-hooks/exhaustive-deps
+    const tab = currentParams.get("tab") || "classes"
+    if (tab !== activeTab) setActiveTab(tab)
+  }, [currentParams, activeTab, setActiveTab])
 
   // ── Tab / sort handlers — no server roundtrip ─────────────────────────────
   const handleTabChange = (tab: string) => {
@@ -1567,7 +1567,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       p.set("tab", tab)
     }
     const qs = p.toString()
-    window.history.pushState(null, "", qs ? `?${qs}` : window.location.pathname)
+    const targetUrl = qs ? `?${qs}` : window.location.pathname
+    window.history.replaceState(window.history.state, "", targetUrl)
   }
 
   const handleClearSearch = useCallback(() => {
