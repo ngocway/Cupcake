@@ -4,10 +4,13 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    return NextResponse.json({ activeClasses: [], pendingRequests: [] });
   }
 
-  const data = await getCachedStudentClasses(session.user.id);
-  return NextResponse.json(data);
+  const studentClasses = await getCachedStudentClasses(userId);
+  return NextResponse.json(studentClasses);
 }
+

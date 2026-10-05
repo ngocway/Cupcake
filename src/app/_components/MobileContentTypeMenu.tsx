@@ -23,7 +23,7 @@ export function MobileContentTypeMenu() {
 
   // Determine active tab from URL path or Zustand store
   const activeTab = useMemo(() => {
-    if (pathname.includes("/student/classes")) return "classes";
+    if (pathname.includes("/classes")) return "classes";
     if (pathname.includes("/exercises") || pathname.includes("/grammar")) return "exercises";
     if (pathname.includes("/lessons") || pathname.includes("/books") || pathname.includes("/public/lessons")) return "lessons";
     if (pathname.includes("/flashcards") || pathname.includes("/student/flashcards")) return "flashcards";
@@ -51,7 +51,7 @@ export function MobileContentTypeMenu() {
           } else {
             const p = new URLSearchParams(window.location.search);
             p.set("tab", tabId);
-            history.replaceState(null, "", `?${p.toString()}`);
+            window.history.replaceState(window.history.state, "", `?${p.toString()}`);
           }
         });
       } else if (setFilterModalOpen) {
@@ -73,7 +73,8 @@ export function MobileContentTypeMenu() {
         p.set("tab", tabId);
       }
       const qs = p.toString();
-      history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+      const targetUrl = qs ? `?${qs}` : window.location.pathname;
+      window.history.replaceState(window.history.state, "", targetUrl);
     }
   };
 
