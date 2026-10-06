@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
         classCode,
         joinCode,
         teacherId: session.user.id,
+        autoApprove: true,
       },
     });
 

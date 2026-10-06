@@ -15,6 +15,7 @@ import {
   bulkUpdateEnrollments,
   bulkRemoveEnrollments,
   toggleClassJoinability,
+  toggleClassAutoApprove,
 } from '../actions';
 
 export type Student = {
@@ -32,6 +33,7 @@ interface ClassDashboardClientProps {
   initialClassName: string;
   initialJoinCode: string;
   initialIsJoinable: boolean;
+  initialAutoApprove?: boolean;
   initialStudents: Student[];
   initialAssignments: Assignment[];
   initialOpenAssignmentCount: number;
@@ -43,6 +45,7 @@ export default function ClassDashboardClient({
   initialClassName,
   initialJoinCode,
   initialIsJoinable,
+  initialAutoApprove = true,
   initialStudents,
   initialAssignments,
   initialOpenAssignmentCount,
@@ -53,6 +56,8 @@ export default function ClassDashboardClient({
   const [className, setClassName] = useState(initialClassName);
   const [joinCode, setJoinCode] = useState(initialJoinCode);
   const [isJoinable, setIsJoinable] = useState(initialIsJoinable);
+  const [autoApprove, setAutoApprove] = useState(initialAutoApprove);
+  const [isTogglingAutoApprove, setIsTogglingAutoApprove] = useState(false);
   const [openAssignmentCount, setOpenAssignmentCount] = useState(initialOpenAssignmentCount);
 
   // Default tab: "Bài tập" (as requested for fast loading & direct assignment focus)
@@ -93,6 +98,9 @@ export default function ClassDashboardClient({
         setClassName(data.class?.name ?? 'Lớp học');
         if (data.class?.isJoinable !== undefined) {
           setIsJoinable(data.class.isJoinable);
+        }
+        if (data.class?.autoApprove !== undefined) {
+          setAutoApprove(data.class.autoApprove);
         }
       }
     } catch (err) {
@@ -159,6 +167,23 @@ export default function ClassDashboardClient({
     fetchStudents();
   };
 
+  const handleToggleAutoApprove = async () => {
+    const next = !autoApprove;
+    setAutoApprove(next);
+    setIsTogglingAutoApprove(true);
+    try {
+      const res = await toggleClassAutoApprove(classId, next);
+      if (!res?.success) throw new Error();
+      await fetchStudents();
+    } catch (err) {
+      setAutoApprove(!next);
+      console.error('Failed to toggle autoApprove', err);
+      alert('Lỗi cập nhật chế độ duyệt học sinh!');
+    } finally {
+      setIsTogglingAutoApprove(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       {/* Header & Breadcrumbs */}
@@ -206,9 +231,14 @@ export default function ClassDashboardClient({
           </button>
           <button
             onClick={() => setActiveTab('students')}
-            className={`py-4 text-sm transition-all ${activeTab === 'students' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}
+            className={`py-4 text-sm transition-all flex items-center gap-2 ${activeTab === 'students' ? 'font-bold tab-active' : 'font-medium text-[#617589] hover:text-primary'}`}
           >
-            Học sinh
+            <span>Học sinh</span>
+            {students.filter(s => s.status === 'PENDING').length > 0 && (
+              <span className="px-2 py-0.5 text-[11px] font-extrabold bg-amber-500 text-white rounded-full animate-pulse shadow-sm">
+                {students.filter(s => s.status === 'PENDING').length} chờ duyệt
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('grades')}
@@ -260,9 +290,25 @@ export default function ClassDashboardClient({
               <button
                 onClick={handleToggleJoinable}
                 className={`flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-[#f0f2f4] dark:border-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shrink-0 ${!isJoinable ? 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100' : 'text-[#617589]'}`}
+                title={isJoinable ? 'Lớp đang mở nhận học sinh' : 'Lớp đang khóa không nhận học sinh mới'}
               >
                 <span className="material-symbols-outlined text-[20px]">{isJoinable ? 'lock_open' : 'lock'}</span>
                 {isJoinable ? 'Mở' : 'Khóa'}
+              </button>
+              <button
+                onClick={handleToggleAutoApprove}
+                disabled={isTogglingAutoApprove}
+                className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
+                  autoApprove
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300'
+                    : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300'
+                } ${isTogglingAutoApprove ? 'opacity-60 cursor-wait' : ''}`}
+                title={autoApprove ? 'Đang bật: Học sinh nhập mã là vào lớp ngay' : 'Đang bật: Cần giáo viên duyệt thì học sinh mới vào lớp'}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {autoApprove ? 'verified_user' : 'how_to_reg'}
+                </span>
+                <span>{autoApprove ? 'Tự động duyệt' : 'Cần phê duyệt'}</span>
               </button>
               <button
                 onClick={() => setIsQRModalOpen(true)}

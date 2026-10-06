@@ -124,9 +124,9 @@ export default async function StudentAssignmentLobbyPage({
   searchParams
 }: { 
   params: Promise<{ id: string }>,
-  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; groupId?: string; review?: string; embedded?: string }>
+  searchParams: Promise<{ direct?: string; newAttempt?: string; fromClass?: string; classId?: string; groupId?: string; review?: string; embedded?: string; preview?: string }>
 }) {
-  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, groupId, review, embedded }] = await Promise.all([
+  const [sessionData, { id: paramsId }, { direct, newAttempt, fromClass, classId, groupId, review, embedded, preview }] = await Promise.all([
     auth(),
     params,
     searchParams
@@ -245,6 +245,11 @@ export default async function StudentAssignmentLobbyPage({
   const fromClassQuery = isFromClass ? "&fromClass=true" : "";
   const embeddedQuery = embedded === "true" ? "&embedded=true" : "";
   const classParams = `${fromClassQuery}${embeddedQuery}${classId ? `&classId=${classId}` : ''}${groupId ? `&groupId=${groupId}` : ''}`;
+
+  // 0. Chế độ xem trước (preview === "true"): Chuyển thẳng sang trang public preview để chơi/xem thử mà không tạo submission vào DB
+  if (preview === "true") {
+    redirect(`/public/assignments/${identifier}`);
+  }
 
   // 1. Khi bấm "Làm lại" (newAttempt === "true"): Luôn tạo lượt làm mới không giới hạn số lần
   if (newAttempt === "true") {

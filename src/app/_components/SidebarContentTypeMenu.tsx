@@ -31,7 +31,21 @@ export function SidebarContentTypeMenu() {
     return () => window.removeEventListener("toggle-english-menu", handleToggle);
   }, []);
 
-  const studyAgeGroup = useContentStore((s) => (s as any).studyAgeGroup) || "";
+  const studyAgeGroupFromStore = useContentStore((s) => (s as any).studyAgeGroup) || "";
+  const studyAgeGroup = useMemo(() => {
+    if (studyAgeGroupFromStore) return studyAgeGroupFromStore;
+    if (typeof document !== "undefined") {
+      const match = document.cookie.match(/(?:^|;\s*)study_age_group=([^;]+)/);
+      if (match && match[1]) {
+        try {
+          return decodeURIComponent(match[1]);
+        } catch {
+          return match[1];
+        }
+      }
+    }
+    return "";
+  }, [studyAgeGroupFromStore]);
 
   const isKindergarten = useMemo(() => {
     const ag = studyAgeGroup.toLowerCase();
@@ -66,19 +80,32 @@ export function SidebarContentTypeMenu() {
     return isKindergarten && (tabId === "lessons" || tabId === "exercises" || tabId === "shadowing");
   };
 
-  // Sync activeTab from URL searchParams (e.g. browser Back / Forward navigation)
+  // Listen to browser Back / Forward buttons (popstate) to sync activeTab
+  useEffect(() => {
+    const handlePopState = () => {
+      if (pathname === "/") {
+        const urlTab = new URLSearchParams(window.location.search).get("tab") || "classes";
+        setActiveTab(urlTab);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [pathname, setActiveTab]);
+
+  // Sync activeTab on initial mount or pathname change (e.g. entering home page from another route)
   useEffect(() => {
     if (pathname === "/") {
-      const urlTab = searchParams.get("tab") || "classes";
+      const urlTab = new URLSearchParams(window.location.search).get("tab") || searchParams.get("tab") || "classes";
       if (urlTab !== activeTab) {
         setActiveTab(urlTab);
       }
     }
-  }, [pathname, searchParams, activeTab, setActiveTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
-  // Direct URL protection check on mount / searchParams change
+  // Direct URL protection check on mount / studyAgeGroup change
   useEffect(() => {
-    const urlTab = searchParams.get("tab");
+    const urlTab = new URLSearchParams(window.location.search).get("tab");
     if (urlTab && (urlTab === "lessons" || urlTab === "exercises" || urlTab === "shadowing")) {
       if (!studyAgeGroup) {
         setActiveTab("games");
@@ -94,7 +121,8 @@ export function SidebarContentTypeMenu() {
         window.history.replaceState(window.history.state, "", `?${p.toString()}`);
       }
     }
-  }, [isKindergarten, studyAgeGroup, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isKindergarten, studyAgeGroup]);
 
   const handleSelectTab = (tabId: string) => {
     // If user has not selected an age group yet and tries to open Reading, Grammar, or Shadowing
@@ -303,6 +331,7 @@ export function SidebarContentTypeMenu() {
         .cefr-redesign-tile.story { background: #FFE0CC !important; }
         .cefr-redesign-tile.story .cefr-redesign-tile-icon { color: #E26D33; }
         .cefr-redesign-tile.story .cefr-redesign-tile-label { color: #E26D33; }
+        .cefr-redesign-tile.story.active { border-color: #E26D33; box-shadow: 0 0 10px rgba(226, 109, 51, 0.25); }
 
         .cefr-redesign-tile.classes { background: #FFF3D6 !important; }
         .cefr-redesign-tile.classes .cefr-redesign-tile-icon { color: #E58A1F; }

@@ -35,6 +35,9 @@ import { CSS } from '@dnd-kit/utilities';
 
 export type Assignment = {
   id: string;
+  slug?: string | null;
+  lessonId?: string | null;
+  lessonSlug?: string | null;
   title: string;
   materialType: 'EXERCISE' | 'READING' | 'FLASHCARD' | 'LESSON' | 'GAME' | 'BOOK';
   level?: string | null;
@@ -67,6 +70,53 @@ const TYPE_CONFIG: Record<string, { label: string; icon: string; bgClass: string
   GAME:     { label: 'Game',    icon: 'sports_esports',bgClass: 'bg-pink-50 dark:bg-pink-900/30',     textClass: 'text-pink-600', badgeClass: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300' },
   BOOK:     { label: 'Shadowing', icon: 'menu_book',   bgClass: 'bg-amber-50 dark:bg-amber-900/30',   textClass: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
 };
+
+export function getAssignmentPreviewUrl(assignment: Assignment): string {
+  if (assignment.instructions) {
+    try {
+      const meta = JSON.parse(assignment.instructions);
+      if (meta?.previewUrl) return meta.previewUrl;
+      if (meta?.playUrl) {
+        const url: string = meta.playUrl;
+        if (
+          url.startsWith('/student/game') ||
+          url.startsWith('/student/books') ||
+          url.startsWith('/grammar') ||
+          url.startsWith('/student/lessons')
+        ) {
+          const separator = url.includes('?') ? '&' : '?';
+          return `${url}${separator}preview=true`;
+        }
+      }
+    } catch {}
+  }
+
+  let kind = assignment.materialType as string;
+  if (assignment.instructions) {
+    try {
+      const meta = JSON.parse(assignment.instructions);
+      if (meta?.kind) kind = meta.kind;
+    } catch {}
+  }
+
+  const isGrammarLesson = 
+    kind === 'LESSON' ||
+    assignment.title.toLowerCase().startsWith('grammar lesson') ||
+    assignment.title.toLowerCase().startsWith('lý thuyết:');
+
+  if (isGrammarLesson) {
+    const targetId = assignment.lessonSlug || assignment.lessonId || assignment.slug || assignment.id;
+    return `/student/lessons/${targetId}?preview=true`;
+  }
+
+  if (kind === 'READING' && (assignment.lessonId || assignment.lessonSlug)) {
+    const targetId = assignment.lessonSlug || assignment.lessonId;
+    return `/student/lessons/${targetId}?preview=true`;
+  }
+
+  const targetId = assignment.slug || assignment.id;
+  return `/public/assignments/${targetId}`;
+}
 
 function formatDeadline(deadline: string | null) {
   if (!deadline) return 'Không giới hạn';
@@ -1135,6 +1185,7 @@ export function AssignmentsTab({
               }
               const config = TYPE_CONFIG[kind] ?? TYPE_CONFIG[assignment.materialType] ?? TYPE_CONFIG.EXERCISE;
               const displayTitle = assignment.title.replace(/^Lý thuyết:\s*/i, 'Grammar lesson: ');
+              const previewUrl = getAssignmentPreviewUrl(assignment);
 
               return (
                 <div
@@ -1202,6 +1253,16 @@ export function AssignmentsTab({
                                 <span className="material-symbols-outlined text-[18px]">visibility</span>
                                 Xem kết quả làm bài
                               </Link>
+                              <Link
+                                href={previewUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setOpenAssignmentMenuId(null)}
+                                className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 text-[#111418] dark:text-gray-200 transition-colors text-left cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[18px] text-indigo-500">open_in_new</span>
+                                Xem trước bài học
+                              </Link>
                               <button 
                                 onClick={() => handleRemind(assignment.id)}
                                 disabled={isReminding}
@@ -1233,11 +1294,22 @@ export function AssignmentsTab({
 
                     {/* Title */}
                     <div className="mt-2">
-                      <CardTitleWithTooltip
-                        title={displayTitle}
-                        as="h4"
-                        className="text-base font-extrabold text-[#111418] dark:text-white line-clamp-2 group-hover:text-primary transition-colors"
-                      />
+                      <Link
+                        href={previewUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group/title-link inline-flex items-start gap-1 max-w-full"
+                        title="Bấm để xem trước bài học trong tab mới"
+                      >
+                        <CardTitleWithTooltip
+                          title={displayTitle}
+                          as="h4"
+                          className="text-base font-extrabold text-[#111418] dark:text-white line-clamp-2 group-hover/title-link:text-primary transition-colors cursor-pointer"
+                        />
+                        <span className="material-symbols-outlined text-[16px] text-gray-400 group-hover/title-link:text-primary opacity-0 group-hover/title-link:opacity-100 transition-all shrink-0 mt-0.5" title="Mở xem trước">
+                          open_in_new
+                        </span>
+                      </Link>
                     </div>
 
                     {/* Deadline */}
