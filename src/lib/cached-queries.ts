@@ -266,7 +266,7 @@ export async function invalidateMaterialCache(assignmentId: string) {
 
 export async function getCachedStudentClasses(userId: string): Promise<{ activeClasses: any[]; pendingRequests: any[] }> {
   // Use Redis cache (TTL 24 hours = 86400s) with active invalidation
-  return fetchWithRedis(`student:classes:${userId}`, 86400, async () => {
+  return fetchWithRedis(`student:classes:v2:${userId}`, 86400, async () => {
     try {
       const rows: any[] = await prisma.$queryRawUnsafe(`
         SELECT 
@@ -279,22 +279,128 @@ export async function getCachedStudentClasses(userId: string): Promise<{ activeC
           c."gradeLevel" as "gradeLevel",
           COALESCE(u."name", u."email") as "teacherName",
           u."image" as "teacherAvatar",
-          (SELECT COUNT(*)::int FROM "AssignmentClass" ac WHERE ac."classId" = c."id") AS "totalAssignments",
+          (
+            SELECT COUNT(*)::int 
+            FROM "AssignmentClass" ac
+            JOIN "Assignment" a ON ac."assignmentId" = a."id"
+            LEFT JOIN "AssignmentGroup" ag ON ac."groupId" = ag."id"
+            WHERE ac."classId" = c."id"
+              AND (
+                ac."groupId" IS NULL 
+                OR ag."id" IS NULL 
+                OR ag."isHidden" = false 
+                OR (ag."visibleFrom" IS NOT NULL AND ag."visibleFrom" <= NOW())
+              )
+              AND (
+                (a."materialType" = 'EXERCISE' OR a."materialType" = 'READING')
+                AND (
+                  a."instructions" IS NULL OR (
+                    a."instructions" NOT LIKE '%"kind":"LESSON"%'
+                    AND a."instructions" NOT LIKE '%"kind":"GAME"%'
+                    AND a."instructions" NOT LIKE '%"kind":"FLASHCARD"%'
+                    AND a."instructions" NOT LIKE '%"kind":"BOOK"%'
+                    AND a."instructions" NOT LIKE '%/grammar/%'
+                    AND a."instructions" NOT LIKE '%/game/%'
+                    AND a."instructions" NOT LIKE '%/student/books/%'
+                  )
+                )
+                AND a."title" NOT ILIKE 'grammar lesson%'
+                AND a."title" NOT ILIKE 'lý thuyết:%'
+              )
+          ) AS "totalAssignments",
           (
             SELECT COUNT(DISTINCT s."assignmentId")::int
             FROM "Submission" s
             JOIN "AssignmentClass" ac ON s."assignmentId" = ac."assignmentId" AND ac."classId" = c."id"
-            WHERE s."studentId" = ce."studentId" AND s."submittedAt" IS NOT NULL
+            JOIN "Assignment" a ON ac."assignmentId" = a."id"
+            LEFT JOIN "AssignmentGroup" ag ON ac."groupId" = ag."id"
+            WHERE s."studentId" = ce."studentId" 
+              AND s."submittedAt" IS NOT NULL
+              AND (
+                ac."groupId" IS NULL 
+                OR ag."id" IS NULL 
+                OR ag."isHidden" = false 
+                OR (ag."visibleFrom" IS NOT NULL AND ag."visibleFrom" <= NOW())
+              )
+              AND (
+                (a."materialType" = 'EXERCISE' OR a."materialType" = 'READING')
+                AND (
+                  a."instructions" IS NULL OR (
+                    a."instructions" NOT LIKE '%"kind":"LESSON"%'
+                    AND a."instructions" NOT LIKE '%"kind":"GAME"%'
+                    AND a."instructions" NOT LIKE '%"kind":"FLASHCARD"%'
+                    AND a."instructions" NOT LIKE '%"kind":"BOOK"%'
+                    AND a."instructions" NOT LIKE '%/grammar/%'
+                    AND a."instructions" NOT LIKE '%/game/%'
+                    AND a."instructions" NOT LIKE '%/student/books/%'
+                  )
+                )
+                AND a."title" NOT ILIKE 'grammar lesson%'
+                AND a."title" NOT ILIKE 'lý thuyết:%'
+              )
           ) AS "completedAssignments",
           CASE 
             WHEN ce."status" = 'ACTIVE' THEN (
               GREATEST(0, 
-                (SELECT COUNT(*)::int FROM "AssignmentClass" ac WHERE ac."classId" = c."id") - 
+                (
+                  SELECT COUNT(*)::int 
+                  FROM "AssignmentClass" ac
+                  JOIN "Assignment" a ON ac."assignmentId" = a."id"
+                  LEFT JOIN "AssignmentGroup" ag ON ac."groupId" = ag."id"
+                  WHERE ac."classId" = c."id"
+                    AND (
+                      ac."groupId" IS NULL 
+                      OR ag."id" IS NULL 
+                      OR ag."isHidden" = false 
+                      OR (ag."visibleFrom" IS NOT NULL AND ag."visibleFrom" <= NOW())
+                    )
+                    AND (
+                      (a."materialType" = 'EXERCISE' OR a."materialType" = 'READING')
+                      AND (
+                        a."instructions" IS NULL OR (
+                          a."instructions" NOT LIKE '%"kind":"LESSON"%'
+                          AND a."instructions" NOT LIKE '%"kind":"GAME"%'
+                          AND a."instructions" NOT LIKE '%"kind":"FLASHCARD"%'
+                          AND a."instructions" NOT LIKE '%"kind":"BOOK"%'
+                          AND a."instructions" NOT LIKE '%/grammar/%'
+                          AND a."instructions" NOT LIKE '%/game/%'
+                          AND a."instructions" NOT LIKE '%/student/books/%'
+                        )
+                      )
+                      AND a."title" NOT ILIKE 'grammar lesson%'
+                      AND a."title" NOT ILIKE 'lý thuyết:%'
+                    )
+                ) - 
                 (
                   SELECT COUNT(DISTINCT s."assignmentId")::int
                   FROM "Submission" s
                   JOIN "AssignmentClass" ac ON s."assignmentId" = ac."assignmentId" AND ac."classId" = c."id"
-                  WHERE s."studentId" = ce."studentId" AND s."submittedAt" IS NOT NULL
+                  JOIN "Assignment" a ON ac."assignmentId" = a."id"
+                  LEFT JOIN "AssignmentGroup" ag ON ac."groupId" = ag."id"
+                  WHERE s."studentId" = ce."studentId" 
+                    AND s."submittedAt" IS NOT NULL
+                    AND (
+                      ac."groupId" IS NULL 
+                      OR ag."id" IS NULL 
+                      OR ag."isHidden" = false 
+                      OR (ag."visibleFrom" IS NOT NULL AND ag."visibleFrom" <= NOW())
+                    )
+                    AND (
+                      (a."materialType" = 'EXERCISE' OR a."materialType" = 'READING')
+                      AND (
+                        a."instructions" IS NULL OR (
+                          a."instructions" NOT LIKE '%"kind":"LESSON"%'
+                          AND a."instructions" NOT LIKE '%"kind":"GAME"%'
+                          AND a."instructions" NOT LIKE '%"kind":"FLASHCARD"%'
+                          AND a."instructions" NOT LIKE '%"kind":"BOOK"%'
+                          AND a."instructions" NOT LIKE '%/grammar/%'
+                          AND a."instructions" NOT LIKE '%/game/%'
+                          AND a."instructions" NOT LIKE '%/student/books/%'
+                        )
+                      )
+                      AND a."title" NOT ILIKE 'grammar lesson%'
+                      AND a."title" NOT ILIKE 'lý thuyết:%'
+                    )
                 )
               )
             )
@@ -474,7 +580,10 @@ export async function invalidatePublicClassesCache() {
 
 export async function invalidateStudentClassesCache(userId: string) {
   try {
-    await redis.del(`student:classes:${userId}`);
+    await Promise.all([
+      redis.del(`student:classes:v2:${userId}`),
+      redis.del(`student:classes:${userId}`)
+    ]);
   } catch (e) {
     console.warn("[invalidateStudentClassesCache] Failed to delete cache for:", userId, e);
   }

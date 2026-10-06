@@ -5,7 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentAssignmentsView, StudentAssignmentGroup } from './_components/StudentAssignmentsView';
-import { sortGroupItems } from './_utils/assignmentOrder';
+import { sortGroupItems, isScoredAssignment } from './_utils/assignmentOrder';
 import { ClassHeroBento } from './_components/ClassHeroBento';
 import StudentClassDetailLoading from './loading';
 
@@ -344,11 +344,12 @@ async function StudentClassDetailContent({
     g.items = sortGroupItems(g.items);
   });
 
-  // 3. Compute group completion stats
+  // 3. Compute group completion stats (Chỉ tính các bài tập có chấm điểm: Grammar exercises & Reading)
   const groupStatsMap = new Map<string, { total: number; completed: number; percent: number }>();
   assignmentGroups.forEach((g) => {
-    const total = g.items.length;
-    const completed = g.items.filter((i) => i.isSubmitted).length;
+    const scoredItems = g.items.filter(isScoredAssignment);
+    const total = scoredItems.length;
+    const completed = scoredItems.filter((i) => i.isSubmitted).length;
     const percent = total > 0 ? Math.round((completed / total) * 100) : 100;
     groupStatsMap.set(g.id, { total, completed, percent });
   });
@@ -388,7 +389,7 @@ async function StudentClassDetailContent({
   let uncompletedItem: any = null;
   for (const grp of assignmentGroups) {
     if (grp.isLocked) continue;
-    const found = grp.items.find((i) => !i.isSubmitted);
+    const found = grp.items.find((i) => isScoredAssignment(i) && !i.isSubmitted);
     if (found) {
       uncompletedItem = found;
       break;
@@ -442,8 +443,15 @@ async function StudentClassDetailContent({
     };
   }
 
-  const totalAssignments = rawAssignments.length;
-  const completedAssignments = submissions.length;
+  // Tổng số bài tập tính điểm & số bài đã nộp của lớp học (loại trừ bài trong nhóm bị ẩn)
+  const visibleScoredItems = rawAssignments
+    .filter((ac) => !ac.groupId || !hiddenGroupIds.has(ac.groupId))
+    .filter(isScoredAssignment);
+  const totalAssignments = visibleScoredItems.length;
+  const completedAssignments = visibleScoredItems.filter((ac) => {
+    const groupKey = ac.groupId ? `${ac.assignment.id}_${ac.groupId}` : null;
+    return (groupKey && submittedGroupKeys.has(groupKey)) || submittedAssignmentIds.has(ac.assignment.id);
+  }).length;
 
   return (
     <StudentAssignmentsView 

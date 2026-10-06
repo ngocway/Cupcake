@@ -91,3 +91,198 @@ export function sortGroupItems<T extends {
     return (a.assignment.title || '').localeCompare(b.assignment.title || '');
   });
 }
+
+/**
+ * Kiểm tra xem bài học có được tính vào điểm số và % hoàn thành nhóm bài không.
+ * Quy tắc:
+ * - CHỈ CÓ: Grammar exercises (exercise, grammar, review trắc nghiệm) và Reading (bài đọc hiểu) là ĐƯỢC TÍNH.
+ * - KHÔNG TÍNH: Lesson grammar (lý thuyết), Game (trò chơi), Shadowing / Book, Flashcard.
+ */
+export function isScoredAssignment(item: {
+  assignment: {
+    title: string;
+    instructions?: string | null;
+    materialType?: string | null;
+  };
+}): boolean {
+  let kind = (item.assignment.materialType || 'EXERCISE').toUpperCase();
+  let targetUrl = '';
+  if (item.assignment.instructions) {
+    try {
+      const meta = JSON.parse(item.assignment.instructions);
+      if (meta.playUrl) targetUrl = meta.playUrl;
+      if (meta.kind) kind = meta.kind.toUpperCase();
+    } catch {}
+  }
+  const titleLower = (item.assignment.title || '').toLowerCase();
+  const isGrammarLesson = 
+    kind === 'LESSON' || 
+    targetUrl.includes('/grammar/') || 
+    titleLower.startsWith('grammar lesson') ||
+    titleLower.startsWith('lý thuyết:');
+
+  // Lý thuyết không tính
+  if (isGrammarLesson || kind === 'LESSON') return false;
+
+  // Game không tính
+  if (kind === 'GAME') return false;
+
+  // Shadowing / Book không tính
+  if (kind === 'BOOK' || targetUrl.includes('/student/books/')) return false;
+
+  // Flashcard không tính
+  if (kind === 'FLASHCARD') return false;
+
+  // Chỉ tính Grammar Exercise (kể cả review trắc nghiệm) và Reading
+  if (kind === 'EXERCISE' || kind === 'GRAMMAR' || kind === 'READING') return true;
+
+  return false;
+}
+
+/**
+ * Trích xuất identifier của bài ngữ pháp từ assignment (grammarLesson hoặc từ rawId/playUrl/title)
+ */
+export function extractGrammarKey(item: {
+  assignment: {
+    title: string;
+    instructions?: string | null;
+    grammarLesson?: string | null;
+    grammarTopic?: string | null;
+  };
+}): { lessonKey: string; topicKey: string; cleanTitle: string } {
+  let lessonKey = (item.assignment.grammarLesson || '').toLowerCase().trim();
+  let topicKey = (item.assignment.grammarTopic || '').toLowerCase().trim();
+
+  if (item.assignment.instructions) {
+    try {
+      const meta = JSON.parse(item.assignment.instructions);
+      if (meta.rawId) {
+        const raw = String(meta.rawId).toLowerCase();
+        if (raw.startsWith('grammar:')) {
+          const parts = raw.replace(/^grammar:/, '').split(':');
+          if (parts.length >= 2) {
+            topicKey = topicKey || parts[0];
+            lessonKey = lessonKey || parts[1];
+          } else if (parts.length === 1) {
+            lessonKey = lessonKey || parts[0];
+          }
+        }
+      }
+      if (meta.playUrl) {
+        const parts = String(meta.playUrl).toLowerCase().replace(/^\/grammar\//, '').split('/');
+        if (parts.length >= 2) {
+          topicKey = topicKey || parts[0];
+          lessonKey = lessonKey || parts[1].split('?')[0];
+        }
+      }
+    } catch {}
+  }
+
+  // Chuẩn hóa tiêu đề để so khớp tương đồng (loại bỏ tiền tố bài giảng)
+  const cleanTitle = (item.assignment.title || '')
+    .toLowerCase()
+    .replace(/^(grammar lesson|grammar exercise|lý thuyết|bài tập|thực hành):\s*/i, '')
+    .replace(/\(.*?\)/g, '')
+    .replace(/[:\-–—].*$/, '')
+    .trim();
+
+  return { lessonKey, topicKey, cleanTitle };
+}
+
+export interface GroupTreeStructure<T> {
+  clusters: {
+    lesson: T;
+    exercises: T[];
+  }[];
+  supplementaryItems: T[];
+}
+
+/**
+ * Xây dựng cây phân cấp Cha (Lý thuyết) - Con (Bài tập liên quan) cho một nhóm bài học
+ */
+export function buildGroupTree<T extends {
+  assignment: {
+    id: string;
+    title: string;
+    instructions?: string | null;
+    materialType?: string | null;
+    grammarLesson?: string | null;
+    grammarTopic?: string | null;
+  };
+}>(items: T[]): GroupTreeStructure<T> {
+  const lessons: T[] = [];
+  const nonLessons: T[] = [];
+
+  items.forEach((it) => {
+    if (getItemStage(it) === 'lesson') {
+      lessons.push(it);
+    } else {
+      nonLessons.push(it);
+    }
+  });
+
+  // Nếu không có bài lý thuyết nào trong nhóm, toàn bộ đưa vào supplementary
+  if (lessons.length === 0) {
+    return {
+      clusters: [],
+      supplementaryItems: nonLessons,
+    };
+  }
+
+  const clusters: { lesson: T; exercises: T[] }[] = lessons.map((lesson) => ({
+    lesson,
+    exercises: [],
+  }));
+
+  const lessonMetaList = lessons.map((l) => extractGrammarKey(l));
+  const assignedExerciseIds = new Set<string>();
+
+  // Gắn các bài tập vào bài lý thuyết phù hợp nhất
+  nonLessons.forEach((exercise) => {
+    const exMeta = extractGrammarKey(exercise);
+    let matchedClusterIndex = -1;
+
+    // 1. Khớp theo lessonKey (chính xác nhất từ database/instructions)
+    if (exMeta.lessonKey) {
+      matchedClusterIndex = lessonMetaList.findIndex(
+        (l) => l.lessonKey && l.lessonKey === exMeta.lessonKey
+      );
+    }
+
+    // 2. Khớp theo cleanTitle (nếu tiêu đề chứa nhau)
+    if (matchedClusterIndex === -1 && exMeta.cleanTitle) {
+      matchedClusterIndex = lessonMetaList.findIndex((l) => {
+        if (!l.cleanTitle) return false;
+        return (
+          exMeta.cleanTitle.includes(l.cleanTitle) ||
+          l.cleanTitle.includes(exMeta.cleanTitle)
+        );
+      });
+    }
+
+    // 3. Khớp theo topicKey nếu trong nhóm chỉ có duy nhất 1 bài lý thuyết thuộc topic đó
+    if (matchedClusterIndex === -1 && exMeta.topicKey) {
+      const candidates = lessonMetaList
+        .map((l, idx) => (l.topicKey === exMeta.topicKey ? idx : -1))
+        .filter((idx) => idx !== -1);
+      if (candidates.length === 1) {
+        matchedClusterIndex = candidates[0];
+      }
+    }
+
+    if (matchedClusterIndex !== -1) {
+      clusters[matchedClusterIndex].exercises.push(exercise);
+      assignedExerciseIds.add(exercise.assignment.id);
+    }
+  });
+
+  const supplementaryItems = nonLessons.filter(
+    (ex) => !assignedExerciseIds.has(ex.assignment.id)
+  );
+
+  return {
+    clusters,
+    supplementaryItems,
+  };
+}
+
