@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { invalidateStudentClassesCache } from '@/lib/cached-queries';
 import Link from 'next/link';
+import { JoinSubmitButton } from './JoinSubmitButton';
 
 export default async function JoinClassPage({ params }: { params: Promise<{ joinCode: string }> }) {
   const { joinCode } = await params;
@@ -107,7 +108,9 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
     }
   }
 
-  // 5. Server Action to submit request (TH2)
+  const isAutoApprove = classObj.autoApprove ?? true;
+
+  // 5. Server Action to submit request
   async function requestJoinClass() {
     'use server';
     
@@ -115,10 +118,22 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
     const currentSession = await auth();
     if (!currentSession?.user?.id) throw new Error("Unauthorized");
     
-    const curClass = await prisma.class.findUnique({ where: { joinCode } });
+    const curClass = await prisma.class.findFirst({
+      where: {
+        OR: [
+          { joinCode: joinCode },
+          { classCode: joinCode },
+          { id: joinCode }
+        ],
+        deletedAt: null
+      },
+      include: { teacher: true }
+    });
     if (!curClass || !curClass.isJoinable) throw new Error("Class not joinable");
 
     const userId = currentSession.user.id;
+    const shouldAutoApprove = curClass.autoApprove ?? true;
+    const targetStatus = shouldAutoApprove ? 'ACTIVE' : 'PENDING';
 
     // Create or update existing block/invite
     await prisma.classEnrollment.upsert({
@@ -131,15 +146,35 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
       create: {
         studentId: userId,
         classId: curClass.id,
-        status: 'PENDING'
+        status: targetStatus
       },
       update: {
-        status: 'PENDING'
+        status: targetStatus
       }
     });
 
     await invalidateStudentClassesCache(userId);
-    revalidatePath(`/join/${joinCode}`);
+
+    // Gợi ý 2: Nếu tự động duyệt, gửi thông báo nhẹ cho giáo viên/admin và chuyển thẳng vào lớp
+    if (shouldAutoApprove) {
+      try {
+        const { createNotification } = await import('@/actions/notification-actions');
+        const studentName = currentSession.user.name || currentSession.user.email || 'Một học sinh';
+        await createNotification(
+          curClass.teacherId,
+          'ENROLLMENT_SUCCESS',
+          'Học sinh mới tham gia lớp',
+          `${studentName} vừa tham gia lớp học "${curClass.name}".`,
+          `/teacher/classes/${curClass.id}`
+        );
+      } catch (err) {
+        console.error("Failed to notify teacher on auto-join:", err);
+      }
+
+      redirect(`/student/classes/${curClass.id}`);
+    } else {
+      revalidatePath(`/join/${joinCode}`);
+    }
   }
 
   return (
@@ -153,32 +188,37 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
           🏫
         </div>
         
-        <h1 className="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Join Class</h1>
+        <h1 className="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Tham gia lớp học</h1>
         
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 mb-8 text-left mt-6">
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 mb-6 text-left mt-6">
           <div className="mb-4">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Class</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Lớp học</p>
             <p className="text-lg font-bold text-slate-900">{classObj.name}</p>
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Teacher</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Giáo viên</p>
             <p className="text-slate-800 font-medium">{classObj.teacher.name || classObj.teacher.email}</p>
           </div>
         </div>
 
-        <p className="text-slate-500 mb-8 text-sm">
-          You are requesting to join this class. Your request will be sent to the teacher for approval.
-        </p>
+        {isAutoApprove ? (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3.5 mb-6 text-sm flex items-center justify-center gap-2">
+            <span>✨</span>
+            <span>Lớp học mở tham gia trực tiếp. Bạn sẽ vào lớp ngay sau khi bấm nút.</span>
+          </div>
+        ) : (
+          <p className="text-slate-500 mb-6 text-sm">
+            Bạn đang yêu cầu tham gia lớp học này. Yêu cầu của bạn sẽ được gửi đến giáo viên để phê duyệt.
+          </p>
+        )}
 
         <form action={requestJoinClass}>
-          <button type="submit" className="w-full px-6 py-3.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-600/20 transition-all focus:ring-4 focus:ring-blue-600/30 active:scale-[0.98]">
-            Send Join Request
-          </button>
+          <JoinSubmitButton isAutoApprove={isAutoApprove} />
         </form>
         
         <div className="mt-4">
           <Link href="/student/dashboard" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
-            Cancel and go back
+            Hủy và quay lại
           </Link>
         </div>
       </div>

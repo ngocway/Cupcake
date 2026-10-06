@@ -31,6 +31,7 @@ export function MobileContentTypeMenu() {
     if (pathname.includes("/game")) return "games";
     
     // On home page or default
+    if (pathname === "/") return activeTabStore || "classes";
     return searchParams.get("tab") || activeTabStore || "classes";
   }, [pathname, searchParams, activeTabStore]);
 

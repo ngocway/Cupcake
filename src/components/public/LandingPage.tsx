@@ -1550,11 +1550,15 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     }
   }
 
-  // ── Sync URL → state (e.g. browser Back button) ───────────────────────────
+  // ── Sync URL → state on browser Back / Forward (popstate) ──────────────────
   useEffect(() => {
-    const tab = currentParams.get("tab") || "classes"
-    if (tab !== activeTab) setActiveTab(tab)
-  }, [currentParams, activeTab, setActiveTab])
+    const handlePopState = () => {
+      const urlTab = new URLSearchParams(window.location.search).get("tab") || "classes"
+      setActiveTab(urlTab)
+    }
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [setActiveTab])
 
   // ── Tab / sort handlers — no server roundtrip ─────────────────────────────
   const handleTabChange = (tab: string) => {

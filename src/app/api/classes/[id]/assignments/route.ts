@@ -47,6 +47,9 @@ export async function GET(
         },
         assignment: {
           include: {
+            lesson: {
+              select: { id: true, slug: true }
+            },
             _count: {
               select: {
                 submissions: {
@@ -80,6 +83,9 @@ export async function GET(
 
       return {
         id: a.id,
+        slug: a.slug || null,
+        lessonId: a.lesson?.id || null,
+        lessonSlug: a.lesson?.slug || null,
         title: a.title,
         materialType: a.materialType,
         level: a.level,

@@ -107,6 +107,18 @@ export async function toggleClassJoinability(classId: string, isJoinable: boolea
   return { success: true };
 }
 
+export async function toggleClassAutoApprove(classId: string, autoApprove: boolean) {
+  await requireTeacherClass(classId);
+
+  await prisma.class.update({
+    where: { id: classId },
+    data: { autoApprove }
+  });
+
+  revalidatePath(`/teacher/classes/${classId}`);
+  return { success: true };
+}
+
 export async function updateStudentNote(classId: string, studentId: string, notes: string) {
   await requireTeacherClass(classId);
 
@@ -230,4 +242,84 @@ export async function removeAssignmentFromClass(classId: string, assignmentId: s
   revalidatePath(`/teacher/classes/${classId}`);
   revalidatePath(`/student/classes/${classId}`);
   return { success: true };
+}
+
+export async function updateClassInfo(
+  classId: string,
+  data: {
+    name: string;
+    description?: string | null;
+    isJoinable?: boolean;
+    autoApprove?: boolean;
+  }
+) {
+  await requireTeacherClass(classId);
+
+  const trimmedName = data.name.trim();
+  if (!trimmedName) {
+    throw new Error('Tên lớp không được để trống');
+  }
+
+  const updated = await prisma.class.update({
+    where: { id: classId },
+    data: {
+      name: trimmedName,
+      description: data.description !== undefined ? (data.description ? data.description.trim() : null) : undefined,
+      isJoinable: data.isJoinable !== undefined ? data.isJoinable : undefined,
+      autoApprove: data.autoApprove !== undefined ? data.autoApprove : undefined,
+    },
+  });
+
+  await invalidateStudentClassDetailCache(classId);
+  revalidatePath('/teacher/classes');
+  revalidatePath(`/teacher/classes/${classId}`);
+
+  return { success: true, class: updated };
+}
+
+export async function deleteClass(classId: string) {
+  await requireTeacherClass(classId);
+
+  // Soft delete class
+  await prisma.class.update({
+    where: { id: classId },
+    data: { deletedAt: new Date() },
+  });
+
+  const enrollments = await prisma.classEnrollment.findMany({
+    where: { classId },
+    select: { studentId: true }
+  });
+  await Promise.all(enrollments.map(e => invalidateStudentClassesCache(e.studentId)));
+  await invalidateStudentClassDetailCache(classId);
+
+  revalidatePath('/teacher/classes');
+  return { success: true };
+}
+
+export async function regenerateClassJoinCode(classId: string) {
+  await requireTeacherClass(classId);
+
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let joinCode = '';
+  let attempts = 0;
+
+  do {
+    joinCode = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const existing = await prisma.class.findFirst({
+      where: { joinCode },
+    });
+    if (!existing) break;
+    attempts++;
+  } while (attempts < 10);
+
+  const updated = await prisma.class.update({
+    where: { id: classId },
+    data: { joinCode },
+  });
+
+  revalidatePath('/teacher/classes');
+  revalidatePath(`/teacher/classes/${classId}`);
+
+  return { success: true, joinCode: updated.joinCode };
 }

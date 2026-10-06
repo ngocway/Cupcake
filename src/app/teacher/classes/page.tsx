@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CreateClassModal } from "./_components/CreateClassModal";
 import { ClassStudentPopup } from "./_components/ClassStudentPopup";
+import { EditClassModal } from "./_components/EditClassModal";
 import { Plus, School, Settings, UserPlus, Users, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface ClassData {
@@ -12,6 +13,8 @@ interface ClassData {
   description: string | null;
   joinCode: string;
   classCode: string;
+  isJoinable?: boolean;
+  autoApprove?: boolean;
   createdAt: string;
   _count: { enrollments: number };
 }
@@ -34,6 +37,7 @@ function getClassGradient(id: string) {
 
 export default function ClassesIndexPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassData | null>(null);
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -120,21 +124,33 @@ export default function ClassesIndexPage() {
               className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-xl overflow-visible shadow-sm hover:shadow-md transition-all group border border-transparent hover:border-primary/20"
             >
               {/* Card banner */}
-              <Link href={`/teacher/classes/${cls.id}`}>
-                <div className={`h-32 bg-gradient-to-r ${getClassGradient(cls.id)} relative p-4`}>
-                  <div className="flex justify-between items-start text-white">
-                    <span className="bg-white/20 backdrop-blur-md px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
-                      {cls.description || 'Lớp học'}
-                    </span>
-                    <button
-                      className="size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors"
-                      onClick={e => { e.preventDefault(); e.stopPropagation(); }}
-                    >
-                      <Settings className="w-5 h-5" />
-                    </button>
-                  </div>
+              <div className={`h-32 bg-gradient-to-r ${getClassGradient(cls.id)} relative p-4 rounded-t-xl overflow-hidden`}>
+                {/* Background Link to class dashboard */}
+                <Link
+                  href={`/teacher/classes/${cls.id}`}
+                  className="absolute inset-0 z-0"
+                  aria-label={`Vào trang lớp ${cls.name}`}
+                />
+
+                <div className="relative z-10 flex justify-between items-start text-white pointer-events-none">
+                  <span className="bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider truncate max-w-[200px]">
+                    {cls.description || 'Lớp học'}
+                  </span>
+                  <button
+                    type="button"
+                    data-no-global-loader="true"
+                    className="pointer-events-auto size-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center hover:bg-white/30 active:scale-95 transition-all text-white shadow-sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditingClass(cls);
+                    }}
+                    title="Cài đặt lớp học"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
                 </div>
-              </Link>
+              </div>
 
               {/* Card body */}
               <div className="p-5">
@@ -197,6 +213,13 @@ export default function ClassesIndexPage() {
       <CreateClassModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={fetchClasses}
+      />
+
+      <EditClassModal
+        isOpen={Boolean(editingClass)}
+        classData={editingClass}
+        onClose={() => setEditingClass(null)}
         onSuccess={fetchClasses}
       />
     </div>
