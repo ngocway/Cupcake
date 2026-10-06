@@ -35,9 +35,14 @@ import {
   PanelLeftOpen,
   ChevronsUpDown,
   Flame,
-  Star
+  Star,
+  FolderKanban,
+  FileEdit,
+  Target,
+  Mic
 } from 'lucide-react';
-import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems } from '../_utils/assignmentOrder';
+import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree } from '../_utils/assignmentOrder';
+import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 import { EmbeddedQuizContainer } from './EmbeddedQuizContainer';
 import { EmbeddedGrammarContainer } from './EmbeddedGrammarContainer';
 import { EmbeddedBookContainer } from './EmbeddedBookContainer';
@@ -121,6 +126,7 @@ export interface ParsedItemConfig {
   kind: string;
   stage: ActivityStage;
   stageLabel: string;
+  tooltipText: string;
   cleanTitle: string;
   isReview: boolean;
   iconNode: React.ReactNode;
@@ -206,49 +212,56 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     /^(Lý thuyết|Bài tập|Grammar lesson|Grammar exercise|Reading|Bài đọc):\s*/i, ''
   );
 
-  // Determine stage
+  // Determine stage & vibrant visual styling (Soft Vibrant Palette)
   let stage: ActivityStage = 'exercise';
   let stageLabel = 'Bài tập';
-  let iconNode = <ClipboardList className="w-4 h-4 stroke-[2px]" />;
-  let badgeClass = 'bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60';
+  let tooltipText = 'Exercise';
+  let iconNode = <FileEdit className="w-3.5 h-3.5 stroke-[2.2px]" />;
+  let badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80';
   let pillColor = 'bg-blue-500';
 
   if (isReview) {
     stage = 'review';
     stageLabel = 'Ôn tập';
-    iconNode = <RotateCcw className="w-4 h-4 stroke-[2px]" />;
-    badgeClass = 'bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/60';
+    tooltipText = 'Review';
+    iconNode = <Target className="w-3.5 h-3.5 stroke-[2.2px]" />;
+    badgeClass = 'bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80';
     pillColor = 'bg-amber-500';
   } else if (kind === 'LESSON') {
     stage = 'lesson';
     stageLabel = 'Lý thuyết';
-    iconNode = <BookOpen className="w-4 h-4 stroke-[2px]" />;
-    badgeClass = 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/60';
+    tooltipText = 'Grammar lesson';
+    iconNode = <BookOpen className="w-3.5 h-3.5 stroke-[2.2px]" />;
+    badgeClass = 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80';
     pillColor = 'bg-indigo-500';
   } else if (kind === 'GAME') {
     stage = 'game';
     stageLabel = 'Game';
-    iconNode = <Gamepad2 className="w-4 h-4 stroke-[2px]" />;
-    badgeClass = 'bg-pink-50 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 border-pink-200/60 dark:border-pink-800/60';
+    tooltipText = 'Game';
+    iconNode = <Gamepad2 className="w-3.5 h-3.5 stroke-[2.2px]" />;
+    badgeClass = 'bg-pink-100 text-pink-700 dark:bg-pink-950/70 dark:text-pink-300 border border-pink-200/80 dark:border-pink-800/80';
     pillColor = 'bg-pink-500';
   } else if (kind === 'READING') {
     stage = 'reading';
     stageLabel = 'Đọc hiểu';
-    iconNode = <BookText className="w-4 h-4 stroke-[2px]" />;
-    badgeClass = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/60';
+    tooltipText = 'Reading';
+    iconNode = <BookText className="w-3.5 h-3.5 stroke-[2.2px]" />;
+    badgeClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80';
     pillColor = 'bg-emerald-500';
   } else if (kind === 'BOOK') {
     stage = 'reading';
     stageLabel = 'Shadowing';
-    iconNode = <Volume2 className="w-4 h-4 stroke-[2px]" />;
-    badgeClass = 'bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 border-teal-200/60 dark:border-teal-800/60';
-    pillColor = 'bg-teal-500';
+    tooltipText = 'Shadowing';
+    iconNode = <Mic className="w-3.5 h-3.5 stroke-[2.2px]" />;
+    badgeClass = 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/80';
+    pillColor = 'bg-rose-500';
   } else if (kind === 'FLASHCARD') {
     stage = 'flashcard';
     stageLabel = 'Từ vựng';
-    iconNode = <Layers className="w-4 h-4 stroke-[2px]" />;
-    badgeClass = 'bg-purple-50 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200/60 dark:border-purple-800/60';
-    pillColor = 'bg-purple-500';
+    tooltipText = 'Flashcard';
+    iconNode = <Sparkles className="w-3.5 h-3.5 stroke-[2.2px]" />;
+    badgeClass = 'bg-violet-100 text-violet-700 dark:bg-violet-950/70 dark:text-violet-300 border border-violet-200/80 dark:border-violet-800/80';
+    pillColor = 'bg-violet-500';
   }
 
   return {
@@ -258,6 +271,7 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     kind,
     stage,
     stageLabel,
+    tooltipText,
     cleanTitle,
     isReview,
     iconNode,
@@ -719,21 +733,71 @@ export function StudentAssignmentsView({
     activeItemConfig && !isCurrentGame && !isCurrentLesson && !isCurrentBook
   );
 
-  // Overall student progress calculation
+  // Overall student progress calculation (only scored assignments: exercises & reading)
   const overallStats = useMemo(() => {
     let total = 0;
     let completed = 0;
     assignmentGroups.forEach(g => {
       g.items.forEach(it => {
-        total++;
-        if (submissionsState[it.assignment.id]?.isSubmitted) {
-          completed++;
+        if (isScoredAssignment(it)) {
+          total++;
+          if (submissionsState[it.assignment.id]?.isSubmitted) {
+            completed++;
+          }
         }
       });
     });
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     return { total, completed, percent };
   }, [assignmentGroups, submissionsState]);
+
+  // Metadata for active grammar lesson (for rendering level & topic badge on top action bar)
+  const activeGrammarMeta = useMemo(() => {
+    if (!isCurrentLesson || !activeItemConfig) return null;
+    const assignment = activeItemConfig.item.assignment;
+    let lessonId = assignment.grammarLesson || '';
+    let topicId = assignment.grammarTopic || '';
+
+    if (assignment.instructions) {
+      try {
+        const meta = JSON.parse(assignment.instructions);
+        if (meta.rawId) {
+          const raw = String(meta.rawId);
+          if (raw.startsWith('grammar:')) {
+            const parts = raw.replace(/^grammar:/, '').split(':');
+            if (parts.length >= 2) {
+              topicId = parts[0];
+              lessonId = parts[1];
+            } else if (parts.length === 1) {
+              lessonId = parts[0];
+            }
+          } else {
+            lessonId = raw;
+          }
+        }
+        if (meta.playUrl) {
+          const parts = meta.playUrl.replace(/^\/grammar\//, '').split('/');
+          if (parts.length >= 2) {
+            topicId = parts[0];
+            lessonId = parts[1].split('?')[0];
+          }
+        }
+      } catch {}
+    }
+
+    if (!topicId && lessonId) {
+      const found = GRAMMAR_TOPICS.find(t => t.lessons.some(l => l.id === lessonId));
+      if (found) topicId = found.id;
+    }
+
+    const topic = GRAMMAR_TOPICS.find(t => t.id === topicId);
+    const lesson = topic?.lessons.find(l => l.id === lessonId);
+    const rawLvl = (assignment.level || lesson?.level || 'a1').toLowerCase();
+    const lvlCfg = CEFR_LEVELS.find(l => l.id === rawLvl) || CEFR_LEVELS[0];
+    const topicLabel = topic?.label || 'Sentence Structure';
+
+    return { lvlCfg, topicLabel };
+  }, [isCurrentLesson, activeItemConfig]);
 
   // Filter groups in tree based on search query
   const searchFilteredGroups = useMemo(() => {
@@ -871,8 +935,9 @@ export function StudentAssignmentsView({
                   {/* 1.4 Hierarchical Accordion Tree (Groups & Assignments) */}
                   <div className="flex-1 overflow-y-auto p-2 space-y-2.5 custom-scrollbar">
                     {searchFilteredGroups.map((group, groupIdx) => {
-                      const totalInGrp = group.items.length;
-                      const completedInGrp = group.items.filter(i => submissionsState[i.assignment.id]?.isSubmitted).length;
+                      const scoredItems = group.items.filter(isScoredAssignment);
+                      const totalInGrp = scoredItems.length;
+                      const completedInGrp = scoredItems.filter(i => submissionsState[i.assignment.id]?.isSubmitted).length;
                       const isGrpActive = group.id === selectedGroupId;
                       const isExpanded = !!expandedGroups[group.id];
 
@@ -937,20 +1002,37 @@ export function StudentAssignmentsView({
                             </div>
                           </div>
 
-                          {/* Children Items (Level 3: Assignments in Group) */}
-                          {isExpanded && !group.isLocked && (
-                            <div className="py-1 px-1.5 space-y-1 border-t border-slate-100 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60">
-                              {group.items.map((item) => {
-                                const parsed = parseItemConfig(item);
-                                const isItemActive = item.assignment.id === activeAssignmentId;
-                                const isSubmitted = submissionsState[item.assignment.id]?.isSubmitted;
-                                const itemScore = submissionsState[item.assignment.id]?.score;
-                                const itemProgress = preloadProgress[item.assignment.id] ?? 0;
-                                const isItemReady = isItemActive || itemProgress >= 100 || isAssignmentCached(item.assignment.id);
+                          {/* Children Items (Level 3: Assignments in Group - Sub-Tree Hierarchy) */}
+                          {isExpanded && !group.isLocked && (() => {
+                            const tree = buildGroupTree(group.items);
 
-                                return (
+                            const renderItemButton = (item: StudentGroupItem, isChild = false) => {
+                              const parsed = parseItemConfig(item);
+                              const isItemActive = item.assignment.id === activeAssignmentId;
+                              const isSubmitted = submissionsState[item.assignment.id]?.isSubmitted;
+                              const itemScore = submissionsState[item.assignment.id]?.score;
+                              const itemProgress = preloadProgress[item.assignment.id] ?? 0;
+                              const isItemReady = isItemActive || itemProgress >= 100 || isAssignmentCached(item.assignment.id);
+
+                              // Theo ngữ cảnh: Bài tập con đi liền sau lý thuyết luôn mang icon & style thực hành (Practice)
+                              const itemIconNode = isChild && (parsed.stage === 'review' || parsed.stage === 'exercise')
+                                ? <FileEdit className="w-3.5 h-3.5 stroke-[2.2px]" />
+                                : parsed.iconNode;
+
+                              const itemBadgeClass = isChild && (parsed.stage === 'review' || parsed.stage === 'exercise')
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80'
+                                : parsed.badgeClass;
+
+                              const itemTooltip = isChild ? 'Exercise' : parsed.tooltipText;
+
+                              return (
+                                <div key={item.assignment.id} className="relative flex items-center">
+                                  {/* Visual tree connecting branch for child items */}
+                                  {isChild && (
+                                    <div className="absolute left-2.5 top-0 bottom-1/2 w-3.5 border-l-2 border-b-2 border-slate-300 dark:border-slate-700 rounded-bl-lg pointer-events-none" />
+                                  )}
+
                                   <button
-                                    key={item.assignment.id}
                                     type="button"
                                     aria-disabled={!isItemReady}
                                     onClick={(e) => {
@@ -962,51 +1044,94 @@ export function StudentAssignmentsView({
                                     }}
                                     onMouseEnter={() => preloadAssignment(item)}
                                     title={!isItemReady ? 'Đang chuẩn bị dữ liệu...' : undefined}
-                                    className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-left text-xs transition-all ${
+                                    className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-left transition-all ${
+                                      isChild ? 'ml-5 sm:ml-6 pl-2' : ''
+                                    } ${
                                       isItemActive
-                                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/20 translate-x-1 cursor-pointer'
+                                        ? 'bg-blue-600 text-white font-black shadow-md shadow-blue-500/20 translate-x-0.5 cursor-pointer'
                                         : isItemReady
-                                          ? 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-300 cursor-pointer active:scale-[0.99]'
+                                          ? isChild
+                                            ? 'hover:bg-slate-100/90 dark:hover:bg-slate-800/90 text-slate-700 dark:text-slate-300 cursor-pointer active:scale-[0.99] bg-slate-50/40 dark:bg-slate-800/20'
+                                            : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-200 font-bold cursor-pointer active:scale-[0.99]'
                                           : 'opacity-55 text-slate-400 dark:text-slate-500 cursor-wait select-none'
                                     }`}
                                   >
-                                    <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="flex items-center gap-2 min-w-0">
                                       <AssignmentIconWithProgress
                                         progress={itemProgress}
                                         isItemActive={isItemActive}
-                                        badgeClass={parsed.badgeClass}
-                                        iconNode={parsed.iconNode}
+                                        badgeClass={itemBadgeClass}
+                                        iconNode={itemIconNode}
+                                        tooltipText={itemTooltip}
                                       />
-                                      <span className="truncate leading-snug">
+                                      <span className={`truncate leading-snug ${isChild ? 'text-[11.5px]' : 'text-xs'}`}>
                                         {parsed.cleanTitle}
                                       </span>
                                     </div>
 
-                                    <div className="shrink-0 flex items-center gap-1">
-                                      {isSubmitted ? (
-                                        <div className={`flex items-center gap-1 text-[10px] font-black ${
-                                          isItemActive ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'
-                                        }`}>
-                                          {typeof itemScore === 'number' && (
-                                            <span>{formatScore(itemScore)}</span>
-                                          )}
-                                          <CheckCircle2 className="w-3.5 h-3.5" />
-                                        </div>
-                                      ) : (
-                                        <CircleDashed className={`w-3.5 h-3.5 ${
-                                          isItemActive 
-                                            ? 'text-white/60' 
-                                            : !isItemReady && itemProgress > 0
-                                              ? 'text-blue-400 dark:text-blue-500 animate-pulse'
-                                              : 'text-slate-300 dark:text-slate-600'
-                                        }`} />
-                                      )}
-                                    </div>
+                                    {parsed.stage !== 'lesson' && (
+                                      <div className="shrink-0 flex items-center gap-1">
+                                        {isSubmitted ? (
+                                          <div className={`flex items-center gap-1 text-[10px] font-black ${
+                                            isItemActive ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'
+                                          }`}>
+                                            {typeof itemScore === 'number' && (
+                                              <span>{formatScore(itemScore)}</span>
+                                            )}
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                          </div>
+                                        ) : (
+                                          <CircleDashed className={`w-3.5 h-3.5 ${
+                                            isItemActive 
+                                              ? 'text-white/60' 
+                                              : !isItemReady && itemProgress > 0
+                                                ? 'text-blue-400 dark:text-blue-500 animate-pulse'
+                                                : 'text-slate-300 dark:text-slate-600'
+                                          }`} />
+                                        )}
+                                      </div>
+                                    )}
                                   </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                                </div>
+                              );
+                            };
+
+                            return (
+                              <div className="py-1.5 px-1.5 space-y-2 border-t border-slate-100 dark:border-slate-800/60 bg-white/70 dark:bg-slate-900/60">
+                                {/* Cụm Cha - Con: Lý thuyết & Bài tập liên quan */}
+                                {tree.clusters.map((cluster) => (
+                                  <div key={cluster.lesson.assignment.id} className="space-y-1">
+                                    {/* Bài Lý thuyết cha */}
+                                    {renderItemButton(cluster.lesson, false)}
+
+                                    {/* Các bài tập con (Always expanded) */}
+                                    {cluster.exercises.length > 0 && (
+                                      <div className="relative pl-1 space-y-1 pt-0.5">
+                                        {/* Trục dọc nối nhánh cây */}
+                                        {cluster.exercises.length > 1 && (
+                                          <div className="absolute left-[13px] top-0 bottom-3 w-0.5 bg-slate-300 dark:bg-slate-700 pointer-events-none" />
+                                        )}
+                                        {cluster.exercises.map((ex) => renderItemButton(ex, true))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+
+                                {/* Cụm Luyện tập bổ trợ & Ôn tập (Các bài không thuộc lý thuyết nào) */}
+                                {tree.supplementaryItems.length > 0 && (
+                                  <div className="pt-1.5 space-y-1 border-t border-slate-100/80 dark:border-slate-800/40">
+                                    {tree.clusters.length > 0 && (
+                                      <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                        <FolderKanban className="w-3 h-3 text-slate-400" />
+                                        <span>Luyện tập bổ trợ & Ôn tập</span>
+                                      </div>
+                                    )}
+                                    {tree.supplementaryItems.map((item) => renderItemButton(item, false))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}
@@ -1025,7 +1150,7 @@ export function StudentAssignmentsView({
               KHU VỰC 2: TOP ACTION BAR & STAGES TABS (Chặng học tập)
               ════════════════════════════════════════════════════════════════ */}
           {!isSidebarCollapsed && (
-            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-[1.75rem] p-4 sm:p-5 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-3 duration-200">
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-[1.75rem] p-3.5 sm:p-4 shadow-xs animate-in fade-in slide-in-from-top-3 duration-200">
               
               {/* Top row: Breadcrumb, Title & Global Action CTAs */}
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1043,8 +1168,8 @@ export function StudentAssignmentsView({
                       {activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
                     </h2>
 
-                    {/* Status Badges */}
-                    {activeItemConfig && (
+                    {/* Status Badges - Ẩn hoàn toàn khi là bài Lý thuyết */}
+                    {activeItemConfig && !isCurrentLesson && (
                       <div className="flex items-center gap-1.5">
                         {isCurrentSubmitted ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] border border-emerald-200/60 dark:border-emerald-800/60">
@@ -1060,60 +1185,35 @@ export function StudentAssignmentsView({
                     )}
                   </div>
                 </div>
-              </div>
 
-            {/* Bottom row: Stages Tabs (Các chặng: Ôn tập, Ngữ pháp, Bài tập, Game, Đọc hiểu...) */}
-            <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-              <div className="flex items-center gap-1.5 overflow-x-auto min-w-0 custom-scrollbar">
-                {availableStages.map(stage => {
-                  const isActiveStage = stage.id === activeStageId;
-                  const completedInStage = stage.items.filter(i => submissionsState[i.item.assignment.id]?.isSubmitted).length;
-                  const isStageAllDone = stage.items.length > 0 && completedInStage === stage.items.length;
-
-                  return (
-                    <button
-                      key={stage.id}
-                      type="button"
-                      onClick={() => handleSelectStageTab(stage.id)}
-                      onMouseEnter={() => {
-                        if (stage.items[0]) preloadAssignment(stage.items[0].item);
-                      }}
-                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
-                        isActiveStage
-                          ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 scale-[1.02]'
-                          : 'bg-slate-100/80 dark:bg-slate-800/80 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <span className="shrink-0">{stage.icon}</span>
-                      <span>{stage.label}</span>
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                        isActiveStage 
-                          ? 'bg-white/25 text-white' 
-                          : isStageAllDone 
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
-                      }`}>
-                        {stage.items.length}
+                {/* Vị trí bôi đỏ: Badge trình độ & chủ đề khi là bài lý thuyết + Nút Thu gọn sidebar */}
+                <div className="shrink-0 flex items-center gap-2">
+                  {isCurrentLesson && activeGrammarMeta && (
+                    <>
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${activeGrammarMeta.lvlCfg.bg} ${activeGrammarMeta.lvlCfg.color} border ${activeGrammarMeta.lvlCfg.border}`}>
+                        {activeGrammarMeta.lvlCfg.label}
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
+                        <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+                        {activeGrammarMeta.topicLabel}
+                      </span>
+                    </>
+                  )}
 
-              {/* Toggle Focus / Thu gọn button moved to Area 2 */}
-              {!isZenMode && (
-                <button
-                  type="button"
-                  title="Thu gọn menu & thanh trên để tối đa khung làm bài"
-                  onClick={toggleSidebar}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-bold text-xs transition-all cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
-                >
-                  <PanelLeftClose className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Thu gọn</span>
-                </button>
-              )}
+                  {!isZenMode && (
+                    <button
+                      type="button"
+                      title="Thu gọn menu & thanh trên để tối đa khung làm bài"
+                      onClick={toggleSidebar}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-bold text-xs transition-all cursor-pointer border border-slate-200/60 dark:border-slate-700/60 shadow-xs"
+                    >
+                      <PanelLeftClose className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Thu gọn</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
           )}
 
           {/* ════════════════════════════════════════════════════════════════
@@ -1137,7 +1237,7 @@ export function StudentAssignmentsView({
             )}
 
             {/* Embedded Activity Canvas (Keep-Alive Pool: 100% Native & 0ms Instant Switch) */}
-            <div className="relative flex-1 w-full h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            <div className="relative flex-1 w-full h-full bg-white dark:bg-slate-900 overflow-hidden">
               {Object.keys(visitedConfigs).length > 0 ? (
                 Object.values(visitedConfigs).map((cfg) => {
                   const aid = cfg.item.assignment.id;
