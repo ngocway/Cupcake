@@ -150,7 +150,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {!isLoggedIn && <HomeHeroSplit initialSession={session} />}
       <div 
         id="content-explore-section" 
-        className={`w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto relative z-30 ${
+        className={`w-full max-w-[1600px] min-w-0 pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 mx-auto relative z-30 ${
           !isLoggedIn ? "-mt-10 sm:-mt-14 lg:-mt-16" : "pt-4 sm:pt-6 lg:pt-8"
         }`}
       >

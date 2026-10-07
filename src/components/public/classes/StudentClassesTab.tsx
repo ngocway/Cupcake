@@ -190,7 +190,7 @@ function EnrolledClassRowCard({
 
   return (
     <div
-      className={`group bg-white dark:bg-slate-800 rounded-2xl sm:rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500/60 shadow-xs hover:shadow-lg transition-all duration-300 p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-5 ${
+      className={`group bg-white dark:bg-slate-800 rounded-2xl sm:rounded-[28px] border border-slate-200/90 dark:border-slate-700/80 hover:border-blue-400 dark:hover:border-blue-500/60 shadow-xs hover:shadow-lg transition-all duration-300 p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 lg:gap-5 w-full max-w-full min-w-0 overflow-hidden ${
         enteringClassId === targetClassId ? 'ring-2 ring-blue-500/80 pointer-events-none' : ''
       }`}
     >
@@ -236,12 +236,12 @@ function EnrolledClassRowCard({
       </div>
 
       {/* 3. Progress Bar */}
-      <div className="w-full md:w-44 lg:w-56 shrink-0 flex flex-col justify-center">
-        <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">
-          <span className="text-slate-500 dark:text-slate-400">
+      <div className="w-full md:w-44 lg:w-56 shrink-0 flex flex-col justify-center min-w-0">
+        <div className="flex items-center justify-between gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5 min-w-0">
+          <span className="text-slate-500 dark:text-slate-400 shrink-0">
             {isVi ? 'Tiến độ:' : 'Progress:'}
           </span>
-          <span className="font-extrabold text-slate-700 dark:text-slate-200">
+          <span className="font-extrabold text-slate-700 dark:text-slate-200 truncate text-right">
             {completedCount}/{totalAssignments} {isVi ? 'bài' : 'lessons'} ({progressPercent}%)
           </span>
         </div>
@@ -258,7 +258,7 @@ function EnrolledClassRowCard({
       </div>
 
       {/* 4. Alert / To-do Chip */}
-      <div className="w-full md:w-52 lg:w-60 shrink-0">
+      <div className="w-full md:w-52 lg:w-60 shrink-0 min-w-0">
         {isCompleted ? (
           <div className="px-3.5 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/50 flex items-center gap-2.5">
             <div className="size-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -307,7 +307,7 @@ function EnrolledClassRowCard({
       </div>
 
       {/* 5. Action Button */}
-      <div className="w-full md:w-auto shrink-0 min-w-[130px]">
+      <div className="w-full md:w-auto shrink-0 md:min-w-[130px]">
         <Link
           href={classUrl}
           prefetch={true}
@@ -816,11 +816,11 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
   const recommendedClasses: PublicClassItem[] = PUBLIC_CLASSES;
 
   return (
-    <div className="space-y-8 sm:space-y-10 animate-in fade-in duration-300">
+    <div className="space-y-8 sm:space-y-10 animate-in fade-in duration-300 w-full max-w-full min-w-0">
       {/* ========================================================= */}
       {/* KHU VỰC 1: LỚP HỌC CỦA TÔI (ENROLLED CLASSES)             */}
       {/* ========================================================= */}
-      <section className="space-y-5">
+      <section className="space-y-5 w-full max-w-full min-w-0">
         {/* Header bar */}
         <div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-headline tracking-tight flex items-center gap-2.5">
@@ -893,7 +893,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
 
         {/* Enrolled Classes List (Horizontal Row Cards) */}
         {activeClasses.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-4 w-full max-w-full min-w-0">
             {activeClasses.map((item) => (
               <EnrolledClassRowCard
                 key={item.id || item.class.id}
@@ -925,7 +925,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
       {/* ========================================================= */}
       {/* KHU VỰC 2: KHÁM PHÁ THÊM CÁC LỚP HỌC (SHOWCASE / RECOMMENDED)*/}
       {/* ========================================================= */}
-      <section className="pt-6 sm:pt-8 border-t border-slate-200/80 dark:border-slate-800 space-y-6">
+      <section className="pt-6 sm:pt-8 border-t border-slate-200/80 dark:border-slate-800 space-y-6 w-full max-w-full min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">

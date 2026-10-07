@@ -148,7 +148,7 @@ export default async function RootLayout({
         />
       </head>
 
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col w-full max-w-full overflow-x-hidden min-w-0" suppressHydrationWarning>
         <Providers session={session} locale={locale} messages={messages}>
           <SharedBackground />
           <Suspense fallback={null}>

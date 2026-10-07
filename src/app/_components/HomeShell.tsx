@@ -64,7 +64,7 @@ function HomeShellContent({ children, hideHeader }: { children?: React.ReactNode
   }
 
   return (
-    <div className={`text-foreground min-h-screen font-body selection:bg-primary/20 relative z-0 ${isTeacherPage ? 'bg-[#f8fafc]' : 'bg-[#e2f0e7]'}`}>
+    <div className={`text-foreground min-h-screen font-body selection:bg-primary/20 relative z-0 w-full max-w-full overflow-x-hidden min-w-0 ${isTeacherPage ? 'bg-[#f8fafc]' : 'bg-[#e2f0e7]'}`}>
       <div className={`fixed inset-0 overflow-hidden pointer-events-none -z-10 ${
         isTeacherPage 
           ? 'bg-gradient-to-tr from-[#ffffff] via-[#f4f9ff] to-[#eaf3ff]' 
@@ -104,7 +104,7 @@ function HomeShellContent({ children, hideHeader }: { children?: React.ReactNode
           <MobileContentTypeMenu />
         </>
       )}
-      <div className={`relative transition-all duration-500 ease-in-out ${isPending || isFiltering ? "opacity-60 pointer-events-none" : ""} ${hideHeader ? "pt-0" : "pt-0 lg:pt-2"}`}>
+      <div className={`relative w-full max-w-full min-w-0 transition-all duration-500 ease-in-out ${isPending || isFiltering ? "opacity-60 pointer-events-none" : ""} ${hideHeader ? "pt-0" : "pt-0 lg:pt-2"}`}>
         {(isPending || isFiltering) && (
           <div className="fixed inset-0 z-[999] flex items-center justify-center bg-transparent pointer-events-none">
             <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin shadow-md" />
@@ -134,15 +134,15 @@ export function HomeShell({ children, hideHeader }: { children?: React.ReactNode
 
 export function HomeLoadingSkeleton() {
   return (
-    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-[#e2f0e7]">
+    <div className="text-foreground min-h-screen font-body selection:bg-primary/20 relative bg-[#e2f0e7] w-full max-w-full overflow-x-hidden min-w-0">
        {/* Header Skeleton */}
-       <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-10 py-4 w-[95%] max-w-[1440px] bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[32px] border border-outline-variant/10">
-          <div className="w-48 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+       <header className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex justify-between items-center px-4 sm:px-10 py-3 sm:py-4 w-[95%] max-w-[1440px] bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-[32px] border border-outline-variant/10">
+          <div className="w-32 sm:w-48 h-9 sm:h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
           <div className="w-80 h-10 bg-slate-100 dark:bg-slate-800/50 rounded-xl animate-pulse hidden xl:block" />
-          <div className="w-40 h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
+          <div className="w-24 sm:w-40 h-9 sm:h-10 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />
        </header>
 
-      <div className="w-full pt-24 pb-20 flex flex-col lg:flex-row items-start gap-10 px-6 md:px-10 max-w-[1600px] mx-auto">
+      <div className="w-full pt-24 pb-20 flex flex-col lg:flex-row items-start gap-10 px-4 sm:px-6 md:px-10 max-w-[1600px] mx-auto min-w-0">
         <aside className="hidden lg:block w-80 p-8 glass rounded-3xl h-fit space-y-6">
             <div className="h-12 bg-slate-200 dark:bg-slate-800 rounded-2xl w-full animate-pulse" />
             <div className="space-y-3 pt-4">

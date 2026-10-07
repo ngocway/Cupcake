@@ -63,7 +63,8 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
     );
   }
 
-  const isAutoApprove = classObj.autoApprove ?? true;
+  const { id: targetClassId, name: targetClassName, teacherId: targetTeacherId, autoApprove: targetAutoApprove } = classObj;
+  const isAutoApprove = targetAutoApprove ?? true;
 
   // 3. User Authentication
   const session = await auth();
@@ -166,7 +167,7 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
     }
 
     const userId = currentSession.user.id;
-    const shouldAutoApprove = classObj.autoApprove ?? true;
+    const shouldAutoApprove = targetAutoApprove ?? true;
     const targetStatus = shouldAutoApprove ? 'ACTIVE' : 'PENDING';
 
     // 1. Ghi danh siêu tốc qua primary key index
@@ -174,12 +175,12 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
       where: {
         studentId_classId: {
           studentId: userId,
-          classId: classObj.id
+          classId: targetClassId
         }
       },
       create: {
         studentId: userId,
-        classId: classObj.id,
+        classId: targetClassId,
         status: targetStatus
       },
       update: {
@@ -195,11 +196,11 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
           const { createNotification } = await import('@/actions/notification-actions');
           const studentName = currentSession.user.name || currentSession.user.email || 'Một học sinh';
           await createNotification(
-            classObj.teacherId,
+            targetTeacherId,
             'ENROLLMENT_SUCCESS',
             'Học sinh mới tham gia lớp',
-            `${studentName} vừa tham gia lớp học "${classObj.name}".`,
-            `/teacher/classes/${classObj.id}`
+            `${studentName} vừa tham gia lớp học "${targetClassName}".`,
+            `/teacher/classes/${targetClassId}`
           );
         }
       } catch (err) {
@@ -208,7 +209,7 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
     })();
 
     if (shouldAutoApprove) {
-      return { success: true, redirectUrl: `/student/classes/${classObj.id}` };
+      return { success: true, redirectUrl: `/student/classes/${targetClassId}` };
     } else {
       revalidatePath(`/join/${joinCode}`);
       return { success: true };

@@ -125,9 +125,9 @@ export function MobileContentTypeMenu() {
   ];
 
   return (
-    <div className="w-full lg:hidden block px-4 pt-1 pb-0 select-none">
+    <div className="w-full max-w-full min-w-0 lg:hidden block px-4 pt-1 pb-0 select-none overflow-hidden">
       {/* Scrollable Horizontal Bar */}
-      <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-0.5">
+      <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-0.5 w-full max-w-full min-w-0">
         {items.map((item) => {
           const isActive = activeTab === item.id;
           const locked = isTabLocked(item.id);
