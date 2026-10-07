@@ -34,6 +34,7 @@ interface ClassDashboardClientProps {
   initialJoinCode: string;
   initialIsJoinable: boolean;
   initialAutoApprove?: boolean;
+  initialDailyDripUnlock?: boolean;
   initialStudents: Student[];
   initialAssignments: Assignment[];
   initialOpenAssignmentCount: number;
@@ -46,6 +47,7 @@ export default function ClassDashboardClient({
   initialJoinCode,
   initialIsJoinable,
   initialAutoApprove = true,
+  initialDailyDripUnlock = false,
   initialStudents,
   initialAssignments,
   initialOpenAssignmentCount,
@@ -58,6 +60,8 @@ export default function ClassDashboardClient({
   const [isJoinable, setIsJoinable] = useState(initialIsJoinable);
   const [autoApprove, setAutoApprove] = useState(initialAutoApprove);
   const [isTogglingAutoApprove, setIsTogglingAutoApprove] = useState(false);
+  const [dailyDripUnlock, setDailyDripUnlock] = useState(initialDailyDripUnlock);
+  const [isTogglingDailyDrip, setIsTogglingDailyDrip] = useState(false);
   const [openAssignmentCount, setOpenAssignmentCount] = useState(initialOpenAssignmentCount);
 
   // Default tab: "Bài tập" (as requested for fast loading & direct assignment focus)
@@ -101,6 +105,9 @@ export default function ClassDashboardClient({
         }
         if (data.class?.autoApprove !== undefined) {
           setAutoApprove(data.class.autoApprove);
+        }
+        if (data.class?.dailyDripUnlock !== undefined) {
+          setDailyDripUnlock(data.class.dailyDripUnlock);
         }
       }
     } catch (err) {
@@ -181,6 +188,24 @@ export default function ClassDashboardClient({
       alert('Lỗi cập nhật chế độ duyệt học sinh!');
     } finally {
       setIsTogglingAutoApprove(false);
+    }
+  };
+
+  const handleToggleDailyDrip = async () => {
+    const next = !dailyDripUnlock;
+    setDailyDripUnlock(next);
+    setIsTogglingDailyDrip(true);
+    try {
+      const { toggleClassDailyDripUnlock } = await import('../actions');
+      const res = await toggleClassDailyDripUnlock(classId, next);
+      if (!res?.success) throw new Error();
+      await fetchStudents();
+    } catch (err) {
+      setDailyDripUnlock(!next);
+      console.error('Failed to toggle dailyDripUnlock', err);
+      alert('Lỗi cập nhật chế độ mở bài theo ngày!');
+    } finally {
+      setIsTogglingDailyDrip(false);
     }
   };
 
@@ -309,6 +334,21 @@ export default function ClassDashboardClient({
                   {autoApprove ? 'verified_user' : 'how_to_reg'}
                 </span>
                 <span>{autoApprove ? 'Tự động duyệt' : 'Cần phê duyệt'}</span>
+              </button>
+              <button
+                onClick={handleToggleDailyDrip}
+                disabled={isTogglingDailyDrip}
+                className={`flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
+                  dailyDripUnlock
+                    ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'
+                } ${isTogglingDailyDrip ? 'opacity-60 cursor-wait' : ''}`}
+                title={dailyDripUnlock ? 'Đang bật: Mỗi ngày mở 1 bài vào 05:00 sáng sau khi hoàn thành 100% bài trước, xem trước 2 bài' : 'Đang tắt: Mở bài theo quy tắc thông thường'}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {dailyDripUnlock ? 'schedule' : 'calendar_today'}
+                </span>
+                <span>{dailyDripUnlock ? 'Daily Drip: 5h sáng (Bật)' : 'Mở tự do'}</span>
               </button>
               <button
                 onClick={() => setIsQRModalOpen(true)}

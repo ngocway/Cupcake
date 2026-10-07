@@ -135,8 +135,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
 
   if (isDetailOrRunPage || isEmbedded) return null;
 
-  // Chuyên biệt cho trang chi tiết lớp học (/student/classes/[id]): Render Header theo phong cách phẳng Anhngu24h
-  const isStudentClassDetail = pathname?.startsWith('/student/classes/') && pathname !== '/student/classes';
+  // Chuyên biệt cho các trang lớp học học sinh (/student/classes): Render Header theo phong cách phẳng Anhngu24h
+  const isStudentClassDetail = pathname?.startsWith('/student/classes');
   if (isStudentClassDetail) {
     return <StudentClassHeader session={session} />;
   }
