@@ -18,7 +18,11 @@ interface LoginButtonProps {
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultView?: "role" | "studentLogin" | "teacherLogin"
+  onLoginSuccess?: () => void;
+  defaultView?: "role" | "studentLogin" | "teacherLogin";
+  joinNotice?: {
+    className: string;
+  };
 }
 
 const MODAL_DICT = {
@@ -73,7 +77,7 @@ function ModalLanguageSwitcher({ locale, onChange }: { locale: "vi" | "en"; onCh
   );
 }
 
-export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "role", joinNotice }: LoginModalProps) {
   const [mounted, setMounted] = useState(false)
   const [view, setView] = useState<"role" | "studentLogin" | "teacherLogin">(defaultView)
   const [locale, setLocale] = useState<"vi" | "en">("vi")
@@ -234,7 +238,17 @@ export function LoginModal({ isOpen, onClose, defaultView = "role" }: LoginModal
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar">
-              <StudentLoginForm onSuccess={handleClose} />
+              <StudentLoginForm
+                onSuccess={() => {
+                  if (onLoginSuccess) {
+                    onLoginSuccess();
+                  } else {
+                    handleClose();
+                  }
+                }}
+                joinNotice={joinNotice}
+                locale={locale}
+              />
             </div>
           </div>
         )}

@@ -15,7 +15,10 @@ export default async function StudentClassesPage() {
   const userId = session.user.id;
 
   const enrollments = await prisma.classEnrollment.findMany({
-    where: { studentId: userId },
+    where: { 
+      studentId: userId,
+      class: { deletedAt: null }
+    },
     include: {
       class: {
         include: {

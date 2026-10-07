@@ -260,8 +260,8 @@ export function buildGroupTree<T extends {
       });
     }
 
-    // 3. Khớp theo topicKey nếu trong nhóm chỉ có duy nhất 1 bài lý thuyết thuộc topic đó
-    if (matchedClusterIndex === -1 && exMeta.topicKey) {
+    // 3. Khớp theo topicKey nếu bài tập không có lessonKey riêng và trong nhóm có 1 bài lý thuyết cùng topic
+    if (matchedClusterIndex === -1 && !exMeta.lessonKey && exMeta.topicKey) {
       const candidates = lessonMetaList
         .map((l, idx) => (l.topicKey === exMeta.topicKey ? idx : -1))
         .filter((idx) => idx !== -1);

@@ -47,7 +47,10 @@ export default async function StudentAssignmentsPage({
   if (source === "class") {
     // 1. Fetch Class Assignments (Assigned by Teachers)
     const enrollments = await prisma.classEnrollment.findMany({
-      where: { studentId: userId },
+      where: { 
+        studentId: userId,
+        class: { deletedAt: null }
+      },
       include: {
         class: {
           include: {

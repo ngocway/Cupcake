@@ -20,7 +20,10 @@ export default async function StudentDashboardPage() {
   // 1. Fetch Overview Data
   // Let's count pending tasks
   const enrollments = await prisma.classEnrollment.findMany({
-    where: { studentId: userId },
+    where: { 
+      studentId: userId,
+      class: { deletedAt: null }
+    },
     include: { class: { include: { assignments: { include: { assignment: true } } } } }
   })
   

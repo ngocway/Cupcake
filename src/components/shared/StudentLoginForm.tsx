@@ -7,8 +7,15 @@ import { registerStudent, resetPassword } from "@/actions/auth-actions"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight, User, HelpCircle } from "lucide-react"
 import { CenteredLoginLoader } from "@/components/shared/CenteredLoginLoader"
+export interface StudentLoginFormProps {
+  onSuccess?: () => void;
+  joinNotice?: {
+    className: string;
+  };
+  locale?: "vi" | "en";
+}
 
-export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
+export function StudentLoginForm({ onSuccess, joinNotice, locale = "vi" }: StudentLoginFormProps) {
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -136,6 +143,14 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
     let callbackUrl = existingCallbackUrl || window.location.pathname + window.location.search;
     if (callbackUrl.includes('/login')) {
       callbackUrl = '/';
+    } else if (joinNotice?.className) {
+      try {
+        const url = new URL(callbackUrl, window.location.origin);
+        url.searchParams.set('autojoin', '1');
+        callbackUrl = url.pathname + url.search;
+      } catch (e) {
+        callbackUrl = callbackUrl + (callbackUrl.includes('?') ? '&' : '?') + 'autojoin=1';
+      }
     }
     
     signIn("google", { callbackUrl }).catch(() => setIsPending(false));
@@ -153,6 +168,29 @@ export function StudentLoginForm({ onSuccess }: { onSuccess?: () => void }) {
         <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Dolcake</h2>
         <p className="text-xs text-on-surface-variant font-bold uppercase tracking-[0.2em] mt-1">Student Portal</p>
       </div>
+
+      {joinNotice?.className && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 shadow-sm text-left">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20 text-lg">
+              🏫
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black text-emerald-800 uppercase tracking-wider mb-0.5">
+                {locale === "en" ? "Join Class" : "Tham gia lớp học"}
+              </p>
+              <p className="font-bold text-slate-900 text-sm sm:text-base leading-snug line-clamp-2">
+                {joinNotice.className}
+              </p>
+              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-medium">
+                {locale === "en"
+                  ? "Please log in with a Student account to join this class."
+                  : "Bạn cần đăng nhập tài khoản Học sinh để tham gia lớp học này."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {(mode === "login" || mode === "register") && (
         <div className="flex gap-8 mb-10 border-b border-outline-variant/20 relative">

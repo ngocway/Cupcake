@@ -44,6 +44,8 @@ async function getStudentClassDetailData(userId: string, classId: string) {
               instructions: true,
               thumbnail: true,
               tags: true,
+              grammarLesson: true,
+              grammarTopic: true,
               teacher: {
                 select: { id: true, name: true, image: true }
               },
@@ -65,7 +67,11 @@ async function getStudentClassDetailData(userId: string, classId: string) {
         orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }]
       }),
       prisma.classEnrollment.findMany({
-        where: { studentId: userId, status: 'ACTIVE' },
+        where: { 
+          studentId: userId, 
+          status: 'ACTIVE',
+          class: { deletedAt: null }
+        },
         select: {
           class: {
             select: {
@@ -191,15 +197,20 @@ async function StudentClassDetailContent({
 
   const cls = enrollment?.class;
 
-  if (!enrollment || enrollment.status !== 'ACTIVE' || !cls) {
+  if (!enrollment || enrollment.status !== 'ACTIVE' || !cls || cls.deletedAt) {
+    const isDeleted = Boolean(cls?.deletedAt);
     return (
       <div className="flex flex-col flex-1 items-center justify-center p-12 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-slate-700/60 text-center rounded-[2rem] shadow-xs my-8 max-w-xl mx-auto">
         <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4">
           <Lock className="w-8 h-8 stroke-[1.8px]" />
         </div>
-        <h2 className="text-2xl font-black mb-2 text-slate-900 dark:text-white">Chưa có quyền truy cập</h2>
+        <h2 className="text-2xl font-black mb-2 text-slate-900 dark:text-white">
+          {isDeleted ? "Lớp học đã bị xóa hoặc ngừng hoạt động" : "Chưa có quyền truy cập"}
+        </h2>
         <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md leading-relaxed">
-          Bạn chưa tham gia lớp học này hoặc yêu cầu tham gia của bạn đang chờ giáo viên phê duyệt.
+          {isDeleted 
+            ? "Lớp học này đã được giáo viên đóng hoặc xóa khỏi hệ thống."
+            : "Bạn chưa tham gia lớp học này hoặc yêu cầu tham gia của bạn đang chờ giáo viên phê duyệt."}
         </p>
         <Link 
           href="/student/classes" 
@@ -325,6 +336,8 @@ async function StudentClassDetailContent({
         instructions: ac.assignment.instructions,
         thumbnail: finalThumbnail,
         tags: ac.assignment.tags,
+        grammarLesson: (ac.assignment as any).grammarLesson,
+        grammarTopic: (ac.assignment as any).grammarTopic,
         teacher: ac.assignment.teacher,
         questionsCount: (ac.assignment as any)._count?.questions || 0,
       },

@@ -49,7 +49,10 @@ export async function GET(request: NextRequest) {
     if (source === "class") {
       // Count total
       const enrollments = await prisma.classEnrollment.findMany({
-        where: { studentId: userId },
+        where: { 
+          studentId: userId,
+          class: { deletedAt: null }
+        },
         include: {
           class: {
             include: {

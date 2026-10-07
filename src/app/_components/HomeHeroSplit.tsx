@@ -1,11 +1,12 @@
 "use client"
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SessionContext } from 'next-auth/react'
 import { useContentStore } from '@/store/useContentStore'
 import { GraduationCap, ArrowRight } from 'lucide-react'
+import { LoginModal } from '@/components/LoginButton'
 
 const STUDENT_CARDS = [
   {
@@ -59,6 +60,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
 
   const isTeacher = session?.user && (session.user as any).role === 'TEACHER'
   const isStudent = session?.user && (session.user as any).role !== 'TEACHER'
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
 
   const handleStudentCardClick = (targetTab: string) => {
     if (setActiveTab) {
@@ -193,19 +195,30 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
 
           {/* Student CTA Button with Luminous Neon Glow - Elevated to z-30 */}
           <div className="w-full flex justify-center relative z-30">
-            <Link
-              href={isStudent ? "/student/dashboard" : isTeacher ? "/student/dashboard" : "/student/login"}
-              className="group inline-flex items-center gap-2.5 px-9 py-3.5 rounded-full bg-gradient-to-r from-[#00d2ff] to-[#0099ff] text-white font-black text-sm sm:text-base tracking-wide shadow-[0_10px_35px_-5px_rgba(0,186,242,0.65)] hover:shadow-[0_15px_42px_rgba(0,186,242,0.85)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
-            >
-              <span>
-                {isStudent 
-                  ? "Enter Your Learning Space" 
-                  : isTeacher 
-                    ? "Student Realm" 
-                    : "Student Login"}
-              </span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-            </Link>
+            {!session?.user ? (
+              <button
+                type="button"
+                onClick={() => setIsStudentModalOpen(true)}
+                className="group inline-flex items-center gap-2.5 px-9 py-3.5 rounded-full bg-gradient-to-r from-[#00d2ff] to-[#0099ff] text-white font-black text-sm sm:text-base tracking-wide shadow-[0_10px_35px_-5px_rgba(0,186,242,0.65)] hover:shadow-[0_15px_42px_rgba(0,186,242,0.85)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+              >
+                <span>Student Login</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+              </button>
+            ) : (
+              <Link
+                href={isStudent ? "/student/dashboard" : isTeacher ? "/student/dashboard" : "/student/login"}
+                className="group inline-flex items-center gap-2.5 px-9 py-3.5 rounded-full bg-gradient-to-r from-[#00d2ff] to-[#0099ff] text-white font-black text-sm sm:text-base tracking-wide shadow-[0_10px_35px_-5px_rgba(0,186,242,0.65)] hover:shadow-[0_15px_42px_rgba(0,186,242,0.85)] hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+              >
+                <span>
+                  {isStudent 
+                    ? "Enter Your Learning Space" 
+                    : isTeacher 
+                      ? "Student Realm" 
+                      : "Student Login"}
+                </span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+              </Link>
+            )}
           </div>
         </div>
 
@@ -308,6 +321,12 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
           </div>
         </button>
       </div>
+
+      <LoginModal
+        isOpen={isStudentModalOpen}
+        onClose={() => setIsStudentModalOpen(false)}
+        defaultView="studentLogin"
+      />
     </section>
   )
 }

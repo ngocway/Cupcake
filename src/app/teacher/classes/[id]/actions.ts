@@ -294,6 +294,8 @@ export async function deleteClass(classId: string) {
   await invalidateStudentClassDetailCache(classId);
 
   revalidatePath('/teacher/classes');
+  revalidatePath('/student/classes');
+  revalidatePath(`/student/classes/${classId}`);
   return { success: true };
 }
 

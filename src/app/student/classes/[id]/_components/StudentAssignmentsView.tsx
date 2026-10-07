@@ -68,6 +68,8 @@ export interface StudentGroupItem {
     instructions?: string | null;
     thumbnail?: string | null;
     tags?: string | null;
+    grammarLesson?: string | null;
+    grammarTopic?: string | null;
     teacher?: { id: string; name: string | null; image: string | null } | null;
     questionsCount?: number;
   };

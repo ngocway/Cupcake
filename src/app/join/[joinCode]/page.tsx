@@ -5,9 +5,17 @@ import { revalidatePath } from 'next/cache';
 import { invalidateStudentClassesCache } from '@/lib/cached-queries';
 import Link from 'next/link';
 import { JoinSubmitButton } from './JoinSubmitButton';
+import { JoinLoginTrigger } from './JoinLoginTrigger';
+import { TeacherAccountNotice } from './TeacherAccountNotice';
 
-export default async function JoinClassPage({ params }: { params: Promise<{ joinCode: string }> }) {
+interface JoinClassPageProps {
+  params: Promise<{ joinCode: string }>;
+  searchParams?: Promise<{ autojoin?: string }>;
+}
+
+export default async function JoinClassPage({ params, searchParams }: JoinClassPageProps) {
   const { joinCode } = await params;
+  const queryParams = searchParams ? await searchParams : {};
 
   // 1. Check if class exists by joinCode, classCode, OR id
   const classObj = await prisma.class.findFirst({
@@ -35,8 +43,8 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Code</h1>
-          <p className="text-slate-500">We couldn't find any class or assignment with this code.</p>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Mã lớp không hợp lệ</h1>
+          <p className="text-slate-500">Không tìm thấy lớp học hoặc bài tập nào với mã này.</p>
         </div>
       </div>
     );
@@ -47,105 +55,131 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
         <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-           <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🔒</div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Class Closed</h1>
-          <p className="text-slate-500">The teacher has disabled joining this class. Please contact the teacher for more details.</p>
+          <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🔒</div>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Lớp học đã đóng</h1>
+          <p className="text-slate-500">Giáo viên đã tạm dừng nhận học sinh mới cho lớp học này.</p>
         </div>
       </div>
     );
   }
 
-  // 3. User Authentication
-  const session = await auth();
-  if (!session?.user?.id) {
-    // TH1: Học sinh chưa đăng nhập
-    redirect(`/login?callbackUrl=/join/${joinCode}`);
-  }
-
-  const studentId = session.user.id;
-
-  // 4. Check Enrollment Status
-  const existingEnrollment = await prisma.classEnrollment.findUnique({
-    where: {
-      studentId_classId: {
-        studentId,
-        classId: classObj.id
-      }
-    }
-  });
-
-  if (existingEnrollment) {
-    switch(existingEnrollment.status) {
-      case 'ACTIVE':
-         redirect(`/student/classes/${classObj.id}`);
-         break;
-      case 'PENDING':
-        return (
-          <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-              <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⏳</div>
-              <h1 className="text-2xl font-bold text-slate-800 mb-2">Pending Approval</h1>
-              <p className="text-slate-500 mb-6">Your request to join class <strong>{classObj.name}</strong> has been sent. Please wait for the teacher to approve.</p>
-              <Link href="/student/dashboard" className="px-6 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors inline-block w-full">
-                Back to Dashboard
-              </Link>
-            </div>
-          </div>
-        );
-      case 'BLOCKED':
-        return (
-          <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🚫</div>
-              <h1 className="text-2xl font-bold text-slate-800 mb-2">Cannot Join</h1>
-              <p className="text-slate-500">You have been blocked from this class.</p>
-            </div>
-          </div>
-        );
-      case 'INVITED':
-        // Nếu đã được mời, có thể tự động duyệt hoặc hiển thị popup xác nhận
-        break;
-    }
-  }
-
   const isAutoApprove = classObj.autoApprove ?? true;
 
-  // 5. Server Action to submit request
-  async function requestJoinClass() {
+  // 3. User Authentication
+  const session = await auth();
+  const user = session?.user;
+  const isAuthenticated = Boolean(user?.id);
+  const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
+
+  // 4. Check Enrollment Status for authenticated student
+  if (isAuthenticated && !isTeacher && user?.id) {
+    const studentId = user.id;
+    const existingEnrollment = await prisma.classEnrollment.findUnique({
+      where: {
+        studentId_classId: {
+          studentId,
+          classId: classObj.id
+        }
+      }
+    });
+
+    if (existingEnrollment) {
+      switch(existingEnrollment.status) {
+        case 'ACTIVE':
+          // Đã tham gia lớp -> Chuyển thẳng vào lớp học
+          redirect(`/student/classes/${classObj.id}`);
+          break;
+        case 'PENDING':
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
+              <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+                <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⏳</div>
+                <h1 className="text-2xl font-bold text-slate-800 mb-2">Đang chờ phê duyệt</h1>
+                <p className="text-slate-500 mb-6">Yêu cầu tham gia lớp <strong>{classObj.name}</strong> của bạn đã được gửi. Vui lòng đợi giáo viên duyệt.</p>
+                <Link href="/student/classes" className="px-6 py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition-colors inline-block w-full">
+                  Về danh sách lớp học
+                </Link>
+              </div>
+            </div>
+          );
+        case 'BLOCKED':
+          return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 font-sans p-4">
+              <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+                <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🚫</div>
+                <h1 className="text-2xl font-bold text-slate-800 mb-2">Không thể tham gia</h1>
+                <p className="text-slate-500">Bạn đã bị chặn khỏi lớp học này.</p>
+              </div>
+            </div>
+          );
+      }
+    } else if (queryParams.autojoin === '1' && isAutoApprove) {
+      // Tự động ghi danh & vào lớp ngay nếu học sinh vừa đăng nhập từ Google
+      await prisma.classEnrollment.upsert({
+        where: {
+          studentId_classId: {
+            studentId,
+            classId: classObj.id
+          }
+        },
+        create: {
+          studentId,
+          classId: classObj.id,
+          status: 'ACTIVE'
+        },
+        update: {
+          status: 'ACTIVE'
+        }
+      });
+
+      void (async () => {
+        try {
+          await invalidateStudentClassesCache(studentId);
+          const { createNotification } = await import('@/actions/notification-actions');
+          const studentName = user.name || user.email || 'Một học sinh';
+          await createNotification(
+            classObj.teacherId,
+            'ENROLLMENT_SUCCESS',
+            'Học sinh mới tham gia lớp',
+            `${studentName} vừa tham gia lớp học "${classObj.name}".`,
+            `/teacher/classes/${classObj.id}`
+          );
+        } catch (e) {
+          console.error('Auto-join background notification error:', e);
+        }
+      })();
+
+      redirect(`/student/classes/${classObj.id}`);
+    }
+  }
+
+  // 5. Server Action to submit request (Fast & Non-blocking)
+  async function requestJoinClass(): Promise<{ success: boolean; redirectUrl?: string; error?: string }> {
     'use server';
     
-    // Security check again inside action
     const currentSession = await auth();
-    if (!currentSession?.user?.id) throw new Error("Unauthorized");
-    
-    const curClass = await prisma.class.findFirst({
-      where: {
-        OR: [
-          { joinCode: joinCode },
-          { classCode: joinCode },
-          { id: joinCode }
-        ],
-        deletedAt: null
-      },
-      include: { teacher: true }
-    });
-    if (!curClass || !curClass.isJoinable) throw new Error("Class not joinable");
+    if (!currentSession?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    if (currentSession.user.role === 'TEACHER' || currentSession.user.role === 'ADMIN') {
+      return { success: false, error: 'Vui lòng dùng tài khoản Học sinh để tham gia lớp.' };
+    }
 
     const userId = currentSession.user.id;
-    const shouldAutoApprove = curClass.autoApprove ?? true;
+    const shouldAutoApprove = classObj.autoApprove ?? true;
     const targetStatus = shouldAutoApprove ? 'ACTIVE' : 'PENDING';
 
-    // Create or update existing block/invite
+    // 1. Ghi danh siêu tốc qua primary key index
     await prisma.classEnrollment.upsert({
       where: {
         studentId_classId: {
           studentId: userId,
-          classId: curClass.id
+          classId: classObj.id
         }
       },
       create: {
         studentId: userId,
-        classId: curClass.id,
+        classId: classObj.id,
         status: targetStatus
       },
       update: {
@@ -153,27 +187,31 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
       }
     });
 
-    await invalidateStudentClassesCache(userId);
-
-    // Gợi ý 2: Nếu tự động duyệt, gửi thông báo nhẹ cho giáo viên/admin và chuyển thẳng vào lớp
-    if (shouldAutoApprove) {
+    // 2. Tác vụ phụ chạy ngầm trong background (Non-blocking), không làm chậm phản hồi của học sinh
+    void (async () => {
       try {
-        const { createNotification } = await import('@/actions/notification-actions');
-        const studentName = currentSession.user.name || currentSession.user.email || 'Một học sinh';
-        await createNotification(
-          curClass.teacherId,
-          'ENROLLMENT_SUCCESS',
-          'Học sinh mới tham gia lớp',
-          `${studentName} vừa tham gia lớp học "${curClass.name}".`,
-          `/teacher/classes/${curClass.id}`
-        );
+        await invalidateStudentClassesCache(userId);
+        if (shouldAutoApprove) {
+          const { createNotification } = await import('@/actions/notification-actions');
+          const studentName = currentSession.user.name || currentSession.user.email || 'Một học sinh';
+          await createNotification(
+            classObj.teacherId,
+            'ENROLLMENT_SUCCESS',
+            'Học sinh mới tham gia lớp',
+            `${studentName} vừa tham gia lớp học "${classObj.name}".`,
+            `/teacher/classes/${classObj.id}`
+          );
+        }
       } catch (err) {
-        console.error("Failed to notify teacher on auto-join:", err);
+        console.error('Background join notification error:', err);
       }
+    })();
 
-      redirect(`/student/classes/${curClass.id}`);
+    if (shouldAutoApprove) {
+      return { success: true, redirectUrl: `/student/classes/${classObj.id}` };
     } else {
       revalidatePath(`/join/${joinCode}`);
+      return { success: true };
     }
   }
 
@@ -190,13 +228,14 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
         
         <h1 className="text-3xl font-extrabold text-slate-800 mb-3 tracking-tight">Tham gia lớp học</h1>
         
+        {/* Class Context Card */}
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 mb-6 text-left mt-6">
           <div className="mb-4">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Lớp học</p>
             <p className="text-lg font-bold text-slate-900">{classObj.name}</p>
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Giáo viên</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Giáo viên phụ trách</p>
             <p className="text-slate-800 font-medium">{classObj.teacher.name || classObj.teacher.email}</p>
           </div>
         </div>
@@ -212,12 +251,32 @@ export default async function JoinClassPage({ params }: { params: Promise<{ join
           </p>
         )}
 
-        <form action={requestJoinClass}>
-          <JoinSubmitButton isAutoApprove={isAutoApprove} />
-        </form>
+        {/* Action Area: 3 distinct user states */}
+        {!isAuthenticated ? (
+          /* Trạng thái 1: Chưa đăng nhập -> Nút Đăng nhập & Tự động bật Popup LoginModal */
+          <JoinLoginTrigger
+            classTitle={classObj.name}
+            classId={classObj.id}
+            isAutoApprove={isAutoApprove}
+            onJoin={requestJoinClass}
+          />
+        ) : isTeacher ? (
+          /* Trạng thái 2: Đang là Giáo viên -> Cảnh báo cần tài khoản Học sinh */
+          <TeacherAccountNotice email={user?.email} joinCode={joinCode} />
+        ) : (
+          /* Trạng thái 3: Học sinh đã đăng nhập -> Nút Tham gia lớp (Tối ưu Client Navigation & Prefetch) */
+          <JoinSubmitButton
+            classId={classObj.id}
+            isAutoApprove={isAutoApprove}
+            onJoin={requestJoinClass}
+          />
+        )}
         
         <div className="mt-4">
-          <Link href="/student/dashboard" className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors">
+          <Link 
+            href={isAuthenticated ? "/student/classes" : "/"} 
+            className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
+          >
             Hủy và quay lại
           </Link>
         </div>

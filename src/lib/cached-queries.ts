@@ -418,6 +418,7 @@ export async function getCachedStudentClasses(userId: string): Promise<{ activeC
         JOIN "Class" c ON ce."classId" = c."id"
         LEFT JOIN "User" u ON c."teacherId" = u."id"
         WHERE ce."studentId" = $1
+          AND c."deletedAt" IS NULL
         ORDER BY ce."joinedAt" DESC
       `, userId);
 

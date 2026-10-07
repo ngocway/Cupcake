@@ -21,7 +21,10 @@ export default async function StudentLessonsPage({
   // 1-3. Parallel Fetching to avoid waterfalls
   const [enrollments, progressRaw, userFavorites] = await Promise.all([
     prisma.classEnrollment.findMany({
-      where: { studentId: userId },
+      where: { 
+        studentId: userId,
+        class: { deletedAt: null }
+      },
       include: { class: { include: { teacher: true } } }
     }),
     prisma.lessonProgress.findMany({

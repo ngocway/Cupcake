@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
     // Parallel fetch for better performance
     const [enrollments, progressRaw, userFavorites] = await Promise.all([
       prisma.classEnrollment.findMany({
-        where: { studentId: userId },
+        where: { 
+          studentId: userId,
+          class: { deletedAt: null }
+        },
         include: { class: { include: { teacher: true } } }
       }),
       prisma.lessonProgress.findMany({
