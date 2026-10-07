@@ -167,7 +167,7 @@ async function StudentClassDetailContent({
 }: { 
   id: string;
   userId: string;
-  userRole?: string;
+  userRole?: string | null;
   searchParams?: { groupId?: string; viewAll?: string; assignmentId?: string; tab?: string };
 }) {
   const initialGroupId = (searchParams as any)?.groupId || null;
@@ -550,7 +550,7 @@ export default async function StudentClassDetailPage({
           <StudentClassDetailContent 
             id={id} 
             userId={session.user.id} 
-            userRole={session.user.role}
+            userRole={session.user.role || undefined}
             searchParams={(resolvedSearchParams as any) || {}} 
           />
         </Suspense>
