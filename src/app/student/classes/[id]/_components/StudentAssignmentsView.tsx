@@ -39,14 +39,25 @@ import {
   FolderKanban,
   FileEdit,
   Target,
-  Mic
+  Mic,
+  Clock
 } from 'lucide-react';
 import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree } from '../_utils/assignmentOrder';
 import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
-import { EmbeddedQuizContainer } from './EmbeddedQuizContainer';
-import { EmbeddedGrammarContainer } from './EmbeddedGrammarContainer';
-import { EmbeddedBookContainer } from './EmbeddedBookContainer';
-import { EmbeddedGameContainer } from './EmbeddedGameContainer';
+import dynamic from 'next/dynamic';
+
+const EmbeddedQuizContainer = dynamic(
+  () => import('./EmbeddedQuizContainer').then((mod) => mod.EmbeddedQuizContainer)
+);
+const EmbeddedGrammarContainer = dynamic(
+  () => import('./EmbeddedGrammarContainer').then((mod) => mod.EmbeddedGrammarContainer)
+);
+const EmbeddedBookContainer = dynamic(
+  () => import('./EmbeddedBookContainer').then((mod) => mod.EmbeddedBookContainer)
+);
+const EmbeddedGameContainer = dynamic(
+  () => import('./EmbeddedGameContainer').then((mod) => mod.EmbeddedGameContainer)
+);
 import { AssignmentIconWithProgress } from './AssignmentIconWithProgress';
 import { 
   prefetchAssignmentData,
@@ -77,6 +88,7 @@ export interface StudentGroupItem {
   dueDate?: string | null;
   isSubmitted: boolean;
   score?: number | null;
+  submittedAt?: string | null;
   classId?: string;
   groupId?: string;
 }
@@ -91,6 +103,8 @@ export interface StudentAssignmentGroup {
   forceUnlocked?: boolean;
   isLocked?: boolean;
   lockReason?: string;
+  isWaiting5Am?: boolean;
+  unlockAt?: string | null;
   prerequisiteTotalCount?: number;
   prerequisiteCompletedCount?: number;
   prerequisitePercent?: number;
@@ -868,7 +882,10 @@ export function StudentAssignmentsView({
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 tracking-wider">Lớp học hiện tại</p>
-                          <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                          <h4 
+                            className="text-xs font-black text-slate-800 dark:text-slate-100 truncate"
+                            title={currentClass?.name || 'Lớp học của tôi'}
+                          >
                             {currentClass?.name || 'Lớp học của tôi'}
                           </h4>
                         </div>
@@ -885,6 +902,7 @@ export function StudentAssignmentsView({
                             key={cls.id}
                             href={`/student/classes/${cls.id}`}
                             onClick={() => setIsClassDropdownOpen(false)}
+                            title={cls.name}
                             className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                               cls.id === currentClass?.id 
                                 ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-black' 
@@ -961,6 +979,7 @@ export function StudentAssignmentsView({
                                 queueGroupForPreload(group.items);
                               }
                             }}
+                            title={group.title}
                             className={`flex items-center justify-between gap-2 p-3 text-left transition-colors cursor-pointer select-none ${
                               isGrpActive 
                                 ? 'bg-blue-100/40 dark:bg-blue-900/30 text-blue-950 dark:text-blue-100' 
@@ -981,7 +1000,7 @@ export function StudentAssignmentsView({
                               </button>
 
                               <div className="min-w-0">
-                                <h4 className="text-xs font-black truncate leading-tight">
+                                <h4 className="text-xs font-black truncate leading-tight" title={group.title}>
                                   {group.title}
                                 </h4>
                               </div>
@@ -989,9 +1008,19 @@ export function StudentAssignmentsView({
 
                             <div className="flex items-center gap-1.5 shrink-0">
                               {group.isLocked ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-[10px] font-black">
-                                  <Lock className="w-3 h-3" /> Khóa
-                                </span>
+                                group.isWaiting5Am ? (
+                                  <span 
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100/90 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 text-[10px] font-black tracking-tight shadow-2xs"
+                                    title={group.lockReason}
+                                  >
+                                    <Clock className="w-3 h-3 text-blue-600 dark:text-blue-400 stroke-[2.2px] animate-pulse" />
+                                    <span>Mở 05:00</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-[10px] font-black">
+                                    <Lock className="w-3 h-3" /> Khóa
+                                  </span>
+                                )
                               ) : (
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                                   completedInGrp === totalInGrp && totalInGrp > 0
@@ -1045,7 +1074,7 @@ export function StudentAssignmentsView({
                                       handleSelectAssignment(item, group.id);
                                     }}
                                     onMouseEnter={() => preloadAssignment(item)}
-                                    title={!isItemReady ? 'Đang chuẩn bị dữ liệu...' : undefined}
+                                    title={parsed.cleanTitle}
                                     className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl text-left transition-all ${
                                       isChild ? 'ml-5 sm:ml-6 pl-2' : ''
                                     } ${
@@ -1066,7 +1095,10 @@ export function StudentAssignmentsView({
                                         iconNode={itemIconNode}
                                         tooltipText={itemTooltip}
                                       />
-                                      <span className={`truncate leading-snug ${isChild ? 'text-[11.5px]' : 'text-xs'}`}>
+                                      <span 
+                                        className={`truncate leading-snug ${isChild ? 'text-[11.5px]' : 'text-xs'}`}
+                                        title={parsed.cleanTitle}
+                                      >
                                         {parsed.cleanTitle}
                                       </span>
                                     </div>
@@ -1159,14 +1191,17 @@ export function StudentAssignmentsView({
                 <div className="min-w-0 flex-1">
                   {/* Breadcrumb */}
                   <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 mb-1 flex-wrap">
-                    <span>{currentClass?.name || 'Lớp học'}</span>
+                    <span title={currentClass?.name || 'Lớp học'}>{currentClass?.name || 'Lớp học'}</span>
                     <span>/</span>
-                    <span className="text-slate-600 dark:text-slate-300 truncate">{activeGroup?.title}</span>
+                    <span className="text-slate-600 dark:text-slate-300 truncate" title={activeGroup?.title}>{activeGroup?.title}</span>
                   </div>
 
                   {/* Active Activity Title */}
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                    <h2 
+                      className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight"
+                      title={activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
+                    >
                       {activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
                     </h2>
 
@@ -1342,21 +1377,52 @@ export function StudentAssignmentsView({
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md">
-              <Lock className="w-8 h-8 stroke-[2px]" />
-            </div>
+            {lockedGroupModal.isWaiting5Am ? (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-blue-500/25">
+                  <Clock className="w-8 h-8 stroke-[2.2px] animate-pulse" />
+                </div>
 
-            <div className="space-y-2">
-              <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-black text-[11px] uppercase tracking-wider">
-                Nhóm bài đang tạm khóa
-              </span>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white pt-1">
-                {lockedGroupModal.title}
-              </h3>
-              <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed pt-1">
-                {lockedGroupModal.lockReason || 'Bạn cần hoàn thành nhóm bài trước để mở khóa nhóm bài này.'}
-              </p>
-            </div>
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 font-black text-[11px] uppercase tracking-wider">
+                    Bài học tiếp theo
+                  </span>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white pt-1">
+                    {lockedGroupModal.title}
+                  </h3>
+                  <div className="bg-blue-50/80 dark:bg-blue-950/40 p-4 rounded-2xl border border-blue-200/70 dark:border-blue-800/60 text-left space-y-2 my-2">
+                    <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-black text-xs">
+                      <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span>Bạn đã hoàn thành bài học hôm nay!</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed">
+                      {lockedGroupModal.lockReason}
+                    </p>
+                    <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold pt-1">
+                      💡 Mỗi ngày 1 bài giúp não bộ ghi nhớ sâu và bền vững. Hãy nghỉ ngơi và quay lại vào 05:00 nhé!
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-md">
+                  <Lock className="w-8 h-8 stroke-[2px]" />
+                </div>
+
+                <div className="space-y-2">
+                  <span className="px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-black text-[11px] uppercase tracking-wider">
+                    Nhóm bài đang tạm khóa
+                  </span>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white pt-1">
+                    {lockedGroupModal.title}
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed pt-1">
+                    {lockedGroupModal.lockReason || 'Bạn cần hoàn thành nhóm bài trước để mở khóa nhóm bài này.'}
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* Prerequisite progress bar */}
             {lockedGroupModal.prerequisiteGroupId && (

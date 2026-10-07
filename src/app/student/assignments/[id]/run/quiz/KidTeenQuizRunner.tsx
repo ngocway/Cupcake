@@ -798,7 +798,7 @@ function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }:
 export default function KidTeenQuizRunner({
   assignment,
   submissionId,
-  questions = [],
+  questions: rawQuestionsProp = [],
   questionsPromise,
   initialAnswers,
   extraDataPromise,
@@ -816,20 +816,23 @@ export default function KidTeenQuizRunner({
   isEmbeddedInCanvas = false,
   isAdmin = false,
 }: Props) {
-  const [activeQuestions, setActiveQuestions] = useState<any[]>(questions);
+  const [rawQuestions, setRawQuestions] = useState<any[]>(rawQuestionsProp);
+  const [attemptSeed, setAttemptSeed] = useState<string>(() => {
+    return submissionId || `${assignment?.id || "quiz"}-${Date.now()}`;
+  });
 
   useEffect(() => {
-    if (questions && questions.length > 0) {
-      setActiveQuestions(questions);
+    if (rawQuestionsProp && rawQuestionsProp.length > 0) {
+      setRawQuestions(rawQuestionsProp);
     }
-  }, [questions]);
+  }, [rawQuestionsProp]);
 
   useEffect(() => {
     if (questionsPromise) {
       questionsPromise
         .then((qs) => {
           if (qs && qs.length > 0) {
-            setActiveQuestions(qs);
+            setRawQuestions(qs);
           }
         })
         .catch((err) => {
@@ -837,6 +840,44 @@ export default function KidTeenQuizRunner({
         });
     }
   }, [questionsPromise]);
+
+  useEffect(() => {
+    if (submissionId) {
+      setAttemptSeed(submissionId);
+    }
+  }, [submissionId]);
+
+  // Keep question list in original order; shuffle options within each question
+  const activeQuestions = useMemo(() => {
+    if (!rawQuestions || rawQuestions.length === 0) return [];
+    return rawQuestions.map((q) => {
+      let parsedContent: any;
+      try {
+        parsedContent = typeof q.content === "string" ? JSON.parse(q.content) : q.content;
+      } catch {
+        parsedContent = q.content;
+      }
+
+      if (parsedContent && Array.isArray(parsedContent.options)) {
+        const optionsWithIndex = parsedContent.options.map((opt: any, idx: number) => ({
+          ...opt,
+          originalIndex: opt.originalIndex !== undefined ? opt.originalIndex : idx,
+        }));
+        const shuffledOptions = seedShuffle(optionsWithIndex, `${attemptSeed}-${q.id}-opts`);
+        return {
+          ...q,
+          content: JSON.stringify({
+            ...parsedContent,
+            options: shuffledOptions,
+          }),
+        };
+      }
+      return q;
+    });
+  }, [rawQuestions, attemptSeed]);
+
+  // Alias questions to activeQuestions so all internal logic uses the active questions with shuffled options
+  const questions = activeQuestions;
   const t = useTranslations("student.quiz");
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -1326,6 +1367,7 @@ export default function KidTeenQuizRunner({
 
   // ── Reset ────────────────────────────────────────────────
   const handleReset = () => {
+    setAttemptSeed(`${assignment?.id || "quiz"}-${Date.now()}`);
     setAnswers({});
     setCheckedQuestions({});
     setExpandedExplanations({});
@@ -1951,7 +1993,7 @@ export default function KidTeenQuizRunner({
       <SelectionTranslator />
       {/* ── MAIN CONTENT (Image Background) ── */}
       <div 
-        className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-44 lg:pt-16 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
+        className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-14 lg:pt-16 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
         style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
       >
         {/* ── FLOATING TOP-LEFT CONTROLS (Logo, Sound, Back & Retry) ── */}
@@ -2018,173 +2060,8 @@ export default function KidTeenQuizRunner({
           </React.Suspense>
         </div>
 
-        {/* ── DESKTOP FLOATING PANEL (Top-Right: Exercise Title & Question Grid 5 cols for >= 1024px) ── */}
-        <div className="hidden lg:block absolute top-4 right-4 sm:right-6 z-30 bg-white/45 backdrop-blur-xl border-2 border-white/70 shadow-2xl shadow-slate-900/10 rounded-3xl p-3.5 w-[260px] sm:w-[290px] max-h-[calc(100vh-140px)] transition-all duration-300">
-          <h2 className="text-xs font-black text-slate-800 uppercase tracking-wide text-center line-clamp-2 leading-tight mb-2.5 pb-2 border-b border-slate-200/50">
-            {assignment.title || "FUN WITH SCHOOL TOOLS: QUIZ FOR LITTLE LEARNERS"}
-          </h2>
-          <div className="grid grid-cols-5 gap-2 max-h-[calc(100vh-210px)] overflow-y-auto pr-1 py-0.5 justify-items-center scrollbar-thin scrollbar-thumb-purple-200/60">
-            {questions.map((q, i) => {
-              const active = i === currentIndex;
-              
-              // Check answer status
-              const ans = answers[q.id];
-              let isAnswered = false;
-              if (ans !== undefined && ans !== null) {
-                if (Array.isArray(ans)) {
-                  isAnswered = ans.length > 0;
-                } else if (typeof ans === "object") {
-                  isAnswered = Object.keys(ans).length > 0;
-                } else {
-                  isAnswered = true;
-                }
-              }
-
-              // Check if graded
-              const isGraded = checkedQuestions[q.id];
-              let status = "pending";
-              if (isGraded) {
-                status = getQuestionStatus(q, ans);
-              }
-
-              // Determine classes based on state
-              let btnClass = "";
-              
-              if (isGraded) {
-                if (status === "correct") {
-                  btnClass = active 
-                    ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-105" 
-                    : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600 opacity-90";
-                } else if (status === "incorrect") {
-                  btnClass = active 
-                    ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-105" 
-                    : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 opacity-90";
-                } else {
-                  // skipped/unanswered
-                  btnClass = active
-                    ? "bg-slate-500 text-white border-2 border-slate-200 shadow-md shadow-slate-500/40 scale-105"
-                    : "bg-white/40 text-slate-400 border border-slate-300/60 border-dashed hover:bg-white/70";
-                }
-              } else {
-                // Not graded yet
-                if (active) {
-                  btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-2 border-orange-200 scale-105 z-10";
-                } else if (isAnswered) {
-                  btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
-                } else {
-                  btnClass = "bg-white/60 backdrop-blur-sm border border-white/80 text-slate-600 hover:bg-white/90 hover:border-purple-300 hover:text-purple-600 shadow-sm";
-                }
-              }
-
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => navigateTo(i)}
-                  disabled={isAutoRevealing}
-                  className={`relative w-9 h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center ${btnClass}`}
-                >
-                  <span className="font-black text-sm leading-none">
-                    {i + 1}
-                  </span>
-                  {isGraded && !active && status === "correct" && (
-                    <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
-                      <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
-                    </div>
-                  )}
-                  {isGraded && !active && status === "incorrect" && (
-                    <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
-                      <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── MOBILE / IPAD PORTRAIT HORIZONTAL SCROLLBAR (1 Line under Logo for < 1024px) ── */}
-        <div className="lg:hidden absolute top-[62px] left-4 right-4 z-30 flex items-center bg-white/45 backdrop-blur-xl border-2 border-white/70 shadow-xl rounded-2xl px-3 py-2 overflow-x-auto whitespace-nowrap gap-2 scrollbar-none">
-          {questions.map((q, i) => {
-            const active = i === currentIndex;
-            
-            // Check answer status
-            const ans = answers[q.id];
-            let isAnswered = false;
-            if (ans !== undefined && ans !== null) {
-              if (Array.isArray(ans)) {
-                isAnswered = ans.length > 0;
-              } else if (typeof ans === "object") {
-                isAnswered = Object.keys(ans).length > 0;
-              } else {
-                isAnswered = true;
-              }
-            }
-
-            // Check if graded
-            const isGraded = checkedQuestions[q.id];
-            let status = "pending";
-            if (isGraded) {
-              status = getQuestionStatus(q, ans);
-            }
-
-            // Determine classes based on state
-            let btnClass = "";
-            
-            if (isGraded) {
-              if (status === "correct") {
-                btnClass = active 
-                  ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-105" 
-                  : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600 opacity-90";
-              } else if (status === "incorrect") {
-                btnClass = active 
-                  ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-105" 
-                  : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 opacity-90";
-              } else {
-                // skipped/unanswered
-                btnClass = active
-                  ? "bg-slate-500 text-white border-2 border-slate-200 shadow-md shadow-slate-500/40 scale-105"
-                  : "bg-white/40 text-slate-400 border border-slate-300/60 border-dashed hover:bg-white/70";
-              }
-            } else {
-              // Not graded yet
-              if (active) {
-                btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-2 border-orange-200 scale-105 z-10";
-              } else if (isAnswered) {
-                btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
-              } else {
-                btnClass = "bg-white/60 backdrop-blur-sm border border-white/80 text-slate-600 hover:bg-white/90 hover:border-purple-300 hover:text-purple-600 shadow-sm";
-              }
-            }
-
-            return (
-              <button
-                key={q.id}
-                onClick={() => navigateTo(i)}
-                disabled={isAutoRevealing}
-                className={`relative w-9 h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center ${btnClass}`}
-              >
-                <span className="font-black text-sm leading-none">
-                  {i + 1}
-                </span>
-                {isGraded && !active && status === "correct" && (
-                  <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
-                    <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
-                  </div>
-                )}
-                {isGraded && !active && status === "incorrect" && (
-                  <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
-                    <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-      {activeQuestions.length > 0 && (
-        <>
-        {/* ── SMART CONTAINER (Main Card + Right Padding Shift when top-right panel is active) ── */}
-        <div className="w-full max-w-4xl mx-auto lg:pr-[310px] 2xl:pr-0 z-10 relative transition-all duration-300">
+        {/* ── SMART CONTAINER (Main Card Centered) ── */}
+        <div className="w-full max-w-4xl mx-auto z-10 relative transition-all duration-300 flex flex-col items-center">
 
         {isShowingResultScreen && scoreResult ? (
         <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
@@ -2423,7 +2300,7 @@ export default function KidTeenQuizRunner({
               {/* ── TRUE / FALSE ── */}
               {qType === "TRUE_FALSE" && (
                 <div className="grid grid-cols-2 gap-6 pt-4">
-                  {[
+                  {seedShuffle([
                     { 
                       label: "True", 
                       value: true,
@@ -2442,7 +2319,7 @@ export default function KidTeenQuizRunner({
                         </div>
                       )
                     },
-                  ].map((opt, i) => {
+                  ], `${attemptSeed}-${currentQuestion?.id}-tf`).map((opt, i) => {
                     const isSelected = userAnswer === opt.value;
                     let isCorrectOpt = false;
                     if (typeof currentQuestionData.isTrue === "boolean") {
@@ -2682,6 +2559,94 @@ export default function KidTeenQuizRunner({
           </div>
         </div>
 
+        {/* ── DẢI SỐ CÂU HỎI BÊN DƯỚI (Vùng bôi đỏ, tối đa 2 hàng, căn giữa) ── */}
+        {questions && questions.length > 0 && !isShowingResultScreen && (
+          <div className="w-full mt-3 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
+            <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-white/80 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3.5 sm:px-5 py-2 sm:py-2.5 max-w-full overflow-x-auto scrollbar-none flex items-center justify-center">
+              <div
+                className={`grid ${
+                  questions.length > 8 ? "grid-rows-2" : "grid-rows-1"
+                } grid-flow-col auto-cols-max gap-1.5 sm:gap-2.5 items-center justify-center`}
+              >
+                {questions.map((q, i) => {
+                  const active = i === currentIndex;
+
+                  // Check answer status
+                  const ans = answers[q.id];
+                  let isAnswered = false;
+                  if (ans !== undefined && ans !== null) {
+                    if (Array.isArray(ans)) {
+                      isAnswered = ans.length > 0;
+                    } else if (typeof ans === "object") {
+                      isAnswered = Object.keys(ans).length > 0;
+                    } else {
+                      isAnswered = true;
+                    }
+                  }
+
+                  // Check if graded
+                  const isGraded = checkedQuestions[q.id];
+                  let status = "pending";
+                  if (isGraded) {
+                    status = getQuestionStatus(q, ans);
+                  }
+
+                  // Determine classes based on state
+                  let btnClass = "";
+
+                  if (isGraded) {
+                    if (status === "correct") {
+                      btnClass = active
+                        ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-105"
+                        : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600 opacity-90";
+                    } else if (status === "incorrect") {
+                      btnClass = active
+                        ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-105"
+                        : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 opacity-90";
+                    } else {
+                      btnClass = active
+                        ? "bg-slate-500 text-white border-2 border-slate-200 shadow-md shadow-slate-500/40 scale-105"
+                        : "bg-white/40 text-slate-400 border border-slate-300/60 border-dashed hover:bg-white/70";
+                    }
+                  } else {
+                    if (active) {
+                      btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-2 border-orange-200 scale-105 z-10";
+                    } else if (isAnswered) {
+                      btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
+                    } else {
+                      btnClass = "bg-white/75 backdrop-blur-sm border border-white/90 text-slate-700 hover:bg-white hover:border-purple-300 hover:text-purple-600 shadow-sm";
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => navigateTo(i)}
+                      disabled={isAutoRevealing}
+                      className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer ${btnClass}`}
+                      title={`Câu ${i + 1}`}
+                    >
+                      <span className="font-black text-xs sm:text-sm leading-none">
+                        {i + 1}
+                      </span>
+                      {isGraded && !active && status === "correct" && (
+                        <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
+                          <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
+                        </div>
+                      )}
+                      {isGraded && !active && status === "incorrect" && (
+                        <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
+                          <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Related Content in Review Mode (static, below the sliding card) */}
         {scoreResult && relatedAssignmentsPromise && (
           <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
@@ -2693,8 +2658,6 @@ export default function KidTeenQuizRunner({
         </>
         )}
         </div>
-        </>
-      )}
       </div>
 
       {/* ── NAV GUARD MODAL ── */}

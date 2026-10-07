@@ -118,6 +118,7 @@ model Class {
   joinCode        String            @unique
   isJoinable      Boolean           @default(true)
   autoApprove     Boolean           @default(true)
+  dailyDripUnlock Boolean           @default(false)
   teacherId       String
   deletedAt       DateTime?
   createdAt       DateTime          @default(now())

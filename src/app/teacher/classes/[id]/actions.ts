@@ -119,6 +119,21 @@ export async function toggleClassAutoApprove(classId: string, autoApprove: boole
   return { success: true };
 }
 
+export async function toggleClassDailyDripUnlock(classId: string, dailyDripUnlock: boolean) {
+  await requireTeacherClass(classId);
+
+  await prisma.class.update({
+    where: { id: classId },
+    data: { dailyDripUnlock }
+  });
+
+  await invalidateStudentClassDetailCache(classId);
+  revalidatePath('/teacher/classes');
+  revalidatePath(`/teacher/classes/${classId}`);
+  revalidatePath(`/student/classes/${classId}`);
+  return { success: true, dailyDripUnlock };
+}
+
 export async function updateStudentNote(classId: string, studentId: string, notes: string) {
   await requireTeacherClass(classId);
 
@@ -251,6 +266,7 @@ export async function updateClassInfo(
     description?: string | null;
     isJoinable?: boolean;
     autoApprove?: boolean;
+    dailyDripUnlock?: boolean;
   }
 ) {
   await requireTeacherClass(classId);
@@ -267,6 +283,7 @@ export async function updateClassInfo(
       description: data.description !== undefined ? (data.description ? data.description.trim() : null) : undefined,
       isJoinable: data.isJoinable !== undefined ? data.isJoinable : undefined,
       autoApprove: data.autoApprove !== undefined ? data.autoApprove : undefined,
+      dailyDripUnlock: data.dailyDripUnlock !== undefined ? data.dailyDripUnlock : undefined,
     },
   });
 

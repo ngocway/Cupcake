@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentAssignmentsView, StudentAssignmentGroup } from './_components/StudentAssignmentsView';
 import { sortGroupItems, isScoredAssignment } from './_utils/assignmentOrder';
+import { applyDailyDripProgression } from './_utils/dailyDripProgression';
 import { ClassHeroBento } from './_components/ClassHeroBento';
 import StudentClassDetailLoading from './loading';
 
@@ -95,7 +96,7 @@ async function getStudentClassDetailData(userId: string, classId: string) {
             assignmentId: { in: assignmentIds },
             submittedAt: { not: null }
           },
-          select: { assignmentId: true, groupId: true, score: true }
+          select: { assignmentId: true, groupId: true, score: true, submittedAt: true }
         })
       : [];
 
@@ -161,10 +162,12 @@ async function getStudentClassDetailData(userId: string, classId: string) {
 async function StudentClassDetailContent({ 
   id,
   userId,
+  userRole,
   searchParams
 }: { 
   id: string;
   userId: string;
+  userRole?: string;
   searchParams?: { groupId?: string; viewAll?: string; assignmentId?: string; tab?: string };
 }) {
   const initialGroupId = (searchParams as any)?.groupId || null;
@@ -227,14 +230,18 @@ async function StudentClassDetailContent({
   );
   const submittedAssignmentIds = new Set(submissions.map((s: any) => s.assignmentId));
   const submissionScoreMap = new Map<string, number | null>();
+  const submissionDateMap = new Map<string, string>();
   submissions.forEach((s: any) => {
     const val = s.score !== null && s.score !== undefined
       ? (typeof s.score === 'number' ? Number(s.score.toFixed(1)) : s.score)
       : null;
+    const dateStr = s.submittedAt ? new Date(s.submittedAt).toISOString() : null;
     if (s.groupId) {
       submissionScoreMap.set(`${s.assignmentId}_${s.groupId}`, val);
+      if (dateStr) submissionDateMap.set(`${s.assignmentId}_${s.groupId}`, dateStr);
     }
     submissionScoreMap.set(s.assignmentId, val);
+    if (dateStr) submissionDateMap.set(s.assignmentId, dateStr);
   });
 
   // Group assignments by Group (or ungrouped legacy)
@@ -324,6 +331,10 @@ async function StudentClassDetailContent({
       ? (submissionScoreMap.get(groupKey) ?? null)
       : (submissionScoreMap.get(ac.assignment.id) ?? null);
 
+    const submittedAt = (groupKey && submissionDateMap.get(groupKey))
+      || submissionDateMap.get(ac.assignment.id)
+      || null;
+
     groupsMap.get(gId)!.items.push({
       classId: id,
       groupId: gId,
@@ -345,6 +356,7 @@ async function StudentClassDetailContent({
       dueDate: ac.dueDate ? new Date(ac.dueDate).toISOString() : null,
       isSubmitted,
       score,
+      submittedAt,
     });
   });
 
@@ -367,40 +379,54 @@ async function StudentClassDetailContent({
     groupStatsMap.set(g.id, { total, completed, percent });
   });
 
-  // 4. Calculate locked / unlock progression status per group
-  assignmentGroups.forEach((g) => {
-    if (g.forceUnlocked || !g.prerequisiteGroupId) {
-      g.isLocked = false;
-      return;
-    }
+  const isTeacherOrAdmin = userRole === 'TEACHER' || userRole === 'ADMIN' || cls.teacherId === userId;
+  const isDailyDrip = Boolean((cls as any)?.dailyDripUnlock);
 
-    const prereqStats = groupStatsMap.get(g.prerequisiteGroupId);
-    const threshold = g.unlockThreshold ?? 60;
+  let finalAssignmentGroups = assignmentGroups;
 
-    if (!prereqStats || prereqStats.total === 0) {
-      g.isLocked = false;
-      return;
-    }
+  if (isDailyDrip) {
+    // Chế độ Mở bài theo ngày (Daily Drip): 5:00 sáng hôm sau sau khi làm xong 100% bài trước, xem trước 2 ngày khóa
+    const dripResult = applyDailyDripProgression(assignmentGroups, {
+      now: new Date(),
+      isTeacherOrAdmin,
+    });
+    finalAssignmentGroups = dripResult.visibleGroups;
+  } else {
+    // 4. Calculate locked / unlock progression status per group (Chế độ thông thường)
+    assignmentGroups.forEach((g) => {
+      if (g.forceUnlocked || !g.prerequisiteGroupId) {
+        g.isLocked = false;
+        return;
+      }
 
-    g.prerequisiteTotalCount = prereqStats.total;
-    g.prerequisiteCompletedCount = prereqStats.completed;
-    g.prerequisitePercent = prereqStats.percent;
+      const prereqStats = groupStatsMap.get(g.prerequisiteGroupId);
+      const threshold = g.unlockThreshold ?? 60;
 
-    const neededCount = Math.ceil(prereqStats.total * (threshold / 100));
-    const remainingCount = Math.max(0, neededCount - prereqStats.completed);
+      if (!prereqStats || prereqStats.total === 0) {
+        g.isLocked = false;
+        return;
+      }
 
-    if (prereqStats.percent < threshold) {
-      g.isLocked = true;
-      g.lockReason = `Cần hoàn thành tối thiểu ${threshold}% (${neededCount}/${prereqStats.total} bài) của "${g.prerequisiteGroupTitle || 'nhóm trước'}". Bạn đã hoàn thành ${prereqStats.completed}/${prereqStats.total} bài (${prereqStats.percent}%) — Còn thiếu ${remainingCount} bài để mở khóa.`;
-    } else {
-      g.isLocked = false;
-    }
-  });
+      g.prerequisiteTotalCount = prereqStats.total;
+      g.prerequisiteCompletedCount = prereqStats.completed;
+      g.prerequisitePercent = prereqStats.percent;
+
+      const neededCount = Math.ceil(prereqStats.total * (threshold / 100));
+      const remainingCount = Math.max(0, neededCount - prereqStats.completed);
+
+      if (prereqStats.percent < threshold) {
+        g.isLocked = true;
+        g.lockReason = `Cần hoàn thành tối thiểu ${threshold}% (${neededCount}/${prereqStats.total} bài) của "${g.prerequisiteGroupTitle || 'nhóm trước'}". Bạn đã hoàn thành ${prereqStats.completed}/${prereqStats.total} bài (${prereqStats.percent}%) — Còn thiếu ${remainingCount} bài để mở khóa.`;
+      } else {
+        g.isLocked = false;
+      }
+    });
+  }
 
   // 5. Find next uncompleted task for quick resume CTA (Only from unlocked groups in roadmap order)
   let nextTask: { id: string; title: string; kind: string; targetUrl: string } | null = null;
   let uncompletedItem: any = null;
-  for (const grp of assignmentGroups) {
+  for (const grp of finalAssignmentGroups) {
     if (grp.isLocked) continue;
     const found = grp.items.find((i) => isScoredAssignment(i) && !i.isSubmitted);
     if (found) {
@@ -468,7 +494,7 @@ async function StudentClassDetailContent({
 
   return (
     <StudentAssignmentsView 
-      assignmentGroups={assignmentGroups} 
+      assignmentGroups={finalAssignmentGroups} 
       initialGroupId={initialGroupId}
       initialViewAll={initialViewAll}
       initialAssignmentId={initialAssignmentId}
@@ -524,6 +550,7 @@ export default async function StudentClassDetailPage({
           <StudentClassDetailContent 
             id={id} 
             userId={session.user.id} 
+            userRole={session.user.role}
             searchParams={(resolvedSearchParams as any) || {}} 
           />
         </Suspense>

@@ -37,7 +37,7 @@ async function ClassDashboardContent({
           id: classId,
           ...(isTeacherAdmin ? {} : { teacherId }),
         },
-        select: { id: true, name: true, joinCode: true, isJoinable: true, autoApprove: true, teacherId: true },
+        select: { id: true, name: true, joinCode: true, isJoinable: true, autoApprove: true, dailyDripUnlock: true, teacherId: true },
       }),
       // 2. Enrolled students
       prisma.classEnrollment.findMany({
@@ -190,6 +190,7 @@ async function ClassDashboardContent({
       initialJoinCode={cls.joinCode}
       initialIsJoinable={cls.isJoinable}
       initialAutoApprove={cls.autoApprove ?? true}
+      initialDailyDripUnlock={cls.dailyDripUnlock ?? false}
       initialStudents={students}
       initialAssignments={assignments}
       initialOpenAssignmentCount={initialOpenAssignmentCount}

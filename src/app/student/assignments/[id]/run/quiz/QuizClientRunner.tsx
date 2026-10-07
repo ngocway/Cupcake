@@ -801,10 +801,8 @@ export default function QuizClientRunner({
   const { isHidden } = useScrollDirection();
 
   const questions = useMemo(() => {
-    // 1. Shuffle the questions list
-    const shuffledList = seedShuffle(rawQuestions, submissionId || assignment?.id || "");
-    // 2. For each question, shuffle its options if they exist
-    return shuffledList.map((q) => {
+    // Keep question order fixed, only shuffle options within each question
+    return (rawQuestions || []).map((q) => {
       let parsedContent: any;
       try {
         parsedContent = typeof q.content === 'string' ? JSON.parse(q.content) : q.content;
@@ -1398,10 +1396,12 @@ export default function QuizClientRunner({
                               "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
                               "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
                             ];
-                            return [
+                            const tfBase = [
                                { label: t("correct"), value: true },
                                { label: t("incorrect"), value: false }
-                            ].map((opt, i) => {
+                            ];
+                            const shuffledTf = seedShuffle(tfBase, `${submissionId || assignment?.id || ""}-${q.id}-tf`);
+                            return shuffledTf.map((opt, i) => {
                               const blobShape = blobShapes[i % blobShapes.length];
                               const isSelected = userAnswer === opt.value;
                               let isCorrect = false;

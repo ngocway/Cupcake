@@ -1,7 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import KidTeenQuizRunner from '@/app/student/assignments/[id]/run/quiz/KidTeenQuizRunner';
+import dynamic from 'next/dynamic';
+
+const KidTeenQuizRunner = dynamic(
+  () => import('@/app/student/assignments/[id]/run/quiz/KidTeenQuizRunner'),
+  {
+    loading: () => (
+      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Đang tải bài tập...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 import { getStudentQuizRunnerData, ensureStudentSubmission } from '@/app/student/assignments/[id]/run/actions';
 import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { getCachedQuizData, setCachedQuizData, fetchQuizDataWithCache } from '../_utils/assignmentCache';

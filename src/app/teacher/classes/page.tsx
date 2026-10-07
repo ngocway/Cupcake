@@ -15,6 +15,7 @@ interface ClassData {
   classCode: string;
   isJoinable?: boolean;
   autoApprove?: boolean;
+  dailyDripUnlock?: boolean;
   createdAt: string;
   _count: { enrollments: number };
 }

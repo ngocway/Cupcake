@@ -16,7 +16,8 @@ import {
   Loader2, 
   AlertTriangle,
   Lock,
-  LockOpen
+  LockOpen,
+  Clock
 } from "lucide-react";
 import { updateClassInfo, deleteClass, regenerateClassJoinCode } from "../[id]/actions";
 
@@ -28,6 +29,7 @@ export interface ClassData {
   classCode: string;
   isJoinable?: boolean;
   autoApprove?: boolean;
+  dailyDripUnlock?: boolean;
   createdAt: string;
   _count: { enrollments: number };
 }
@@ -44,6 +46,7 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
   const [description, setDescription] = useState("");
   const [isJoinable, setIsJoinable] = useState(true);
   const [autoApprove, setAutoApprove] = useState(true);
+  const [dailyDripUnlock, setDailyDripUnlock] = useState(false);
   const [currentJoinCode, setCurrentJoinCode] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
@@ -61,6 +64,7 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
       setDescription(classData.description || "");
       setIsJoinable(classData.isJoinable ?? true);
       setAutoApprove(classData.autoApprove ?? true);
+      setDailyDripUnlock(classData.dailyDripUnlock ?? false);
       setCurrentJoinCode(classData.joinCode || "");
       setShowDeleteConfirm(false);
     }
@@ -124,6 +128,7 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
         description,
         isJoinable,
         autoApprove,
+        dailyDripUnlock,
       });
 
       if (res.success) {
@@ -307,6 +312,29 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
                   type="checkbox"
                   checked={autoApprove}
                   onChange={(e) => setAutoApprove(e.target.checked)}
+                  className="size-5 rounded text-primary focus:ring-primary/40 border-slate-300 cursor-pointer"
+                />
+              </label>
+
+              {/* dailyDripUnlock toggle */}
+              <label className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 hover:bg-slate-50/60 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className={`size-8 rounded-lg flex items-center justify-center ${dailyDripUnlock ? "bg-indigo-500/10 text-indigo-600" : "bg-slate-500/10 text-slate-500"}`}>
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">Mở bài theo ngày (Daily Drip)</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {dailyDripUnlock 
+                        ? "Mỗi ngày mở 1 bài vào 05:00 sáng sau khi hoàn thành 100% bài trước. Luôn xem trước 2 bài." 
+                        : "Học sinh có thể học tự do hoặc theo điều kiện thông thường"}
+                    </p>
+                  </div>
+                </div>
+                <input 
+                  type="checkbox"
+                  checked={dailyDripUnlock}
+                  onChange={(e) => setDailyDripUnlock(e.target.checked)}
                   className="size-5 rounded text-primary focus:ring-primary/40 border-slate-300 cursor-pointer"
                 />
               </label>
