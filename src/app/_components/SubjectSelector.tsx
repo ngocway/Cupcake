@@ -6,6 +6,16 @@ import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils";
 import { useRouter } from "next/navigation";
 import { useTransition, useState, useEffect } from "react";
 import { SidebarContentTypeMenu } from "./SidebarContentTypeMenu";
+import { 
+  Lock, 
+  ChevronDown, 
+  GraduationCap, 
+  Gamepad2, 
+  Layers, 
+  BookOpen, 
+  CircleHelp, 
+  BookOpenText 
+} from "lucide-react";
 
 interface SubjectConfig {
   id: string;
@@ -174,12 +184,10 @@ export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
                 )}
                 <span className="font-headline font-bold">{displayLabel}</span>
                 {isLocked ? (
-                  <span className="material-symbols-rounded lock ml-auto text-slate-400 font-normal">lock</span>
+                  <Lock className="w-4 h-4 ml-auto text-slate-400 shrink-0" />
                 ) : (
                   subject.id === "english" && (
-                    <span className={`material-symbols-rounded ml-auto font-normal transition-transform duration-300 ${isMenuOpen ? "rotate-180" : ""}`}>
-                      expand_more
-                    </span>
+                    <ChevronDown className={`w-5 h-5 ml-auto text-current transition-transform duration-300 shrink-0 ${isMenuOpen ? "rotate-180" : ""}`} />
                   )
                 )}
               </button>
@@ -194,12 +202,12 @@ export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
               {/* Collapsed state mini-preview icons */}
               {!isMenuOpen && isActive && subject.id === "english" && (
                 <div className="flex gap-3 px-3 py-2 bg-white/60 rounded-[16px] border border-[#F0E2BF] w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-white transition-all shadow-xs" onClick={toggleMenu}>
-                  <span className="material-symbols-rounded text-base text-[#E58A1F] opacity-75">school</span>
-                  <span className="material-symbols-rounded text-base text-[#FF6F96] opacity-75">sports_esports</span>
-                  <span className="material-symbols-rounded text-base text-[#7B5CFA] opacity-75">style</span>
-                  <span className="material-symbols-rounded text-base text-[#0B7A58] opacity-75">import_contacts</span>
-                  <span className="material-symbols-rounded text-base text-[#3FA9F5] opacity-75">edit_note</span>
-                  <span className="material-symbols-rounded text-base text-[#FF9F43] opacity-75">auto_stories</span>
+                  <GraduationCap className="w-4 h-4 text-[#E58A1F] opacity-75 shrink-0" />
+                  <Gamepad2 className="w-4 h-4 text-[#FF6F96] opacity-75 shrink-0" />
+                  <Layers className="w-4 h-4 text-[#7B5CFA] opacity-75 shrink-0" />
+                  <BookOpen className="w-4 h-4 text-[#0B7A58] opacity-75 shrink-0" />
+                  <CircleHelp className="w-4 h-4 text-[#3FA9F5] opacity-75 shrink-0" />
+                  <BookOpenText className="w-4 h-4 text-[#FF9F43] opacity-75 shrink-0" />
                 </div>
               )}
             </div>

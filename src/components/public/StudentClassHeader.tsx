@@ -18,9 +18,12 @@ import {
   X,
   LayoutDashboard,
   ShieldCheck,
-  Briefcase
+  Briefcase,
+  CircleHelp,
+  BookOpenText
 } from "lucide-react";
 import { NotificationBell } from "@/components/common/NotificationBell";
+import { useContentStore } from "@/store/useContentStore";
 
 interface StudentClassHeaderProps {
   session: {
@@ -38,6 +41,7 @@ export function StudentClassHeader({ session }: StudentClassHeaderProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -50,42 +54,48 @@ export function StudentClassHeader({ session }: StudentClassHeaderProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Navigation Items according to Option A (Real Dolcake features)
+  // Navigation Items matching Homepage Quick Practice (100% English)
   const navItems = [
     {
-      label: "Lớp học",
-      href: "/student/classes",
+      label: "Class",
+      href: "/?tab=classes",
+      tabId: "classes",
       icon: GraduationCap,
-      isActive: true, // Always active on class pages
+      isActive: true, // Active on class pages
     },
     {
-      label: "Bài tập",
-      href: "/student/assignments",
-      icon: ClipboardList,
+      label: "Grammar",
+      href: "/?tab=exercises",
+      tabId: "exercises",
+      icon: CircleHelp,
       isActive: false,
     },
     {
-      label: "Bài học & Ngữ pháp",
-      href: "/student/lessons",
+      label: "Reading",
+      href: "/?tab=lessons",
+      tabId: "lessons",
       icon: BookOpen,
       isActive: false,
     },
     {
-      label: "Từ vựng",
-      href: "/flashcards",
+      label: "Flashcards",
+      href: "/?tab=flashcards",
+      tabId: "flashcards",
       icon: Layers,
       isActive: false,
     },
     {
-      label: "Trò chơi",
-      href: "/game",
+      label: "Games",
+      href: "/?tab=games",
+      tabId: "games",
       icon: Gamepad2,
       isActive: false,
     },
     {
-      label: "Lộ trình",
-      href: "/student/dashboard",
-      icon: Compass,
+      label: "Shadowing",
+      href: "/?tab=shadowing",
+      tabId: "shadowing",
+      icon: BookOpenText,
       isActive: false,
     },
   ];
@@ -123,6 +133,9 @@ export function StudentClassHeader({ session }: StudentClassHeaderProps) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => {
+                  if (setActiveTab) setActiveTab(item.tabId);
+                }}
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   item.isActive
                     ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-extrabold shadow-2xs"
@@ -287,7 +300,10 @@ export function StudentClassHeader({ session }: StudentClassHeaderProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setIsMobileNavOpen(false)}
+                  onClick={() => {
+                    if (setActiveTab) setActiveTab(item.tabId);
+                    setIsMobileNavOpen(false);
+                  }}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                     item.isActive
                       ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"

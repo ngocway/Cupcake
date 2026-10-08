@@ -10,6 +10,23 @@ import { useContentStore } from "@/store/useContentStore"
 import { useTranslations } from "next-intl"
 import { TeacherLanguageSelector } from "@/components/teacher/TeacherLanguageSelector"
 import { StudentClassHeader } from "./StudentClassHeader"
+import { 
+  Gamepad2, 
+  BookOpen, 
+  Search, 
+  ChevronDown, 
+  ChevronRight, 
+  LayoutDashboard, 
+  GraduationCap, 
+  User, 
+  Settings, 
+  LogOut, 
+  ClipboardList, 
+  History, 
+  Bookmark, 
+  Star,
+  ArrowLeftRight
+} from "lucide-react"
 
 const LANG_LABELS: Record<string, string> = {
   vi: "Tiếng Việt", th: "ภาษาไทย", id: "Bahasa Indonesia",
@@ -147,7 +164,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
     }
   }
 
-  const isTeacherAccount = session?.role === "TEACHER" || session?.role === "ADMIN"
+  const isTeacherAccount = session?.role?.toUpperCase() === "TEACHER" || session?.role?.toUpperCase() === "ADMIN" || session?.email === "admin@cupcakes.com"
   const isTeacherSection = pathname.startsWith("/teacher") || isTeacherDomain
   const isTeacher = isTeacherAccount || isTeacherSection
   const dashboardHref = isTeacherAccount ? "/teacher" : "/student/dashboard"
@@ -191,22 +208,33 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         {pathname.startsWith("/teacher") ? (
           <Link 
             href="/"
-            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 border border-emerald-500 shadow-sm hover:shadow-md hover:shadow-emerald-500/25 active:scale-95 group ml-1 sm:ml-2"
+            className="hidden sm:inline-flex items-center gap-2.5 pl-2 pr-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 border border-emerald-500/80 shadow-sm hover:shadow-md hover:shadow-emerald-500/25 active:scale-95 group ml-1 sm:ml-2"
           >
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300">
-              <span className="material-symbols-outlined text-[15px]">auto_stories</span>
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300 shrink-0">
+              <BookOpen className="w-4 h-4 text-white" />
             </span>
-            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Quay về học</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-headline tracking-tight text-xs sm:text-[13px] font-bold text-white">Student Portal</span>
+            </div>
+            <ArrowLeftRight className="w-4 h-4 text-emerald-200 group-hover:text-white group-hover:rotate-180 transition-all duration-500 shrink-0 ml-0.5" />
           </Link>
         ) : isTeacherAccount ? (
           <Link 
             href="/teacher"
-            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-105 shadow-md shadow-blue-500/25 active:scale-95 ml-1 sm:ml-2 shrink-0 group"
+            className="hidden sm:inline-flex items-center gap-2.5 pl-2.5 pr-4 py-2 bg-gradient-to-r from-[#2dd4bf] to-[#06b6d4] hover:from-[#14b8a6] hover:to-[#0891b2] text-white rounded-full text-xs font-bold transition-all duration-300 hover:scale-[1.02] hover:-translate-y-0.5 border border-white/30 hover:border-white/50 shadow-[0_4px_14px_rgba(6,182,212,0.35),inset_0_1px_0_rgba(255,255,255,0.4)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.5),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-md active:scale-95 ml-1 sm:ml-2 shrink-0 group cursor-pointer"
           >
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-white group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-300">
-              <span className="material-symbols-outlined text-[15px]">sports_esports</span>
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 border border-white/30 text-white shadow-sm group-hover:scale-110 group-hover:bg-white/30 group-hover:rotate-6 transition-all duration-300 shrink-0">
+              <GraduationCap className="w-4 h-4" />
             </span>
-            <span className="font-headline tracking-tight text-[11px] sm:text-xs">Giáo viên tạo game</span>
+            <div className="flex items-center gap-2">
+              <span className="font-headline tracking-tight text-xs sm:text-[13px] font-black text-white">
+                Teacher Portal
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-white/20 text-white border border-white/30 text-[9.5px] font-black tracking-wider uppercase backdrop-blur-sm">
+                STUDIO
+              </span>
+            </div>
+            <ArrowLeftRight className="w-4 h-4 text-cyan-100 group-hover:text-white group-hover:rotate-180 transition-all duration-500 shrink-0 ml-0.5" />
           </Link>
         ) : null}
       </div>
@@ -219,12 +247,10 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                 <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              <span 
+              <Search 
                 onClick={handleTriggerSearch}
-                className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-primary/20 group-focus-within:text-primary transition-all duration-500 cursor-pointer hover:scale-110 z-10"
-              >
-                search
-              </span>
+                className="w-5 h-5 absolute left-5 top-1/2 -translate-y-1/2 text-primary/30 group-focus-within:text-primary transition-all duration-500 cursor-pointer hover:scale-110 z-10"
+              />
             )}
             <input 
               value={localSearch}
@@ -256,7 +282,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                   />
                 </div>
                 <span className="hidden sm:inline-block max-w-[120px] truncate text-xs font-bold">{session.name || t("profile")}</span>
-                <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${isMenuOpen ? "rotate-180" : ""}`}>expand_more</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isMenuOpen ? "rotate-180" : ""}`} />
               </button>
 
               {/* Dropdown Menu */}
@@ -303,7 +329,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                                   : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                              <LayoutDashboard className="w-4 h-4" />
                               <span>Dashboard</span>
                             </Link>
                             <Link 
@@ -315,7 +341,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                                   : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[18px]">school</span>
+                              <GraduationCap className="w-4 h-4" />
                               <span>Lớp học</span>
                             </Link>
                             <Link 
@@ -327,7 +353,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                                   : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[18px]">menu_book</span>
+                              <BookOpen className="w-4 h-4" />
                               <span>Bài học</span>
                             </Link>
                             <Link 
@@ -339,7 +365,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                                   : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[18px]">contact_page</span>
+                              <User className="w-4 h-4" />
                               <span>Quản lý Portfolio</span>
                             </Link>
                             <Link 
@@ -351,7 +377,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                                   : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                               }`}
                             >
-                              <span className="material-symbols-outlined text-[18px]">settings</span>
+                              <Settings className="w-4 h-4" />
                               <span>Cài đặt</span>
                             </Link>
                           </>
@@ -362,7 +388,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                           onClick={() => signOut({ callbackUrl: "/" })}
                           className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
                         >
-                          <span className="material-symbols-outlined text-[18px]">logout</span>
+                          <LogOut className="w-4 h-4" />
                           <span>Đăng xuất</span>
                         </button>
                       </>
@@ -378,7 +404,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                                 : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                             }`}
                           >
-                            <span className="material-symbols-outlined text-[18px]">dashboard</span>
+                            <LayoutDashboard className="w-4 h-4" />
                             <span>{t("dashboard")}</span>
                           </Link>
                         ) : (
@@ -393,14 +419,14 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <span className={`material-symbols-outlined text-[19px] font-bold transition-transform group-hover:scale-110 ${
+                                <GraduationCap className={`w-[19px] h-[19px] font-bold transition-transform group-hover:scale-110 ${
                                   isActive('/student/classes') ? "text-white" : "text-emerald-600 dark:text-emerald-400"
-                                }`}>school</span>
+                                }`} />
                                 <span className="font-extrabold text-[13px] tracking-tight">Class</span>
                               </div>
-                              <span className={`material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5 ${
+                              <ChevronRight className={`w-4 h-4 transition-transform group-hover:translate-x-0.5 ${
                                 isActive('/student/classes') ? "text-white/80" : "text-emerald-600/60 dark:text-emerald-400/60"
-                              }`}>chevron_right</span>
+                              }`} />
                             </Link>
                           </div>
                         )}
@@ -413,7 +439,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
-                          <span className="material-symbols-outlined text-[18px]">person</span>
+                          <User className="w-4 h-4" />
                           <span>{t("profile")}</span>
                         </Link>
                         
@@ -428,7 +454,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
-                          <span className="material-symbols-outlined text-[18px]">assignment</span>
+                          <ClipboardList className="w-4 h-4" />
                           <span>Bài tập của tôi</span>
                         </Link>
                         <Link 
@@ -440,7 +466,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
-                          <span className="material-symbols-outlined text-[18px]">history_edu</span>
+                          <History className="w-4 h-4" />
                           <span>Bài học đã học</span>
                         </Link>
                         <Link 
@@ -452,7 +478,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
-                          <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                          <Bookmark className="w-4 h-4" />
                           <span>Đã lưu</span>
                         </Link>
                         <Link 
@@ -464,7 +490,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               : "text-on-surface-variant/70 hover:bg-surface-container-low hover:text-primary"
                           }`}
                         >
-                          <span className="material-symbols-outlined text-[18px]">star</span>
+                          <Star className="w-4 h-4" />
                           <span>Đánh giá của tôi</span>
                         </Link>
                         
@@ -485,7 +511,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                             <span className="border border-amber-300 px-1.5 py-0.5 bg-amber-50 text-amber-800 rounded-full">
                               {LANG_LABELS[nativeLanguage] || "English"}
                             </span>
-                            <span className="material-symbols-outlined text-[13px] text-primary/30 group-hover:text-primary ml-0.5">settings</span>
+                            <Settings className="w-3.5 h-3.5 text-primary/30 group-hover:text-primary ml-0.5 inline shrink-0" />
                           </div>
                         </button>
 
@@ -495,7 +521,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                           onClick={() => signOut({ callbackUrl: "/" })}
                           className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
                         >
-                          <span className="material-symbols-outlined text-[18px]">logout</span>
+                          <LogOut className="w-4 h-4" />
                           <span>Đăng xuất</span>
                         </button>
                       </>

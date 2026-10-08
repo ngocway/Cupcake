@@ -5,7 +5,19 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock, Settings, Sparkles } from "lucide-react";
+import { 
+  Lock, 
+  Settings, 
+  Sparkles, 
+  GraduationCap, 
+  Gamepad2, 
+  Layers, 
+  BookOpen, 
+  CircleHelp, 
+  BookOpenText, 
+  Bot, 
+  Pencil 
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import { AgeGroupRestrictionModal } from "@/components/modals/AgeGroupRestrictionModal";
 
@@ -182,10 +194,10 @@ export function SidebarContentTypeMenu() {
 
   return (
     <div className="flex flex-col w-full text-[#3E3524] select-none">
-      {/* Dynamic Font Loading for Baloo 2 and Material Symbols Rounded */}
+      {/* Dynamic Font Loading for Baloo 2 */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0" rel="stylesheet" />
+      <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
 
       <style>{`
         /* Scoped styles with hex codes directly to match user html exactly */
@@ -257,18 +269,23 @@ export function SidebarContentTypeMenu() {
         }
 
         /* Micro-interactions applied on hover */
+        .cefr-redesign-tile.lessons:hover .cefr-redesign-tile-icon svg,
         .cefr-redesign-tile.lessons:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: book-shake 0.6s ease-in-out infinite;
         }
+        .cefr-redesign-tile.flash:hover .cefr-redesign-tile-icon svg,
         .cefr-redesign-tile.flash:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: flash-flip-anim 0.6s ease-in-out infinite;
         }
+        .cefr-redesign-tile.games:hover .cefr-redesign-tile-icon svg,
         .cefr-redesign-tile.games:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: wiggle-gamepad 0.5s ease-in-out infinite;
         }
+        .cefr-redesign-tile.exercise:hover .cefr-redesign-tile-icon svg,
         .cefr-redesign-tile.exercise:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: pencil-write-anim 0.6s ease-in-out infinite;
         }
+        .cefr-redesign-tile.story:hover .cefr-redesign-tile-icon svg,
         .cefr-redesign-tile.story:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: book-float-anim 0.8s ease-in-out infinite;
         }
@@ -276,6 +293,7 @@ export function SidebarContentTypeMenu() {
           0%, 100% { transform: translateY(0) rotate(0); }
           50% { transform: translateY(-4px) rotate(-6deg); }
         }
+        .cefr-redesign-tile.classes:hover .cefr-redesign-tile-icon svg,
         .cefr-redesign-tile.classes:hover .cefr-redesign-tile-icon .material-symbols-rounded {
           animation: cap-bounce 0.6s ease-in-out infinite;
         }
@@ -371,6 +389,7 @@ export function SidebarContentTypeMenu() {
           box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.35);
         }
 
+        .cefr-redesign-dolbot-btn:hover svg,
         .cefr-redesign-dolbot-btn:hover .material-symbols-rounded {
           animation: robot-float 1s ease-in-out infinite;
         }
@@ -379,7 +398,8 @@ export function SidebarContentTypeMenu() {
           transform: translateY(-1px);
         }
 
-        .cefr-redesign-dolbot-btn .material-symbols-rounded {
+        .cefr-redesign-dolbot-btn .material-symbols-rounded,
+        .cefr-redesign-dolbot-btn svg {
           font-size: 20px !important;
           color: #FFFFFF !important;
           transition: transform 0.3s ease;
@@ -437,7 +457,7 @@ export function SidebarContentTypeMenu() {
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">school</span>
+                  <GraduationCap className="w-[26px] h-[26px] stroke-[2.3]" />
                 </div>
               </div>
               <p className="cefr-redesign-tile-label">
@@ -452,7 +472,7 @@ export function SidebarContentTypeMenu() {
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">sports_esports</span>
+                  <Gamepad2 className="w-[26px] h-[26px] stroke-[2.3]" />
                 </div>
               </div>
               <p className="cefr-redesign-tile-label">
@@ -467,7 +487,7 @@ export function SidebarContentTypeMenu() {
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">layers</span>
+                  <Layers className="w-[26px] h-[26px] stroke-[2.3]" />
                 </div>
               </div>
               <p className="cefr-redesign-tile-label">
@@ -482,7 +502,7 @@ export function SidebarContentTypeMenu() {
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">menu_book</span>
+                  <BookOpen className="w-[26px] h-[26px] stroke-[2.3]" />
                 </div>
                 {isTabLocked("lessons") && (
                   <div className="p-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-amber-600 shadow-xs border border-amber-300/50">
@@ -502,7 +522,7 @@ export function SidebarContentTypeMenu() {
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">quiz</span>
+                  <CircleHelp className="w-[26px] h-[26px] stroke-[2.3]" />
                 </div>
                 {isTabLocked("exercises") && (
                   <div className="p-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-amber-600 shadow-xs border border-amber-300/50">
@@ -522,7 +542,7 @@ export function SidebarContentTypeMenu() {
             >
               <div className="cefr-redesign-tile-top">
                 <div className="cefr-redesign-tile-icon">
-                  <span className="material-symbols-rounded">auto_stories</span>
+                  <BookOpenText className="w-[26px] h-[26px] stroke-[2.3]" />
                 </div>
                 {isTabLocked("shadowing") && (
                   <div className="p-1 rounded-lg bg-white/80 dark:bg-slate-900/80 text-amber-600 shadow-xs border border-amber-300/50">
@@ -540,7 +560,7 @@ export function SidebarContentTypeMenu() {
         {/* Dolbot Chat button */}
         <Link href="/student/game/robot-chat" className="decoration-transparent text-inherit">
           <div className="cefr-redesign-dolbot-btn">
-            <span className="material-symbols-rounded">smart_toy</span>
+            <Bot className="w-5 h-5 shrink-0 text-white" />
             <span className="cefr-redesign-dolbot-text">
               {locale === "vi" ? "Chat với Dolbot" : "Chat with Dolbot"}
             </span>
@@ -585,7 +605,7 @@ export function SidebarContentTypeMenu() {
               </div>
             </div>
             <div className="w-7 h-7 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-all shrink-0">
-              <span className="material-symbols-rounded text-sm">edit</span>
+              <Pencil className="w-3.5 h-3.5" />
             </div>
           </button>
         )}

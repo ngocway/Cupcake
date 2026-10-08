@@ -20,6 +20,8 @@ import {
   Users,
   CheckCircle2,
   Clock,
+  Compass,
+  ArrowDown,
 } from 'lucide-react';
 
 import { useContentStore } from '@/store/useContentStore';
@@ -822,16 +824,28 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
       {/* ========================================================= */}
       <section className="space-y-5 w-full max-w-full min-w-0">
         {/* Header bar */}
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-headline tracking-tight flex items-center gap-2.5">
-            <span className="material-symbols-rounded !text-3xl text-blue-600">school</span>
-            {isVi ? 'Lớp học của tôi' : 'My Classes'}
-          </h2>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-            {isVi
-              ? 'Theo dõi bài tập và tham gia các lớp học của bạn'
-              : 'Track your assignments and continue learning'}
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-headline tracking-tight flex items-center gap-2.5">
+              <GraduationCap className="w-7 h-7 text-blue-600 shrink-0 stroke-[2.3]" />
+              {isVi ? 'Lớp học của tôi' : 'My Classes'}
+            </h2>
+            <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+              {isVi
+                ? 'Theo dõi bài tập và tham gia các lớp học của bạn'
+                : 'Track your assignments and continue learning'}
+            </p>
+          </div>
+          {activeClasses.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsJoinModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 dark:text-purple-300 font-bold text-xs sm:text-sm border border-purple-200 dark:border-purple-800 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>{isVi ? 'Nhập mã lớp' : 'Join with Code'}</span>
+            </button>
+          )}
         </div>
 
         {/* Pending Requests Section */}
@@ -905,19 +919,82 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
             ))}
           </div>
         ) : (
-          /* Empty State if student hasn't joined any classes yet */
-          <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-700 p-8 sm:p-10 text-center flex flex-col items-center justify-center shadow-xs">
-            <div className="size-16 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mb-3.5">
-              <BookOpen className="w-8 h-8" />
+          /* Empty State: Left Notification (70% - Desktop only) ⇄ Right Join with Code Card (30%) */
+          <div className="grid grid-cols-1 md:grid-cols-10 gap-5 sm:gap-6 w-full items-stretch">
+            {/* Khối 1 (Bên trái): Thông báo chưa tham gia lớp nào (70% - Ẩn trên mobile, hiện trên desktop) */}
+            <div className="hidden md:flex relative rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-6 sm:p-7 flex-col justify-between shadow-xs transition-all duration-300 hover:shadow-md group overflow-hidden md:col-span-7">
+              <div className="flex items-start gap-4 mb-5">
+                <div className="size-14 sm:size-16 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 border border-amber-200/60 dark:border-amber-800/60 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform duration-300">
+                  <BookOpen className="w-7 h-7 stroke-[2.2]" />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/80 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[11px] font-black tracking-wider uppercase">
+                    {isVi ? 'CHƯA CÓ LỚP HỌC' : 'NO CLASSES YET'}
+                  </span>
+                  <h4 className="text-lg sm:text-xl font-black text-slate-800 dark:text-white font-headline leading-tight">
+                    {isVi ? 'Bạn chưa tham gia lớp học nào' : "You haven't joined any classes yet"}
+                  </h4>
+                  <p className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-xl">
+                    {isVi
+                      ? 'Hãy nhập mã lớp do thầy cô cung cấp ở bên cạnh, hoặc khám phá các lớp học gợi ý bên dưới để bắt đầu học nhé!'
+                      : 'Enter your class code on the right, or explore recommended classes below to start learning!'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Nút phụ cuộn nhanh xuống danh sách lớp */}
+              <button
+                type="button"
+                onClick={() => {
+                  document.getElementById('explore-classes-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-fit self-start py-2.5 px-5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-300 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-2xs"
+              >
+                <span>{isVi ? 'Khám phá lớp học bên dưới' : 'Explore classes below'}</span>
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <h4 className="text-base sm:text-lg font-black text-slate-800 dark:text-white mb-1.5">
-              {isVi ? 'Bạn chưa tham gia lớp học nào' : "You haven't joined any classes yet"}
-            </h4>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md font-medium leading-relaxed">
-              {isVi
-                ? 'Bạn chưa tham gia lớp học nào. Hãy khám phá và đăng ký các lớp học gợi ý bên dưới nhé!'
-                : 'Explore and enroll in the recommended classes below to start learning!'}
-            </p>
+
+            {/* Khối 2 (Bên phải): Card tím - Tham gia bằng mã lớp (30% - Hiện trên cả desktop & mobile) */}
+            <div className="relative rounded-[28px] border-2 border-dashed border-purple-200 dark:border-purple-800/80 hover:border-purple-400 bg-gradient-to-br from-[#faf8ff] via-[#f6f2ff] to-[#efe6ff] dark:from-slate-800/90 dark:to-purple-950/40 p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 group overflow-hidden w-full md:col-span-3">
+              <div className="absolute top-3 right-4 text-purple-300/60 text-xl pointer-events-none select-none">✦</div>
+              <div className="absolute bottom-4 left-4 text-amber-300/80 text-lg pointer-events-none select-none">★</div>
+              
+              <div className="flex items-start gap-3.5 mb-4">
+                <div className="relative size-12 sm:size-14 rounded-2xl bg-white dark:bg-purple-900/40 shadow-sm border border-purple-100 dark:border-purple-800/60 flex items-center justify-center shrink-0 p-2 group-hover:scale-105 transition-transform duration-300">
+                  <Image
+                    src="/assests/Classes/icons/join-with-code-key.png"
+                    alt="Class Code"
+                    fill
+                    className="object-contain p-1.5"
+                  />
+                </div>
+                <div className="space-y-1 min-w-0">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-100/80 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10.5px] font-black tracking-wider uppercase">
+                    {isVi ? 'MÃ LỚP HỌC' : 'CLASS CODE'}
+                  </span>
+                  <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white font-headline leading-tight">
+                    {isVi ? 'Tham gia bằng mã lớp' : 'Join with Class Code'}
+                  </h4>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed mb-4">
+                {isVi
+                  ? 'Thầy cô đã gửi mã lớp cho bạn? Nhập mã 6 ký tự để vào lớp ngay.'
+                  : 'Have a class code from your teacher? Enter the code to join now.'}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setIsJoinModalOpen(true)}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/35 transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 group-hover:scale-[1.01]"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>{isVi ? 'Nhập mã vào lớp' : 'Enter Class Code'}</span>
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -925,7 +1002,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
       {/* ========================================================= */}
       {/* KHU VỰC 2: KHÁM PHÁ THÊM CÁC LỚP HỌC (SHOWCASE / RECOMMENDED)*/}
       {/* ========================================================= */}
-      <section className="pt-6 sm:pt-8 border-t border-slate-200/80 dark:border-slate-800 space-y-6 w-full max-w-full min-w-0">
+      <section id="explore-classes-section" className="pt-6 sm:pt-8 border-t border-slate-200/80 dark:border-slate-800 space-y-6 w-full max-w-full min-w-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">

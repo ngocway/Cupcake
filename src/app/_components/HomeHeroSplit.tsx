@@ -285,21 +285,15 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
 
           </div>
 
-          {/* Teacher CTA Button with Modern Sleek Black Gradient - Elevated to z-30 */}
+          {/* Teacher CTA Button with Luxurious Black Frosted Glass - Elevated to z-30 */}
           <div className="w-full flex justify-center relative z-30">
             <Link
               href={isTeacher ? "/teacher/dashboard" : isStudent ? "/teacher/dashboard" : "/teacher/login"}
-              className="group inline-flex items-center gap-2.5 px-9 py-3.5 rounded-full bg-gradient-to-r from-[#0b0f19] via-[#161c2e] to-[#0b0f19] hover:from-[#111827] hover:via-[#1e293b] hover:to-[#111827] border border-white/20 hover:border-indigo-400/50 text-white font-black text-sm sm:text-base tracking-wide shadow-[0_12px_35px_-8px_rgba(0,0,0,0.7),0_0_20px_rgba(99,102,241,0.2)] hover:shadow-[0_16px_40px_-5px_rgba(0,0,0,0.85),0_0_30px_rgba(99,102,241,0.4)] ring-1 ring-white/10 hover:ring-indigo-400/30 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+              className="group inline-flex items-center gap-2.5 px-9 py-3.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-xl border border-white/20 hover:border-white/35 text-white font-bold text-sm sm:text-base tracking-wide shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_0_rgba(255,255,255,0.25)] hover:shadow-[0_14px_40px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.4)] ring-1 ring-white/10 hover:ring-white/20 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
             >
-              <GraduationCap className="w-5 h-5 text-indigo-300 group-hover:text-indigo-200 group-hover:rotate-12 transition-transform" />
-              <span>
-                {isTeacher 
-                  ? "Enter Teacher Lounge" 
-                  : isStudent 
-                    ? "Teacher Lounge" 
-                    : "Teacher Login"}
-              </span>
-              <ArrowRight className="w-4 h-4 text-indigo-300/80 group-hover:text-white group-hover:translate-x-1.5 transition-transform" />
+              <GraduationCap className="w-5 h-5 text-white/80 group-hover:text-white group-hover:rotate-12 transition-transform" />
+              <span>Teacher access</span>
+              <ArrowRight className="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-1.5 transition-transform" />
             </Link>
           </div>
         </div>
