@@ -32,7 +32,7 @@ import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
-import { uploadImageFast } from "@/lib/direct-upload";
+import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
@@ -184,6 +184,7 @@ export function ConveyorDropCreatorUI() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [imageSearchStyle, setImageSearchStyle] = useState<"CARTOON" | "REALISTIC">("CARTOON");
   const [isSearching, startSearchTransition] = useTransition();
+  const [brokenImageIds, setBrokenImageIds] = useState<Record<string, boolean>>({});
 
   // Hidden file input refs for dynamic triggering
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -295,12 +296,18 @@ export function ConveyorDropCreatorUI() {
     if (!file || !activePairIdForUpload) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file hình ảnh hợp lệ!");
+      toast.error("Vui lòng chọn đúng file định dạng hình ảnh (PNG, JPG, WEBP)!");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File ảnh quá lớn (>5MB). Vui lòng chọn ảnh dung lượng nhẹ hơn!");
       return;
     }
 
     const pairId = activePairIdForUpload;
     const tempUrl = URL.createObjectURL(file);
+    setBrokenImageIds((prev) => ({ ...prev, [pairId]: false }));
 
     setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
       ...r,
@@ -313,9 +320,10 @@ export function ConveyorDropCreatorUI() {
         ...r,
         pairs: r.pairs.map(p => p.id === pairId ? { ...p, imageUrl: finalUrl, imageFile: undefined, isUploadingImage: false } : p)
       }));
+      setBrokenImageIds((prev) => ({ ...prev, [pairId]: false }));
       toast.success("Tải & nén ảnh thành công!");
     } catch (err: any) {
-      toast.error(`Tải ảnh thất bại: ${err.message}`);
+      toast.error(err.message || "Tải ảnh thất bại! Vui lòng thử lại.");
       setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
         ...r,
         pairs: r.pairs.map(p => p.id === pairId ? { ...p, isUploadingImage: false } : p)
@@ -343,17 +351,20 @@ export function ConveyorDropCreatorUI() {
           setSearchResults(results);
         } else {
           setSearchResults([]);
-          toast.error("Không tìm thấy hình ảnh phù hợp!");
+          toast.warning(`Không tìm thấy hình ảnh nào cho từ khóa "${query}". Thử tìm bằng từ tiếng Anh khác nhé!`);
         }
       } catch (e) {
         setSearchResults([]);
-        toast.error("Lỗi khi tìm ảnh!");
+        toast.error("Lỗi khi kết nối tìm kiếm ảnh! Vui lòng thử lại sau.");
       }
     });
   };
 
   const handleSelectSearchImage = (imageUrl: string) => {
     if (!activePairIdForSearch) return;
+
+    const targetPairId = activePairIdForSearch;
+    const targetRoundIdx = activeRoundIndex;
 
     const updatedRounds = [...rounds];
     updatedRounds[activeRoundIndex] = {
@@ -373,7 +384,29 @@ export function ConveyorDropCreatorUI() {
     setRounds(updatedRounds);
 
     setShowSearchModal(false);
+    setBrokenImageIds((prev) => ({ ...prev, [targetPairId]: false }));
     toast.success("Đã chọn hình ảnh cho từ vựng!");
+
+    // Background optimization: download, convert to WebP via Sharp, and upload to R2
+    uploadExternalImageUrlFast(imageUrl).then((r2Url) => {
+      if (r2Url && r2Url !== imageUrl) {
+        setRounds((prevRounds) => {
+          const nextRounds = [...prevRounds];
+          if (!nextRounds[targetRoundIdx]) return prevRounds;
+          nextRounds[targetRoundIdx] = {
+            ...nextRounds[targetRoundIdx],
+            pairs: nextRounds[targetRoundIdx].pairs.map((p) =>
+              p.id === targetPairId ? { ...p, imageUrl: r2Url } : p
+            ),
+          };
+          return nextRounds;
+        });
+      } else if (!r2Url) {
+        toast.error("Không thể lưu ảnh từ internet lên máy chủ. Vui lòng chọn ảnh khác hoặc tải file từ máy tính!");
+      }
+    }).catch(() => {
+      toast.error("Lỗi khi đồng bộ ảnh từ internet. Vui lòng thử lại hoặc tải ảnh từ máy tính!");
+    });
   };
 
   // Drag & Drop Image Handling
@@ -623,6 +656,7 @@ export function ConveyorDropCreatorUI() {
       setTitle(suggestedTitle);
       setTitleError(false);
     }
+    setBrokenImageIds({});
 
     const isSingleEmptyInitial =
       rounds.length === 1 &&
@@ -709,20 +743,26 @@ export function ConveyorDropCreatorUI() {
       }
     }
 
-    // Verification 2: Check missing word or image
+    // Verification 2: Check missing word, missing image, or broken image
     for (let rIdx = 0; rIdx < rounds.length; rIdx++) {
       const r = rounds[rIdx];
-      const missingWordIdx = r.pairs.findIndex(p => !p.word.trim());
-      if (missingWordIdx !== -1) {
-        setActiveRoundIndex(rIdx);
-        setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${missingWordIdx + 1} chưa nhập từ vựng. Vui lòng kiểm tra lại!`);
-        return;
-      }
-      const missingImgIdx = r.pairs.findIndex(p => !p.imageUrl);
-      if (missingImgIdx !== -1) {
-        setActiveRoundIndex(rIdx);
-        setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${missingImgIdx + 1} ("${r.pairs[missingImgIdx].word}") chưa chọn hình ảnh. Vui lòng bấm [Tìm ảnh] hoặc [Tải file]!`);
-        return;
+      for (let pIdx = 0; pIdx < r.pairs.length; pIdx++) {
+        const p = r.pairs[pIdx];
+        if (!p.word.trim()) {
+          setActiveRoundIndex(rIdx);
+          setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${pIdx + 1} chưa nhập từ vựng. Vui lòng kiểm tra lại!`);
+          return;
+        }
+        if (!p.imageUrl) {
+          setActiveRoundIndex(rIdx);
+          setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${pIdx + 1} ("${p.word}") chưa chọn hình ảnh. Vui lòng bấm [Tìm ảnh] hoặc [Tải file]!`);
+          return;
+        }
+        if (brokenImageIds[p.id]) {
+          setActiveRoundIndex(rIdx);
+          setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${pIdx + 1} ("${p.word}") có ảnh bị lỗi không thể tải được. Vui lòng đổi ảnh khác trước khi lưu!`);
+          return;
+        }
       }
     }
 
@@ -779,6 +819,11 @@ export function ConveyorDropCreatorUI() {
               if (pair.imageFile) {
                 try {
                   return await uploadImageFast(pair.imageFile);
+                } catch (e) {}
+              }
+              if (pair.imageUrl && !pair.imageUrl.includes("media.dolcake.com")) {
+                try {
+                  return await uploadExternalImageUrlFast(pair.imageUrl);
                 } catch (e) {}
               }
               return pair.imageUrl;
@@ -1158,7 +1203,7 @@ export function ConveyorDropCreatorUI() {
                         : "border-slate-200/80 dark:border-slate-700"
                     }`}
                   >
-                    {pair.imageUrl ? (
+                    {pair.imageUrl && !brokenImageIds[pair.id] ? (
                       <div
                         draggable
                         onDragStart={e => {
@@ -1170,14 +1215,22 @@ export function ConveyorDropCreatorUI() {
                           setDragSourcePairId(null);
                           setDragActivePairId(null);
                         }}
-                        className="relative w-full h-full group/img cursor-grab active:cursor-grabbing"
+                        className="relative w-full h-full group/img cursor-grab active:cursor-grabbing bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center overflow-hidden"
                         title="Kéo thả ảnh sang thẻ khác để di chuyển hoặc tráo đổi vị trí"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={pair.imageUrl} 
                           alt={pair.word || "Card image"} 
-                          className="w-full h-full object-cover pointer-events-none select-none"
+                          onError={() => {
+                            setBrokenImageIds((prev) => {
+                              if (!prev[pair.id]) {
+                                toast.error(`Thẻ "${pair.word || "không tên"}" không tải được ảnh. Vui lòng kiểm tra lại!`);
+                              }
+                              return { ...prev, [pair.id]: true };
+                            });
+                          }}
+                          className="w-full h-full object-contain pointer-events-none select-none transition-transform duration-200 group-hover/img:scale-105"
                         />
                         <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
                           <button
@@ -1195,6 +1248,34 @@ export function ConveyorDropCreatorUI() {
                             title="Tải ảnh khác từ máy"
                           >
                             <Upload className="w-4 h-4 text-cyan-600" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : pair.imageUrl && brokenImageIds[pair.id] ? (
+                      <div className="flex flex-col items-center justify-center p-3 text-center space-y-2 bg-amber-500/5 dark:bg-amber-950/20 w-full h-full">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block">Ảnh lỗi tải / Chặn link</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Vui lòng chọn ảnh khác</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageSearch(pair)}
+                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                          >
+                            <Search className="w-3 h-3" />
+                            <span>Đổi ảnh</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageUpload(pair.id)}
+                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Upload className="w-3 h-3" />
+                            <span>Tải file</span>
                           </button>
                         </div>
                       </div>

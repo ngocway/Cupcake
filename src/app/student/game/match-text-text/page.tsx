@@ -12,6 +12,21 @@ function MatchTextTextGameContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasStarted, setHasStarted] = useState(false);
 
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data && e.data.type === "MATCH_GAME_READY") {
+        setIsLoading(false);
+      }
+    };
+    window.addEventListener("message", handleMsg);
+    // Safety fallback timer: maximum 2s to guarantee loading always disappears
+    const timer = setTimeout(() => setIsLoading(false), 2000);
+    return () => {
+      window.removeEventListener("message", handleMsg);
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <ForcedLandscapeWrapper
       backHref="/teacher?tab=my-match-games"
@@ -39,7 +54,6 @@ function MatchTextTextGameContent() {
         }`}
         title="Game Nối Chữ - Chữ"
         sandbox="allow-scripts allow-same-origin"
-        onLoad={() => setIsLoading(false)}
       />
     </ForcedLandscapeWrapper>
   );

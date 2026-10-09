@@ -1147,6 +1147,18 @@
                     topicsData = data.topicsData;
                     defaultTopic = data.defaultTopic;
                     currentTopic = defaultTopic;
+
+                    // Preload all topic images in background
+                    Object.values(topicsData).forEach(topicCards => {
+                        if (Array.isArray(topicCards)) {
+                            topicCards.forEach(c => {
+                                if (c.imageUrl) {
+                                    const preImg = new Image();
+                                    preImg.src = c.imageUrl;
+                                }
+                            });
+                        }
+                    });
                 } else {
                     document.getElementById('titleText').textContent = 'No Topics Found';
                 }

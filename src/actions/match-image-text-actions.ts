@@ -71,6 +71,22 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
   try {
     const session = await auth();
 
+    const { optimizeAndUploadToR2 } = await import("@/lib/server-image-uploader");
+    const subFolder = `uploads/${session?.user?.id || "teacher"}`;
+    const sanitizedPairs = await Promise.all(
+      (data.pairs || []).map(async (pair) => {
+        const [optA, optB] = await Promise.all([
+          pair.imageUrl ? optimizeAndUploadToR2(pair.imageUrl, subFolder) : Promise.resolve(null),
+          pair.imageBUrl ? optimizeAndUploadToR2(pair.imageBUrl, subFolder) : Promise.resolve(null),
+        ]);
+        return {
+          ...pair,
+          imageUrl: optA || pair.imageUrl || null,
+          imageBUrl: optB || pair.imageBUrl || null,
+        };
+      })
+    );
+
     // If updating an existing topic
     if (data.topicId) {
       // 1. Delete existing items to re-create fresh pair items
@@ -91,9 +107,9 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
       });
 
       // 3. Bulk insert items in 1 SQL statement
-      if (data.pairs.length > 0) {
+      if (sanitizedPairs.length > 0) {
         await prisma.matchWordItem.createMany({
-          data: data.pairs.map((pair) => ({
+          data: sanitizedPairs.map((pair) => ({
             topicId: updatedTopic.id,
             roundIndex: pair.roundIndex ?? 0,
             word: pair.word || "",
@@ -164,9 +180,9 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
     });
 
     // 3. Bulk insert all card items in 1 SQL statement
-    if (data.pairs.length > 0) {
+    if (sanitizedPairs.length > 0) {
       await prisma.matchWordItem.createMany({
-        data: data.pairs.map((pair) => ({
+        data: sanitizedPairs.map((pair) => ({
           topicId: topic.id,
           roundIndex: pair.roundIndex ?? 0,
           word: pair.word || "",

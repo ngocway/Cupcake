@@ -575,6 +575,16 @@
             currentLevelKey = levelKey;
             currentQuestions = shuffle(gameData[levelKey]); // Shuffle copy of level questions
             currentQuestionIndex = 0;
+
+            // Preload all level images in background
+            if (Array.isArray(currentQuestions)) {
+                currentQuestions.forEach(q => {
+                    if (q.image) {
+                        const preImg = new Image();
+                        preImg.src = q.image;
+                    }
+                });
+            }
             initQuestion();
         }
 
@@ -715,7 +725,16 @@
 
             const qData = currentQuestions[currentQuestionIndex];
 
-            mainImage.src = qData.image;
+            if (qData.image) {
+                mainImage.style.opacity = '0';
+                mainImage.style.transition = 'opacity 0.25s ease';
+                mainImage.onload = () => { mainImage.style.opacity = '1'; };
+                mainImage.onerror = () => { mainImage.style.opacity = '0.35'; };
+                mainImage.src = qData.image;
+                if (mainImage.complete && mainImage.naturalWidth > 0) {
+                    mainImage.style.opacity = '1';
+                }
+            }
             progressText.textContent = `${currentQuestionIndex + 1} / ${currentQuestions.length}`;
 
             // Update hint button: grey out if no audio

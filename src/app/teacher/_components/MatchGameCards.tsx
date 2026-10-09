@@ -64,7 +64,7 @@ const MATCH_GAMES: GameCard[] = [
     badgeBg: "bg-rose-500 text-white",
     desc: "Học sinh dùng thao tác cắt dây để nối hình ảnh với từ vựng / câu tương ứng.",
     videoId: "",
-    imageUrl: "/images/games/flashcard-match.png",
+    imageUrl: "/images/games/cut-rope.png",
   },
   {
     id: "train-vocab",

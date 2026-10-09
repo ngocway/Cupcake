@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       Key: filePath,
       Body: buffer,
       ContentType: file.type || "image/webp",
+      CacheControl: "public, max-age=31536000, immutable",
     });
 
     await s3Client.send(command);

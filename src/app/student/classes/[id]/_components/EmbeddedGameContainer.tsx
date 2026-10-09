@@ -60,7 +60,7 @@ export function resolveDirectGameUrl(rawUrl: string, assignment?: any): string {
     return `/games/mystery-treasure-grid-assets/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/cut-rope')) {
-    return `/games/cut-rope/index.html${queryStr}`;
+    return `/games/magic_tree_matching_game_v3/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/flashcard-quiz')) {
     return `/games/flashcard-quiz/index.html${queryStr}`;

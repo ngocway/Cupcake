@@ -365,6 +365,8 @@ function setupDynamicRounds(cards) {
 
   if (gameRounds.length === 0) {
     setupDefaultRounds();
+  } else {
+    preloadAllGameImages();
   }
 }
 
@@ -465,13 +467,17 @@ function renderCurrentTurn() {
 
     button.innerHTML = `
       <img class="card-frame" src="assets/cards/card-frame-hanging.png" alt="" />
-      <img class="card-animal" src="${card.imageUrl}" alt="${card.word}" />
+      <div class="card-skeleton"></div>
+      <img class="card-animal" src="${card.imageUrl}" alt="${card.word}" style="opacity: 0;" />
     `;
 
-    // Tự động co hẹp chiều ngang khung gỗ theo tỉ lệ ảnh (Cách 1)
+    // Tự động co hẹp chiều ngang khung gỗ theo tỉ lệ ảnh + xử lý skeleton & fallback
     const animalImg = button.querySelector('.card-animal');
+    const skeleton = button.querySelector('.card-skeleton');
     if (animalImg) {
-      const applyRatio = () => {
+      const applyRatioAndShow = () => {
+        if (skeleton) skeleton.style.display = 'none';
+        animalImg.style.opacity = '1';
         const nw = animalImg.naturalWidth;
         const nh = animalImg.naturalHeight;
         if (nw && nh) {
@@ -483,10 +489,20 @@ function renderCurrentTurn() {
         }
       };
 
+      const handleImageError = () => {
+        if (skeleton) skeleton.style.display = 'none';
+        animalImg.style.display = 'none';
+        const fallback = document.createElement('div');
+        fallback.className = 'card-error-fallback';
+        fallback.innerHTML = `<span class="fallback-icon">🖼️</span><span class="fallback-word">${card.word || ''}</span>`;
+        button.appendChild(fallback);
+      };
+
       if (animalImg.complete && animalImg.naturalWidth) {
-        applyRatio();
+        applyRatioAndShow();
       } else {
-        animalImg.addEventListener('load', applyRatio);
+        animalImg.addEventListener('load', applyRatioAndShow);
+        animalImg.addEventListener('error', handleImageError);
       }
     }
 
@@ -663,6 +679,12 @@ function showRoundTransition(nextRoundNumber) {
   }
   collectedCards = [];
 
+  // Nạp trước ảnh của vòng tiếp theo ngay trong thời gian banner chuyển vòng
+  const nextRound = gameRounds[currentRoundIdx];
+  if (nextRound && nextRound.allCards) {
+    preloadRoundImages(nextRound.allCards, 1500);
+  }
+
   setTimeout(() => {
     if (roundTransitionOverlay) {
       roundTransitionOverlay.classList.add('hidden');
@@ -674,6 +696,9 @@ function showRoundTransition(nextRoundNumber) {
 }
 
 function finishGame() {
+  lockBoard = true;
+  if (cardsLayer) cardsLayer.innerHTML = '';
+  if (promptWord) promptWord.innerHTML = '';
   if (finalScore) finalScore.textContent = score;
   if (finishTitle) {
     finishTitle.textContent = topicTitle ? topicTitle : 'Tuyệt vời!';
@@ -863,8 +888,23 @@ if (exitButton) {
   });
 }
 
+// Nạp trước toàn bộ ảnh của tất cả các vòng trong nền (Background Preloading)
+function preloadAllGameImages() {
+  if (!Array.isArray(gameRounds)) return;
+  gameRounds.forEach(r => {
+    if (Array.isArray(r.allCards)) {
+      r.allCards.forEach(c => {
+        if (c.imageUrl && !c.imageUrl.includes('card-frame-hanging')) {
+          const img = new Image();
+          img.src = c.imageUrl;
+        }
+      });
+    }
+  });
+}
+
 // Hỗ trợ nạp trước ảnh vào bộ nhớ cache trình duyệt để khung ảnh hiển thị tức thì không bị chớp
-async function preloadRoundImages(cards) {
+async function preloadRoundImages(cards, timeoutMs = 4000) {
   if (!Array.isArray(cards) || cards.length === 0) return;
   const promises = cards.map(c => {
     if (!c.imageUrl) return Promise.resolve();
@@ -875,10 +915,9 @@ async function preloadRoundImages(cards) {
       img.src = c.imageUrl;
     });
   });
-  // Chờ tối đa 1.5s để nạp trước ảnh, nếu mạng quá chậm thì không chặn game
   await Promise.race([
     Promise.allSettled(promises),
-    new Promise(res => setTimeout(res, 1500))
+    new Promise(res => setTimeout(res, timeoutMs))
   ]);
 }
 

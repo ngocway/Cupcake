@@ -40,7 +40,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import { searchImagesAction, resolveQuestionKeywordAction } from "@/actions/image-search-actions";
 import { searchImagesClient } from "@/lib/image-search-client";
-import { uploadImageFast } from "@/lib/direct-upload";
+import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import {
   saveTreasureHuntGameAction,
   getTreasureHuntGameDetailsAction,
@@ -184,6 +184,7 @@ function SortableOptionItem({
 interface SortableQuestionCardProps {
   q: QuizQuestion;
   qIdx: number;
+  isImageBroken?: boolean;
   handleDeleteQuestion: (id: string) => void;
   handleQuestionTextChange: (id: string, text: string) => void;
   updateQuestionImage: (id: string, url: string | undefined) => void;
@@ -194,11 +195,13 @@ interface SortableQuestionCardProps {
   handleOptionTextChange: (questionId: string, optionIdx: number, text: string) => void;
   handleDeleteOption: (questionId: string, optionIdx: number) => void;
   handleReorderOptions: (questionId: string, oldIndex: number, newIndex: number) => void;
+  onImageError?: () => void;
 }
 
 function SortableQuestionCard({
   q,
   qIdx,
+  isImageBroken: isImageBrokenProp,
   handleDeleteQuestion,
   handleQuestionTextChange,
   updateQuestionImage,
@@ -209,7 +212,15 @@ function SortableQuestionCard({
   handleOptionTextChange,
   handleDeleteOption,
   handleReorderOptions,
+  onImageError,
 }: SortableQuestionCardProps) {
+  const [internalIsBroken, setInternalIsBroken] = useState(false);
+  const isImageBroken = isImageBrokenProp ?? internalIsBroken;
+
+  useEffect(() => {
+    setInternalIsBroken(false);
+  }, [q.imageUrl]);
+
   const {
     attributes,
     listeners,
@@ -309,7 +320,7 @@ function SortableQuestionCard({
               Ảnh <span className="normal-case font-bold text-rose-500">(tùy chọn)</span>
             </label>
           </div>
-          {q.imageUrl ? (
+          {q.imageUrl && !isImageBroken ? (
             <div className="relative w-full h-[110px] rounded-[5px] overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-900/5 dark:bg-slate-900/40 group/img flex items-center justify-center">
               <img
                 src={q.imageUrl}
@@ -320,6 +331,10 @@ function SortableQuestionCard({
               <img
                 src={q.imageUrl}
                 alt="Question illustration"
+                onError={() => {
+                  setInternalIsBroken(true);
+                  onImageError?.();
+                }}
                 className="relative z-10 max-w-full max-h-full w-auto h-auto object-contain p-1.5 drop-shadow-sm transition-transform duration-200 group-hover/img:scale-[1.03] rounded-[3px]"
               />
               <button
@@ -330,6 +345,30 @@ function SortableQuestionCard({
               >
                 <X className="w-3.5 h-3.5" />
               </button>
+            </div>
+          ) : q.imageUrl && isImageBroken ? (
+            <div className="relative w-full h-[110px] rounded-[5px] overflow-hidden border border-amber-300 dark:border-amber-800 bg-amber-500/10 dark:bg-amber-950/20 p-2 flex flex-col items-center justify-center text-center gap-1">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 leading-tight">
+                Ảnh lỗi tải
+              </span>
+              <div className="flex items-center gap-1 pt-0.5 w-full">
+                <button
+                  type="button"
+                  onClick={() => handleOpenSearchImage(q.id, q.options, q.question)}
+                  className="flex-1 py-1 px-1 rounded bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] transition-all cursor-pointer truncate"
+                >
+                  Đổi ảnh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateQuestionImage(q.id, undefined)}
+                  className="p-1 rounded bg-slate-200 dark:bg-slate-700 hover:bg-rose-100 hover:text-rose-600 text-slate-600 dark:text-slate-300 font-bold text-[10px] transition-all cursor-pointer"
+                  title="Xóa ảnh"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-1.5 h-[110px] justify-center">
@@ -491,6 +530,7 @@ export function TreasureHuntCreatorUI() {
     results: [],
     isSearching: false,
   });
+  const [brokenImageIds, setBrokenImageIds] = useState<Record<string, boolean>>({});
 
   // Load existing topic details when editing
   useEffect(() => {
@@ -715,10 +755,20 @@ export function TreasureHuntCreatorUI() {
 
   // Image upload handling
   const handleUploadImageFile = async (questionId: string, file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn đúng file định dạng hình ảnh (PNG, JPG, WEBP)!");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File ảnh quá lớn (>5MB). Vui lòng chọn ảnh dung lượng nhẹ hơn!");
+      return;
+    }
+
     try {
       const finalUrl = await uploadImageFast(file);
       if (finalUrl) {
         updateQuestionImage(questionId, finalUrl);
+        setBrokenImageIds((prev) => ({ ...prev, [questionId]: false }));
         toast.success("Tải ảnh thành công!");
         return;
       }
@@ -729,6 +779,7 @@ export function TreasureHuntCreatorUI() {
   };
 
   const updateQuestionImage = (questionId: string, url: string | undefined) => {
+    setBrokenImageIds((prev) => ({ ...prev, [questionId]: false }));
     const updatedQuestions = questions.map((q) => {
       if (q.id === questionId) {
         return { ...q, imageUrl: url };
@@ -767,11 +818,20 @@ export function TreasureHuntCreatorUI() {
 
       if (keyword && keyword.trim()) {
         const results = await searchImagesClient(keyword, searchImageModal.style || "CARTOON");
-        setSearchImageModal((prev) => ({
-          ...prev,
-          results: results || [],
-          isSearching: false,
-        }));
+        if (results && results.length > 0) {
+          setSearchImageModal((prev) => ({
+            ...prev,
+            results,
+            isSearching: false,
+          }));
+        } else {
+          setSearchImageModal((prev) => ({
+            ...prev,
+            results: [],
+            isSearching: false,
+          }));
+          toast.warning(`Không tìm thấy hình ảnh nào cho từ khóa "${keyword}". Thử tìm bằng từ tiếng Anh khác nhé!`);
+        }
       } else {
         setSearchImageModal((prev) => ({
           ...prev,
@@ -780,7 +840,7 @@ export function TreasureHuntCreatorUI() {
       }
     } catch (e) {
       setSearchImageModal((prev) => ({ ...prev, isSearching: false }));
-      toast.error("Lỗi khi tìm ảnh!");
+      toast.error("Lỗi khi kết nối tìm kiếm ảnh! Vui lòng thử lại sau.");
     }
   };
 
@@ -790,21 +850,41 @@ export function TreasureHuntCreatorUI() {
     setSearchImageModal((prev) => ({ ...prev, isSearching: true, style: modeToUse }));
     try {
       const results = await searchImagesClient(qText, modeToUse);
-      setSearchImageModal((prev) => ({
-        ...prev,
-        results: results || [],
-        isSearching: false,
-      }));
+      if (results && results.length > 0) {
+        setSearchImageModal((prev) => ({
+          ...prev,
+          results,
+          isSearching: false,
+        }));
+      } else {
+        setSearchImageModal((prev) => ({
+          ...prev,
+          results: [],
+          isSearching: false,
+        }));
+        toast.warning(`Không tìm thấy hình ảnh nào cho từ khóa "${qText}". Thử tìm bằng từ tiếng Anh khác nhé!`);
+      }
     } catch (e) {
       setSearchImageModal((prev) => ({ ...prev, isSearching: false }));
-      toast.error("Lỗi khi tìm ảnh!");
+      toast.error("Lỗi khi kết nối tìm kiếm ảnh! Vui lòng thử lại sau.");
     }
   };
 
   const handleSelectSearchedImage = (url: string) => {
     if (searchImageModal.targetQuestionId) {
-      updateQuestionImage(searchImageModal.targetQuestionId, url);
+      const targetQId = searchImageModal.targetQuestionId;
+      updateQuestionImage(targetQId, url);
       toast.success("Đã áp dụng ảnh!");
+
+      uploadExternalImageUrlFast(url).then((r2Url) => {
+        if (r2Url && r2Url !== url) {
+          updateQuestionImage(targetQId, r2Url);
+        } else if (!r2Url) {
+          toast.error("Không thể lưu ảnh từ internet lên máy chủ. Vui lòng chọn ảnh khác hoặc tải file từ máy tính!");
+        }
+      }).catch(() => {
+        toast.error("Lỗi khi đồng bộ ảnh từ internet. Vui lòng thử lại hoặc tải ảnh từ máy tính!");
+      });
     }
     setSearchImageModal((prev) => ({ ...prev, isOpen: false }));
   };
@@ -1008,6 +1088,12 @@ export function TreasureHuntCreatorUI() {
         if (!q.question.trim()) {
           setActiveRoundIndex(rIdx);
           toast.error(`${r.title}, Câu hỏi #${qIdx + 1} chưa có nội dung câu hỏi!`);
+          return;
+        }
+
+        if (q.imageUrl && brokenImageIds[q.id]) {
+          setActiveRoundIndex(rIdx);
+          toast.error(`${r.title}, Câu hỏi #${qIdx + 1} có ảnh bị lỗi tải! Vui lòng đổi ảnh khác hoặc gỡ ảnh trước khi lưu.`);
           return;
         }
 
@@ -1262,6 +1348,15 @@ export function TreasureHuntCreatorUI() {
                   key={q.id}
                   q={q}
                   qIdx={qIdx}
+                  isImageBroken={Boolean(brokenImageIds[q.id])}
+                  onImageError={() => {
+                    setBrokenImageIds((prev) => {
+                      if (!prev[q.id]) {
+                        toast.error(`Ảnh của câu hỏi #${qIdx + 1} không tải được. Vui lòng kiểm tra lại!`);
+                      }
+                      return { ...prev, [q.id]: true };
+                    });
+                  }}
                   handleDeleteQuestion={handleDeleteQuestion}
                   handleQuestionTextChange={handleQuestionTextChange}
                   updateQuestionImage={updateQuestionImage}

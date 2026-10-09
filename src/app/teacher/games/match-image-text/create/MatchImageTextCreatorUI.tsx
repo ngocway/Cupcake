@@ -28,11 +28,11 @@ import {
 } from "lucide-react";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
+import { uploadMedia } from "@/actions/upload-actions";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
-import { uploadMedia } from "@/actions/upload-actions";
-import { uploadImageFast } from "@/lib/direct-upload";
+import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
@@ -74,7 +74,7 @@ const INITIAL_ROUNDS: GameRound[] = [
   },
 ];
 
-export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
+export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
@@ -90,6 +90,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
   const maxPairsPerRound = currentGameMode === "train" ? 4 : 7;
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSavedSuccessfully, setIsSavedSuccessfully] = useState(false);
 
   useEffect(() => {
     if (searchParams?.get("saved") === "true") {
@@ -199,9 +201,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
   const [activePairIdForUpload, setActivePairIdForUpload] = useState<string | null>(null);
   const [dragActivePairId, setDragActivePairId] = useState<string | null>(null);
   const [dragSourcePairId, setDragSourcePairId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSavedSuccessfully, setIsSavedSuccessfully] = useState(false);
   const [playingTTSPairId, setPlayingTTSPairId] = useState<string | null>(null);
+  const [brokenImageIds, setBrokenImageIds] = useState<Record<string, boolean>>({});
 
   // Warn teacher before closing browser tab or reloading if there are unsaved changes
   useEffect(() => {
@@ -339,7 +340,12 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
     if (!file || !activePairIdForUpload) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file hình ảnh hợp lệ!");
+      toast.error("File không hợp lệ! Vui lòng chỉ chọn file hình ảnh (JPG, PNG, WebP).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhẹ hơn để học sinh tải nhanh!");
       return;
     }
 
@@ -357,9 +363,10 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
         ...r,
         pairs: r.pairs.map(p => p.id === pairId ? { ...p, imageUrl: finalUrl, imageFile: undefined, isUploadingImage: false } : p)
       }));
+      setBrokenImageIds((prev) => ({ ...prev, [pairId]: false }));
       toast.success("Tải & nén ảnh thành công!");
     } catch (err: any) {
-      toast.error(`Tải ảnh thất bại: ${err.message}`);
+      toast.error(`Tải ảnh lên thất bại: ${err?.message || "Lỗi kết nối máy chủ"}. Vui lòng thử lại!`);
       setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
         ...r,
         pairs: r.pairs.map(p => p.id === pairId ? { ...p, isUploadingImage: false } : p)
@@ -387,17 +394,20 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
           setSearchResults(results);
         } else {
           setSearchResults([]);
-          toast.error("Không tìm thấy hình ảnh phù hợp!");
+          toast.warning(`Không tìm thấy ảnh nào phù hợp cho từ khóa "${query}". Vui lòng thử từ khóa khác!`);
         }
       } catch (e) {
         setSearchResults([]);
-        toast.error("Lỗi khi tìm ảnh!");
+        toast.error("Lỗi khi tìm ảnh trực tuyến. Vui lòng thử lại!");
       }
     });
   };
 
   const handleSelectSearchImage = (imageUrl: string) => {
     if (!activePairIdForSearch) return;
+
+    const targetPairId = activePairIdForSearch;
+    const targetRoundIdx = activeRoundIndex;
 
     const updatedRounds = [...rounds];
     updatedRounds[activeRoundIndex] = {
@@ -418,6 +428,32 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
 
     setShowSearchModal(false);
     toast.success("Đã chọn hình ảnh cho từ vựng!");
+    setBrokenImageIds((prev) => ({ ...prev, [targetPairId]: false }));
+
+    // Background optimization: download, convert to WebP via Sharp, and upload to R2
+    uploadExternalImageUrlFast(imageUrl)
+      .then((r2Url) => {
+        if (r2Url && r2Url !== imageUrl) {
+          setRounds((prevRounds) => {
+            const nextRounds = [...prevRounds];
+            if (!nextRounds[targetRoundIdx]) return prevRounds;
+            nextRounds[targetRoundIdx] = {
+              ...nextRounds[targetRoundIdx],
+              pairs: nextRounds[targetRoundIdx].pairs.map((p) =>
+                p.id === targetPairId ? { ...p, imageUrl: r2Url } : p
+              ),
+            };
+            return nextRounds;
+          });
+        } else if (!r2Url) {
+          setBrokenImageIds((prev) => ({ ...prev, [targetPairId]: true }));
+          toast.error("Ảnh vừa chọn bị chặn tải từ nguồn gốc. Vui lòng chọn ảnh khác hoặc tải file từ máy tính!");
+        }
+      })
+      .catch(() => {
+        setBrokenImageIds((prev) => ({ ...prev, [targetPairId]: true }));
+        toast.error("Ảnh vừa chọn bị lỗi kết nối máy chủ. Vui lòng chọn ảnh khác!");
+      });
   };
 
   const handleRemoveImage = (pairId: string) => {
@@ -803,7 +839,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       const missingImgIdx = r.pairs.findIndex(p => !p.imageUrl);
       if (missingImgIdx !== -1) {
         setActiveRoundIndex(rIdx);
-        setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${missingImgIdx + 1} ("${r.pairs[missingImgIdx].word}") chưa chọn hình ảnh. Vui lòng bấm [Tìm ảnh] hoặc [Tải file]!`);
+        setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${missingImgIdx + 1} ("${r.pairs[missingImgIdx].word || ''}") chưa chọn hình ảnh. Vui lòng chọn đủ ảnh trước khi lưu!`);
+        return;
+      }
+      const brokenImgIdx = r.pairs.findIndex(p => Boolean(brokenImageIds[p.id]));
+      if (brokenImgIdx !== -1) {
+        setActiveRoundIndex(rIdx);
+        setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${brokenImgIdx + 1} ("${r.pairs[brokenImgIdx].word || ''}") đang bị lỗi tải ảnh. Vui lòng đổi ảnh khác trước khi lưu bài!`);
         return;
       }
     }
@@ -858,11 +900,16 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
       const updatedPairs = await Promise.all(
         allPairs.map(async (pair) => {
           const [finalImageUrl, finalAudioUrl] = await Promise.all([
-            // Task A: Process Custom Image File
+            // Task A: Process Custom Image File or External Image URL
             (async () => {
               if (pair.imageFile) {
                 try {
                   return await uploadImageFast(pair.imageFile);
+                } catch (e) {}
+              }
+              if (pair.imageUrl && !pair.imageUrl.includes("media.dolcake.com")) {
+                try {
+                  return await uploadExternalImageUrlFast(pair.imageUrl);
                 } catch (e) {}
               }
               return pair.imageUrl;
@@ -1276,7 +1323,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                         : "border-slate-200/80 dark:border-slate-700"
                     }`}
                   >
-                    {pair.imageUrl ? (
+                    {pair.imageUrl && !brokenImageIds[pair.id] ? (
                       <div
                         draggable
                         onDragStart={e => {
@@ -1288,14 +1335,18 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                           setDragSourcePairId(null);
                           setDragActivePairId(null);
                         }}
-                        className="relative w-full h-full group/img cursor-grab active:cursor-grabbing"
+                        className="relative w-full h-full group/img cursor-grab active:cursor-grabbing bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center overflow-hidden"
                         title="Kéo thả ảnh sang thẻ khác để di chuyển hoặc tráo đổi vị trí"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={pair.imageUrl} 
                           alt={pair.word || "Card image"} 
-                          className="w-full h-full object-cover pointer-events-none select-none"
+                          onError={() => {
+                            setBrokenImageIds((prev) => ({ ...prev, [pair.id]: true }));
+                            toast.error(`Thẻ "${pair.word || 'này'}" không tải được ảnh. Vui lòng kiểm tra lại!`);
+                          }}
+                          className="w-full h-full object-contain pointer-events-none select-none transition-transform duration-200 group-hover/img:scale-105"
                         />
                         <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
                           <button
@@ -1313,6 +1364,34 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType: string }) {
                             title="Tải ảnh khác từ máy"
                           >
                             <Upload className="w-4 h-4 text-purple-600" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : pair.imageUrl && brokenImageIds[pair.id] ? (
+                      <div className="flex flex-col items-center justify-center p-3 text-center space-y-2 bg-amber-500/5 dark:bg-amber-950/20 w-full h-full">
+                        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="space-y-0.5">
+                          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block">Ảnh lỗi tải / Chặn link</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Vui lòng chọn ảnh khác</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageSearch(pair)}
+                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                          >
+                            <Search className="w-3 h-3" />
+                            <span>Đổi ảnh</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenImageUpload(pair.id)}
+                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                          >
+                            <Upload className="w-3 h-3" />
+                            <span>Tải file</span>
                           </button>
                         </div>
                       </div>

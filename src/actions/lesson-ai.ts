@@ -951,6 +951,7 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
     Key: filePath,
     Body: buffer!,
     ContentType: contentType,
+    CacheControl: 'public, max-age=31536000, immutable',
   });
 
   await s3Client.send(command);
@@ -1147,6 +1148,7 @@ Negative directives: no realism, no anime, no manga, no cel shading, no 3D, no p
     Key: filePath,
     Body: buffer,
     ContentType: mimeType,
+    CacheControl: 'public, max-age=31536000, immutable',
   });
 
   await s3Client.send(command);

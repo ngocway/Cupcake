@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { processTopicAudioInBackground } from "@/lib/server-topic-tts";
+import { isDolcakeMediaUrl, migrateTopicImagesInBackground } from "@/lib/server-image-uploader";
 
 export async function GET(
   request: Request,
@@ -28,6 +29,15 @@ export async function GET(
       const hasMissingAudio = matchTopic.items.some((item) => !item.audioUrl && Boolean(item.word && item.word.trim()));
       if (hasMissingAudio && (matchTopic.audioMode === "AUTO_TTS" || !matchTopic.audioMode)) {
         processTopicAudioInBackground(matchTopic.id).catch(() => {});
+      }
+
+      const hasExternalImages = matchTopic.items.some(
+        (item) =>
+          (item.imageUrl && !isDolcakeMediaUrl(item.imageUrl) && item.imageUrl.startsWith("http")) ||
+          (item.imageBUrl && !isDolcakeMediaUrl(item.imageBUrl) && item.imageBUrl.startsWith("http"))
+      );
+      if (hasExternalImages) {
+        migrateTopicImagesInBackground(matchTopic.id).catch(() => {});
       }
 
       const cards = matchTopic.items.map((item) => ({

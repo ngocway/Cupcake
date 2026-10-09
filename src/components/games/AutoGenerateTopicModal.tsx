@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
+import { uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import {
   generateTopicVocabulariesAction,
   analyzeImageForTopicAction,
@@ -228,22 +229,15 @@ export function AutoGenerateTopicModal({
                 searchImagesClient(query, "REALISTIC"),
               ]);
 
-              if (cartoonRes && cartoonRes.length > 0) {
-                selectedImageAUrl = cartoonRes[0].url;
-              } else {
-                const fbA = await searchImagesClient(item.word, "CARTOON");
-                if (fbA && fbA.length > 0) selectedImageAUrl = fbA[0].url;
+              const cartoonPool = cartoonRes && cartoonRes.length > 0 ? cartoonRes : await searchImagesClient(item.word, "CARTOON");
+              if (cartoonPool && cartoonPool.length > 0) {
+                selectedImageAUrl = await uploadExternalImageUrlFast(cartoonPool.slice(0, 4).map(r => r.url));
               }
 
-              if (realisticRes && realisticRes.length > 0) {
-                const distinctB = realisticRes.find(r => r.url !== selectedImageAUrl) || realisticRes[0];
-                selectedImageBUrl = distinctB.url;
-              } else {
-                const fbB = await searchImagesClient(item.word, "REALISTIC");
-                if (fbB && fbB.length > 0) {
-                  const distinctB = fbB.find(r => r.url !== selectedImageAUrl) || fbB[0];
-                  selectedImageBUrl = distinctB.url;
-                }
+              const realisticPool = realisticRes && realisticRes.length > 0 ? realisticRes : await searchImagesClient(item.word, "REALISTIC");
+              if (realisticPool && realisticPool.length > 0) {
+                const candidatesB = realisticPool.filter(r => r.url !== selectedImageAUrl).slice(0, 4).map(r => r.url);
+                selectedImageBUrl = await uploadExternalImageUrlFast(candidatesB.length > 0 ? candidatesB : realisticPool.slice(0, 4).map(r => r.url));
               }
 
               selectedImageUrl = selectedImageAUrl;
@@ -254,7 +248,8 @@ export function AutoGenerateTopicModal({
                 results = await searchImagesClient(item.word, imageStyle);
               }
               if (results && results.length > 0) {
-                selectedImageUrl = results[0].url;
+                const candidateUrls = results.slice(0, 4).map(r => r.url);
+                selectedImageUrl = await uploadExternalImageUrlFast(candidateUrls);
               }
             }
           } catch {
@@ -280,9 +275,20 @@ export function AutoGenerateTopicModal({
         suggestedTitle: imageAnalysisResult?.suggestedTitle || res.suggestedTitle,
       });
 
-      toast.success(
-        `Đã tạo thành công ${finalPairs.length} cặp thẻ cho chủ đề "${cleanTopic}"!`
-      );
+      const failedWords = isDualImageMode
+        ? finalPairs.filter((p) => !p.imageAUrl || !p.imageBUrl).map((p) => p.word)
+        : finalPairs.filter((p) => !p.imageUrl).map((p) => p.word);
+
+      if (failedWords.length > 0) {
+        toast.warning(
+          `⚠️ Có ${failedWords.length} thẻ chưa lấy được ảnh: ${failedWords.join(", ")}. Vui lòng chọn ảnh bổ sung!`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(
+          `Đã tạo thành công ${finalPairs.length} cặp thẻ cho chủ đề "${cleanTopic}" với đầy đủ hình ảnh!`
+        );
+      }
       onClose();
     } catch (err: any) {
       console.error("Lỗi khi tự động tạo theo chủ đề:", err);

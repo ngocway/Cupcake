@@ -138,6 +138,21 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
         : "Trò chơi Trắc nghiệm Kẹo Ngọt";
     const defaultIcon = isTreasure ? "🗺️" : isShooter ? "🎯" : "🍬";
 
+    const { optimizeAndUploadToR2 } = await import("@/lib/server-image-uploader");
+    const subFolder = `uploads/${session?.user?.id || "teacher"}`;
+    const sanitizedFlatItems = await Promise.all(
+      flatItems.map(async (item) => {
+        let optImg = item.imageUrl;
+        if (item.imageUrl) {
+          optImg = await optimizeAndUploadToR2(item.imageUrl, subFolder);
+        }
+        return {
+          ...item,
+          imageUrl: optImg || item.imageUrl || null,
+        };
+      })
+    );
+
     // If updating an existing topic
     if (data.topicId) {
       await prisma.matchWordItem.deleteMany({
@@ -155,9 +170,9 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
         },
       });
 
-      if (flatItems.length > 0) {
+      if (sanitizedFlatItems.length > 0) {
         await prisma.matchWordItem.createMany({
-          data: flatItems.map((item) => ({
+          data: sanitizedFlatItems.map((item) => ({
             topicId: updatedTopic.id,
             roundIndex: item.roundIndex,
             word: item.word,
@@ -207,9 +222,9 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
       },
     });
 
-    if (flatItems.length > 0) {
+    if (sanitizedFlatItems.length > 0) {
       await prisma.matchWordItem.createMany({
-        data: flatItems.map((item) => ({
+        data: sanitizedFlatItems.map((item) => ({
           topicId: topic.id,
           roundIndex: item.roundIndex,
           word: item.word,

@@ -54,6 +54,7 @@ export async function uploadMedia(formData: FormData) {
       Key: filePath,
       Body: buffer,
       ContentType: file.type,
+      CacheControl: 'public, max-age=31536000, immutable',
     });
 
     await s3Client.send(command);
@@ -75,60 +76,13 @@ export async function uploadUrlMedia(imageUrl: string) {
     return { success: false, error: 'No URL provided' };
   }
 
-  const bucketName = process.env.R2_BUCKET_NAME;
-  const publicUrlBase = process.env.NEXT_PUBLIC_R2_URL;
-
-  if (!bucketName || !publicUrlBase) {
-    throw new Error('R2_BUCKET_NAME or NEXT_PUBLIC_R2_URL is not set');
-  }
-
   try {
-    const s3Client = getR2Client();
-
-    let buffer: Buffer;
-    let mimeType = 'image/jpeg';
-    let ext = 'jpg';
-
-    if (imageUrl.startsWith('data:')) {
-      const base64Content = imageUrl.includes('base64,') ? imageUrl.split('base64,')[1] : imageUrl;
-      buffer = Buffer.from(base64Content, 'base64');
-      const match = imageUrl.match(/^data:([^;]+);base64,/);
-      if (match) {
-        mimeType = match[1];
-        ext = mimeType.split('/')[1] || 'png';
-      }
-    } else {
-      const response = await fetch(imageUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-        }
-      });
-      if (!response.ok) {
-        return { success: false, error: `Failed to fetch external image (Status: ${response.status})` };
-      }
-      
-      const arrayBuffer = await response.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-      mimeType = response.headers.get('content-type') || 'image/jpeg';
-      ext = mimeType.split('/')[1] || 'jpg';
-      if (ext === 'jpeg') ext = 'jpg';
+    const { optimizeAndUploadToR2 } = await import('@/lib/server-image-uploader');
+    const optimizedUrl = await optimizeAndUploadToR2(imageUrl, `uploads/${session.user.id}`);
+    if (optimizedUrl) {
+      return { success: true, url: optimizedUrl };
     }
-    
-    const fileName = `${session.user.id}-${Date.now()}.${ext}`;
-    const filePath = `uploads/${fileName}`;
-
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: filePath,
-      Body: buffer,
-      ContentType: mimeType,
-    });
-
-    await s3Client.send(command);
-
-    const publicUrl = `${publicUrlBase.replace(/\/$/, '')}/${filePath}`;
-    return { success: true, url: publicUrl };
+    return { success: false, error: 'Failed to process image' };
   } catch (error: any) {
     return { success: false, error: error.message || 'Error processing image URL' };
   }
@@ -169,6 +123,7 @@ export async function uploadBase64Image(base64Data: string, assignmentId: string
       Key: filePath,
       Body: buffer,
       ContentType: contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
     });
 
     await s3Client.send(command);
@@ -196,6 +151,7 @@ export async function uploadBufferToR2(buffer: Buffer, fileName: string, content
     Key: filePath,
     Body: buffer,
     ContentType: contentType,
+    CacheControl: 'public, max-age=31536000, immutable',
   });
 
   await s3Client.send(command);

@@ -31,7 +31,7 @@ import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { uploadMedia } from "@/actions/upload-actions";
-import { uploadImageFast } from "@/lib/direct-upload";
+import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
@@ -164,6 +164,7 @@ export function MatchImageImageCreatorUI() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [imageSearchStyle, setImageSearchStyle] = useState<"CARTOON" | "REALISTIC">("CARTOON");
   const [isSearching, startSearchTransition] = useTransition();
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   // Hidden file input refs
   const singleImageInputRef = useRef<HTMLInputElement>(null);
@@ -333,7 +334,12 @@ export function MatchImageImageCreatorUI() {
     if (!file || !activeUploadTarget) return;
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file hình ảnh hợp lệ!");
+      toast.error("File không hợp lệ! Vui lòng chỉ chọn file hình ảnh (JPG, PNG, WebP).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File ảnh quá lớn (>5MB). Vui lòng chọn ảnh nhẹ hơn để học sinh tải nhanh!");
       return;
     }
 
@@ -359,9 +365,10 @@ export function MatchImageImageCreatorUI() {
             : { ...p, imageBUrl: finalUrl, imageBFile: undefined, isUploadingB: false }
         ) : p)
       }));
+      setBrokenImages((prev) => ({ ...prev, [`${pairId}_${side}`]: false }));
       toast.success(`Đã tải & nén ảnh vế ${side} thành công!`);
     } catch (err: any) {
-      toast.error(`Tải ảnh vế ${side} thất bại: ${err.message}`);
+      toast.error(`Tải ảnh vế ${side} thất bại: ${err?.message || "Lỗi kết nối máy chủ"}. Vui lòng thử lại!`);
       setRounds(prev => prev.map((r, rIdx) => rIdx !== activeRoundIndex ? r : {
         ...r,
         pairs: r.pairs.map(p => p.id === pairId ? (
@@ -480,11 +487,11 @@ export function MatchImageImageCreatorUI() {
           setSearchResults(results);
         } else {
           setSearchResults([]);
-          toast.error("Không tìm thấy hình ảnh phù hợp!");
+          toast.warning(`Không tìm thấy ảnh nào phù hợp cho từ khóa "${query}". Vui lòng thử từ khóa khác!`);
         }
       } catch (e) {
         setSearchResults([]);
-        toast.error("Lỗi khi tìm ảnh!");
+        toast.error("Lỗi khi tìm ảnh trực tuyến. Vui lòng thử lại!");
       }
     });
   };
@@ -492,6 +499,7 @@ export function MatchImageImageCreatorUI() {
   const handleSelectSearchImage = (imageUrl: string) => {
     if (!activeSearchTarget) return;
     const { pairId, side } = activeSearchTarget;
+    const targetRoundIdx = activeRoundIndex;
 
     const updatedRounds = [...rounds];
     updatedRounds[activeRoundIndex] = {
@@ -507,7 +515,34 @@ export function MatchImageImageCreatorUI() {
     };
     setRounds(updatedRounds);
     setShowSearchModal(false);
+    setBrokenImages((prev) => ({ ...prev, [`${pairId}_${side}`]: false }));
     toast.success(`Đã chọn hình ảnh cho vế ${side}!`);
+
+    // Background optimization: download, convert to WebP via Sharp, and upload to R2
+    uploadExternalImageUrlFast(imageUrl)
+      .then((r2Url) => {
+        if (r2Url && r2Url !== imageUrl) {
+          setRounds((prevRounds) => {
+            const nextRounds = [...prevRounds];
+            if (!nextRounds[targetRoundIdx]) return prevRounds;
+            nextRounds[targetRoundIdx] = {
+              ...nextRounds[targetRoundIdx],
+              pairs: nextRounds[targetRoundIdx].pairs.map((p) => {
+                if (p.id !== pairId) return p;
+                return side === "A" ? { ...p, imageAUrl: r2Url } : { ...p, imageBUrl: r2Url };
+              }),
+            };
+            return nextRounds;
+          });
+        } else if (!r2Url) {
+          setBrokenImages((prev) => ({ ...prev, [`${pairId}_${side}`]: true }));
+          toast.error(`Ảnh vừa chọn cho vế ${side} bị chặn tải từ nguồn gốc. Vui lòng chọn ảnh khác hoặc tải file từ máy tính!`);
+        }
+      })
+      .catch(() => {
+        setBrokenImages((prev) => ({ ...prev, [`${pairId}_${side}`]: true }));
+        toast.error(`Ảnh vừa chọn cho vế ${side} bị lỗi tải. Vui lòng chọn ảnh khác!`);
+      });
   };
 
   const handleRemoveImage = (pairId: string, side: "A" | "B") => {
@@ -686,6 +721,20 @@ export function MatchImageImageCreatorUI() {
         setValidationModalMessage(`${r.title}, Cặp thẻ thứ #${missingImgBIdx + 1} chưa chọn Hình ảnh cho Thẻ B. Vui lòng chọn ảnh trước khi lưu!`);
         return;
       }
+
+      const brokenImgAIdx = r.pairs.findIndex(p => Boolean(brokenImages[`${p.id}_A`]));
+      if (brokenImgAIdx !== -1) {
+        setActiveRoundIndex(rIdx);
+        setValidationModalMessage(`${r.title}, Thẻ A của cặp thứ #${brokenImgAIdx + 1} đang bị lỗi tải ảnh. Vui lòng đổi ảnh khác trước khi lưu bài!`);
+        return;
+      }
+
+      const brokenImgBIdx = r.pairs.findIndex(p => Boolean(brokenImages[`${p.id}_B`]));
+      if (brokenImgBIdx !== -1) {
+        setActiveRoundIndex(rIdx);
+        setValidationModalMessage(`${r.title}, Thẻ B của cặp thứ #${brokenImgBIdx + 1} đang bị lỗi tải ảnh. Vui lòng đổi ảnh khác trước khi lưu bài!`);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -698,10 +747,14 @@ export function MatchImageImageCreatorUI() {
           let finalImageAUrl = pair.imageAUrl;
           if (pair.imageAFile) {
             finalImageAUrl = await uploadImageFast(pair.imageAFile);
+          } else if (pair.imageAUrl && !pair.imageAUrl.includes("media.dolcake.com")) {
+            finalImageAUrl = await uploadExternalImageUrlFast(pair.imageAUrl);
           }
           let finalImageBUrl = pair.imageBUrl;
           if (pair.imageBFile) {
             finalImageBUrl = await uploadImageFast(pair.imageBFile);
+          } else if (pair.imageBUrl && !pair.imageBUrl.includes("media.dolcake.com")) {
+            finalImageBUrl = await uploadExternalImageUrlFast(pair.imageBUrl);
           }
 
           return {
@@ -782,6 +835,7 @@ export function MatchImageImageCreatorUI() {
       setTitle(suggestedTitle);
       setTitleError(false);
     }
+    setBrokenImages({});
 
     const isSingleEmptyInitial =
       rounds.length === 1 &&
@@ -1071,7 +1125,7 @@ export function MatchImageImageCreatorUI() {
                               : "border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900"
                         }`}
                       >
-                        {pair.imageAUrl ? (
+                        {pair.imageAUrl && !brokenImages[`${pair.id}_A`] ? (
                           <div 
                             draggable
                             onDragStart={(e) => {
@@ -1083,13 +1137,17 @@ export function MatchImageImageCreatorUI() {
                               setDragSource(null);
                               setDragActiveTarget(null);
                             }}
-                            className="relative w-full h-full group cursor-grab active:cursor-grabbing"
+                            className="relative w-full h-full group cursor-grab active:cursor-grabbing bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center overflow-hidden"
                             title="Kéo thả sang ô khác để di chuyển hoặc tráo đổi vị trí ảnh"
                           >
                             <img
                               src={pair.imageAUrl}
                               alt="Vế A"
-                              className="w-full h-full object-contain p-1.5 pointer-events-none select-none"
+                              onError={() => {
+                                setBrokenImages((prev) => ({ ...prev, [`${pair.id}_A`]: true }));
+                                toast.error(`Ảnh vế A của cặp thẻ #${pIdx + 1} không tải được ảnh. Vui lòng kiểm tra lại!`);
+                              }}
+                              className="w-full h-full object-contain p-1.5 pointer-events-none select-none transition-transform duration-200 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 backdrop-blur-[2px]">
                               <button
@@ -1103,6 +1161,29 @@ export function MatchImageImageCreatorUI() {
                                 className="w-full py-1 rounded-lg bg-sky-500 text-white text-[10px] font-bold shadow-md hover:bg-sky-600"
                               >
                                 Tìm kiếm
+                              </button>
+                            </div>
+                          </div>
+                        ) : pair.imageAUrl && brokenImages[`${pair.id}_A`] ? (
+                          <div className="flex flex-col items-center justify-center p-2 text-center space-y-1.5 bg-amber-500/5 dark:bg-amber-950/20 w-full h-full">
+                            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                              <AlertCircle className="w-4 h-4" />
+                            </div>
+                            <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 leading-tight">
+                              Ảnh lỗi tải
+                            </p>
+                            <div className="flex items-center justify-center gap-1 pt-0.5">
+                              <button
+                                onClick={() => handleOpenImageSearch(pair, "A")}
+                                className="px-2 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-[10px] font-bold transition-all shadow-sm"
+                              >
+                                Đổi ảnh
+                              </button>
+                              <button
+                                onClick={() => handleOpenImageUpload(pair.id, "A")}
+                                className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-[10px] font-bold transition-all"
+                              >
+                                Tải file
                               </button>
                             </div>
                           </div>
@@ -1159,7 +1240,7 @@ export function MatchImageImageCreatorUI() {
                               : "border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900"
                         }`}
                       >
-                        {pair.imageBUrl ? (
+                        {pair.imageBUrl && !brokenImages[`${pair.id}_B`] ? (
                           <div 
                             draggable
                             onDragStart={(e) => {
@@ -1171,13 +1252,17 @@ export function MatchImageImageCreatorUI() {
                               setDragSource(null);
                               setDragActiveTarget(null);
                             }}
-                            className="relative w-full h-full group cursor-grab active:cursor-grabbing"
+                            className="relative w-full h-full group cursor-grab active:cursor-grabbing bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center overflow-hidden"
                             title="Kéo thả sang ô khác để di chuyển hoặc tráo đổi vị trí ảnh"
                           >
                             <img
                               src={pair.imageBUrl}
                               alt="Vế B"
-                              className="w-full h-full object-contain p-1.5 pointer-events-none select-none"
+                              onError={() => {
+                                setBrokenImages((prev) => ({ ...prev, [`${pair.id}_B`]: true }));
+                                toast.error(`Ảnh vế B của cặp thẻ #${pIdx + 1} không tải được ảnh. Vui lòng kiểm tra lại!`);
+                              }}
+                              className="w-full h-full object-contain p-1.5 pointer-events-none select-none transition-transform duration-200 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-1 backdrop-blur-[2px]">
                               <button
@@ -1191,6 +1276,29 @@ export function MatchImageImageCreatorUI() {
                                 className="w-full py-1 rounded-lg bg-purple-500 text-white text-[10px] font-bold shadow-md hover:bg-purple-600"
                               >
                                 Tìm kiếm
+                              </button>
+                            </div>
+                          </div>
+                        ) : pair.imageBUrl && brokenImages[`${pair.id}_B`] ? (
+                          <div className="flex flex-col items-center justify-center p-2 text-center space-y-1.5 bg-amber-500/5 dark:bg-amber-950/20 w-full h-full">
+                            <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                              <AlertCircle className="w-4 h-4" />
+                            </div>
+                            <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 leading-tight">
+                              Ảnh lỗi tải
+                            </p>
+                            <div className="flex items-center justify-center gap-1 pt-0.5">
+                              <button
+                                onClick={() => handleOpenImageSearch(pair, "B")}
+                                className="px-2 py-1 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-[10px] font-bold transition-all shadow-sm"
+                              >
+                                Đổi ảnh
+                              </button>
+                              <button
+                                onClick={() => handleOpenImageUpload(pair.id, "B")}
+                                className="px-2 py-1 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-200 text-[10px] font-bold transition-all"
+                              >
+                                Tải file
                               </button>
                             </div>
                           </div>

@@ -389,6 +389,14 @@ function startStation(index = currentStationIndex) {
       img.src = pair.picture;
       img.alt = pair.word;
       img.loading = 'eager';
+      img.onerror = () => {
+        img.style.display = 'none';
+        const fallback = document.createElement('span');
+        fallback.className = 'picture-fallback';
+        fallback.textContent = '🖼️';
+        fallback.style.fontSize = '32px';
+        picDiv.prepend(fallback);
+      };
       picDiv.appendChild(img);
     } else {
       const emojiSpan = document.createElement('span');
@@ -870,6 +878,25 @@ async function initGame() {
 
   renderStationButtons();
   startStation(0);
+
+  // Preload all remaining rounds in background so subsequent stations load instantly
+  setTimeout(() => {
+    try {
+      if (Array.isArray(window.WORD_SETS)) {
+        window.WORD_SETS.slice(1).forEach(st => {
+          if (Array.isArray(st.pairs)) {
+            st.pairs.forEach(p => {
+              const u = p[1];
+              if (u && /^(data:|assets\/|\.\/|https?:|\/)/.test(u)) {
+                const bgImg = new Image();
+                bgImg.src = u;
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }, 300);
 
   // Báo cho trang ngoài tắt Loading Skeleton khi tàu bắt đầu chuyển động vào ga
   setTimeout(() => {

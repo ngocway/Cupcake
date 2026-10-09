@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { searchImagesClient, SearchImageResult } from "@/lib/image-search-client";
+import { uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import {
   generateCandyQuizQuestionsAction,
   analyzeImageForQuizAction,
@@ -238,8 +239,8 @@ export function AutoGenerateCandyQuizModal({
           try {
             const results = await searchImagesClient(query, imageMode === "REALISTIC" ? "REALISTIC" : "CARTOON");
             if (results.length > 0) {
-              imageUrl = results[0].url;
               cachedResults = results;
+              imageUrl = await uploadExternalImageUrlFast(results.slice(0, 4).map(r => r.url));
             }
           } catch (imgErr) {
             console.warn(`Lỗi tìm ảnh cho câu "${query}":`, imgErr);
@@ -268,7 +269,15 @@ export function AutoGenerateCandyQuizModal({
 
       setReviewQuestions(questionsWithMedia);
       setStep("REVIEW");
-      toast.success(`Đã tạo thành công ${questionsWithMedia.length} câu hỏi!`);
+      const missingCount = questionsWithMedia.filter((q) => !q.imageUrl).length;
+      if (imageMode !== "NONE" && missingCount > 0) {
+        toast.warning(
+          `⚠️ Có ${missingCount}/${questionsWithMedia.length} câu hỏi chưa lấy được ảnh. Vui lòng chọn ảnh bổ sung trong bảng duyệt bên dưới!`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(`Đã tạo thành công ${questionsWithMedia.length} câu hỏi!`);
+      }
     } catch (err: any) {
       console.error("Lỗi tạo câu hỏi AI:", err);
       toast.error("Có lỗi xảy ra trong quá trình tạo câu hỏi. Vui lòng thử lại!");
@@ -323,7 +332,10 @@ export function AutoGenerateCandyQuizModal({
 
   const handlePerformImageSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!imageSearchQuery.trim()) return;
+    if (!imageSearchQuery.trim()) {
+      toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh!");
+      return;
+    }
 
     setIsSearchingImage(true);
     try {
@@ -331,9 +343,12 @@ export function AutoGenerateCandyQuizModal({
         imageSearchQuery.trim(),
         imageMode === "REALISTIC" ? "REALISTIC" : "CARTOON"
       );
-      setImageSearchResults(results);
+      if (!results || results.length === 0) {
+        toast.warning(`Không tìm thấy ảnh nào cho từ khóa "${imageSearchQuery.trim()}". Vui lòng thử từ khóa khác!`);
+      }
+      setImageSearchResults(results || []);
     } catch (err) {
-      toast.error("Không thể tìm ảnh lúc này.");
+      toast.error("Không thể tìm ảnh lúc này. Vui lòng thử lại sau!");
     } finally {
       setIsSearchingImage(false);
     }
@@ -341,11 +356,31 @@ export function AutoGenerateCandyQuizModal({
 
   const handleSelectSearchedImage = (url: string) => {
     if (activeImagePickerQIndex !== null) {
+      const qIndex = activeImagePickerQIndex;
       const updated = [...reviewQuestions];
-      updated[activeImagePickerQIndex].imageUrl = url;
+      updated[qIndex].imageUrl = url;
       setReviewQuestions(updated);
       setActiveImagePickerQIndex(null);
       toast.success("Đã cập nhật ảnh cho câu hỏi!");
+
+      // Tối ưu & lưu lên Cloudflare R2
+      uploadExternalImageUrlFast(url)
+        .then((r2Url) => {
+          if (r2Url && r2Url !== url) {
+            setReviewQuestions((prev) => {
+              const next = [...prev];
+              if (next[qIndex]) {
+                next[qIndex] = { ...next[qIndex], imageUrl: r2Url };
+              }
+              return next;
+            });
+          } else if (!r2Url) {
+            toast.error("Ảnh vừa chọn bị chặn tải từ nguồn gốc. Vui lòng chọn ảnh khác!");
+          }
+        })
+        .catch(() => {
+          toast.error("Không thể tải và lưu ảnh này. Vui lòng chọn ảnh khác!");
+        });
     }
   };
 

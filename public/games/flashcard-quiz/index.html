@@ -810,6 +810,14 @@
                 if (data.success && data.questions && data.questions.length > 0) {
                     questions = data.questions;
                     currentIndex = 0;
+
+                    // Preload all question images in background
+                    questions.forEach(q => {
+                        if (q.imageUrl) {
+                            const preImg = new Image();
+                            preImg.src = q.imageUrl;
+                        }
+                    });
                     
                     // Update start screen subtitle with topic name
                     if (data.topicName) {
@@ -939,13 +947,30 @@
             });
 
             if (q.imageUrl) {
-                cardImage.src = q.imageUrl;
                 cardImage.style.display = 'block';
                 placeholder.style.display = 'none';
-                
-                // Initialize reveal canvas
                 revealCanvas.style.display = 'block';
-                initRevealCanvas();
+
+                const onImageReady = () => {
+                    initRevealCanvas();
+                };
+
+                const onImageFail = () => {
+                    cardImage.style.display = 'none';
+                    revealCanvas.style.display = 'none';
+                    placeholder.style.display = 'block';
+                };
+
+                cardImage.onerror = onImageFail;
+
+                if (cardImage.src !== q.imageUrl) {
+                    cardImage.onload = onImageReady;
+                    cardImage.src = q.imageUrl;
+                } else if (cardImage.complete && cardImage.naturalWidth > 0) {
+                    onImageReady();
+                } else {
+                    cardImage.onload = onImageReady;
+                }
             } else {
                 cardImage.style.display = 'none';
                 placeholder.style.display = 'block';

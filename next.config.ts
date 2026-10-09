@@ -53,6 +53,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: '*.supabase.co' },
       { protocol: 'https', hostname: '*.r2.dev' },
+      { protocol: 'https', hostname: 'media.dolcake.com' },
     ],
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',

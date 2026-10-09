@@ -83,6 +83,24 @@ const DEFAULT_GAME_DATA = [
     ];
   }
 
+  // Preload all question images in background
+  setTimeout(() => {
+    try {
+      if (Array.isArray(gameRounds)) {
+        gameRounds.forEach(r => {
+          if (Array.isArray(r.questions)) {
+            r.questions.forEach(q => {
+              if (q.imageUrl && typeof q.imageUrl === 'string' && q.imageUrl.trim() !== '') {
+                const img = new Image();
+                img.src = q.imageUrl;
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {}
+  }, 200);
+
   const state = {
     roundIdx: 0,
     questionIdx: 0,

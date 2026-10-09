@@ -320,7 +320,7 @@ function getBaseClassifiedTeacherGame(topic: {
       badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20",
       icon: "content_cut",
       desc: "Học sinh dùng thao tác cắt dây để nối hình ảnh với từ vựng / câu tương ứng.",
-      imageUrl: "/images/games/flashcard-match.png",
+      imageUrl: "/images/games/cut-rope.png",
       itemCount: topic._count?.items ?? 0,
       createdAt: topic.createdAt.toISOString(),
       playUrl: `/student/game/cut-rope?topicId=${topic.id}`,

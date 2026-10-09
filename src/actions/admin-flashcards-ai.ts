@@ -455,6 +455,7 @@ async function uploadToFlashcardR2(buffer: Buffer, fileName: string, contentType
     Key: key,
     Body: buffer,
     ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
   }));
   return `${process.env.NEXT_PUBLIC_R2_URL!.replace(/\/$/, "")}/${key}`;
 }

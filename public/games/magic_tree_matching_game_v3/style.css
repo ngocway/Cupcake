@@ -75,7 +75,6 @@ button { font: inherit; }
 .mascot-area,
 .cards-layer,
 .feedback-badge,
-.finish-modal,
 .sound-button {
   position: absolute;
   z-index: 2;
@@ -336,6 +335,62 @@ button { font: inherit; }
   width: 72%;
   height: 38%;
   object-fit: contain;
+  transition: opacity 0.28s ease;
+}
+
+/* Card Loading Skeleton & Fallback */
+.card-skeleton {
+  position: absolute;
+  left: 14%;
+  top: 57%;
+  width: 72%;
+  height: 38%;
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(230, 195, 140, 0.4) 0%, rgba(255, 235, 190, 0.75) 50%, rgba(230, 195, 140, 0.4) 100%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes skeletonPulse {
+  0% { background-position: 200% 0; opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { background-position: -200% 0; opacity: 0.6; }
+}
+
+.card-error-fallback {
+  position: absolute;
+  left: 14%;
+  top: 57%;
+  width: 72%;
+  height: 38%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.card-error-fallback .fallback-icon {
+  font-size: clamp(16px, 1.8vw, 28px);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.card-error-fallback .fallback-word {
+  font-family: 'Fredoka', var(--ui-font);
+  font-size: clamp(10px, 1.1vw, 16px);
+  font-weight: 900;
+  color: #78350f;
+  line-height: 1.1;
+  word-break: break-word;
+  max-width: 95%;
 }
 
 .answer-area {
@@ -508,11 +563,13 @@ button { font: inherit; }
 }
 
 .finish-modal {
+  position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(26, 92, 140, 0.28);
-  backdrop-filter: blur(2px);
+  background: rgba(26, 92, 140, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
 }
 .finish-modal.hidden { display: none; }
 .finish-card {

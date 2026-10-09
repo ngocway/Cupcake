@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { isDolcakeMediaUrl, migrateTopicImagesInBackground } from "@/lib/server-image-uploader";
 
 export async function GET(
   request: Request,
@@ -29,6 +30,13 @@ export async function GET(
         { success: false, error: "Không tìm thấy bài tập trắc nghiệm!" },
         { status: 404 }
       );
+    }
+
+    const hasExternalImages = topic.items.some(
+      (item) => item.imageUrl && !isDolcakeMediaUrl(item.imageUrl) && item.imageUrl.startsWith("http")
+    );
+    if (hasExternalImages) {
+      migrateTopicImagesInBackground(topic.id).catch(() => {});
     }
 
     // Group items by roundIndex

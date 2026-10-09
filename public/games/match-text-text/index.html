@@ -277,6 +277,8 @@
             aspect-ratio: 1 / 1;
             padding: 8px;
             border: 5px solid #ffd154;
+            position: relative;
+            overflow: hidden;
         }
 
         .card-img img {
@@ -285,6 +287,76 @@
             object-fit: cover;
             border-radius: 16px;
             pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+
+        .card-img img.loaded {
+            opacity: 1;
+        }
+
+        /* ── CARD SKELETON SHIMMER ── */
+        .card-skeleton {
+            background: #f1f3f5 !important;
+        }
+
+        .card-skeleton::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+            animation: shimmerSlide 1.2s infinite;
+        }
+
+        @keyframes shimmerSlide {
+            100% { transform: translateX(100%); }
+        }
+
+        /* ── BOARD LOADING STATE ── */
+        .board-loading-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            border-radius: 34px;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .board-loader-spinner {
+            font-size: 3.5rem;
+            animation: pulseBounce 1.2s ease-in-out infinite alternate;
+        }
+
+        .board-loader-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #ff6b6b;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(255, 107, 107, 0.2);
+            animation: textPulse 1.5s ease-in-out infinite;
+        }
+
+        .board-loader-subtext {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #868e96;
+        }
+
+        @keyframes pulseBounce {
+            0% { transform: scale(0.9) translateY(0) rotate(-6deg); }
+            100% { transform: scale(1.15) translateY(-8px) rotate(6deg); }
+        }
+
+        @keyframes textPulse {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 1; }
         }
 
         /* Word Cards (Pill shape) */
@@ -645,6 +717,13 @@
 
             <!-- Next Round Button (shown only if there is a next round) -->
             <button class="next-round-btn" id="nextRoundBtn">NEXT ROUND ▶</button>
+
+            <!-- Board Loading State (Shown while fetching API and Round 1 cards) -->
+            <div id="boardLoadingState" class="board-loading-state">
+                <div class="board-loader-spinner">🌟</div>
+                <div class="board-loader-text">Đang nạp thẻ bài nối từ...</div>
+                <div class="board-loader-subtext">Sẵn sàng để nối những cặp từ siêu vui nhé!</div>
+            </div>
         </div>
     </div>
 
@@ -788,20 +867,28 @@
         } catch (e) {}
     }
 
-    async function preloadImages(imageUrls) {
+    function preloadImagesWithTimeout(imageUrls, timeoutMs = 1200) {
         const promises = imageUrls.filter(Boolean).map(url => {
             return new Promise((resolve) => {
                 const img = new Image();
-                img.onload = resolve;
-                img.onerror = resolve;
+                let done = false;
+                const finish = () => {
+                    if (!done) {
+                        done = true;
+                        resolve();
+                    }
+                };
+                img.onload = finish;
+                img.onerror = finish;
                 img.src = url;
+                setTimeout(finish, timeoutMs);
             });
         });
-        await Promise.all(promises);
+        return Promise.all(promises);
     }
 
     async function loadGameData() {
-        const loadingEl = document.getElementById('loadingOverlay');
+        const boardLoading = document.getElementById('boardLoadingState');
         try {
             let cards = [];
             if (TOPIC_ID) {
@@ -841,30 +928,63 @@
                 roundsData = Object.keys(roundsMap).sort((a, b) => a - b).map(r => roundsMap[r]);
                 currentRoundIndex = 0;
 
-                // Preload image assets in background before initializing
-                const urlsToPreload = [];
-                allCards.forEach(c => {
-                    if (c.imageUrl) urlsToPreload.push(c.imageUrl);
-                    if (c.imageBUrl) urlsToPreload.push(c.imageBUrl);
+                // Priority preload Round 1 images with a short timeout (max 1.2s)
+                const round1Cards = roundsData[0] || [];
+                const round1Urls = [];
+                round1Cards.forEach(c => {
+                    if (c.imageUrl) round1Urls.push(c.imageUrl);
+                    if (c.imageBUrl) round1Urls.push(c.imageBUrl);
                 });
-                await preloadImages(urlsToPreload);
+
+                if (round1Urls.length > 0) {
+                    await preloadImagesWithTimeout(round1Urls, 1200);
+                }
+
+                // Hide board loading state smoothly
+                if (boardLoading) {
+                    boardLoading.style.opacity = '0';
+                    setTimeout(() => { boardLoading.style.display = 'none'; }, 300);
+                }
 
                 initRound();
-            } else if (loadingEl) {
-                loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
+
+                // Signal to outer Next.js page that game is ready
+                try {
+                    window.parent.postMessage({ type: 'MATCH_GAME_READY' }, '*');
+                } catch (e) {}
+
+                // Preload remaining rounds in background so round transitions are instant
+                setTimeout(() => {
+                    const remainingUrls = [];
+                    roundsData.slice(1).forEach(round => {
+                        round.forEach(c => {
+                            if (c.imageUrl) remainingUrls.push(c.imageUrl);
+                            if (c.imageBUrl) remainingUrls.push(c.imageBUrl);
+                        });
+                    });
+                    remainingUrls.forEach(url => {
+                        const bgImg = new Image();
+                        bgImg.src = url;
+                    });
+                }, 350);
+            } else if (boardLoading) {
+                boardLoading.innerHTML = `
+                    <div style="font-size: 3rem;">😢</div>
+                    <div class="board-loader-text">Không tìm thấy thẻ bài nào</div>
+                    <div class="board-loader-subtext">Vui lòng kiểm tra lại chủ đề</div>
+                `;
                 return;
             }
         } catch (e) {
             console.error('Failed to load game data:', e);
-            if (loadingEl) {
-                loadingEl.querySelector('.loadText').textContent = 'Error loading game 😢';
+            if (boardLoading) {
+                boardLoading.innerHTML = `
+                    <div style="font-size: 3rem;">⚠️</div>
+                    <div class="board-loader-text">Lỗi tải dữ liệu bài học</div>
+                    <div class="board-loader-subtext">Vui lòng thử tải lại trang</div>
+                `;
             }
             return;
-        }
-
-        if (loadingEl) {
-            loadingEl.style.opacity = '0';
-            setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
         }
     }
 
@@ -959,10 +1079,24 @@
             dotBottom.dataset.side = 'top';
 
             if (item.imageUrl) {
-                topCard.className = `match-card card-img theme-${theme.name}`;
+                topCard.className = `match-card card-img theme-${theme.name} card-skeleton`;
                 const img = document.createElement('img');
-                img.src = item.imageUrl;
                 img.alt = item.word || 'Item';
+                img.onload = () => {
+                    topCard.classList.remove('card-skeleton');
+                    img.classList.add('loaded');
+                };
+                img.onerror = () => {
+                    topCard.classList.remove('card-skeleton');
+                    topCard.className = `match-card card-word theme-${theme.name}`;
+                    topCard.innerHTML = `<span>${item.word || 'Item'}</span>`;
+                    topCard.appendChild(dotBottom);
+                };
+                img.src = item.imageUrl;
+                if (img.complete && img.naturalWidth) {
+                    topCard.classList.remove('card-skeleton');
+                    img.classList.add('loaded');
+                }
                 topCard.appendChild(img);
             } else {
                 topCard.className = `match-card card-word theme-${theme.name}`;
@@ -986,10 +1120,24 @@
             dotTop.dataset.side = 'bottom';
 
             if (isImageImage && item.imageBUrl) {
-                bottomCard.className = `match-card card-img theme-${theme.name}`;
+                bottomCard.className = `match-card card-img theme-${theme.name} card-skeleton`;
                 const img = document.createElement('img');
-                img.src = item.imageBUrl;
                 img.alt = item.word || 'Item B';
+                img.onload = () => {
+                    bottomCard.classList.remove('card-skeleton');
+                    img.classList.add('loaded');
+                };
+                img.onerror = () => {
+                    bottomCard.classList.remove('card-skeleton');
+                    bottomCard.className = `match-card card-word theme-${theme.name}`;
+                    bottomCard.innerHTML = `<span>${item.labelB || item.word || 'Word'}</span>`;
+                    bottomCard.appendChild(dotTop);
+                };
+                img.src = item.imageBUrl;
+                if (img.complete && img.naturalWidth) {
+                    bottomCard.classList.remove('card-skeleton');
+                    img.classList.add('loaded');
+                }
                 bottomCard.appendChild(img);
             } else {
                 bottomCard.className = `match-card card-word theme-${theme.name}`;

@@ -1125,6 +1125,18 @@
             if (data.success && data.cards && data.cards.length > 0) {
                 allCards = data.cards;
                 isTeacherGame = Boolean(data.isTeacherGame);
+
+                // Background Preload all card images
+                allCards.forEach(c => {
+                    if (c.imageUrl) {
+                        const preImg = new Image();
+                        preImg.src = c.imageUrl;
+                    }
+                    if (c.imageBUrl) {
+                        const preImgB = new Image();
+                        preImgB.src = c.imageBUrl;
+                    }
+                });
             } else {
                 loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
                 return;

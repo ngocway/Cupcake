@@ -469,7 +469,98 @@ export const GameCardThumbnailPreview = React.forwardRef<
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 5. LẬT ẢNH / NỐI CẶP KHÁC (Flip / Match)
+  // 5. CẮT DÂY (Cut Rope - Cây Phép Thuật)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (normMode.includes("cut-rope") || normMode.includes("cắt dây") || normMode === "cut-rope") {
+    const activePairs = pairs.length > 0
+      ? pairs.slice(0, 4)
+      : [
+          { word: "Cat", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-cat.png" },
+          { word: "Dog", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-dog.png" },
+          { word: "Monkey", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-monkey.png" },
+          { word: "Chicken", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-chicken.png" },
+        ];
+    const targetWord = activePairs[0]?.word || "TARGET";
+
+    return (
+      <div
+        ref={ref}
+        style={{ width: 1200, height: 675 }}
+        className="relative overflow-hidden font-sans select-none flex flex-col justify-between p-8 bg-[#8bd8ff]"
+      >
+        <img
+          src="/games/magic_tree_matching_game_v3/assets/background/background.png"
+          alt="Cut Rope Tree Background"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Top Header */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-pink-600 text-white px-6 py-2.5 rounded-full font-black text-xl tracking-wider uppercase shadow-xl shadow-rose-500/25">
+              <span>✂️</span>
+              <span>CẮT DÂY NỐI TỪ</span>
+            </div>
+            <span className="px-3.5 py-1.5 rounded-full bg-amber-500 text-white text-xs font-black uppercase tracking-wider shadow-md">
+              CÂY PHÉP THUẬT
+            </span>
+          </div>
+          {title && (
+            <div className="bg-white/90 backdrop-blur-md px-6 py-2 rounded-2xl border-2 border-rose-200 text-rose-950 font-black text-xl max-w-lg truncate shadow-lg">
+              {title}
+            </div>
+          )}
+        </div>
+
+        {/* 4 Hanging Cards */}
+        <div className="relative z-10 grid grid-cols-4 gap-8 px-6 mt-2">
+          {activePairs.map((pair, i) => (
+            <div key={i} className="relative flex flex-col items-center">
+              <div className="w-1.5 h-16 bg-amber-700/80 rounded-full mb-1 shadow-sm" />
+              <div className="w-40 h-40 bg-white/95 rounded-3xl p-3 border-4 border-amber-400 shadow-2xl flex flex-col items-center justify-center">
+                {pair.imageUrl ? (
+                  <img src={pair.imageUrl} alt={pair.word} className="w-24 h-24 object-contain rounded-xl" />
+                ) : (
+                  <span className="text-3xl">⭐</span>
+                )}
+                <span className="text-xs font-black text-slate-700 mt-1 truncate max-w-[140px]">
+                  {pair.word}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Basket with Word Plaque & Mascot */}
+        <div className="relative z-10 flex items-end justify-between px-10">
+          <div className="w-28" />
+          <div className="flex flex-col items-center">
+            <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white font-black text-2xl uppercase tracking-widest px-8 py-3 rounded-2xl border-4 border-amber-300 shadow-2xl drop-shadow">
+              {targetWord}
+            </div>
+            <img
+              src="/games/magic_tree_matching_game_v3/assets/answer/basket-front.png"
+              alt="Basket"
+              className="w-56 h-auto -mt-3 object-contain drop-shadow-xl"
+            />
+          </div>
+          <img
+            src="/games/magic_tree_matching_game_v3/assets/mascot/mascot-squirrel.png"
+            alt="Mascot"
+            className="w-28 h-28 object-contain drop-shadow-xl"
+          />
+        </div>
+
+        {/* Bottom Banner */}
+        <div className="relative z-10 flex justify-between items-center text-slate-800 font-bold text-sm bg-white/80 backdrop-blur-md px-6 py-2 rounded-2xl border border-white shadow-sm">
+          <span>✂️ Cắt đúng sợi dây của thẻ tương ứng để đưa vào giỏ</span>
+          <span>Cupcakes Game Studio</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 6. LẬT ẢNH / NỐI CẶP KHÁC (Flip / Match)
   // ──────────────────────────────────────────────────────────────────────────
   if (
     normMode.includes("flip") ||
