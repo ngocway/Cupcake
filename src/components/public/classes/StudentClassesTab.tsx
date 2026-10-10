@@ -211,9 +211,17 @@ function EnrolledClassRowCard({
   const targetClassId = item.class.id || item.id;
   const classUrl = `/student/classes/${targetClassId}`;
 
-  // Real thumbnail and teacher avatar from database
-  const thumbnailSrc = item.class.thumbnail || matched.thumbnail;
-  const teacherAvatar = item.class.teacherAvatar || matched.teacher.avatar;
+  // Real thumbnail and teacher avatar from database with defensive error fallback
+  const [thumbSrc, setThumbSrc] = useState(item.class.thumbnail || matched.thumbnail);
+  const [avatarSrc, setAvatarSrc] = useState(item.class.teacherAvatar || matched.teacher.avatar);
+
+  useEffect(() => {
+    setThumbSrc(item.class.thumbnail || matched.thumbnail);
+  }, [item.class.thumbnail, matched.thumbnail]);
+
+  useEffect(() => {
+    setAvatarSrc(item.class.teacherAvatar || matched.teacher.avatar);
+  }, [item.class.teacherAvatar, matched.teacher.avatar]);
 
   return (
     <div
@@ -228,11 +236,12 @@ function EnrolledClassRowCard({
         className="relative w-full md:w-36 lg:w-44 h-44 sm:h-48 md:h-24 lg:h-28 rounded-lg sm:rounded-[12px] overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/60 block cursor-pointer"
       >
         <Image
-          src={thumbnailSrc}
+          src={thumbSrc}
           alt={item.class.name || matched.title}
           fill
           sizes="(max-width: 768px) 100vw, 180px"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={() => setThumbSrc('/assests/Classes/thumbnails/class-thumb-neutral-default.jpg')}
         />
       </Link>
 
@@ -250,10 +259,11 @@ function EnrolledClassRowCard({
         <div className="flex items-center gap-2 mt-2">
           <div className="relative size-6 sm:size-7 rounded-full overflow-hidden border border-white dark:border-slate-700 shadow-2xs shrink-0">
             <Image
-              src={teacherAvatar}
+              src={avatarSrc}
               alt={item.class.teacherName || matched.teacher.name}
               fill
               className="object-cover"
+              onError={() => setAvatarSrc('/assests/Classes/avatars/teacher-avatar-ms-jessica.png')}
             />
           </div>
           <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">
