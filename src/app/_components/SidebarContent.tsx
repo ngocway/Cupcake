@@ -60,7 +60,13 @@ export async function SidebarContent({ searchParams, initialUserType, studySubje
       `}</style>
 
       {/* Subject Selector */}
-      <SubjectSelector subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))} config={config} locale={locale} />
+      <SubjectSelector
+        subjects={(config?.subjects || []).map((s: any) => ({ id: s.id, label: s.label, icon: s.icon }))}
+        config={config}
+        locale={locale}
+        initialStudySubject={studySubject}
+        initialStudyAgeGroup={studyAgeGroup}
+      />
     </div>
   );
 }

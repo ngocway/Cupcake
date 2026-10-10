@@ -17,12 +17,14 @@ import {
   LogIn,
   RefreshCw,
   Eye,
-  Users,
   CheckCircle2,
   Clock,
   Compass,
   ArrowDown,
+  Copy,
+  Check,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { useContentStore } from '@/store/useContentStore';
 
@@ -35,6 +37,7 @@ type PublicClassItem = {
   typeBadge: string;
   typeBadgeClass: string;
   thumbnail: string;
+  joinCode?: string;
   teacher: {
     name: string;
     avatar: string;
@@ -47,6 +50,25 @@ type PublicClassItem = {
 
 const PUBLIC_CLASSES: PublicClassItem[] = [
   {
+    id: 'cmuvbigbg0001vta43ikcsjbk',
+    title: 'English Grammar Mastery (45 Days)',
+    description: 'Master English grammar from zero to B1 with 268 interactive spaced-repetition exercises.',
+    subjectBadge: 'Grammar',
+    subjectBadgeClass: 'bg-[#ede9fe]/95 text-[#4338ca] border-[#c7d2fe]/70',
+    typeBadge: '🔥 Free',
+    typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
+    joinCode: 'GM45VN',
+    teacher: {
+      name: 'Dolcake Teacher',
+      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      role: 'Teacher',
+    },
+    lessonsCount: 268,
+    studentsCount: '12+ students',
+    btnGradient: 'from-[#6366f1] to-[#8b5cf6] hover:from-[#4f46e5] hover:to-[#7c3aed] shadow-indigo-500/20',
+  },
+  {
     id: 'english-adventure-club',
     title: 'English Adventure Club',
     description: 'Learn English through storytelling, interactive games, and joyful daily challenges.',
@@ -55,6 +77,7 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+    joinCode: 'EAC23',
     teacher: {
       name: 'Ms. Jessica Nguyen',
       avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
@@ -73,6 +96,7 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     typeBadge: '🔥 Hot',
     typeBadgeClass: 'bg-[#fee2e2]/95 text-[#991b1b] border-[#fca5a5]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
+    joinCode: 'PHON12',
     teacher: {
       name: 'Ms. Anna Pham',
       avatar: '/assests/Classes/avatars/teacher-avatar-ms-anna.png',
@@ -91,6 +115,7 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     typeBadge: '✨ Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
+    joinCode: 'STAR35',
     teacher: {
       name: 'Mr. David Tran',
       avatar: '/assests/Classes/avatars/teacher-avatar-mr-david.png',
@@ -218,7 +243,7 @@ function EnrolledClassRowCard({
           onClick={() => onEnter(targetClassId)}
           className="block"
         >
-          <h3 className="font-headline font-black text-slate-900 dark:text-white text-base sm:text-lg leading-tight line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <h3 className="font-headline font-black text-slate-900 dark:text-white text-base sm:text-lg leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {item.class.name || matched.title}
           </h3>
         </Link>
@@ -349,12 +374,20 @@ interface PublicClassCardProps {
 }
 
 function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
-  const targetUrl = isLoggedIn
-    ? `/classes/${cls.id}`
-    : `/student/login?callbackUrl=/classes/${cls.id}`;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyCode = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!cls.joinCode) return;
+    navigator.clipboard.writeText(cls.joinCode);
+    setCopied(true);
+    toast.success(`Đã sao chép mã lớp: ${cls.joinCode}`);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-[28px] sm:rounded-[32px] overflow-hidden border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between group">
+    <div className="bg-white dark:bg-slate-800 rounded-[28px] sm:rounded-[32px] overflow-hidden border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between h-full group">
       {/* Thumbnail Container with Badges */}
       <Link
         href={`/classes/${cls.id}`}
@@ -387,7 +420,7 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
       <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
         <div>
           <Link href={`/classes/${cls.id}`} className="block">
-            <h3 className="font-headline font-black text-slate-900 dark:text-white text-lg sm:text-[19px] leading-tight line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <h3 className="font-headline font-black text-slate-900 dark:text-white text-lg sm:text-[19px] leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {cls.title}
             </h3>
           </Link>
@@ -395,8 +428,8 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
             {cls.description}
           </p>
 
-          {/* Teacher Info */}
-          <div className="flex items-center gap-3 mb-4">
+          {/* Teacher & Class Code Info */}
+          <div className="flex items-center gap-3 mb-5">
             <div className="relative size-10 rounded-full overflow-hidden border-2 border-white dark:border-slate-700 shadow-xs shrink-0">
               <Image
                 src={cls.teacher.avatar}
@@ -405,45 +438,39 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
                 className="object-cover"
               />
             </div>
-            <div className="flex flex-col text-left min-w-0">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-tight">
-                {cls.teacher.role}
-              </span>
-              <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
+            <div className="flex flex-col text-left min-w-0 flex-1">
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  onClick={handleCopyCode}
+                  title="Bấm để sao chép mã lớp"
+                  className="group/code inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-700/70 dark:hover:bg-blue-900/40 text-slate-800 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-300 border border-slate-200/80 dark:border-slate-600/80 transition-all cursor-pointer active:scale-95"
+                >
+                  <span className="text-xs sm:text-[13px] font-mono font-extrabold tracking-wide leading-tight">
+                    Code: {cls.joinCode || '---'}
+                  </span>
+                  {copied ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[2.5]" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-slate-400 group-hover/code:text-blue-500 transition-colors" />
+                  )}
+                </button>
+              </div>
+              <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1">
                 {cls.teacher.name}
               </span>
             </div>
           </div>
-
-          {/* Stat Chips */}
-          <div className="flex items-center gap-2 mb-5">
-            <span className="px-3 py-1.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-300 text-xs font-bold flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>{cls.lessonsCount} lessons</span>
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 text-xs font-bold flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5" />
-              <span>{cls.studentsCount}</span>
-            </span>
-          </div>
         </div>
 
         {/* Actions */}
-        <div className="space-y-1.5 pt-1">
+        <div className="pt-2">
           <Link
-            href={targetUrl}
+            href={`/classes/${cls.id}`}
             className={`w-full py-3 px-4 rounded-2xl bg-gradient-to-r ${cls.btnGradient || 'from-blue-600 to-indigo-600 shadow-blue-500/20'} text-white font-black text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer`}
           >
             <Sparkles className="w-4 h-4 stroke-[2.5]" />
             <span>Join Class</span>
-          </Link>
-
-          <Link
-            href={`/classes/${cls.id}`}
-            className="w-full py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>View Details</span>
           </Link>
         </div>
       </div>
@@ -706,10 +733,10 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
                     />
                   </div>
                   <div>
-                    <span className="text-xs font-semibold text-slate-400 block uppercase">
-                      {selectedClassDetail.teacher.role}
+                    <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 block tracking-wider mb-0.5">
+                      Code: {selectedClassDetail.joinCode || selectedClassDetail.teacher.role}
                     </span>
-                    <span className="text-base font-bold text-slate-800 dark:text-slate-200">
+                    <span className="text-base font-medium text-slate-700 dark:text-slate-300">
                       {selectedClassDetail.teacher.name}
                     </span>
                   </div>
@@ -876,7 +903,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
                         {isVi ? 'Chờ giáo viên' : 'Waiting teacher'}
                       </span>
                     </div>
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white line-clamp-1 mb-1">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white mb-1">
                       {item.class.name}
                     </h3>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400">

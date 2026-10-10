@@ -1,3 +1,5 @@
+import { GRAMMAR_45_DAYS_UNITS_VI, GRAMMAR_45_DAYS_UNITS_EN } from './grammar-45-days-units';
+
 export type CourseLesson = {
   id: string;
   lessonIndex: number;
@@ -62,6 +64,7 @@ export type PublicClassDetail = {
   rating: number;
   reviewsCount: number;
   btnGradient: string;
+  joinCode?: string;
   en: ClassLangContent;
   vi: ClassLangContent;
 
@@ -140,6 +143,180 @@ export const CLASS_DETAIL_UI_LABELS = {
 };
 
 export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
+  'cmuvbigbg0001vta43ikcsjbk': {
+    id: 'cmuvbigbg0001vta43ikcsjbk',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
+    subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
+    typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
+    rating: 5.0,
+    reviewsCount: 45,
+    btnGradient: 'from-[#6366f1] to-[#8b5cf6] hover:from-[#4f46e5] hover:to-[#7c3aed] shadow-indigo-500/25',
+    joinCode: 'GM45VN',
+
+    // ENGLISH VERSION
+    en: {
+      title: 'Master English Grammar from Zero to B1 (45 Days)',
+      shortDescription: 'Comprehensive 45-day course to solidify your English grammar foundations from zero to B1 with 268 spaced-repetition exercises.',
+      heroDescription: 'Join Dolcake Teacher in this 45-day intensive grammar mastery program! Featuring bilingual visual theory, 268 adaptive exercises, and spaced-repetition retention for confident daily communication.',
+      subjectBadge: 'Grammar',
+      typeBadge: '🔥 Free',
+      studentsCount: '12+ students',
+      lessonsCount: 268,
+      duration: '45 days (Daily Drip Practice)',
+      language: 'English & Vietnamese (Bilingual Support)',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '268 Spaced-Repetition Exercises',
+          description: 'A proven system of 3 new exercises + 2 spaced review exercises daily ensures permanent grammatical retention.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'book',
+          title: 'Complete A1 to B1 Roadmap',
+          description: 'Master all essential grammar topics: Nouns, Pronouns, Tenses, Modals, Passive Voice, Conditionals, and Relative Clauses.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'message',
+          title: 'Visual Bilingual Theory Guides',
+          description: 'Crystal-clear theory explanations with real-world examples and step-by-step bilingual breakdowns.',
+          colorScheme: 'purple',
+        },
+        {
+          iconType: 'trophy',
+          title: 'Daily Achievement Badges',
+          description: 'Track daily progress milestones, earn study stars, and build an unstoppable 45-day learning streak.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: GRAMMAR_45_DAYS_UNITS_EN,
+      teacher: {
+        name: 'Dolcake Teacher',
+        role: 'Lead English Instructor & Curriculum Specialist',
+        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        degree: 'Master of English Linguistics & TESOL Certified',
+        experience: 'Over 10 years guiding thousands of learners from basic to advanced English mastery',
+        quote: '“Grammar is the skeleton of language. Master it step-by-step each day, and you will speak and write English with total confidence.”',
+      },
+      reviews: [
+        {
+          id: 'r1',
+          author: 'Minh Chau (Learner)',
+          avatar: '/images/avatars/grade_3.png',
+          stars: 5,
+          timeAgo: '2 days ago',
+          content: '“The 5-exercise daily structure is unbelievable! The spaced review questions help me remember grammar points effortlessly without cramming.”',
+        },
+        {
+          id: 'r2',
+          author: 'Duc Anh (Grade 8 Student)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '5 days ago',
+          content: '“From zero grammar knowledge, I now clearly understand tenses, passive voice, and relative clauses. Best grammar course ever!”',
+        },
+        {
+          id: 'r3',
+          author: 'Thu Huong (Parent)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '1 week ago',
+          content: '“My child does the exercises every single evening. The bite-sized lessons keep him motivated without feeling overwhelmed.”',
+        },
+      ],
+    },
+
+    // VIETNAMESE VERSION
+    vi: {
+      title: 'Làm chủ ngữ pháp tiếng Anh từ Mất gốc đến B1 (45 Ngày)',
+      shortDescription: 'Khóa học 45 ngày củng cố toàn diện nền tảng ngữ pháp tiếng Anh từ căn bản mất gốc đến B1 với 268 bài tập phân hóa theo phương pháp Spaced Repetition.',
+      heroDescription: 'Cùng Dolcake Teacher củng cố toàn diện nền tảng ngữ pháp tiếng Anh suốt 45 ngày! Tích hợp lý thuyết trực quan song ngữ, hệ thống 5 bài tập phân hóa mỗi ngày (3 bài thực hành mới + 2 bài ôn tập ngắt quãng Spaced Repetition) giúp học sâu, nhớ chắc và tự tin sử dụng.',
+      subjectBadge: 'Grammar',
+      typeBadge: '🔥 Free',
+      studentsCount: '12+ học viên',
+      lessonsCount: 268,
+      duration: '45 ngày (Luyện tập mỗi ngày)',
+      language: 'Tiếng Anh & Tiếng Việt (Song ngữ trợ giảng)',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '268 bài tập Spaced Repetition',
+          description: 'Hệ thống 3 bài thực hành mới + 2 bài ôn tập ngắt quãng mỗi ngày giúp kiến thức thẩm thấu tự nhiên và nhớ lâu dài.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'book',
+          title: 'Lộ trình bài bản từ A1 đến B1',
+          description: 'Nắm trọn vẹn Danh từ, Đại từ, các Thì căn bản & nâng cao, Câu điều kiện, Câu bị động và Mệnh đề quan hệ.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'message',
+          title: 'Lý thuyết trực quan song ngữ',
+          description: 'Bài học lý thuyết ngắn gọn, dễ hiểu, có bảng tổng hợp và ví dụ minh họa song ngữ sát thực tế.',
+          colorScheme: 'purple',
+        },
+        {
+          iconType: 'trophy',
+          title: 'Huy hiệu thành tích & Điểm thưởng',
+          description: 'Ghi nhận chuỗi ngày học liên tục (Streak), tích lũy sao thưởng và chứng nhận sau khi hoàn thành khóa học.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: GRAMMAR_45_DAYS_UNITS_VI,
+      teacher: {
+        name: 'Dolcake Teacher',
+        role: 'Giáo viên phụ trách & Thiết kế chương trình',
+        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        degree: 'Thạc sĩ Ngôn ngữ Anh & Chứng chỉ Giảng dạy TESOL',
+        experience: 'Hơn 10 năm kinh nghiệm đồng hành cùng học viên xây dựng nền tảng ngữ pháp vững chắc',
+        quote: '“Ngữ pháp không phải là những quy tắc khô khan, mà là chiếc chìa khóa giúp các em diễn đạt suy nghĩ của mình một cách rõ ràng và tự tin nhất.”',
+      },
+      reviews: [
+        {
+          id: 'r1',
+          author: 'Minh Châu (Học viên)',
+          avatar: '/images/avatars/grade_3.png',
+          stars: 5,
+          timeAgo: '2 ngày trước',
+          content: '“Cấu trúc 5 bài mỗi ngày cực kỳ vừa sức và hiệu quả! Phần ôn tập lặp lại ngắt quãng giúp em không bao giờ bị quên kiến thức cũ.”',
+        },
+        {
+          id: 'r2',
+          author: 'Đức Anh (Học sinh Lớp 8)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '5 ngày trước',
+          content: '“Từ một người mất gốc ngữ pháp, sau khóa học em đã tự tin làm đúng các câu về thì và câu bị động trên lớp. Em cảm ơn thầy cô rất nhiều!”',
+        },
+        {
+          id: 'r3',
+          author: 'Chị Thu Hương (Phụ huynh)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '1 tuần trước',
+          content: '“Bé nhà mình tự giác vào học mỗi tối. Giao diện trực quan, bài tập phân hóa rõ ràng nên con học rất hào hứng và tiến bộ trông thấy.”',
+        },
+      ],
+    },
+
+    // Backward compatibility direct getters mapped to English
+    get title() { return this.en.title; },
+    get shortDescription() { return this.en.shortDescription; },
+    get heroDescription() { return this.en.heroDescription; },
+    get subjectBadge() { return this.en.subjectBadge; },
+    get typeBadge() { return this.en.typeBadge; },
+    get studentsCount() { return this.en.studentsCount; },
+    get lessonsCount() { return this.en.lessonsCount; },
+    get duration() { return this.en.duration; },
+    get language() { return this.en.language; },
+    get whatYouLearn() { return this.en.whatYouLearn; },
+    get units() { return this.en.units; },
+    get teacher() { return this.en.teacher; },
+    get reviews() { return this.en.reviews; },
+  },
+
   'english-adventure-club': {
     id: 'english-adventure-club',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
@@ -148,6 +325,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     rating: 4.9,
     reviewsCount: 68,
     btnGradient: 'from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] shadow-cyan-500/25',
+    joinCode: 'EAC23',
 
     // ENGLISH VERSION (DEFAULT)
     en: {
@@ -523,6 +701,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     rating: 5.0,
     reviewsCount: 92,
     btnGradient: 'from-[#f97316] to-[#f43f5e] hover:from-[#ea580c] hover:to-[#e11d48] shadow-rose-500/25',
+    joinCode: 'PHON12',
 
     // ENGLISH VERSION (DEFAULT)
     en: {
@@ -898,6 +1077,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     rating: 4.9,
     reviewsCount: 115,
     btnGradient: 'from-[#8b5cf6] to-[#6366f1] hover:from-[#7c3aed] hover:to-[#4f46e5] shadow-indigo-500/25',
+    joinCode: 'STAR35',
 
     // ENGLISH VERSION (DEFAULT)
     en: {

@@ -21,7 +21,11 @@ import {
 import { useSession } from "next-auth/react";
 import { AgeGroupRestrictionModal } from "@/components/modals/AgeGroupRestrictionModal";
 
-export function SidebarContentTypeMenu() {
+interface SidebarContentTypeMenuProps {
+  initialStudyAgeGroup?: string;
+}
+
+export function SidebarContentTypeMenu({ initialStudyAgeGroup = "" }: SidebarContentTypeMenuProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locale = useLocale();
@@ -44,20 +48,22 @@ export function SidebarContentTypeMenu() {
   }, []);
 
   const studyAgeGroupFromStore = useContentStore((s) => (s as any).studyAgeGroup) || "";
-  const studyAgeGroup = useMemo(() => {
-    if (studyAgeGroupFromStore) return studyAgeGroupFromStore;
+  const [cookieAgeGroup, setCookieAgeGroup] = useState<string>("");
+
+  useEffect(() => {
     if (typeof document !== "undefined") {
       const match = document.cookie.match(/(?:^|;\s*)study_age_group=([^;]+)/);
       if (match && match[1]) {
         try {
-          return decodeURIComponent(match[1]);
+          setCookieAgeGroup(decodeURIComponent(match[1]));
         } catch {
-          return match[1];
+          setCookieAgeGroup(match[1]);
         }
       }
     }
-    return "";
-  }, [studyAgeGroupFromStore]);
+  }, []);
+
+  const studyAgeGroup = studyAgeGroupFromStore || initialStudyAgeGroup || cookieAgeGroup || "";
 
   const isKindergarten = useMemo(() => {
     const ag = studyAgeGroup.toLowerCase();
@@ -572,6 +578,7 @@ export function SidebarContentTypeMenu() {
         {!session?.user && (
           <button
             type="button"
+            suppressHydrationWarning
             onClick={() => setFilterModalOpen && setFilterModalOpen(true)}
             className="mt-3.5 w-full p-3 rounded-2xl bg-gradient-to-r from-amber-100/90 via-orange-50/80 to-amber-50/60 dark:from-slate-800 dark:to-slate-800/80 border-2 border-amber-200/80 dark:border-amber-500/30 hover:border-amber-400 dark:hover:border-amber-400 transition-all text-left flex items-center justify-between group cursor-pointer shadow-xs hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"
           >
@@ -588,6 +595,7 @@ export function SidebarContentTypeMenu() {
                       : "/images/avatars/adult.png"
                   }
                   alt="Age Avatar"
+                  suppressHydrationWarning
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
@@ -595,7 +603,7 @@ export function SidebarContentTypeMenu() {
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-800/70 dark:text-amber-300">
                   {locale === "vi" ? "Lứa tuổi học tập" : "Age Profile"}
                 </span>
-                <span className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
+                <span suppressHydrationWarning className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
                   {(studyAgeGroup === "kindergarten" || studyAgeGroup === "kindergarden")
                     ? "< 6 years"
                     : studyAgeGroup

@@ -27,6 +27,8 @@ interface Props {
   subjects: SubjectConfig[];
   config: any;
   locale?: string;
+  initialStudySubject?: string;
+  initialStudyAgeGroup?: string;
 }
 
 const subjectStyles: Record<string, { bg: string; activeBg: string; border: string; activeBorder: string; text: string; activeText: string; icon: string }> = {
@@ -57,7 +59,7 @@ function getStyle(subjectId: string) {
   return subjectStyles[subjectId] || defaultStyle;
 }
 
-export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
+export function SubjectSelector({ subjects, config, locale = "en", initialStudySubject, initialStudyAgeGroup }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -76,9 +78,11 @@ export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
     window.dispatchEvent(new CustomEvent("toggle-english-menu", { detail: { open: next } }));
   };
 
-  const studySubject = useContentStore(s => (s as any).studySubject);
+  const studySubjectFromStore = useContentStore(s => (s as any).studySubject);
+  const studySubject = studySubjectFromStore || initialStudySubject || "english";
   const setStudySubject = useContentStore(s => (s as any).setStudySubject);
-  const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup);
+  const studyAgeGroupFromStore = useContentStore(s => (s as any).studyAgeGroup);
+  const studyAgeGroup = studyAgeGroupFromStore || initialStudyAgeGroup || "";
   const setStudyAgeGroup = useContentStore(s => (s as any).setStudyAgeGroup);
   const studyLevel = useContentStore(s => (s as any).studyLevel);
   const setStudyLevel = useContentStore(s => (s as any).setStudyLevel);
@@ -195,7 +199,7 @@ export function SubjectSelector({ subjects, config, locale = "en" }: Props) {
               {/* Nested Collapsible Submenu (Thụt lề) */}
               <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isActive && isMenuOpen ? "max-h-[1200px] opacity-100 mt-2" : "max-h-0 opacity-0 pointer-events-none"}`}>
                 <div className="ml-1.5 p-2">
-                  <SidebarContentTypeMenu />
+                  <SidebarContentTypeMenu initialStudyAgeGroup={initialStudyAgeGroup} />
                 </div>
               </div>
 

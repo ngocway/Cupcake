@@ -36,6 +36,7 @@ interface Props {
 }
 
 const STORAGE_LANG_KEY = 'dolcake_class_detail_lang';
+const DEMO_CLASS_IDS = new Set(['english-adventure-club', 'phonics-happy-reading', 'little-speaking-stars']);
 
 export function ClassDetailClient({ classData }: Props) {
   const router = useRouter();
@@ -194,10 +195,10 @@ export function ClassDetailClient({ classData }: Props) {
                 }
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer shadow-2xs hover:-translate-x-0.5"
-              title="Back"
+              title={lang === 'en' ? 'Back' : 'Quay lại'}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back</span>
+              <span>{lang === 'en' ? 'Back' : 'Quay lại'}</span>
             </button>
 
             <nav className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 font-medium">
@@ -396,11 +397,6 @@ export function ClassDetailClient({ classData }: Props) {
                           <span className="text-xs font-semibold text-slate-400 hidden sm:inline">
                             {unit.lessonsCount} {labels.totalLessons}
                           </span>
-                          {unit.isFreeTrial && (
-                            <span className="px-2.5 py-0.5 rounded-full bg-[#ecfdf5] text-[#059669] border border-[#a7f3d0] font-black text-[11px] shrink-0">
-                              {labels.freeTrialBadge}
-                            </span>
-                          )}
                           <div className="text-slate-400 transition-transform duration-200">
                             {isOpen ? (
                               <ChevronUp className="w-5 h-5 text-slate-600" />
@@ -420,15 +416,9 @@ export function ClassDetailClient({ classData }: Props) {
                               className="flex items-center justify-between p-3 sm:p-3.5 rounded-xl bg-white border border-slate-100/90 shadow-2xs hover:border-slate-200 transition-all gap-3"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                {lesson.isTrial ? (
-                                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                                    <Play className="w-3 h-3 fill-white ml-0.5" />
-                                  </div>
-                                ) : (
-                                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                                  </div>
-                                )}
+                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                                </div>
                                 <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
                                   {lesson.title}
                                 </span>
@@ -439,20 +429,9 @@ export function ClassDetailClient({ classData }: Props) {
                                   {lesson.type}
                                 </span>
 
-                                {lesson.isTrial ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenTrial(lesson.title)}
-                                    className="px-3 py-1 rounded-full bg-[#ecfdf5] hover:bg-[#d1fae5] text-[#059669] border border-[#a7f3d0] font-black text-xs flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
-                                  >
-                                    <Play className="w-3 h-3 fill-[#059669]" />
-                                    <span>{labels.tryFreeBtn}</span>
-                                  </button>
-                                ) : (
-                                  <span className="text-slate-300">
-                                    <Lock className="w-4 h-4" />
-                                  </span>
-                                )}
+                                <span className="text-slate-300">
+                                  <Lock className="w-4 h-4" />
+                                </span>
                               </div>
                             </div>
                           ))}
@@ -650,33 +629,28 @@ export function ClassDetailClient({ classData }: Props) {
               {/* CTA Buttons */}
               <div className={`space-y-2 ${viewportHeight < 720 ? 'pt-0.5' : 'pt-1'}`}>
                 {/* Primary Button: Tham gia lớp */}
-                <Link
-                  href={`/student/login?callbackUrl=/classes/${classData.id}`}
-                  className={`w-full rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer ${
-                    viewportHeight < 720 ? 'py-2.5 px-3 text-xs sm:text-sm' : 'py-3 px-4 text-sm'
-                  }`}
-                >
-                  <span>{labels.enrollBtn}</span>
-                  <ArrowRight className="w-4 h-4 stroke-[3]" />
-                </Link>
-
-                {/* Secondary Button: Học thử bài đầu tiên */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleOpenTrial(
-                      lang === 'en'
-                        ? 'Lesson 1: Nice to meet you!'
-                        : 'Bài 1: Nice to meet you! (Chào hỏi & Làm quen)'
-                    )
-                  }
-                  className={`w-full rounded-xl bg-white border-2 border-[#06b6d4] hover:bg-cyan-50 text-[#0891b2] font-black active:scale-95 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer ${
-                    viewportHeight < 720 ? 'py-2 px-3 text-[11px] sm:text-xs' : 'py-2.5 px-4 text-xs'
-                  }`}
-                >
-                  <Play className="w-3 h-3 fill-[#0891b2]" />
-                  <span>{labels.tryFirstLessonBtn}</span>
-                </button>
+                {DEMO_CLASS_IDS.has(classData.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewOpen(true)}
+                    className={`w-full rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer ${
+                      viewportHeight < 720 ? 'py-2.5 px-3 text-xs sm:text-sm' : 'py-3 px-4 text-sm'
+                    }`}
+                  >
+                    <span>{labels.enrollBtn}</span>
+                    <ArrowRight className="w-4 h-4 stroke-[3]" />
+                  </button>
+                ) : (
+                  <Link
+                    href={`/join/${classData.joinCode || classData.id}`}
+                    className={`w-full rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer ${
+                      viewportHeight < 720 ? 'py-2.5 px-3 text-xs sm:text-sm' : 'py-3 px-4 text-sm'
+                    }`}
+                  >
+                    <span>{labels.enrollBtn}</span>
+                    <ArrowRight className="w-4 h-4 stroke-[3]" />
+                  </Link>
+                )}
 
                 {/* Security lock note */}
                 <p className="text-[11px] text-slate-400 font-medium text-center flex items-center justify-center gap-1 pt-0.5">
@@ -710,7 +684,7 @@ export function ClassDetailClient({ classData }: Props) {
               type="button"
               onClick={() => setIsPreviewOpen(false)}
               className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-colors cursor-pointer"
-              aria-label="Đóng thông báo"
+              aria-label={lang === 'en' ? 'Close dialog' : 'Đóng thông báo'}
             >
               <X className="w-5 h-5" />
             </button>

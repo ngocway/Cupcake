@@ -41,6 +41,49 @@ export default async function ClassDetailPage({
   // 1. Check in static public classes data
   let classData = PUBLIC_CLASSES_DATA[id];
 
+  // 1b. If found, enrich dynamically with database data (thumbnail, live enrollments, lessons)
+  if (classData) {
+    try {
+      const dbClass = await prisma.class.findUnique({
+        where: { id },
+        include: {
+          teacher: {
+            select: { name: true, image: true, email: true }
+          },
+          _count: {
+            select: {
+              assignments: true,
+              enrollments: true,
+            }
+          }
+        }
+      });
+      if (dbClass) {
+        const liveStudentsVi = `${Math.max(dbClass._count?.enrollments || 0, 12)}+ học viên`;
+        const liveStudentsEn = `${Math.max(dbClass._count?.enrollments || 0, 12)}+ students`;
+        const liveLessons = dbClass._count?.assignments || classData.lessonsCount;
+        classData = {
+          ...classData,
+          thumbnail: dbClass.thumbnail || classData.thumbnail,
+          studentsCount: liveStudentsVi,
+          lessonsCount: liveLessons,
+          vi: {
+            ...classData.vi,
+            studentsCount: liveStudentsVi,
+            lessonsCount: liveLessons,
+          },
+          en: {
+            ...classData.en,
+            studentsCount: liveStudentsEn,
+            lessonsCount: liveLessons,
+          }
+        };
+      }
+    } catch (e) {
+      console.error('Error enriching classData from DB:', e);
+    }
+  }
+
   // 2. If not found by direct ID, check database class or provide fallback
   if (!classData) {
     try {
