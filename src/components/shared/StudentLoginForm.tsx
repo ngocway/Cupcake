@@ -159,15 +159,6 @@ export function StudentLoginForm({ onSuccess, joinNotice, locale = "vi" }: Stude
   return (
     <div className="max-w-md w-full mx-auto relative z-10 p-2">
       <CenteredLoginLoader isVisible={isPending} color="emerald" />
-      <div className="md:hidden mb-12 flex flex-col items-center">
-        <img 
-          src="/images/logo.png" 
-          alt="Dolcake" 
-          className="w-16 h-16 object-contain mb-4 animate-float" 
-        />
-        <h2 className="font-headline font-black text-3xl text-primary tracking-tight">Dolcake</h2>
-        <p className="text-xs text-on-surface-variant font-bold uppercase tracking-[0.2em] mt-1">Student Portal</p>
-      </div>
 
       {joinNotice?.className && (
         <div className="mb-6 p-4 rounded-2xl bg-emerald-50/90 border border-emerald-200/90 shadow-sm text-left">

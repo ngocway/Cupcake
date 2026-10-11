@@ -9,38 +9,63 @@ interface EmbeddedGrammarContainerProps {
   assignmentId: string;
   classId?: string;
   groupId?: string;
+  initialInstructions?: string | null;
+  initialInstructionsTranslations?: any;
   onComplete?: (score: number, assignmentId: string) => void;
   onNextActivity?: () => void;
 }
 
 export function EmbeddedGrammarContainer({
   assignmentId,
+  classId,
+  groupId,
+  initialInstructions,
+  initialInstructionsTranslations,
+  onComplete,
   onNextActivity,
 }: EmbeddedGrammarContainerProps) {
   const cached = getCachedGrammarData(assignmentId);
-  const [data, setData] = useState<any>(cached || null);
-  const [isLoading, setIsLoading] = useState(!cached);
+  const isValidCached = cached?.instructions && !String(cached.instructions).trim().startsWith('{');
+
+  const cleanInitialInstructions = (initialInstructions && !initialInstructions.trim().startsWith('{'))
+    ? initialInstructions
+    : null;
+
+  const initialPayload = isValidCached ? cached : (cleanInitialInstructions ? {
+    assignmentId,
+    instructions: cleanInitialInstructions,
+    instructionsTranslations: initialInstructionsTranslations || null,
+  } : null);
+
+  const [data, setData] = useState<any>(initialPayload);
+  const [isLoading, setIsLoading] = useState(!initialPayload);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async (force = false) => {
     const existing = getCachedGrammarData(assignmentId);
-    if (!force && existing) {
+    const hasValidExisting = existing?.instructions && !String(existing.instructions).trim().startsWith('{');
+    if (!force && hasValidExisting) {
       setData(existing);
       setIsLoading(false);
       return;
     }
-    if (!existing) setIsLoading(true);
+    // If we don't have valid HTML instructions, show loading screen
+    if (!hasValidExisting && !cleanInitialInstructions) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const res = await fetchGrammarDataWithCache(assignmentId, force);
       setData(res);
     } catch (err: any) {
-      console.error('Failed to load grammar lesson data:', err);
-      setError(err?.message || 'Không thể tải nội dung bài học.');
+      if (!cleanInitialInstructions && !data?.instructions) {
+        console.error('Failed to load grammar lesson data:', err);
+        setError(err?.message || 'Không thể tải nội dung bài học.');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [assignmentId]);
+  }, [assignmentId, cleanInitialInstructions, data?.instructions]);
 
   useEffect(() => {
     loadData();

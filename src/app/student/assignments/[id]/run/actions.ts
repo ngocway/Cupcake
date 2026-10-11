@@ -91,15 +91,36 @@ export async function getStudentQuizRunnerData(
 
   const { getCachedQuizRunnerTemplate } = await import("./data");
 
-  // 1. Resolve cached template from Redis (all questions, translations, meta, instructions)
-  const template = await getCachedQuizRunnerTemplate(assignmentId);
+  const isCuid = assignmentId.startsWith('cm') || assignmentId.length >= 24;
+
+  // Run template resolution and submission lookup concurrently to eliminate sequential roundtrips
+  const templatePromise = getCachedQuizRunnerTemplate(assignmentId);
+  const preliminarySubmissionPromise = (!forceNewAttempt && isCuid)
+    ? prisma.submission.findFirst({
+        where: { 
+          assignmentId, 
+          studentId: userId, 
+          classId: classId || undefined,
+          groupId: groupId || undefined,
+          submittedAt: null 
+        },
+        orderBy: { startedAt: "desc" },
+        include: { answers: true }
+      })
+    : Promise.resolve(null);
+
+  const [template, preliminarySubmission] = await Promise.all([
+    templatePromise,
+    preliminarySubmissionPromise
+  ]);
+
   if (!template) throw new Error("Assignment not found");
   const actualAssignmentId = template.actualAssignmentId || template.assignment.id;
 
   // 2. Resolve or create submission
-  let submission: any = null;
+  let submission: any = preliminarySubmission;
 
-  if (forceNewAttempt) {
+  if (!submission && forceNewAttempt) {
     const completedCount = await prisma.submission.count({
       where: { 
         assignmentId: actualAssignmentId, 
@@ -118,19 +139,21 @@ export async function getStudentQuizRunnerData(
       },
       include: { answers: true }
     });
-  } else {
-    // Check for an in-progress submission first
-    submission = await prisma.submission.findFirst({
-      where: { 
-        assignmentId: actualAssignmentId, 
-        studentId: userId, 
-        classId: classId || undefined,
-        groupId: groupId || undefined,
-        submittedAt: null 
-      },
-      orderBy: { startedAt: "desc" },
-      include: { answers: true }
-    });
+  } else if (!submission) {
+    // If not found in-progress during preliminary check (e.g. non-cuid or none in progress), check in-progress if needed
+    if (!isCuid) {
+      submission = await prisma.submission.findFirst({
+        where: { 
+          assignmentId: actualAssignmentId, 
+          studentId: userId, 
+          classId: classId || undefined,
+          groupId: groupId || undefined,
+          submittedAt: null 
+        },
+        orderBy: { startedAt: "desc" },
+        include: { answers: true }
+      });
+    }
 
     if (!submission) {
       // Check for latest completed submission (Review mode)
@@ -206,10 +229,16 @@ export async function ensureStudentSubmission(assignmentId: string, classId?: st
   if (!session?.user?.id) throw new Error("Unauthorized");
   const userId = session.user.id;
 
-  const assignmentRecord = await prisma.assignment.findFirst({
-    where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
-    select: { id: true }
-  });
+  const isId = assignmentId.startsWith('cm') || assignmentId.length >= 24;
+  const assignmentRecord = isId
+    ? await prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        select: { id: true }
+      })
+    : await prisma.assignment.findFirst({
+        where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+        select: { id: true }
+      });
   if (!assignmentRecord) throw new Error("Assignment not found");
   const actualAssignmentId = assignmentRecord.id;
 
@@ -251,4 +280,91 @@ export async function ensureStudentSubmission(assignmentId: string, classId?: st
     select: { id: true, score: true }
   });
 }
+
+/**
+ * High-speed batch preload for quiz runner data:
+ * Resolves cached templates and submissions for multiple assignments in a single Server Action.
+ */
+export async function getBatchStudentQuizRunnerData(
+  assignmentIds: string[],
+  classId?: string,
+  groupId?: string
+): Promise<Record<string, any>> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const userId = session.user.id;
+
+  if (!assignmentIds || assignmentIds.length === 0) return {};
+
+  const { getCachedQuizRunnerTemplate } = await import("./data");
+
+  // Parallel template resolution from Redis/DB
+  const templates = await Promise.all(
+    assignmentIds.map(id => getCachedQuizRunnerTemplate(id).catch(() => null))
+  );
+
+  const validTemplates = templates.filter(Boolean);
+  const actualIds = validTemplates.map(t => t.actualAssignmentId || t.assignment.id);
+
+  // Single batch query for student submissions
+  const submissions = actualIds.length > 0
+    ? await prisma.submission.findMany({
+        where: {
+          assignmentId: { in: actualIds },
+          studentId: userId,
+          classId: classId || undefined,
+          groupId: groupId || undefined,
+        },
+        orderBy: { startedAt: "desc" },
+        include: { answers: true }
+      })
+    : [];
+
+  const subMap = new Map<string, any>();
+  submissions.forEach(s => {
+    if (!subMap.has(s.assignmentId)) {
+      subMap.set(s.assignmentId, s);
+    }
+  });
+
+  const resultMap: Record<string, any> = {};
+
+  validTemplates.forEach(template => {
+    const aid = template.actualAssignmentId || template.assignment.id;
+    const submission = subMap.get(aid) || null;
+
+    const initialAnswers: Record<string, any> = {};
+    if (submission?.answers && submission.answers.length > 0) {
+      submission.answers.forEach((ans: any) => {
+        try {
+          initialAnswers[ans.questionId] = JSON.parse(ans.studentAnswer);
+        } catch {
+          initialAnswers[ans.questionId] = ans.studentAnswer;
+        }
+      });
+    } else if (submission?.answersDraft) {
+      try {
+        const parsedDraft = JSON.parse(submission.answersDraft as string);
+        Object.assign(initialAnswers, parsedDraft);
+      } catch {}
+    }
+
+    const isReviewMode = Boolean(submission?.submittedAt);
+
+    resultMap[aid] = {
+      assignment: template.assignment,
+      submissionId: submission?.id ?? null,
+      submissionScore: submission?.score ?? null,
+      isReviewMode,
+      initialAnswers,
+      questions: template.questions,
+      questionTranslations: template.questionTranslations,
+      assignmentTranslations: template.assignmentTranslations,
+      extraData: template.extraData
+    };
+  });
+
+  return resultMap;
+}
+
 

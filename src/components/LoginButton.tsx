@@ -48,7 +48,7 @@ const MODAL_DICT = {
 
 function ModalLanguageSwitcher({ locale, onChange }: { locale: "vi" | "en"; onChange: (l: "vi" | "en") => void }) {
   return (
-    <div className="flex items-center bg-neutral-100 dark:bg-gray-800 p-0.5 rounded-full border border-neutral-200 dark:border-gray-700 text-[11px] font-bold">
+    <div className="hidden sm:flex items-center bg-neutral-100 dark:bg-gray-800 p-0.5 rounded-full border border-neutral-200 dark:border-gray-700 text-[11px] font-bold">
       <button
         type="button"
         onClick={() => onChange("vi")}

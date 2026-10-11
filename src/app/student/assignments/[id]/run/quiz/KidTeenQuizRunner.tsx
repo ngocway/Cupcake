@@ -753,11 +753,13 @@ function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise:
   const relatedAssignments = React.use(promise);
   if (!relatedAssignments || relatedAssignments.length === 0) return null;
   return (
-    <RelatedAssignmentsSection 
-      items={relatedAssignments.map((a: any) => ({ ...a, type: a.type || ("ASSIGNMENT" as const) }))} 
-      isGuest={isGuest}
-      onNavigate={onNavigate}
-    />
+    <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
+      <RelatedAssignmentsSection 
+        items={relatedAssignments.map((a: any) => ({ ...a, type: a.type || ("ASSIGNMENT" as const) }))} 
+        isGuest={isGuest}
+        onNavigate={onNavigate}
+      />
+    </div>
   );
 }
 
@@ -2063,53 +2065,6 @@ export default function KidTeenQuizRunner({
         {/* ── SMART CONTAINER (Main Card Centered) ── */}
         <div className="w-full max-w-4xl mx-auto z-10 relative transition-all duration-300 flex flex-col items-center">
 
-        {isShowingResultScreen && scoreResult ? (
-        <div className="w-full animate-in slide-in-from-bottom-8 fade-in-0 duration-500">
-            <div className="bg-white rounded-[2rem] border-4 border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden flex flex-col items-center text-center px-8 py-6 relative">
-              {/* Decorative elements */}
-              <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-400 via-amber-400 to-primary"></div>
-              
-              <div className="text-5xl mb-3 animate-bounce">
-                {getScoreEmoji(scoreResult.correct, scoreResult.total)}
-              </div>
-              <h2 className="text-2xl font-black text-slate-800 mb-1">{getScoreMsg(scoreResult.correct, scoreResult.total)}</h2>
-              <p className="text-sm text-slate-500 font-medium mb-5">
-                You answered <span className="text-primary font-black text-xl px-1">{scoreResult.correct}</span> / {scoreResult.total} questions correctly.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
-                <button
-                  onClick={() => {
-                    setIsShowingResultScreen(false);
-                    navigateTo(0);
-                  }}
-                  className="px-6 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-700 font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-                >
-                  <Info className="w-4 h-4" />
-                  {t("reviewDetails") || "Review details"}
-                </button>
-                <button
-                  onClick={handleRetryAssignment}
-                  className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  {t("retryAssignment") || "Retry assignment"}
-                </button>
-              </div>
-            </div>
-
-            {/* Related Content */}
-            {relatedAssignmentsPromise && (
-              <div className="mt-4 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
-                <React.Suspense fallback={<div className="h-40 animate-pulse bg-slate-100 rounded-xl w-full"></div>}>
-                  <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
-                </React.Suspense>
-              </div>
-            )}
-          </div>
-
-        ) : (
-          <>
             {/* Question Card */}
             <div
               key={`${currentIndex}-${slideDirection}`}
@@ -2559,106 +2514,171 @@ export default function KidTeenQuizRunner({
           </div>
         </div>
 
-        {/* ── DẢI SỐ CÂU HỎI BÊN DƯỚI (Vùng bôi đỏ, tối đa 2 hàng, căn giữa) ── */}
-        {questions && questions.length > 0 && !isShowingResultScreen && (
-          <div className="w-full mt-3 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
-            <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-white/80 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3.5 sm:px-5 py-2 sm:py-2.5 max-w-full overflow-x-auto scrollbar-none flex items-center justify-center">
-              <div
-                className={`grid ${
-                  questions.length > 8 ? "grid-rows-2" : "grid-rows-1"
-                } grid-flow-col auto-cols-max gap-1.5 sm:gap-2.5 items-center justify-center`}
+        {/* ── DẢI SỐ CÂU HỎI BÊN DƯỚI (2 hàng từ trái qua phải, căn giữa, 100% hình tròn) ── */}
+        {questions && questions.length > 0 && (() => {
+          const splitTwoRows = questions.length > 8;
+          const half = splitTwoRows ? Math.ceil(questions.length / 2) : questions.length;
+          const row1 = questions.slice(0, half);
+          const row2 = splitTwoRows ? questions.slice(half) : [];
+
+          const renderQuestionButton = (q: any, i: number) => {
+            const active = i === currentIndex;
+
+            // Check answer status
+            const ans = answers[q.id];
+            let isAnswered = false;
+            if (ans !== undefined && ans !== null) {
+              if (Array.isArray(ans)) {
+                isAnswered = ans.length > 0;
+              } else if (typeof ans === "object") {
+                isAnswered = Object.keys(ans).length > 0;
+              } else {
+                isAnswered = true;
+              }
+            }
+
+            // Check if graded
+            const isGraded = checkedQuestions[q.id];
+            let status = "pending";
+            if (isGraded) {
+              status = getQuestionStatus(q, ans);
+            }
+
+            // Determine classes based on state - 100% solid colors without opacity to prevent Chromium square artifact
+            let btnClass = "";
+
+            if (isGraded) {
+              if (status === "correct") {
+                btnClass = active
+                  ? "bg-emerald-500 text-white ring-2 ring-emerald-300 shadow-md shadow-emerald-500/40 scale-105"
+                  : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600";
+              } else if (status === "incorrect") {
+                btnClass = active
+                  ? "bg-rose-500 text-white ring-2 ring-rose-300 shadow-md shadow-rose-500/40 scale-105"
+                  : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600";
+              } else {
+                btnClass = active
+                  ? "bg-slate-500 text-white ring-2 ring-slate-300 shadow-md shadow-slate-500/40 scale-105"
+                  : "bg-white text-slate-400 border border-slate-300 border-dashed hover:bg-slate-50";
+              }
+            } else {
+              if (active) {
+                btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 ring-2 ring-orange-300 scale-105 z-10";
+              } else if (isAnswered) {
+                btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
+              } else {
+                btnClass = "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-purple-300 hover:text-purple-600 shadow-xs";
+              }
+            }
+
+            return (
+              <button
+                key={q.id}
+                onClick={() => navigateTo(i)}
+                disabled={isAutoRevealing}
+                className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer select-none ${btnClass}`}
+                title={`Câu ${i + 1}`}
               >
-                {questions.map((q, i) => {
-                  const active = i === currentIndex;
+                <span className="font-black text-xs sm:text-sm leading-none">
+                  {i + 1}
+                </span>
+                {isGraded && !active && status === "correct" && (
+                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-xs">
+                    <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3.5px]" />
+                  </div>
+                )}
+                {isGraded && !active && status === "incorrect" && (
+                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-xs">
+                    <X className="w-2.5 h-2.5 text-rose-700 stroke-[3.5px]" />
+                  </div>
+                )}
+              </button>
+            );
+          };
 
-                  // Check answer status
-                  const ans = answers[q.id];
-                  let isAnswered = false;
-                  if (ans !== undefined && ans !== null) {
-                    if (Array.isArray(ans)) {
-                      isAnswered = ans.length > 0;
-                    } else if (typeof ans === "object") {
-                      isAnswered = Object.keys(ans).length > 0;
-                    } else {
-                      isAnswered = true;
-                    }
-                  }
+          return (
+            <div className="w-full mt-3 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
+              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3.5 sm:px-5 py-2.5 max-w-full overflow-x-auto scrollbar-none flex flex-col gap-2 items-center justify-center">
+                {/* Hàng 1: Từ trái qua phải (1 -> 8) */}
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 flex-nowrap">
+                  {row1.map((q, idx) => renderQuestionButton(q, idx))}
+                </div>
 
-                  // Check if graded
-                  const isGraded = checkedQuestions[q.id];
-                  let status = "pending";
-                  if (isGraded) {
-                    status = getQuestionStatus(q, ans);
-                  }
-
-                  // Determine classes based on state
-                  let btnClass = "";
-
-                  if (isGraded) {
-                    if (status === "correct") {
-                      btnClass = active
-                        ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-105"
-                        : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600 opacity-90";
-                    } else if (status === "incorrect") {
-                      btnClass = active
-                        ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-105"
-                        : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600 opacity-90";
-                    } else {
-                      btnClass = active
-                        ? "bg-slate-500 text-white border-2 border-slate-200 shadow-md shadow-slate-500/40 scale-105"
-                        : "bg-white/40 text-slate-400 border border-slate-300/60 border-dashed hover:bg-white/70";
-                    }
-                  } else {
-                    if (active) {
-                      btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-2 border-orange-200 scale-105 z-10";
-                    } else if (isAnswered) {
-                      btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
-                    } else {
-                      btnClass = "bg-white/75 backdrop-blur-sm border border-white/90 text-slate-700 hover:bg-white hover:border-purple-300 hover:text-purple-600 shadow-sm";
-                    }
-                  }
-
-                  return (
-                    <button
-                      key={q.id}
-                      onClick={() => navigateTo(i)}
-                      disabled={isAutoRevealing}
-                      className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer ${btnClass}`}
-                      title={`Câu ${i + 1}`}
-                    >
-                      <span className="font-black text-xs sm:text-sm leading-none">
-                        {i + 1}
-                      </span>
-                      {isGraded && !active && status === "correct" && (
-                        <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm">
-                          <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
-                        </div>
-                      )}
-                      {isGraded && !active && status === "incorrect" && (
-                        <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm">
-                          <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                {/* Hàng 2: Từ trái qua phải (9 -> 15) */}
+                {row2.length > 0 && (
+                  <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 flex-nowrap">
+                    {row2.map((q, idx) => renderQuestionButton(q, half + idx))}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Related Content in Review Mode (static, below the sliding card) */}
         {scoreResult && relatedAssignmentsPromise && (
-          <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
-            <React.Suspense fallback={<div className="h-40 animate-pulse bg-slate-100 rounded-xl w-full"></div>}>
-              <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
-            </React.Suspense>
-          </div>
-        )}
-        </>
+          <React.Suspense fallback={null}>
+            <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
+          </React.Suspense>
         )}
         </div>
       </div>
+
+      {/* ── RESULT POPUP MODAL ── */}
+      {isShowingResultScreen && scoreResult && (
+        <div 
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsShowingResultScreen(false);
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border-4 border-primary/20 shadow-2xl shadow-primary/20 overflow-hidden flex flex-col items-center text-center px-8 py-7 relative max-w-md w-full animate-in zoom-in-95 duration-300">
+            {/* Decorative top gradient */}
+            <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-400 via-amber-400 to-primary"></div>
+
+            {/* Close button (X) */}
+            <button
+              onClick={() => setIsShowingResultScreen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95"
+              title="Close"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="text-5xl mb-3 mt-1 animate-bounce">
+              {getScoreEmoji(scoreResult.correct, scoreResult.total)}
+            </div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">
+              {getScoreMsg(scoreResult.correct, scoreResult.total)}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-6">
+              You answered <span className="text-primary font-black text-xl px-1">{scoreResult.correct}</span> / {scoreResult.total} questions correctly.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
+              <button
+                onClick={() => {
+                  setIsShowingResultScreen(false);
+                }}
+                className="px-6 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <Info className="w-4 h-4" />
+                {t("reviewDetails") || "Review details"}
+              </button>
+              <button
+                onClick={handleRetryAssignment}
+                className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {t("retryAssignment") || "Retry assignment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── NAV GUARD MODAL ── */}
       {navGuard.isOpen && (

@@ -2,26 +2,59 @@ import prisma from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import { redis } from "@/lib/redis";
 
+// ─── L1 Server In-Memory Cache (Sub-millisecond access & offline Redis resilience) ───
+const l1MemoryCache = new Map<string, { value: any; expiresAt: number }>();
+
+function getL1Cache<T>(key: string): T | undefined {
+  const item = l1MemoryCache.get(key);
+  if (!item) return undefined;
+  if (Date.now() > item.expiresAt) {
+    l1MemoryCache.delete(key);
+    return undefined;
+  }
+  return item.value as T;
+}
+
+function setL1Cache<T>(key: string, value: T, ttlSeconds: number) {
+  if (l1MemoryCache.size > 1500) {
+    const keys = Array.from(l1MemoryCache.keys()).slice(0, 300);
+    keys.forEach(k => l1MemoryCache.delete(k));
+  }
+  l1MemoryCache.set(key, {
+    value,
+    expiresAt: Date.now() + ttlSeconds * 1000,
+  });
+}
+
 export async function fetchWithRedis<T>(key: string, ttlSeconds: number, fetcher: () => Promise<T>): Promise<T> {
+  // 1. Try L1 Server In-Memory Cache first (0ms instant)
+  const l1Hit = getL1Cache<T>(key);
+  if (l1Hit !== undefined) {
+    return l1Hit;
+  }
+
+  // 2. Try Redis L2
   try {
     const cached = await redis.get(key);
     if (cached !== null && cached !== undefined && cached !== 'null' && cached !== 'undefined') {
-      console.log(`[REDIS HIT] ${key}`);
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      setL1Cache(key, parsed, Math.min(ttlSeconds, 600));
+      return parsed;
     }
   } catch (e) {
-    console.warn("Redis GET failed for key:", key, e);
+    // Suppress noisy repeated logs if Redis connection is closed
   }
 
-  console.log(`[REDIS MISS] ${key} - Fetching from DB...`);
+  // 3. Fetch from DB
   const data = await fetcher();
 
-  // Only cache non-null results to avoid stale null entries
+  // 4. Save to L1 & Redis
   if (data !== null && data !== undefined) {
+    setL1Cache(key, data, Math.min(ttlSeconds, 600));
     try {
       await redis.setex(key, ttlSeconds, JSON.stringify(data));
     } catch (e) {
-      console.warn("Redis SET failed for key:", key, e);
+      // Redis offline
     }
   }
 

@@ -47,8 +47,9 @@ export function getItemStage(item: {
   const isGrammarLesson = 
     kind === 'LESSON' || 
     targetUrl.includes('/grammar/') || 
-    titleLower.startsWith('grammar lesson') ||
-    titleLower.startsWith('lý thuyết:');
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson');
 
   if (isReview) return 'review';
   if (isGrammarLesson || kind === 'LESSON') return 'lesson';
@@ -118,8 +119,9 @@ export function isScoredAssignment(item: {
   const isGrammarLesson = 
     kind === 'LESSON' || 
     targetUrl.includes('/grammar/') || 
-    titleLower.startsWith('grammar lesson') ||
-    titleLower.startsWith('lý thuyết:');
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson');
 
   // Lý thuyết không tính
   if (isGrammarLesson || kind === 'LESSON') return false;
@@ -178,10 +180,11 @@ export function extractGrammarKey(item: {
     } catch {}
   }
 
-  // Chuẩn hóa tiêu đề để so khớp tương đồng (loại bỏ tiền tố bài giảng)
+  // Chuẩn hóa tiêu đề để so khớp tương đồng (loại bỏ tiền tố bài giảng, emoji, [lý thuyết], ngày XX)
   const cleanTitle = (item.assignment.title || '')
     .toLowerCase()
-    .replace(/^(grammar lesson|grammar exercise|lý thuyết|bài tập|thực hành):\s*/i, '')
+    .replace(/^[📘📗📕📙📓📖\s]*\[?(?:lý thuyết|ly thuyet|grammar lesson|grammar exercise|bài tập|thực hành)\]?:?\s*/i, '')
+    .replace(/^ngày\s*\d+\s*:\s*/i, '')
     .replace(/\(.*?\)/g, '')
     .replace(/[:\-–—].*$/, '')
     .trim();
@@ -234,18 +237,29 @@ export function buildGroupTree<T extends {
     exercises: [],
   }));
 
-  const lessonMetaList = lessons.map((l) => extractGrammarKey(l));
+  const normalizeKey = (k: string) => (k || '').toLowerCase().replace(/^day-\d+-/i, '').replace(/^(grammar|topic):/i, '').trim();
+
+  const lessonMetaList = lessons.map((l) => {
+    const meta = extractGrammarKey(l);
+    return {
+      ...meta,
+      normLessonKey: normalizeKey(meta.lessonKey),
+    };
+  });
   const assignedExerciseIds = new Set<string>();
 
   // Gắn các bài tập vào bài lý thuyết phù hợp nhất
   nonLessons.forEach((exercise) => {
+    const exStage = getItemStage(exercise);
     const exMeta = extractGrammarKey(exercise);
+    const exNormKey = normalizeKey(exMeta.lessonKey);
     let matchedClusterIndex = -1;
 
-    // 1. Khớp theo lessonKey (chính xác nhất từ database/instructions)
-    if (exMeta.lessonKey) {
+    // 1. Khớp theo lessonKey (chính xác nhất từ database/instructions hoặc chuẩn hóa bỏ day-XX-)
+    if (exNormKey) {
       matchedClusterIndex = lessonMetaList.findIndex(
-        (l) => l.lessonKey && l.lessonKey === exMeta.lessonKey
+        (l) => (l.normLessonKey && l.normLessonKey === exNormKey) ||
+               (l.lessonKey && (l.lessonKey.includes(exNormKey) || exNormKey.includes(l.normLessonKey)))
       );
     }
 
@@ -268,6 +282,12 @@ export function buildGroupTree<T extends {
       if (candidates.length === 1) {
         matchedClusterIndex = candidates[0];
       }
+    }
+
+    // 4. Smart Fallback: Nếu trong nhóm chỉ có duy nhất 1 bài Lý thuyết VÀ bài tập này KHÔNG PHẢI bài ôn tập (review)
+    // (tức là bài thực hành mới của ngày hôm đó), tự động gán vào làm con của bài lý thuyết duy nhất đó!
+    if (matchedClusterIndex === -1 && lessons.length === 1 && exStage !== 'review') {
+      matchedClusterIndex = 0;
     }
 
     if (matchedClusterIndex !== -1) {

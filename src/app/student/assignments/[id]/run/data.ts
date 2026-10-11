@@ -90,12 +90,15 @@ export const prewarmAssignmentQuestions = async (assignmentId: string) => {
 
 export const getCachedAssignmentQuestions = async (assignmentId: string) => {
   return fetchWithRedis(`assignment:questions:v2:${assignmentId}`, 3600, async () => {
+    const isId = assignmentId.startsWith('cm') || assignmentId.length >= 24;
     return prisma.question.findMany({
-      where: {
-        assignment: {
-          OR: [{ id: assignmentId }, { slug: assignmentId }]
-        }
-      },
+      where: isId
+        ? { assignmentId }
+        : {
+            assignment: {
+              OR: [{ id: assignmentId }, { slug: assignmentId }]
+            }
+          },
       orderBy: { orderIndex: 'asc' }
     });
   });
@@ -106,11 +109,17 @@ export const getCachedAssignmentQuestions = async (assignmentId: string) => {
  */
 export const getQuestionTranslationMap = async (assignmentId: string) => {
   return fetchWithRedis(`assignment:question-translations:v2:${assignmentId}`, 3600, async () => {
+    const isId = assignmentId.startsWith('cm') || assignmentId.length >= 24;
+    const query = isId
+      ? `SELECT q.id, q."explanationTranslations" 
+         FROM "Question" q 
+         WHERE q."assignmentId" = $1`
+      : `SELECT q.id, q."explanationTranslations" 
+         FROM "Question" q 
+         JOIN "Assignment" a ON q."assignmentId" = a.id 
+         WHERE a.id = $1 OR a.slug = $1`;
     const rows = await prisma.$queryRawUnsafe<Array<{ id: string; explanationTranslations: any }>>(
-      `SELECT q.id, q."explanationTranslations" 
-       FROM "Question" q 
-       JOIN "Assignment" a ON q."assignmentId" = a.id 
-       WHERE a.id = $1 OR a.slug = $1`,
+      query,
       assignmentId
     );
     const map: Record<string, any> = {};
@@ -123,10 +132,16 @@ export const getQuestionTranslationMap = async (assignmentId: string) => {
 
 export const getAssignmentTranslations = async (assignmentId: string) => {
   return fetchWithRedis(`assignment:translations:v4:${assignmentId}`, 3600, async () => {
-    const ass = await prisma.assignment.findFirst({
-      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
-      select: { grammarLesson: true, instructionsTranslations: true }
-    });
+    const isId = assignmentId.startsWith('cm') || assignmentId.length >= 24;
+    const ass = isId
+      ? await prisma.assignment.findUnique({
+          where: { id: assignmentId },
+          select: { grammarLesson: true, instructionsTranslations: true }
+        })
+      : await prisma.assignment.findFirst({
+          where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+          select: { grammarLesson: true, instructionsTranslations: true }
+        });
     if (ass?.grammarLesson) {
       const gLesson = await prisma.grammarLesson.findUnique({
         where: { id: ass.grammarLesson },
@@ -144,56 +159,64 @@ export const getAssignmentTranslations = async (assignmentId: string) => {
  */
 export const getCachedQuizRunnerTemplate = async (assignmentId: string) => {
   return fetchWithRedis(`assignment:runner-template:v2:${assignmentId}`, 3600, async () => {
-    // 1. Lean query without expensive _count aggregations
-    const assignmentRecord = await prisma.assignment.findFirst({
-      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        tags: true,
-        level: true,
-        materialType: true,
-        grammarLesson: true,
-        targetAudiences: true,
-        readingText: true,
-        instructions: true,
-        instructionsImageUrl: true,
-        videoUrl: true,
-        audioUrl: true,
-        teacher: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-            professionalTitle: true,
-            bio: true,
-            isPortfolioPublished: true,
-          }
-        },
-        lesson: {
-          select: {
-            id: true,
-            videoUrl: true,
-            audioUrl: true,
-            targetAudiences: true
-          }
+    // 1. Lean query with primary key index when assignmentId is CUID
+    const isId = assignmentId.startsWith('cm') || assignmentId.length >= 24;
+    const assignmentSelect = {
+      id: true,
+      title: true,
+      slug: true,
+      tags: true,
+      level: true,
+      materialType: true,
+      grammarLesson: true,
+      targetAudiences: true,
+      readingText: true,
+      instructions: true,
+      instructionsImageUrl: true,
+      instructionsTranslations: true,
+      videoUrl: true,
+      audioUrl: true,
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          professionalTitle: true,
+          bio: true,
+          isPortfolioPublished: true,
+        }
+      },
+      lesson: {
+        select: {
+          id: true,
+          videoUrl: true,
+          audioUrl: true,
+          targetAudiences: true
         }
       }
-    });
+    };
+
+    const assignmentRecord = isId
+      ? await prisma.assignment.findUnique({
+          where: { id: assignmentId },
+          select: assignmentSelect
+        })
+      : await prisma.assignment.findFirst({
+          where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+          select: assignmentSelect
+        });
 
     if (!assignmentRecord) return null;
     const actualAssignmentId = assignmentRecord.id;
 
-    // 2. Parallel fetch questions, translations & extra grammar instructions
-    const [questions, questionTranslations, assignmentTranslations, grammarLesson] = await Promise.all([
+    // 2. Parallel fetch questions, translations & extra grammar instructions without redundant queries
+    const [questions, questionTranslations, grammarLesson] = await Promise.all([
       getCachedAssignmentQuestions(actualAssignmentId),
       getQuestionTranslationMap(actualAssignmentId),
-      getAssignmentTranslations(actualAssignmentId),
       assignmentRecord.grammarLesson 
         ? prisma.grammarLesson.findUnique({
             where: { id: assignmentRecord.grammarLesson },
-            select: { instructions: true }
+            select: { instructions: true, instructionsTranslations: true }
           })
         : Promise.resolve(null)
     ]);
@@ -202,6 +225,8 @@ export const getCachedQuizRunnerTemplate = async (assignmentId: string) => {
     if (grammarLesson?.instructions) {
       instructions = grammarLesson.instructions;
     }
+
+    const assignmentTranslations = grammarLesson?.instructionsTranslations ?? assignmentRecord.instructionsTranslations ?? null;
 
     const extraData = {
       readingText: assignmentRecord.readingText,

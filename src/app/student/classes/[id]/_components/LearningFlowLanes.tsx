@@ -96,11 +96,13 @@ export function LearningFlowLanes({ items }: LearningFlowLanesProps) {
 
       // Material type overrides & fallbacks:
       // A Grammar Lesson must always remain 'LESSON' and belong to Grammar lane
+      const itemTitleLower = item.assignment.title.toLowerCase();
       const isGrammarLesson = 
         kind === 'LESSON' || 
         targetUrl.includes('/grammar/') || 
-        item.assignment.title.toLowerCase().startsWith('grammar lesson') ||
-        item.assignment.title.toLowerCase().startsWith('lý thuyết:');
+        itemTitleLower.includes('lý thuyết') ||
+        itemTitleLower.includes('ly thuyet') ||
+        itemTitleLower.includes('grammar lesson');
 
       if (isGrammarLesson) {
         kind = 'LESSON';

@@ -234,7 +234,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         {/* ========================================================================= */}
         {/* 2. KHÔNG GIAN GIÁO VIÊN (NỬA PHẢI - TEACHER REALM)                         */}
         {/* ========================================================================= */}
-        <div className="relative w-full lg:w-1/2 px-6 sm:px-10 lg:px-6 xl:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10 text-white max-lg:bg-gradient-to-b max-lg:from-[#131938] max-lg:via-[#131938] max-lg:to-transparent lg:bg-transparent lg:[background-image:none]">
+        <div className="relative w-full lg:w-1/2 px-4 sm:px-10 lg:px-6 xl:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10 text-white max-lg:bg-gradient-to-b max-lg:from-[#131938] max-lg:via-[#131938] max-lg:to-transparent lg:bg-transparent lg:[background-image:none]">
           
           {/* Top Title Group: Teacher Realm */}
           <div className="w-full max-w-[700px] mx-auto flex flex-col items-center pt-2 sm:pt-4 lg:pt-8 mb-3 sm:mb-4">
@@ -247,7 +247,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
           </div>
 
           {/* 3 Colorful Interactive Game Cards (Centerpiece elevated with Celebration Confetti - Scaled 1.3x & Shifted Up) */}
-          <div className="w-full max-w-[700px] mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 items-end -translate-y-3 sm:-translate-y-6 mb-8 sm:mb-10">
+          <div className="w-full max-w-[700px] mx-auto grid grid-cols-3 gap-2.5 sm:gap-5 lg:gap-6 items-end -translate-y-2 sm:-translate-y-6 mb-8 sm:mb-10">
             
             {/* Card 1: Flashcard Match (Left) */}
             <div className="group relative overflow-visible hover:-translate-y-2 hover:scale-[1.03] transition-all duration-300 cursor-default select-none">
@@ -256,7 +256,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
                 alt="Flashcard Match" 
                 width={336} 
                 height={334} 
-                className="w-full h-auto drop-shadow-xl group-hover:drop-shadow-2xl transition-all duration-300"
+                className="w-full h-auto drop-shadow-lg sm:drop-shadow-xl group-hover:drop-shadow-2xl transition-all duration-300"
               />
             </div>
 
@@ -267,7 +267,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
                 alt="Quiz Arena" 
                 width={352} 
                 height={540} 
-                className="w-full h-auto drop-shadow-2xl group-hover:drop-shadow-purple-500/50 transition-all duration-300"
+                className="w-full h-auto drop-shadow-xl sm:drop-shadow-2xl group-hover:drop-shadow-purple-500/50 transition-all duration-300"
                 priority
               />
             </div>
@@ -279,7 +279,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
                 alt="Sentence Builder" 
                 width={336} 
                 height={334} 
-                className="w-full h-auto drop-shadow-xl group-hover:drop-shadow-2xl transition-all duration-300"
+                className="w-full h-auto drop-shadow-lg sm:drop-shadow-xl group-hover:drop-shadow-2xl transition-all duration-300"
               />
             </div>
 

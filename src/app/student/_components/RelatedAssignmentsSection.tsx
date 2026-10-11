@@ -56,6 +56,8 @@ export function RelatedAssignmentsSection({
   const t = useTranslations("header");
   const [showLoginModal, setShowLoginModal] = useState(false);
 
+  if (!items || items.length === 0) return null;
+
   const hasLessons = items.some(item => item.type === "LESSON");
 
   return (

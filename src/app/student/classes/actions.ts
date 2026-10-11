@@ -38,8 +38,8 @@ export async function getStudentGrammarLessonData(assignmentId: string) {
 
   // 1. Fetch cached static lesson template from Redis (1 hour TTL)
   const template = await fetchWithRedis(`grammar:lesson-template:v2:${assignmentId}`, 3600, async () => {
-    const assignment = await prisma.assignment.findFirst({
-      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+    let assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId },
       select: {
         id: true,
         title: true,
@@ -54,6 +54,25 @@ export async function getStudentGrammarLessonData(assignmentId: string) {
         }
       }
     });
+
+    if (!assignment) {
+      assignment = await prisma.assignment.findFirst({
+        where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          level: true,
+          grammarLesson: true,
+          instructions: true,
+          instructionsTranslations: true,
+          updatedAt: true,
+          teacher: {
+            select: { id: true, name: true, image: true }
+          }
+        }
+      });
+    }
 
     if (!assignment) return null;
 

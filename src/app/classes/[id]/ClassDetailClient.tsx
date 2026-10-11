@@ -284,6 +284,28 @@ export function ClassDetailClient({ classData }: Props) {
                 {content.title}
               </h1>
 
+              {/* Mobile Standalone Join Class CTA Button */}
+              <div className="lg:hidden w-full pt-1 pb-1">
+                {DEMO_CLASS_IDS.has(classData.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsPreviewOpen(true)}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer text-sm"
+                  >
+                    <span>{labels.enrollBtn}</span>
+                    <ArrowRight className="w-4 h-4 stroke-[3]" />
+                  </button>
+                ) : (
+                  <Link
+                    href={`/join/${classData.joinCode || classData.id}`}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer text-sm"
+                  >
+                    <span>{labels.enrollBtn}</span>
+                    <ArrowRight className="w-4 h-4 stroke-[3]" />
+                  </Link>
+                )}
+              </div>
+
               {/* Hero Description */}
               <p className="text-slate-600 text-sm sm:text-base font-medium leading-relaxed max-w-3xl">
                 {content.heroDescription}

@@ -43,6 +43,7 @@ async function getStudentClassDetailData(userId: string, classId: string) {
               materialType: true,
               level: true,
               instructions: true,
+              instructionsTranslations: true,
               thumbnail: true,
               tags: true,
               grammarLesson: true,
@@ -125,7 +126,30 @@ async function getStudentClassDetailData(userId: string, classId: string) {
       }
     });
 
-    const [resolvedLessons, resolvedGames, resolvedFlashcards] = await Promise.all([
+    const grammarLessonIds: string[] = [];
+    rawAssignments.forEach((ac) => {
+      const a = ac.assignment;
+      if ((a as any).grammarLesson) {
+        grammarLessonIds.push((a as any).grammarLesson);
+      }
+      if (a.instructions && a.instructions.trim().startsWith('{')) {
+        try {
+          const meta = JSON.parse(a.instructions);
+          if (meta.rawId) {
+            const raw = String(meta.rawId);
+            if (raw.startsWith('grammar:')) {
+              const parts = raw.replace(/^grammar:/, '').split(':');
+              if (parts.length >= 2) grammarLessonIds.push(parts[1]);
+              else if (parts.length === 1) grammarLessonIds.push(parts[0]);
+            } else {
+              grammarLessonIds.push(raw);
+            }
+          }
+        } catch {}
+      }
+    });
+
+    const [resolvedLessons, resolvedGames, resolvedFlashcards, resolvedGrammarLessons] = await Promise.all([
       lessonRawIds.length > 0
         ? prisma.lesson.findMany({
             where: { id: { in: lessonRawIds } },
@@ -144,6 +168,12 @@ async function getStudentClassDetailData(userId: string, classId: string) {
             select: { id: true, iconUrl: true }
           })
         : Promise.resolve([]),
+      grammarLessonIds.length > 0
+        ? prisma.grammarLesson.findMany({
+            where: { id: { in: Array.from(new Set(grammarLessonIds)) } },
+            select: { id: true, instructions: true, instructionsTranslations: true }
+          })
+        : Promise.resolve([]),
     ]);
 
     return {
@@ -154,7 +184,8 @@ async function getStudentClassDetailData(userId: string, classId: string) {
       allEnrolledClasses,
       resolvedLessons,
       resolvedGames,
-      resolvedFlashcards
+      resolvedFlashcards,
+      resolvedGrammarLessons
     };
   });
 }
@@ -184,7 +215,8 @@ async function StudentClassDetailContent({
     allEnrolledClasses,
     resolvedLessons,
     resolvedGames,
-    resolvedFlashcards
+    resolvedFlashcards,
+    resolvedGrammarLessons
   } = await getStudentClassDetailData(userId, id);
 
   // Pre-warm question & translation caches in Redis for assignments in the class (non-blocking)
@@ -281,6 +313,7 @@ async function StudentClassDetailContent({
     g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg')
   ]));
   const flashcardThumbMap = new Map(resolvedFlashcards.filter((f: any) => f.iconUrl).map((f: any) => [f.id, f.iconUrl!]));
+  const grammarLessonMap = new Map((resolvedGrammarLessons || []).map((g: any) => [g.id, g]));
 
   // 2. Attach items to groups (skip assignments belonging to hidden groups)
   rawAssignments.forEach((ac) => {
@@ -323,6 +356,31 @@ async function StudentClassDetailContent({
       }
     }
 
+    let finalInstructions = ac.assignment.instructions;
+    let finalTranslations = (ac.assignment as any).instructionsTranslations;
+
+    // Resolve real HTML instructions from grammarLessonMap if assignment.instructions is a JSON metadata pointer
+    let lessonKey = (ac.assignment as any).grammarLesson;
+    if (!lessonKey && finalInstructions && finalInstructions.trim().startsWith('{')) {
+      try {
+        const meta = JSON.parse(finalInstructions);
+        if (meta.rawId) {
+          const raw = String(meta.rawId);
+          if (raw.startsWith('grammar:')) {
+            const parts = raw.replace(/^grammar:/, '').split(':');
+            lessonKey = parts.length >= 2 ? parts[1] : parts[0];
+          } else {
+            lessonKey = raw;
+          }
+        }
+      } catch {}
+    }
+    if (lessonKey && grammarLessonMap.has(lessonKey)) {
+      const gl = grammarLessonMap.get(lessonKey)!;
+      if (gl.instructions) finalInstructions = gl.instructions;
+      if (gl.instructionsTranslations) finalTranslations = gl.instructionsTranslations;
+    }
+
     const groupKey = ac.groupId ? `${ac.assignment.id}_${ac.groupId}` : null;
     const isSubmitted = (groupKey && submittedGroupKeys.has(groupKey))
       || submittedAssignmentIds.has(ac.assignment.id);
@@ -344,7 +402,8 @@ async function StudentClassDetailContent({
         title: ac.assignment.title,
         materialType: ac.assignment.materialType,
         level: ac.assignment.level,
-        instructions: ac.assignment.instructions,
+        instructions: finalInstructions,
+        instructionsTranslations: finalTranslations,
         thumbnail: finalThumbnail,
         tags: ac.assignment.tags,
         grammarLesson: (ac.assignment as any).grammarLesson,
@@ -380,7 +439,8 @@ async function StudentClassDetailContent({
   });
 
   const isTeacherOrAdmin = userRole === 'TEACHER' || userRole === 'ADMIN' || cls.teacherId === userId;
-  const isDailyDrip = Boolean((cls as any)?.dailyDripUnlock);
+  const is45DaysGrammarClass = cls.id === 'cmuvbigbg0001vta43ikcsjbk';
+  const isDailyDrip = !is45DaysGrammarClass && Boolean((cls as any)?.dailyDripUnlock);
 
   let finalAssignmentGroups = assignmentGroups;
 
@@ -394,8 +454,10 @@ async function StudentClassDetailContent({
   } else {
     // 4. Calculate locked / unlock progression status per group (Chế độ thông thường)
     assignmentGroups.forEach((g) => {
-      if (g.forceUnlocked || !g.prerequisiteGroupId) {
+      if (is45DaysGrammarClass || g.forceUnlocked || !g.prerequisiteGroupId) {
         g.isLocked = false;
+        g.isWaiting5Am = false;
+        g.unlockAt = null;
         return;
       }
 
@@ -442,11 +504,13 @@ async function StudentClassDetailContent({
       try {
         const meta = JSON.parse(uncompletedItem.assignment.instructions);
         if (meta.playUrl) targetUrl = meta.playUrl;
+        const uncompletedTitleLower = uncompletedItem.assignment.title.toLowerCase();
         const isLesson = 
           meta.kind === 'LESSON' || 
           targetUrl.includes('/grammar/') || 
-          uncompletedItem.assignment.title.toLowerCase().startsWith('grammar lesson') ||
-          uncompletedItem.assignment.title.toLowerCase().startsWith('lý thuyết:');
+          uncompletedTitleLower.includes('lý thuyết') ||
+          uncompletedTitleLower.includes('ly thuyet') ||
+          uncompletedTitleLower.includes('grammar lesson');
 
         if (isLesson) {
           kind = 'Lý thuyết';
