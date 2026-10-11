@@ -385,7 +385,7 @@ export async function getBatchStudentQuizRunnerData(
     assignmentIds.map(id => getCachedQuizRunnerTemplate(id).catch(() => null))
   );
 
-  const validTemplates = templates.filter(Boolean);
+  const validTemplates = templates.filter((t): t is NonNullable<typeof t> => Boolean(t));
   const actualIds = validTemplates.map(t => t.actualAssignmentId || t.assignment.id);
 
   // Single batch query for student submissions

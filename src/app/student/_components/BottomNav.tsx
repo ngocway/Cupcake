@@ -18,8 +18,8 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ labels }: BottomNavProps) {
-  return null;
-}
+  const pathname = usePathname()
+  const [isEmbedded, setIsEmbedded] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === 'true') {
