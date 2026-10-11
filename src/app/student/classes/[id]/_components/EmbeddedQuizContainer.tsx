@@ -41,6 +41,12 @@ export function EmbeddedQuizContainer({
   const [isLoading, setIsLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [forceAutoStart, setForceAutoStart] = useState(false);
+
+  // Reset forceAutoStart if assignment changes
+  useEffect(() => {
+    setForceAutoStart(false);
+  }, [assignmentId]);
 
   const loadData = useCallback(async (forceNew = false) => {
     const existing = getCachedQuizData(cacheKey) || getCachedQuizData(assignmentId);
@@ -62,7 +68,7 @@ export function EmbeddedQuizContainer({
       }
       return;
     }
-    if (!existing) setIsLoading(true);
+    if (!existing || forceNew) setIsLoading(true);
     setError(null);
     try {
       let res = await fetchQuizDataWithCache(assignmentId, forceNew, false, classId, groupId);
@@ -80,14 +86,15 @@ export function EmbeddedQuizContainer({
     } finally {
       setIsLoading(false);
     }
-  }, [assignmentId]);
+  }, [assignmentId, cacheKey, classId, groupId]);
 
   useEffect(() => {
     loadData(false);
   }, [loadData, retryKey]);
 
-  const handleRetry = useCallback(() => {
-    loadData(true);
+  const handleRetry = useCallback(async () => {
+    setForceAutoStart(true);
+    await loadData(true);
   }, [loadData]);
 
   // Stable memoized promises for React.use() / Suspense inside KidTeenQuizRunner
@@ -174,7 +181,7 @@ export function EmbeddedQuizContainer({
         isReviewMode={data.isReviewMode}
         submissionScore={data.submissionScore}
         isFromClass={true}
-        autoStart={autoStart}
+        autoStart={autoStart || forceAutoStart}
         onComplete={onComplete}
         onRetry={handleRetry}
         isEmbeddedInCanvas={true}

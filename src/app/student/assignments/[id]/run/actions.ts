@@ -95,6 +95,20 @@ export async function getStudentQuizRunnerData(
   const targetClassId = classId ? classId : null;
   const targetGroupId = classId && groupId ? groupId : (classId ? undefined : null);
 
+  const hasSubstantiveAnswers = (sub: any) => {
+    if (!sub) return false;
+    if (sub.answers && sub.answers.length > 0) return true;
+    if (sub.answersDraft) {
+      try {
+        const parsed = typeof sub.answersDraft === 'string' ? JSON.parse(sub.answersDraft) : sub.answersDraft;
+        return parsed && Object.keys(parsed).length > 0;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  };
+
   // Run template resolution and submission lookup concurrently to eliminate sequential roundtrips
   const templatePromise = getCachedQuizRunnerTemplate(assignmentId);
   const preliminarySubmissionPromise = (!forceNewAttempt && isCuid)
@@ -122,6 +136,31 @@ export async function getStudentQuizRunnerData(
   // 2. Resolve or create submission
   let submission: any = preliminarySubmission;
 
+  // If in-progress submission exists but has NO substantive answers, check if there's a completed submission
+  if (!forceNewAttempt && submission && !hasSubstantiveAnswers(submission)) {
+    const latestCompleted = await prisma.submission.findFirst({
+      where: { 
+        assignmentId: actualAssignmentId, 
+        studentId: userId, 
+        classId: targetClassId,
+        groupId: targetGroupId,
+        submittedAt: { not: null } 
+      },
+      orderBy: { submittedAt: "desc" },
+      include: { answers: true }
+    });
+
+    if (latestCompleted) {
+      // Clean up orphaned empty draft so it does not leave clutter in DB
+      if (submission.id) {
+        try {
+          await prisma.submission.delete({ where: { id: submission.id } });
+        } catch {}
+      }
+      submission = latestCompleted;
+    }
+  }
+
   if (!submission && forceNewAttempt) {
     const completedCount = await prisma.submission.count({
       where: { 
@@ -132,6 +171,21 @@ export async function getStudentQuizRunnerData(
         submittedAt: { not: null } 
       }
     });
+
+    // Delete any prior empty drafts for this user & assignment
+    try {
+      await prisma.submission.deleteMany({
+        where: {
+          assignmentId: actualAssignmentId,
+          studentId: userId,
+          classId: targetClassId,
+          groupId: targetGroupId,
+          submittedAt: null,
+          answers: { none: {} }
+        }
+      });
+    } catch {}
+
     submission = await prisma.submission.create({
       data: {
         assignmentId: actualAssignmentId,
@@ -156,6 +210,26 @@ export async function getStudentQuizRunnerData(
         orderBy: { startedAt: "desc" },
         include: { answers: true }
       });
+
+      if (submission && !hasSubstantiveAnswers(submission)) {
+        const latestCompleted = await prisma.submission.findFirst({
+          where: { 
+            assignmentId: actualAssignmentId, 
+            studentId: userId, 
+            classId: targetClassId,
+            groupId: targetGroupId,
+            submittedAt: { not: null } 
+          },
+          orderBy: { submittedAt: "desc" },
+          include: { answers: true }
+        });
+        if (latestCompleted) {
+          try {
+            await prisma.submission.delete({ where: { id: submission.id } });
+          } catch {}
+          submission = latestCompleted;
+        }
+      }
     }
 
     if (!submission) {
@@ -166,8 +240,9 @@ export async function getStudentQuizRunnerData(
           studentId: userId,
           classId: targetClassId,
           groupId: targetGroupId,
+          submittedAt: { not: null }
         },
-        orderBy: { startedAt: "desc" },
+        orderBy: { submittedAt: "desc" },
         include: { answers: true }
       });
     }
@@ -268,8 +343,9 @@ export async function ensureStudentSubmission(assignmentId: string, classId?: st
       studentId: userId,
       classId: targetClassId,
       groupId: targetGroupId,
+      submittedAt: { not: null }
     },
-    orderBy: { startedAt: "desc" },
+    orderBy: { submittedAt: "desc" },
     select: { id: true, score: true }
   });
   if (latestCompleted) return latestCompleted;
@@ -330,9 +406,46 @@ export async function getBatchStudentQuizRunnerData(
     : [];
 
   const subMap = new Map<string, any>();
+  const byAssignment = new Map<string, any[]>();
   submissions.forEach(s => {
-    if (!subMap.has(s.assignmentId)) {
-      subMap.set(s.assignmentId, s);
+    const list = byAssignment.get(s.assignmentId) || [];
+    list.push(s);
+    byAssignment.set(s.assignmentId, list);
+  });
+
+  const checkHasAnswers = (sub: any) => {
+    if (!sub) return false;
+    if (sub.answers && sub.answers.length > 0) return true;
+    if (sub.answersDraft) {
+      try {
+        const parsed = typeof sub.answersDraft === 'string' ? JSON.parse(sub.answersDraft) : sub.answersDraft;
+        return parsed && Object.keys(parsed).length > 0;
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  };
+
+  byAssignment.forEach((list, aid) => {
+    // 1. Prioritize active submission with substantive answers
+    const activeWithAnswers = list.find(s => s.submittedAt === null && checkHasAnswers(s));
+    if (activeWithAnswers) {
+      subMap.set(aid, activeWithAnswers);
+      return;
+    }
+    // 2. Find latest completed submission
+    const latestCompleted = list
+      .filter(s => s.submittedAt !== null)
+      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+    if (latestCompleted) {
+      subMap.set(aid, latestCompleted);
+      return;
+    }
+    // 3. Fallback to any active draft
+    const anyActive = list.find(s => s.submittedAt === null);
+    if (anyActive) {
+      subMap.set(aid, anyActive);
     }
   });
 

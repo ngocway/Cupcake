@@ -11,6 +11,7 @@ import {
   XCircle,
   MousePointer2,
   RotateCcw,
+  Loader2,
   CheckCircle,
   Volume2,
   VolumeX,
@@ -1127,14 +1128,23 @@ export default function KidTeenQuizRunner({
     }
   }, [isReviewMode, activeQuestions, answers]);
 
-  const handleRetryAssignment = () => {
-    if (onRetry) {
-      onRetry();
-      return;
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleRetryAssignment = async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      if (onRetry) {
+        await onRetry();
+        return;
+      }
+      const identifier = assignment.slug || assignment.id;
+      const fromClassParam = isFromClass && classId ? `&fromClass=true&classId=${classId}` : "";
+      router.push(`/student/assignments/${identifier}/run?direct=true&newAttempt=true${fromClassParam}`);
+    } catch (err) {
+      console.error("Retry failed:", err);
+      setIsRetrying(false);
     }
-    const identifier = assignment.slug || assignment.id;
-    const fromClassParam = isFromClass && classId ? `&fromClass=true&classId=${classId}` : "";
-    router.push(`/student/assignments/${identifier}/run?direct=true&newAttempt=true${fromClassParam}`);
   };
 
   // ── Kid/Teen navigation state ────────────────────────────
@@ -1849,7 +1859,9 @@ export default function KidTeenQuizRunner({
             </div>
           ) : (
             <h4 className="text-purple-600 dark:text-purple-400 font-black text-xs uppercase tracking-[0.2em] mb-3">
-              ARE YOU READY?
+              {Object.keys(initialAnswers || {}).length > 0
+                ? `ĐANG LÀM DỞ (${Object.keys(initialAnswers || {}).length}/${qCount} CÂU)`
+                : "ARE YOU READY?"}
             </h4>
           )}
           
@@ -1914,10 +1926,17 @@ export default function KidTeenQuizRunner({
               {/* Làm lại bài (Practise) Button */}
               <button
                 onClick={handleRetryAssignment}
-                className="group relative px-6 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                disabled={isRetrying}
+                className={`group relative px-6 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 ${
+                  isRetrying ? "opacity-75 cursor-not-allowed" : "cursor-pointer"
+                }`}
               >
-                <RotateCcw className="w-4 h-4 text-white group-hover:-rotate-90 transition-transform duration-300" />
-                <span>Làm lại (Practise)</span>
+                {isRetrying ? (
+                  <Loader2 className="w-4 h-4 text-white animate-spin shrink-0" />
+                ) : (
+                  <RotateCcw className="w-4 h-4 text-white group-hover:-rotate-90 transition-transform duration-300 shrink-0" />
+                )}
+                <span>{isRetrying ? "Đang chuẩn bị đề thi..." : "Làm lại (Practise)"}</span>
               </button>
             </div>
           ) : (
@@ -1955,7 +1974,9 @@ export default function KidTeenQuizRunner({
                 >
                   <span className="flex items-center justify-center gap-2">
                     <Play className="w-5 h-5 fill-current text-purple-600" />
-                    Practice now
+                    {Object.keys(initialAnswers || {}).length > 0
+                      ? `Tiếp tục làm bài (${Object.keys(initialAnswers || {}).length}/${qCount})`
+                      : "Practice now"}
                   </span>
                 </button>
               )}
@@ -2055,11 +2076,18 @@ export default function KidTeenQuizRunner({
           {isReviewMode && !isShowingResultScreen && (
             <button
               onClick={handleRetryAssignment}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95 transition-all cursor-pointer"
+              disabled={isRetrying}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-full font-black text-xs uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95 transition-all ${
+                isRetrying ? "opacity-75 cursor-not-allowed" : "cursor-pointer"
+              }`}
               title={t("retry") || "Làm lại"}
             >
-              <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-              <span>{t("retry") || "Làm lại"}</span>
+              {isRetrying ? (
+                <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin" />
+              ) : (
+                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              )}
+              <span>{isRetrying ? "Đang tải..." : (t("retry") || "Làm lại")}</span>
             </button>
           )}
 
@@ -2479,11 +2507,22 @@ export default function KidTeenQuizRunner({
               ) : isReviewMode ? (
                 <button
                   onClick={handleRetryAssignment}
-                  className="flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#9A89FF] bg-[#9A89FF] text-white hover:bg-[#8371f5] hover:border-[#8371f5] hover:text-white hover:shadow-lg active:scale-95 transition-all"
+                  disabled={isRetrying}
+                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#9A89FF] bg-[#9A89FF] text-white hover:bg-[#8371f5] hover:border-[#8371f5] hover:text-white hover:shadow-lg active:scale-95 transition-all ${
+                    isRetrying ? "opacity-75 cursor-not-allowed" : ""
+                  }`}
                 >
-                  <RotateCcw className="w-5 h-5" />
-                  <span className="hidden sm:inline">{t("retryAssignment") || "Làm lại bài"}</span>
-                  <span className="sm:hidden">{t("retry") || "Làm lại"}</span>
+                  {isRetrying ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-5 h-5" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {isRetrying ? "Đang chuẩn bị đề thi..." : (t("retryAssignment") || "Làm lại bài")}
+                  </span>
+                  <span className="sm:hidden">
+                    {isRetrying ? "Đang tải..." : (t("retry") || "Làm lại")}
+                  </span>
                 </button>
               ) : isAllChecked ? (
                 <button
@@ -2676,10 +2715,17 @@ export default function KidTeenQuizRunner({
               </button>
               <button
                 onClick={handleRetryAssignment}
-                className="px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
+                disabled={isRetrying}
+                className={`px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto ${
+                  isRetrying ? "opacity-75 cursor-not-allowed" : ""
+                }`}
               >
-                <RotateCcw className="w-4 h-4" />
-                {t("retryAssignment") || "Retry assignment"}
+                {isRetrying ? (
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                ) : (
+                  <RotateCcw className="w-4 h-4 shrink-0" />
+                )}
+                <span>{isRetrying ? "Đang chuẩn bị đề thi..." : (t("retryAssignment") || "Retry assignment")}</span>
               </button>
             </div>
           </div>

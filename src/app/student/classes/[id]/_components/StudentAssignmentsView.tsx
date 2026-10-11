@@ -1758,16 +1758,26 @@ export function StudentAssignmentsView({
             isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
           }`}>
             
-            {/* Floating Expand button when sidebar is collapsed (moved to top-right) */}
+            {/* ── FLOATING EXPAND TAB (HƯỚNG 1: Notion / ChatGPT / VS Code style) ── */}
             {isSidebarCollapsed && !isZenMode && (
               <button
                 type="button"
-                title="Mở lại menu bài học & thanh điều hướng"
+                title="Mở lại menu bài học & danh sách ngày"
                 onClick={toggleSidebar}
-                className="absolute top-3 right-3 sm:right-4 z-30 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-blue-600 dark:text-blue-400 border border-slate-200/80 dark:border-slate-700/80 shadow-md hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                className="absolute left-0 top-5 z-40 flex items-center gap-2.5 pl-3 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/95 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-r-2xl border-y-2 border-r-2 border-l-0 border-emerald-400/80 dark:border-emerald-500/80 shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/25 backdrop-blur-md transition-all duration-300 hover:translate-x-1.5 active:scale-95 group cursor-pointer animate-in fade-in slide-in-from-left-6"
               >
-                <PanelLeftOpen className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Mở thanh điều hướng</span>
+                <div className="w-7 h-7 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                  <PanelLeftOpen className="w-4 h-4 stroke-[2.5px]" />
+                </div>
+                <div className="flex flex-col text-left leading-none font-['Baloo_2',_'Nunito',_sans-serif]">
+                  <span className="text-[9.5px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
+                    Menu lớp
+                  </span>
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">
+                    Danh sách bài
+                  </span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all ml-0.5" />
               </button>
             )}
 
