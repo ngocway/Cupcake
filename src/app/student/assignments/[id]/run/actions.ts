@@ -92,6 +92,8 @@ export async function getStudentQuizRunnerData(
   const { getCachedQuizRunnerTemplate } = await import("./data");
 
   const isCuid = assignmentId.startsWith('cm') || assignmentId.length >= 24;
+  const targetClassId = classId ? classId : null;
+  const targetGroupId = classId && groupId ? groupId : (classId ? undefined : null);
 
   // Run template resolution and submission lookup concurrently to eliminate sequential roundtrips
   const templatePromise = getCachedQuizRunnerTemplate(assignmentId);
@@ -100,8 +102,8 @@ export async function getStudentQuizRunnerData(
         where: { 
           assignmentId, 
           studentId: userId, 
-          classId: classId || undefined,
-          groupId: groupId || undefined,
+          classId: targetClassId,
+          groupId: targetGroupId,
           submittedAt: null 
         },
         orderBy: { startedAt: "desc" },
@@ -125,7 +127,8 @@ export async function getStudentQuizRunnerData(
       where: { 
         assignmentId: actualAssignmentId, 
         studentId: userId, 
-        classId: classId || undefined,
+        classId: targetClassId,
+        groupId: targetGroupId,
         submittedAt: { not: null } 
       }
     });
@@ -134,7 +137,7 @@ export async function getStudentQuizRunnerData(
         assignmentId: actualAssignmentId,
         studentId: userId,
         classId: classId || null,
-        groupId: groupId || null,
+        groupId: classId ? (groupId || null) : null,
         attemptNumber: completedCount + 1
       },
       include: { answers: true }
@@ -146,8 +149,8 @@ export async function getStudentQuizRunnerData(
         where: { 
           assignmentId: actualAssignmentId, 
           studentId: userId, 
-          classId: classId || undefined,
-          groupId: groupId || undefined,
+          classId: targetClassId,
+          groupId: targetGroupId,
           submittedAt: null 
         },
         orderBy: { startedAt: "desc" },
@@ -161,8 +164,8 @@ export async function getStudentQuizRunnerData(
         where: { 
           assignmentId: actualAssignmentId, 
           studentId: userId,
-          classId: classId || undefined,
-          groupId: groupId || undefined,
+          classId: targetClassId,
+          groupId: targetGroupId,
         },
         orderBy: { startedAt: "desc" },
         include: { answers: true }
@@ -179,7 +182,7 @@ export async function getStudentQuizRunnerData(
             assignmentId: actualAssignmentId,
             studentId: userId,
             classId: classId || null,
-            groupId: groupId || null,
+            groupId: classId ? (groupId || null) : null,
             attemptNumber: 1
           },
           include: { answers: true }
@@ -243,12 +246,15 @@ export async function ensureStudentSubmission(assignmentId: string, classId?: st
   const actualAssignmentId = assignmentRecord.id;
 
   // 1. Check if active submission already exists
+  const targetClassId = classId ? classId : null;
+  const targetGroupId = classId && groupId ? groupId : (classId ? undefined : null);
+
   const activeSubmission = await prisma.submission.findFirst({
     where: { 
       assignmentId: actualAssignmentId, 
       studentId: userId, 
-      classId: classId || undefined,
-      groupId: groupId || undefined,
+      classId: targetClassId,
+      groupId: targetGroupId,
       submittedAt: null 
     },
     select: { id: true, score: true }
@@ -260,8 +266,8 @@ export async function ensureStudentSubmission(assignmentId: string, classId?: st
     where: { 
       assignmentId: actualAssignmentId, 
       studentId: userId,
-      classId: classId || undefined,
-      groupId: groupId || undefined,
+      classId: targetClassId,
+      groupId: targetGroupId,
     },
     orderBy: { startedAt: "desc" },
     select: { id: true, score: true }
@@ -274,7 +280,7 @@ export async function ensureStudentSubmission(assignmentId: string, classId?: st
       assignmentId: actualAssignmentId,
       studentId: userId,
       classId: classId || null,
-      groupId: groupId || null,
+      groupId: classId ? (groupId || null) : null,
       attemptNumber: 1
     },
     select: { id: true, score: true }
@@ -307,13 +313,16 @@ export async function getBatchStudentQuizRunnerData(
   const actualIds = validTemplates.map(t => t.actualAssignmentId || t.assignment.id);
 
   // Single batch query for student submissions
+  const targetClassId = classId ? classId : null;
+  const targetGroupId = classId && groupId ? groupId : (classId ? undefined : null);
+
   const submissions = actualIds.length > 0
     ? await prisma.submission.findMany({
         where: {
           assignmentId: { in: actualIds },
           studentId: userId,
-          classId: classId || undefined,
-          groupId: groupId || undefined,
+          classId: targetClassId,
+          groupId: targetGroupId,
         },
         orderBy: { startedAt: "desc" },
         include: { answers: true }

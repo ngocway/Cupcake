@@ -614,6 +614,7 @@ interface Props {
   isReviewMode?: boolean;
   submissionScore?: number | null;
   isFromClass?: boolean;
+  classId?: string;
   autoStart?: boolean;
   onComplete?: (score: number, assignmentId: string) => void;
   onRetry?: () => void;
@@ -812,6 +813,7 @@ export default function KidTeenQuizRunner({
   isReviewMode = false,
   submissionScore = null,
   isFromClass = false,
+  classId,
   autoStart = false,
   onComplete,
   onRetry,
@@ -938,7 +940,9 @@ export default function KidTeenQuizRunner({
   };
 
   const handleBackToClass = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
+    if (classId) {
+      router.push(`/student/classes/${classId}`);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
       router.push("/student/classes");
@@ -1129,7 +1133,7 @@ export default function KidTeenQuizRunner({
       return;
     }
     const identifier = assignment.slug || assignment.id;
-    const fromClassParam = isFromClass ? "&fromClass=true" : "";
+    const fromClassParam = isFromClass && classId ? `&fromClass=true&classId=${classId}` : "";
     router.push(`/student/assignments/${identifier}/run?direct=true&newAttempt=true${fromClassParam}`);
   };
 
@@ -1959,13 +1963,15 @@ export default function KidTeenQuizRunner({
           )}
 
           {/* Back to class link (Gợi ý 3) */}
-          <button
-            onClick={handleBackToClass}
-            className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors py-1 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Quay lại lớp học</span>
-          </button>
+          {isFromClass && (
+            <button
+              onClick={handleBackToClass}
+              className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors py-1 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Quay lại lớp học</span>
+            </button>
+          )}
         </div>
       </div>
     );

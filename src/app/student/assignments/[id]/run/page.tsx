@@ -139,13 +139,13 @@ export default async function StudentAssignmentLobbyPage({
   // Hướng 1 & 4: Parallel queries + Meta-only fetch (Cực nhanh)
   const [rawAssignment, allSubmissions, t, locale] = await Promise.all([
     getAssignmentMeta(id),
-    // Fetch submissions scoped to class/group if accessed from class
+    // Fetch submissions scoped to class/group if accessed from class, or strictly free submissions if classId is absent
     prisma.submission.findMany({
       where: { 
         assignmentId: id, 
         studentId: userId,
-        classId: classId || undefined,
-        groupId: groupId || undefined
+        classId: classId ? classId : null,
+        groupId: classId && groupId ? groupId : (classId ? undefined : null)
       },
       select: {
         id: true,
@@ -165,28 +165,32 @@ export default async function StudentAssignmentLobbyPage({
   }
   const assignment = rawAssignment;
 
-  // Progression Check: If assignment belongs to a locked group for this student, redirect to class page with lockedGroup modal
-  const assignedClass = await prisma.assignmentClass.findFirst({
-    where: {
-      assignmentId: assignment.id,
-      class: {
-        enrollments: {
-          some: { studentId: userId, status: "ACTIVE" }
-        }
-      }
-    },
-    include: {
-      group: {
+  // Progression Check: ONLY check prerequisite progression if accessing inside a class
+  const assignedClass = classId
+    ? await prisma.assignmentClass.findFirst({
+        where: {
+          assignmentId: assignment.id,
+          classId: classId,
+          class: {
+            enrollments: {
+              some: { studentId: userId, status: "ACTIVE" }
+            }
+          }
+        },
         include: {
-          prerequisiteGroup: {
+          group: {
             include: {
-              assignments: {
+              prerequisiteGroup: {
                 include: {
-                  assignment: {
+                  assignments: {
                     include: {
-                      submissions: {
-                        where: { studentId: userId, submittedAt: { not: null } },
-                        select: { id: true }
+                      assignment: {
+                        include: {
+                          submissions: {
+                            where: { studentId: userId, classId: classId, submittedAt: { not: null } },
+                            select: { id: true }
+                          }
+                        }
                       }
                     }
                   }
@@ -195,9 +199,8 @@ export default async function StudentAssignmentLobbyPage({
             }
           }
         }
-      }
-    }
-  });
+      })
+    : null;
 
   if (assignedClass?.group?.prerequisiteGroup && !assignedClass.group.forceUnlocked) {
     const prereqGroup = assignedClass.group.prerequisiteGroup;
@@ -229,8 +232,8 @@ export default async function StudentAssignmentLobbyPage({
     } catch {}
   }
 
-  // Detect whether this is for a student in class
-  const isFromClass = fromClass === "true" || !!classId || !!assignedClass;
+  // Detect whether this is for a student in class: ONLY true if classId is provided!
+  const isFromClass = Boolean(classId);
 
   const activeSubmission = allSubmissions.find(s => !s.submittedAt);
   const completedSubmissions = allSubmissions.filter(s => !!s.submittedAt);
@@ -244,7 +247,7 @@ export default async function StudentAssignmentLobbyPage({
   const identifier = assignment.slug || assignment.id;
   const fromClassQuery = isFromClass ? "&fromClass=true" : "";
   const embeddedQuery = embedded === "true" ? "&embedded=true" : "";
-  const classParams = `${fromClassQuery}${embeddedQuery}${classId ? `&classId=${classId}` : ''}${groupId ? `&groupId=${groupId}` : ''}`;
+  const classParams = `${classId ? `&classId=${classId}` : ''}${groupId && classId ? `&groupId=${groupId}` : ''}${fromClassQuery}${embeddedQuery}`;
 
   // 0. Chế độ xem trước (preview === "true"): Chuyển thẳng sang trang public preview để chơi/xem thử mà không tạo submission vào DB
   if (preview === "true") {
@@ -259,7 +262,7 @@ export default async function StudentAssignmentLobbyPage({
         assignmentId: assignment.id,
         studentId: userId,
         classId: classId || null,
-        groupId: groupId || null,
+        groupId: classId ? (groupId || null) : null,
         attemptNumber: nextAttemptNumber
       }
     });
@@ -298,7 +301,7 @@ export default async function StudentAssignmentLobbyPage({
       assignmentId: assignment.id,
       studentId: userId,
       classId: classId || null,
-      groupId: groupId || null,
+      groupId: classId ? (groupId || null) : null,
       attemptNumber: 1
     }
   });

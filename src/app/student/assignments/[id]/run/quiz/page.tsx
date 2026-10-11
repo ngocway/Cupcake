@@ -23,7 +23,8 @@ export default async function StudentQuizPage({
   const userId = session.user.id;
   const isAdmin = session.user.role === "ADMIN";
 
-  const isClassMode = embedded === "true" || fromClass === "true" || !!classId;
+  const isClassMode = embedded === "true" || Boolean(classId);
+  const isFromClass = Boolean(classId);
 
   // 1. Kick off cached questions and translations immediately in parallel
   const questionsPromise = getCachedAssignmentQuestions(paramsId);
@@ -61,11 +62,12 @@ export default async function StudentQuizPage({
     });
   } else {
     // Fast path: find existing submission directly with paramsId (matches ID or slug)
+    // Strictly isolate by classId: if classId is absent, query ONLY free submissions (classId: null)
     const existing = await prisma.submission.findFirst({
       where: {
         studentId: userId,
-        classId: classId || undefined,
-        groupId: groupId || undefined,
+        classId: classId ? classId : null,
+        groupId: classId && groupId ? groupId : (classId ? undefined : null),
         OR: [
           { assignmentId: paramsId },
           { assignment: { slug: paramsId } }
@@ -115,7 +117,7 @@ export default async function StudentQuizPage({
           assignmentId: assignmentRecord.id,
           studentId: userId,
           classId: classId || null,
-          groupId: groupId || null,
+          groupId: classId ? (groupId || null) : null,
           attemptNumber: 1
         },
         select: { id: true }
@@ -139,7 +141,6 @@ export default async function StudentQuizPage({
 
   const assignmentCore = submission.assignment;
   const isReviewMode = Boolean(submission.submittedAt || review === "true");
-  const isFromClass = isClassMode;
 
   let initialAnswers: any = {};
   if (submission.answers && submission.answers.length > 0) {
@@ -235,6 +236,7 @@ export default async function StudentQuizPage({
           isReviewMode={isReviewMode}
           submissionScore={submission.score}
           isFromClass={isFromClass}
+          classId={classId}
           autoStart={autoStart === "true"}
           isAdmin={isAdmin}
        />
