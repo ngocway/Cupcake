@@ -78,6 +78,7 @@ interface BooksBrowserProps {
   itemsByLevel: Record<string, any[]>;   // pre-grouped: { a1: [...], a2: [], ... }
   loadingLevels?: string[];              // levels still being fetched
   initialLevel?: string;
+  onExpandLevel?: (levelId: string) => void;
 }
 
 function BookCard({ book }: { book: any }) {
@@ -129,7 +130,7 @@ function BookCard({ book }: { book: any }) {
   );
 }
 
-export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = "a1" }: BooksBrowserProps) {
+export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = "a1", onExpandLevel }: BooksBrowserProps) {
   const defaultLevel = useMemo(() => {
     return CEFR_ORDER.includes(initialLevel) ? initialLevel : "a1";
   }, [initialLevel]);
@@ -139,11 +140,14 @@ export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = 
   useEffect(() => {
     const handleOpenLevel = (e: any) => {
       const lvl = e.detail?.level;
-      if (lvl && lvl !== "all" && CEFR_ORDER.includes(lvl)) setOpenLevel(lvl);
+      if (lvl && lvl !== "all" && CEFR_ORDER.includes(lvl)) {
+        setOpenLevel(lvl);
+        if (onExpandLevel) onExpandLevel(lvl);
+      }
     };
     window.addEventListener("open-cefr-level", handleOpenLevel);
     return () => window.removeEventListener("open-cefr-level", handleOpenLevel);
-  }, []);
+  }, [onExpandLevel]);
 
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({
     a1: 6, a2: 6, b1: 6, b2: 6, c1: 6,
@@ -177,7 +181,11 @@ export function BooksBrowser({ itemsByLevel, loadingLevels = [], initialLevel = 
           >
             {/* Header */}
             <button
-              onClick={() => setOpenLevel(isOpen ? "" : levelId)}
+              onClick={() => {
+                const next = isOpen ? "" : levelId;
+                setOpenLevel(next);
+                if (next && onExpandLevel) onExpandLevel(next);
+              }}
               className="w-full flex items-center gap-2 sm:gap-3.5 px-3.5 sm:px-6 py-3.5 sm:py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5 min-w-0"
             >
               <span className={`shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>

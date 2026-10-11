@@ -380,10 +380,11 @@ function EnrolledClassRowCard({
 interface PublicClassCardProps {
   cls: PublicClassItem;
   isLoggedIn: boolean;
+  priority?: boolean;
   onPreview?: (cls: PublicClassItem) => void;
 }
 
-function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
+function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCardProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopyCode = (e: React.MouseEvent) => {
@@ -407,6 +408,7 @@ function PublicClassCard({ cls, isLoggedIn, onPreview }: PublicClassCardProps) {
           src={cls.thumbnail}
           alt={cls.title}
           fill
+          priority={priority}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -536,9 +538,10 @@ function JoinWithCodeCard({ onOpen }: { onOpen: () => void }) {
 interface StudentClassesTabProps {
   isLoggedIn: boolean;
   locale?: string;
+  classesPromise?: Promise<any>;
 }
 
-export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesTabProps) {
+export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }: StudentClassesTabProps) {
   const router = useRouter();
   const isVi = locale === 'vi';
 
@@ -548,8 +551,23 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
   const activeClasses: FormattedClassInfo[] = cachedData?.activeClasses || [];
   const pendingRequests: FormattedClassInfo[] = cachedData?.pendingRequests || [];
 
+  const [hasMounted, setHasMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(!cachedData && isLoggedIn);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHasMounted(true);
+    if (!cachedData) {
+      try {
+        const stored = localStorage.getItem("dolcake_student_classes_cache");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setCachedData(parsed);
+          setIsLoading(false);
+        }
+      } catch (e) {}
+    }
+  }, []);
 
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [enteringClassId, setEnteringClassId] = useState<string | null>(null);
@@ -585,10 +603,34 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
   };
 
   useEffect(() => {
-    if (isLoggedIn && !cachedData) {
+    if (cachedData) {
+      setIsLoading(false);
+    }
+  }, [cachedData]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (classesPromise && isLoggedIn) {
+      Promise.resolve(classesPromise)
+        .then((data) => {
+          if (isMounted && data) {
+            setCachedData(data);
+            setIsLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.error('Error resolving classesPromise:', err);
+          if (isMounted && !cachedData) {
+            fetchClasses(false);
+          }
+        });
+    } else if (isLoggedIn && !cachedData) {
       fetchClasses(false);
     }
-  }, [isLoggedIn, cachedData]);
+    return () => {
+      isMounted = false;
+    };
+  }, [classesPromise, isLoggedIn]);
 
   const handleCancelRequest = async (classId: string) => {
     setCancelingId(classId);
@@ -620,11 +662,12 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
     return (
       <div className="w-full animate-in fade-in duration-300">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
-          {PUBLIC_CLASSES.map((cls) => (
+          {PUBLIC_CLASSES.map((cls, index) => (
             <PublicClassCard
               key={cls.id}
               cls={cls}
               isLoggedIn={false}
+              priority={index < 2}
               onPreview={setSelectedClassDetail}
             />
           ))}
@@ -791,8 +834,8 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
     );
   }
 
-  // 2. Loading skeleton
-  if (isLoading) {
+  // 2. Loading skeleton (Rendered during SSR and until client mounts & data is ready)
+  if (!hasMounted || (isLoading && !cachedData)) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="flex items-center justify-between">
@@ -1058,11 +1101,12 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi' }: StudentClassesT
 
         {/* Grid of recommended classes (filtered) + Join with code card */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
-          {recommendedClasses.map((cls) => (
+          {recommendedClasses.map((cls, index) => (
             <PublicClassCard
               key={cls.id}
               cls={cls}
               isLoggedIn={true}
+              priority={index < 2}
               onPreview={setSelectedClassDetail}
             />
           ))}

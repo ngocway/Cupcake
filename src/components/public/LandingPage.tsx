@@ -13,6 +13,7 @@ import { TypingText } from "@/components/public/TypingText"
 import { updateAllPreferences, getOnboardingConfig } from "@/actions/user-preferences-actions"
 import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
 import { getFlashcardTopics } from "@/actions/flashcards-actions"
+import { getPublishedTeacherGamesAction } from "@/actions/admin-teacher-games"
 import { X, SlidersHorizontal } from "lucide-react"
 import {
   Select,
@@ -973,42 +974,66 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const setStudentClasses    = useContentStore(s => (s as any).setStudentClasses);
   const studentClassesLoaded = useContentStore(s => (s as any).studentClassesLoaded);
 
-  // SSR seed: unwrap server-fetched student classes and populate store on mount
-  const ssrStudentClasses = use(promises.studentClasses ?? Promise.resolve(null)) as any;
+  // Resolve student classes promise in background without suspending the page
   useEffect(() => {
-    if (!studentClassesLoaded && ssrStudentClasses) {
-      setStudentClasses(ssrStudentClasses);
+    if (promises.studentClasses) {
+      Promise.resolve(promises.studentClasses)
+        .then((data) => {
+          if (data) setStudentClasses(data);
+        })
+        .catch(console.error);
     }
-  }, [studentClassesLoaded, ssrStudentClasses, setStudentClasses]);
+  }, [promises.studentClasses, setStudentClasses]);
 
   // Flashcard topics — read from Zustand store (persists across tab switches, no re-fetch on remount)
   const allFlashcardTopics    = useContentStore(s => (s as any).flashcardTopics) as any[];
   const flashcardTopicsLoaded = useContentStore(s => (s as any).flashcardTopicsLoaded) as boolean;
   const setFlashcardTopics    = useContentStore(s => (s as any).setFlashcardTopics);
 
-  // SSR seed: unwrap server-fetched flashcard topics and populate the store on mount
-  const ssrFlashcardTopics = use(promises.flashcards ?? Promise.resolve([])) as any[];
+  // Resolve flashcards promise in background without suspending the page
   useEffect(() => {
-    if (!flashcardTopicsLoaded && ssrFlashcardTopics && ssrFlashcardTopics.length > 0) {
-      setFlashcardTopics(ssrFlashcardTopics);
+    if (promises.flashcards) {
+      Promise.resolve(promises.flashcards)
+        .then((data) => {
+          if (data && data.length > 0) setFlashcardTopics(data);
+        })
+        .catch(console.error);
     }
-  }, [flashcardTopicsLoaded, ssrFlashcardTopics, setFlashcardTopics]);
+  }, [promises.flashcards, setFlashcardTopics]);
 
-  // Teacher-created games unwrap
-  const ssrTeacherGames = use(promises.teacherGames ?? Promise.resolve([])) as any[];
-
-  // Use SSR topics as immediate fallback — avoids skeleton flash on first render
-  // even before Zustand has been hydrated by setFlashcardTopics.
-  const effectiveFlashcardTopics = allFlashcardTopics.length > 0 ? allFlashcardTopics : ssrFlashcardTopics;
-  const isFlashcardsLoading = effectiveFlashcardTopics.length === 0;
-
-  // Exercise counts — read from Zustand store (prefetched on mount)
-  const setExerciseCounts      = useContentStore(s => (s as any).setExerciseCounts);
-  const exerciseCountsLoaded   = useContentStore(s => (s as any).exerciseCountsLoaded) as boolean;
+  // Teacher-created games — resolve in background without suspending the page
+  const [teacherGames, setTeacherGames] = useState<any[]>([]);
+  useEffect(() => {
+    if (promises.teacherGames) {
+      Promise.resolve(promises.teacherGames)
+        .then((data) => {
+          if (data && data.length > 0) setTeacherGames(data);
+        })
+        .catch(console.error);
+    }
+  }, [promises.teacherGames]);
 
   // Active tab — read directly from Zustand store (instant, no re-mount)
   const activeTab    = useContentStore((s) => (s as any).activeTab) || "classes";
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
+
+  // Lazy fetch teacher games only when games tab becomes active
+  useEffect(() => {
+    if (activeTab === "games" && teacherGames.length === 0) {
+      getPublishedTeacherGamesAction()
+        .then((data) => {
+          if (data && data.length > 0) setTeacherGames(data);
+        })
+        .catch(console.error);
+    }
+  }, [activeTab, teacherGames.length]);
+
+  const effectiveFlashcardTopics = allFlashcardTopics;
+  const isFlashcardsLoading = !flashcardTopicsLoaded && effectiveFlashcardTopics.length === 0;
+
+  // Exercise counts — read from Zustand store
+  const setExerciseCounts      = useContentStore(s => (s as any).setExerciseCounts);
+  const exerciseCountsLoaded   = useContentStore(s => (s as any).exerciseCountsLoaded) as boolean;
 
   // On first mount: initialize store from URL so bookmarks/direct links still work
   useEffect(() => {
@@ -1026,24 +1051,24 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fallback: only fetch client-side if SSR data was empty (cache miss on first server boot)
+  // Lazy fetch flashcards only when flashcards tab is active
   useEffect(() => {
-    if (flashcardTopicsLoaded) return;
-    getFlashcardTopics()
-      .then(setFlashcardTopics)
-      .catch(console.error);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (activeTab === "flashcards" && !flashcardTopicsLoaded && allFlashcardTopics.length === 0) {
+      getFlashcardTopics()
+        .then(setFlashcardTopics)
+        .catch(console.error);
+    }
+  }, [activeTab, flashcardTopicsLoaded, allFlashcardTopics.length, setFlashcardTopics]);
 
-  // Prefetch exercise counts on mount — only if not already cached in store
+  // Lazy fetch exercise counts only when exercises tab is active
   useEffect(() => {
-    if (exerciseCountsLoaded) return;
-    fetch("/api/exercises/counts")
-      .then(r => r.json())
-      .then(setExerciseCounts)
-      .catch(console.error);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (activeTab === "exercises" && !exerciseCountsLoaded) {
+      fetch("/api/exercises/counts")
+        .then(r => r.json())
+        .then(setExerciseCounts)
+        .catch(console.error);
+    }
+  }, [activeTab, exerciseCountsLoaded, setExerciseCounts]);
 
   // Fallback prefetch student classes on mount for logged in students if not hydrated from SSR
   useEffect(() => {
@@ -1097,6 +1122,33 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const lessonsFetchedBaseRef = useRef('');
   const lessonsFetchedLevelsRef = useRef(new Set<string>());
 
+  const fetchLessonLevel = useCallback(async (levelKey: string) => {
+    if (!levelKey || !CEFR_TO_API[levelKey]) return;
+    const cacheKey = `${lessonCacheBase}:${levelKey}`;
+    if (lessonsFetchedLevelsRef.current.has(cacheKey)) return;
+    lessonsFetchedLevelsRef.current.add(cacheKey);
+
+    // Skip if already loaded in store
+    if (lessonsPerLevel[cacheKey] !== undefined) return;
+
+    setLessonsLevelLoading(cacheKey, true);
+    try {
+      const qs = new URLSearchParams();
+      qs.set('type', 'lessons');
+      qs.set('level', CEFR_TO_API[levelKey]);
+      if (userType) qs.set('userType', userType);
+      if (studySubject) qs.set('subject', studySubject);
+      const res = await fetch(`/api/feed?${qs.toString()}`);
+      const data = await res.json();
+      setLessonsForLevel(cacheKey, data.items || []);
+    } catch (e) {
+      console.error('Failed to fetch lessons for level', levelKey, e);
+      setLessonsForLevel(cacheKey, []);
+    } finally {
+      setLessonsLevelLoading(cacheKey, false);
+    }
+  }, [lessonCacheBase, lessonsPerLevel, userType, studySubject, setLessonsLevelLoading, setLessonsForLevel]);
+
   useEffect(() => {
     if (!userType || !studySubject) return;
 
@@ -1106,40 +1158,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       lessonsFetchedLevelsRef.current = new Set();
     }
 
-    const fetchLevel = async (levelKey: string) => {
-      const cacheKey = `${lessonCacheBase}:${levelKey}`;
-      if (lessonsFetchedLevelsRef.current.has(cacheKey)) return;
-      lessonsFetchedLevelsRef.current.add(cacheKey);
-
-      // Skip if already loaded in store
-      if (lessonsPerLevel[cacheKey] !== undefined) return;
-
-      setLessonsLevelLoading(cacheKey, true);
-      try {
-        const qs = new URLSearchParams();
-        qs.set('type', 'lessons');
-        qs.set('level', CEFR_TO_API[levelKey]);
-        if (userType) qs.set('userType', userType);
-        if (studySubject) qs.set('subject', studySubject);
-        const res = await fetch(`/api/feed?${qs.toString()}`);
-        const data = await res.json();
-        setLessonsForLevel(cacheKey, data.items || []);
-      } catch (e) {
-        console.error('Failed to fetch lessons for level', levelKey, e);
-        setLessonsForLevel(cacheKey, []);
-      } finally {
-        setLessonsLevelLoading(cacheKey, false);
-      }
-    };
-
-    // Priority: fetch current level first, then others in background
-    fetchLevel(normalizedStudyLevel).then(() => {
-      CEFR_LEVELS_LIST
-        .filter(l => l !== normalizedStudyLevel)
-        .forEach(l => fetchLevel(l));
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessonCacheBase, normalizedStudyLevel]);
+    // Lazy load lessons only when lessons tab becomes active
+    if (activeTab === "lessons" && normalizedStudyLevel) {
+      fetchLessonLevel(normalizedStudyLevel);
+    }
+  }, [lessonCacheBase, normalizedStudyLevel, userType, studySubject, activeTab, fetchLessonLevel]);
 
   // Build itemsByLevel and loadingLevels for LessonAccordionBrowser
   const lessonItemsByLevel = useMemo(() => {
@@ -1158,7 +1181,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   , [lessonsPerLevel, lessonsLevelLoading, lessonCacheBase]);
   // ─────────────────────────────────────────────────────────────────────────
 
-  // ─── Books per CEFR level (same priority-fetch pattern as lessons) ─────────
+  // ─── Books per CEFR level (same on-demand pattern as lessons) ─────────────
   const booksPerLevel       = useContentStore(s => (s as any).booksPerLevel) as Record<string, any[]>;
   const booksLevelLoading   = useContentStore(s => (s as any).booksLevelLoading) as Record<string, boolean>;
   const setBooksForLevel    = useContentStore(s => (s as any).setBooksForLevel);
@@ -1166,33 +1189,31 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
   const booksFetchedLevelsRef = useRef(new Set<string>());
 
+  const fetchBookLevel = useCallback(async (levelKey: string) => {
+    if (!levelKey) return;
+    if (booksFetchedLevelsRef.current.has(levelKey)) return;
+    booksFetchedLevelsRef.current.add(levelKey);
+    if (booksPerLevel[levelKey] !== undefined) return; // already in store
+
+    setBooksLevelLoading(levelKey, true);
+    try {
+      const res = await fetch(`/api/books?level=${levelKey}`);
+      const data = await res.json();
+      setBooksForLevel(levelKey, data.items || []);
+    } catch (e) {
+      console.error('Failed to fetch books for level', levelKey, e);
+      setBooksForLevel(levelKey, []);
+    } finally {
+      setBooksLevelLoading(levelKey, false);
+    }
+  }, [booksPerLevel, setBooksLevelLoading, setBooksForLevel]);
+
   useEffect(() => {
-    const fetchBookLevel = async (levelKey: string) => {
-      if (booksFetchedLevelsRef.current.has(levelKey)) return;
-      booksFetchedLevelsRef.current.add(levelKey);
-      if (booksPerLevel[levelKey] !== undefined) return; // already in store
-
-      setBooksLevelLoading(levelKey, true);
-      try {
-        const res = await fetch(`/api/books?level=${levelKey}`);
-        const data = await res.json();
-        setBooksForLevel(levelKey, data.items || []);
-      } catch (e) {
-        console.error('Failed to fetch books for level', levelKey, e);
-        setBooksForLevel(levelKey, []);
-      } finally {
-        setBooksLevelLoading(levelKey, false);
-      }
-    };
-
-    // Priority: fetch current CEFR level first, then others in background
-    fetchBookLevel(normalizedStudyLevel).then(() => {
-      CEFR_LEVELS_LIST
-        .filter(l => l !== normalizedStudyLevel)
-        .forEach(l => fetchBookLevel(l));
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [normalizedStudyLevel]);
+    // Lazy load books only when shadowing tab becomes active
+    if (activeTab === "shadowing" && normalizedStudyLevel) {
+      fetchBookLevel(normalizedStudyLevel);
+    }
+  }, [activeTab, normalizedStudyLevel, fetchBookLevel]);
 
   const bookItemsByLevel = useMemo(() => {
     const result: Record<string, any[]> = {};
@@ -1758,7 +1779,11 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         )}
         <div className={isPending || isFiltering ? "opacity-50 pointer-events-none transition-opacity duration-300" : "transition-opacity duration-300"}>
           {activeTab === "classes" ? (
-            <StudentClassesTab isLoggedIn={isLoggedIn} locale={locale} />
+            <StudentClassesTab 
+              isLoggedIn={isLoggedIn} 
+              locale={locale} 
+              classesPromise={promises.studentClasses}
+            />
           ) : activeTab === "flashcards" ? (
             isFlashcardsLoading
               ? <FlashcardSkeleton />
@@ -1767,7 +1792,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
             <Suspense fallback={<SectionSkeleton />}>
               <StudentGamesHub
                 systemGames={filteredGames}
-                teacherGames={ssrTeacherGames}
+                teacherGames={teacherGames}
                 locale={locale}
               />
             </Suspense>
@@ -1779,6 +1804,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               itemsByLevel={bookItemsByLevel}
               loadingLevels={bookLoadingLevels}
               initialLevel={normalizedStudyLevel}
+              onExpandLevel={fetchBookLevel}
             />
           ) : (
             // Lessons tab: uses per-level Zustand cache (priority fetch on mount)
@@ -1787,6 +1813,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
               loadingLevels={lessonLoadingLevels}
               isLoggedIn={isLoggedIn}
               initialLevel={normalizedStudyLevel}
+              onExpandLevel={fetchLessonLevel}
             />
           )}
 

@@ -25,13 +25,16 @@ export async function POST(req: NextRequest) {
     const ipHash = crypto.createHash("sha256").update(ip).digest("hex");
     const userAgent = req.headers.get("user-agent") || "";
 
-    await prisma.pageViewLog.create({
+    // Non-blocking fire-and-forget write to DB so response returns in <10ms
+    prisma.pageViewLog.create({
       data: {
         path,
         userId,
         ipHash,
         userAgent,
       },
+    }).catch((err) => {
+      console.error("Failed to track page view:", err);
     });
 
     return NextResponse.json({ ok: true });

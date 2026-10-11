@@ -22,15 +22,18 @@ export default function PageViewTracker() {
         const query = searchParams?.toString();
         const fullPath = pathname + (query ? `?${query}` : "");
 
-        await fetch("/api/analytics/track", {
+        fetch("/api/analytics/track", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ path: fullPath }),
-        });
+          keepalive: true,
+          // @ts-ignore
+          priority: "low",
+        }).catch(() => {});
       } catch (e) {
-        console.warn("Analytics tracking failed:", e);
+        // safe ignore
       }
     };
 

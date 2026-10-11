@@ -90,9 +90,10 @@ interface LessonAccordionBrowserProps {
   loadingLevels?: string[];             // levels still being fetched
   isLoggedIn: boolean;
   initialLevel?: string;
+  onExpandLevel?: (levelId: string) => void;
 }
 
-export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLoggedIn, initialLevel }: LessonAccordionBrowserProps) {
+export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLoggedIn, initialLevel, onExpandLevel }: LessonAccordionBrowserProps) {
   // Normalize initial level or default to "a1"
   const defaultLevel = useMemo(() => {
     const norm = normalizeLessonLevel(initialLevel);
@@ -106,11 +107,12 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
       const lvl = e.detail?.level;
       if (lvl && lvl !== "all") {
         setOpenLevel(lvl);
+        if (onExpandLevel) onExpandLevel(lvl);
       }
     };
     window.addEventListener("open-cefr-level", handleOpenLevel);
     return () => window.removeEventListener("open-cefr-level", handleOpenLevel);
-  }, []);
+  }, [onExpandLevel]);
 
   // Track pagination limits per level (default 6 items)
   const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({
@@ -151,7 +153,11 @@ export function LessonAccordionBrowser({ itemsByLevel, loadingLevels = [], isLog
           >
             {/* Level Accordion Header */}
             <button
-              onClick={() => setOpenLevel(isOpen ? "" : levelId)}
+              onClick={() => {
+                const next = isOpen ? "" : levelId;
+                setOpenLevel(next);
+                if (next && onExpandLevel) onExpandLevel(next);
+              }}
               className="w-full flex items-center gap-2 sm:gap-3.5 px-3.5 sm:px-6 py-3.5 sm:py-4.5 cursor-pointer text-left focus:outline-none transition-transform duration-300 group-hover/accordion:-translate-y-0.5 min-w-0"
             >
               <span className={`shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-[11px] sm:text-xs font-black uppercase transition-transform duration-300 group-hover/accordion:scale-110 ${config.badge}`}>

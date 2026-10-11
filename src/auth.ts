@@ -1,3 +1,4 @@
+import { cache } from "react"
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import Google from "next-auth/providers/google"
@@ -7,7 +8,7 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { cookies } from "next/headers"
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+const nextAuth = NextAuth({
   adapter: PrismaAdapter(prisma as any),
   session: { strategy: "jwt" },
   trustHost: true,
@@ -92,7 +93,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true
     },
     async jwt({ token, user, trigger, session }) {
-      if (token.email) {
+      if (user && !token.role) {
+        token.role = (user as any).role || "STUDENT"
+      }
+      if (trigger === "update" && session?.role) {
+        token.role = session.role
+      }
+      if (token.email && !token.role) {
         try {
           const cookieStore = await cookies()
           const intentRole = cookieStore.get("login_role_intent")?.value
@@ -110,12 +117,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
         } catch (e) {}
       }
-      if (user && !token.role) {
-        token.role = (user as any).role || "STUDENT"
-      }
-      if (trigger === "update" && session?.role) {
-        token.role = session.role
-      }
       return token
     },
     async session({ session, token }) {
@@ -127,3 +128,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }
   }
 })
+
+export const handlers = nextAuth.handlers
+export const signIn = nextAuth.signIn
+export const signOut = nextAuth.signOut
+export const auth = cache(nextAuth.auth)
+

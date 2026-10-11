@@ -53,9 +53,13 @@ const STATIC_KINDERGARTEN_GAMES = Promise.resolve([
 const EMPTY_PROMISE = Promise.resolve({ items: [], total: 0 });
 
 export default async function HomePage({ searchParams }: { searchParams: Promise<any> }) {
-  const params = await searchParams;
+  const [params, cookieStore, session, config] = await Promise.all([
+    searchParams,
+    cookies(),
+    auth(),
+    getOnboardingConfig(),
+  ]);
 
-  const cookieStore = await cookies()
   const userTypeCookie = cookieStore.get("user_type")?.value
   let initialUserType = userTypeCookie || "learner"
   let hasUserPreference = !!userTypeCookie
@@ -67,10 +71,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   let studyAgeGroup = studyAgeGroupCookie || ""
   let studyLevel = studyLevelCookie || ""
 
-  const session = await auth()
   const isStudentSession = session?.user?.id && session?.user?.role !== "TEACHER"
 
-  if (isStudentSession) {
+  // Only query DB if user does not already have complete preferences in cookies
+  const hasCompleteCookies = !!(studySubjectCookie && studyAgeGroupCookie && studyLevelCookie && userTypeCookie)
+  if (isStudentSession && !hasCompleteCookies) {
     const user = await prisma.user.findUnique({ 
       where: { id: session.user.id },
       select: { role: true, userType: true, studySubject: true, studyAgeGroup: true, studyLevel: true }
@@ -116,7 +121,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   }
 
   // Resolve matching age group if it is mismatched for the active subject
-  const config = await getOnboardingConfig()
   const resolvedAgeGroup = getBestAgeGroupForSubject(studySubject, initialUserType, studyAgeGroup, config)
   if (resolvedAgeGroup !== studyAgeGroup) {
     studyAgeGroup = resolvedAgeGroup
@@ -134,12 +138,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     studyLevel
   };
 
-  // SSR: fetch cached promises on server for immediate streaming
-  const assignmentsPromise = getCachedAssignments(queryParams);
-  const lessonsPromise     = getCachedLessons(queryParams);
-  const flashcardsPromise  = getCachedFlashcardTopics();
-  const teacherGamesPromise = getPublishedTeacherGamesAction();
-  const studentClassesPromise = isStudentSession
+  const currentTab = params?.tab || "classes";
+
+  // SSR: Only fetch server data for the active tab; other tabs are loaded on-demand when clicked
+  const assignmentsPromise = currentTab === "exercises" ? getCachedAssignments(queryParams) : EMPTY_PROMISE;
+  const lessonsPromise     = currentTab === "lessons" ? getCachedLessons(queryParams) : EMPTY_PROMISE;
+  const flashcardsPromise  = currentTab === "flashcards" ? getCachedFlashcardTopics() : Promise.resolve([]);
+  const teacherGamesPromise = currentTab === "games" ? getPublishedTeacherGamesAction() : Promise.resolve([]);
+  const studentClassesPromise = isStudentSession && (currentTab === "classes" || !params?.tab)
     ? getCachedStudentClasses(session.user.id)
     : Promise.resolve({ activeClasses: [], pendingRequests: [] });
 
@@ -157,36 +163,24 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
 
         <main className="w-full flex-1 space-y-2 lg:space-y-12 min-w-0">
-          <Suspense fallback={
-            <div className="space-y-12 animate-pulse">
-              <div className="h-48 w-full bg-slate-200 dark:bg-slate-800 rounded-3xl" />
-              <div className="h-14 w-64 bg-slate-200 dark:bg-slate-800 rounded-full" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <div key={i} className="aspect-video bg-slate-100 dark:bg-slate-800/50 rounded-2xl" />
-                ))}
-              </div>
-            </div>
-          }>
-            <LandingPage
-              promises={{
-                assignments: assignmentsPromise,
-                lessons: lessonsPromise,
-                flashcards: flashcardsPromise,
-                kindergartenGames: STATIC_KINDERGARTEN_GAMES,
-                teacherGames: teacherGamesPromise,
-                studentClasses: studentClassesPromise,
-              }}
-              initialIsLoggedIn={!!session?.user?.id}
-              searchParams={params}
-              initialUserType={initialUserType}
-              hasUserPreference={hasUserPreference}
-              initialStudySubject={studySubject}
-              initialStudyAgeGroup={studyAgeGroup}
-              initialStudyLevel={studyLevel}
-              onboardingConfig={config}
-            />
-          </Suspense>
+          <LandingPage
+            promises={{
+              assignments: assignmentsPromise,
+              lessons: lessonsPromise,
+              flashcards: flashcardsPromise,
+              kindergartenGames: STATIC_KINDERGARTEN_GAMES,
+              teacherGames: teacherGamesPromise,
+              studentClasses: studentClassesPromise,
+            }}
+            initialIsLoggedIn={!!session?.user?.id}
+            searchParams={params}
+            initialUserType={initialUserType}
+            hasUserPreference={hasUserPreference}
+            initialStudySubject={studySubject}
+            initialStudyAgeGroup={studyAgeGroup}
+            initialStudyLevel={studyLevel}
+            onboardingConfig={config}
+          />
         </main>
       </div>
     </HomeShell>

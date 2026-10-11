@@ -173,7 +173,14 @@ export const useContentStore = create<ContentState>((set, get) => ({
   studentClasses: null,
   studentClassesLoaded: false,
   studentClassesLoading: false,
-  setStudentClasses: (data) => set({ studentClasses: data, studentClassesLoaded: true }),
+  setStudentClasses: (data) => {
+    if (typeof window !== "undefined" && data) {
+      try {
+        localStorage.setItem("dolcake_student_classes_cache", JSON.stringify(data));
+      } catch (e) {}
+    }
+    set({ studentClasses: data, studentClassesLoaded: true });
+  },
   setStudentClassesLoading: (val) => set({ studentClassesLoading: val }),
 
   pendingFlashcards: null,

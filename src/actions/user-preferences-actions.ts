@@ -195,14 +195,24 @@ const DEFAULT_CONFIG = {
   ]
 };
 
+let memoryCachedConfig: any = null;
+let memoryCachedConfigExpiry = 0;
+
 export const getOnboardingConfig = cache(async function getOnboardingConfig() {
+  const now = Date.now();
+  if (memoryCachedConfig && now < memoryCachedConfigExpiry) {
+    return memoryCachedConfig;
+  }
   try {
-    return await fetchWithRedis('system:onboarding_config', 3600, async () => {
+    const data = await fetchWithRedis('system:onboarding_config', 3600, async () => {
       const setting = await prisma.systemSetting.findUnique({
         where: { key: 'onboarding_config' }
       })
       return setting ? setting.value : DEFAULT_CONFIG
-    })
+    });
+    memoryCachedConfig = data || DEFAULT_CONFIG;
+    memoryCachedConfigExpiry = now + 10 * 60 * 1000; // 10 minutes memory cache
+    return memoryCachedConfig;
   } catch (e) {
     console.error("Failed to fetch onboarding config", e)
     return DEFAULT_CONFIG
