@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 
 import { AssignContentModal } from './AssignContentModal';
+import { GrammarHtmlEditorModal } from './GrammarHtmlEditorModal';
 import { remindPendingSubmissions, removeAssignmentFromClass } from '../actions';
 import { 
   renameAssignmentGroupAction, 
@@ -347,6 +348,25 @@ function SortableCompactGroupCard({
   );
 }
 
+function isGrammarLessonAssignment(assignment: Assignment): boolean {
+  let kind = assignment.materialType as string;
+  if (assignment.instructions) {
+    try {
+      const meta = JSON.parse(assignment.instructions);
+      if (meta?.kind) kind = meta.kind;
+    } catch {}
+  }
+  const titleLower = assignment.title.toLowerCase();
+  return (
+    kind === 'LESSON' ||
+    assignment.materialType === 'LESSON' ||
+    titleLower.startsWith('grammar lesson') ||
+    titleLower.startsWith('lý thuyết:') ||
+    titleLower.includes('[lý thuyết]') ||
+    (assignment.instructions ? assignment.instructions.includes('/grammar/') : false)
+  );
+}
+
 export function AssignmentsTab({
   classId,
   onOpenCountChange,
@@ -372,6 +392,7 @@ export function AssignmentsTab({
   // Group 3-dot menu and assignment 3-dot menu
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string | null>(null);
   const [openAssignmentMenuId, setOpenAssignmentMenuId] = useState<string | null>(null);
+  const [htmlModalAssignment, setHtmlModalAssignment] = useState<Assignment | null>(null);
 
   // Assign modal state (supports both new group or adding to existing group)
   const [assignModalState, setAssignModalState] = useState<{
@@ -1263,6 +1284,19 @@ export function AssignmentsTab({
                                 <span className="material-symbols-outlined text-[18px] text-indigo-500">open_in_new</span>
                                 Xem trước bài học
                               </Link>
+                              {isGrammarLessonAssignment(assignment) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenAssignmentMenuId(null);
+                                    setHtmlModalAssignment(assignment);
+                                  }}
+                                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors text-left cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">code</span>
+                                  Sửa bài giảng HTML (Cloudflare)
+                                </button>
+                              )}
                               <button 
                                 onClick={() => handleRemind(assignment.id)}
                                 disabled={isReminding}
@@ -1334,15 +1368,33 @@ export function AssignmentsTab({
                       />
                     </div>
 
-                    <Link
-                      href={`/teacher/classes/${classId}/assignments/${assignment.id}`}
-                      className="flex items-center justify-between text-xs font-bold text-primary group-hover:text-primary/80 transition-colors pt-1"
-                    >
-                      <span>Xem kết quả chi tiết</span>
-                      <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
-                        arrow_forward
-                      </span>
-                    </Link>
+                    <div className="flex items-center justify-between pt-1 gap-2">
+                      <Link
+                        href={`/teacher/classes/${classId}/assignments/${assignment.id}`}
+                        className="flex items-center gap-1 text-xs font-bold text-primary group-hover:text-primary/80 transition-colors"
+                      >
+                        <span>Xem kết quả</span>
+                        <span className="material-symbols-outlined text-[16px] group-hover:translate-x-0.5 transition-transform">
+                          arrow_forward
+                        </span>
+                      </Link>
+
+                      {isGrammarLessonAssignment(assignment) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setHtmlModalAssignment(assignment);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 shadow-2xs transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
+                          title="Tải lên hoặc chỉnh sửa file HTML bài giảng ngữ pháp này trên Cloudflare R2"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">code</span>
+                          <span>Sửa HTML</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -2035,6 +2087,22 @@ export function AssignmentsTab({
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal: Chỉnh sửa / Tải lên HTML bài giảng trên Cloudflare R2 */}
+      {htmlModalAssignment && (
+        <GrammarHtmlEditorModal
+          classId={classId}
+          assignmentId={htmlModalAssignment.id}
+          assignmentTitle={htmlModalAssignment.title}
+          onClose={() => setHtmlModalAssignment(null)}
+          onSaved={() => {
+            fetchAssignments();
+            setToastMessage('Đã cập nhật bài giảng HTML trên Cloudflare R2 thành công!');
+            setShowSuccessToast(true);
+            setTimeout(() => setShowSuccessToast(false), 3000);
+          }}
+        />
       )}
     </div>
   );

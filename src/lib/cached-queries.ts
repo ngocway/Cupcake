@@ -3,7 +3,13 @@ import { unstable_cache } from "next/cache";
 import { redis } from "@/lib/redis";
 
 // ─── L1 Server In-Memory Cache (Sub-millisecond access & offline Redis resilience) ───
-const l1MemoryCache = new Map<string, { value: any; expiresAt: number }>();
+const globalForCache = globalThis as unknown as {
+  l1MemoryCache?: Map<string, { value: any; expiresAt: number }>;
+};
+const l1MemoryCache = globalForCache.l1MemoryCache || new Map<string, { value: any; expiresAt: number }>();
+if (process.env.NODE_ENV !== 'production') {
+  globalForCache.l1MemoryCache = l1MemoryCache;
+}
 
 function getL1Cache<T>(key: string): T | undefined {
   const item = l1MemoryCache.get(key);
@@ -625,6 +631,8 @@ export async function invalidateStudentClassesCache(userId: string) {
 
 export async function invalidateStudentClassDetailCache(classId: string, studentId?: string) {
   try {
+    await redis.del(`class:structure:v4:${classId}`);
+    l1MemoryCache.delete(`class:structure:v4:${classId}`);
     if (studentId) {
       await redis.del(`student:class-detail:${studentId}:${classId}`);
     } else {

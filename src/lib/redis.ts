@@ -18,16 +18,25 @@ function createRedisClient(): Redis {
     });
   }
 
-  return new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-    connectTimeout: 500, // 500ms fast timeout
-    maxRetriesPerRequest: 0, // Fail commands immediately when offline
+  const client = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    connectTimeout: 5000, // 5000ms safe timeout for cloud TLS handshake
+    maxRetriesPerRequest: 1,
     enableOfflineQueue: false,
     lazyConnect: true,
     retryStrategy(times) {
-      console.warn(`[Redis] Connection attempt ${times} failed. Disabling reconnect strategy.`);
-      return null; // Stop retrying
+      if (times > 3) {
+        console.warn(`[Redis] Connection attempt ${times} failed. Disabling reconnect strategy.`);
+        return null; // Stop retrying
+      }
+      return Math.min(times * 300, 1000);
     }
   });
+
+  client.on('error', (err) => {
+    // Suppress unhandled error log when offline
+  });
+
+  return client;
 }
 
 export const redis = globalForRedis.redis || createRedisClient();

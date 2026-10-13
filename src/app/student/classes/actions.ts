@@ -115,8 +115,56 @@ export async function getStudentGrammarLessonData(assignmentId: string) {
       });
     }
 
-    const finalInstructions = grammarLesson?.instructions || assignment.instructions || '';
-    const finalTranslations = grammarLesson?.instructionsTranslations || assignment.instructionsTranslations || null;
+    let cdnUrlEn: string | null = null;
+    let cdnUrlVi: string | null = null;
+
+    if (assignment.instructionsTranslations && typeof assignment.instructionsTranslations === 'object') {
+      const trans = assignment.instructionsTranslations as any;
+      if (trans.cdnUrlEn) cdnUrlEn = trans.cdnUrlEn;
+      if (trans.cdnUrlVi) cdnUrlVi = trans.cdnUrlVi;
+    }
+    if (assignment.instructions && assignment.instructions.trim().startsWith('{')) {
+      try {
+        const meta = JSON.parse(assignment.instructions);
+        if (!cdnUrlEn && meta.cdnUrlEn) cdnUrlEn = meta.cdnUrlEn;
+        if (!cdnUrlVi && meta.cdnUrlVi) cdnUrlVi = meta.cdnUrlVi;
+      } catch {}
+    }
+    if (grammarLesson?.instructionsTranslations) {
+      const glTrans = grammarLesson.instructionsTranslations as any;
+      if (!cdnUrlEn && glTrans.cdnUrlEn) cdnUrlEn = glTrans.cdnUrlEn;
+      if (!cdnUrlVi && glTrans.cdnUrlVi) cdnUrlVi = glTrans.cdnUrlVi;
+    }
+
+    let finalInstructions = (grammarLesson?.instructions && !grammarLesson.instructions.trim().startsWith('{'))
+      ? grammarLesson.instructions
+      : (!assignment.instructions?.trim().startsWith('{') ? (assignment.instructions || '') : '');
+
+    let finalTranslations: any = grammarLesson?.instructionsTranslations || assignment.instructionsTranslations || null;
+
+    if (cdnUrlEn) {
+      try {
+        const res = await fetch(cdnUrlEn, { next: { revalidate: 3600 } });
+        if (res.ok) {
+          finalInstructions = await res.text();
+        }
+      } catch (err) {
+        console.warn('[GrammarAction] Failed to fetch cdnUrlEn:', err);
+      }
+    }
+
+    if (cdnUrlVi) {
+      try {
+        const res = await fetch(cdnUrlVi, { next: { revalidate: 3600 } });
+        if (res.ok) {
+          const viText = await res.text();
+          finalTranslations = { ...(typeof finalTranslations === 'object' && finalTranslations !== null ? finalTranslations : {}), vi: viText };
+        }
+      } catch (err) {
+        console.warn('[GrammarAction] Failed to fetch cdnUrlVi:', err);
+      }
+    }
+
     const topicCfg = getTopicById(topicId);
     const lessonCfg = topicCfg?.lessons.find(l => l.id === lessonId);
 

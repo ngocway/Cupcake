@@ -596,3 +596,55 @@ export function prefetchAssignmentData(
   preloadQueue.sort((a, b) => b.priority - a.priority);
   processPreloadQueue();
 }
+
+// ══════════════════════════════════════════════════════════════════
+// PROGRESSIVE IDLE PRELOAD FOR ALL REMAINING GRAMMAR LESSONS (TIER 4)
+// ══════════════════════════════════════════════════════════════════
+
+let idleTimer: any = null;
+let isIdlePreloadActive = false;
+
+export function stopGrammarLessonsIdlePreload() {
+  isIdlePreloadActive = false;
+  if (idleTimer) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+  }
+}
+
+export function queueGrammarLessonsIdlePreload(
+  items: Array<{ assignment: { id: string; materialType: string; instructions?: string | null; title: string }; groupId?: string }>,
+  classId?: string
+) {
+  stopGrammarLessonsIdlePreload();
+  isIdlePreloadActive = true;
+
+  // Filter items that are not yet cached
+  const queue = items.filter(it => it?.assignment?.id && !isAssignmentCached(it.assignment.id));
+  if (queue.length === 0) return;
+
+  function runNext() {
+    if (!isIdlePreloadActive || queue.length === 0) {
+      isIdlePreloadActive = false;
+      return;
+    }
+
+    const nextItem = queue.shift();
+    if (nextItem && !isAssignmentCached(nextItem.assignment.id)) {
+      prefetchAssignmentData(nextItem, classId, nextItem.groupId);
+    }
+
+    // Gentle 2.5s pacing to never stress the network or DB
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => {
+        idleTimer = setTimeout(runNext, 2500);
+      }, { timeout: 3500 });
+    } else {
+      idleTimer = setTimeout(runNext, 2500);
+    }
+  }
+
+  // Defer start by 3.5s so initial render and Tier 2 preloads have completely settled
+  idleTimer = setTimeout(runNext, 3500);
+}
+

@@ -65,10 +65,32 @@ import {
   queueGroupForPreload,
   promoteAssignmentPriority,
   isAssignmentCached,
-  clearPreloadQueue
+  clearPreloadQueue,
+  queueGrammarLessonsIdlePreload,
+  stopGrammarLessonsIdlePreload
 } from '../_utils/assignmentCache';
 export type { ActivityStage };
 export { STAGE_ROADMAP_ORDER, sortGroupItems };
+
+export function isGrammarAssignmentItem(item: StudentGroupItem): boolean {
+  const matType = item.assignment.materialType;
+  let kind = matType;
+  if (item.assignment.instructions) {
+    try {
+      const meta = JSON.parse(item.assignment.instructions);
+      if (meta.kind) kind = meta.kind;
+    } catch {}
+  }
+  const titleLower = item.assignment.title.toLowerCase();
+  return (
+    kind === 'LESSON' ||
+    matType === 'LESSON' ||
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson') ||
+    Boolean(item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
+  );
+}
 
 export interface StudentGroupItem {
   assignment: {
@@ -461,18 +483,26 @@ export function StudentAssignmentsView({
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('dolcake_classroom_sidebar_collapsed');
-      if (saved === 'true') {
+      const isMobile = window.innerWidth < 1024;
+      const urlAssignmentId = searchParams?.get('assignmentId') || initialAssignmentId;
+      if (isMobile && urlAssignmentId) {
         setIsSidebarCollapsed(true);
+      } else {
+        const saved = localStorage.getItem('dolcake_classroom_sidebar_collapsed');
+        if (saved === 'true') {
+          setIsSidebarCollapsed(true);
+        }
       }
     } catch {}
-  }, []);
+  }, [initialAssignmentId, searchParams]);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prev => {
       const next = !prev;
       try {
-        localStorage.setItem('dolcake_classroom_sidebar_collapsed', String(next));
+        if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+          localStorage.setItem('dolcake_classroom_sidebar_collapsed', String(next));
+        }
       } catch {}
       return next;
     });
@@ -809,6 +839,12 @@ export function StudentAssignmentsView({
     setActiveAssignmentId(item.assignment.id);
     setActiveStageId(cfg.stage);
     updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
+
+    // Auto-collapse sidebar on mobile so the student immediately sees the activity canvas
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setIsSidebarCollapsed(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Switch Stage Tab (Area 2)
@@ -823,6 +859,11 @@ export function StudentAssignmentsView({
       promoteAssignmentPriority(chosenItem.item.assignment.id);
       setActiveAssignmentId(chosenItem.item.assignment.id);
       updateQueryParams(selectedGroupId, chosenItem.item.assignment.id, stageId);
+
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setIsSidebarCollapsed(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
@@ -898,12 +939,56 @@ export function StudentAssignmentsView({
     prefetchAssignmentData(item);
   }, []);
 
-  // Smart background preload: Preload all items in active group via concurrency-limited queue
+  // 1. Throttled Preload for Active Group: delay by 1000ms so initial DOM mount and paint are 100% smooth
   useEffect(() => {
-    if (activeGroup && !activeGroup.isLocked && activeGroup.items.length > 0) {
+    if (!activeGroup || activeGroup.isLocked || activeGroup.items.length === 0) return;
+    const timer = setTimeout(() => {
       queueGroupForPreload(activeGroup.items, activeAssignmentId, classId, activeGroup.id);
-    }
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [activeGroup?.id, activeAssignmentId, classId]);
+
+  // 2. Tier 2 (Anticipated): Preload grammar lessons of adjacent groups (Day+1, Day+2, Day-1) after 1.5s
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const activeIdx = assignmentGroups.findIndex(g => g.id === selectedGroupId);
+      if (activeIdx < 0) return;
+
+      const adjacentGroups = [
+        assignmentGroups[activeIdx + 1],
+        assignmentGroups[activeIdx + 2],
+        assignmentGroups[activeIdx - 1],
+      ].filter(Boolean);
+
+      adjacentGroups.forEach(grp => {
+        if (grp.isLocked) return;
+        const grammarItem = grp.items.find(isGrammarAssignmentItem);
+        if (grammarItem && !isAssignmentCached(grammarItem.assignment.id)) {
+          prefetchAssignmentData(grammarItem, classId, grp.id);
+        }
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [selectedGroupId, assignmentGroups, classId]);
+
+  // 3. Tier 4 (Progressive Idle Preload): Gently preload all remaining 50+ grammar lessons in background
+  useEffect(() => {
+    const allGrammarItems: StudentGroupItem[] = [];
+    assignmentGroups.forEach(grp => {
+      grp.items.forEach(it => {
+        if (isGrammarAssignmentItem(it)) {
+          allGrammarItems.push({ ...it, groupId: grp.id });
+        }
+      });
+    });
+
+    queueGrammarLessonsIdlePreload(allGrammarItems, classId);
+
+    return () => {
+      stopGrammarLessonsIdlePreload();
+    };
+  }, [assignmentGroups, classId]);
 
   // Keep-Alive Pool: Preserves visited component instances and their user progress in DOM
   const [visitedConfigs, setVisitedConfigs] = useState<Record<string, ParsedItemConfig>>(() => {
@@ -1136,8 +1221,8 @@ export function StudentAssignmentsView({
           onClick={() => handleSelectGroup(group.id)}
           onMouseEnter={() => {
             if (!group.isLocked && group.items.length > 0) {
-              preloadAssignment(group.items[0]);
-              queueGroupForPreload(group.items, undefined, classId, group.id);
+              const grammarItem = group.items.find(isGrammarAssignmentItem) || group.items[0];
+              prefetchAssignmentData(grammarItem, classId, group.id);
             }
           }}
           title={displayTitle}
@@ -1201,6 +1286,7 @@ export function StudentAssignmentsView({
           const renderItemButton = (item: StudentGroupItem, isChild = false) => {
             const parsed = parseItemConfig(item);
             const isItemActive = item.assignment.id === activeAssignmentId;
+            const isLessonItem = parsed.stage === 'lesson';
             const isSubmitted = submissionsState[item.assignment.id]?.isSubmitted;
             const itemScore = submissionsState[item.assignment.id]?.score;
             const itemProgress = preloadProgress[item.assignment.id] ?? 0;
@@ -1261,7 +1347,11 @@ export function StudentAssignmentsView({
                       {itemIconNode}
                     </div>
                     <span 
-                      className={`truncate leading-snug font-bold ${isChild ? 'text-[11.5px]' : 'text-xs'}`}
+                      className={`truncate leading-snug ${
+                        isLessonItem
+                          ? 'font-black text-emerald-600 dark:text-emerald-400 group-hover/item:text-emerald-700 dark:group-hover/item:text-emerald-300'
+                          : isItemActive ? 'font-extrabold' : 'font-bold'
+                      } ${isChild ? 'text-[11.5px]' : 'text-xs'}`}
                       title={parsed.cleanTitle}
                     >
                       {parsed.cleanTitle}
@@ -1432,14 +1522,32 @@ export function StudentAssignmentsView({
                     <p className="cefr-redesign-section-label">
                       Lớp học hiện tại
                     </p>
-                    <button
-                      type="button"
-                      onClick={toggleSidebar}
-                      title="Thu gọn menu"
-                      className="w-7 h-7 rounded-xl bg-white/70 hover:bg-white dark:bg-slate-800 text-[#8C826D] hover:text-[#3E3524] border border-[#F0E2BF] dark:border-slate-700 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-2xs"
-                    >
-                      <PanelLeftClose className="w-3.5 h-3.5 stroke-[2.2px]" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {activeAssignmentId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSidebarCollapsed(true);
+                            if (typeof window !== 'undefined') {
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95"
+                          title="Vào bài tập đang chọn"
+                        >
+                          <span>Làm bài</span>
+                          <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={toggleSidebar}
+                        title="Thu gọn menu"
+                        className="w-7 h-7 rounded-xl bg-white/70 hover:bg-white dark:bg-slate-800 text-[#8C826D] hover:text-[#3E3524] border border-[#F0E2BF] dark:border-slate-700 flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-2xs"
+                      >
+                        <PanelLeftClose className="w-3.5 h-3.5 stroke-[2.2px]" />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="relative w-full" ref={classDropdownRef}>
@@ -1686,7 +1794,11 @@ export function StudentAssignmentsView({
                   {/* Active Activity Title */}
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <h2 
-                      className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight"
+                      className={`text-lg sm:text-xl md:text-2xl font-black leading-tight ${
+                        isCurrentLesson 
+                          ? 'text-emerald-600 dark:text-emerald-400' 
+                          : 'text-slate-900 dark:text-white'
+                      }`}
                       title={activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
                     >
                       {activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
@@ -1762,14 +1874,15 @@ export function StudentAssignmentsView({
             {isSidebarCollapsed && !isZenMode && (
               <button
                 type="button"
+                aria-label="Mở lại menu bài học"
                 title="Mở lại menu bài học & danh sách ngày"
                 onClick={toggleSidebar}
-                className="absolute left-0 top-5 z-40 flex items-center gap-2.5 pl-3 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/95 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-r-2xl border-y-2 border-r-2 border-l-0 border-emerald-400/80 dark:border-emerald-500/80 shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/25 backdrop-blur-md transition-all duration-300 hover:translate-x-1.5 active:scale-95 group cursor-pointer animate-in fade-in slide-in-from-left-6"
+                className="absolute left-0 top-3 sm:top-5 z-40 flex items-center p-2 sm:py-2.5 sm:pl-3 sm:pr-4 sm:gap-2.5 bg-white/95 dark:bg-slate-900/95 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-r-2xl border-y-2 border-r-2 border-l-0 border-emerald-400/80 dark:border-emerald-500/80 shadow-xl shadow-emerald-500/10 hover:shadow-emerald-500/25 backdrop-blur-md transition-all duration-300 hover:translate-x-1.5 active:scale-95 group cursor-pointer animate-in fade-in slide-in-from-left-6"
               >
-                <div className="w-7 h-7 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                <div className="w-7 h-7 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform shrink-0">
                   <PanelLeftOpen className="w-4 h-4 stroke-[2.5px]" />
                 </div>
-                <div className="flex flex-col text-left leading-none font-['Baloo_2',_'Nunito',_sans-serif]">
+                <div className="hidden sm:flex flex-col text-left leading-none font-['Baloo_2',_'Nunito',_sans-serif]">
                   <span className="text-[9.5px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">
                     Menu lớp
                   </span>
@@ -1777,7 +1890,7 @@ export function StudentAssignmentsView({
                     Danh sách bài
                   </span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all ml-0.5" />
+                <ChevronRight className="hidden sm:block w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all ml-0.5" />
               </button>
             )}
 

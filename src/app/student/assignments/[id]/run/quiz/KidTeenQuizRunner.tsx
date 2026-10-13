@@ -1,605 +1,59 @@
 "use client";
 
-import React, { useState, useTransition, useEffect, useMemo, useRef } from "react";
+import React, { useState, useTransition, useEffect, useMemo, useRef, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ChevronLeft,
   ChevronRight,
-  Check,
-  X,
   CheckCircle2,
   XCircle,
-  MousePointer2,
   RotateCcw,
   Loader2,
   CheckCircle,
   Volume2,
   VolumeX,
-  Info,
-  BookOpen,
-  Star,
-  MessageCircle,
-  HelpCircle,
-  ChevronDown,
-  Bookmark,
-  Play,
-  Clock,
-  User,
-  Eye,
   ArrowLeft,
-  Award,
 } from "lucide-react";
 
-import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { LoginModal } from "@/components/LoginButton";
-import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
-import { submitAssignmentReview } from "@/actions/reviews";
 import { completeSubmission } from "@/actions/submission-actions";
 import { toast } from "sonner";
-import { ReviewList } from "@/components/reviews/ReviewList";
-import { InteractiveReadingContent } from "@/components/common/InteractiveReadingContent";
-import { GlobalAudioPlayer } from "@/components/common/GlobalAudioPlayer";
 import { SelectionTranslator } from "@/components/common/SelectionTranslator";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
-import { FloatingTeacherInfo } from "@/app/student/_components/FloatingTeacherInfo";
-import { RelatedAssignmentsSection } from "@/app/student/_components/RelatedAssignmentsSection";
-import { ExplanationBlock } from "@/components/common/ExplanationBlock";
-import { InstructionsBlock } from "@/components/common/InstructionsBlock";
-import Link from "next/link";
-import { useTranslations } from "next-intl";
 import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
 
+// Internal Modular Components & Helpers
+import { seedShuffle, getQuestionStatus } from "./utils/quizHelpers";
+import {
+  ExplanationResolver,
+  GlobalTeacherInfoConsumer,
+  RelatedAssignmentsConsumer,
+  SidePanelToggleButton,
+} from "./components/QuizConsumers";
+import { QuizStartScreen } from "./components/QuizStartScreen";
+import { QuizResultModal } from "./components/QuizResultModal";
+import { QuizNavGuardModal } from "./components/QuizNavGuardModal";
+import { QuizQuestionNumbers } from "./components/QuizQuestionNumbers";
+import { MultipleChoiceBlock } from "./components/question-types/MultipleChoiceBlock";
+import { TrueFalseBlock } from "./components/question-types/TrueFalseBlock";
+import { ClozeTestBlock } from "./components/question-types/ClozeTestBlock";
+import { useQuizAudioEngine } from "./hooks/useQuizAudioEngine";
 
-// ============================================================
-// HELPERS (duplicated from QuizClientRunner to avoid coupling)
-// ============================================================
-
-function seedShuffle<T>(array: T[], seed: string): T[] {
-  if (!array || array.length === 0) return [];
-  const shuffled = [...array];
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) {
-    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
-  }
-  
-  const random = () => {
-    let x = Math.sin(h++) * 10000;
-    return x - Math.floor(x);
-  };
-
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    const temp = shuffled[i];
-    shuffled[i] = shuffled[j];
-    shuffled[j] = temp;
-  }
-  return shuffled;
-}
-
-const getQuestionStatus = (q: any, answer: any) => {
-  if (answer === undefined || answer === null) return "pending";
-  let questionData: any;
-  try {
-    questionData = typeof q.content === "string" ? JSON.parse(q.content) : q.content;
-  } catch {
-    questionData = {};
-  }
-  const qType = questionData.type || q.type;
-
-  if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
-    const options = questionData.options || [];
-    if (qType === "MULTIPLE_SELECT") {
-      const answersArray = Array.isArray(answer) ? answer : [];
-      const correctIndices = options
-        .map((opt: any, i: number) => opt.isCorrect ? (opt.originalIndex !== undefined ? opt.originalIndex : i) : -1)
-        .filter((i: number) => i !== -1);
-      if (answersArray.length === 0) return "pending";
-      if (answersArray.length !== correctIndices.length) return "incorrect";
-      return answersArray.every((v: number) => correctIndices.includes(v)) ? "correct" : "incorrect";
-    } else {
-      const selectedOption = options.find((opt: any, idx: number) => {
-        const origIdx = opt.originalIndex !== undefined ? opt.originalIndex : idx;
-        return origIdx === answer;
-      });
-      return selectedOption?.isCorrect ? "correct" : "incorrect";
-    }
-  }
-  if (qType === "TRUE_FALSE") {
-    if (typeof questionData.isTrue === "boolean") {
-      return answer === questionData.isTrue ? "correct" : "incorrect";
-    }
-    if (Array.isArray(questionData.options)) {
-      const selectedOpt = questionData.options.find((o: any) => {
-        const normText = (o.text || "").toLowerCase().trim();
-        return answer ? (normText === "true" || normText === "đúng" || normText === "yes") : (normText === "false" || normText === "sai" || normText === "no");
-      });
-      return selectedOpt?.isCorrect ? "correct" : "incorrect";
-    }
-    return "incorrect";
-  }
-  if (qType === "CLOZE_TEST") {
-    const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
-    const blanks = Array.from(textWithBlanks.matchAll(/\{\{(.*?)\}\}/g)).map((m: any) => m[1]);
-    const userAnswer = answer || {};
-    if (Object.keys(userAnswer).length === 0) return "pending";
-    const isAllCorrect = blanks.every((expectedWord: string, idx: number) => {
-      const userWord = (userAnswer[idx] || "").trim();
-      return questionData.caseSensitive
-        ? expectedWord === userWord
-        : expectedWord.toLowerCase() === userWord.toLowerCase();
-    });
-    return isAllCorrect ? "correct" : "incorrect";
-  }
-  if (qType === "MATCHING") {
-    const pairs = questionData.pairs || [];
-    const userAnswer = answer || {};
-    if (Object.keys(userAnswer).length === 0) return "pending";
-    const isAllCorrect = pairs.every((p: any) => userAnswer[p.id] === p.rightText);
-    return isAllCorrect ? "correct" : "incorrect";
-  }
-  return "pending";
-};
-
-const getYoutubeVideoId = (url: string | null) => {
-  if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
-};
-
-// ============================================================
-// CLOZE TEST BLOCK (Kid/Teen style)
-// ============================================================
-function ClozeTestBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange }: any) {
-  const textWithBlanks = questionData.textWithBlanks || questionData.questionText || "";
-  const parts = textWithBlanks.split(/(\{\{.*?\}\})/g);
-  let blankIndex = 0;
-
-  return (
-    <div className="w-full p-6 bg-white border-2 border-slate-200 rounded-3xl text-xl lg:text-2xl font-medium text-slate-700 leading-[3.5rem] lg:leading-[4.5rem] shadow-inner">
-      {parts.map((part: string, i: number) => {
-        if (part.startsWith("{{") && part.endsWith("}}")) {
-          const expectedWord = part.slice(2, -2);
-          const currentIndex = blankIndex++;
-          const userWord = (userAnswer || {})[currentIndex] || "";
-          const isCorrect = questionData.caseSensitive
-            ? expectedWord === userWord.trim()
-            : expectedWord.toLowerCase() === userWord.trim().toLowerCase();
-
-          let inputClass = "border-b-4 border-primary/60 bg-primary/5 text-primary font-bold focus:border-primary";
-          if (isChecked) {
-            inputClass = isCorrect
-              ? "border-4 border-emerald-500 bg-emerald-50 text-emerald-700 font-bold rounded-xl"
-              : "border-4 border-rose-500 bg-rose-50 text-rose-700 font-bold opacity-70 line-through rounded-xl";
-          }
-          const width = Math.max(userWord.length, isChecked && !isCorrect ? expectedWord.length : 5) * 1.2 + 2;
-
-          return (
-            <span key={i} className="inline-block relative mx-2 align-middle">
-              <input
-                type="text"
-                disabled={isChecked}
-                value={userWord}
-                onChange={(e) => handleAnswerChange(q, { ...(userAnswer || {}), [currentIndex]: e.target.value })}
-                className={`inline-block text-center outline-none transition-all px-3 py-1 min-w-[100px] disabled:opacity-100 disabled:cursor-not-allowed text-xl ${inputClass}`}
-                style={{ width: `${width}ch` }}
-                placeholder="..."
-              />
-              {isChecked && !isCorrect && (
-                <span className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-xl border border-emerald-200 shadow-md whitespace-nowrap z-30">
-                  {expectedWord}
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-emerald-100 rotate-45 border-r border-b border-emerald-200" />
-                </span>
-              )}
-            </span>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
-    </div>
-  );
-}
-
-// ============================================================
-// MATCHING BLOCK (Kid/Teen style)
-// ============================================================
-function MatchingQuestionBlock({ q, questionData, userAnswer, isChecked, handleAnswerChange, matchingColors }: any) {
-  const t = useTranslations("student.quiz");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState<any>(null);
-  const [hoveredLine, setHoveredLine] = useState<any>(null);
-  const [, setForceUpdate] = useState({});
-  const [selectedLeftId, setSelectedLeftId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Force a re-render after mount to ensure DOM nodes exist for getDotCoords
-    setForceUpdate({});
-    
-    // Also re-calculate lines if window resizes
-    const handleResize = () => setForceUpdate({});
-    window.addEventListener("resize", handleResize);
-    
-    return () => window.removeEventListener("resize", handleResize);
-  }, [q.id]);
-
-  const shuffledRightItems = useMemo(() => {
-    if (!questionData.pairs) return [];
-    const seed = q.id;
-    return [...questionData.pairs]
-      .map((p: any) => p.rightText)
-      .sort(() => (seed.length % 2 === 0 ? 1 : -1) * 0.5 - Math.random());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q.id, JSON.stringify(questionData.pairs)]);
-
-  const getDotCoords = (id: string, side: "left" | "right") => {
-    const el = document.getElementById(`kid-dot-${side}-${q.id}-${id}`);
-    if (!el || !containerRef.current) return { x: 0, y: 0 };
-    const rect = el.getBoundingClientRect();
-    const containerRect = containerRef.current.getBoundingClientRect();
-    return { x: rect.left - containerRect.left + rect.width / 2, y: rect.top - containerRect.top + rect.height / 2 };
-  };
-
-  return (
-    <div className="space-y-6 select-none">
-      <div
-        ref={containerRef}
-        className="grid grid-cols-2 gap-x-8 md:gap-x-16 gap-y-4 relative p-2 md:p-4"
-        style={{ touchAction: "auto" }}
-        onPointerMove={(e) => {
-          if (!dragging || !containerRef.current) return;
-          const rect = containerRef.current.getBoundingClientRect();
-          setDragging({ ...dragging, x2: e.clientX - rect.left, y2: e.clientY - rect.top });
-        }}
-        onPointerUp={(e) => {
-          if (dragging) {
-            const target = document.elementFromPoint(e.clientX, e.clientY);
-            const dot = target?.closest('[id^="kid-dot-"]');
-            if (dot) {
-              const id = dot.id.replace('-wrapper', '');
-              if (dragging.fromSide === 'left' && id.includes('kid-dot-right-')) {
-                const idx = parseInt(id.split('-').pop()!);
-                if (!isNaN(idx) && shuffledRightItems[idx] !== undefined)
-                  handleAnswerChange(q, { leftId: dragging.fromId, rightText: shuffledRightItems[idx] });
-              } else if (dragging.fromSide === 'right' && id.includes('kid-dot-left-')) {
-                const pairId = id.replace(`kid-dot-left-${q.id}-`, '');
-                handleAnswerChange(q, { leftId: pairId, rightText: shuffledRightItems[parseInt(dragging.fromId)] });
-              }
-            }
-          }
-          setDragging(null);
-        }}
-        onPointerCancel={() => setDragging(null)}
-      >
-        <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" style={{ minHeight: "300px" }}>
-          {Object.entries(userAnswer || {}).map(([leftId, rightText], idx) => {
-            const pair = questionData.pairs.find((p: any) => p.id === leftId);
-            if (!pair) return null;
-            const isCorrect = isChecked && pair.rightText === rightText;
-            const coords1 = getDotCoords(leftId, "left");
-            const rightItemIdx = shuffledRightItems.indexOf(rightText as string);
-            if (rightItemIdx === -1) return null;
-            const coords2 = getDotCoords(rightItemIdx.toString(), "right");
-            let strokeColor = matchingColors[idx % matchingColors.length];
-            if (isChecked) strokeColor = isCorrect ? "#10B981" : "#EF4444";
-            return (
-              <g
-                key={`kid-${leftId}`}
-                onMouseEnter={(e) => isChecked && setHoveredLine({ 
-                  x: e.clientX, 
-                  y: e.clientY, 
-                  isCorrect, 
-                  content: isCorrect ? t("correct") : t("yourIncorrectMatch", { defaultMessage: "Lựa chọn của em (Sai)" }) 
-                })}
-                onMouseLeave={() => setHoveredLine(null)}
-              >
-                {/* Vùng vô hình mở rộng để dễ hover */}
-                <line x1={coords1.x} y1={coords1.y} x2={coords2.x} y2={coords2.y} stroke="transparent" strokeWidth="25" className="cursor-help pointer-events-auto" />
-                <line
-                  x1={coords1.x}
-                  y1={coords1.y}
-                  x2={coords2.x}
-                  y2={coords2.y}
-                  stroke={strokeColor}
-                  strokeWidth={isChecked ? (isCorrect ? "6" : "5") : "4"}
-                  strokeDasharray="none"
-                  opacity={isChecked && isCorrect ? "1" : "0.9"}
-                  className="transition-all duration-500 pointer-events-none"
-                />
-                
-                {/* Đáp án đúng của hệ thống (nét đứt mờ, chỉ hiện khi học sinh làm sai) */}
-                {isChecked && !isCorrect && (() => {
-                  const correctIdx = shuffledRightItems.indexOf(pair.rightText);
-                  if (correctIdx === -1) return null;
-                  const correctCoords = getDotCoords(correctIdx.toString(), "right");
-                  return (
-                    <g
-                      onMouseEnter={(e) => setHoveredLine({ 
-                        x: e.clientX, 
-                        y: e.clientY, 
-                        isCorrect: true, 
-                        content: t("correctAnswer", { defaultMessage: "Đáp án đúng" }) 
-                      })}
-                      onMouseLeave={() => setHoveredLine(null)}
-                      className="cursor-help pointer-events-auto"
-                    >
-                      <line x1={coords1.x} y1={coords1.y} x2={correctCoords.x} y2={correctCoords.y} stroke="transparent" strokeWidth="20" />
-                      <line
-                        x1={coords1.x}
-                        y1={coords1.y}
-                        x2={correctCoords.x}
-                        y2={correctCoords.y}
-                        stroke="#10B981"
-                        strokeWidth="4"
-                        strokeDasharray="6,4"
-                        opacity="0.8"
-                        className="pointer-events-none"
-                        style={{ animation: "dash 1s linear infinite" }}
-                      />
-                    </g>
-                  );
-                })()}
-              </g>
-            );
-          })}
-          {dragging && <line x1={dragging.x1} y1={dragging.y1} x2={dragging.x2} y2={dragging.y2} stroke="#3B82F6" strokeWidth="5" />}
-        </svg>
-
-        {/* CSS Animation cho nét đứt chạy rần rần */}
-        <style dangerouslySetInnerHTML={{ __html: "\n          @keyframes dash {\n            to {\n              stroke-dashoffset: -10;\n            }\n          }\n        " }} />
-        {hoveredLine && (
-          <div className="fixed z-[100] px-4 py-2 rounded-2xl bg-slate-900 text-white text-xs font-bold pointer-events-none shadow-xl -translate-x-1/2 -translate-y-full mb-4" style={{ left: hoveredLine.x, top: hoveredLine.y }}>
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${hoveredLine.isCorrect ? "bg-emerald-400" : "bg-rose-400"}`} />
-              {hoveredLine.content}
-            </div>
-          </div>
-        )}
-        <div className="flex flex-col justify-between gap-3 z-20">
-
-          {(questionData.pairs || []).map((pair: any, idx: number) => {
-            const pairedRightText = userAnswer?.[pair.id];
-            const leftIsImage = !!(pair.leftImageUrl || pair.leftText?.startsWith("http") || pair.leftText?.startsWith("/"));
-            const isSelected = selectedLeftId === pair.id;
-            return (
-              <div key={pair.id || idx} className="relative transition-all" style={leftIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
-                {leftIsImage ? (
-                  <div
-                    className={`relative cursor-pointer rounded-2xl p-1 border-2 transition-all ${
-                      isSelected 
-                        ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50/50' 
-                        : pairedRightText 
-                          ? 'border-purple-400' 
-                          : 'border-transparent hover:border-slate-200'
-                    }`}
-                    style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
-                    onClick={() => {
-                      if (isChecked) return;
-                      setSelectedLeftId(isSelected ? null : pair.id);
-                    }}
-                  >
-                    <img src={pair.leftImageUrl || pair.leftText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
-                    <div
-                      id={`kid-dot-left-${q.id}-${pair.id}-wrapper`}
-                      onPointerDown={(e) => {
-                        if (isChecked) return;
-                        e.stopPropagation();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        const coords = getDotCoords(pair.id, "left");
-                        setDragging({ fromId: pair.id, fromSide: "left", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
-                      }}
-                      onPointerUp={(e) => {
-                        try {
-                          e.currentTarget.releasePointerCapture(e.pointerId);
-                        } catch (err) {}
-                      }}
-                      className="absolute -right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center z-30 cursor-crosshair touch-none"
-                    >
-                      <div
-                        id={`kid-dot-left-${q.id}-${pair.id}`}
-                        className={`w-6 h-6 rounded-full border-4 border-white shadow-md transition-transform hover:scale-150 ${pairedRightText ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div 
-                    onClick={() => {
-                      if (isChecked) return;
-                      setSelectedLeftId(isSelected ? null : pair.id);
-                    }}
-                    className={`relative flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                      isSelected 
-                        ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50/50' 
-                        : pairedRightText 
-                          ? 'border-purple-400 bg-purple-50' 
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <span className="font-bold text-slate-700">{pair.leftText}</span>
-                    <div
-                      id={`kid-dot-left-${q.id}-${pair.id}-wrapper`}
-                      onPointerDown={(e) => {
-                        if (isChecked) return;
-                        e.stopPropagation();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        const coords = getDotCoords(pair.id, "left");
-                        setDragging({ fromId: pair.id, fromSide: "left", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
-                      }}
-                      onPointerUp={(e) => {
-                        try {
-                          e.currentTarget.releasePointerCapture(e.pointerId);
-                        } catch (err) {}
-                      }}
-                      className="absolute -right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center z-30 cursor-crosshair touch-none"
-                    >
-                      <div
-                        id={`kid-dot-left-${q.id}-${pair.id}`}
-                        className={`w-6 h-6 rounded-full border-4 border-white shadow-md transition-transform hover:scale-150 ${pairedRightText ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-col justify-between gap-3 z-20">
-
-          {shuffledRightItems.map((rightText: string, idx: number) => {
-            const pairedLeftId = Object.keys(userAnswer || {}).find((k) => userAnswer[k] === rightText);
-            const isPairCorrect = isChecked && pairedLeftId && questionData.pairs.find((p: any) => p.id === pairedLeftId)?.rightText === rightText;
-            const rightIsImage = !!(rightText?.startsWith("http") || rightText?.startsWith("/"));
-            const isSelectedPartner = selectedLeftId === pairedLeftId;
-            return (
-              <div key={idx} className="relative transition-all" style={rightIsImage && idx % 2 === 1 ? { marginTop: '-10%', zIndex: idx + 1 } : { zIndex: idx + 1 }}>
-                {rightIsImage ? (
-                  <div
-                    className={`relative cursor-pointer rounded-2xl p-1 border-2 transition-all ${
-                      isSelectedPartner 
-                        ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50/50' 
-                        : pairedLeftId 
-                          ? 'border-purple-400' 
-                          : 'border-transparent hover:border-slate-200'
-                    }`}
-                    style={{ width: '40%', marginLeft: idx % 2 === 0 ? '0' : 'auto' }}
-                    onClick={() => {
-                      if (isChecked) return;
-                      if (selectedLeftId) {
-                        handleAnswerChange(q, { leftId: selectedLeftId, rightText });
-                        setSelectedLeftId(null);
-                      } else if (pairedLeftId) {
-                        setSelectedLeftId(pairedLeftId);
-                      }
-                    }}
-                  >
-                    <div
-                      id={`kid-dot-right-${q.id}-${idx}-wrapper`}
-                      onPointerDown={(e) => {
-                        if (isChecked) return;
-                        e.stopPropagation();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        const rect = containerRef.current!.getBoundingClientRect();
-                        if (pairedLeftId) {
-                          const coords = getDotCoords(pairedLeftId, "left");
-                          setDragging({ fromId: pairedLeftId, fromSide: "left", x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top, pointerId: e.pointerId });
-                        } else {
-                          const coords = getDotCoords(idx.toString(), "right");
-                          setDragging({ fromId: idx.toString(), fromSide: "right", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
-                        }
-                      }}
-                      onPointerUp={(e) => {
-                        try {
-                          e.currentTarget.releasePointerCapture(e.pointerId);
-                        } catch (err) {}
-                      }}
-                      className="absolute -left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center z-30 cursor-crosshair touch-none"
-                    >
-                      <div
-                        id={`kid-dot-right-${q.id}-${idx}`}
-                        className={`w-6 h-6 rounded-full border-4 border-white shadow-md transition-transform hover:scale-150 ${pairedLeftId ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
-                      />
-                    </div>
-                    <img src={rightText} alt="" className="w-full aspect-[4/3] object-cover rounded-[5px] block" />
-                    {isChecked && pairedLeftId && (
-                      <div className="absolute top-2 right-2">{isPairCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}</div>
-                    )}
-                  </div>
-                ) : (
-                  <div 
-                    onClick={() => {
-                      if (isChecked) return;
-                      if (selectedLeftId) {
-                        handleAnswerChange(q, { leftId: selectedLeftId, rightText });
-                        setSelectedLeftId(null);
-                      } else if (pairedLeftId) {
-                        setSelectedLeftId(pairedLeftId);
-                      }
-                    }}
-                    className={`relative flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                      isSelectedPartner 
-                        ? 'border-purple-500 ring-2 ring-purple-200 bg-purple-50/50' 
-                        : pairedLeftId 
-                          ? 'border-purple-400 bg-purple-50' 
-                          : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
-                  >
-                    <div
-                      id={`kid-dot-right-${q.id}-${idx}-wrapper`}
-                      onPointerDown={(e) => {
-                        if (isChecked) return;
-                        e.stopPropagation();
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        const rect = containerRef.current!.getBoundingClientRect();
-                        if (pairedLeftId) {
-                          const coords = getDotCoords(pairedLeftId, "left");
-                          setDragging({ fromId: pairedLeftId, fromSide: "left", x1: coords.x, y1: coords.y, x2: e.clientX - rect.left, y2: e.clientY - rect.top, pointerId: e.pointerId });
-                        } else {
-                          const coords = getDotCoords(idx.toString(), "right");
-                          setDragging({ fromId: idx.toString(), fromSide: "right", x1: coords.x, y1: coords.y, x2: coords.x, y2: coords.y, pointerId: e.pointerId });
-                        }
-                      }}
-                      onPointerUp={(e) => {
-                        try {
-                          e.currentTarget.releasePointerCapture(e.pointerId);
-                        } catch (err) {}
-                      }}
-                      className="absolute -left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center z-30 cursor-crosshair touch-none"
-                    >
-                      <div
-                        id={`kid-dot-right-${q.id}-${idx}`}
-                        className={`w-6 h-6 rounded-full border-4 border-white shadow-md transition-transform hover:scale-150 ${pairedLeftId ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
-                      />
-                    </div>
-                    <span className="font-bold text-slate-700">{rightText}</span>
-                    {isChecked && pairedLeftId && (
-                      <div className="ml-auto">{isPairCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+// Dynamically load MatchingQuestionBlock to optimize bundle size
+const MatchingQuestionBlock = dynamic(
+  () => import("./components/question-types/MatchingQuestionBlock"),
+  {
+    loading: () => (
+      <div className="w-full h-48 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
       </div>
+    ),
+    ssr: false,
+  }
+);
 
-      {/* Bảng chú giải (Legend) */}
-      {isChecked && (
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-8 px-6 py-3 bg-white/90 backdrop-blur-md rounded-2xl border-2 border-slate-200 shadow-sm mx-auto w-fit">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-1.5 bg-emerald-500 rounded-full"></div>
-            <span className="text-sm font-bold text-slate-700">{t("yourCorrectMatch", { defaultMessage: "Lựa chọn đúng" })}</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-1.5 bg-rose-500 rounded-full"></div>
-            <span className="text-sm font-bold text-slate-700">{t("yourIncorrectMatch", { defaultMessage: "Lựa chọn sai" })}</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 border-t-[4px] border-dashed border-emerald-500"></div>
-            <span className="text-sm font-bold text-slate-700">{t("correctAnswer", { defaultMessage: "Đáp án đúng" })}</span>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}
-
-// ============================================================
-// OPTION COLOR PALETTE (per option index)
-// ============================================================
-const OPTION_COLORS = [
-  { base: "border-blue-200 bg-blue-50 text-blue-800 hover:border-blue-400 hover:bg-blue-100", label: "bg-blue-500 text-white" },
-  { base: "border-emerald-200 bg-emerald-50 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100", label: "bg-emerald-500 text-white" },
-  { base: "border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-400 hover:bg-amber-100", label: "bg-amber-500 text-white" },
-  { base: "border-purple-200 bg-purple-50 text-purple-800 hover:border-purple-400 hover:bg-purple-100", label: "bg-purple-500 text-white" },
-  { base: "border-rose-200 bg-rose-50 text-rose-800 hover:border-rose-400 hover:bg-rose-100", label: "bg-rose-500 text-white" },
-];
-
-const SIDE_PANEL_W = 400;
-
-// ============================================================
-// PROPS
-// ============================================================
 interface Props {
   assignment: any;
   submissionId?: string;
@@ -623,182 +77,6 @@ interface Props {
   isAdmin?: boolean;
 }
 
-/** Resolves questionTranslationsPromise and renders ExplanationBlock with translations. 
- *  Must be inside a React.Suspense boundary. */
-function ExplanationResolver({
-  promise,
-  questionId,
-  explanation,
-  isExpanded,
-  onToggleExpand,
-  hideHeader,
-}: {
-  promise: Promise<Record<string, any>> | undefined;
-  questionId: string;
-  explanation: string;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
-  hideHeader?: boolean;
-}) {
-  const translationMap = promise ? React.use(promise) : null;
-  const translations = translationMap?.[questionId] ?? null;
-  return (
-    <ExplanationBlock
-      questionId={questionId}
-      explanation={explanation}
-      explanationTranslations={translations}
-      isExpanded={isExpanded}
-      onToggleExpand={onToggleExpand}
-      hideHeader={hideHeader}
-    />
-  );
-}
-
-function GlobalTeacherInfoConsumer({ promise, handleSafeNavigate }: any) {
-  const extraData = React.use(promise) as any;
-  if (!extraData || !extraData.teacher) return null;
-  return <FloatingTeacherInfo teacher={extraData.teacher} onNavigate={handleSafeNavigate} />;
-}
-
-function StartScreenTeacherAvatar({ promise }: { promise: Promise<any> }) {
-  const extraData = React.use(promise) as any;
-  if (!extraData || !extraData.teacher) return null;
-  const teacher = extraData.teacher;
-  if (!teacher.isPortfolioPublished) return null;
-
-  return (
-    <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-800 shadow-md overflow-hidden bg-white shrink-0">
-      <TeacherAvatar
-        src={teacher.image}
-        name={teacher.name}
-        className="w-full h-full object-cover"
-        fallback={
-          <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-            <User className="w-8 h-8" />
-          </div>
-        }
-      />
-    </div>
-  );
-}
-
-function ExtraDataConsumer({ promise, translationsPromise, isGuest, t }: any) {
-  const extraData = React.use(promise) as any;
-  const instructionsTranslations = translationsPromise ? React.use(translationsPromise) as any : null;
-  if (!extraData) return null;
-
-  const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
-  const audioUrl = extraData.lesson?.audioUrl || extraData.audioUrl;
-  const youtubeId = getYoutubeVideoId(videoUrl);
-
-  const hasMaterialSection = videoUrl || audioUrl || extraData.readingText;
-  const hasInstructionText = !!extraData.instructions || !!extraData.instructionsImageUrl;
-
-  return (
-    <>
-      {hasMaterialSection && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-widest">
-            <BookOpen className="w-4 h-4" />
-            {t("studyMaterial")}
-          </div>
-          <div className="space-y-6">
-            {videoUrl && (
-              <div className="aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg">
-                {youtubeId ? (
-                  <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${youtubeId}?rel=0`} title="Video" allowFullScreen />
-                ) : (
-                  <video src={videoUrl} className="w-full h-full" controls />
-                )}
-              </div>
-            )}
-             {audioUrl && (
-               <GlobalAudioPlayer audioUrl={audioUrl} autoPlay={false} defaultPlaybackRate={extraData.ttsSpeed || 1.0} />
-             )}
-             <div className="prose prose-slate prose-lg max-w-none text-slate-700 text-lg leading-loose">
-               <InteractiveReadingContent html={extraData.readingText} isLoggedIn={!isGuest} playbackRate={extraData.ttsSpeed || 1.0} />
-             </div>
-          </div>
-        </div>
-      )}
-
-      {hasInstructionText && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-secondary font-black text-xs uppercase tracking-widest">
-            <Info className="w-4 h-4" />
-            {t("instructions")}
-          </div>
-          <InstructionsBlock
-            instructions={extraData.instructions}
-            instructionsTranslations={instructionsTranslations}
-            instructionsImageUrl={extraData.instructionsImageUrl}
-            isLoggedIn={!isGuest}
-            proseClassName="prose prose-slate max-w-none bg-secondary/5 p-4 rounded-2xl border border-secondary/10"
-          />
-        </div>
-      )}
-
-      {extraData.tags && (
-        <div className="flex flex-wrap gap-2">
-          {extraData.tags.split(",").map((tag: string) => tag.trim()).filter(Boolean).map((tag: string, i: number) => (
-            <Link key={i} href={`/tags/${encodeURIComponent(tag)}`} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 hover:bg-slate-200 transition-all">
-              #{tag}
-            </Link>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-function RelatedAssignmentsConsumer({ promise, isGuest, onNavigate }: { promise: Promise<any[]>, isGuest: boolean, onNavigate: (url: string) => void }) {
-  const relatedAssignments = React.use(promise);
-  if (!relatedAssignments || relatedAssignments.length === 0) return null;
-  return (
-    <div className="mt-8 w-full bg-white rounded-[2rem] border-2 border-slate-200 p-6 shadow-xl">
-      <RelatedAssignmentsSection 
-        items={relatedAssignments.map((a: any) => ({ ...a, type: a.type || ("ASSIGNMENT" as const) }))} 
-        isGuest={isGuest}
-        onNavigate={onNavigate}
-      />
-    </div>
-  );
-}
-
-function SidePanelToggleButton({ promise, isSidePanelOpen, setIsSidePanelOpen }: { promise: Promise<any>, isSidePanelOpen: boolean, setIsSidePanelOpen: (open: boolean) => void }) {
-  const extraData = React.use(promise) as any;
-  if (!extraData) return null;
-
-  const videoUrl = extraData.lesson?.videoUrl || extraData.videoUrl;
-  const audioUrl = extraData.lesson?.audioUrl || extraData.audioUrl;
-  const hasMaterialSection = videoUrl || audioUrl || (extraData.readingText && String(extraData.readingText).replace(/<[^>]*>/g, "").trim().length > 0);
-  
-  const hasInstructionText = extraData.instructions && (
-    String(extraData.instructions).replace(/<[^>]*>/g, "").trim().length > 0 || 
-    /<(img|video|audio|iframe|embed)\b/i.test(String(extraData.instructions))
-  );
-
-  const hasTags = !!extraData.tags;
-
-  if (!hasMaterialSection && !hasInstructionText && !hasTags) {
-    return null;
-  }
-
-  return (
-    <button
-      onClick={() => setIsSidePanelOpen(true)}
-      className={`flex items-center justify-center p-2 bg-white text-purple-600 rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm hover:scale-105 duration-200
-        ${isSidePanelOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
-      title="View lesson"
-    >
-      <BookOpen className="w-5 h-5 text-purple-500" />
-    </button>
-  );
-}
-
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
 export default function KidTeenQuizRunner({
   assignment,
   submissionId,
@@ -881,7 +159,6 @@ export default function KidTeenQuizRunner({
     });
   }, [rawQuestions, attemptSeed]);
 
-  // Alias questions to activeQuestions so all internal logic uses the active questions with shuffled options
   const questions = activeQuestions;
   const t = useTranslations("student.quiz");
   const router = useRouter();
@@ -899,179 +176,55 @@ export default function KidTeenQuizRunner({
       }
       if (typeof window !== "undefined" && window.parent && window.parent !== window) {
         try {
-          window.parent.postMessage({
-            type: "ACTIVITY_COMPLETED",
-            assignmentId: assignment?.id,
-            score: submissionScore
-          }, "*");
+          window.parent.postMessage(
+            {
+              type: "ACTIVITY_COMPLETED",
+              assignmentId: assignment?.id,
+              score: submissionScore,
+            },
+            "*"
+          );
         } catch {}
       }
     }
   }, [isReviewMode, assignment?.id, submissionScore, onComplete]);
 
-  // B1 and above get the green gradient background; A1/A2 keep the cartoon image.
-  // The 'level' field in DB stores various formats: "b1", "b1,b1,b1", "intermediate", "upper_intermediate", etc.
   const _normalizedLevel = (cefrLevel || "").toLowerCase().split(",")[0].trim();
   const isHighLevel = [
-    "b1", "b2", "c1", "c2",
-    "intermediate", "upper-intermediate", "upper_intermediate",
-    "advanced", "proficiency",
+    "b1",
+    "b2",
+    "c1",
+    "c2",
+    "intermediate",
+    "upper-intermediate",
+    "upper_intermediate",
+    "advanced",
+    "proficiency",
   ].includes(_normalizedLevel);
 
-  // ── Music references ─────────────────────────────────────
-  const bgMusicRef = useRef<HTMLAudioElement | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const isMutedRef = useRef(isMuted);
-  const autoReadAudioRef = useRef<HTMLAudioElement | null>(null);
-  const segmentsRef = useRef<any[]>([]);
-  const currentSegmentIndexRef = useRef<number>(0);
-  const preloadedUrlsRef = useRef<string[]>([]);
-  const preloadRequestIdRef = useRef<number>(0);
   const isExerciseQuiz = !assignment?.materialType || assignment?.materialType === "EXERCISE";
   const shouldShowReviewStartScreen = Boolean(isReviewMode && isExerciseQuiz);
   const [hasStarted, setHasStarted] = useState(
-    autoStart ? true : (isReviewMode ? !shouldShowReviewStartScreen : false)
+    autoStart ? true : isReviewMode ? !shouldShowReviewStartScreen : false
   );
-
-  const handleStartReview = () => {
-    setHasStarted(true);
-    if (bgMusicRef.current && !isMuted) {
-      bgMusicRef.current.play().catch(() => {});
-    }
-  };
-
-  const handleBackToClass = () => {
-    if (classId) {
-      router.push(`/student/classes/${classId}`);
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/student/classes");
-    }
-  };
-
-  const [isHintPlaying, setIsHintPlaying] = useState(false);
-  const [isTtsPlaying, setIsTtsPlaying] = useState(false);
   const [quizMode, setQuizMode] = useState<"practice" | "autoplay">("practice");
-  const isAutoReadEnabled = quizMode === "autoplay";
-  const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
-  const [nextQuestionCountdown, setNextQuestionCountdown] = useState<number | null>(null);
-  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
 
-  useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
-
-  useEffect(() => {
-    if (autoStart && bgMusicRef.current && !isMutedRef.current) {
-      bgMusicRef.current.play().catch(() => {});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentQuestion = activeQuestions[currentIndex];
+  const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
+  const [isAutoRevealing, setIsAutoRevealing] = useState(false);
+  const [scoreResult, setScoreResult] = useState<{ correct: number; total: number } | null>(() => {
+    if (isReviewMode && questions && questions.length > 0) {
+      const correct = questions.filter((q) => getQuestionStatus(q, initialAnswers[q.id]) === "correct").length;
+      return { correct, total: questions.length };
     }
-  }, [autoStart]);
+    return null;
+  });
+  const [isShowingResultScreen, setIsShowingResultScreen] = useState(false);
 
-  const handleStartQuiz = (mode: "practice" | "autoplay") => {
-    setQuizMode(mode);
-    setHasStarted(true);
-    if (bgMusicRef.current && !isMuted) {
-      bgMusicRef.current.play().catch((e) => console.error("Error playing background music on start click", e));
-    }
-  };
-
-  // ── Background Music (disabled when embedded in class assignment canvas) ──
-  useEffect(() => {
-    if (typeof window === "undefined" || isEmbeddedInCanvas) return;
-
-    const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
-    bgMusic.loop = true;
-    bgMusic.volume = isMuted ? 0 : 0.1;
-    bgMusicRef.current = bgMusic;
-
-    const playMusic = () => {
-      if (!isMutedRef.current) {
-        bgMusic.play().catch(() => {});
-      }
-      window.removeEventListener("click", playMusic);
-      window.removeEventListener("touchstart", playMusic);
-      window.removeEventListener("mousedown", playMusic);
-      window.removeEventListener("keydown", playMusic);
-    };
-
-    bgMusic.play().catch(() => {
-      window.addEventListener("click", playMusic);
-      window.addEventListener("touchstart", playMusic);
-      window.addEventListener("mousedown", playMusic);
-      window.addEventListener("keydown", playMusic);
-    });
-
-    return () => {
-      bgMusic.pause();
-      bgMusic.src = "";
-      bgMusicRef.current = null;
-      window.removeEventListener("click", playMusic);
-      window.removeEventListener("touchstart", playMusic);
-      window.removeEventListener("mousedown", playMusic);
-      window.removeEventListener("keydown", playMusic);
-    };
-  }, [isEmbeddedInCanvas]);
-
-  // Listen to Hint audio play/pause events to track if hint is playing
-  useEffect(() => {
-    const handleHintPlay = () => {
-      setIsHintPlaying(true);
-    };
-
-    const handleHintPause = () => {
-      setIsHintPlaying(false);
-    };
-
-    window.addEventListener('hintAudioPlay', handleHintPlay);
-    window.addEventListener('hintAudioPause', handleHintPause);
-
-    return () => {
-      window.removeEventListener('hintAudioPlay', handleHintPlay);
-      window.removeEventListener('hintAudioPause', handleHintPause);
-    };
-  }, []);
-
-  // Update volume when mute state changes, hint audio state changes, or TTS playing state changes
-  useEffect(() => {
-    if (bgMusicRef.current) {
-      if (isMuted) {
-        bgMusicRef.current.pause();
-        window.dispatchEvent(new CustomEvent('pauseAllAudio'));
-      } else {
-        bgMusicRef.current.play().catch(() => {});
-        bgMusicRef.current.volume = (isHintPlaying || isTtsPlaying) ? 0.03 : 0.1;
-      }
-    }
-  }, [isMuted, isHintPlaying, isTtsPlaying]);
-
-  // Update background music playback based on material audio
-  useEffect(() => {
-    const handleMaterialPlay = () => {
-      if (bgMusicRef.current) {
-        bgMusicRef.current.pause();
-      }
-    };
-
-    const handleMaterialPause = () => {
-      if (bgMusicRef.current && !isMuted) {
-        bgMusicRef.current.play().catch(() => {});
-      }
-    };
-
-    window.addEventListener('materialAudioPlay', handleMaterialPlay);
-    window.addEventListener('materialAudioPause', handleMaterialPause);
-
-    return () => {
-      window.removeEventListener('materialAudioPlay', handleMaterialPlay);
-      window.removeEventListener('materialAudioPause', handleMaterialPause);
-    };
-  }, [isMuted]);
-
-
-
-  // ── Core quiz state ──────────────────────────────────────
-  const [answers, setAnswers] = useState(initialAnswers);
+  // Core quiz state
+  const [answers, setAnswers] = useState(initialAnswers || {});
   const [checkedQuestions, setCheckedQuestions] = useState<Record<string, boolean>>(() => {
     if (isReviewMode) {
       const initialChecked: Record<string, boolean> = {};
@@ -1096,14 +249,12 @@ export default function KidTeenQuizRunner({
     return {};
   });
 
-  // Đồng bộ answers nếu initialAnswers thay đổi
   useEffect(() => {
     if (initialAnswers && Object.keys(initialAnswers).length > 0) {
       setAnswers(initialAnswers);
     }
   }, [initialAnswers]);
 
-  // Cập nhật trạng thái review khi activeQuestions hoặc answers tải xong
   useEffect(() => {
     if (isReviewMode && activeQuestions && activeQuestions.length > 0) {
       setCheckedQuestions((prev) => {
@@ -1147,79 +298,77 @@ export default function KidTeenQuizRunner({
     }
   };
 
-  // ── Kid/Teen navigation state ────────────────────────────
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const currentQuestion = activeQuestions[currentIndex];
-  const [slideDirection, setSlideDirection] = useState<"left" | "right">("right");
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false);
-  const [isAutoRevealing, setIsAutoRevealing] = useState(false);
-  const [scoreResult, setScoreResult] = useState<{ correct: number; total: number } | null>(() => {
-    if (isReviewMode && questions && questions.length > 0) {
-      const correct = questions.filter((q) => getQuestionStatus(q, initialAnswers[q.id]) === "correct").length;
-      return { correct, total: questions.length };
+  const handleBackToClass = () => {
+    if (classId) {
+      router.push(`/student/classes/${classId}`);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/student/classes");
     }
-    return null;
+  };
+
+  const navigateTo = (newIndex: number) => {
+    if (newIndex === currentIndex && !isShowingResultScreen) return;
+    if (isAutoRevealing) return;
+    if (isShowingResultScreen) setIsShowingResultScreen(false);
+
+    audioEngine.setAutoplayCountdown(null);
+    audioEngine.setNextQuestionCountdown(null);
+    audioEngine.setIsAnswerRevealed(false);
+
+    setSlideDirection(newIndex > currentIndex ? "left" : "right");
+    setCurrentIndex(newIndex);
+  };
+
+  // Audio Engine Hook
+  const audioEngine = useQuizAudioEngine({
+    isEmbeddedInCanvas,
+    autoStart,
+    quizMode,
+    targetAudiences: assignment.targetAudiences,
+    lessonTargetAudiences: assignment.lesson?.targetAudiences,
+    currentQuestion,
+    hasStarted,
+    isShowingResultScreen,
+    onAutoplayAnswerReveal: (qId) => {
+      setCheckedQuestions((prev) => ({ ...prev, [qId]: true }));
+    },
+    onAutoplayNextQuestion: () => {
+      if (currentIndex < questions.length - 1) {
+        navigateTo(currentIndex + 1);
+      }
+    },
   });
-  const [isShowingResultScreen, setIsShowingResultScreen] = useState(false);
 
-  // ── Review state ─────────────────────────────────────────
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [userReview, setUserReview] = useState<any>(null);
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState("");
-  const [hoverRating, setHoverRating] = useState(0);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const handleStartReview = () => {
+    setHasStarted(true);
+    if (audioEngine.bgMusicRef.current && !audioEngine.isMuted) {
+      audioEngine.bgMusicRef.current.play().catch(() => {});
+    }
+  };
 
-  // Warm up the Edge TTS API route in the background on mount (standalone only)
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.search.includes("embedded=true")) return;
-    fetch("/api/tts/edge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: "warmup" }),
-    }).catch(() => {});
-  }, []);
+  const handleStartQuiz = (mode: "practice" | "autoplay") => {
+    setQuizMode(mode);
+    setHasStarted(true);
+    if (audioEngine.bgMusicRef.current && !audioEngine.isMuted) {
+      audioEngine.bgMusicRef.current.play().catch((e) => console.error("Error playing background music on start", e));
+    }
+  };
 
-  // ── Nav guard ────────────────────────────────────────────
+  // Nav guard
   const [navGuard, setNavGuard] = useState<{ isOpen: boolean; targetUrl: string; targetTitle: string }>({
     isOpen: false,
     targetUrl: "",
     targetTitle: "",
   });
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const matchingColors = ["#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#EC4899"];
-
-  // ── Media ────────────────────────────────────────────────
-  const videoUrl = assignment.videoUrl || assignment.lesson?.videoUrl;
-  const audioUrl = assignment.audioUrl || assignment.lesson?.audioUrl;
-  const youtubeId = getYoutubeVideoId(videoUrl);
-
-  const hasMaterialSection = useMemo(() => {
-    if (videoUrl || audioUrl) return true;
-    if (assignment?.readingText) {
-      const clean = String(assignment.readingText).replace(/<[^>]*>/g, "").trim();
-      if (clean.length > 0) return true;
-      if (/<(img|video|audio|iframe|embed)\b/i.test(String(assignment.readingText))) return true;
-    }
-    return false;
-  }, [assignment?.readingText, videoUrl, audioUrl]);
-
-  const hasInstructionText = useMemo(() => {
-    if (!assignment?.instructions) return false;
-    const clean = String(assignment.instructions).replace(/<[^>]*>/g, "").trim();
-    if (clean.length > 0) return true;
-    return /<(img|video|audio|iframe|embed)\b/i.test(String(assignment.instructions));
-  }, [assignment?.instructions]);
-
-  // ── Computed ─────────────────────────────────────────────
   const isDirty = Object.keys(answers).length > 0;
-
   const isAllChecked = useMemo(
     () => activeQuestions.length > 0 && activeQuestions.every((q) => checkedQuestions[q.id]),
     [activeQuestions, checkedQuestions]
   );
-
   const allCompleted = useMemo(
     () =>
       activeQuestions.length > 0 &&
@@ -1230,16 +379,17 @@ export default function KidTeenQuizRunner({
     [activeQuestions, answers]
   );
 
-  // ── Before-unload guard ──────────────────────────────────
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (isDirty) { e.preventDefault(); e.returnValue = ""; }
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [isDirty]);
 
-  // ── Navigation helpers ───────────────────────────────────
   const handleSafeNavigate = (href: string, title?: string) => {
     if (isDirty) {
       setNavGuard({ isOpen: true, targetUrl: href, targetTitle: title || "..." });
@@ -1248,30 +398,18 @@ export default function KidTeenQuizRunner({
     }
   };
 
-  const navigateTo = (newIndex: number) => {
-    if (newIndex === currentIndex && !isShowingResultScreen) return;
-    if (isAutoRevealing) return;
-    if (isShowingResultScreen) setIsShowingResultScreen(false);
-
-    setAutoplayCountdown(null);
-    setNextQuestionCountdown(null);
-    setIsAnswerRevealed(false);
-
-    setSlideDirection(newIndex > currentIndex ? "left" : "right");
-    setCurrentIndex(newIndex);
-  };
-
-  // ── Answer change ────────────────────────────────────────
+  // Answer change
   const handleAnswerChange = (q: any, value: any) => {
     if (isReviewMode || checkedQuestions[q.id]) return;
 
-    if (typeof window !== "undefined" && !isMuted) {
-      const snd = new Audio("/sounds/click.wav");
-      snd.play().catch(() => {});
-    }
+    audioEngine.playClickSound();
 
     let questionData: any;
-    try { questionData = JSON.parse(q.content); } catch { questionData = {}; }
+    try {
+      questionData = JSON.parse(q.content);
+    } catch {
+      questionData = {};
+    }
     const qType = questionData.type || q.type;
 
     setAnswers((prev: any) => {
@@ -1287,7 +425,9 @@ export default function KidTeenQuizRunner({
         if (value.rightText === null) {
           delete m[value.leftId];
         } else {
-          Object.keys(m).forEach((k) => { if (m[k] === value.rightText) delete m[k]; });
+          Object.keys(m).forEach((k) => {
+            if (m[k] === value.rightText) delete m[k];
+          });
           m[value.leftId] = value.rightText;
         }
         return { ...prev, [q.id]: m };
@@ -1300,7 +440,7 @@ export default function KidTeenQuizRunner({
     });
   };
 
-  // ── Check all (auto-reveal) ──────────────────────────────
+  // Check all & Submit
   const handleCheckAll = async () => {
     const unanswered: number[] = [];
     questions.forEach((q, idx) => {
@@ -1319,12 +459,10 @@ export default function KidTeenQuizRunner({
     }
 
     setIsAutoRevealing(true);
-
-    // Scroll to top so the student can watch the progress map circles change status/color
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-    
+
     const newChecked: Record<string, boolean> = {};
     const newExpanded: Record<string, boolean> = {};
     let currentRevealIndex = 0;
@@ -1332,7 +470,7 @@ export default function KidTeenQuizRunner({
     const revealInterval = setInterval(() => {
       if (currentRevealIndex >= questions.length) {
         clearInterval(revealInterval);
-        
+
         const correct = questions.filter((q) => getQuestionStatus(q, answers[q.id]) === "correct").length;
         setScoreResult({ correct, total: questions.length });
 
@@ -1341,14 +479,12 @@ export default function KidTeenQuizRunner({
           onComplete(calculatedScore, assignment.id);
         }
 
-        // Auto-complete and record submission in database if submissionId exists
         if (submissionId) {
           completeSubmission(submissionId, answers).catch((err) => {
             console.error("Failed to auto-complete submission:", err);
           });
         }
 
-        // Wait a brief moment after the last question is revealed before popping up the result screen
         setTimeout(() => {
           setIsShowingResultScreen(true);
           setIsSidePanelOpen(false);
@@ -1356,32 +492,27 @@ export default function KidTeenQuizRunner({
         }, 800);
         return;
       }
-      
+
       const q = questions[currentRevealIndex];
       newChecked[q.id] = true;
-      
+
       const isCorrect = getQuestionStatus(q, answers[q.id]) === "correct";
-      if (!isMuted) {
-        if (isCorrect) {
-          playCorrectSound();
-        } else {
-          playIncorrectSound();
-        }
+      if (!audioEngine.isMuted) {
+        if (isCorrect) playCorrectSound();
+        else playIncorrectSound();
       }
 
       if (!isCorrect && q.explanation) {
         newExpanded[q.id] = true;
       }
 
-      // Update state incrementally to trigger re-renders
       setCheckedQuestions({ ...newChecked });
       setExpandedExplanations({ ...newExpanded });
-      
+
       currentRevealIndex++;
-    }, 400); // 400ms delay per question
+    }, 400);
   };
 
-  // ── Reset ────────────────────────────────────────────────
   const handleReset = () => {
     setAttemptSeed(`${assignment?.id || "quiz"}-${Date.now()}`);
     setAnswers({});
@@ -1394,30 +525,13 @@ export default function KidTeenQuizRunner({
     setIsShowingResultScreen(false);
   };
 
-  // ── Review submit ────────────────────────────────────────
-  const handleReviewSubmit = async () => {
-    if (reviewRating === 0) { toast.error(t("starRatingError")); return; }
-    setIsSubmittingReview(true);
-    try {
-      const result = await submitAssignmentReview(assignment.id, reviewRating, reviewComment);
-      if (result.success) {
-        toast.success(result.message);
-        setUserReview({ rating: reviewRating, comment: reviewComment, isApproved: false });
-        setTimeout(() => setIsReviewModalOpen(false), 2000);
-      } else {
-        toast.error(result.message);
-      }
-    } catch {
-      toast.error(t("reviewSubmitError"));
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
-
-  // ── Current question data ────────────────────────────────
+  // Question data
   let currentQuestionData: any;
-  try { currentQuestionData = JSON.parse(currentQuestion?.content || "{}"); }
-  catch { currentQuestionData = { questionText: currentQuestion?.content }; }
+  try {
+    currentQuestionData = JSON.parse(currentQuestion?.content || "{}");
+  } catch {
+    currentQuestionData = { questionText: currentQuestion?.content };
+  }
 
   const qType = currentQuestionData.type || currentQuestion?.type;
   const isMultiSelect = qType === "MULTIPLE_SELECT";
@@ -1432,606 +546,81 @@ export default function KidTeenQuizRunner({
     questionText = currentQuestionData.instruction || t("clozeTest") || "Fill in the blank";
   }
 
-  // ── Autoplay Mode logic ──────────────────────────────────
-  useEffect(() => {
-    if (quizMode !== "autoplay" || autoplayCountdown === null) return;
-
-    if (autoplayCountdown > 0) {
-      const timer = setTimeout(() => {
-        setAutoplayCountdown(autoplayCountdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      // Countdown reached 0: Reveal the correct answer!
-      setCheckedQuestions((prev) => ({ ...prev, [currentQuestion?.id]: true }));
-      setIsAnswerRevealed(true);
-      setNextQuestionCountdown(5);
-    }
-  }, [autoplayCountdown, quizMode, currentQuestion?.id]);
-
-  useEffect(() => {
-    if (quizMode !== "autoplay" || nextQuestionCountdown === null) return;
-
-    if (nextQuestionCountdown > 0) {
-      const timer = setTimeout(() => {
-        setNextQuestionCountdown(nextQuestionCountdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      // Transition countdown reached 0: Go to next question!
-      setNextQuestionCountdown(null);
-      setIsAnswerRevealed(false);
-      if (currentIndex < questions.length - 1) {
-        navigateTo(currentIndex + 1);
-      }
-    }
-  }, [nextQuestionCountdown, quizMode, currentIndex, questions.length]);
-
-  // ── Auto-Read text clean and builder ──────────────────────
-  // ── Auto-Read text clean and builder ──────────────────────
-  const cleanTextForTTS = (text: string) => {
-    if (!text) return "";
-    return text
-      .replace(/\s+/g, " ")             // Collapse multiple spaces
-      .trim();
-  };
-
-  const getQuestionSpeed = () => {
-    const audiences = assignment.targetAudiences || [];
-    const lessonAudiences = assignment.lesson?.targetAudiences || [];
-    const combined = [...audiences, ...lessonAudiences];
-    const isLearner = combined.some(aud => String(aud).toLowerCase() === "learner");
-    // Speed is configurable via NEXT_PUBLIC_TTS_PLAYBACK_SPEED in .env (requires server restart)
-    const configuredSpeed = parseFloat(process.env.NEXT_PUBLIC_TTS_PLAYBACK_SPEED || "0.6");
-    return isLearner ? 1.0 : configuredSpeed;
-  };
-
-  interface AudioSegment {
-    type: 'tts' | 'sound';
-    text?: string;
-    src?: string;
-  }
-
-  const buildAutoReadSegments = (question: any) => {
-    const list: AudioSegment[] = [];
-    if (!question) return list;
-    
-    let questionData: any;
-    try {
-      questionData = typeof question.content === "string" 
-        ? JSON.parse(question.content) 
-        : question.content;
-    } catch {
-      questionData = {};
-    }
-    const qType = questionData.type || question.type;
-
-    let textStr =
-      questionData.instruction ??
-      questionData.questionText ??
-      questionData.statement ??
-      questionData.textWithBlanks ??
-      question.content;
-      
-    if (textStr?.startsWith("{") && textStr?.endsWith("}")) textStr = "";
-    if (qType === "CLOZE_TEST" && textStr && textStr.includes("{{")) {
-      textStr = questionData.instruction || t("clozeTest") || "Fill in the blank";
-    }
-
-    if (!textStr) return list;
-
-    // Check if the text contains a blank (e.g. ______ or {{...}})
-    const hasBlank = /_+/.test(textStr) || /\{\{.*?\}\}/.test(textStr);
-
-    if (hasBlank) {
-      // Split the text by blank placeholders
-      const parts = textStr.split(/_+|\{\{.*?\}\}/g);
-      
-      parts.forEach((part: string, idx: number) => {
-        const cleanPart = cleanTextForTTS(part);
-        if (cleanPart) {
-          // If this is the last part, append options to it
-          if (idx === parts.length - 1) {
-            let lastPartWithChoices = cleanPart;
-            if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
-              const options = questionData.options || [];
-              options.forEach((opt: any, index: number) => {
-                const letter = String.fromCharCode(65 + index);
-                const optionText = cleanTextForTTS(opt.text);
-                if (optionText) {
-                  lastPartWithChoices += `, ${letter}. ${optionText}`;
-                }
-              });
-            } else if (qType === "TRUE_FALSE") {
-              lastPartWithChoices += `, A. True, B. False`;
-            }
-            list.push({ type: 'tts', text: lastPartWithChoices });
-          } else {
-            list.push({ type: 'tts', text: cleanPart });
-          }
-        }
-        
-        // Add chime sound if not the last part
-        if (idx < parts.length - 1) {
-          list.push({ type: 'sound', src: "/sounds/ting_chime.wav" });
-        }
-      });
-    } else {
-      let combinedText = cleanTextForTTS(textStr);
-      if (qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") {
-        const options = questionData.options || [];
-        options.forEach((opt: any, index: number) => {
-          const letter = String.fromCharCode(65 + index);
-          const optionText = cleanTextForTTS(opt.text);
-          if (optionText) {
-            combinedText += `, ${letter}. ${optionText}`;
-          }
-        });
-      } else if (qType === "TRUE_FALSE") {
-        combinedText += `, A. True, B. False`;
-      }
-      list.push({ type: 'tts', text: combinedText });
-    }
-
-    return list;
-  };
-
-  const revokePreloadedUrls = () => {
-    preloadedUrlsRef.current.forEach((url) => {
-      if (url.startsWith("blob:")) {
-        try {
-          URL.revokeObjectURL(url);
-        } catch (e) {
-          console.error("Error revoking blob URL:", e);
-        }
-      }
-    });
-    preloadedUrlsRef.current = [];
-  };
-
-  const stopAutoRead = () => {
-    if (autoReadAudioRef.current) {
-      try {
-        autoReadAudioRef.current.pause();
-        autoReadAudioRef.current.src = "";
-        autoReadAudioRef.current.onended = null;
-        autoReadAudioRef.current.onplay = null;
-        autoReadAudioRef.current.onplaying = null;
-        autoReadAudioRef.current.onerror = null;
-      } catch (e) {
-        console.error("Error stopping autoReadAudio:", e);
-      }
-    }
-    segmentsRef.current = [];
-    currentSegmentIndexRef.current = 0;
-    revokePreloadedUrls();
-
-    setIsTtsPlaying(false);
-    setAutoplayCountdown(null);
-    setNextQuestionCountdown(null);
-    setIsAnswerRevealed(false);
-  };
-
-  // Helper: fetch one TTS segment and store result on the segment object
-  const fetchTtsSegment = async (segment: any) => {
-    if (segment.preloadedUrl || segment.type !== 'tts' || !segment.text) return;
-    try {
-      const response = await fetch("/api/tts/edge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: segment.text })
-      });
-      if (!response.ok) throw new Error(`TTS fetch failed: ${response.status}`);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      segment.preloadedUrl = url;
-      preloadedUrlsRef.current.push(url);
-    } catch (err) {
-      console.error("[TTS] Failed to fetch segment:", segment.text, err);
-    }
-  };
-
-  // Helper: wait for a segment to have preloadedUrl (poll every 30ms, max 5s)
-  const waitForSegment = (segment: any): Promise<void> => {
-    return new Promise((resolve) => {
-      if (segment.preloadedUrl || segment.type === 'sound') { resolve(); return; }
-      const start = Date.now();
-      const interval = setInterval(() => {
-        if (segment.preloadedUrl || Date.now() - start > 5000) {
-          clearInterval(interval);
-          resolve();
-        }
-      }, 30);
-    });
-  };
-
-  const playNextSegment = async () => {
-    if (!isAutoReadEnabled || currentSegmentIndexRef.current >= segmentsRef.current.length) {
-      stopAutoRead();
-      if (quizMode === "autoplay") {
-        setAutoplayCountdown(10);
-        setIsAnswerRevealed(false);
-      }
-      return;
-    }
-
-    setIsTtsPlaying(true);
-    const segment = segmentsRef.current[currentSegmentIndexRef.current];
-    currentSegmentIndexRef.current++;
-
-    const playSpeed = getQuestionSpeed();
-    let audio = autoReadAudioRef.current;
-    if (!audio) {
-      audio = new Audio();
-      autoReadAudioRef.current = audio;
-    }
-
-    // Wait until this segment is ready (polling, max 5s)
-    await waitForSegment(segment);
-
-    const src = segment.preloadedUrl;
-    if (!src) {
-      // Skip this segment if still not ready after timeout
-      playNextSegment();
-      return;
-    }
-
-    try {
-      audio.onplay = () => {
-        if (audio) audio.playbackRate = playSpeed;
-      };
-      audio.onplaying = () => {
-        if (audio) audio.playbackRate = playSpeed;
-      };
-      audio.onended = () => {
-        playNextSegment();
-      };
-      audio.onerror = (e) => {
-        console.error("Audio player error event:", e);
-        playNextSegment();
-      };
-
-      audio.src = src;
-      audio.defaultPlaybackRate = playSpeed;
-      audio.playbackRate = playSpeed;
-
-      audio.play().then(() => {
-        if (audio) audio.playbackRate = playSpeed;
-      }).catch(err => {
-        console.error("Failed to play audio segment:", err);
-        playNextSegment();
-      });
-    } catch (err) {
-      console.error("Error setting up audio playback:", err);
-      playNextSegment();
-    }
-  };
-
-  const startAutoReadQueue = async (question: any) => {
-    stopAutoRead();
-    if (!question) return;
-
-    setIsTtsPlaying(true);
-    const queue = buildAutoReadSegments(question);
-    const requestId = ++preloadRequestIdRef.current;
-
-    if (queue.length === 0) return;
-
-    // Mark sound segments as ready immediately
-    queue.forEach((segment: any) => {
-      if (segment.type === 'sound' && segment.src) {
-        segment.preloadedUrl = segment.src;
-      }
-    });
-
-    // Kick off ALL TTS fetches in parallel right now
-    const ttsSegments = queue.filter((s: any) => s.type === 'tts' && s.text);
-    ttsSegments.forEach((segment: any) => fetchTtsSegment(segment));
-
-    // Set queue so playNextSegment can start
-    segmentsRef.current = queue;
-    currentSegmentIndexRef.current = 0;
-
-    if (requestId !== preloadRequestIdRef.current) return;
-
-    // Start playing — playNextSegment will poll-wait for each segment to be ready
-    playNextSegment();
-  };
-
-  // Trigger Auto-read when current question or auto-read enabled changes
-  useEffect(() => {
-    if (!hasStarted || isShowingResultScreen) {
-      stopAutoRead();
-      return;
-    }
-    
-    if (isAutoReadEnabled && currentQuestion) {
-      startAutoReadQueue(currentQuestion);
-    } else {
-      stopAutoRead();
-    }
-    
-    return () => {
-      stopAutoRead();
-    };
-  }, [currentIndex, isAutoReadEnabled, hasStarted, isShowingResultScreen]);
-
-  // Listen to other audio events to stop auto-reading
-  useEffect(() => {
-    const handleOtherAudioPlay = () => {
-      stopAutoRead();
-    };
-    window.addEventListener('materialAudioPlay', handleOtherAudioPlay);
-    window.addEventListener('hintAudioPlay', handleOtherAudioPlay);
-    window.addEventListener('pauseAllAudio', handleOtherAudioPlay);
-    return () => {
-      window.removeEventListener('materialAudioPlay', handleOtherAudioPlay);
-      window.removeEventListener('hintAudioPlay', handleOtherAudioPlay);
-      window.removeEventListener('pauseAllAudio', handleOtherAudioPlay);
-    };
-  }, []);
-
-  // Save isAutoReadEnabled to localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("quiz_auto_read_enabled", String(isAutoReadEnabled));
-    }
-  }, [isAutoReadEnabled]);
-
   const userAnswer = answers[currentQuestion?.id];
   const isChecked = checkedQuestions[currentQuestion?.id] || false;
-
   const questionStatus = currentQuestion ? getQuestionStatus(currentQuestion, userAnswer) : "pending";
   const isCorrectNow = isChecked && questionStatus === "correct";
   const isWrongNow = isChecked && questionStatus !== "correct" && questionStatus !== "pending";
 
-  // ── Score helpers ────────────────────────────────────────
-  const getScoreEmoji = (c: number, t2: number) => {
-    const p = c / t2;
-    if (p >= 0.8) return "🌟";
-    if (p >= 0.5) return "👏";
-    return "💪";
-  };
-  const getScoreMsg = (c: number, t2: number) => {
-    const p = c / t2;
-    if (p >= 0.8) return "Excellent!";
-    if (p >= 0.5) return "Not bad!";
-    return "Keep trying!";
-  };
-  const getStars = (c: number, t2: number) => {
-    const p = c / t2;
-    if (p >= 0.8) return 3;
-    if (p >= 0.5) return 2;
-    return 1;
-  };
+  const matchingColors = ["#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#EC4899"];
 
+  // 1. Start Screen
   if (!hasStarted) {
-    const qCount = assignment._count?.questions ?? activeQuestions.length;
     return (
-      <div 
-        className={`${isEmbeddedInCanvas ? 'h-full min-h-[580px] lg:min-h-[660px]' : 'min-h-screen'} font-body flex flex-col items-center justify-center p-6 w-full relative ${
-          isHighLevel
-            ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
-            : "bg-cover bg-center bg-[#8cd2f6]"
-        }`}
-        style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
-      >
-        {/* B1+ floating decorative blobs */}
-        {isHighLevel && (
-          <>
-            <div className="absolute top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none" style={{ animationDuration:'10s' }} />
-            <div className="absolute bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none" style={{ animationDuration:'12s' }} />
-            <div className="absolute top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none" style={{ animationDuration:'15s' }} />
-            <div className="absolute top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none" style={{ animationDuration:'8s' }} />
-            <div className="absolute bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none" style={{ animationDuration:'10s' }} />
-            <div className="absolute top-[50%] right-[25%] w-[100px] h-[100px] rounded-full bg-[#14b8a6]/18 blur-[15px] animate-pulse pointer-events-none" style={{ animationDuration:'6s' }} />
-          </>
-        )}
-
-
-        {/* Start Card */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-[3rem] border-4 border-white dark:border-slate-800 shadow-2xl p-8 md:p-12 max-w-xl w-full text-center relative overflow-hidden animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center">
-          {/* Top colored strip */}
-          <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-r from-orange-400 via-pink-400 to-purple-500"></div>
-
-          {/* Close button (X) */}
-          {!isEmbeddedInCanvas && (
-            <button
-              onClick={handleBackToClass}
-              className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-20 cursor-pointer"
-              title="Đóng / Quay lại"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-
-          {/* Teacher avatar if available */}
-          <div className="mb-6 flex justify-center">
-            <React.Suspense fallback={<div className="w-20 h-20 rounded-full bg-purple-100 animate-pulse border-4 border-white shadow-md shrink-0" />}>
-              <StartScreenTeacherAvatar promise={extraDataPromise} />
-            </React.Suspense>
-          </div>
-
-          {shouldShowReviewStartScreen ? (
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-black text-xs uppercase tracking-widest mb-3 shadow-xs">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>BÀI TẬP ĐÃ HOÀN THÀNH</span>
-            </div>
-          ) : (
-            <h4 className="text-purple-600 dark:text-purple-400 font-black text-xs uppercase tracking-[0.2em] mb-3">
-              {Object.keys(initialAnswers || {}).length > 0
-                ? `ĐANG LÀM DỞ (${Object.keys(initialAnswers || {}).length}/${qCount} CÂU)`
-                : "ARE YOU READY?"}
-            </h4>
-          )}
-          
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight leading-tight uppercase italic mb-4">
-            {assignment.title || "QUIZ FOR LITTLE LEARNERS"}
-          </h1>
-
-          {/* Previous result summary card (Gợi ý 1) */}
-          {shouldShowReviewStartScreen && (
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-6 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-teal-50/60 to-sky-50/80 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-sky-950/40 border border-emerald-200/70 dark:border-emerald-800/50 shadow-xs w-full max-w-md">
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 shadow-xs border border-emerald-100 dark:border-emerald-900/60">
-                <Award className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Điểm:</span>
-                <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                  {submissionScore !== null && submissionScore !== undefined
-                    ? `${Number(submissionScore.toFixed(1))} đ`
-                    : scoreResult
-                    ? `${Number(((scoreResult.correct / scoreResult.total) * 10).toFixed(1))} đ`
-                    : 'Đã nộp'}
-                </span>
-              </div>
-
-              {scoreResult && (
-                <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 shadow-xs border border-teal-100 dark:border-teal-900/60">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">Đúng:</span>
-                  <span className="text-sm font-black text-teal-600 dark:text-teal-400">
-                    {scoreResult.correct}/{scoreResult.total} câu
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {!shouldShowReviewStartScreen && (
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-6 text-slate-600 dark:text-slate-300 font-bold text-sm">
-              <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
-                <HelpCircle className="w-5 h-5 text-purple-500" />
-                {qCount} QUESTIONS
-              </div>
-              {assignment.timeLimit && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl border border-purple-100 dark:border-purple-900/40">
-                  <Clock className="w-5 h-5 text-purple-500" />
-                  {assignment.timeLimit} MINUTES
-                </div>
-              )}
-            </div>
-          )}
-
-          {shouldShowReviewStartScreen ? (
-            /* 2 Action Buttons for Completed Exercise (Gợi ý 2) */
-            <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full max-w-lg justify-center mt-2">
-              {/* Review Button */}
-              <button
-                onClick={handleStartReview}
-                className="group relative px-6 py-4 w-full sm:w-1/2 rounded-3xl bg-white dark:bg-slate-800 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/40 border-2 border-emerald-500/40 hover:border-emerald-500 text-emerald-700 dark:text-emerald-300 font-black text-sm uppercase tracking-wider shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span>Review kết quả</span>
-              </button>
-
-              {/* Làm lại bài (Practise) Button */}
-              <button
-                onClick={handleRetryAssignment}
-                disabled={isRetrying}
-                className={`group relative px-6 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 ${
-                  isRetrying ? "opacity-75 cursor-not-allowed" : "cursor-pointer"
-                }`}
-              >
-                {isRetrying ? (
-                  <Loader2 className="w-4 h-4 text-white animate-spin shrink-0" />
-                ) : (
-                  <RotateCcw className="w-4 h-4 text-white group-hover:-rotate-90 transition-transform duration-300 shrink-0" />
-                )}
-                <span>{isRetrying ? "Đang chuẩn bị đề thi..." : "Làm lại (Practise)"}</span>
-              </button>
-            </div>
-          ) : (
-            /* Start buttons */
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-lg justify-center mt-4">
-              {isAdmin ? (
-                <>
-                  {/* Practice Mode Button (Admin only) */}
-                  <button
-                    onClick={() => handleStartQuiz("practice")}
-                    className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <Play className="w-5 h-5 fill-current text-purple-600" />
-                      Practice Mode
-                    </span>
-                  </button>
-
-                  {/* Autoplay Mode Button (Admin only) */}
-                  <button
-                    onClick={() => handleStartQuiz("autoplay")}
-                    className="group relative px-8 py-4 w-full sm:w-1/2 rounded-3xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-black text-base uppercase tracking-wider shadow-lg shadow-orange-500/30 hover:scale-[1.03] active:scale-95 transition-all duration-200"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <Play className="w-5 h-5 fill-current text-white animate-pulse" />
-                      Autoplay Mode
-                    </span>
-                  </button>
-                </>
-              ) : (
-                /* Regular users (Students, Teachers, Guests): Only Practice now */
-                <button
-                  onClick={() => handleStartQuiz("practice")}
-                  className="group relative px-8 py-4 w-full sm:w-2/3 max-w-sm rounded-3xl bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border-2 border-purple-200 text-purple-700 font-black text-base uppercase tracking-wider shadow-md hover:scale-[1.03] active:scale-95 transition-all duration-200"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <Play className="w-5 h-5 fill-current text-purple-600" />
-                    {Object.keys(initialAnswers || {}).length > 0
-                      ? `Tiếp tục làm bài (${Object.keys(initialAnswers || {}).length}/${qCount})`
-                      : "Practice now"}
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Back to class link (Gợi ý 3) */}
-          {isFromClass && (
-            <button
-              onClick={handleBackToClass}
-              className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors py-1 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Quay lại lớp học</span>
-            </button>
-          )}
-        </div>
-      </div>
+      <QuizStartScreen
+        assignment={assignment}
+        activeQuestionsCount={activeQuestions.length}
+        isHighLevel={isHighLevel}
+        isEmbeddedInCanvas={isEmbeddedInCanvas}
+        extraDataPromise={extraDataPromise}
+        shouldShowReviewStartScreen={shouldShowReviewStartScreen}
+        submissionScore={submissionScore}
+        scoreResult={scoreResult}
+        initialAnswers={initialAnswers}
+        isAdmin={isAdmin}
+        isFromClass={isFromClass}
+        isRetrying={isRetrying}
+        handleBackToClass={handleBackToClass}
+        handleStartReview={handleStartReview}
+        handleRetryAssignment={handleRetryAssignment}
+        handleStartQuiz={handleStartQuiz}
+      />
     );
   }
 
   if (!currentQuestion) return null;
 
-  const cols = Math.ceil(activeQuestions.length / 2);
-
-  // ── Render ───────────────────────────────────────────────
   return (
-    <div className={`${isEmbeddedInCanvas ? 'h-full min-h-[580px] lg:min-h-[660px]' : 'min-h-screen'} font-body flex flex-col ${
-      isHighLevel
-        ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
-        : "bg-[#8cd2f6]"
-    }`}>
-      {/* B1+ floating decorative blobs */}
+    <div
+      className={`${
+        isEmbeddedInCanvas ? "h-full min-h-[580px] lg:min-h-[660px]" : "min-h-screen"
+      } font-body flex flex-col ${
+        isHighLevel
+          ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
+          : "bg-[#8cd2f6]"
+      }`}
+    >
+      {/* Decorative blobs */}
       {isHighLevel && (
         <>
-          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none -z-0`} style={{ animationDuration:'10s' }} />
-          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none -z-0`} style={{ animationDuration:'12s' }} />
-          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} top-[15%] right-[5%] w-[45vw] h-[45vw] rounded-full bg-gradient-to-bl from-[#5eead4]/55 to-transparent blur-[120px] animate-pulse pointer-events-none -z-0`} style={{ animationDuration:'15s' }} />
-          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} top-[25%] left-[8%] w-[120px] h-[120px] rounded-full bg-[#34d399]/20 blur-[15px] animate-bounce pointer-events-none -z-0`} style={{ animationDuration:'8s' }} />
-          <div className={`${isEmbeddedInCanvas ? 'absolute' : 'fixed'} bottom-[35%] right-[12%] w-[150px] h-[150px] rounded-full bg-[#a3e635]/15 blur-[20px] animate-bounce pointer-events-none -z-0`} style={{ animationDuration:'10s' }} />
+          <div
+            className={`${
+              isEmbeddedInCanvas ? "absolute" : "fixed"
+            } top-[-5%] left-[-5%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-br from-[#6ee7b7]/65 to-transparent blur-[130px] animate-pulse pointer-events-none -z-0`}
+            style={{ animationDuration: "10s" }}
+          />
+          <div
+            className={`${
+              isEmbeddedInCanvas ? "absolute" : "fixed"
+            } bottom-[-10%] right-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-tl from-[#a7f3d0]/65 to-transparent blur-[150px] animate-pulse pointer-events-none -z-0`}
+            style={{ animationDuration: "12s" }}
+          />
         </>
       )}
+
       <SelectionTranslator />
-      {/* ── MAIN CONTENT (Image Background) ── */}
-      <div 
+
+      {/* Main Content Area */}
+      <div
         className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-14 lg:pt-16 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
-        style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+        style={isHighLevel ? {} : { backgroundImage: "url(/images/background/cartoon-background-children.jpg)" }}
       >
-        {/* ── FLOATING TOP-LEFT CONTROLS (Logo, Sound, Back & Retry) ── */}
+        {/* Floating Top-Left Controls */}
         <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2 sm:gap-2.5">
-          {/* Dolcake Logo - về trang chủ */}
           {!isEmbeddedInCanvas && (
             <button
               onClick={() => router.push("/")}
-              className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-md hover:bg-white/80 transition-all active:scale-95 group"
+              className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-md hover:bg-white/80 transition-all active:scale-95 group cursor-pointer"
               title="Về trang chủ"
             >
               <img
@@ -2040,19 +629,23 @@ export default function KidTeenQuizRunner({
                 className="w-7 h-7 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
               />
               <div className="flex flex-col text-left">
-                <span className="font-headline font-black text-base tracking-tighter text-primary leading-none">Dolcake</span>
-                <span className="text-[7px] font-black text-primary/60 tracking-[0.3em] uppercase hidden sm:block">Student Portal</span>
+                <span className="font-headline font-black text-base tracking-tighter text-primary leading-none">
+                  Dolcake
+                </span>
+                <span className="text-[7px] font-black text-primary/60 tracking-[0.3em] uppercase hidden sm:block">
+                  Student Portal
+                </span>
               </div>
             </button>
           )}
 
           {!isEmbeddedInCanvas && (
             <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="flex items-center justify-center p-2 bg-white/60 backdrop-blur-md text-purple-600 rounded-full border border-white/80 hover:bg-white/80 transition-all active:scale-95 shadow-md"
-              title={isMuted ? "Unmute music" : "Mute music"}
+              onClick={() => audioEngine.setIsMuted(!audioEngine.isMuted)}
+              className="flex items-center justify-center p-2 bg-white/60 backdrop-blur-md text-purple-600 rounded-full border border-white/80 hover:bg-white/80 transition-all active:scale-95 shadow-md cursor-pointer"
+              title={audioEngine.isMuted ? "Unmute music" : "Mute music"}
             >
-              {isMuted ? (
+              {audioEngine.isMuted ? (
                 <VolumeX className="w-5 h-5 text-rose-500" />
               ) : (
                 <Volume2 className="w-5 h-5 text-purple-500 animate-pulse" />
@@ -2060,7 +653,6 @@ export default function KidTeenQuizRunner({
             </button>
           )}
 
-          {/* Nút Về lớp học */}
           {isFromClass && !isEmbeddedInCanvas && (
             <button
               onClick={handleBackToClass}
@@ -2072,7 +664,6 @@ export default function KidTeenQuizRunner({
             </button>
           )}
 
-          {/* Nút Làm lại bài - chỉ hiển thị khi đang Review chi tiết câu hỏi (ẩn khi đang ở màn hình kết quả) */}
           {isReviewMode && !isShowingResultScreen && (
             <button
               onClick={handleRetryAssignment}
@@ -2087,685 +678,389 @@ export default function KidTeenQuizRunner({
               ) : (
                 <RotateCcw className="w-3.5 h-3.5 shrink-0" />
               )}
-              <span>{isRetrying ? "Đang tải..." : (t("retry") || "Làm lại")}</span>
+              <span>{isRetrying ? "Đang tải..." : t("retry") || "Làm lại"}</span>
             </button>
           )}
 
-          <React.Suspense fallback={null}>
+          <Suspense fallback={null}>
             <GlobalTeacherInfoConsumer promise={extraDataPromise} handleSafeNavigate={handleSafeNavigate} />
-          </React.Suspense>
+          </Suspense>
         </div>
 
-        {/* ── SMART CONTAINER (Main Card Centered) ── */}
+        {/* Smart Container / Main Card */}
         <div className="w-full max-w-4xl mx-auto z-10 relative transition-all duration-300 flex flex-col items-center">
-
-            {/* Question Card */}
+          <div
+            key={`${currentIndex}-${slideDirection}`}
+            className={`w-full ${
+              slideDirection === "left"
+                ? "animate-in slide-in-from-right-16 fade-in-0"
+                : "animate-in slide-in-from-left-16 fade-in-0"
+            } duration-300`}
+          >
             <div
-              key={`${currentIndex}-${slideDirection}`}
-          className={`w-full ${
-            slideDirection === "left"
-              ? "animate-in slide-in-from-right-16 fade-in-0"
-              : "animate-in slide-in-from-left-16 fade-in-0"
-          } duration-300`}
-        >
-          {/* Card Wrapper */}
-          <div className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-all duration-500 relative border-[6px] flex flex-col ${
-            (isChecked && quizMode !== "autoplay") ? "max-h-[60dvh]" : "max-h-[85dvh]"
-          } ${
-            isCorrectNow
-              ? "border-emerald-400"
-              : isWrongNow
-              ? "border-rose-400"
-              : "border-[#9A89FF]"
-          }`}>
+              className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-all duration-500 relative border-[6px] flex flex-col ${
+                isChecked && quizMode !== "autoplay" ? "max-h-[60dvh]" : "max-h-[85dvh]"
+              } ${
+                isCorrectNow
+                  ? "border-emerald-400"
+                  : isWrongNow
+                  ? "border-rose-400"
+                  : "border-[#9A89FF]"
+              }`}
+            >
+              {/* Card Header Row */}
+              <div className="flex items-center justify-between px-6 pt-5 pb-1 z-20">
+                <div className="flex items-center gap-2">
+                  <Suspense fallback={null}>
+                    <SidePanelToggleButton
+                      promise={extraDataPromise}
+                      isSidePanelOpen={isSidePanelOpen}
+                      setIsSidePanelOpen={setIsSidePanelOpen}
+                    />
+                  </Suspense>
+                </div>
 
-            {/* Card Header Row */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-1 z-20">
-              <div className="flex items-center gap-2">
-                <React.Suspense fallback={null}>
-                  <SidePanelToggleButton 
-                    promise={extraDataPromise} 
-                    isSidePanelOpen={isSidePanelOpen} 
-                    setIsSidePanelOpen={setIsSidePanelOpen} 
-                  />
-                </React.Suspense>
-              </div>
-              
-              {/* Autoplay mobile progress indicator inside the header */}
-              {quizMode === "autoplay" ? (
-                <div className="flex sm:hidden items-center">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 border border-purple-200 text-purple-700 rounded-full font-black text-xs tracking-wider shadow-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                    <span>{currentIndex + 1} / {activeQuestions.length}</span>
+                {quizMode === "autoplay" && (
+                  <div className="flex sm:hidden items-center">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-100 border border-purple-200 text-purple-700 rounded-full font-black text-xs tracking-wider shadow-sm">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                      <span>{currentIndex + 1} / {activeQuestions.length}</span>
+                    </div>
                   </div>
-                </div>
-              ) : null}
+                )}
 
-              {/* Spacing alignment */}
-              <div className={`w-9 h-9 ${quizMode === "autoplay" ? "hidden sm:block" : "block"}`} />
-            </div>
-
-            {/* Optional Type Label (moved to top right) */}
-            <div className="absolute -top-6 right-10 z-20 hidden sm:block">
-              <span className="bg-[#9A89FF] text-white text-sm font-bold px-5 py-2 rounded-full shadow-md whitespace-nowrap">
-                {qType === "MULTIPLE_SELECT" ? "Multiple Select"
-                  : qType === "MATCHING" ? "Matching"
-                  : qType === "CLOZE_TEST" ? "Fill in the blank"
-                  : qType === "TRUE_FALSE" ? "True / False"
-                  : "Choose the correct answer"}
-              </span>
-            </div>
-
-
-
-            {isChecked && quizMode !== "autoplay" && (
-              <div className="absolute -top-6 right-10 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-20">
-                <div className={`flex items-center gap-2 text-white font-black text-sm whitespace-nowrap px-5 py-2 rounded-full shadow-md ${isCorrectNow ? "bg-emerald-500" : "bg-rose-500"}`}>
-                  {isCorrectNow
-                    ? <><CheckCircle2 className="w-5 h-5" /> Correct! 🎉</>
-                    : <><XCircle className="w-5 h-5" /> Incorrect! 😅</>}
-                </div>
+                <div className={`w-9 h-9 ${quizMode === "autoplay" ? "hidden sm:block" : "block"}`} />
               </div>
-            )}
 
-            {/* Card body */}
-            <div className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
-              (isChecked && quizMode !== "autoplay")
-                ? "px-[clamp(0.75rem,3vw,2rem)] pt-1 pb-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
-                : "px-[clamp(1rem,4vw,3rem)] pt-2 pb-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
-            }`}>
-              {/* Question text (not for MATCHING as MATCHING has it on the left column) */}
-              {qType !== "MATCHING" && questionText && questionText !== "{}" && (
-                <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
-                  <h3
-                    className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
-                      (isChecked && quizMode !== "autoplay") ? "text-[clamp(1rem,2dvh,1.25rem)]" : "text-[clamp(1.25rem,3.5dvh,2rem)]"
+              {/* Type Label */}
+              <div className="absolute -top-6 right-10 z-20 hidden sm:block">
+                <span className="bg-[#9A89FF] text-white text-sm font-bold px-5 py-2 rounded-full shadow-md whitespace-nowrap">
+                  {qType === "MULTIPLE_SELECT"
+                    ? "Multiple Select"
+                    : qType === "MATCHING"
+                    ? "Matching"
+                    : qType === "CLOZE_TEST"
+                    ? "Fill in the blank"
+                    : qType === "TRUE_FALSE"
+                    ? "True / False"
+                    : "Choose the correct answer"}
+                </span>
+              </div>
+
+              {isChecked && quizMode !== "autoplay" && (
+                <div className="absolute -top-6 right-10 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-20">
+                  <div
+                    className={`flex items-center gap-2 text-white font-black text-sm whitespace-nowrap px-5 py-2 rounded-full shadow-md ${
+                      isCorrectNow ? "bg-emerald-500" : "bg-rose-500"
                     }`}
-                    style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
-                    title="Tap a word to translate"
                   >
-                    {questionText}
-                  </h3>
-                  {currentQuestion?.audioUrl && (
-                    <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={getQuestionSpeed()} />
-                  )}
-                </div>
-              )}
-
-              {/* ── MULTIPLE CHOICE / SELECT ── */}
-              {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
-                <div className="flex flex-wrap justify-center gap-x-4 sm:gap-x-8 gap-y-[clamp(1rem,4dvh,2rem)] pt-[clamp(0.5rem,1.5dvh,1rem)] w-full">
-                  {(currentQuestionData.options || []).map((option: any, i: number) => {
-                    const optionVal = option.originalIndex !== undefined ? option.originalIndex : i;
-                    const isSelected = isMultiSelect
-                      ? Array.isArray(userAnswer) && userAnswer.includes(optionVal)
-                      : userAnswer === optionVal;
-                    const isCorrectOpt = option.isCorrect;
-
-                    const solarpunkStyles = [
-                      { 
-                        color: "text-emerald-900", bg: "bg-emerald-100", border: "border-emerald-300", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10",
-                        selectedBg: "bg-emerald-500", selectedBorder: "border-emerald-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-emerald-600", selectedShadow: "shadow-emerald-500/40"
-                      },
-                      { 
-                        color: "text-orange-900", bg: "bg-orange-100", border: "border-orange-300", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10",
-                        selectedBg: "bg-orange-500", selectedBorder: "border-orange-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-orange-600", selectedShadow: "shadow-orange-500/40"
-                      },
-                      { 
-                        color: "text-sky-900", bg: "bg-sky-100", border: "border-sky-300", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10",
-                        selectedBg: "bg-sky-500", selectedBorder: "border-sky-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-sky-600", selectedShadow: "shadow-sky-500/40"
-                      },
-                      { 
-                        color: "text-purple-900", bg: "bg-purple-100", border: "border-purple-300", iconBg: "bg-purple-200", shadow: "shadow-purple-900/10",
-                        selectedBg: "bg-purple-500", selectedBorder: "border-purple-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-purple-600", selectedShadow: "shadow-purple-500/40"
-                      },
-                      { 
-                        color: "text-rose-900", bg: "bg-rose-100", border: "border-rose-300", iconBg: "bg-rose-200", shadow: "shadow-rose-900/10",
-                        selectedBg: "bg-rose-500", selectedBorder: "border-rose-600", selectedColor: "text-white", selectedIconBg: "bg-white", selectedIconColor: "text-rose-600", selectedShadow: "shadow-rose-500/40"
-                      },
-                    ];
-                    
-                    const blobShapes = [
-                      "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
-                      "rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem]",
-                      "rounded-[2.5rem_4.5rem_3rem_4rem_/_4rem_3rem_4.5rem_2.5rem]",
-                      "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
-                      "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
-                    ];
-
-                    const theme = solarpunkStyles[i % solarpunkStyles.length];
-                    const blobShape = blobShapes[i % blobShapes.length];
-
-                    let containerClass = `${theme.bg} ${theme.border} ${theme.shadow}`;
-                    let textClass = theme.color;
-                    let iconClass = `${theme.iconBg} ${theme.color}`;
-
-                    if (isChecked) {
-                      if (isCorrectOpt) {
-                        containerClass = `bg-emerald-100 border-emerald-400 shadow-emerald-900/10 ${quizMode === "autoplay" ? "" : "scale-[1.02]"}`;
-                        textClass = "text-emerald-900";
-                        iconClass = "bg-emerald-500 text-white";
-                      } else if (isSelected) {
-                        containerClass = "bg-rose-100 border-rose-400 shadow-rose-900/10";
-                        textClass = "text-rose-900";
-                        iconClass = "bg-rose-500 text-white";
-                      } else {
-                        containerClass = "bg-slate-50 border-slate-200 opacity-60";
-                        textClass = "text-slate-500";
-                        iconClass = "bg-slate-200 text-slate-500";
-                      }
-                    } else if (isSelected) {
-                      containerClass = `${theme.selectedBg} ${theme.selectedBorder} scale-[1.05] shadow-2xl ${theme.selectedShadow} z-10 animate-solar-pulse border-4`;
-                      textClass = theme.selectedColor;
-                      iconClass = `${theme.selectedIconBg} ${theme.selectedIconColor} scale-110 -rotate-6 shadow-xl`;
-                    }
-
-                    return (
-                      <button
-                        key={i}
-                        disabled={isChecked}
-                        onClick={() => handleAnswerChange(currentQuestion, optionVal)}
-                        className={`group relative min-h-[clamp(4.5rem,9dvh,6rem)] w-auto flex-auto min-w-[140px] max-w-full ${blobShape} py-[clamp(0.75rem,2dvh,1.25rem)] px-[clamp(1rem,3vw,1.5rem)] transition-all duration-700 flex flex-col items-center justify-center border-[3px] shadow-lg ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.03]" : ""}`}
-                        style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
-                      >
-                        {/* Floating Badge (A, B, C, D) */}
-                        <div className={`absolute -top-3 -left-2 sm:-top-4 sm:-left-3 rounded-full shadow-lg transition-all duration-700 flex items-center justify-center w-10 h-10 text-xl font-[900] ${iconClass} ${!isChecked && !isSelected ? "group-hover:scale-110 group-hover:-rotate-12" : ""}`}>
-                          {isMultiSelect
-                            ? <Check className={`w-6 h-6 transition-all ${isSelected ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} strokeWidth={4} />
-                            : String.fromCharCode(65 + i)}
-                        </div>
-
-                        <span className={`relative z-10 font-[800] text-[clamp(1rem,2.5dvh,1.25rem)] tracking-tight transition-all duration-500 ${textClass} text-center flex items-center justify-center gap-1.5`}>
-                          {option.text}
-                          {isChecked && isCorrectOpt && <CheckCircle2 className="w-[1.25em] h-[1.25em] text-emerald-600 shrink-0 ml-1" />}
-                          {isChecked && isSelected && !isCorrectOpt && <XCircle className="w-[1.25em] h-[1.25em] text-rose-600 shrink-0 ml-1" />}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* ── TRUE / FALSE ── */}
-              {qType === "TRUE_FALSE" && (
-                <div className="grid grid-cols-2 gap-6 pt-4">
-                  {seedShuffle([
-                    { 
-                      label: "True", 
-                      value: true,
-                      icon: (colorClass: string) => (
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-hover:scale-110 shadow-sm ${colorClass}`}>
-                          <Check className="w-8 h-8" strokeWidth={4.5} />
-                        </div>
-                      )
-                    },
-                    { 
-                      label: "False", 
-                      value: false,
-                      icon: (colorClass: string) => (
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-hover:scale-110 shadow-sm ${colorClass}`}>
-                          <X className="w-8 h-8" strokeWidth={4.5} />
-                        </div>
-                      )
-                    },
-                  ], `${attemptSeed}-${currentQuestion?.id}-tf`).map((opt, i) => {
-                    const isSelected = userAnswer === opt.value;
-                    let isCorrectOpt = false;
-                    if (typeof currentQuestionData.isTrue === "boolean") {
-                      isCorrectOpt = currentQuestionData.isTrue === opt.value;
-                    } else if (Array.isArray(currentQuestionData.options)) {
-                      const matchedOpt = currentQuestionData.options.find((o: any) => {
-                        const normText = (o.text || "").toLowerCase().trim();
-                        return opt.value ? (normText === "true" || normText === "đúng" || normText === "yes") : (normText === "false" || normText === "sai" || normText === "no");
-                      });
-                      isCorrectOpt = !!matchedOpt?.isCorrect;
-                    }
-                    
-                    let btnStyle = "";
-                    let iconBgColor = "";
-                    
-                    if (isChecked) {
-                      if (isCorrectOpt) {
-                        btnStyle = "border-emerald-400 bg-emerald-100 text-emerald-900 shadow-md scale-[1.02]";
-                        iconBgColor = "bg-emerald-500 text-white";
-                      } else if (isSelected) {
-                        btnStyle = "border-rose-400 bg-rose-100 text-rose-900 shadow-md";
-                        iconBgColor = "bg-rose-500 text-white";
-                      } else {
-                        btnStyle = "border-slate-200 bg-slate-50 text-slate-400 opacity-60";
-                        iconBgColor = "bg-slate-200 text-slate-400";
-                      }
-                    } else if (isSelected) {
-                      if (opt.value) {
-                        btnStyle = "border-emerald-600 bg-emerald-500 text-white scale-[1.05] shadow-xl shadow-emerald-500/30 border-4 z-10 font-black";
-                        iconBgColor = "bg-white text-emerald-600 scale-110 shadow-md";
-                      } else {
-                        btnStyle = "border-rose-600 bg-rose-500 text-white scale-[1.05] shadow-xl shadow-rose-500/30 border-4 z-10 font-black";
-                        iconBgColor = "bg-white text-rose-600 scale-110 shadow-md";
-                      }
-                    } else {
-                      if (opt.value) {
-                        btnStyle = "border-emerald-250 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100/80 shadow-sm";
-                        iconBgColor = "bg-emerald-100 text-emerald-600";
-                      } else {
-                        btnStyle = "border-rose-250 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100/80 shadow-sm";
-                        iconBgColor = "bg-rose-100 text-rose-600";
-                      }
-                    }
-                    
-                    return (
-                      <button
-                        key={i}
-                        disabled={isChecked}
-                        onClick={() => handleAnswerChange(currentQuestion, opt.value)}
-                        className={`relative group flex flex-col items-center justify-center py-6 px-4 rounded-[2.5rem] border-[3px] font-extrabold text-xl sm:text-2xl transition-all duration-350 ${btnStyle} ${!isChecked ? "hover:scale-[1.03] active:scale-95 cursor-pointer" : "cursor-default"}`}
-                        style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
-                      >
-                        {/* Badge góc trên phải khi review */}
-                        {isChecked && (isCorrectOpt || isSelected) && (
-                          <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
-                            {isCorrectOpt && quizMode !== "autoplay" && (
-                              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-400">
-                                <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> Correct
-                              </span>
-                            )}
-                            {isSelected && !isCorrectOpt && (
-                              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-rose-500 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-rose-400">
-                                <User className="w-2.5 h-2.5 shrink-0" /> Yours
-                              </span>
-                            )}
-                            {isSelected && isCorrectOpt && (
-                              <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide bg-emerald-700 text-white pl-1.5 pr-2 py-0.5 rounded-full shadow-md border border-emerald-600">
-                                <User className="w-2.5 h-2.5 shrink-0" /> Yours ✓
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {opt.icon(iconBgColor)}
-                        <span>{opt.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* ── MATCHING ── */}
-              {qType === "MATCHING" && (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start w-full min-h-0">
-                  {/* Cột bên trái: Yêu cầu câu hỏi và media đính kèm */}
-                  <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left space-y-5 px-2">
-                    {questionText && questionText !== "{}" && (
-                      <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
-                        <h3 className="text-xl sm:text-2xl md:text-3xl font-[800] text-[#2D366D] leading-tight" style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}>
-                          {questionText}
-                        </h3>
-                        {currentQuestion?.audioUrl && (
-                          <QuestionAudioPlayButton src={currentQuestion.audioUrl} playbackRate={getQuestionSpeed()} />
-                        )}
-                      </div>
-                    )}
-                    {currentQuestion?.imageUrl && (
-                      <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-3xl overflow-hidden shadow-md border-4 border-white bg-white">
-                        <img src={currentQuestion.imageUrl} alt="Question media" className="w-full h-full object-cover" />
-                      </div>
+                    {isCorrectNow ? (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" /> Correct! 🎉
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-5 h-5" /> Incorrect! 😅
+                      </>
                     )}
                   </div>
-
-                  {/* Cột bên phải: Khu vực làm bài nối cặp */}
-                  <div className="md:col-span-8 w-full min-h-0">
-                    <MatchingQuestionBlock
-                      q={currentQuestion}
-                      questionData={currentQuestionData}
-                      userAnswer={userAnswer}
-                      isChecked={isChecked}
-                      handleAnswerChange={handleAnswerChange}
-                      matchingColors={matchingColors}
-                    />
-                  </div>
                 </div>
               )}
 
-              {/* ── CLOZE TEST ── */}
-              {qType === "CLOZE_TEST" && (
-                <ClozeTestBlock
-                  q={currentQuestion}
-                  questionData={currentQuestionData}
-                  userAnswer={userAnswer}
-                  isChecked={isChecked}
-                  handleAnswerChange={handleAnswerChange}
-                />
-              )}
-
-              {/* ── EXPLANATION (with language toggle) ── */}
-              {isChecked && currentQuestion?.explanation && (
-                <div className="space-y-3 mt-2">
-                  <React.Suspense
-                    fallback={
-                      <ExplanationBlock
-                        questionId={currentQuestion.id}
-                        explanation={currentQuestion.explanation}
-                        explanationTranslations={null}
-                        isExpanded={quizMode === "autoplay" ? true : !!expandedExplanations[currentQuestion.id]}
-                        onToggleExpand={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
-                        hideHeader={quizMode === "autoplay"}
-                      />
-                    }
-                  >
-                    <ExplanationResolver
-                      promise={questionTranslationsPromise}
-                      questionId={currentQuestion.id}
-                      explanation={currentQuestion.explanation}
-                      isExpanded={quizMode === "autoplay" ? true : !!expandedExplanations[currentQuestion.id]}
-                      onToggleExpand={() => setExpandedExplanations((p) => ({ ...p, [currentQuestion.id]: !p[currentQuestion.id] }))}
-                      hideHeader={quizMode === "autoplay"}
-                    />
-                  </React.Suspense>
-                </div>
-              )}
-            </div>
-
-
-            {/* ── CARD FOOTER (NAVIGATION) ── */}
-            <div className="w-full bg-transparent px-[clamp(1rem,4vw,3rem)] py-[clamp(0.75rem,2dvh,1.25rem)] flex items-center justify-between border-t-2 border-slate-100 shrink-0 z-20">
-              {/* Back */}
-              <button
-                disabled={currentIndex === 0 || isAutoRevealing}
-                onClick={() => navigateTo(currentIndex - 1)}
-                className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 ${
-                  currentIndex === 0 || isAutoRevealing
-                    ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
-                    : "border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95"
+              {/* Card Body */}
+              <div
+                className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+                  isChecked && quizMode !== "autoplay"
+                    ? "px-[clamp(0.75rem,3vw,2rem)] pt-1 pb-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
+                    : "px-[clamp(1rem,4vw,3rem)] pt-2 pb-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
                 }`}
               >
-                <ChevronLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Previous</span>
-              </button>
+                {/* Question text */}
+                {qType !== "MATCHING" && questionText && questionText !== "{}" && (
+                  <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
+                    <h3
+                      className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
+                        isChecked && quizMode !== "autoplay"
+                          ? "text-[clamp(1rem,2dvh,1.25rem)]"
+                          : "text-[clamp(1.25rem,3.5dvh,2rem)]"
+                      }`}
+                      style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                      title="Tap a word to translate"
+                    >
+                      {questionText}
+                    </h3>
+                    {currentQuestion?.audioUrl && (
+                      <QuestionAudioPlayButton
+                        src={currentQuestion.audioUrl}
+                        playbackRate={audioEngine.getQuestionSpeed()}
+                      />
+                    )}
+                  </div>
+                )}
 
-              <div className="flex-1 flex justify-center items-center">
-                {quizMode === "autoplay" && autoplayCountdown !== null && !isAnswerRevealed && (
-                  <div className="w-12 h-12 rounded-full bg-amber-50/90 border-2 border-amber-200/80 shadow-[0_4px_10px_rgba(245,158,11,0.12),inset_0_2px_4px_rgba(255,255,255,0.9)] flex items-center justify-center text-2xl font-[900] text-amber-500 animate-bounce select-none">
-                    {autoplayCountdown}
+                {/* Multiple Choice / Select */}
+                {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
+                  <MultipleChoiceBlock
+                    currentQuestion={currentQuestion}
+                    options={currentQuestionData.options || []}
+                    userAnswer={userAnswer}
+                    isChecked={isChecked}
+                    isMultiSelect={isMultiSelect}
+                    quizMode={quizMode}
+                    handleAnswerChange={handleAnswerChange}
+                  />
+                )}
+
+                {/* True / False */}
+                {qType === "TRUE_FALSE" && (
+                  <TrueFalseBlock
+                    currentQuestion={currentQuestion}
+                    currentQuestionData={currentQuestionData}
+                    userAnswer={userAnswer}
+                    isChecked={isChecked}
+                    quizMode={quizMode}
+                    attemptSeed={attemptSeed}
+                    handleAnswerChange={handleAnswerChange}
+                  />
+                )}
+
+                {/* Matching Question */}
+                {qType === "MATCHING" && (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start w-full min-h-0">
+                    <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left space-y-5 px-2">
+                      {questionText && questionText !== "{}" && (
+                        <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+                          <h3
+                            className="text-xl sm:text-2xl md:text-3xl font-[800] text-[#2D366D] leading-tight"
+                            style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                          >
+                            {questionText}
+                          </h3>
+                          {currentQuestion?.audioUrl && (
+                            <QuestionAudioPlayButton
+                              src={currentQuestion.audioUrl}
+                              playbackRate={audioEngine.getQuestionSpeed()}
+                            />
+                          )}
+                        </div>
+                      )}
+                      {currentQuestion?.imageUrl && (
+                        <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-3xl overflow-hidden shadow-md border-4 border-white bg-white">
+                          <img
+                            src={currentQuestion.imageUrl}
+                            alt="Question media"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-8 w-full min-h-0">
+                      <MatchingQuestionBlock
+                        q={currentQuestion}
+                        questionData={currentQuestionData}
+                        userAnswer={userAnswer}
+                        isChecked={isChecked}
+                        handleAnswerChange={handleAnswerChange}
+                        matchingColors={matchingColors}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Cloze Test */}
+                {qType === "CLOZE_TEST" && (
+                  <ClozeTestBlock
+                    q={currentQuestion}
+                    questionData={currentQuestionData}
+                    userAnswer={userAnswer}
+                    isChecked={isChecked}
+                    handleAnswerChange={handleAnswerChange}
+                  />
+                )}
+
+                {/* Explanation block */}
+                {isChecked && currentQuestion.explanation && (
+                  <div className="w-full pt-2">
+                    <Suspense
+                      fallback={
+                        <ExplanationResolver
+                          promise={undefined}
+                          questionId={currentQuestion.id}
+                          explanation={currentQuestion.explanation}
+                          isExpanded={quizMode === "autoplay" ? true : !!expandedExplanations[currentQuestion.id]}
+                          onToggleExpand={() =>
+                            setExpandedExplanations((p) => ({
+                              ...p,
+                              [currentQuestion.id]: !p[currentQuestion.id],
+                            }))
+                          }
+                          hideHeader={quizMode === "autoplay"}
+                        />
+                      }
+                    >
+                      <ExplanationResolver
+                        promise={questionTranslationsPromise}
+                        questionId={currentQuestion.id}
+                        explanation={currentQuestion.explanation}
+                        isExpanded={quizMode === "autoplay" ? true : !!expandedExplanations[currentQuestion.id]}
+                        onToggleExpand={() =>
+                          setExpandedExplanations((p) => ({
+                            ...p,
+                            [currentQuestion.id]: !p[currentQuestion.id],
+                          }))
+                        }
+                        hideHeader={quizMode === "autoplay"}
+                      />
+                    </Suspense>
                   </div>
                 )}
               </div>
 
-              {/* Next / Check / Reset */}
-              {currentIndex < questions.length - 1 ? (
+              {/* Card Footer Navigation */}
+              <div className="w-full bg-transparent px-[clamp(1rem,4vw,3rem)] py-[clamp(0.75rem,2dvh,1.25rem)] flex items-center justify-between border-t-2 border-slate-100 shrink-0 z-20">
                 <button
-                  disabled={isAutoRevealing}
-                  onClick={() => navigateTo(currentIndex + 1)}
-                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 ${
-                    isAutoRevealing
+                  disabled={currentIndex === 0 || isAutoRevealing}
+                  onClick={() => navigateTo(currentIndex - 1)}
+                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 cursor-pointer ${
+                    currentIndex === 0 || isAutoRevealing
                       ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
                       : "border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95"
                   }`}
                 >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronLeft className="w-5 h-5" />
+                  <span className="hidden sm:inline">Previous</span>
                 </button>
-              ) : isReviewMode ? (
-                <button
-                  onClick={handleRetryAssignment}
-                  disabled={isRetrying}
-                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#9A89FF] bg-[#9A89FF] text-white hover:bg-[#8371f5] hover:border-[#8371f5] hover:text-white hover:shadow-lg active:scale-95 transition-all ${
-                    isRetrying ? "opacity-75 cursor-not-allowed" : ""
-                  }`}
-                >
-                  {isRetrying ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <RotateCcw className="w-5 h-5" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {isRetrying ? "Đang chuẩn bị đề thi..." : (t("retryAssignment") || "Làm lại bài")}
-                  </span>
-                  <span className="sm:hidden">
-                    {isRetrying ? "Đang tải..." : (t("retry") || "Làm lại")}
-                  </span>
-                </button>
-              ) : isAllChecked ? (
-                <button
-                  onClick={handleReset}
-                  className="flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95 transition-all"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  <span className="hidden sm:inline">Try again</span>
-                </button>
-              ) : (
-                <button
-                  disabled={isAutoRevealing}
-                  onClick={handleCheckAll}
-                  className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 ${
-                    isAutoRevealing
-                      ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
-                      : "border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white hover:shadow-lg active:scale-95"
-                  }`}
-                >
-                  {isAutoRevealing ? (
-                    <>
-                      <span className="animate-spin inline-block">⏳</span>
-                      <span className="hidden sm:inline">Grading...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-5 h-5" />
-                      <span>Submit</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
 
-        {/* ── DẢI SỐ CÂU HỎI BÊN DƯỚI (2 hàng từ trái qua phải, căn giữa, 100% hình tròn) ── */}
-        {questions && questions.length > 0 && (() => {
-          const splitTwoRows = questions.length > 8;
-          const half = splitTwoRows ? Math.ceil(questions.length / 2) : questions.length;
-          const row1 = questions.slice(0, half);
-          const row2 = splitTwoRows ? questions.slice(half) : [];
-
-          const renderQuestionButton = (q: any, i: number) => {
-            const active = i === currentIndex;
-
-            // Check answer status
-            const ans = answers[q.id];
-            let isAnswered = false;
-            if (ans !== undefined && ans !== null) {
-              if (Array.isArray(ans)) {
-                isAnswered = ans.length > 0;
-              } else if (typeof ans === "object") {
-                isAnswered = Object.keys(ans).length > 0;
-              } else {
-                isAnswered = true;
-              }
-            }
-
-            // Check if graded
-            const isGraded = checkedQuestions[q.id];
-            let status = "pending";
-            if (isGraded) {
-              status = getQuestionStatus(q, ans);
-            }
-
-            // Determine classes based on state - 100% solid colors without opacity to prevent Chromium square artifact
-            let btnClass = "";
-
-            if (isGraded) {
-              if (status === "correct") {
-                btnClass = active
-                  ? "bg-emerald-500 text-white ring-2 ring-emerald-300 shadow-md shadow-emerald-500/40 scale-105"
-                  : "bg-emerald-500 text-white border border-emerald-600 hover:bg-emerald-600";
-              } else if (status === "incorrect") {
-                btnClass = active
-                  ? "bg-rose-500 text-white ring-2 ring-rose-300 shadow-md shadow-rose-500/40 scale-105"
-                  : "bg-rose-500 text-white border border-rose-600 hover:bg-rose-600";
-              } else {
-                btnClass = active
-                  ? "bg-slate-500 text-white ring-2 ring-slate-300 shadow-md shadow-slate-500/40 scale-105"
-                  : "bg-white text-slate-400 border border-slate-300 border-dashed hover:bg-slate-50";
-              }
-            } else {
-              if (active) {
-                btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 ring-2 ring-orange-300 scale-105 z-10";
-              } else if (isAnswered) {
-                btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20 hover:bg-purple-600";
-              } else {
-                btnClass = "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-purple-300 hover:text-purple-600 shadow-xs";
-              }
-            }
-
-            return (
-              <button
-                key={q.id}
-                onClick={() => navigateTo(i)}
-                disabled={isAutoRevealing}
-                className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer select-none ${btnClass}`}
-                title={`Câu ${i + 1}`}
-              >
-                <span className="font-black text-xs sm:text-sm leading-none">
-                  {i + 1}
-                </span>
-                {isGraded && !active && status === "correct" && (
-                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-xs">
-                    <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3.5px]" />
-                  </div>
-                )}
-                {isGraded && !active && status === "incorrect" && (
-                  <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-xs">
-                    <X className="w-2.5 h-2.5 text-rose-700 stroke-[3.5px]" />
-                  </div>
-                )}
-              </button>
-            );
-          };
-
-          return (
-            <div className="w-full mt-3 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
-              <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3.5 sm:px-5 py-2.5 max-w-full overflow-x-auto scrollbar-none flex flex-col gap-2 items-center justify-center">
-                {/* Hàng 1: Từ trái qua phải (1 -> 8) */}
-                <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 flex-nowrap">
-                  {row1.map((q, idx) => renderQuestionButton(q, idx))}
+                <div className="flex-1 flex justify-center items-center">
+                  {quizMode === "autoplay" &&
+                    audioEngine.autoplayCountdown !== null &&
+                    !audioEngine.isAnswerRevealed && (
+                      <div className="w-12 h-12 rounded-full bg-amber-50/90 border-2 border-amber-200/80 shadow-[0_4px_10px_rgba(245,158,11,0.12),inset_0_2px_4px_rgba(255,255,255,0.9)] flex items-center justify-center text-2xl font-[900] text-amber-500 animate-bounce select-none">
+                        {audioEngine.autoplayCountdown}
+                      </div>
+                    )}
                 </div>
 
-                {/* Hàng 2: Từ trái qua phải (9 -> 15) */}
-                {row2.length > 0 && (
-                  <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 flex-nowrap">
-                    {row2.map((q, idx) => renderQuestionButton(q, half + idx))}
-                  </div>
+                {currentIndex < questions.length - 1 ? (
+                  <button
+                    disabled={isAutoRevealing}
+                    onClick={() => navigateTo(currentIndex + 1)}
+                    className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 cursor-pointer ${
+                      isAutoRevealing
+                        ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                        : "border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95"
+                    }`}
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                ) : isReviewMode ? (
+                  <button
+                    onClick={handleRetryAssignment}
+                    disabled={isRetrying}
+                    className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#9A89FF] bg-[#9A89FF] text-white hover:bg-[#8371f5] hover:border-[#8371f5] hover:text-white hover:shadow-lg active:scale-95 transition-all cursor-pointer ${
+                      isRetrying ? "opacity-75 cursor-not-allowed" : ""
+                    }`}
+                  >
+                    {isRetrying ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <RotateCcw className="w-5 h-5" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {isRetrying ? "Đang chuẩn bị đề thi..." : t("retryAssignment") || "Làm lại bài"}
+                    </span>
+                    <span className="sm:hidden">
+                      {isRetrying ? "Đang tải..." : t("retry") || "Làm lại"}
+                    </span>
+                  </button>
+                ) : isAllChecked ? (
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg border-2 border-[#e9d5ff] bg-white text-[#9A89FF] hover:bg-[#9A89FF] hover:border-[#9A89FF] hover:text-white hover:shadow-lg active:scale-95 transition-all cursor-pointer"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span className="hidden sm:inline">Try again</span>
+                  </button>
+                ) : (
+                  <button
+                    disabled={isAutoRevealing}
+                    onClick={handleCheckAll}
+                    className={`flex items-center gap-2 px-5 sm:px-8 py-3 rounded-full font-black text-base sm:text-lg transition-all duration-200 border-2 cursor-pointer ${
+                      isAutoRevealing
+                        ? "border-slate-200 bg-slate-50 text-slate-300 cursor-not-allowed"
+                        : "border-emerald-200 bg-white text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white hover:shadow-lg active:scale-95"
+                    }`}
+                  >
+                    {isAutoRevealing ? (
+                      <>
+                        <span className="animate-spin inline-block">⏳</span>
+                        <span className="hidden sm:inline">Grading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        <span>Submit</span>
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
-          );
-        })()}
+          </div>
 
-        {/* Related Content in Review Mode (static, below the sliding card) */}
-        {scoreResult && relatedAssignmentsPromise && (
-          <React.Suspense fallback={null}>
-            <RelatedAssignmentsConsumer promise={relatedAssignmentsPromise} isGuest={isGuest} onNavigate={handleSafeNavigate} />
-          </React.Suspense>
-        )}
+          {/* Question circle buttons (1..15) */}
+          <QuizQuestionNumbers
+            questions={questions}
+            currentIndex={currentIndex}
+            answers={answers}
+            checkedQuestions={checkedQuestions}
+            isAutoRevealing={isAutoRevealing}
+            navigateTo={navigateTo}
+          />
+
+          {/* Related Content in Review Mode */}
+          {scoreResult && relatedAssignmentsPromise && (
+            <Suspense fallback={null}>
+              <RelatedAssignmentsConsumer
+                promise={relatedAssignmentsPromise}
+                isGuest={isGuest}
+                onNavigate={handleSafeNavigate}
+              />
+            </Suspense>
+          )}
         </div>
       </div>
 
-      {/* ── RESULT POPUP MODAL ── */}
+      {/* Result Modal */}
       {isShowingResultScreen && scoreResult && (
-        <div 
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsShowingResultScreen(false);
-            }
-          }}
-        >
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border-4 border-primary/20 shadow-2xl shadow-primary/20 overflow-hidden flex flex-col items-center text-center px-8 py-7 relative max-w-md w-full animate-in zoom-in-95 duration-300">
-            {/* Decorative top gradient */}
-            <div className="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-emerald-400 via-amber-400 to-primary"></div>
-
-            {/* Close button (X) */}
-            <button
-              onClick={() => setIsShowingResultScreen(false)}
-              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95"
-              title="Close"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="text-5xl mb-3 mt-1 animate-bounce">
-              {getScoreEmoji(scoreResult.correct, scoreResult.total)}
-            </div>
-            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">
-              {getScoreMsg(scoreResult.correct, scoreResult.total)}
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-6">
-              You answered <span className="text-primary font-black text-xl px-1">{scoreResult.correct}</span> / {scoreResult.total} questions correctly.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
-              <button
-                onClick={() => {
-                  setIsShowingResultScreen(false);
-                }}
-                className="px-6 py-2.5 rounded-2xl bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 font-black text-sm transition-all active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto"
-              >
-                <Info className="w-4 h-4" />
-                {t("reviewDetails") || "Review details"}
-              </button>
-              <button
-                onClick={handleRetryAssignment}
-                disabled={isRetrying}
-                className={`px-6 py-2.5 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black text-sm transition-all shadow-xl shadow-primary/30 active:scale-95 flex items-center justify-center gap-2 w-full sm:w-auto ${
-                  isRetrying ? "opacity-75 cursor-not-allowed" : ""
-                }`}
-              >
-                {isRetrying ? (
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                ) : (
-                  <RotateCcw className="w-4 h-4 shrink-0" />
-                )}
-                <span>{isRetrying ? "Đang chuẩn bị đề thi..." : (t("retryAssignment") || "Retry assignment")}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <QuizResultModal
+          scoreResult={scoreResult}
+          isRetrying={isRetrying}
+          onClose={() => setIsShowingResultScreen(false)}
+          handleRetryAssignment={handleRetryAssignment}
+        />
       )}
 
-      {/* ── NAV GUARD MODAL ── */}
-      {navGuard.isOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 backdrop-blur-sm bg-slate-900/60 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md p-8 relative animate-in zoom-in-95 duration-300">
-            <button onClick={() => setNavGuard({ ...navGuard, isOpen: false })} className="absolute top-5 left-5 p-1.5 text-slate-400 hover:text-slate-900 transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-            <div className="mt-6 space-y-5 text-center">
-              <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto">
-                <HelpCircle className="w-7 h-7 text-amber-600" />
-              </div>
-              <div className="space-y-2">
-                <h4 className="text-xl font-black text-slate-900">{t("navGuardTitle")}</h4>
-                <p className="text-slate-500 text-sm leading-relaxed">{t("navGuardMessage", { unfinished: allCompleted ? "" : t("unfinished"), title: navGuard.targetTitle })}</p>
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => { setNavGuard({ ...navGuard, isOpen: false }); router.push(navGuard.targetUrl); }}
-                  className="w-full py-4 bg-primary text-white rounded-2xl font-black text-sm tracking-widest hover:bg-primary/90 transition-all shadow-xl uppercase italic"
-                >
-                  {t("confirm")}
-                </button>
-                <button
-                  onClick={() => setNavGuard({ ...navGuard, isOpen: false })}
-                  className="w-full py-3 text-slate-500 font-bold text-xs hover:text-slate-800 transition-colors uppercase tracking-widest"
-                >
-                  {t("continue")}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} defaultView="studentLogin" />
+      {/* Nav Guard Modal */}
+      <QuizNavGuardModal
+        isOpen={navGuard.isOpen}
+        targetTitle={navGuard.targetTitle}
+        targetUrl={navGuard.targetUrl}
+        allCompleted={allCompleted}
+        onClose={() => setNavGuard({ ...navGuard, isOpen: false })}
+        onConfirm={(url) => {
+          setNavGuard({ ...navGuard, isOpen: false });
+          router.push(url);
+        }}
+      />
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        defaultView="studentLogin"
+      />
     </div>
   );
 }

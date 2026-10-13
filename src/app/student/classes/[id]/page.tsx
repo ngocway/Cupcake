@@ -11,21 +11,16 @@ import { ClassHeroBento } from './_components/ClassHeroBento';
 import StudentClassDetailLoading from './loading';
 
 import { fetchWithRedis } from '@/lib/cached-queries';
-import { prewarmAssignmentsData } from '@/app/student/assignments/[id]/run/data';
 
-async function getStudentClassDetailData(userId: string, classId: string) {
-  return fetchWithRedis(`student:class-detail:${userId}:${classId}`, 900, async () => {
-    // 1. Fetch enrollment, rawAssignments, allGroups, allEnrolledClasses in parallel
-    const [enrollment, rawAssignments, allGroups, allEnrolledClasses] = await Promise.all([
-      prisma.classEnrollment.findUnique({
-        where: { studentId_classId: { studentId: userId, classId } },
+async function getCachedClassStructure(classId: string) {
+  return fetchWithRedis(`class:structure:v5:${classId}`, 86400, async () => {
+    // 1. Fetch class info, all 268 assignments, and 45 groups
+    const [cls, rawAssignments, allGroups] = await Promise.all([
+      prisma.class.findUnique({
+        where: { id: classId },
         include: {
-          class: {
-            include: {
-              teacher: {
-                select: { name: true, email: true, image: true }
-              }
-            }
+          teacher: {
+            select: { id: true, name: true, email: true, image: true, professionalTitle: true }
           }
         }
       }),
@@ -43,16 +38,12 @@ async function getStudentClassDetailData(userId: string, classId: string) {
               materialType: true,
               level: true,
               instructions: true,
-              instructionsTranslations: true,
               thumbnail: true,
               tags: true,
               grammarLesson: true,
               grammarTopic: true,
               teacher: {
                 select: { id: true, name: true, image: true }
-              },
-              _count: {
-                select: { questions: true }
               }
             }
           }
@@ -67,41 +58,22 @@ async function getStudentClassDetailData(userId: string, classId: string) {
           }
         },
         orderBy: [{ orderIndex: 'asc' }, { createdAt: 'asc' }]
-      }),
-      prisma.classEnrollment.findMany({
-        where: { 
-          studentId: userId, 
-          status: 'ACTIVE',
-          class: { deletedAt: null }
-        },
-        select: {
-          class: {
-            select: {
-              id: true,
-              name: true,
-              gradeLevel: true,
-            }
-          }
-        },
-        orderBy: { joinedAt: 'desc' }
       })
     ]);
 
-    // 2. Fetch submissions directly with indexed assignmentId in list, strictly scoped to this class
-    const assignmentIds = rawAssignments.map(a => a.assignmentId);
-    const submissions = assignmentIds.length > 0
-      ? await prisma.submission.findMany({
-          where: {
-            studentId: userId,
-            classId,
-            assignmentId: { in: assignmentIds },
-            submittedAt: { not: null }
-          },
-          select: { assignmentId: true, groupId: true, score: true, submittedAt: true }
-        })
-      : [];
+    if (!cls || cls.deletedAt) {
+      return {
+        cls: null,
+        rawAssignments: [],
+        allGroups: [],
+        resolvedLessons: [],
+        resolvedGames: [],
+        resolvedFlashcards: [],
+        day1GrammarLessons: []
+      };
+    }
 
-    // 3. Pre-resolve accurate thumbnails matching HomepageFeed for reading / games / flashcards
+    // 2. Pre-resolve accurate thumbnails matching HomepageFeed for reading / games / flashcards
     const lessonRawIds: string[] = [];
     const gameRawIds: string[] = [];
     const flashcardRawIds: string[] = [];
@@ -126,30 +98,36 @@ async function getStudentClassDetailData(userId: string, classId: string) {
       }
     });
 
-    const grammarLessonIds: string[] = [];
-    rawAssignments.forEach((ac) => {
-      const a = ac.assignment;
-      if ((a as any).grammarLesson) {
-        grammarLessonIds.push((a as any).grammarLesson);
-      }
-      if (a.instructions && a.instructions.trim().startsWith('{')) {
-        try {
-          const meta = JSON.parse(a.instructions);
-          if (meta.rawId) {
-            const raw = String(meta.rawId);
-            if (raw.startsWith('grammar:')) {
-              const parts = raw.replace(/^grammar:/, '').split(':');
-              if (parts.length >= 2) grammarLessonIds.push(parts[1]);
-              else if (parts.length === 1) grammarLessonIds.push(parts[0]);
-            } else {
-              grammarLessonIds.push(raw);
+    // 3. Pre-fetch Day 1 grammar lesson HTML for instant 0ms open for all new students
+    let firstGrammarLessonId: string | null = null;
+    const firstGroup = allGroups[0];
+    if (firstGroup) {
+      const firstGroupAssignments = rawAssignments.filter(ac => ac.groupId === firstGroup.id);
+      for (const ac of firstGroupAssignments) {
+        const a = ac.assignment;
+        if ((a as any).grammarLesson) {
+          firstGrammarLessonId = (a as any).grammarLesson;
+          break;
+        }
+        if (a.instructions && a.instructions.trim().startsWith('{')) {
+          try {
+            const meta = JSON.parse(a.instructions);
+            if (meta.rawId) {
+              const raw = String(meta.rawId);
+              if (raw.startsWith('grammar:')) {
+                const parts = raw.replace(/^grammar:/, '').split(':');
+                firstGrammarLessonId = parts.length >= 2 ? parts[1] : parts[0];
+              } else {
+                firstGrammarLessonId = raw;
+              }
+              break;
             }
-          }
-        } catch {}
+          } catch {}
+        }
       }
-    });
+    }
 
-    const [resolvedLessons, resolvedGames, resolvedFlashcards, resolvedGrammarLessons] = await Promise.all([
+    const [resolvedLessons, resolvedGames, resolvedFlashcards, day1GrammarLessons] = await Promise.all([
       lessonRawIds.length > 0
         ? prisma.lesson.findMany({
             where: { id: { in: lessonRawIds } },
@@ -168,26 +146,154 @@ async function getStudentClassDetailData(userId: string, classId: string) {
             select: { id: true, iconUrl: true }
           })
         : Promise.resolve([]),
-      grammarLessonIds.length > 0
+      firstGrammarLessonId
         ? prisma.grammarLesson.findMany({
-            where: { id: { in: Array.from(new Set(grammarLessonIds)) } },
+            where: { id: firstGrammarLessonId },
             select: { id: true, instructions: true, instructionsTranslations: true }
           })
         : Promise.resolve([]),
     ]);
 
     return {
-      enrollment,
+      cls,
       rawAssignments,
-      submissions,
       allGroups,
-      allEnrolledClasses,
       resolvedLessons,
       resolvedGames,
       resolvedFlashcards,
-      resolvedGrammarLessons
+      day1GrammarLessons
     };
   });
+}
+
+async function getStudentClassDetailData(userId: string, classId: string) {
+  // 1. Fetch shared class structure (cached for 24h across ALL students in L1 RAM + Upstash Redis)
+  const classStructurePromise = getCachedClassStructure(classId);
+
+  // 2. Fetch student-specific enrollment, submissions and other active classes
+  const studentDataPromise = Promise.all([
+    prisma.classEnrollment.findUnique({
+      where: { studentId_classId: { studentId: userId, classId } },
+      select: { status: true, joinedAt: true }
+    }),
+    prisma.submission.findMany({
+      where: {
+        studentId: userId,
+        classId,
+        submittedAt: { not: null }
+      },
+      select: { assignmentId: true, groupId: true, score: true, submittedAt: true }
+    }),
+    prisma.classEnrollment.findMany({
+      where: { 
+        studentId: userId, 
+        status: 'ACTIVE',
+        class: { deletedAt: null }
+      },
+      select: {
+        class: {
+          select: {
+            id: true,
+            name: true,
+            gradeLevel: true,
+          }
+        }
+      },
+      orderBy: { joinedAt: 'desc' }
+    })
+  ]);
+
+  const [structure, [enrollmentRecord, submissions, allEnrolledClasses]] = await Promise.all([
+    classStructurePromise,
+    studentDataPromise
+  ]);
+
+  const cls = structure?.cls || null;
+  const rawAssignments = structure?.rawAssignments || [];
+  const allGroups = structure?.allGroups || [];
+  const resolvedLessons = structure?.resolvedLessons || [];
+  const resolvedGames = structure?.resolvedGames || [];
+  const resolvedFlashcards = structure?.resolvedFlashcards || [];
+  const day1GrammarLessons = structure?.day1GrammarLessons || [];
+
+  const enrollment = enrollmentRecord && cls ? {
+    ...enrollmentRecord,
+    class: cls
+  } : null;
+
+  // 3. Determine active group for this student
+  let resolvedGrammarLessons = day1GrammarLessons || [];
+  if (submissions.length > 0 && allGroups.length > 0) {
+    const submittedKeys = new Set(
+      submissions.map((s: any) => (s.groupId ? `${s.assignmentId}_${s.groupId}` : s.assignmentId))
+    );
+    const submittedAids = new Set(submissions.map((s: any) => s.assignmentId));
+
+    let activeGroupId: string | null = null;
+    for (const g of allGroups) {
+      const gAssignments = rawAssignments.filter(ac => ac.groupId === g.id);
+      if (gAssignments.length === 0) continue;
+      const completedCount = gAssignments.filter(ac => {
+        const key = `${ac.assignment.id}_${g.id}`;
+        return submittedKeys.has(key) || submittedAids.has(ac.assignment.id);
+      }).length;
+      if (completedCount > 0 && completedCount < gAssignments.length) {
+        activeGroupId = g.id;
+        break;
+      }
+      if (completedCount === 0 && !activeGroupId) {
+        activeGroupId = g.id;
+        break;
+      }
+    }
+
+    // If active group is NOT the first group, fetch that active day's grammar lesson
+    if (activeGroupId && activeGroupId !== allGroups[0]?.id) {
+      let activeGrammarLessonId: string | null = null;
+      const activeGroupAssignments = rawAssignments.filter(ac => ac.groupId === activeGroupId);
+      for (const ac of activeGroupAssignments) {
+        const a = ac.assignment;
+        if ((a as any).grammarLesson) {
+          activeGrammarLessonId = (a as any).grammarLesson;
+          break;
+        }
+        if (a.instructions && a.instructions.trim().startsWith('{')) {
+          try {
+            const meta = JSON.parse(a.instructions);
+            if (meta.rawId) {
+              const raw = String(meta.rawId);
+              if (raw.startsWith('grammar:')) {
+                const parts = raw.replace(/^grammar:/, '').split(':');
+                activeGrammarLessonId = parts.length >= 2 ? parts[1] : parts[0];
+              } else {
+                activeGrammarLessonId = raw;
+              }
+              break;
+            }
+          } catch {}
+        }
+      }
+
+      if (activeGrammarLessonId) {
+        resolvedGrammarLessons = await prisma.grammarLesson.findMany({
+          where: { id: activeGrammarLessonId },
+          select: { id: true, instructions: true, instructionsTranslations: true }
+        });
+      }
+    }
+  }
+
+  return {
+    enrollment,
+    rawAssignments,
+    submissions,
+    allGroups,
+    allEnrolledClasses,
+    resolvedLessons,
+    resolvedGames,
+    resolvedFlashcards,
+    resolvedGrammarLessons
+  };
 }
 
 async function StudentClassDetailContent({ 
@@ -219,16 +325,7 @@ async function StudentClassDetailContent({
     resolvedGrammarLessons
   } = await getStudentClassDetailData(userId, id);
 
-  // Pre-warm question & translation caches in Redis for assignments in the class (non-blocking)
-  if (rawAssignments && rawAssignments.length > 0) {
-    const exerciseIds = rawAssignments
-      .filter((a: any) => a.assignment?.materialType === 'EXERCISE' || a.assignment?.materialType === 'GRAMMAR')
-      .map((a: any) => a.assignment?.id)
-      .filter(Boolean);
-    if (exerciseIds.length > 0) {
-      prewarmAssignmentsData(exerciseIds);
-    }
-  }
+
 
   const cls = enrollment?.class;
 
@@ -307,12 +404,12 @@ async function StudentClassDetailContent({
     });
   });
 
-  const lessonThumbMap = new Map(resolvedLessons.filter((l: any) => l.thumbnail).map((l: any) => [l.id, l.thumbnail!]));
-  const gameThumbMap = new Map(resolvedGames.map((g: any) => [
+  const lessonThumbMap = new Map((resolvedLessons || []).filter((l: any) => l.thumbnail).map((l: any) => [l.id, l.thumbnail!]));
+  const gameThumbMap = new Map((resolvedGames || []).map((g: any) => [
     g.id, 
     g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg')
   ]));
-  const flashcardThumbMap = new Map(resolvedFlashcards.filter((f: any) => f.iconUrl).map((f: any) => [f.id, f.iconUrl!]));
+  const flashcardThumbMap = new Map((resolvedFlashcards || []).filter((f: any) => f.iconUrl).map((f: any) => [f.id, f.iconUrl!]));
   const grammarLessonMap = new Map((resolvedGrammarLessons || []).map((g: any) => [g.id, g]));
 
   // 2. Attach items to groups (skip assignments belonging to hidden groups)
@@ -409,7 +506,7 @@ async function StudentClassDetailContent({
         grammarLesson: (ac.assignment as any).grammarLesson,
         grammarTopic: (ac.assignment as any).grammarTopic,
         teacher: ac.assignment.teacher,
-        questionsCount: (ac.assignment as any)._count?.questions || 0,
+        questionsCount: (ac.assignment as any)._count?.questions || 15,
       },
       assignedAt: ac.assignedAt ? new Date(ac.assignedAt).toISOString() : new Date().toISOString(),
       dueDate: ac.dueDate ? new Date(ac.dueDate).toISOString() : null,
