@@ -451,9 +451,16 @@ export function ClassDetailClient({ classData }: Props) {
                                   {lesson.type}
                                 </span>
 
-                                <span className="text-slate-300">
-                                  <Lock className="w-4 h-4" />
-                                </span>
+                                {lesson.isTrial ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                    <Play className="w-2.5 h-2.5 fill-emerald-600" />
+                                    <span>{lang === 'en' ? 'Open' : 'Mở'}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300">
+                                    <Lock className="w-4 h-4" />
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))}

@@ -5,6 +5,7 @@ import { searchImagesAction } from "@/actions/image-search-actions";
 import { uploadUrlMedia, uploadBufferToR2 } from "@/actions/upload-actions";
 import { adminCreateFlashcard } from "@/actions/admin-flashcards";
 import { generateTTSHelper } from "@/actions/lesson-ai";
+import { generateAllEdgeFlashcardAudio } from "@/lib/edge-child-tts";
 import { auth } from "@/auth";
 
 // Gemini API routing: use 9Router proxy (Bearer auth) when GEMINI_API_ENDPOINT is set,
@@ -121,9 +122,18 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
   try {
     let imageUrl = null;
     let audioUrl = null;
+    let audioWordUrl = null;
+    let audioSentenceUrl = null;
+    let quizAudioUrl = null;
 
-    // 1. Search for image
-    if (wordData.imageSearchKeyword || wordData.word) {
+    const topicObj = await prisma.flashcardTopic.findUnique({
+      where: { id: topicId },
+      select: { classes: { select: { id: true } } },
+    });
+    const isClassTopic = Boolean(topicObj?.classes && topicObj.classes.length > 0);
+
+    // 1. Search for image (skip for class topics - admin adds image later)
+    if (!isClassTopic && (wordData.imageSearchKeyword || wordData.word)) {
       try {
         const searchKeyword = wordData.imageSearchKeyword || wordData.word;
         const images = await searchImagesAction(searchKeyword);
@@ -145,29 +155,38 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
     // 2. Generate TTS Audio
     if (wordData.word) {
       try {
-        const session = await auth();
-        const userId = session?.user?.id || "system";
-        
-        // Construct speechText: Word. Word. Example. Word.
-        const word = wordData.word.trim();
-        const exampleSentence = wordData.exampleSentence || "";
-        const speechText = exampleSentence.trim() 
-          ? `${word}. ${word}. ${exampleSentence} ${word}.`
-          : `${word}. ${word}. ${word}.`;
+        if (isClassTopic) {
+          console.log(`[Edge TTS Child Voice] Single flashcard generation for class card: "${wordData.word}"`);
+          const edgeAudios = await generateAllEdgeFlashcardAudio(wordData.word, wordData.exampleSentence, wordData.quizQuestion);
+          audioUrl = edgeAudios.audioUrl;
+          audioWordUrl = edgeAudios.audioWordUrl;
+          audioSentenceUrl = edgeAudios.audioSentenceUrl;
+          quizAudioUrl = edgeAudios.quizAudioUrl;
+        } else {
+          const session = await auth();
+          const userId = session?.user?.id || "system";
+          
+          // Construct speechText: Word. Word. Example. Word.
+          const word = wordData.word.trim();
+          const exampleSentence = wordData.exampleSentence || "";
+          const speechText = exampleSentence.trim() 
+            ? `${word}. ${word}. ${exampleSentence} ${word}.`
+            : `${word}. ${word}. ${word}.`;
 
-        // Determine speed based on categoryName
-        let speed = 1.0;
-        if (categoryName) {
-          const cat = categoryName.toLowerCase();
-          if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
-            speed = 0.75;
+          // Determine speed based on categoryName
+          let speed = 1.0;
+          if (categoryName) {
+            const cat = categoryName.toLowerCase();
+            if (cat.includes("kindergarten") || cat.includes("< 6") || cat.includes("under 6")) {
+              speed = 0.75;
+            }
           }
-        }
 
-        console.log(`Generating auto TTS for bulk card: ${word} with speed ${speed}`);
-        const ttsRes = await generateTTSHelper(speechText, "Aoede", speed, userId, "flashcard");
-        if (ttsRes && ttsRes.url) {
-          audioUrl = ttsRes.url;
+          console.log(`Generating auto TTS for bulk card: ${word} with speed ${speed}`);
+          const ttsRes = await generateTTSHelper(speechText, "Aoede", speed, userId, "flashcard");
+          if (ttsRes && ttsRes.url) {
+            audioUrl = ttsRes.url;
+          }
         }
       } catch (ttsError) {
         console.error("Error generating auto TTS for word", wordData.word, ttsError);
@@ -199,6 +218,10 @@ export async function generateSingleFlashcardWithImage(topicId: string, wordData
       exampleSentence: wordData.exampleSentence,
       imageUrl: imageUrl || undefined,
       audioUrl: audioUrl || undefined,
+      audioWordUrl: audioWordUrl || undefined,
+      audioSentenceUrl: audioSentenceUrl || undefined,
+      quizQuestion: wordData.quizQuestion || undefined,
+      quizAudioUrl: quizAudioUrl || undefined,
       translations: Object.keys(translations).length > 0 ? translations : undefined,
     });
 
@@ -365,13 +388,37 @@ export async function generateCardImageAction(word: string, imageSearchKeyword: 
   return { success: true, imageUrl };
 }
 
-// Action to generate card audio (includes splitting and quiz audio generation)
-export async function generateCardAudioAction(word: string, exampleSentence: string, categoryName?: string, quizQuestion?: string) {
+// Action to generate card audio (includes Edge Child TTS for class topics or splitting/Gemini for others)
+export async function generateCardAudioAction(
+  word: string, 
+  exampleSentence: string, 
+  categoryName?: string, 
+  quizQuestion?: string,
+  isClassTopic?: boolean
+) {
   let audioUrl = null;
   let audioWordUrl = null;
+  let audioSentenceUrl = null;
   let quizAudioUrl = null;
 
   if (word) {
+    // 1. If assigned to a class, always use Edge TTS child voice (en-US-AnaNeural)
+    if (isClassTopic) {
+      try {
+        console.log(`[Edge TTS Child Voice] Generating audio for class card: "${word}"`);
+        const edgeAudios = await generateAllEdgeFlashcardAudio(word, exampleSentence, quizQuestion);
+        return {
+          success: true,
+          audioUrl: edgeAudios.audioUrl,
+          audioWordUrl: edgeAudios.audioWordUrl,
+          audioSentenceUrl: edgeAudios.audioSentenceUrl,
+          quizAudioUrl: edgeAudios.quizAudioUrl,
+        };
+      } catch (edgeErr: any) {
+        console.error(`[Edge TTS Child Voice] Failed for "${word}", falling back to standard TTS:`, edgeErr);
+      }
+    }
+
     try {
       const session = await auth();
       const userId = session?.user?.id || "system";
@@ -425,7 +472,7 @@ export async function generateCardAudioAction(word: string, exampleSentence: str
       console.error("Error generating auto TTS for word", word, ttsError);
     }
   }
-  return { success: true, audioUrl, audioWordUrl, quizAudioUrl };
+  return { success: true, audioUrl, audioWordUrl, audioSentenceUrl, quizAudioUrl };
 }
 
 // ============================================================================
@@ -603,7 +650,8 @@ Rules:
 export async function createCompleteFlashcardFull(
   word: string,
   topicId: string,
-  categoryName: string
+  categoryName: string,
+  isClassTopicParam?: boolean
 ): Promise<{ success: boolean; card?: any; error?: string }> {
   try {
     const session = await auth();
@@ -645,67 +693,99 @@ export async function createCompleteFlashcardFull(
     });
     const td = JSON.parse(completion.choices[0].message.content?.trim() ?? "");
 
-    // Step 2: FLUX image
-    const fluxRes = await fetch("https://api.deepinfra.com/v1/openai/images/generations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "black-forest-labs/FLUX-1-dev",
-        prompt: `A simple 2D cartoon illustration of ${word}. Flat design, colorful, cute, child-friendly. No text. Clean white isolated background.`,
-        n: 1,
-        size: "1024x1024",
-        response_format: "b64_json",
-      }),
-    });
-    if (!fluxRes.ok) throw new Error(`FLUX error ${fluxRes.status}`);
-    const fluxJson = await fluxRes.json();
-    const imgBuffer = Buffer.from(fluxJson.data?.[0]?.b64_json ?? "", "base64");
-    const imageUrl = await uploadToFlashcardR2(imgBuffer, `${slug}-${ts}.png`, "image/png");
-
-    // Step 3: Gemini TTS — x-slow, 1 call, no break tags
-    const ssml = `<speak><prosody rate="x-slow">${word}. ${td.exampleSentence} ${td.quizQuestion}</prosody></speak>`;
-    const fullWav = await geminiTTSBatch(ssml);
-
-    if (!fullWav) {
-      throw new Error("TTS không khả dụng — không thể tạo audio cho card này.");
+    // Step 2 & 3: Check if topic belongs to a class
+    let isClassTopic = Boolean(isClassTopicParam);
+    if (isClassTopicParam === undefined) {
+      const topicObj = await prisma.flashcardTopic.findUnique({
+        where: { id: topicId },
+        select: { classes: { select: { id: true } } },
+      });
+      isClassTopic = Boolean(topicObj?.classes && topicObj.classes.length > 0);
     }
 
-    // Step 4: Windowed RMS silence detection
-    const pcm = wavPcm(fullWav);
-    const silenceRegions = detectSilence(pcm);
-    if (silenceRegions.length < 2) {
-      throw new Error(`Silence detection thất bại cho "${word}": tìm thấy ${silenceRegions.length} vùng (cần ≥2)`);
+    // Step 2: Image generation (Only for non-class topics; class topics skip image)
+    let imageUrl: string | undefined = undefined;
+    if (!isClassTopic) {
+      const fluxRes = await fetch("https://api.deepinfra.com/v1/openai/images/generations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.DEEPINFRA_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "black-forest-labs/FLUX-1-dev",
+          prompt: `A simple 2D cartoon illustration of ${word}. Flat design, colorful, cute, child-friendly. No text. Clean white isolated background.`,
+          n: 1,
+          size: "1024x1024",
+          response_format: "b64_json",
+        }),
+      });
+      if (!fluxRes.ok) throw new Error(`FLUX error ${fluxRes.status}`);
+      const fluxJson = await fluxRes.json();
+      const imgBuffer = Buffer.from(fluxJson.data?.[0]?.b64_json ?? "", "base64");
+      imageUrl = await uploadToFlashcardR2(imgBuffer, `${slug}-${ts}.png`, "image/png");
     }
-    const [sep1, sep2] = [...silenceRegions]
-      .sort((a, b) => (b.end - b.start) - (a.end - a.start))
-      .slice(0, 2)
-      .sort((a, b) => a.start - b.start);
 
-    // Step 5: Slice 3 segments
-    const totalSamples = Math.floor(pcm.length / BPS);
-    const seg1 = wavSlice(fullWav, 0,        sep1.start); // word
-    const seg2 = wavSlice(fullWav, sep1.end, sep2.start); // sentence
-    const seg3 = wavSlice(fullWav, sep2.end, totalSamples); // quiz
+    let audioUrl: string | null = null;
+    let audioWordUrl: string | null = null;
+    let audioSentenceUrl: string | null = null;
+    let quizAudioUrl: string | null = null;
 
-    // Step 6: Reconstruct audioUrl = word + word + sentence + word
-    const pad = Buffer.alloc(Math.floor(SR * 0.4) * BPS, 0);
-    const audioUrlWav = wavWrap(Buffer.concat([
-      wavPcm(seg1), pad,
-      wavPcm(seg1), pad,
-      wavPcm(seg2), pad,
-      wavPcm(seg1),
-    ]));
+    if (isClassTopic) {
+      console.log(`[Batch Create Flashcard] Topic "${topicId}" belongs to class. Using Edge Child TTS for "${word}"`);
+      const edgeAudios = await generateAllEdgeFlashcardAudio(word, td.exampleSentence, td.quizQuestion);
+      audioUrl = edgeAudios.audioUrl;
+      audioWordUrl = edgeAudios.audioWordUrl;
+      audioSentenceUrl = edgeAudios.audioSentenceUrl;
+      quizAudioUrl = edgeAudios.quizAudioUrl;
+    } else {
+      // Step 3 (Non-class): Gemini TTS — x-slow, 1 call, no break tags
+      const ssml = `<speak><prosody rate="x-slow">${word}. ${td.exampleSentence} ${td.quizQuestion}</prosody></speak>`;
+      const fullWav = await geminiTTSBatch(ssml);
 
-    // Step 7: Upload 4 audio files to R2
-    const [audioUrl, audioWordUrl, audioSentenceUrl, quizAudioUrl] = await Promise.all([
-      uploadToFlashcardR2(audioUrlWav, `${slug}-full-${ts}.wav`,     "audio/wav"),
-      uploadToFlashcardR2(seg1,        `${slug}-word-${ts}.wav`,     "audio/wav"),
-      uploadToFlashcardR2(seg2,        `${slug}-sentence-${ts}.wav`, "audio/wav"),
-      uploadToFlashcardR2(seg3,        `${slug}-quiz-${ts}.wav`,     "audio/wav"),
-    ]);
+      if (!fullWav) {
+        throw new Error("TTS không khả dụng — không thể tạo audio cho card này.");
+      }
+
+      // Step 4: Windowed RMS silence detection
+      const pcm = wavPcm(fullWav);
+      const silenceRegions = detectSilence(pcm);
+      if (silenceRegions.length < 2) {
+        throw new Error(`Silence detection thất bại cho "${word}": tìm thấy ${silenceRegions.length} vùng (cần ≥2)`);
+      }
+      const [sep1, sep2] = [...silenceRegions]
+        .sort((a, b) => (b.end - b.start) - (a.end - a.start))
+        .slice(0, 2)
+        .sort((a, b) => a.start - b.start);
+
+      // Step 5: Slice 3 segments
+      const totalSamples = Math.floor(pcm.length / BPS);
+      const seg1 = wavSlice(fullWav, 0,        sep1.start); // word
+      const seg2 = wavSlice(fullWav, sep1.end, sep2.start); // sentence
+      const seg3 = wavSlice(fullWav, sep2.end, totalSamples); // quiz
+
+      // Step 6: Reconstruct audioUrl = word + word + sentence + word
+      const pad = Buffer.alloc(Math.floor(SR * 0.4) * BPS, 0);
+      const audioUrlWav = wavWrap(Buffer.concat([
+        wavPcm(seg1), pad,
+        wavPcm(seg1), pad,
+        wavPcm(seg2), pad,
+        wavPcm(seg1),
+      ]));
+
+      // Step 7: Upload 4 audio files to R2
+      const [rAudioUrl, rAudioWordUrl, rAudioSentenceUrl, rQuizAudioUrl] = await Promise.all([
+        uploadToFlashcardR2(audioUrlWav, `${slug}-full-${ts}.wav`,     "audio/wav"),
+        uploadToFlashcardR2(seg1,        `${slug}-word-${ts}.wav`,     "audio/wav"),
+        uploadToFlashcardR2(seg2,        `${slug}-sentence-${ts}.wav`, "audio/wav"),
+        uploadToFlashcardR2(seg3,        `${slug}-quiz-${ts}.wav`,     "audio/wav"),
+      ]);
+
+      audioUrl = rAudioUrl;
+      audioWordUrl = rAudioWordUrl;
+      audioSentenceUrl = rAudioSentenceUrl;
+      quizAudioUrl = rQuizAudioUrl;
+    }
 
     // Step 8 & 9: DB insert via existing adminCreateFlashcard
     const res = await adminCreateFlashcard({
@@ -718,11 +798,11 @@ export async function createCompleteFlashcardFull(
       definitionId:    td.definitionId?.trim() || undefined,
       exampleSentence: td.exampleSentence?.trim() || undefined,
       imageUrl,
-      audioUrl,
-      audioWordUrl,
-      audioSentenceUrl,
+      audioUrl:        audioUrl || undefined,
+      audioWordUrl:    audioWordUrl || undefined,
+      audioSentenceUrl: audioSentenceUrl || undefined,
       quizQuestion:    td.quizQuestion?.trim() || undefined,
-      quizAudioUrl,
+      quizAudioUrl:    quizAudioUrl || undefined,
       translations:    td.translations || undefined,
     });
 

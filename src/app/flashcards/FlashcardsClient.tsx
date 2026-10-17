@@ -18,7 +18,9 @@ import {
   Loader2,
   Languages,
   Keyboard,
-  CheckCircle2
+  CheckCircle2,
+  RotateCcw,
+  Puzzle
 } from "lucide-react"
 import { completeClassActivityAction } from "@/actions/activity-completion-actions"
 
@@ -169,11 +171,61 @@ const getLangTitle = (lang: string) => {
 };
 
 interface FlashcardsClientProps {
-  initialCategories: Category[]
+  initialCategories?: Category[]
   studyAgeGroup?: string | null
+  initialTopicId?: string | null
+  initialCards?: Flashcard[]
+  isEmbedded?: boolean
+  assignmentId?: string
+  initialMode?: 'hint' | 'scramble' | 'type'
+  lockMode?: boolean
+  isActive?: boolean
+  onComplete?: (score: number | null, assignmentId: string) => void
 }
 
-export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudyAgeGroup }: FlashcardsClientProps) {
+const EMPTY_CATEGORIES: Category[] = [];
+const DEFAULT_FALLBACK_CATEGORIES: Category[] = [
+  { id: 'kindergarten', name: 'Kindergarten', slug: 'kindergarten', topics: [] }
+];
+
+// In-memory cache for loaded flashcard images across re-renders
+const loadedImageUrls = new Set<string>();
+
+function isImageAlreadyLoaded(url?: string | null): boolean {
+  if (!url) return false;
+  if (loadedImageUrls.has(url)) return true;
+  if (typeof window !== 'undefined') {
+    const probe = new Image();
+    probe.src = url;
+    if (probe.complete && probe.naturalWidth > 0) {
+      loadedImageUrls.add(url);
+      return true;
+    }
+  }
+  return false;
+}
+
+function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+export function FlashcardsClient({
+  initialCategories = EMPTY_CATEGORIES,
+  studyAgeGroup: serverStudyAgeGroup,
+  initialTopicId,
+  initialCards,
+  isEmbedded = false,
+  assignmentId: propAssignmentId,
+  initialMode,
+  lockMode = false,
+  isActive = true,
+  onComplete,
+}: FlashcardsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const studyAgeGroup = useContentStore(s => (s as any).studyAgeGroup)
@@ -188,31 +240,94 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     "teen", "teens", 
     "learner", "readers", "adults", "adult"
   ]
-  const categories = [...initialCategories].sort((a, b) => {
-    const indexA = CATEGORY_ORDER.indexOf(a.slug);
-    const indexB = CATEGORY_ORDER.indexOf(b.slug);
-    const rankA = indexA === -1 ? 999 : indexA;
-    const rankB = indexB === -1 ? 999 : indexB;
-    return rankA - rankB;
-  });
+  const safeCategories = useMemo(() => {
+    if (initialCategories && initialCategories.length > 0) return initialCategories;
+    return DEFAULT_FALLBACK_CATEGORIES;
+  }, [initialCategories]);
+
+  const categories = useMemo(() => {
+    return [...safeCategories].sort((a, b) => {
+      const indexA = CATEGORY_ORDER.indexOf(a.slug);
+      const indexB = CATEGORY_ORDER.indexOf(b.slug);
+      const rankA = indexA === -1 ? 999 : indexA;
+      const rankB = indexB === -1 ? 999 : indexB;
+      return rankA - rankB;
+    });
+  }, [safeCategories]);
 
   // Trạng thái chọn Danh mục & Chủ đề
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null)
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
-  const [topicToSelect, setTopicToSelect] = useState<Topic | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(() => {
+    return categories[0] || null;
+  });
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(() => {
+    if (initialTopicId) {
+      return {
+        id: initialTopicId,
+        categoryId: categories[0]?.id || 'kindergarten',
+        name: 'Flashcards',
+        slug: initialTopicId,
+        flashcardCount: initialCards?.length || 20,
+        cefrLevel: 'a1'
+      };
+    }
+    return null;
+  });
+  const [topicToSelect, setTopicToSelect] = useState<Topic | null>(null);
   
   // Trạng thái học Flashcards
-  const [flashcards, setFlashcards] = useState<Flashcard[]>([])
-  const [currentIndex, setCurrentIndex] = useState<number>(0)
-  const [isFlipped, setIsFlipped] = useState<boolean>(false)
-  const [focusMode, setFocusMode] = useState<boolean>(false)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [voicesLoaded, setVoicesLoaded] = useState<boolean>(false)
+  const [flashcards, setFlashcards] = useState<Flashcard[]>(() => {
+    if (initialCards && initialCards.length > 0) {
+      return isEmbedded ? shuffleArray(initialCards) : initialCards;
+    }
+    return [];
+  });
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [isFlipped, setIsFlipped] = useState<boolean>(false);
+  const [focusMode, setFocusMode] = useState<boolean>(() => Boolean(initialTopicId || (initialCards && initialCards.length > 0) || isEmbedded));
+  const [loading, setLoading] = useState<boolean>(false);
+  const [voicesLoaded, setVoicesLoaded] = useState<boolean>(false);
 
   // Tracking lật thẻ cho bài tập được giao trong lớp (yêu cầu lật ít nhất 80% thẻ)
-  const assignmentId = searchParams?.get('assignmentId')
-  const [flippedIndices, setFlippedIndices] = useState<Set<number>>(new Set())
-  const [assignmentCompleted, setAssignmentCompleted] = useState<boolean>(false)
+  const activeAssignmentId = propAssignmentId || searchParams?.get('assignmentId');
+  const isClassOrAssigned = Boolean(isEmbedded || searchParams?.get("embedded") === "true" || activeAssignmentId || lockMode);
+  const [flippedIndices, setFlippedIndices] = useState<Set<number>>(new Set());
+  const [assignmentCompleted, setAssignmentCompleted] = useState<boolean>(false);
+
+  const lastSyncedCardsRef = useRef<Flashcard[] | undefined>(initialCards);
+  const lastSyncedTopicIdRef = useRef<string | null | undefined>(initialTopicId);
+
+  // Đồng bộ danh sách thẻ khi initialCards thay đổi
+  useEffect(() => {
+    if (initialCards && initialCards.length > 0) {
+      if (lastSyncedCardsRef.current === initialCards && lastSyncedTopicIdRef.current === initialTopicId) {
+        return;
+      }
+      lastSyncedCardsRef.current = initialCards;
+      lastSyncedTopicIdRef.current = initialTopicId;
+
+      const preparedCards = isEmbedded ? shuffleArray(initialCards) : initialCards;
+      setFlashcards(preparedCards);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+      setIsImageLoading(!isImageAlreadyLoaded(preparedCards[0]?.imageUrl));
+      setFocusMode(true);
+      if (initialTopicId) {
+        setSelectedTopic(prev => {
+          if (prev?.id === initialTopicId && prev.flashcardCount === initialCards.length) {
+            return prev;
+          }
+          return {
+            id: initialTopicId,
+            categoryId: categories[0]?.id || 'kindergarten',
+            name: 'Flashcards',
+            slug: initialTopicId,
+            flashcardCount: initialCards.length,
+            cefrLevel: 'a1'
+          };
+        });
+      }
+    }
+  }, [initialCards, initialTopicId]);
 
   useEffect(() => {
     setFlippedIndices(new Set())
@@ -226,16 +341,27 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         next.add(currentIndex)
 
         const ratio = next.size / flashcards.length
-        if (ratio >= 0.8 && !assignmentCompleted && assignmentId) {
+        if (ratio >= 0.8 && !assignmentCompleted && activeAssignmentId) {
           setAssignmentCompleted(true)
-          completeClassActivityAction({ assignmentId, score: null }).catch((err) => {
+          completeClassActivityAction({ assignmentId: activeAssignmentId, score: null }).catch((err) => {
             console.error("Failed to auto-complete flashcards:", err)
           })
+          if (onComplete) {
+            onComplete(10, activeAssignmentId)
+          }
+          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+            window.parent.postMessage({
+              type: 'ACTIVITY_COMPLETED',
+              assignmentId: activeAssignmentId,
+              isCompleted: true,
+              score: 10
+            }, '*')
+          }
         }
         return next
       })
     }
-  }, [isFlipped, currentIndex, flashcards.length, assignmentCompleted, assignmentId])
+  }, [isFlipped, currentIndex, flashcards.length, assignmentCompleted, activeAssignmentId, onComplete])
   
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
   const currentLang = useContentStore(s => s.nativeLanguage)
@@ -246,8 +372,26 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     setDisplayLang(currentLang)
   }, [currentLang])
 
-  // Trạng thái load ảnh để hiển thị spinner
-  const [isImageLoading, setIsImageLoading] = useState(true)
+  // Trạng thái load ảnh để hiển thị spinner (kiểm tra tức thì cache bộ nhớ)
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(() => {
+    const firstCard = initialCards?.[0];
+    if (!firstCard?.imageUrl) return false;
+    return !isImageAlreadyLoaded(firstCard.imageUrl);
+  });
+
+  // Tự động tắt loading nếu ảnh đã có trong cache
+  useEffect(() => {
+    const card = flashcards[currentIndex];
+    if (!card?.imageUrl) {
+      setIsImageLoading(false);
+      return;
+    }
+    if (isImageAlreadyLoaded(card.imageUrl)) {
+      setIsImageLoading(false);
+    } else {
+      setIsImageLoading(true);
+    }
+  }, [currentIndex, flashcards]);
 
   // Trạng thái hiển thị từng chữ cái lần lượt ngẫu nhiên
   const [revealedIndices, setRevealedIndices] = useState<number[]>([])
@@ -255,12 +399,22 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   // Trạng thái cho chế độ Thử thách từ vựng (Gợi ý, Ghép chữ, Tự gõ)
   const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>(() => {
-    // Read mode from URL param (?mode=...) for direct links — fallback to 'scramble'
+    if (initialMode && ['hint', 'scramble', 'type'].includes(initialMode)) {
+      return initialMode;
+    }
+    // Read mode from URL param (?mode=...) for direct links — fallback to 'hint'
     const urlMode = typeof window !== 'undefined'
       ? (new URLSearchParams(window.location.search).get('mode') as 'hint' | 'scramble' | 'type' | null)
       : null
-    return (urlMode && ['hint', 'scramble', 'type'].includes(urlMode)) ? urlMode : 'scramble'
+    return (urlMode && ['hint', 'scramble', 'type'].includes(urlMode)) ? urlMode : 'hint'
   })
+
+  // Đồng bộ challengeMode khi initialMode từ prop thay đổi
+  useEffect(() => {
+    if (initialMode && ['hint', 'scramble', 'type'].includes(initialMode)) {
+      setChallengeMode(initialMode)
+    }
+  }, [initialMode])
   const [scrambledLetters, setScrambledLetters] = useState<{ id: number, letter: string, index: number, used: boolean }[]>([])
   const [shakeItemId, setShakeItemId] = useState<number | null>(null)
   const [wrongTypedIndex, setWrongTypedIndex] = useState<number | null>(null)
@@ -338,10 +492,24 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     }
   }
 
+  // Stop audio immediately whenever component is unmounted or becomes inactive in keep-alive
+  useEffect(() => {
+    if (isActive === false) {
+      stopCurrentAudio()
+    }
+  }, [isActive])
+
+  useEffect(() => {
+    return () => {
+      stopCurrentAudio()
+    }
+  }, [])
+
   // ── Quick-start: consume pre-fetched cards from homepage popup ───────────────
   // If the user clicked a topic on the home page, cards + mode are already in
   // the Zustand store. Consume them immediately (no server round-trip needed).
   useEffect(() => {
+    if (isEmbedded) return
     const topicId = searchParams.get('topic')
     if (!topicId || !pendingFlashcards || pendingFlashcards.topicId !== topicId) return
 
@@ -442,16 +610,36 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     }
   }
 
-  // Hàm phát âm từ vựng (Ưu tiên dùng audio lồng tiếng tải lên nếu có, nếu không thì dùng Web Speech API)
+  // Hàm lấy URL phát âm thông minh (Phương án Hybrid):
+  // 1. Ưu tiên file thu âm / TTS có sẵn trên Cloudflare R2
+  // 2. Nếu thẻ chưa có file audio -> Gọi trực tiếp Edge TTS on-the-fly (/api/tts/edge?text=...)
+  const resolveAudioUrl = (customUrl?: string | null, textFallback?: string | null): string | null => {
+    if (customUrl && typeof customUrl === 'string' && customUrl.trim()) {
+      return customUrl.trim()
+    }
+    if (textFallback && typeof textFallback === 'string' && textFallback.trim()) {
+      return `/api/tts/edge?text=${encodeURIComponent(textFallback.trim())}`
+    }
+    return null
+  }
+
+  // Hàm phát âm từ vựng (kèm câu ví dụ nếu có mặt sau)
   const handlePlayAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
-    // Ưu tiên: audioUrl (full word + sentence) → audioWordUrl → TTS fallback
-    const urlToPlay = (card.audioUrl && card.audioUrl.trim())
-      ? card.audioUrl
+
+    // Phương án Hybrid: audioUrl -> audioWordUrl từ Cloudflare -> Edge TTS on-the-fly
+    const customUrl = (card.audioUrl && card.audioUrl.trim())
+      ? card.audioUrl.trim()
       : (card.audioWordUrl && card.audioWordUrl.trim())
-      ? card.audioWordUrl
+      ? card.audioWordUrl.trim()
       : null
+
+    const textToSpeak = card.word
+      ? (card.exampleSentence ? `${card.word}. ${card.exampleSentence}` : card.word)
+      : ''
+    const urlToPlay = resolveAudioUrl(customUrl, textToSpeak || card.word)
+
     if (urlToPlay) {
       const audio = new Audio(urlToPlay)
       currentAudioRef.current = audio
@@ -462,7 +650,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       currentPlayPromiseRef.current = promise
       promise.catch(err => {
         if (err?.name === 'AbortError') return // bị dừng chủ động, bỏ qua
-        console.error("Lỗi phát audio tùy chỉnh:", err)
+        console.warn("Lỗi phát audio tùy chỉnh / Edge TTS, fallback sang Web Speech API:", err)
         // Fallback to speech synthesis
         handleSpeak(card.word, onEnded)
       })
@@ -475,8 +663,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
   const handlePlayWordAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
-    if (card.audioWordUrl && card.audioWordUrl.trim()) {
-      const audio = new Audio(card.audioWordUrl)
+
+    // Phương án Hybrid: Ưu tiên audioWordUrl từ Cloudflare, nếu không có -> Edge TTS on-the-fly
+    const urlToPlay = resolveAudioUrl(card.audioWordUrl, card.word)
+
+    if (urlToPlay) {
+      const audio = new Audio(urlToPlay)
       currentAudioRef.current = audio
       if (onEnded) {
         audio.onended = onEnded
@@ -485,7 +677,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       currentPlayPromiseRef.current = promise
       promise.catch(err => {
         if (err?.name === 'AbortError') return // bị dừng chủ động, bỏ qua
-        console.error("Lỗi phát audio từ vựng tùy chỉnh:", err)
+        console.warn("Lỗi phát audio từ vựng / Edge TTS, fallback sang Web Speech API:", err)
         // Fallback to speech synthesis
         handleSpeak(card.word, onEnded)
       })
@@ -692,7 +884,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   // 1. Reset card, đặt lại chữ cái đã lật và tự động phát âm khi chuyển thẻ, đổi chế độ hoặc đổi topic
   useEffect(() => {
-    if (isFlipped) return
+    if (!isActive || isFlipped) return
 
     const card = flashcards[currentIndex]
     if (!card) return
@@ -723,14 +915,19 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [currentIndex, selectedTopic, challengeMode, isFlipped, flashcards])
+  }, [isActive, currentIndex, selectedTopic, challengeMode, isFlipped, flashcards])
 
   // 2. Tự động phát âm đầy đủ khi lật sang mặt sau
   useEffect(() => {
+    if (!isActive) return
     if (isFlipped && selectedCategory && flashcards[currentIndex]) {
       const card = flashcards[currentIndex]
-      // Chỉ auto-play nếu có audio file thực sự — không dùng TTS cho auto-play
-      const hasAudio = (card.audioUrl && card.audioUrl.trim()) || (card.audioWordUrl && card.audioWordUrl.trim())
+      // Phương án Hybrid: Tự động phát âm bằng audio Cloudflare hoặc Edge TTS on-the-fly
+      const hasAudio = Boolean(
+        (card.audioUrl && card.audioUrl.trim()) ||
+        (card.audioWordUrl && card.audioWordUrl.trim()) ||
+        (card.word && card.word.trim())
+      )
       if (!hasAudio) return
 
       const timer = setTimeout(() => {
@@ -738,12 +935,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       }, 150)
       return () => clearTimeout(timer)
     }
-  }, [isFlipped, currentIndex, selectedCategory, flashcards])
+  }, [isActive, isFlipped, currentIndex, selectedCategory, flashcards])
 
   // 3. Tự động hiển thị gợi ý từng chữ cái ngẫu nhiên (Chỉ hoạt động ở chế độ Gợi ý)
   useEffect(() => {
     const card = flashcards[currentIndex]
-    if (!wordAudioEnded || !card || isFlipped || challengeMode !== 'hint') return
+    if (!isActive || !wordAudioEnded || !card || isFlipped || challengeMode !== 'hint') return
 
     const word = card.word
     const initialIndices: number[] = []
@@ -783,7 +980,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     return () => {
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [wordAudioEnded, currentIndex, flashcards, isFlipped, challengeMode])
+  }, [isActive, wordAudioEnded, currentIndex, flashcards, isFlipped, challengeMode])
 
   // 4. Lắng nghe phím gõ từ bàn phím cứng (Chế độ Tự gõ)
   useEffect(() => {
@@ -859,7 +1056,13 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     // Đánh dấu đây là navigation do code gọi (không phải user nhập URL)
     // để useEffect URL không re-trigger handleSelectTopic lần 2
     programmaticNavRef.current = true
-    router.replace(`/flashcards?topic=${topic.id}`, { scroll: false })
+    const isEmb = searchParams.get('embedded') === 'true'
+    const aid = searchParams.get('assignmentId')
+    const query = new URLSearchParams()
+    query.set('topic', topic.id)
+    if (isEmb) query.set('embedded', 'true')
+    if (aid) query.set('assignmentId', aid)
+    router.replace(`/flashcards?${query.toString()}`, { scroll: false })
     
     try {
       const cards = await getFlashcardsByTopic(topic.id)
@@ -884,7 +1087,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
     } finally {
       setLoading(false)
     }
-  }, [router, flashcardTopics])
+  }, [router, flashcardTopics, searchParams])
   
   const handleChooseMode = useCallback((mode: 'hint' | 'scramble' | 'type') => {
     if (!topicToSelect) return
@@ -924,6 +1127,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   // Initialize selectedCategory based on studyAgeGroup or URL topic
   useEffect(() => {
+    if (isEmbedded) return
     const topicId = searchParams.get("topic")
     if (topicId) {
       // Nếu URL thay đổi do chính handleSelectTopic gọi router.replace → bỏ qua để tránh double-call
@@ -934,13 +1138,28 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       // URL có topic (deep link / reload / back button) nhưng chưa vào focusMode
       // → Hiện popup chọn mode thay vì vào thẳng, đảm bảo user luôn chọn được mode
       if (!focusMode && (!selectedTopic || selectedTopic.id !== topicId)) {
+        const isEmbedded = searchParams.get("embedded") === "true"
         for (const cat of categories) {
           const foundTopic = cat.topics.find(t => t.id === topicId)
           if (foundTopic) {
             setSelectedCategory(cat)
-            setTopicToSelect(foundTopic)   // ← Hiện popup thay vì gọi handleSelectTopic trực tiếp
+            if (isEmbedded) {
+              handleSelectTopic(foundTopic)
+            } else {
+              setTopicToSelect(foundTopic)   // ← Hiện popup thay vì gọi handleSelectTopic trực tiếp
+            }
             return
           }
+        }
+        if (isEmbedded) {
+          handleSelectTopic({
+            id: topicId,
+            categoryId: categories[0]?.id || 'kindergarten',
+            name: 'Flashcards',
+            slug: topicId,
+            flashcardCount: 20
+          })
+          return
         }
       }
     } else {
@@ -1014,10 +1233,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
       
       if (nextCard?.imageUrl) {
         const img = new Image()
+        img.onload = () => loadedImageUrls.add(nextCard.imageUrl!)
         img.src = nextCard.imageUrl
       }
       if (prevCard?.imageUrl) {
         const img = new Image()
+        img.onload = () => loadedImageUrls.add(prevCard.imageUrl!)
         img.src = prevCard.imageUrl
       }
     }
@@ -1345,84 +1566,124 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
   return (
     <div
-      className={`fixed inset-0 z-[100] ${pageBg} flex flex-col overflow-y-auto md:overflow-hidden font-body animate-in fade-in zoom-in-95 duration-500`}
+      className={`${
+        isEmbedded
+          ? "relative w-full h-full min-h-[580px] lg:min-h-[660px] rounded-b-[1.75rem]"
+          : "fixed inset-0 z-[100] animate-in fade-in zoom-in-95 duration-500"
+      } ${pageBg} flex flex-col overflow-y-auto md:overflow-hidden font-body`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       
       {/* Floating Header Actions (Transparent) */}
       <div className="absolute top-[max(16px,env(safe-area-inset-top,16px))] left-4 right-4 md:top-6 md:left-8 md:right-8 z-50 flex justify-between items-center pointer-events-none">
-        <button 
-          onClick={handleBackToSelection}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto ${backButtonClass}`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="hidden md:inline">Back to Topics</span>
-        </button>
+        {isEmbedded || searchParams.get("embedded") === "true" ? (
+          <button 
+            onClick={() => {
+              if (isEmbedded) {
+                const baseCards = initialCards && initialCards.length > 0 ? initialCards : flashcards;
+                const reshuffled = shuffleArray(baseCards);
+                setFlashcards(reshuffled);
+                setIsImageLoading(!isImageAlreadyLoaded(reshuffled[0]?.imageUrl));
+              }
+              setCurrentIndex(0)
+              setIsFlipped(false)
+              setFlippedIndices(new Set())
+              setAssignmentCompleted(false)
+              stopCurrentAudio()
+            }}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold pointer-events-auto ${backButtonClass}`}
+            title="Làm lại từ thẻ đầu tiên (xáo trộn ngẫu nhiên)"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Học lại từ đầu</span>
+          </button>
+        ) : (
+          <button 
+            onClick={handleBackToSelection}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto ${backButtonClass}`}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden md:inline">Back to Topics</span>
+          </button>
+        )}
 
-        {/* Mode Switcher Segmented Control (Top Right) */}
-        <div className="pointer-events-auto">
-          <div className={`flex items-center gap-1 p-1 rounded-2xl border shadow-sm transition-all duration-300 ${
-            isKidMode 
-              ? "bg-amber-50/90 border-amber-200/60" 
-              : "bg-slate-50 border-slate-200"
-          }`}>
-            {/* Mode Switcher — order: Word Puzzle | Type | Hint */}
-            <button 
-              onClick={() => handleModeChange('scramble')} 
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
-                challengeMode === 'scramble' 
-                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
-                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
-              }`}
-            >
-              Word Puzzle
-            </button>
-            <button 
-              onClick={() => handleModeChange('type')} 
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
-                challengeMode === 'type' 
-                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
-                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
-              }`}
-            >
-              Type
-            </button>
-            <button 
-              onClick={() => handleModeChange('hint')} 
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
-                challengeMode === 'hint' 
-                  ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
-                  : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
-              }`}
-            >
-              Hint
-            </button>
+        {/* Mode Switcher Segmented Control (Top Right) - Completely hidden in classes/assigned assignments */}
+        {!isClassOrAssigned && (
+          <div className="pointer-events-auto">
+            {lockMode ? (
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border shadow-xs text-xs font-black select-none ${
+                isKidMode 
+                  ? "bg-amber-100/90 border-amber-300/80 text-amber-900 shadow-amber-500/10" 
+                  : "bg-slate-100 border-slate-300 text-slate-800"
+              }`}>
+                {challengeMode === 'hint' && (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-400 shrink-0" />
+                    <span>Lật thẻ (Hint)</span>
+                  </>
+                )}
+                {challengeMode === 'scramble' && (
+                  <>
+                    <Puzzle className="w-3.5 h-3.5 text-amber-600 fill-amber-400 shrink-0" />
+                    <span>Ghép chữ (Word Puzzle)</span>
+                  </>
+                )}
+                {challengeMode === 'type' && (
+                  <>
+                    <Keyboard className="w-3.5 h-3.5 text-amber-600 fill-amber-400 shrink-0" />
+                    <span>Gõ từ (Type)</span>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className={`flex items-center gap-1 p-1 rounded-2xl border shadow-sm transition-all duration-300 ${
+                isKidMode 
+                  ? "bg-amber-50/90 border-amber-200/60" 
+                  : "bg-slate-50 border-slate-200"
+              }`}>
+                {/* Mode Switcher — order: Word Puzzle | Type | Hint */}
+                <button 
+                  onClick={() => handleModeChange('scramble')} 
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                    challengeMode === 'scramble' 
+                      ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                      : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+                  }`}
+                >
+                  Word Puzzle
+                </button>
+                <button 
+                  onClick={() => handleModeChange('type')} 
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                    challengeMode === 'type' 
+                      ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                      : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+                  }`}
+                >
+                  Type
+                </button>
+                <button 
+                  onClick={() => handleModeChange('hint')} 
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all duration-200 ${
+                    challengeMode === 'hint' 
+                      ? (isKidMode ? 'bg-amber-500 text-white shadow-md' : 'bg-primary text-white shadow-md') 
+                      : (isKidMode ? 'text-amber-800 hover:bg-amber-100/50' : 'text-slate-600 hover:bg-slate-100')
+                  }`}
+                >
+                  Hint
+                </button>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
 
       {/* 2. Central Content: 3D Flip Card */}
-      <main className="flex-1 flex flex-col justify-start md:justify-center items-center px-4 md:px-6 pt-24 sm:pt-24 md:pt-16 pb-4 md:pb-0 relative max-w-4xl mx-auto w-full">
-
-        {/* Assignment Progress Pill if opened from class */}
-        {assignmentId && flashcards.length > 0 && (
-          <div className={`mb-3 px-3.5 py-1.5 rounded-full text-xs font-black backdrop-blur-md border shadow-xs inline-flex items-center gap-1.5 transition-all duration-300 ${
-            assignmentCompleted || (flippedIndices.size / flashcards.length >= 0.8)
-              ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-500/20'
-              : 'bg-white/90 dark:bg-slate-800/90 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
-          }`}>
-            {assignmentCompleted || (flippedIndices.size / flashcards.length >= 0.8) ? (
-              <>
-                <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                <span>Đã lật {flippedIndices.size}/{flashcards.length} thẻ (≥80%) • Đã hoàn thành!</span>
-              </>
-            ) : (
-              <span>Tiến độ bài học: {flippedIndices.size}/{flashcards.length} thẻ lật ({Math.round((flippedIndices.size / flashcards.length) * 100)}% / 80%)</span>
-            )}
-          </div>
-        )}
+      <main className={`flex-1 flex flex-col justify-center items-center px-4 md:px-6 ${
+        isEmbedded ? "pt-4 sm:pt-4 md:pt-2" : "pt-14 sm:pt-16 md:pt-12"
+      } pb-4 md:pb-6 relative max-w-4xl mx-auto w-full`}>
 
         {/* Hidden input for mobile keyboard support */}
         <input 
@@ -1510,8 +1771,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                 <div className="w-full h-full rounded-[32px] overflow-hidden relative bg-white">
                   {activeCard?.imageUrl ? (
                     <>
-                      {isImageLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-amber-50/50 backdrop-blur-sm z-10">
+                      {isImageLoading && !isImageAlreadyLoaded(activeCard?.imageUrl) && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-amber-50/50 backdrop-blur-sm z-10 transition-opacity duration-150">
                           <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
                         </div>
                       )}
@@ -1519,8 +1780,15 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                         key={activeCard?.id}
                         src={activeCard.imageUrl} 
                         alt="Flashcard illustration"
-                        className={`w-full h-full object-contain transition-all duration-700 hover:scale-105 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                        onLoad={() => setIsImageLoading(false)}
+                        loading="eager"
+                        decoding="async"
+                        className={`w-full h-full object-contain transition-opacity duration-200 hover:scale-105 ${isImageLoading && !isImageAlreadyLoaded(activeCard?.imageUrl) ? 'opacity-0' : 'opacity-100'}`}
+                        onLoad={() => {
+                          if (activeCard?.imageUrl) {
+                            loadedImageUrls.add(activeCard.imageUrl);
+                          }
+                          setIsImageLoading(false);
+                        }}
                       />
                     </>
                   ) : (
@@ -1535,8 +1803,8 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                   <div className="w-full h-[68%] rounded-2xl overflow-hidden relative border border-slate-100 bg-slate-50 shrink-0">
                     {activeCard?.imageUrl ? (
                       <>
-                        {isImageLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 backdrop-blur-sm z-10">
+                        {isImageLoading && !isImageAlreadyLoaded(activeCard?.imageUrl) && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 backdrop-blur-sm z-10 transition-opacity duration-150">
                             <Loader2 className="w-10 h-10 text-slate-400 animate-spin" />
                           </div>
                         )}
@@ -1544,8 +1812,15 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
                           key={activeCard?.id}
                           src={activeCard.imageUrl} 
                           alt="Flashcard illustration"
-                          className={`w-full h-full object-cover transition-opacity duration-500 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                          onLoad={() => setIsImageLoading(false)}
+                          loading="eager"
+                          decoding="async"
+                          className={`w-full h-full object-cover transition-opacity duration-200 ${isImageLoading && !isImageAlreadyLoaded(activeCard?.imageUrl) ? 'opacity-0' : 'opacity-100'}`}
+                          onLoad={() => {
+                            if (activeCard?.imageUrl) {
+                              loadedImageUrls.add(activeCard.imageUrl);
+                            }
+                            setIsImageLoading(false);
+                          }}
                         />
                       </>
                     ) : (
@@ -1687,12 +1962,12 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
         </div>
 
         {/* Native Language Definition — below card, in flow (no overlap) */}
-        {activeCard && !isFlipped && challengeMode !== 'hint' && (
-          <div className="mt-4 text-center animate-in fade-in zoom-in-95 duration-300 px-4">
+        {activeCard && !isFlipped && (
+          <div className={`mt-3 sm:mt-4 text-center px-4 ${isEmbedded ? "" : "animate-in fade-in zoom-in-95 duration-300"}`}>
             <span className={`font-black tracking-wide text-xl md:text-2xl lg:text-3xl ${
-              isKidMode ? "text-amber-900" : "text-slate-800"
+              isKidMode ? "text-amber-900 dark:text-amber-100" : "text-slate-800 dark:text-slate-100"
             }`}>
-              {getDefinitionText(activeCard, currentLang)}
+              {activeCard.definitionVi || getDefinitionText(activeCard, currentLang) || activeCard.definition}
             </span>
           </div>
         )}
@@ -1716,7 +1991,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
 
         {/* Random letter-by-letter reveal area (outside card container) */}
         {!isFlipped && (isKidMode || challengeMode !== 'hint') && activeCard && (
-          <div className="mt-3 flex flex-wrap justify-center items-center gap-1.5 md:gap-2 max-w-[480px] w-full select-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className={`mt-3 flex flex-wrap justify-center items-center gap-1.5 md:gap-2 max-w-[480px] w-full select-none ${isEmbedded ? "" : "animate-in fade-in slide-in-from-bottom-2 duration-300"}`}>
             {activeCard.word.split("").map((char, index) => {
               const isSpace = char === " ";
               const isLetterChar = /[a-zA-Z]/.test(char);
@@ -1785,7 +2060,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               </button>
             ) : challengeMode === 'scramble' ? (
               /* Bong bóng chữ cái xáo trộn */
-              <div className="flex items-center justify-center gap-3 md:gap-3.5 shrink-0 flex-wrap min-h-[52px] w-full max-w-[480px] animate-in fade-in zoom-in-95 duration-300">
+              <div className={`flex items-center justify-center gap-3 md:gap-3.5 shrink-0 flex-wrap min-h-[52px] w-full max-w-[480px] ${isEmbedded ? "" : "animate-in fade-in zoom-in-95 duration-300"}`}>
                 {scrambledLetters.map((item) => {
                   const isShaking = shakeItemId === item.id
                   return (
@@ -1813,7 +2088,7 @@ export function FlashcardsClient({ initialCategories, studyAgeGroup: serverStudy
               </div>
             ) : (
               /* Khung hướng dẫn Tự Gõ + nút Hint & Reveal */
-              <div className="flex flex-col items-center gap-3 w-full animate-in fade-in zoom-in-95 duration-300">
+              <div className={`flex flex-col items-center gap-3 w-full ${isEmbedded ? "" : "animate-in fade-in zoom-in-95 duration-300"}`}>
                 <div 
                   onClick={() => hiddenInputRef.current?.focus()}
                   className={`cursor-pointer px-6 py-3 rounded-2xl border text-center transition-all duration-200 hover:scale-102 active:scale-98 max-w-[360px] w-full shadow-sm ${

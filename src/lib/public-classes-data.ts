@@ -1,4 +1,5 @@
 import { GRAMMAR_45_DAYS_UNITS_VI, GRAMMAR_45_DAYS_UNITS_EN } from './grammar-45-days-units';
+import { TINY_VOCAB_45_UNITS_VI, TINY_VOCAB_45_UNITS_EN } from './tiny-vocab-45-units';
 
 export type CourseLesson = {
   id: string;
@@ -297,6 +298,180 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
           stars: 5,
           timeAgo: '1 tuần trước',
           content: '“Bé nhà mình tự giác vào học mỗi tối. Giao diện trực quan, bài tập phân hóa rõ ràng nên con học rất hào hứng và tiến bộ trông thấy.”',
+        },
+      ],
+    },
+
+    // Backward compatibility direct getters mapped to English
+    get title() { return this.en.title; },
+    get shortDescription() { return this.en.shortDescription; },
+    get heroDescription() { return this.en.heroDescription; },
+    get subjectBadge() { return this.en.subjectBadge; },
+    get typeBadge() { return this.en.typeBadge; },
+    get studentsCount() { return this.en.studentsCount; },
+    get lessonsCount() { return this.en.lessonsCount; },
+    get duration() { return this.en.duration; },
+    get language() { return this.en.language; },
+    get whatYouLearn() { return this.en.whatYouLearn; },
+    get units() { return this.en.units; },
+    get teacher() { return this.en.teacher; },
+    get reviews() { return this.en.reviews; },
+  },
+
+  'tiny-vocab-wonders': {
+    id: 'tiny-vocab-wonders',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    subjectBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
+    typeBadgeClass: 'bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]',
+    rating: 5.0,
+    reviewsCount: 38,
+    btnGradient: 'from-[#f59e0b] via-[#f97316] to-[#ec4899] hover:from-[#d97706] hover:to-[#db2777] shadow-amber-500/25',
+    joinCode: 'VOCAB45',
+
+    // ENGLISH VERSION
+    en: {
+      title: 'Tiny Vocab Wonders: Flashcard, Story & Play (45 Days)',
+      shortDescription: 'Joyful 45-day vocabulary journey for Preschool & Grade 1 kids through native audio flashcards, illustrated mini-stories, and playful games.',
+      heroDescription: 'Welcome little learners to Tiny Vocab Wonders! An interactive 45-day English journey crafted specifically for preschoolers and 1st graders. Featuring a 3-step routine: Native Audio Flashcards, Delightful Mini-Stories, and Joyful Interactive Games. Zero pressure, pure curiosity, and lasting retention!',
+      subjectBadge: 'Vocab • Grades K-1',
+      typeBadge: '🔥 Free',
+      studentsCount: '60+ students',
+      lessonsCount: 45,
+      duration: '45 days (5-8 mins/day)',
+      language: 'English with Visual & Bilingual Support',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '180+ Native Audio Flashcards',
+          description: 'Gentle, clear pronunciation with storybook illustrations helps kids absorb first words naturally without rote memorization.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'book',
+          title: '45 Illustrated Mini-Stories',
+          description: 'Bite-sized stories with 2-4 lines contextualize new vocabulary immediately, cultivating early reading habits.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'game',
+          title: '90+ Interactive Minigames',
+          description: 'Tap-to-match, balloon pop, and sound quizzes transform daily practice into pure joy and keep kids engaged.',
+          colorScheme: 'purple',
+        },
+        {
+          iconType: 'trophy',
+          title: '45-Day Daily Habit & Stars',
+          description: 'Earn shiny reward stars and celebrate milestone badges with robot Dolbot, fostering self-motivated daily learning.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: TINY_VOCAB_45_UNITS_EN,
+      teacher: {
+        name: 'Ms. Jessica Nguyen',
+        role: 'Early Childhood English Instructor',
+        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        degree: 'Bachelor of English & TESOL Young Learners Certified',
+        experience: 'Over 8 years inspiring early learners with joyful storybook and gamified learning methods',
+        quote: '“For young kids, learning English is an exciting adventure filled with colors, sounds, and laughter. Let every flashcard and story bring a smile to their faces!”',
+      },
+      reviews: [
+        {
+          id: 'tv-r1',
+          author: 'Thu Thao (Parent of 5yo)',
+          avatar: '/images/avatars/grade_3.png',
+          stars: 5,
+          timeAgo: '1 day ago',
+          content: '“My 5-year-old daughter absolutely adores the cute pictures and audio. She eagerly sits down for 8 minutes every afternoon without being told!”',
+        },
+        {
+          id: 'tv-r2',
+          author: 'Minh Tuan (Parent of 1st Grader)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '3 days ago',
+          content: '“The 3-step routine (Flashcard -> Story -> Game) is brilliant. My son remembers words in full sentences instead of isolated translations.”',
+        },
+        {
+          id: 'tv-r3',
+          author: 'Hoang Lan (Kindergarten Teacher)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '1 week ago',
+          content: '“Warm audio voice, gentle pace, and beautiful child-friendly design. Perfectly tuned for preschool and grade 1 focus span.”',
+        },
+      ],
+    },
+
+    // VIETNAMESE VERSION
+    vi: {
+      title: 'Tiny Vocab Wonders: Bé Khám Phá Từ Vựng (45 Ngày)',
+      shortDescription: 'Hành trình 45 ngày xây dựng vốn từ vựng đầu đời cho bé Mầm non & Lớp 1 qua Flashcard phát âm chuẩn, truyện tranh mini và trò chơi tương tác.',
+      heroDescription: 'Chào mừng các bé đến với Tiny Vocab Wonders! Khóa học 45 ngày được thiết kế riêng cho sự tập trung của bé 4 - 6 tuổi theo chu trình 3 bước vàng: Chạm Flashcard nghe giọng đọc ấm áp ➔ Đọc câu chuyện tranh mini ➔ Chơi minigame tương tác. Bé học mà chơi, không áp lực và tự giác khám phá mỗi ngày.',
+      subjectBadge: 'Từ Vựng • Mầm Non - Lớp 1',
+      typeBadge: '🔥 Free',
+      studentsCount: '60+ học viên',
+      lessonsCount: 45,
+      duration: '45 ngày (5-8 phút/ngày)',
+      language: 'Tiếng Anh chuẩn bản xứ có hỗ trợ song ngữ cho phụ huynh',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '180+ Flashcard Âm Thanh Chuẩn Bản Xứ',
+          description: 'Giọng đọc ấm áp, phát âm chậm rãi kết hợp tranh minh họa ngộ nghĩnh giúp bé bật âm chính xác tự nhiên.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'book',
+          title: '45 Mẩu Truyện Tranh Mini Dễ Nhớ',
+          description: 'Từ vựng được lồng ghép vào câu ngắn 2-4 dòng gần gũi, giúp bé rèn luyện phản xạ đọc sớm ngay từ lớp 1.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'game',
+          title: '90+ Minigame Tương Tác Vui Nhộn',
+          description: 'Nối hình tìm từ, nghe tiếng đoán bạn, đố vui âm thanh biến giờ ôn tập thành sân chơi rộn rã tiếng cười.',
+          colorScheme: 'purple',
+        },
+        {
+          iconType: 'trophy',
+          title: 'Chuỗi 45 Ngày Tự Giác Cùng Dolbot',
+          description: 'Tích lũy sao thưởng và mở khóa huy hiệu sau mỗi bài học, tạo dựng nếp học tiếng Anh đều đặn mỗi ngày.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: TINY_VOCAB_45_UNITS_VI,
+      teacher: {
+        name: 'Ms. Jessica Nguyen',
+        role: 'Giáo viên phụ trách khối Mầm non & Lớp 1',
+        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        degree: 'Cử nhân Ngôn ngữ Anh & Chứng chỉ Sư phạm Quốc tế TESOL-YL',
+        experience: 'Hơn 8 năm kinh nghiệm giảng dạy tiếng Anh sớm qua phương pháp tranh truyện và game tương tác',
+        quote: '“Ở lứa tuổi mầm non và lớp 1, học tiếng Anh là một chuyến phiêu lưu ngập tràn màu sắc và tiếng cười. Hãy để mỗi chiếc Flashcard và mẩu chuyện mang lại niềm vui cho bé!”',
+      },
+      reviews: [
+        {
+          id: 'tv-r1',
+          author: 'Mẹ Thu Thảo (Bé 5 tuổi)',
+          avatar: '/images/avatars/grade_3.png',
+          stars: 5,
+          timeAgo: '1 ngày trước',
+          content: '“Bé nhà mình thích mê giọng đọc và tranh vẽ ngộ nghĩnh. Mỗi chiều đi học về là tự giác xin học 8 phút cùng bạn robot.”',
+        },
+        {
+          id: 'tv-r2',
+          author: 'Bố Minh Tuấn (Bé Lớp 1)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '3 ngày trước',
+          content: '“Cách phối hợp Flashcard rồi đọc truyện ngắn và chơi game rất hay. Bé nhớ từ theo câu hoàn chỉnh chứ không học vẹt.”',
+        },
+        {
+          id: 'tv-r3',
+          author: 'Cô Hoàng Lan (Giáo viên Mầm non)',
+          avatar: '/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '1 tuần trước',
+          content: '“Giọng audio ấm, tốc độ vừa phải, giao diện rất thân thiện với trẻ nhỏ. Phù hợp hoàn hảo với độ tập trung của lứa tuổi 4-6 tuổi.”',
         },
       ],
     },

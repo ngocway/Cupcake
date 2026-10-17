@@ -16,6 +16,7 @@ import { AiAudioQuestionsModal } from './AiAudioQuestionsModal';
 import { generateQuestionsFromAudioChunks } from '@/actions/ai-audio-questions';
 
 import { CustomRichTextEditor } from '@/components/ui/CustomRichTextEditor';
+import { X, RotateCcw } from 'lucide-react';
 
 type MediaAttachment = {
   id: string;
@@ -696,17 +697,49 @@ export function ReadingExerciseBuilder({
   const [visibleImagesCount, setVisibleImagesCount] = useState(12);
   const [imageSearchStyle, setImageSearchStyle] = useState<"REALISTIC" | "CARTOON">("REALISTIC");
   const [isSearchingImage, setIsSearchingImage] = useState(false);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [imageSearchOriginalWord, setImageSearchOriginalWord] = useState("");
+  const imageSearchInputRef = useRef<HTMLInputElement>(null);
 
   const handleGoogleImageSearch = async (searchTerm: string, forceStyle?: "REALISTIC" | "CARTOON") => {
     if (!searchTerm || !searchTerm.trim()) {
       toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh.");
       return;
     }
+    const trimmed = searchTerm.trim();
+    setImageSearchQuery(trimmed);
+    setImageSearchOriginalWord(trimmed);
     setIsSearchingImage(true);
     setShowImageSearchDrawer(true);
+
+    setTimeout(() => {
+      imageSearchInputRef.current?.focus();
+      imageSearchInputRef.current?.select();
+    }, 150);
+
     const styleToUse = forceStyle || imageSearchStyle;
     try {
-      const results = await searchImagesClient(searchTerm, styleToUse);
+      const results = await searchImagesClient(trimmed, styleToUse);
+      setImageSearchResults(results || []);
+      setVisibleImagesCount(12);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Lỗi tìm ảnh: " + (err.message || "Không thể tải ảnh từ Google Images."));
+    } finally {
+      setIsSearchingImage(false);
+    }
+  };
+
+  const handleExecuteImageSearch = async (queryText: string, forceStyle?: "REALISTIC" | "CARTOON") => {
+    const trimmed = queryText.trim();
+    if (!trimmed) {
+      toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh.");
+      return;
+    }
+    setIsSearchingImage(true);
+    const styleToUse = forceStyle || imageSearchStyle;
+    try {
+      const results = await searchImagesClient(trimmed, styleToUse);
       setImageSearchResults(results || []);
       setVisibleImagesCount(12);
     } catch (err: any) {
@@ -2827,49 +2860,135 @@ export function ReadingExerciseBuilder({
 
         {/* Image Search Drawer */}
         {showImageSearchDrawer && (
-          <div className="fixed top-0 right-0 h-full w-[350px] bg-white dark:bg-gray-900 border-l border-slate-200 dark:border-gray-800 p-6 shadow-2xl flex flex-col z-[150] animate-in slide-in-from-right duration-300">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex-1">
-                <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">travel_explore</span>
-                  Tìm ảnh Internet
-                </h4>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-3">
-                  Từ khoá: <span className="text-primary">{currentSearchWord}</span>
-                </p>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-slate-100 dark:bg-gray-800 rounded-lg p-1">
-                      <button
-                        type="button"
-                        onClick={() => setImageSearchStyle("REALISTIC")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "REALISTIC" ? "bg-blue-600 text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"}`}
-                      >
-                        📷 Ảnh thực tế
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setImageSearchStyle("CARTOON")}
-                        className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"}`}
-                      >
-                        🎨 Ảnh hoạt hình
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={isSearchingImage}
-                      onClick={() => handleGoogleImageSearch(currentSearchWord, imageSearchStyle)}
-                      className="px-3 py-1.5 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 active:scale-95 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-slate-200 dark:border-gray-700 h-full"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">search</span>
-                      Tìm
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <button type="button" onClick={() => setShowImageSearchDrawer(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors ml-2 shrink-0">
-                <span className="material-symbols-outlined text-[20px]">close</span>
+          <div className="fixed top-0 right-0 h-full w-[380px] bg-white dark:bg-gray-900 border-l border-slate-200 dark:border-gray-800 p-5 shadow-2xl flex flex-col z-[150] animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">travel_explore</span>
+                <span>Tìm ảnh Internet</span>
+              </h4>
+              <button 
+                type="button" 
+                onClick={() => setShowImageSearchDrawer(false)} 
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* Search Box & Controls */}
+            <div className="mb-4 space-y-2">
+              {/* Input with Clear Button */}
+              <div className="relative flex items-center">
+                <input
+                  ref={imageSearchInputRef}
+                  type="text"
+                  value={imageSearchQuery}
+                  onChange={(e) => setImageSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleExecuteImageSearch(imageSearchQuery, imageSearchStyle);
+                    }
+                  }}
+                  placeholder="Nhập từ khóa tìm kiếm..."
+                  className="w-full pl-3 pr-8 py-2 bg-slate-50 dark:bg-gray-800/80 border border-slate-200 dark:border-gray-700 focus:border-primary rounded-xl text-slate-800 dark:text-white text-xs font-semibold outline-none transition-all placeholder:text-slate-400"
+                />
+                {imageSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSearchQuery("");
+                      imageSearchInputRef.current?.focus();
+                    }}
+                    className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 transition-colors cursor-pointer"
+                    title="Xóa trắng"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Original Word & Reset Link */}
+              {imageSearchOriginalWord && imageSearchQuery.trim() !== imageSearchOriginalWord.trim() && (
+                <div className="flex items-center justify-between text-[11px] px-0.5 text-slate-500 dark:text-slate-400">
+                  <span className="truncate max-w-[200px]">Gốc: <b className="text-slate-700 dark:text-slate-200">{imageSearchOriginalWord}</b></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSearchQuery(imageSearchOriginalWord);
+                      handleExecuteImageSearch(imageSearchOriginalWord, imageSearchStyle);
+                    }}
+                    className="text-primary hover:underline flex items-center gap-1 font-semibold shrink-0 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Khôi phục
+                  </button>
+                </div>
+              )}
+
+              {/* Quick Context Filter Chips */}
+              <div className="flex flex-wrap gap-1 pt-0.5">
+                {["shape", "math", "icon", "clipart", "object", "cute"].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      const alreadyHas = imageSearchQuery.toLowerCase().includes(tag);
+                      const newQuery = alreadyHas ? imageSearchQuery : `${imageSearchQuery.trim()} ${tag}`.trim();
+                      setImageSearchQuery(newQuery);
+                      handleExecuteImageSearch(newQuery, imageSearchStyle);
+                    }}
+                    className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-gray-800 dark:hover:bg-gray-700 active:scale-95 text-[10px] font-bold text-slate-600 dark:text-slate-300 rounded-md border border-slate-200 dark:border-gray-700 transition-all cursor-pointer"
+                  >
+                    +{tag}
+                  </button>
+                ))}
+              </div>
+
+              {/* Style Selector & Search Button */}
+              <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center bg-slate-100 dark:bg-gray-800 rounded-lg p-1 border border-slate-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSearchStyle("REALISTIC");
+                      handleExecuteImageSearch(imageSearchQuery, "REALISTIC");
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                      imageSearchStyle === "REALISTIC" ? "bg-blue-600 text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
+                    }`}
+                  >
+                    📷 Thực tế
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSearchStyle("CARTOON");
+                      handleExecuteImageSearch(imageSearchQuery, "CARTOON");
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                      imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white"
+                    }`}
+                  >
+                    🎨 Hoạt hình
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isSearchingImage}
+                  onClick={() => handleExecuteImageSearch(imageSearchQuery, imageSearchStyle)}
+                  className="flex-1 py-1.5 bg-primary hover:bg-primary/90 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 shadow-sm cursor-pointer"
+                >
+                  {isSearchingImage ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span className="material-symbols-outlined text-[14px]">search</span>
+                  )}
+                  <span>Tìm</span>
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto custom-scrollbar -mx-2 px-2">

@@ -44,12 +44,25 @@ export function getItemStage(item: {
   }
 
   const titleLower = (item.assignment.title || '').toLowerCase();
+  const isDirectHtml = Boolean(
+    item.assignment.instructions && 
+    !item.assignment.instructions.trim().startsWith('{')
+  );
+  const isExplicitChildType = 
+    kind === 'FLASHCARD' || 
+    kind === 'GAME' || 
+    kind === 'EXERCISE' || 
+    kind === 'GRAMMAR';
+
   const isGrammarLesson = 
-    kind === 'LESSON' || 
-    targetUrl.includes('/grammar/') || 
-    titleLower.includes('lý thuyết') ||
-    titleLower.includes('ly thuyet') ||
-    titleLower.includes('grammar lesson');
+    !isExplicitChildType && (
+      kind === 'LESSON' || 
+      isDirectHtml ||
+      targetUrl.includes('/grammar/') || 
+      titleLower.includes('lý thuyết') ||
+      titleLower.includes('ly thuyet') ||
+      titleLower.includes('grammar lesson')
+    );
 
   if (isReview) return 'review';
   if (isGrammarLesson || kind === 'LESSON') return 'lesson';
@@ -158,6 +171,9 @@ export function extractGrammarKey(item: {
   if (item.assignment.instructions) {
     try {
       const meta = JSON.parse(item.assignment.instructions);
+      if (meta.lessonKey) {
+        lessonKey = lessonKey || String(meta.lessonKey).toLowerCase().trim();
+      }
       if (meta.rawId) {
         const raw = String(meta.rawId).toLowerCase();
         if (raw.startsWith('grammar:')) {
@@ -294,6 +310,41 @@ export function buildGroupTree<T extends {
       clusters[matchedClusterIndex].exercises.push(exercise);
       assignedExerciseIds.add(exercise.assignment.id);
     }
+  });
+
+  // Sort child exercises within each cluster by pedagogical roadmap order (Flashcard -> Exercise -> Game -> Review)
+  // And for games: Word Puzzle (subOrder: 1) -> Type (subOrder: 2)
+  clusters.forEach((cluster) => {
+    cluster.exercises.sort((a, b) => {
+      const stageA = getItemStage(a);
+      const stageB = getItemStage(b);
+      const orderDiff = (STAGE_ROADMAP_ORDER[stageA] ?? 99) - (STAGE_ROADMAP_ORDER[stageB] ?? 99);
+      if (orderDiff !== 0) return orderDiff;
+
+      const getGameSubOrder = (item: any) => {
+        let subOrder = 99;
+        if (item.assignment.instructions) {
+          try {
+            const meta = JSON.parse(item.assignment.instructions);
+            if (typeof meta.subOrder === 'number') return meta.subOrder;
+            if (meta.mode === 'scramble' || meta.gameMode === 'puzzle') return 1;
+            if (meta.mode === 'type' || meta.gameMode === 'type') return 2;
+            if (meta.mode === 'match' || meta.gameMode === 'match') return 3;
+          } catch {}
+        }
+        const title = (item.assignment.title || '').toLowerCase();
+        if (title.includes('puzzle') || title.includes('ghép chữ') || title.includes('ghep chu')) return 1;
+        if (title.includes('type') || title.includes('gõ từ') || title.includes('go tu')) return 2;
+        if (title.includes('nối thẻ') || title.includes('noi the') || title.includes('flashcard-match')) return 3;
+        return subOrder;
+      };
+
+      const subA = getGameSubOrder(a);
+      const subB = getGameSubOrder(b);
+      if (subA !== subB) return subA - subB;
+
+      return (a.assignment.title || '').localeCompare(b.assignment.title || '');
+    });
   });
 
   const supplementaryItems = nonLessons.filter(

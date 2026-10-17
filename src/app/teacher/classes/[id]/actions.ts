@@ -267,6 +267,7 @@ export async function updateClassInfo(
     isJoinable?: boolean;
     autoApprove?: boolean;
     dailyDripUnlock?: boolean;
+    zaloGroupUrl?: string | null;
   }
 ) {
   await requireTeacherClass(classId);
@@ -284,6 +285,7 @@ export async function updateClassInfo(
       isJoinable: data.isJoinable !== undefined ? data.isJoinable : undefined,
       autoApprove: data.autoApprove !== undefined ? data.autoApprove : undefined,
       dailyDripUnlock: data.dailyDripUnlock !== undefined ? data.dailyDripUnlock : undefined,
+      zaloGroupUrl: data.zaloGroupUrl !== undefined ? (data.zaloGroupUrl ? data.zaloGroupUrl.trim() : null) : undefined,
     },
   });
 

@@ -64,10 +64,6 @@ export async function GET(
       where: { id: topicId },
       include: {
         flashcards: {
-          where: {
-            imageUrl: { not: null },
-            NOT: { imageUrl: "" },
-          },
           orderBy: { orderIndex: "asc" },
         },
       },
@@ -78,7 +74,9 @@ export async function GET(
         id: f.id,
         word: f.englishText || f.word || "",
         imageUrl: f.imageUrl || null,
-        audioUrl: f.audioUrl || null,
+        audioWordUrl: f.audioWordUrl || null,
+        // Crucial: Use isolated word audio (not full sentence audio) so matching cards only pronounces the word
+        audioUrl: f.audioWordUrl || null,
       }));
 
       return NextResponse.json({

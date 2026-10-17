@@ -3456,6 +3456,17 @@ export async function searchAssignableContentAction(
     const fcLvlFilter = buildLevelFilter('cefrLevel');
     if (fcLvlFilter) fcWhere.AND.push(fcLvlFilter);
 
+    if (params.classId) {
+      fcWhere.AND.push({
+        OR: [
+          { classes: { some: { id: params.classId } } },
+          { classes: { none: {} } }
+        ]
+      });
+    } else {
+      fcWhere.AND.push({ classes: { none: {} } });
+    }
+
     queries.push(
       prisma.flashcardTopic.findMany({
         where: fcWhere.AND.length > 0 ? fcWhere : undefined,
@@ -3465,12 +3476,16 @@ export async function searchAssignableContentAction(
           cefrLevel: true,
           iconUrl: true,
           createdAt: true,
+          classes: {
+            select: { id: true, name: true }
+          },
           _count: { select: { flashcards: true } }
         },
         orderBy: { createdAt: 'desc' },
         take: limit
       }).then(list => {
         list.forEach(f => {
+          const isClassTopic = !!(params.classId && f.classes?.some((c: any) => c.id === params.classId));
           const ageParam = mapCefrToAgeParam(f.cefrLevel);
           const lvl = mapAgeGroupToLevel(f.cefrLevel);
           const count = f._count?.flashcards || 0;
@@ -3491,7 +3506,7 @@ export async function searchAssignableContentAction(
             isAssignment: false,
             previewUrl: `/student/game/flashcard-match?topicId=${f.id}`,
             playUrl: `/student/game/flashcard-match?topicId=${f.id}`,
-            badgeLabel: 'Lật thẻ',
+            badgeLabel: isClassTopic ? 'Bộ từ của lớp' : 'Lật thẻ',
           });
 
           // Group 2: Sentence Builder (Flashcards - Ghép câu)

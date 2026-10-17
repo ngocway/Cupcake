@@ -23,9 +23,15 @@ import {
 } from "@/actions/admin-flashcards-ai"
 
 import { toast } from "sonner"
-import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy, Folder, ArrowLeft } from "lucide-react"
+import { Volume2, Plus, Edit, Trash2, Search, Filter, Image as ImageIcon, CheckCircle2, AlertCircle, Globe, Sparkles, Wand2, Copy, Folder, ArrowLeft, GraduationCap, X, RotateCcw } from "lucide-react"
 
 // TypeScript interfaces
+export interface AdminClassItem {
+  id: string
+  name: string
+  classCode: string
+}
+
 interface Topic {
   id: string
   targetAudiences: string[]
@@ -33,6 +39,7 @@ interface Topic {
   slug: string
   iconUrl?: string | null
   createdAt: Date
+  classes?: AdminClassItem[]
   _count?: {
     flashcards: number
   }
@@ -51,23 +58,29 @@ interface Flashcard {
   imageUrl: string | null
   audioUrl: string | null
   audioWordUrl: string | null
+  audioSentenceUrl?: string | null
+  quizQuestion?: string | null
+  quizAudioUrl?: string | null
   createdAt: Date
   topic: {
     id: string
     name: string
     targetAudiences: string[]
     iconUrl?: string | null
+    classes?: AdminClassItem[]
   }
 }
 
 interface AdminFlashcardsClientProps {
   targetAudiences: any[]
+  classes?: AdminClassItem[]
   initialTopics: Topic[]
   initialFlashcards: any[]
 }
 
 export function AdminFlashcardsClient({ 
   targetAudiences, 
+  classes = [],
   initialTopics, 
   initialFlashcards 
 }: AdminFlashcardsClientProps) {
@@ -76,6 +89,7 @@ export function AdminFlashcardsClient({
   // Navigation & Core Lists
 
   const [targetAudiencesList] = useState<any[]>(targetAudiences)
+  const [classList] = useState<AdminClassItem[]>(classes || [])
   const [topics, setTopics] = useState<Topic[]>(initialTopics)
   const [flashcards, setFlashcards] = useState<any[]>(initialFlashcards)
 
@@ -84,6 +98,7 @@ export function AdminFlashcardsClient({
   useEffect(() => { setTopics(initialTopics) }, [initialTopics])
 
   // Filters
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>("ALL") // "ALL" | "NONE" (Kho chung) | classId
   const [selectedCatFilter, setSelectedCatFilter] = useState<string>("ALL")
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<string>("ALL")
   const [searchWord, setSearchWord] = useState<string>("")
@@ -115,11 +130,18 @@ export function AdminFlashcardsClient({
   
   const [showTopicModal, setShowTopicModal] = useState(false)
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null)
-  const [topicForm, setTopicForm] = useState({
+  const [topicForm, setTopicForm] = useState<{
+    targetAudiences: string[]
+    name: string
+    sampleCount: string
+    iconUrl: string
+    classIds: string[]
+  }>({
     targetAudiences: ["kid"],
     name: "",
     sampleCount: "",
-    iconUrl: ""
+    iconUrl: "",
+    classIds: []
   })
   const [isUploadingTopicIcon, setIsUploadingTopicIcon] = useState(false)
   const topicIconInputRef = useRef<HTMLInputElement>(null)
@@ -151,6 +173,9 @@ export function AdminFlashcardsClient({
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
   const [visibleImagesCount, setVisibleImagesCount] = useState(12)
   const [showAIPromptModal, setShowAIPromptModal] = useState(false)
+  const [imageSearchQuery, setImageSearchQuery] = useState("")
+  const [imageSearchOriginalWord, setImageSearchOriginalWord] = useState("")
+  const imageSearchInputRef = useRef<HTMLInputElement>(null)
   const [isUploadingAudio, setIsUploadingAudio] = useState(false)
   const [isGeneratingAudio, setIsGeneratingAudio] = useState(false)
   const [isGeneratingExample, setIsGeneratingExample] = useState(false)
@@ -185,14 +210,25 @@ export function AdminFlashcardsClient({
     }
   }
 
+  const isCardFormInClass = () => {
+    if (cardForm.topicId) {
+      const t = topics.find(t => t.id === cardForm.topicId)
+      if (t?.classes && t.classes.length > 0) return true
+    }
+    if (editingCard?.topic?.classes && editingCard.topic.classes.length > 0) return true
+    if (selectedClassFilter !== "ALL" && selectedClassFilter !== "NONE") return true
+    return false
+  }
+
   const handleGenerateAIAudio = async (word: string, exampleSentence: string) => {
     if (!word || !word.trim()) {
       toast.error("Vui lòng nhập từ vựng trước khi tạo audio.")
       return
     }
     
+    const inClass = isCardFormInClass()
     setIsGeneratingAudio(true)
-    toast.info("Đang tạo audio bằng AI...")
+    toast.info(inClass ? "Đang tạo audio giọng trẻ em (Edge TTS)..." : "Đang tạo audio bằng AI...")
 
     try {
       const selectedCategory = targetAudiencesList.find(c => c.id === cardForm.targetAudience)
@@ -207,7 +243,8 @@ export function AdminFlashcardsClient({
         body: JSON.stringify({ 
           text: word, 
           exampleSentence: exampleSentence,
-          speed: isKindergarten ? 0.8 : 1.0
+          speed: isKindergarten ? 0.8 : 1.0,
+          isClassTopic: inClass
         })
       })
 
@@ -215,7 +252,7 @@ export function AdminFlashcardsClient({
 
       if (res.ok && data.url) {
         setCardForm(prev => ({ ...prev, audioUrl: data.url }))
-        toast.success("Tạo audio AI và lưu lên R2 thành công!")
+        toast.success(inClass ? "Tạo audio giọng trẻ em thành công!" : "Tạo audio AI và lưu lên R2 thành công!")
       } else {
         toast.error("Tạo audio thất bại: " + (data.error || "Unknown error"))
       }
@@ -232,15 +269,48 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const filteredFlashcards = flashcards.filter(card => {
     const matchWord = card.word.toLowerCase().includes(searchWord.toLowerCase())
-    const matchCat = selectedCatFilter === "ALL" || card.topic?.targetAudiences.includes(selectedCatFilter)
-    const matchTopic = selectedTopicFilter === "ALL" || card.topic?.id === selectedTopicFilter
-    return matchWord && matchCat && matchTopic
+    
+    // Class filter match
+    const topicObj = topics.find(t => t.id === card.topicId) || card.topic
+    const topicClasses = topicObj?.classes || []
+    let matchClass = true
+    if (selectedClassFilter === "NONE") {
+      matchClass = topicClasses.length === 0
+    } else if (selectedClassFilter !== "ALL") {
+      matchClass = topicClasses.some((c: any) => c.id === selectedClassFilter)
+    }
+
+    // Category filter match: If a specific class is selected, category filter does not apply
+    let matchCat = true
+    if (selectedClassFilter === "ALL" || selectedClassFilter === "NONE") {
+      matchCat = selectedCatFilter === "ALL" || (topicObj?.targetAudiences && topicObj.targetAudiences.includes(selectedCatFilter))
+    }
+
+    // Topic filter match
+    const matchTopic = selectedTopicFilter === "ALL" || card.topicId === selectedTopicFilter || card.topic?.id === selectedTopicFilter
+
+    return matchWord && matchClass && matchCat && matchTopic
   })
 
-  // Dynamic topics under selected Category inside Filters dropdown
-  const filteredTopicsForFilter = selectedCatFilter === "ALL" 
-    ? topics 
-    : topics.filter(t => t.targetAudiences.includes(selectedCatFilter))
+  // Dynamic topics under selected Class and Category inside Filters dropdown
+  const filteredTopicsForFilter = topics.filter(t => {
+    // 1. Class filter:
+    const tClasses = t.classes || []
+    if (selectedClassFilter === "NONE") {
+      if (tClasses.length > 0) return false
+    } else if (selectedClassFilter !== "ALL") {
+      if (!tClasses.some(c => c.id === selectedClassFilter)) return false
+    }
+
+    // 2. Category filter (only applies if class is ALL or NONE):
+    if (selectedClassFilter === "ALL" || selectedClassFilter === "NONE") {
+      if (selectedCatFilter !== "ALL") {
+        if (!t.targetAudiences || !t.targetAudiences.includes(selectedCatFilter)) return false
+      }
+    }
+
+    return true
+  })
 
   // -------------------------------------------------------------
   // TOPIC FILTERING LOGIC
@@ -357,16 +427,19 @@ export function AdminFlashcardsClient({
                                categoryName.toLowerCase().includes("under 6")
         const speed = isKindergarten ? 0.8 : 1.0
 
+        const inClass = isCardFormInClass()
+
         // Automatically trigger AI audio generation for word
         try {
-          toast.info("Đang tự động tạo audio từ vựng...")
+          toast.info(inClass ? "Đang tự động tạo audio từ vựng giọng trẻ em (Edge TTS)..." : "Đang tự động tạo audio từ vựng...")
           const audioRes = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
               text: result.word || word, 
               exampleSentence: sentence,
-              speed
+              speed,
+              isClassTopic: inClass
             })
           })
           const audioData = await audioRes.json()
@@ -381,14 +454,15 @@ export function AdminFlashcardsClient({
         // Automatically trigger AI audio generation for quiz question
         if (generatedQuestion) {
           try {
-            toast.info("Đang tự động tạo audio câu hỏi...")
+            toast.info(inClass ? "Đang tự động tạo audio câu hỏi giọng trẻ em (Edge TTS)..." : "Đang tự động tạo audio câu hỏi...")
             const qAudioRes = await fetch("/api/tts", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ 
                 text: generatedQuestion, 
                 mode: "inline",
-                speed
+                speed,
+                isClassTopic: inClass
               })
             })
             const qAudioData = await qAudioRes.json()
@@ -458,13 +532,15 @@ export function AdminFlashcardsClient({
                                categoryName.toLowerCase().includes("under 6")
         const speed = isKindergarten ? 0.8 : 1.0
 
+        const inClassFallback = isCardFormInClass()
         const ttsRes = await fetch("/api/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             text: word, 
             exampleSentence: exampleSentence,
-            speed
+            speed,
+            isClassTopic: inClassFallback
           })
         })
         const ttsData = await ttsRes.json()
@@ -478,7 +554,8 @@ export function AdminFlashcardsClient({
           body: JSON.stringify({ 
             text: fallbackQuestion, 
             mode: "inline",
-            speed
+            speed,
+            isClassTopic: inClassFallback
           })
         })
         const qTtsData = await qTtsRes.json()
@@ -507,13 +584,47 @@ export function AdminFlashcardsClient({
       return
     }
 
+    const trimmed = searchTerm.trim()
+    setImageSearchQuery(trimmed)
+    setImageSearchOriginalWord(trimmed)
     setIsSearchingImage(true)
     setShowImageSearchDrawer(true)
 
+    // Auto-focus and select text when drawer opens
+    setTimeout(() => {
+      imageSearchInputRef.current?.focus()
+      imageSearchInputRef.current?.select()
+    }, 150)
+
     const styleToUse = forceStyle || imageSearchStyle
     const finalSearchTerm = styleToUse === "CARTOON" 
-      ? `${searchTerm} cartoon illustration` 
-      : searchTerm
+      ? `${trimmed} cartoon illustration` 
+      : trimmed
+
+    try {
+      const results = await searchImagesAction(finalSearchTerm)
+      setImageSearchResults(results || [])
+      setVisibleImagesCount(12)
+    } catch (err: any) {
+      console.error(err)
+      toast.error("Lỗi tìm ảnh: " + (err.message || "Không thể tải ảnh từ Google Images."))
+    } finally {
+      setIsSearchingImage(false)
+    }
+  }
+
+  const handleExecuteImageSearch = async (queryText: string, forceStyle?: "REALISTIC" | "CARTOON") => {
+    const trimmed = queryText.trim()
+    if (!trimmed) {
+      toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh.")
+      return
+    }
+
+    setIsSearchingImage(true)
+    const styleToUse = forceStyle || imageSearchStyle
+    const finalSearchTerm = styleToUse === "CARTOON"
+      ? `${trimmed} cartoon illustration`
+      : trimmed
 
     try {
       const results = await searchImagesAction(finalSearchTerm)
@@ -545,6 +656,10 @@ export function AdminFlashcardsClient({
             phonetic: activeOuterCardForImage.phonetic,
             imageUrl: result.url,
             audioUrl: activeOuterCardForImage.audioUrl,
+            audioWordUrl: activeOuterCardForImage.audioWordUrl || undefined,
+            audioSentenceUrl: activeOuterCardForImage.audioSentenceUrl || undefined,
+            quizQuestion: activeOuterCardForImage.quizQuestion || undefined,
+            quizAudioUrl: activeOuterCardForImage.quizAudioUrl || undefined,
             definition: activeOuterCardForImage.definition,
             definitionVi: activeOuterCardForImage.definitionVi,
             definitionTh: activeOuterCardForImage.definitionTh,
@@ -743,19 +858,25 @@ export function AdminFlashcardsClient({
   const openTopicModal = (topic: Topic | null = null) => {
     if (topic) {
       setEditingTopic(topic)
+      const topicClassIds = topic.classes?.map((c) => c.id) || []
       setTopicForm({
         targetAudiences: topic.targetAudiences || [],
         name: topic.name,
         sampleCount: "",
-        iconUrl: topic.iconUrl || ""
+        iconUrl: topic.iconUrl || "",
+        classIds: topicClassIds,
       })
     } else {
       setEditingTopic(null)
+      const preselectedClassIds =
+        selectedClassFilter !== "ALL" && selectedClassFilter !== "NONE" ? [selectedClassFilter] : []
       setTopicForm({
-        targetAudiences: [selectedCatFilter !== "ALL" ? selectedCatFilter : "kid"],
+        targetAudiences:
+          preselectedClassIds.length > 0 ? [] : [selectedCatFilter !== "ALL" ? selectedCatFilter : "kid"],
         name: "",
         sampleCount: "",
-        iconUrl: ""
+        iconUrl: "",
+        classIds: preselectedClassIds,
       })
     }
     setShowTopicModal(true)
@@ -766,23 +887,36 @@ export function AdminFlashcardsClient({
   // -------------------------------------------------------------
   const handleSaveTopic = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!topicForm.name || topicForm.targetAudiences.length === 0) {
-      alert("Vui lòng nhập tên chủ đề và chọn ít nhất 1 nhóm tuổi.")
+    const hasClasses = topicForm.classIds.length > 0
+    if (!topicForm.name.trim()) {
+      alert("Vui lòng nhập tên chủ đề.")
+      return
+    }
+    if (!hasClasses && topicForm.targetAudiences.length === 0) {
+      alert("Vui lòng chọn ít nhất 1 nhóm tuổi cho chủ đề thư viện dùng chung.")
       return
     }
 
     if (editingTopic) {
       startTransition(async () => {
         // UPDATE
-        const res = await adminUpdateTopic(editingTopic.id, topicForm.name, topicForm.targetAudiences, topicForm.iconUrl)
+        const res = await adminUpdateTopic(
+          editingTopic.id,
+          topicForm.name,
+          hasClasses ? [] : topicForm.targetAudiences,
+          topicForm.iconUrl,
+          topicForm.classIds
+        )
         if (res.success && res.topic) {
-          const updatedLocalTopic = {
+          const assignedClasses = classList.filter((c) => topicForm.classIds.includes(c.id))
+          const updatedLocalTopic: Topic = {
             ...editingTopic,
             ...res.topic,
-            targetAudiences: topicForm.targetAudiences,
-            iconUrl: topicForm.iconUrl
+            targetAudiences: hasClasses ? [] : topicForm.targetAudiences,
+            iconUrl: topicForm.iconUrl,
+            classes: assignedClasses,
           }
-          setTopics(prev => prev.map(t => t.id === editingTopic.id ? updatedLocalTopic : t))
+          setTopics((prev) => prev.map((t) => (t.id === editingTopic.id ? updatedLocalTopic : t)))
           setShowTopicModal(false)
         } else {
           alert("Lỗi sửa chủ đề: " + res.error)
@@ -803,23 +937,33 @@ export function AdminFlashcardsClient({
     }
 
     try {
-      const createRes = await adminCreateTopic(topicForm.targetAudiences, topicForm.name, topicForm.iconUrl)
+      const createRes = await adminCreateTopic(
+        hasClasses ? [] : topicForm.targetAudiences,
+        topicForm.name,
+        topicForm.iconUrl,
+        topicForm.classIds
+      )
       if (!createRes.success || !createRes.topic) {
         alert("Lỗi tạo chủ đề: " + createRes.error)
         setIsGeneratingSamples(false)
         return
       }
 
-      const categoryName = targetAudiencesList.find(c => c.id === topicForm.targetAudiences[0])?.name || ""
-      const newLocalTopic = {
+      const assignedClasses = classList.filter((c) => topicForm.classIds.includes(c.id))
+      const categoryName = hasClasses 
+        ? (assignedClasses[0]?.name || "Lớp học") 
+        : (targetAudiencesList.find((c) => c.id === topicForm.targetAudiences[0])?.name || "")
+
+      const newLocalTopic: Topic = {
         ...createRes.topic,
-        targetAudiences: topicForm.targetAudiences,
+        targetAudiences: hasClasses ? [] : topicForm.targetAudiences,
         iconUrl: topicForm.iconUrl,
-        _count: { flashcards: 0 }
+        classes: assignedClasses,
+        _count: { flashcards: 0 },
       }
 
       // Prepend topic
-      setTopics(prev => [newLocalTopic, ...prev])
+      setTopics((prev) => [newLocalTopic, ...prev])
 
       if (isGenerating) {
         const vocabRes = await generateFlashcardVocabularyList(categoryName, topicForm.name, parsedSampleCount)
@@ -838,11 +982,19 @@ export function AdminFlashcardsClient({
         for (let i = 0; i < words.length; i++) {
           const item = words[i]
           
-          setGeneratingStatus(`[${i + 1}/${words.length}] Đang tìm ảnh cho "${item.word}"...`)
-          const imgRes = await generateCardImageAction(item.word, item.imageSearchKeyword)
+          let cardImageUrl: string | undefined = undefined
+          if (!hasClasses) {
+            setGeneratingStatus(`[${i + 1}/${words.length}] Đang tìm ảnh cho "${item.word}"...`)
+            const imgRes = await generateCardImageAction(item.word, item.imageSearchKeyword)
+            cardImageUrl = imgRes.imageUrl || undefined
+          }
           
-          setGeneratingStatus(`[${i + 1}/${words.length}] Đang tạo âm thanh cho "${item.word}"...`)
-          const audioRes = await generateCardAudioAction(item.word, item.exampleSentence, categoryName, item.quizQuestion)
+          setGeneratingStatus(
+            hasClasses
+              ? `[${i + 1}/${words.length}] Đang tạo âm thanh giọng trẻ em (Edge TTS) cho "${item.word}"...`
+              : `[${i + 1}/${words.length}] Đang tạo âm thanh cho "${item.word}"...`
+          )
+          const audioRes = await generateCardAudioAction(item.word, item.exampleSentence, categoryName, item.quizQuestion, hasClasses)
           
           setGeneratingStatus(`[${i + 1}/${words.length}] Đang lưu thẻ "${item.word}"...`)
           const cardRes = await adminCreateFlashcard({
@@ -854,9 +1006,10 @@ export function AdminFlashcardsClient({
             definitionTh: item.definitionTh,
             definitionId: item.definitionId,
             exampleSentence: item.exampleSentence,
-            imageUrl: imgRes.imageUrl || undefined,
+            imageUrl: cardImageUrl,
             audioUrl: audioRes.audioUrl || undefined,
             audioWordUrl: audioRes.audioWordUrl || undefined,
+            audioSentenceUrl: (audioRes as any).audioSentenceUrl || undefined,
             quizQuestion: item.quizQuestion || undefined,
             quizAudioUrl: audioRes.quizAudioUrl || undefined,
           })
@@ -866,10 +1019,12 @@ export function AdminFlashcardsClient({
             newLocalCards.push({
               ...cardRes.card,
               audioWordUrl: (cardRes.card as any).audioWordUrl || null,
+              audioSentenceUrl: (cardRes.card as any).audioSentenceUrl || null,
               topic: {
                 id: createRes.topic.id,
                 name: topicForm.name,
-                targetAudiences: topicForm.targetAudiences
+                targetAudiences: topicForm.targetAudiences,
+                classes: assignedClasses,
               }
             })
           }
@@ -1049,24 +1204,55 @@ export function AdminFlashcardsClient({
       <div className="space-y-6">
           
           {/* Dynamic Filter Row */}
-          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-3xl grid grid-cols-1 md:grid-cols-3 gap-4 shadow-md">
+          <div className="bg-neutral-900 border border-neutral-800 p-6 rounded-3xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shadow-md">
             
-            {/* Filter Category */}
+            {/* Filter 1: Lớp học (Class) */}
+            <div className="space-y-1.5">
+              <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Lọc theo lớp học (Class)</label>
+              <div className="relative">
+                <select
+                  value={selectedClassFilter}
+                  onChange={(e) => {
+                    setSelectedClassFilter(e.target.value)
+                    setSelectedTopicFilter("ALL") // Reset topic filter
+                  }}
+                  className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
+                >
+                  <option value="ALL">Tất cả lớp & Kho chung</option>
+                  <option value="NONE">Kho chung (Thư viện công khai)</option>
+                  {classList.map(cls => (
+                    <option key={cls.id} value={cls.id}>{cls.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
+                  <GraduationCap className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* Filter 2: Category */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Nhóm tuổi (Category)</label>
               <div className="relative">
                 <select
                   value={selectedCatFilter}
+                  disabled={selectedClassFilter !== "ALL" && selectedClassFilter !== "NONE"}
                   onChange={(e) => {
                     setSelectedCatFilter(e.target.value)
                     setSelectedTopicFilter("ALL") // Reset topic filter
                   }}
-                  className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
+                  className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <option value="ALL">Tất cả nhóm tuổi</option>
-                  {targetAudiencesList.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {selectedClassFilter !== "ALL" && selectedClassFilter !== "NONE" ? (
+                    <option value="ALL">Không áp dụng (Theo lớp)</option>
+                  ) : (
+                    <>
+                      <option value="ALL">Tất cả nhóm tuổi</option>
+                      {targetAudiencesList.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </>
+                  )}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
                   <Filter className="w-4 h-4" />
@@ -1074,7 +1260,7 @@ export function AdminFlashcardsClient({
               </div>
             </div>
 
-            {/* Filter Topic */}
+            {/* Filter 3: Topic */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Chủ đề từ vựng (Topic)</label>
               <div className="flex gap-2">
@@ -1084,10 +1270,15 @@ export function AdminFlashcardsClient({
                     onChange={(e) => setSelectedTopicFilter(e.target.value)}
                     className="w-full pl-4 pr-10 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold appearance-none cursor-pointer"
                   >
-                    <option value="ALL">Tất cả chủ đề</option>
-                    {filteredTopicsForFilter.map(t => (
-                      <option key={t.id} value={t.id}>{t.name} ({targetAudiencesList.find(c => t.targetAudiences.includes(c.id))?.name || "Multiple"})</option>
-                    ))}
+                    <option value="ALL">Tất cả chủ đề ({filteredTopicsForFilter.length})</option>
+                    {filteredTopicsForFilter.map(t => {
+                      const label = t.classes && t.classes.length > 0
+                        ? `${t.name} (Lớp: ${t.classes.map(c => c.name).join(", ")})`
+                        : `${t.name} (${targetAudiencesList.find(c => t.targetAudiences.includes(c.id))?.name || "Kho chung"})`
+                      return (
+                        <option key={t.id} value={t.id}>{label}</option>
+                      )
+                    })}
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none">
                     <Filter className="w-4 h-4" />
@@ -1120,7 +1311,7 @@ export function AdminFlashcardsClient({
               </div>
             </div>
 
-            {/* Search Word */}
+            {/* Filter 4: Search Word */}
             <div className="space-y-1.5">
               <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Tìm từ vựng (Word Search)</label>
               <div className="relative">
@@ -1180,13 +1371,22 @@ export function AdminFlashcardsClient({
                             )}
                           </div>
 
-                          {/* Category Tags */}
+                          {/* Category / Class Tags */}
                           <div className="flex flex-wrap gap-1">
-                            {(topic.targetAudiences || []).map(aud => (
-                              <span key={aud} className="inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
-                                {targetAudiencesList.find(c => c.id === aud)?.name || aud}
-                              </span>
-                            ))}
+                            {topic.classes && topic.classes.length > 0 ? (
+                              topic.classes.map(cls => (
+                                <span key={cls.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-600/15 text-emerald-400 border border-emerald-600/30">
+                                  <GraduationCap className="w-2.5 h-2.5" />
+                                  {cls.name}
+                                </span>
+                              ))
+                            ) : (
+                              (topic.targetAudiences || []).map(aud => (
+                                <span key={aud} className="inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
+                                  {targetAudiencesList.find(c => c.id === aud)?.name || aud}
+                                </span>
+                              ))
+                            )}
                           </div>
 
                           {/* Topic Name */}
@@ -1269,12 +1469,26 @@ export function AdminFlashcardsClient({
                         
                         <div className="flex gap-3.5 min-w-0 flex-1">
                           {/* Thumbnail frame */}
-                          <div className="w-20 h-20 rounded-none overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0">
+                          <div 
+                            onClick={() => {
+                              setActiveOuterCardForImage(card)
+                              handleGoogleImageSearch(card.word)
+                            }}
+                            className="w-20 h-20 rounded-xl overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0 cursor-pointer group/thumb hover:border-violet-500/50 transition-all"
+                            title={card.imageUrl ? "Click để đổi ảnh từ Internet" : "Click để tìm & gán ảnh từ Internet"}
+                          >
                             {card.imageUrl ? (
-                              <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover" />
+                              <>
+                                <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300" />
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-[10px] font-bold text-white transition-opacity gap-1">
+                                  <ImageIcon className="w-3.5 h-3.5 text-violet-400" />
+                                  <span>Đổi ảnh</span>
+                                </div>
+                              </>
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-neutral-600 bg-neutral-900">
-                                <ImageIcon className="w-5 h-5" />
+                              <div className="w-full h-full flex flex-col items-center justify-center text-neutral-500 hover:text-violet-400 bg-neutral-900/80 gap-1 transition-colors p-1 text-center">
+                                <Plus className="w-4 h-4 text-violet-400" />
+                                <span className="text-[9px] font-black tracking-tight text-neutral-400 leading-tight">Thêm ảnh</span>
                               </div>
                             )}
                           </div>
@@ -1282,14 +1496,30 @@ export function AdminFlashcardsClient({
                           <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 gap-1">
                             {/* Tags line */}
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {(card.topic?.targetAudiences || []).map((aud: string) => (
-                                <span key={aud} className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
-                                  {targetAudiencesList.find(c => c.id === aud)?.name || aud}
-                                </span>
-                              ))}
+                              {(() => {
+                                const cardClasses = card.topic?.classes || topics.find(t => t.id === card.topicId)?.classes || []
+                                if (cardClasses.length > 0) {
+                                  return cardClasses.map((cls: any) => (
+                                    <span key={cls.id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-600/15 text-emerald-400 border border-emerald-600/30">
+                                      <GraduationCap className="w-2.5 h-2.5" />
+                                      {cls.name}
+                                    </span>
+                                  ))
+                                }
+                                return (card.topic?.targetAudiences || []).map((aud: string) => (
+                                  <span key={aud} className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-blue-600/10 text-blue-400 border border-blue-600/15">
+                                    {targetAudiencesList.find(c => c.id === aud)?.name || aud}
+                                  </span>
+                                ))
+                              })()}
                               <span className="inline-flex px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-neutral-800 text-neutral-400 border border-neutral-700">
                                 {card.topic?.name}
                               </span>
+                              {!card.imageUrl && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/25">
+                                  Chưa có ảnh
+                                </span>
+                              )}
                             </div>
 
                             {/* Word & phonetic */}
@@ -1440,6 +1670,7 @@ export function AdminFlashcardsClient({
         <BatchCreateFlashcardModal
           topics={topics}
           targetAudiences={targetAudiencesList}
+          classList={classList}
           allFlashcards={flashcards}
           onClose={() => setShowBatchCreateModal(false)}
           onCardsCreated={(newCards, topicId, audienceId) => {
@@ -1453,12 +1684,18 @@ export function AdminFlashcardsClient({
                 name: topicObj.name,
                 targetAudiences: topicObj.targetAudiences,
                 iconUrl: topicObj.iconUrl ?? null,
+                classes: topicObj.classes,
               } : undefined,
             }))
             setFlashcards(prev => [...cardsWithTopic, ...prev])
             setShowBatchCreateModal(false)
             // Navigate to the topic view so admin can review the new cards
-            setSelectedCatFilter(audienceId)
+            if (topicObj?.classes && topicObj.classes.length > 0) {
+              setSelectedClassFilter(topicObj.classes[0].id)
+              setSelectedCatFilter("ALL")
+            } else {
+              setSelectedCatFilter(audienceId.startsWith("class:") ? "ALL" : audienceId)
+            }
             setSelectedTopicFilter(topicId)
             setSearchWord("")
             toast.success(`Đã tạo thành công ${newCards.length} thẻ học mới!`)
@@ -1472,6 +1709,7 @@ export function AdminFlashcardsClient({
                 : undefined
           }
           defaultTopicId={selectedTopicFilter !== "ALL" ? selectedTopicFilter : undefined}
+          defaultClassId={selectedClassFilter !== "ALL" && selectedClassFilter !== "NONE" ? selectedClassFilter : undefined}
         />
       )}
 
@@ -1528,8 +1766,10 @@ export function AdminFlashcardsClient({
                     onChange={(e) => setCardForm(prev => ({ ...prev, topicId: e.target.value }))}
                     className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl outline-none focus:border-blue-500 text-white transition-all text-sm font-semibold cursor-pointer"
                   >
-                    {topics.filter(t => t.targetAudiences.includes(cardForm.targetAudience)).map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                    {topics.filter(t => t.targetAudiences.includes(cardForm.targetAudience) || t.id === cardForm.topicId).map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} {t.classes && t.classes.length > 0 ? `(Lớp: ${t.classes.map(c => c.name).join(", ")})` : ""}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1848,7 +2088,7 @@ export function AdminFlashcardsClient({
           ======================================================================= */}
       {showTopicModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 w-full max-w-md shadow-2xl space-y-6">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-6 w-full max-w-lg shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             
             <div>
               <h2 className="text-2xl font-black text-white tracking-tight">
@@ -1859,26 +2099,133 @@ export function AdminFlashcardsClient({
 
             <form onSubmit={handleSaveTopic} className="space-y-5">
               
+              {/* Category (Nhóm tuổi) */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">Chọn nhóm tuổi (Category) <span className="text-red-500">*</span></label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {targetAudiencesList.map(c => (
-                    <label key={c.id} className="flex items-center gap-2 cursor-pointer bg-neutral-900 border border-neutral-700 hover:border-neutral-500 px-3 py-2 rounded-xl transition-all">
-                      <input 
-                        type="checkbox"
-                        checked={topicForm.targetAudiences.includes(c.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setTopicForm(prev => ({ ...prev, targetAudiences: [...prev.targetAudiences, c.id] }))
-                          } else {
-                            setTopicForm(prev => ({ ...prev, targetAudiences: prev.targetAudiences.filter(id => id !== c.id) }))
-                          }
-                        }}
-                        className="w-4 h-4 rounded text-blue-500 bg-neutral-800 border-neutral-600 focus:ring-0 focus:ring-offset-0"
-                      />
-                      <span className="text-white text-sm font-semibold">{c.name}</span>
-                    </label>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1">
+                    Chọn nhóm tuổi (Category) {topicForm.classIds.length === 0 && <span className="text-red-500">*</span>}
+                  </label>
+                  {topicForm.classIds.length > 0 && (
+                    <span className="text-[10px] font-bold text-amber-400">
+                      Tự động tắt (Đã gán theo lớp)
+                    </span>
+                  )}
+                </div>
+
+                {topicForm.classIds.length > 0 ? (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300 leading-relaxed flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <span>
+                      Chủ đề này thuộc về <strong>lớp học</strong>, không phân theo nhóm tuổi và <strong>không hiển thị công khai</strong> ngoài trang chủ.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {targetAudiencesList.map(c => (
+                      <label key={c.id} className="flex items-center gap-2 cursor-pointer bg-neutral-900 border border-neutral-700 hover:border-neutral-500 px-3 py-2 rounded-xl transition-all">
+                        <input 
+                          type="checkbox"
+                          checked={topicForm.targetAudiences.includes(c.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setTopicForm(prev => ({ ...prev, targetAudiences: [...prev.targetAudiences, c.id] }))
+                            } else {
+                              setTopicForm(prev => ({ ...prev, targetAudiences: prev.targetAudiences.filter(id => id !== c.id) }))
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-blue-500 bg-neutral-800 border-neutral-600 focus:ring-0 focus:ring-offset-0"
+                        />
+                        <span className="text-white text-sm font-semibold">{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Class selection (Gán cho Lớp học - Tùy chọn) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Gán cho Lớp học (Tùy chọn - Nhiều lớp)</span>
+                  </label>
+                  {topicForm.classIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTopicForm((prev) => ({
+                          ...prev,
+                          classIds: [],
+                          targetAudiences: prev.targetAudiences.length > 0 ? prev.targetAudiences : ["kid"],
+                        }))
+                      }
+                      className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 underline"
+                    >
+                      Đặt về Kho chung
+                    </button>
+                  )}
+                </div>
+
+                <div className="bg-neutral-850/60 border border-neutral-750 p-3.5 rounded-2xl space-y-2.5">
+                  <p className="text-[11px] text-neutral-400">
+                    {topicForm.classIds.length === 0 ? (
+                      <span className="text-blue-400 font-semibold">
+                        📦 Hiện tại: <strong>Kho chung (Thư viện công khai)</strong>
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 font-semibold">
+                        🎓 Đã gán cho <strong>{topicForm.classIds.length} lớp học</strong> (Chỉ học sinh trong lớp mới được học)
+                      </span>
+                    )}
+                  </p>
+
+                  {classList.length === 0 ? (
+                    <p className="text-xs text-neutral-500 italic">Chưa có lớp học nào trong hệ thống.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                      {classList.map((cls) => {
+                        const isChecked = topicForm.classIds.includes(cls.id)
+                        return (
+                          <label
+                            key={cls.id}
+                            className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition-all ${
+                              isChecked
+                                ? "bg-emerald-950/40 border-emerald-500/50 text-white"
+                                : "bg-neutral-800/60 border-neutral-700/60 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setTopicForm((prev) => ({
+                                    ...prev,
+                                    classIds: [...prev.classIds, cls.id],
+                                    targetAudiences: [], // Clear age groups when assigned to class
+                                  }))
+                                } else {
+                                  setTopicForm((prev) => {
+                                    const nextClasses = prev.classIds.filter((id) => id !== cls.id)
+                                    return {
+                                      ...prev,
+                                      classIds: nextClasses,
+                                      targetAudiences:
+                                        nextClasses.length === 0 && prev.targetAudiences.length === 0
+                                          ? ["kid"]
+                                          : prev.targetAudiences,
+                                    }
+                                  })
+                                }
+                              }}
+                              className="w-4 h-4 rounded text-emerald-500 bg-neutral-800 border-neutral-600 focus:ring-0 focus:ring-offset-0"
+                            />
+                            <span className="truncate">{cls.name}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1965,7 +2312,13 @@ export function AdminFlashcardsClient({
                     className="w-full px-4 py-3 bg-neutral-800 border border-purple-500/30 rounded-xl outline-none text-white focus:border-purple-500 text-sm font-semibold"
                   />
                   <p className="text-[11px] text-neutral-500 pl-1 mt-1">
-                    Hệ thống sẽ dùng AI để sinh từ vựng, tự động dịch, tạo câu ví dụ và tìm ảnh. Quá trình có thể mất vài phút.
+                    {topicForm.classIds.length > 0 ? (
+                      <span className="text-emerald-400 font-medium">
+                        ⚡ Chủ đề thuộc lớp học: Hệ thống sẽ sinh từ vựng, dịch nghĩa và tạo âm thanh giọng trẻ em (Edge TTS). Không tải ảnh để tạo siêu tốc — bạn có thể thêm ảnh từ Internet sau.
+                      </span>
+                    ) : (
+                      "Hệ thống sẽ dùng AI để sinh từ vựng, tự động dịch, tạo câu ví dụ và tìm ảnh. Quá trình có thể mất vài phút."
+                    )}
                   </p>
                 </div>
               )}
@@ -2067,58 +2420,139 @@ export function AdminFlashcardsClient({
           SLIDE-OUT DRAWER: TÌM ẢNH TỪ GOOGLE IMAGES
           ======================================================================= */}
       {showImageSearchDrawer && (
-        <div className="fixed top-0 right-0 h-full w-[360px] bg-neutral-900 border-l border-neutral-800 p-6 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
+        <div className="fixed top-0 right-0 h-full w-[380px] bg-neutral-900 border-l border-neutral-800 p-5 shadow-2xl flex flex-col z-[60] animate-in slide-in-from-right duration-300">
           
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex-1">
-              <h4 className="text-base font-bold text-white flex items-center gap-2">
-                <Globe className="text-blue-500 w-5 h-5" />
-                Tìm ảnh Internet
-              </h4>
-              <p className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mt-1 mb-3">
-                Từ khoá: <span className="text-blue-500">{activeOuterCardForImage ? activeOuterCardForImage.word : cardForm?.word}</span>
-              </p>
-              
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-neutral-800 rounded-lg p-1">
-                    <button
-                      type="button"
-                      onClick={() => setImageSearchStyle("REALISTIC")}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "REALISTIC" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
-                    >
-                      📷 Ảnh thực tế
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setImageSearchStyle("CARTOON")}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
-                    >
-                      🎨 Ảnh hoạt hình
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={isSearchingImage}
-                    onClick={() => handleGoogleImageSearch(activeOuterCardForImage ? activeOuterCardForImage.word : cardForm?.word, imageSearchStyle)}
-                    className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition-all disabled:opacity-50 border border-neutral-700 h-full"
-                  >
-                    <Search className="w-3.5 h-3.5" />
-                    Tìm
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Header */}
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="text-base font-bold text-white flex items-center gap-2">
+              <Globe className="text-blue-500 w-5 h-5" />
+              <span>Tìm ảnh Internet</span>
+            </h4>
             <button 
               type="button" 
               onClick={() => {
                 setShowImageSearchDrawer(false)
                 setActiveOuterCardForImage(null)
               }} 
-              className="p-2 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors ml-2 shrink-0"
+              className="p-1.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors shrink-0 cursor-pointer"
+              title="Đóng"
             >
-              <span className="material-symbols-outlined text-[20px]">close</span>
+              <X className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Search Box & Controls */}
+          <div className="mb-4 space-y-2">
+            {/* Input with Clear Button */}
+            <div className="relative flex items-center">
+              <input
+                ref={imageSearchInputRef}
+                type="text"
+                value={imageSearchQuery}
+                onChange={(e) => setImageSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    handleExecuteImageSearch(imageSearchQuery, imageSearchStyle)
+                  }
+                }}
+                placeholder="Nhập từ khóa tìm kiếm (VD: Cross math)..."
+                className="w-full pl-3 pr-8 py-2 bg-neutral-950 border border-neutral-700 focus:border-blue-500 rounded-xl text-white text-xs font-semibold outline-none transition-all placeholder:text-neutral-500"
+              />
+              {imageSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSearchQuery("")
+                    imageSearchInputRef.current?.focus()
+                  }}
+                  className="absolute right-2 text-neutral-400 hover:text-white p-1 transition-colors cursor-pointer"
+                  title="Xóa trắng"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Original Word & Reset Link */}
+            {imageSearchOriginalWord && imageSearchQuery.trim() !== imageSearchOriginalWord.trim() && (
+              <div className="flex items-center justify-between text-[11px] px-0.5 text-neutral-400">
+                <span className="truncate max-w-[200px]">Gốc: <b className="text-neutral-200">{imageSearchOriginalWord}</b></span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSearchQuery(imageSearchOriginalWord)
+                    handleExecuteImageSearch(imageSearchOriginalWord, imageSearchStyle)
+                  }}
+                  className="text-blue-400 hover:underline flex items-center gap-1 font-semibold shrink-0 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" /> Khôi phục
+                </button>
+              </div>
+            )}
+
+            {/* Quick Context Filter Chips */}
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {["shape", "math", "icon", "clipart", "object", "cute"].map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    const alreadyHas = imageSearchQuery.toLowerCase().includes(tag)
+                    const newQuery = alreadyHas ? imageSearchQuery : `${imageSearchQuery.trim()} ${tag}`.trim()
+                    setImageSearchQuery(newQuery)
+                    handleExecuteImageSearch(newQuery, imageSearchStyle)
+                  }}
+                  className="px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-[10px] font-bold text-neutral-300 hover:text-white rounded-md border border-neutral-700 transition-all cursor-pointer"
+                >
+                  +{tag}
+                </button>
+              ))}
+            </div>
+
+            {/* Style Selector & Search Button */}
+            <div className="flex items-center gap-2 pt-1">
+              <div className="flex items-center bg-neutral-800 rounded-lg p-1 border border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSearchStyle("REALISTIC")
+                    handleExecuteImageSearch(imageSearchQuery, "REALISTIC")
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                    imageSearchStyle === "REALISTIC" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  📷 Thực tế
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageSearchStyle("CARTOON")
+                    handleExecuteImageSearch(imageSearchQuery, "CARTOON")
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                    imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"
+                  }`}
+                >
+                  🎨 Hoạt hình
+                </button>
+              </div>
+
+              <button
+                type="button"
+                disabled={isSearchingImage}
+                onClick={() => handleExecuteImageSearch(imageSearchQuery, imageSearchStyle)}
+                className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 border border-blue-500 shadow-sm cursor-pointer"
+              >
+                {isSearchingImage ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Search className="w-3.5 h-3.5" />
+                )}
+                <span>Tìm</span>
+              </button>
+            </div>
           </div>
           
           <div className="flex-1 overflow-y-auto pr-1 space-y-4">

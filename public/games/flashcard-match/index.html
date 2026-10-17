@@ -534,34 +534,44 @@
 
         if (url) {
             try {
-                // Use Web Audio API with GainNode to boost volume above 1.0
+                // Priority 1: Web Audio API with GainNode for Cloudflare audio
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const res      = await fetch(url);
-                const buf      = await res.arrayBuffer();
-                const decoded  = await audioCtx.decodeAudioData(buf);
-                const source   = audioCtx.createBufferSource();
-                const gain     = audioCtx.createGain();
-                gain.gain.value = 2.0;  // boost 2x
-                source.buffer  = decoded;
-                source.connect(gain);
-                gain.connect(audioCtx.destination);
-                source.onended = restoreVolume;
-                source.start(0);
-                return;
+                if (res.ok) {
+                    const buf      = await res.arrayBuffer();
+                    const decoded  = await audioCtx.decodeAudioData(buf);
+                    const source   = audioCtx.createBufferSource();
+                    const gain     = audioCtx.createGain();
+                    gain.gain.value = 2.0;  // boost 2x
+                    source.buffer  = decoded;
+                    source.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    source.onended = restoreVolume;
+                    source.start(0);
+                    return;
+                }
             } catch(e) {
-                // Fallback: plain Audio element
+                // Secondary check: plain Audio element
                 try {
-                    const a=new Audio(url);
-                    a.volume=1;
+                    const a = new Audio(url);
+                    a.volume = 1;
                     a.addEventListener('ended', restoreVolume);
-                    a.addEventListener('error', restoreVolume);
+                    a.addEventListener('error', () => {
+                        fallbackToEdgeTTS(card, restoreVolume);
+                    });
                     await a.play();
                     return;
                 } catch(e2){
-                    restoreVolume();
+                    // Fall through to Edge TTS below
                 }
             }
         }
+
+        // Priority 2: Fallback on-the-fly Edge TTS (for cards without Cloudflare audio)
+        fallbackToEdgeTTS(card, restoreVolume);
+    }
+
+    function fallbackToEdgeTTS(card, restoreVolume) {
         const textToSpeak = (card.word || '').trim();
         if (textToSpeak) {
             try {
@@ -571,7 +581,9 @@
                 edgeAudio.addEventListener('error', () => {
                     tryBrowserSpeech(textToSpeak, restoreVolume);
                 });
-                await edgeAudio.play();
+                edgeAudio.play().catch(() => {
+                    tryBrowserSpeech(textToSpeak, restoreVolume);
+                });
                 return;
             } catch(edgeErr) {
                 tryBrowserSpeech(textToSpeak, restoreVolume);
@@ -1149,6 +1161,10 @@
 
         loadingEl.style.opacity = '0';
         setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+
+        try {
+            window.parent.postMessage({ type: 'GAME_READY', game: 'flashcard-match' }, '*');
+        } catch(e) {}
     }
 
     if (document.readyState === 'loading') {

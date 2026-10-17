@@ -50,6 +50,25 @@ type PublicClassItem = {
 
 const PUBLIC_CLASSES: PublicClassItem[] = [
   {
+    id: 'tiny-vocab-wonders',
+    title: 'Tiny Vocab Wonders (45 Days)',
+    description: 'Learn 180+ first English words through audio flashcards, illustrated mini-stories, and joyful games.',
+    subjectBadge: 'Vocab • Grades K-1',
+    subjectBadgeClass: 'bg-[#fef3c7]/95 text-[#92400e] border-[#fde68a]/70',
+    typeBadge: '🔥 Free',
+    typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
+    thumbnail: '/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    joinCode: 'VOCAB45',
+    teacher: {
+      name: 'Ms. Jessica Nguyen',
+      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      role: 'Teacher',
+    },
+    lessonsCount: 45,
+    studentsCount: '60+ students',
+    btnGradient: 'from-[#f59e0b] via-[#f97316] to-[#ec4899] hover:from-[#d97706] hover:to-[#db2777] shadow-amber-500/20',
+  },
+  {
     id: 'cmuvbigbg0001vta43ikcsjbk',
     title: 'English Grammar Mastery (45 Days)',
     description: 'Master English grammar from zero to B1 with 268 interactive spaced-repetition exercises.',
@@ -211,12 +230,21 @@ function EnrolledClassRowCard({
   const targetClassId = item.class.id || item.id;
   const classUrl = `/student/classes/${targetClassId}`;
 
+  const resolvedThumbnail =
+    item.class.thumbnail && item.class.thumbnail !== '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg'
+      ? item.class.thumbnail
+      : matched.thumbnail || item.class.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
+
   // Real thumbnail and teacher avatar from database with defensive error fallback
-  const [thumbSrc, setThumbSrc] = useState(item.class.thumbnail || matched.thumbnail);
+  const [thumbSrc, setThumbSrc] = useState(resolvedThumbnail);
   const [avatarSrc, setAvatarSrc] = useState(item.class.teacherAvatar || matched.teacher.avatar);
 
   useEffect(() => {
-    setThumbSrc(item.class.thumbnail || matched.thumbnail);
+    const nextThumb =
+      item.class.thumbnail && item.class.thumbnail !== '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg'
+        ? item.class.thumbnail
+        : matched.thumbnail || item.class.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
+    setThumbSrc(nextThumb);
   }, [item.class.thumbnail, matched.thumbnail]);
 
   useEffect(() => {
@@ -624,8 +652,12 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
             fetchClasses(false);
           }
         });
-    } else if (isLoggedIn && !cachedData) {
-      fetchClasses(false);
+    } else if (isLoggedIn) {
+      if (!cachedData) {
+        fetchClasses(false);
+      } else {
+        fetchClasses(true);
+      }
     }
     return () => {
       isMounted = false;

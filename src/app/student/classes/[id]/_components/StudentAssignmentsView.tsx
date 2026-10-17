@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { 
@@ -40,23 +40,60 @@ import {
   FileEdit,
   Target,
   Mic,
-  Clock
+  Clock,
+  Puzzle,
+  Keyboard,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree } from '../_utils/assignmentOrder';
 import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 import dynamic from 'next/dynamic';
+import { FloatingZaloWidget } from './FloatingZaloWidget';
+
+export function ActivityCanvasLoadingFallback() {
+  return (
+    <div className="w-full h-full min-h-[580px] lg:min-h-[660px] flex flex-col items-center justify-center p-6 bg-slate-50/50 dark:bg-slate-900/50 rounded-b-[1.75rem] animate-in fade-in duration-150">
+      <div className="max-w-sm w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 shadow-sm text-center space-y-3.5">
+        <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto shadow-xs">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
+        </div>
+        <div>
+          <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">
+            Đang tải nội dung bài học...
+          </h4>
+          <p className="text-xs text-slate-400 font-semibold mt-1">
+            Vui lòng chờ trong giây lát
+          </p>
+        </div>
+        <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 h-full w-full animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const EmbeddedQuizContainer = dynamic(
-  () => import('./EmbeddedQuizContainer').then((mod) => mod.EmbeddedQuizContainer)
+  () => import('./EmbeddedQuizContainer').then((mod) => mod.EmbeddedQuizContainer),
+  { loading: () => <ActivityCanvasLoadingFallback /> }
 );
 const EmbeddedGrammarContainer = dynamic(
-  () => import('./EmbeddedGrammarContainer').then((mod) => mod.EmbeddedGrammarContainer)
+  () => import('./EmbeddedGrammarContainer').then((mod) => mod.EmbeddedGrammarContainer),
+  { loading: () => <ActivityCanvasLoadingFallback /> }
 );
 const EmbeddedBookContainer = dynamic(
-  () => import('./EmbeddedBookContainer').then((mod) => mod.EmbeddedBookContainer)
+  () => import('./EmbeddedBookContainer').then((mod) => mod.EmbeddedBookContainer),
+  { loading: () => <ActivityCanvasLoadingFallback /> }
 );
 const EmbeddedGameContainer = dynamic(
-  () => import('./EmbeddedGameContainer').then((mod) => mod.EmbeddedGameContainer)
+  () => import('./EmbeddedGameContainer').then((mod) => mod.EmbeddedGameContainer),
+  { loading: () => <ActivityCanvasLoadingFallback /> }
+);
+const EmbeddedFlashcardContainer = dynamic(
+  () => import('./EmbeddedFlashcardContainer').then((mod) => mod.EmbeddedFlashcardContainer),
+  { loading: () => <ActivityCanvasLoadingFallback /> }
 );
 import { AssignmentIconWithProgress } from './AssignmentIconWithProgress';
 import { 
@@ -75,16 +112,36 @@ export { STAGE_ROADMAP_ORDER, sortGroupItems };
 export function isGrammarAssignmentItem(item: StudentGroupItem): boolean {
   const matType = item.assignment.materialType;
   let kind = matType;
+  const isDirectHtml = Boolean(
+    item.assignment.instructions && !item.assignment.instructions.trim().startsWith('{')
+  );
   if (item.assignment.instructions) {
     try {
       const meta = JSON.parse(item.assignment.instructions);
       if (meta.kind) kind = meta.kind;
     } catch {}
   }
+
+  // Explicit child or distinct activity types should NEVER be treated as grammar lessons
+  const isExplicitNonLesson =
+    kind === 'FLASHCARD' ||
+    kind === 'GAME' ||
+    kind === 'EXERCISE' ||
+    kind === 'READING' ||
+    kind === 'BOOK' ||
+    matType === 'FLASHCARD' ||
+    matType === 'GAME' ||
+    matType === 'READING';
+
+  if (isExplicitNonLesson) return false;
+
   const titleLower = item.assignment.title.toLowerCase();
   return (
     kind === 'LESSON' ||
     matType === 'LESSON' ||
+    Boolean(item.assignment.grammarLesson) ||
+    Boolean(item.assignment.grammarTopic) ||
+    isDirectHtml ||
     titleLower.includes('lý thuyết') ||
     titleLower.includes('ly thuyet') ||
     titleLower.includes('grammar lesson') ||
@@ -148,6 +205,7 @@ export interface StudentAssignmentsViewProps {
     gradeLevel?: string | null;
     joinCode?: string | null;
     teacher?: any;
+    zaloGroupUrl?: string | null;
   };
   enrolledClasses?: {
     id: string;
@@ -181,6 +239,7 @@ export interface ParsedItemConfig {
   badgeClass: string;
   pillColor: string;
   pastel: PastelStyle;
+  cardCount?: number;
 }
 
 /** Helper to clean prefix like "[Chặng 1 - A1]" or "Chặng 1:" from group titles for clean display */
@@ -287,8 +346,13 @@ export function formatScore(score: number | null | undefined): string {
 /** Helper to parse metadata and URLs for each student assignment item */
 export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
   let targetUrl = `/student/assignments/${item.assignment.id}/run`;
-  let kind = 'EXERCISE';
+  let kind = item.assignment.materialType || 'EXERCISE';
   let isReview = false;
+  let cardCount: number | undefined;
+
+  const isDirectHtml = Boolean(
+    item.assignment.instructions && !item.assignment.instructions.trim().startsWith('{')
+  );
 
   if (item.assignment.instructions) {
     try {
@@ -296,22 +360,39 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
       if (meta.playUrl) targetUrl = meta.playUrl;
       if (meta.kind) kind = meta.kind;
       if (meta.section === 'REVIEW' || meta.isReview) isReview = true;
+      if (typeof meta.cardCount === 'number') cardCount = meta.cardCount;
     } catch {}
   }
 
   const titleLower = item.assignment.title.toLowerCase();
+  const isExplicitChildType = 
+    kind === 'FLASHCARD' || 
+    kind === 'GAME' || 
+    kind === 'EXERCISE' || 
+    item.assignment.materialType === 'FLASHCARD' ||
+    item.assignment.materialType === 'GAME' ||
+    targetUrl.includes('/flashcard');
+
   const isGrammarLesson = 
-    kind === 'LESSON' || 
-    targetUrl.includes('/grammar/') || 
-    titleLower.includes('lý thuyết') ||
-    titleLower.includes('ly thuyet') ||
-    titleLower.includes('grammar lesson');
+    !isExplicitChildType && (
+      kind === 'LESSON' || 
+      item.assignment.materialType === 'LESSON' ||
+      Boolean(item.assignment.grammarLesson) ||
+      Boolean(item.assignment.grammarTopic) ||
+      isDirectHtml ||
+      targetUrl.includes('/grammar/') || 
+      titleLower.includes('lý thuyết') ||
+      titleLower.includes('ly thuyet') ||
+      titleLower.includes('grammar lesson')
+    );
 
   if (isGrammarLesson) {
     kind = 'LESSON';
   } else if (item.assignment.materialType === 'READING') {
     kind = 'READING';
-  } else if (item.assignment.materialType === 'FLASHCARD') {
+  } else if (kind === 'GAME' || item.assignment.materialType === 'GAME' || targetUrl.includes('/game/') || targetUrl.includes('/games/')) {
+    kind = 'GAME';
+  } else if (item.assignment.materialType === 'FLASHCARD' || kind === 'FLASHCARD' || targetUrl.includes('/flashcard')) {
     kind = 'FLASHCARD';
   } else if (kind === 'GRAMMAR' || kind === 'EXERCISE') {
     kind = 'EXERCISE';
@@ -405,13 +486,13 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     stageLabel = 'Game';
     tooltipText = 'Game';
     iconNode = <Gamepad2 className="w-3.5 h-3.5 stroke-[2.3px]" />;
-    badgeClass = 'bg-pink-100 text-pink-700 dark:bg-pink-950/70 dark:text-pink-300 border border-pink-200/80 dark:border-pink-800/80';
-    pillColor = 'bg-pink-500';
+    badgeClass = 'bg-rose-100 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/80';
+    pillColor = 'bg-rose-500';
     pastel = {
-      tileBg: '#FCD5DF',
-      tileColor: '#D9436C',
-      activeBorder: '#FF6F96',
-      badgeBg: 'bg-[#FCD5DF] text-[#D9436C]',
+      tileBg: '#FFE4E6',
+      tileColor: '#E11D48',
+      activeBorder: '#F43F5E',
+      badgeBg: 'bg-[#FFE4E6] text-[#E11D48]',
       typeKey: 'game'
     };
   } else if (kind === 'READING' || kind === 'BOOK') {
@@ -430,16 +511,16 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     };
   } else if (kind === 'FLASHCARD') {
     stage = 'flashcard';
-    stageLabel = 'Từ vựng';
+    stageLabel = 'Flashcard';
     tooltipText = 'Flashcard';
     iconNode = <Layers className="w-3.5 h-3.5 stroke-[2.3px]" />;
-    badgeClass = 'bg-violet-100 text-violet-700 dark:bg-violet-950/70 dark:text-violet-300 border border-violet-200/80 dark:border-violet-800/80';
-    pillColor = 'bg-violet-500';
+    badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80';
+    pillColor = 'bg-amber-500';
     pastel = {
-      tileBg: '#DFD7FC',
-      tileColor: '#5A3EDB',
-      activeBorder: '#7B5CFA',
-      badgeBg: 'bg-[#DFD7FC] text-[#5A3EDB]',
+      tileBg: '#FFF3D6',
+      tileColor: '#D97706',
+      activeBorder: '#F59E0B',
+      badgeBg: 'bg-[#FFF3D6] text-[#C26C08]',
       typeKey: 'flashcard'
     };
   }
@@ -458,10 +539,43 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     badgeClass,
     pillColor,
     pastel,
+    cardCount,
   };
 }
 
+/** Triệt tiêu toàn bộ âm thanh / TTS của trình duyệt, thẻ media và iframe game */
+export function stopAllAudioAndTts() {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {}
+  }
+  if (typeof document !== 'undefined') {
+    try {
+      const mediaElements = document.querySelectorAll<HTMLMediaElement>('audio, video');
+      mediaElements.forEach(el => {
+        try {
+          el.pause();
+          el.currentTime = 0;
+        } catch {}
+      });
+    } catch {}
+    try {
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        try {
+          iframe.contentWindow?.postMessage({ action: 'pause_audio', type: 'STOP_ALL_AUDIO' }, '*');
+          iframe.contentWindow?.postMessage({ action: 'stop_audio', type: 'STOP_ALL_AUDIO' }, '*');
+        } catch {}
+      });
+    } catch {}
+  }
+}
 
+export type PendingNavigation =
+  | { type: 'assignment'; item: StudentGroupItem; parentGroupId: string }
+  | { type: 'group'; groupId: string }
+  | { type: 'stageTab'; stageId: ActivityStage };
 
 export function StudentAssignmentsView({ 
   assignmentGroups,
@@ -712,6 +826,43 @@ export function StudentAssignmentsView({
     return activeGroupParsedItems.find(p => p.item.assignment.id === activeAssignmentId) || activeGroupParsedItems[0] || null;
   }, [activeGroupParsedItems, activeAssignmentId]);
 
+  // Keep-Alive Pool: Preserves visited component instances and their user progress in DOM
+  const [visitedConfigs, setVisitedConfigs] = useState<Record<string, ParsedItemConfig>>(() => {
+    if (activeItemConfig) {
+      return { [activeItemConfig.item.assignment.id]: activeItemConfig };
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    if (activeItemConfig) {
+      const aid = activeItemConfig.item.assignment.id;
+      setVisitedConfigs(prev => {
+        if (prev[aid]) return prev;
+        return {
+          ...prev,
+          [aid]: activeItemConfig,
+        };
+      });
+    }
+  }, [activeItemConfig]);
+
+  // When switching groups, reset pool to the new active item
+  useEffect(() => {
+    if (activeItemConfig) {
+      setVisitedConfigs({ [activeItemConfig.item.assignment.id]: activeItemConfig });
+    }
+  }, [selectedGroupId]);
+
+  // Combined visited configs to guarantee immediate mounting with 0-frame delay
+  const displayConfigs = useMemo(() => {
+    const map = { ...visitedConfigs };
+    if (activeItemConfig) {
+      map[activeItemConfig.item.assignment.id] = activeItemConfig;
+    }
+    return map;
+  }, [visitedConfigs, activeItemConfig]);
+
   // Stage Tabs available in active group
   const availableStages = useMemo(() => {
     if (!activeGroupParsedItems.length) return [];
@@ -773,8 +924,33 @@ export function StudentAssignmentsView({
     } catch {}
   };
 
-  // Switch to a new Group
-  const handleSelectGroup = (groupId: string) => {
+  // State lưu trữ yêu cầu chuyển bài/nhóm/tab đang chờ học sinh xác nhận
+  const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
+
+  // Kiểm tra bài học/game hiện tại có đang làm dở dang (chưa submit/hoàn thành) hay không
+  const isCurrentActivityIncomplete = useCallback((): boolean => {
+    if (!activeAssignmentId || !activeItemConfig) return false;
+    // Nếu bài đã hoàn thành (nộp bài/đạt điểm) -> Cho phép chuyển ngay không cần hỏi
+    if (submissionsState[activeAssignmentId]?.isSubmitted) return false;
+
+    // Các hoạt động có tiến trình làm bài: Flashcard, Game, Bài tập/Quiz, Sách đọc
+    const stage = activeItemConfig.stage;
+    const kind = activeItemConfig.kind;
+    return (
+      stage === 'flashcard' ||
+      stage === 'game' ||
+      stage === 'exercise' ||
+      stage === 'reading' ||
+      stage === 'review' ||
+      kind === 'FLASHCARD' ||
+      kind === 'GAME' ||
+      kind === 'EXERCISE' ||
+      kind === 'BOOK'
+    );
+  }, [activeAssignmentId, activeItemConfig, submissionsState]);
+
+  // Thực hiện chuyển sang Nhóm mới (Internal)
+  const executeSelectGroup = useCallback((groupId: string) => {
     const grp = assignmentGroups.find(g => g.id === groupId);
     if (!grp) return;
 
@@ -783,7 +959,6 @@ export function StudentAssignmentsView({
       return;
     }
 
-    // Auto expand parent stage if this group belongs to a stage
     const match = grp.title.match(/\[?(?:Chặng|Stage)\s*(\d+)/i);
     if (match) {
       const stageNum = parseInt(match[1], 10);
@@ -794,10 +969,8 @@ export function StudentAssignmentsView({
       clearPreloadQueue();
     }
     setSelectedGroupId(groupId);
-    // Single Accordion: Only this group is expanded
     setExpandedGroups({ [groupId]: true });
 
-    // Pick first uncompleted item or first item
     const uncompleted = grp.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
     const chosen = uncompleted || grp.items[0];
 
@@ -815,10 +988,10 @@ export function StudentAssignmentsView({
     } else {
       updateQueryParams(groupId, '', '');
     }
-  };
+  }, [assignmentGroups, selectedGroupId, submissionsState, classId, pathname]);
 
-  // Switch to a new Assignment
-  const handleSelectAssignment = (item: StudentGroupItem, parentGroupId: string) => {
+  // Thực hiện chuyển sang Bài tập mới (Internal)
+  const executeSelectAssignment = useCallback((item: StudentGroupItem, parentGroupId: string) => {
     const grp = assignmentGroups.find(g => g.id === parentGroupId);
     if (grp?.isLocked) {
       setLockedGroupModal(grp);
@@ -829,7 +1002,6 @@ export function StudentAssignmentsView({
       clearPreloadQueue();
     }
 
-    // Always immediately promote preloading priority and unblock interaction
     prefetchAssignmentData(item, classId, parentGroupId);
     promoteAssignmentPriority(item.assignment.id, classId, parentGroupId);
 
@@ -840,19 +1012,17 @@ export function StudentAssignmentsView({
     setActiveStageId(cfg.stage);
     updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
 
-    // Auto-collapse sidebar on mobile so the student immediately sees the activity canvas
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setIsSidebarCollapsed(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
+  }, [assignmentGroups, selectedGroupId, classId, pathname]);
 
-  // Switch Stage Tab (Area 2)
-  const handleSelectStageTab = (stageId: ActivityStage) => {
+  // Thực hiện chuyển Stage Tab (Internal)
+  const executeSelectStageTab = useCallback((stageId: ActivityStage) => {
     setActiveStageId(stageId);
     const stageObj = availableStages.find(s => s.id === stageId);
     if (stageObj && stageObj.items.length > 0) {
-      // If currently selected item is already in this stage, keep it; else select first item in stage
       const itemInStage = stageObj.items.find(i => i.item.assignment.id === activeAssignmentId);
       const chosenItem = itemInStage || stageObj.items[0];
       prefetchAssignmentData(chosenItem.item);
@@ -865,6 +1035,104 @@ export function StudentAssignmentsView({
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
+  }, [availableStages, activeAssignmentId, selectedGroupId, pathname]);
+
+  // Xác nhận dừng bài hiện tại & chuyển bài mới
+  const handleConfirmLeave = useCallback(() => {
+    if (!pendingNavigation) return;
+    const target = pendingNavigation;
+    const oldAid = activeAssignmentId;
+
+    // 1. Tắt ngay toàn bộ TTS / Audio đa tầng
+    stopAllAudioAndTts();
+
+    // 2. Reset bài cũ về đầu: Loại bỏ bài cũ khỏi visitedConfigs để unmount hoàn toàn
+    if (oldAid) {
+      setVisitedConfigs(prev => {
+        const next = { ...prev };
+        delete next[oldAid];
+        return next;
+      });
+    }
+
+    // 3. Đóng modal và thực hiện điều hướng đã lưu
+    setPendingNavigation(null);
+
+    if (target.type === 'assignment') {
+      executeSelectAssignment(target.item, target.parentGroupId);
+    } else if (target.type === 'group') {
+      executeSelectGroup(target.groupId);
+    } else if (target.type === 'stageTab') {
+      executeSelectStageTab(target.stageId);
+    }
+  }, [pendingNavigation, activeAssignmentId, executeSelectAssignment, executeSelectGroup, executeSelectStageTab]);
+
+  // Switch to a new Group
+  const handleSelectGroup = (groupId: string) => {
+    const grp = assignmentGroups.find(g => g.id === groupId);
+    if (!grp) return;
+
+    if (grp.isLocked) {
+      setLockedGroupModal(grp);
+      return;
+    }
+
+    // Nếu chọn đúng nhóm đang mở, không hỏi
+    if (groupId === selectedGroupId) {
+      return;
+    }
+
+    // Nếu bài hiện tại đang làm dở dang -> Hiển thị modal hỏi dừng bài
+    if (isCurrentActivityIncomplete()) {
+      setPendingNavigation({ type: 'group', groupId });
+      return;
+    }
+
+    stopAllAudioAndTts();
+    executeSelectGroup(groupId);
+  };
+
+  // Switch to a new Assignment
+  const handleSelectAssignment = (item: StudentGroupItem, parentGroupId: string) => {
+    const grp = assignmentGroups.find(g => g.id === parentGroupId);
+    if (grp?.isLocked) {
+      setLockedGroupModal(grp);
+      return;
+    }
+
+    // Nếu bấm vào chính bài đang mở, không làm gì
+    if (item.assignment.id === activeAssignmentId) {
+      return;
+    }
+
+    // Nếu bài hiện tại đang làm dở dang -> Hiển thị modal hỏi dừng bài
+    if (isCurrentActivityIncomplete()) {
+      setPendingNavigation({ type: 'assignment', item, parentGroupId });
+      return;
+    }
+
+    stopAllAudioAndTts();
+    executeSelectAssignment(item, parentGroupId);
+  };
+
+  // Switch Stage Tab (Area 2)
+  const handleSelectStageTab = (stageId: ActivityStage) => {
+    if (stageId === activeStageId) return;
+
+    const stageObj = availableStages.find(s => s.id === stageId);
+    if (stageObj && stageObj.items.length > 0) {
+      const itemInStage = stageObj.items.find(i => i.item.assignment.id === activeAssignmentId);
+      const chosenItem = itemInStage || stageObj.items[0];
+
+      // Nếu chuyển tab sẽ đổi sang bài khác và bài hiện tại chưa xong -> Hỏi xác nhận
+      if (chosenItem && chosenItem.item.assignment.id !== activeAssignmentId && isCurrentActivityIncomplete()) {
+        setPendingNavigation({ type: 'stageTab', stageId });
+        return;
+      }
+    }
+
+    stopAllAudioAndTts();
+    executeSelectStageTab(stageId);
   };
 
   // Next Activity CTA
@@ -876,6 +1144,18 @@ export function StudentAssignmentsView({
     if (currentIndex >= 0 && currentIndex < activeGroup.items.length - 1) {
       // Next item in current group
       const nextItem = activeGroup.items[currentIndex + 1];
+      const nextProgress = preloadProgress[nextItem.assignment.id] ?? 0;
+      const isNextReady = nextProgress >= 100 || isAssignmentCached(nextItem.assignment.id);
+      if (!isNextReady) {
+        prefetchAssignmentData(nextItem, classId, activeGroup.id);
+        promoteAssignmentPriority(nextItem.assignment.id, classId, activeGroup.id);
+        const progressDetail = nextProgress > 0 ? ` (${nextProgress}%)` : '';
+        toast.info(`Bài tiếp theo đang được chuẩn bị/tải trước${progressDetail}, vui lòng chờ giây lát...`, {
+          id: `preload-toast-${nextItem.assignment.id}`,
+          duration: 2500,
+        });
+        return;
+      }
       handleSelectAssignment(nextItem, activeGroup.id);
       return;
     }
@@ -936,7 +1216,18 @@ export function StudentAssignmentsView({
 
   // Instant preloader: Silently pre-fetches assignment data into memory
   const preloadAssignment = useCallback((item: StudentGroupItem) => {
-    prefetchAssignmentData(item);
+    prefetchAssignmentData(item, classId, selectedGroupId);
+  }, [classId, selectedGroupId]);
+
+  // Pre-warm dynamic container chunks in idle time so clicking is instant 0ms
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('./EmbeddedFlashcardContainer').catch(() => {});
+      import('./EmbeddedGameContainer').catch(() => {});
+      import('./EmbeddedQuizContainer').catch(() => {});
+      import('./EmbeddedGrammarContainer').catch(() => {});
+      import('@/app/student/assignments/[id]/run/quiz/KidTeenQuizRunner').catch(() => {});
+    }
   }, []);
 
   // 1. Throttled Preload for Active Group: delay by 1000ms so initial DOM mount and paint are 100% smooth
@@ -990,42 +1281,6 @@ export function StudentAssignmentsView({
     };
   }, [assignmentGroups, classId]);
 
-  // Keep-Alive Pool: Preserves visited component instances and their user progress in DOM
-  const [visitedConfigs, setVisitedConfigs] = useState<Record<string, ParsedItemConfig>>(() => {
-    if (activeItemConfig) {
-      return { [activeItemConfig.item.assignment.id]: activeItemConfig };
-    }
-    return {};
-  });
-
-  useEffect(() => {
-    if (activeItemConfig) {
-      const aid = activeItemConfig.item.assignment.id;
-      setVisitedConfigs(prev => {
-        if (prev[aid]) return prev;
-        return {
-          ...prev,
-          [aid]: activeItemConfig,
-        };
-      });
-    }
-  }, [activeItemConfig]);
-
-  // When switching groups, reset pool to the new active item
-  useEffect(() => {
-    if (activeItemConfig) {
-      setVisitedConfigs({ [activeItemConfig.item.assignment.id]: activeItemConfig });
-    }
-  }, [selectedGroupId]);
-
-  // Combined visited configs to guarantee immediate mounting with 0-frame delay
-  const displayConfigs = useMemo(() => {
-    const map = { ...visitedConfigs };
-    if (activeItemConfig) {
-      map[activeItemConfig.item.assignment.id] = activeItemConfig;
-    }
-    return map;
-  }, [visitedConfigs, activeItemConfig]);
 
   // Real-time preload progress for currently active assignment
   const activeAssignmentProgress = activeAssignmentId ? (preloadProgress[activeAssignmentId] ?? 0) : 100;
@@ -1041,7 +1296,7 @@ export function StudentAssignmentsView({
   const currentItemKind = activeItemConfig ? parseItemConfig(activeItemConfig.item).kind : null;
   const currentItemStage = activeItemConfig?.stage;
 
-  // Activity classification for instant native rendering (Prioritize Game & Lesson before Book & Quiz)
+  // Activity classification for instant native rendering (Prioritize Game, Flashcard & Lesson before Book & Quiz)
   const isCurrentGame = Boolean(
     activeItemConfig && (
       currentItemKind === 'GAME' ||
@@ -1052,12 +1307,24 @@ export function StudentAssignmentsView({
     )
   );
 
+  const isCurrentFlashcard = Boolean(
+    activeItemConfig && !isCurrentGame && (
+      currentItemKind === 'FLASHCARD' ||
+      currentItemStage === 'flashcard' ||
+      activeItemConfig.item.assignment.materialType === 'FLASHCARD' ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/flashcard')
+    )
+  );
+
   const activeTitleLower = activeItemConfig?.item?.assignment?.title?.toLowerCase() || '';
   const isCurrentLesson = Boolean(
-    activeItemConfig && !isCurrentGame && (
+    activeItemConfig && !isCurrentFlashcard && !isCurrentGame && (
       currentItemKind === 'LESSON' ||
       currentItemStage === 'lesson' ||
       activeItemConfig.item.assignment.materialType === 'LESSON' ||
+      Boolean(activeItemConfig.item.assignment.grammarLesson) ||
+      Boolean(activeItemConfig.item.assignment.grammarTopic) ||
+      Boolean(activeItemConfig.item.assignment.instructions && !activeItemConfig.item.assignment.instructions.trim().startsWith('{')) ||
       parseItemConfig(activeItemConfig.item).targetUrl.includes('/grammar/') ||
       activeTitleLower.includes('lý thuyết') ||
       activeTitleLower.includes('ly thuyet') ||
@@ -1287,6 +1554,8 @@ export function StudentAssignmentsView({
             const parsed = parseItemConfig(item);
             const isItemActive = item.assignment.id === activeAssignmentId;
             const isLessonItem = parsed.stage === 'lesson';
+            const isGameItem = parsed.stage === 'game' || parsed.kind === 'GAME' || item.assignment.materialType === 'GAME';
+            const isFlashcardItem = !isGameItem && (parsed.stage === 'flashcard' || parsed.kind === 'FLASHCARD' || item.assignment.materialType === 'FLASHCARD');
             const isSubmitted = submissionsState[item.assignment.id]?.isSubmitted;
             const itemScore = submissionsState[item.assignment.id]?.score;
             const itemProgress = preloadProgress[item.assignment.id] ?? 0;
@@ -1294,9 +1563,56 @@ export function StudentAssignmentsView({
 
             const isPreloading = !isItemReady && itemProgress > 0 && itemProgress < 100;
 
-            const itemIconNode = isChild && (parsed.stage === 'review' || parsed.stage === 'exercise')
-              ? <FileEdit className="w-3.5 h-3.5 stroke-[2.3px]" />
-              : parsed.iconNode;
+            const itemIconNode = isFlashcardItem
+              ? <Layers className="w-3.5 h-3.5 stroke-[2.3px]" />
+              : isGameItem
+                ? (() => {
+                    let mode = '';
+                    if (item.assignment.instructions) {
+                      try {
+                        const meta = JSON.parse(item.assignment.instructions);
+                        mode = meta.mode || meta.gameMode || '';
+                      } catch {}
+                    }
+                    const titleLower = item.assignment.title.toLowerCase();
+                    if (mode === 'scramble' || mode === 'puzzle' || titleLower.includes('puzzle') || titleLower.includes('ghép chữ') || titleLower.includes('ghep chu')) {
+                      return <Puzzle className="w-3.5 h-3.5 stroke-[2.3px]" />;
+                    }
+                    if (mode === 'type' || titleLower.includes('type') || titleLower.includes('gõ từ') || titleLower.includes('go tu')) {
+                      return <Keyboard className="w-3.5 h-3.5 stroke-[2.3px]" />;
+                    }
+                    if (mode === 'match' || titleLower.includes('nối thẻ') || titleLower.includes('noi the') || titleLower.includes('flashcard-match')) {
+                      return <Target className="w-3.5 h-3.5 stroke-[2.3px]" />;
+                    }
+                    return <Gamepad2 className="w-3.5 h-3.5 stroke-[2.3px]" />;
+                  })()
+                : isChild && (parsed.stage === 'review' || parsed.stage === 'exercise')
+                  ? <FileEdit className="w-3.5 h-3.5 stroke-[2.3px]" />
+                  : parsed.iconNode;
+
+            const childGameTitle = (() => {
+              let mode = '';
+              if (item.assignment.instructions) {
+                try {
+                  const meta = JSON.parse(item.assignment.instructions);
+                  mode = meta.mode || meta.gameMode || '';
+                } catch {}
+              }
+              const titleLower = item.assignment.title.toLowerCase();
+              if (mode === 'scramble' || mode === 'puzzle' || titleLower.includes('puzzle') || titleLower.includes('ghép chữ') || titleLower.includes('ghep chu')) {
+                return 'Game: Ghép chữ';
+              }
+              if (mode === 'type' || titleLower.includes('type') || titleLower.includes('gõ từ') || titleLower.includes('go tu')) {
+                return 'Game: Gõ từ';
+              }
+              if (mode === 'match' || titleLower.includes('nối thẻ') || titleLower.includes('noi the') || titleLower.includes('flashcard-match')) {
+                return 'Game: Nối thẻ';
+              }
+              if (parsed.cleanTitle && parsed.cleanTitle.toLowerCase().startsWith('game')) {
+                return parsed.cleanTitle;
+              }
+              return 'Game';
+            })();
 
             return (
               <div key={item.assignment.id} className="relative flex items-center group/item">
@@ -1307,9 +1623,29 @@ export function StudentAssignmentsView({
 
                 <button
                   type="button"
-                  onClick={() => handleSelectAssignment(item, group.id)}
+                  onClick={() => {
+                    if (!isItemReady && !isItemActive) {
+                      prefetchAssignmentData(item, classId, group.id);
+                      promoteAssignmentPriority(item.assignment.id, classId, group.id);
+                      const progressDetail = itemProgress > 0 ? ` (${itemProgress}%)` : '';
+                      toast.info(`Bài học đang được chuẩn bị/tải trước${progressDetail}, vui lòng chờ giây lát...`, {
+                        id: `preload-toast-${item.assignment.id}`,
+                        duration: 2500,
+                      });
+                      return;
+                    }
+                    handleSelectAssignment(item, group.id);
+                  }}
                   onMouseEnter={() => preloadAssignment(item)}
-                  title={parsed.cleanTitle}
+                  title={
+                    !isItemReady && !isItemActive
+                      ? `Bài học đang được chuẩn bị/tải trước${itemProgress > 0 ? ` (${itemProgress}%)` : ''}. Vui lòng chờ giây lát...`
+                      : isFlashcardItem
+                        ? `Flashcard (${parsed.cardCount || 20})`
+                        : (isGameItem && isChild)
+                          ? childGameTitle
+                          : parsed.cleanTitle
+                  }
                   style={
                     isItemActive
                       ? {
@@ -1318,12 +1654,14 @@ export function StudentAssignmentsView({
                         }
                       : undefined
                   }
-                  className={`relative w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left transition-all font-['Baloo_2',_'Nunito',_sans-serif] rounded-xl border border-transparent cursor-pointer ${
+                  className={`relative w-full flex items-center justify-between gap-2 px-2.5 py-2 text-left transition-all font-['Baloo_2',_'Nunito',_sans-serif] rounded-xl border border-transparent ${
                     isChild ? 'ml-5 sm:ml-6 pl-2.5' : ''
                   } ${
-                    isItemActive
-                      ? 'font-extrabold shadow-2xs'
-                      : 'bg-white/75 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 text-[#3E3524] dark:text-slate-200 font-bold hover:shadow-2xs hover:scale-[1.01] active:scale-[0.99]'
+                    !isItemReady && !isItemActive
+                      ? 'opacity-65 bg-slate-100/70 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 cursor-not-allowed select-none'
+                      : isItemActive
+                        ? 'font-extrabold shadow-2xs cursor-pointer'
+                        : 'bg-white/75 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 text-[#3E3524] dark:text-slate-200 font-bold hover:shadow-2xs hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
                   }`}
                 >
                   {/* Left Accent Pill (Notion / Linear style) */}
@@ -1337,24 +1675,42 @@ export function StudentAssignmentsView({
                   <div className="flex items-center gap-2 min-w-0">
                     <div 
                       style={{
-                        backgroundColor: isItemActive ? 'white' : parsed.pastel.tileBg,
-                        color: parsed.pastel.tileColor,
+                        backgroundColor: (!isItemReady && !isItemActive) ? undefined : isItemActive ? 'white' : parsed.pastel.tileBg,
+                        color: (!isItemReady && !isItemActive) ? undefined : parsed.pastel.tileColor,
                       }}
                       className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-transform shadow-2xs ${
-                        isItemActive ? 'scale-105' : 'group-hover/item:scale-105'
+                        !isItemReady && !isItemActive
+                          ? 'bg-slate-200/80 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+                          : isItemActive
+                            ? 'scale-105'
+                            : 'group-hover/item:scale-105'
                       }`}
                     >
                       {itemIconNode}
                     </div>
                     <span 
                       className={`truncate leading-snug ${
-                        isLessonItem
-                          ? 'font-black text-emerald-600 dark:text-emerald-400 group-hover/item:text-emerald-700 dark:group-hover/item:text-emerald-300'
-                          : isItemActive ? 'font-extrabold' : 'font-bold'
+                        !isItemReady && !isItemActive
+                          ? 'font-bold text-slate-500 dark:text-slate-400'
+                          : isLessonItem
+                            ? 'font-black text-emerald-600 dark:text-emerald-400 group-hover/item:text-emerald-700 dark:group-hover/item:text-emerald-300'
+                            : isFlashcardItem
+                              ? 'font-black text-amber-600 dark:text-amber-400 group-hover/item:text-amber-700 dark:group-hover/item:text-amber-300'
+                              : isGameItem
+                                ? 'font-black text-rose-600 dark:text-rose-400 group-hover/item:text-rose-700 dark:group-hover/item:text-rose-300'
+                                : isItemActive ? 'font-extrabold' : 'font-bold'
                       } ${isChild ? 'text-[11.5px]' : 'text-xs'}`}
-                      title={parsed.cleanTitle}
                     >
-                      {parsed.cleanTitle}
+                      {isFlashcardItem ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span>Flashcard</span>
+                          <span className="text-[10px] font-bold opacity-75 tabular-nums">({parsed.cardCount || 20})</span>
+                        </span>
+                      ) : (isGameItem && isChild) ? (
+                        childGameTitle
+                      ) : (
+                        parsed.cleanTitle
+                      )}
                     </span>
                   </div>
 
@@ -1371,7 +1727,7 @@ export function StudentAssignmentsView({
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/70 text-[10px] font-black shadow-2xs"
                         title={`Chưa sẵn sàng (Đang tải trước: ${itemProgress}%)`}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />
+                        <Loader2 className="w-2.5 h-2.5 text-amber-600 animate-spin shrink-0" />
                         <span className="hidden sm:inline">Chưa sẵn sàng</span>
                         <span className="tabular-nums text-[9px] font-bold opacity-85">({itemProgress}%)</span>
                       </div>
@@ -1797,11 +2153,70 @@ export function StudentAssignmentsView({
                       className={`text-lg sm:text-xl md:text-2xl font-black leading-tight ${
                         isCurrentLesson 
                           ? 'text-emerald-600 dark:text-emerald-400' 
-                          : 'text-slate-900 dark:text-white'
+                          : isCurrentFlashcard
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : isCurrentGame
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-slate-900 dark:text-white'
                       }`}
-                      title={activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
+                      title={
+                        isCurrentFlashcard
+                          ? `Flashcard (${activeItemConfig?.cardCount || 20})`
+                          : isCurrentGame
+                            ? 'Game'
+                            : (activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu')
+                      }
                     >
-                      {activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'}
+                      {isCurrentFlashcard ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Layers className="w-5 h-5 text-amber-500 inline-block stroke-[2.5px]" />
+                          <span>Flashcard</span>
+                          <span className="text-sm sm:text-base font-bold text-amber-600/80 dark:text-amber-400/80 tabular-nums">({activeItemConfig?.cardCount || 20})</span>
+                        </span>
+                      ) : isCurrentGame ? (
+                        (() => {
+                          let mode = '';
+                          if (activeItemConfig?.item.assignment.instructions) {
+                            try {
+                              const meta = JSON.parse(activeItemConfig.item.assignment.instructions);
+                              mode = meta.mode || meta.gameMode || '';
+                            } catch {}
+                          }
+                          const titleLower = (activeItemConfig?.item.assignment.title || '').toLowerCase();
+                          if (mode === 'scramble' || mode === 'puzzle' || titleLower.includes('puzzle') || titleLower.includes('ghép chữ') || titleLower.includes('ghep chu')) {
+                            return (
+                              <span className="inline-flex items-center gap-2">
+                                <Puzzle className="w-5 h-5 text-purple-500 inline-block stroke-[2.5px]" />
+                                <span>Game: Ghép chữ (Word Puzzle)</span>
+                              </span>
+                            );
+                          }
+                          if (mode === 'type' || titleLower.includes('type') || titleLower.includes('gõ từ') || titleLower.includes('go tu')) {
+                            return (
+                              <span className="inline-flex items-center gap-2">
+                                <Keyboard className="w-5 h-5 text-indigo-500 inline-block stroke-[2.5px]" />
+                                <span>Game: Gõ từ (Type)</span>
+                              </span>
+                            );
+                          }
+                          if (mode === 'match' || titleLower.includes('nối thẻ') || titleLower.includes('noi the') || titleLower.includes('flashcard-match')) {
+                            return (
+                              <span className="inline-flex items-center gap-2">
+                                <Target className="w-5 h-5 text-emerald-500 inline-block stroke-[2.5px]" />
+                                <span>Game: Nối thẻ</span>
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-2">
+                              <Gamepad2 className="w-5 h-5 text-rose-500 inline-block stroke-[2.5px]" />
+                              <span>Game</span>
+                            </span>
+                          );
+                        })()
+                      ) : (
+                        activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'
+                      )}
                     </h2>
 
                     {/* Status Badges - Ẩn hoàn toàn khi là bài Lý thuyết */}
@@ -1974,26 +2389,72 @@ export function StudentAssignmentsView({
               )}
 
               {Object.keys(displayConfigs).length > 0 ? (
-                Object.values(displayConfigs).map((cfg) => {
-                  const aid = cfg.item.assignment.id;
-                  const isActive = activeAssignmentId === aid;
-                  const itemKind = parseItemConfig(cfg.item).kind;
-                  const itemStage = cfg.stage;
+                <Suspense fallback={<ActivityCanvasLoadingFallback />}>
+                  {Object.values(displayConfigs).map((cfg) => {
+                    const aid = cfg.item.assignment.id;
+                    const isActive = activeAssignmentId === aid;
+                    const itemKind = parseItemConfig(cfg.item).kind;
+                    const itemStage = cfg.stage;
 
-                  const isGame = Boolean(
-                    itemKind === 'GAME' ||
-                    itemStage === 'game' ||
-                    cfg.item.assignment.materialType === 'GAME' ||
-                    parseItemConfig(cfg.item).targetUrl.includes('/game/') ||
-                    parseItemConfig(cfg.item).targetUrl.includes('/games/')
-                  );
+                    let metaInstructions: any = {};
+                    if (cfg.item.assignment.instructions) {
+                      try {
+                        metaInstructions = JSON.parse(cfg.item.assignment.instructions);
+                      } catch {}
+                    }
+
+                    const targetUrl = parseItemConfig(cfg.item).targetUrl || '';
+                    const playUrl = typeof metaInstructions.playUrl === 'string' ? metaInstructions.playUrl : '';
+
+                    const isMatchGame = Boolean(
+                      targetUrl.includes('flashcard-match') ||
+                      targetUrl.includes('/games/') ||
+                      targetUrl.includes('/student/game/') ||
+                      playUrl.includes('flashcard-match') ||
+                      playUrl.includes('/games/') ||
+                      playUrl.includes('/student/game/') ||
+                      metaInstructions.gameMode === 'match'
+                    );
+
+                    const isFlashcardUrlOrMeta = !isMatchGame && Boolean(
+                      (targetUrl.includes('/flashcards') && !targetUrl.includes('/game')) ||
+                      (playUrl.includes('/flashcards') && !playUrl.includes('/game')) ||
+                      metaInstructions.gameMode === 'puzzle' ||
+                      metaInstructions.gameMode === 'type' ||
+                      metaInstructions.gameMode === 'hint' ||
+                      metaInstructions.mode === 'scramble' ||
+                      metaInstructions.mode === 'type' ||
+                      metaInstructions.mode === 'hint' ||
+                      Boolean((cfg.item.assignment as any).flashcardTopicId)
+                    );
+
+                    const isFlashcard = !isMatchGame && Boolean(
+                      isFlashcardUrlOrMeta ||
+                      itemKind === 'FLASHCARD' ||
+                      itemStage === 'flashcard' ||
+                      cfg.item.assignment.materialType === 'FLASHCARD'
+                    );
+
+                    const isGame = Boolean(
+                      isMatchGame ||
+                      (!isFlashcard && (
+                        itemKind === 'GAME' ||
+                        itemStage === 'game' ||
+                        cfg.item.assignment.materialType === 'GAME' ||
+                        targetUrl.includes('/game/') ||
+                        targetUrl.includes('/games/')
+                      ))
+                    );
 
                   const itemTitleLower = (cfg.item.assignment.title || '').toLowerCase();
                   const isLesson = Boolean(
-                    !isGame && (
+                    !isFlashcard && !isGame && (
                       itemKind === 'LESSON' ||
                       itemStage === 'lesson' ||
                       cfg.item.assignment.materialType === 'LESSON' ||
+                      Boolean(cfg.item.assignment.grammarLesson) ||
+                      Boolean(cfg.item.assignment.grammarTopic) ||
+                      Boolean(cfg.item.assignment.instructions && !cfg.item.assignment.instructions.trim().startsWith('{')) ||
                       parseItemConfig(cfg.item).targetUrl.includes('/grammar/') ||
                       itemTitleLower.includes('lý thuyết') ||
                       itemTitleLower.includes('ly thuyet') ||
@@ -2002,7 +2463,7 @@ export function StudentAssignmentsView({
                   );
 
                   const isBook = Boolean(
-                    !isGame && !isLesson && (
+                    !isFlashcard && !isGame && !isLesson && (
                       itemKind === 'READING' ||
                       itemKind === 'BOOK' ||
                       itemStage === 'reading' ||
@@ -2011,7 +2472,7 @@ export function StudentAssignmentsView({
                     )
                   );
 
-                  const isQuiz = Boolean(!isGame && !isLesson && !isBook);
+                  const isQuiz = Boolean(!isFlashcard && !isGame && !isLesson && !isBook);
 
                   return (
                     <div
@@ -2023,10 +2484,17 @@ export function StudentAssignmentsView({
                       }`}
                       style={{ display: isActive ? 'block' : 'none' }}
                     >
-                      {isGame ? (
+                      {isFlashcard ? (
+                        <EmbeddedFlashcardContainer
+                          assignment={cfg.item.assignment}
+                          onComplete={handleActivityComplete}
+                          isActive={isActive}
+                        />
+                      ) : isGame ? (
                         <EmbeddedGameContainer
                           assignment={cfg.item.assignment}
                           onComplete={handleActivityComplete}
+                          isActive={isActive}
                         />
                       ) : isLesson ? (
                         <EmbeddedGrammarContainer
@@ -2061,8 +2529,9 @@ export function StudentAssignmentsView({
                       )}
                     </div>
                   );
-                })
-              ) : (
+                })}
+              </Suspense>
+            ) : (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-400">
                   <BookOpen className="w-12 h-12 stroke-[1.5px] mb-3 text-slate-300" />
                   <p className="font-bold text-sm">Vui lòng chọn một bài học từ menu bên trái.</p>
@@ -2227,6 +2696,69 @@ export function StudentAssignmentsView({
           </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════════════════
+          CONFIRMATION MODAL: DỪNG BÀI / GAME HIỆN TẠI (DOLCAKE STYLE)
+          ══════════════════════════════════════════════════════════════════ */}
+      {pendingNavigation && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2.25rem] border-2 border-amber-300 dark:border-amber-500/60 shadow-2xl p-6 sm:p-7 text-center space-y-4 animate-in zoom-in-95 duration-200">
+            {/* Cute Cartoon Badge */}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-400 text-white flex items-center justify-center mx-auto shadow-lg shadow-orange-400/30">
+              <AlertCircle className="w-8 h-8 animate-pulse stroke-[2.3px]" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-black text-[11px] uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-amber-600" />
+                <span>Bạn đang làm bài dở dang</span>
+              </span>
+
+              <h3 className="text-xl font-black text-slate-900 dark:text-white pt-1">
+                Dừng bài hiện tại?
+              </h3>
+
+              <p className="text-slate-600 dark:text-slate-300 text-xs font-semibold leading-relaxed px-1">
+                Bạn chưa hoàn thành bài này. Nếu dừng lại để chuyển bài mới, tiến trình sẽ được đặt lại từ đầu nhé!
+              </p>
+
+              {activeItemConfig && (
+                <div className="mt-3 p-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/60 flex items-center justify-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  <span className="truncate max-w-[280px]">Đang làm: {activeItemConfig.cleanTitle}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2.5 pt-2">
+              {/* Nút 1: Tiếp tục làm bài (Primary) */}
+              <button
+                type="button"
+                onClick={() => setPendingNavigation(null)}
+                className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:via-orange-600 hover:to-rose-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>✨ Tiếp tục học / chơi</span>
+              </button>
+
+              {/* Nút 2: Xác nhận dừng & Đổi bài (Secondary) */}
+              <button
+                type="button"
+                onClick={handleConfirmLeave}
+                className="w-full py-2.5 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-300 font-black text-xs rounded-xl border border-slate-200 dark:border-slate-700 hover:border-rose-200 dark:hover:border-rose-800 transition-all cursor-pointer"
+              >
+                Dừng bài này & Chuyển bài mới
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Zalo Support Widget */}
+      <FloatingZaloWidget 
+        zaloGroupUrl={currentClass?.zaloGroupUrl} 
+        classNameTitle={currentClass?.name}
+        isQuizActive={!isCurrentLesson && Boolean(activeAssignmentId)}
+      />
 
     </div>
   );

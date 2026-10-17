@@ -10,17 +10,20 @@ interface Topic {
   name: string
   slug: string
   targetAudiences: string[]
+  classes?: { id: string; name: string }[]
 }
 
 interface BatchCreateFlashcardModalProps {
   topics: Topic[]
   targetAudiences: any[]
+  classList?: { id: string; name: string }[]
   existingWords?: string[]   // words already in the selected topic
   allFlashcards?: any[]      // to derive existingWords per topic dynamically
   onClose: () => void
   onCardsCreated: (newCards: any[], topicId: string, audienceId: string) => void
   defaultAudience?: string
   defaultTopicId?: string
+  defaultClassId?: string
 }
 
 type Step = "config" | "review" | "creating" | "done"
@@ -28,25 +31,49 @@ type Step = "config" | "review" | "creating" | "done"
 export function BatchCreateFlashcardModal({
   topics,
   targetAudiences,
+  classList = [],
   allFlashcards = [],
   onClose,
   onCardsCreated,
   defaultAudience,
   defaultTopicId,
+  defaultClassId,
 }: BatchCreateFlashcardModalProps) {
   // Step control
   const [step, setStep] = useState<Step>("config")
 
+  // Available classes: from props or derived from topics
+  const availableClasses = classList.length > 0
+    ? classList
+    : Array.from(
+        new Map(topics.flatMap(t => t.classes || []).map(c => [c.id, c])).values()
+      )
+
   // Config step state
   const firstAudience = targetAudiences[0]?.id ?? ""
+  const defaultTopicObj = defaultTopicId ? topics.find(t => t.id === defaultTopicId) : undefined
+  const defaultTopicClassId = defaultTopicObj?.classes?.[0]?.id
 
-  // Derive audience: prefer explicit prop, then derive from topic, then fallback to first
+  // Derive audience: prefer explicit prop, class ID, or derive from topic, then fallback to first
   const initialAudience = defaultAudience
-    ?? (defaultTopicId ? topics.find(t => t.id === defaultTopicId)?.targetAudiences[0] : undefined)
+    ?? (defaultClassId ? `class:${defaultClassId}` : undefined)
+    ?? (defaultTopicClassId ? `class:${defaultTopicClassId}` : undefined)
+    ?? (defaultTopicObj?.targetAudiences?.[0])
     ?? firstAudience
 
   const [selectedAudience, setSelectedAudience] = useState(initialAudience)
-  const filteredTopics = topics.filter(t => t.targetAudiences.includes(selectedAudience))
+
+  const isClassAudience = selectedAudience.startsWith("class:")
+  const activeClassId = isClassAudience ? selectedAudience.replace("class:", "") : null
+
+  const filteredTopics = topics.filter(t => {
+    if (defaultTopicId && t.id === defaultTopicId) return true
+    if (isClassAudience) {
+      return t.classes?.some(c => c.id === activeClassId)
+    }
+    return t.targetAudiences.includes(selectedAudience)
+  })
+
   const [selectedTopicId, setSelectedTopicId] = useState(() => {
     if (defaultTopicId && topics.find(t => t.id === defaultTopicId)) return defaultTopicId
     return filteredTopics[0]?.id ?? ""
@@ -66,14 +93,22 @@ export function BatchCreateFlashcardModal({
 
   // Computed
   const selectedTopic = topics.find(t => t.id === selectedTopicId)
-  const selectedCategoryName = targetAudiences.find(a => a.id === selectedAudience)?.name ?? selectedAudience
+  const isClassTopic = Boolean(selectedTopic && selectedTopic.classes && selectedTopic.classes.length > 0)
+  const selectedCategoryName = isClassTopic
+    ? (selectedTopic?.classes?.[0]?.name ?? "General")
+    : (targetAudiences.find(a => a.id === selectedAudience)?.name ?? selectedAudience)
   const existingWords = allFlashcards
     .filter(c => c.topic?.id === selectedTopicId || c.topicId === selectedTopicId)
     .map((c: any) => c.word as string)
 
   const handleAudienceChange = (val: string) => {
     setSelectedAudience(val)
-    const newFilteredTopics = topics.filter(t => t.targetAudiences.includes(val))
+    const isClass = val.startsWith("class:")
+    const classId = isClass ? val.replace("class:", "") : null
+    const newFilteredTopics = topics.filter(t => {
+      if (isClass) return t.classes?.some(c => c.id === classId)
+      return t.targetAudiences.includes(val)
+    })
     setSelectedTopicId(newFilteredTopics[0]?.id ?? "")
   }
 
@@ -121,7 +156,7 @@ export function BatchCreateFlashcardModal({
       const word = words[i]
       setCurrentIndex(i)
       setCurrentWord(word)
-      const res = await createCompleteFlashcardFull(word, selectedTopicId, selectedCategoryName)
+      const res = await createCompleteFlashcardFull(word, selectedTopicId, selectedCategoryName, Boolean(isClassTopic))
       if (!res.success || !res.card) {
         setErrorMessage(`Lỗi khi tạo "${word}": ${res.error ?? "Unknown error"}`)
         return
@@ -186,19 +221,30 @@ export function BatchCreateFlashcardModal({
           {/* ── STEP: CONFIG ───────────────────────────────────────────── */}
           {step === "config" && (
             <div className="space-y-4">
-              {/* Audience */}
+              {/* Audience or Class */}
               <div className="space-y-1.5">
                 <label className="block text-[10px] font-black text-neutral-500 uppercase tracking-widest">
-                  Nhóm tuổi
+                  Phân loại (Kho chung / Lớp học)
                 </label>
                 <select
                   value={selectedAudience}
                   onChange={e => handleAudienceChange(e.target.value)}
                   className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl text-white text-sm font-semibold outline-none focus:border-violet-500 transition-all cursor-pointer"
                 >
-                  {targetAudiences.map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
+                  <optgroup label="📦 Kho chung (Nhóm tuổi)">
+                    {targetAudiences.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </optgroup>
+                  {availableClasses.length > 0 && (
+                    <optgroup label="🎓 Theo lớp học (Class)">
+                      {availableClasses.map(cls => (
+                        <option key={cls.id} value={`class:${cls.id}`}>
+                          Lớp: {cls.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
@@ -213,10 +259,25 @@ export function BatchCreateFlashcardModal({
                   className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-2xl text-white text-sm font-semibold outline-none focus:border-violet-500 transition-all cursor-pointer"
                 >
                   {filteredTopics.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                    <option key={t.id} value={t.id}>
+                      {t.name} {t.classes && t.classes.length > 0 ? `(Lớp: ${t.classes.map(c => c.name).join(", ")})` : ""}
+                    </option>
                   ))}
                 </select>
               </div>
+
+              {/* Class Topic Indicator Banner */}
+              {isClassTopic && (
+                <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-2xl p-3.5 flex items-start gap-2.5">
+                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-emerald-300 leading-relaxed">
+                    <p className="font-bold text-emerald-200">Chủ đề thuộc Lớp học</p>
+                    <p className="text-[11px] text-emerald-400/90 mt-0.5">
+                      Thẻ sẽ được tạo siêu tốc với <strong>Edge TTS giọng trẻ em</strong>. Hệ thống sẽ bỏ qua vẽ ảnh AI FLUX để bạn có thể tự thêm ảnh từ Internet sau.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Word count */}
               <div className="space-y-1.5">
@@ -342,7 +403,9 @@ export function BatchCreateFlashcardModal({
                         Đang tạo card {currentIndex + 1}/{confirmedWords.length}
                       </p>
                       <p className="text-xs text-neutral-400 mt-0.5">
-                        "{currentWord}" — Gemini text + FLUX image + TTS audio
+                        {isClassTopic
+                          ? `"${currentWord}" — Gemini text + Edge Child TTS (Tạo siêu tốc)`
+                          : `"${currentWord}" — Gemini text + FLUX image + TTS audio`}
                       </p>
                     </div>
                   </div>
@@ -374,7 +437,9 @@ export function BatchCreateFlashcardModal({
                     🎉 Đã tạo {createdCards.length} thẻ học thành công!
                   </p>
                   <p className="text-xs text-emerald-500">
-                    Mỗi thẻ bao gồm ảnh FLUX, 4 file audio Gemini TTS và đầy đủ bản dịch 10 ngôn ngữ.
+                    {isClassTopic
+                      ? "Mỗi thẻ gồm từ vựng, phiên âm, câu ví dụ và 4 file audio Edge giọng trẻ em. Bạn có thể thêm ảnh từ Internet chỉ với 1 click!"
+                      : "Mỗi thẻ bao gồm ảnh FLUX, 4 file audio Gemini TTS và đầy đủ bản dịch 10 ngôn ngữ."}
                   </p>
                 </div>
               </div>

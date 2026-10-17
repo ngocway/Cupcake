@@ -64,25 +64,31 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
     // 1. Primary: MsEdgeTTS (Child-friendly en-US-AnaNeural, clean audio, no padding)
     try {
       console.log(`[Edge TTS Route -> MsEdgeTTS] Synthesizing with voice=${targetVoice}: "${cleanText.substring(0, 30)}..."`);
-      const tts = new MsEdgeTTS();
-      await tts.setMetadata(targetVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+      
+      const synthesizeMsEdge = async () => {
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata(targetVoice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+        const { audioStream } = tts.toStream(cleanText);
+        const chunks: Buffer[] = [];
+        for await (const chunk of audioStream) {
+          chunks.push(chunk as Buffer);
+        }
+        tts.close();
+        return Buffer.concat(chunks);
+      };
 
-      const { audioStream } = tts.toStream(cleanText);
+      const timeoutPromise = new Promise<Buffer>((_, reject) =>
+        setTimeout(() => reject(new Error('MsEdgeTTS timeout after 3500ms')), 3500)
+      );
 
-      const chunks: Buffer[] = [];
-      for await (const chunk of audioStream) {
-        chunks.push(chunk as Buffer);
-      }
-      tts.close();
-
-      const audioBuffer = Buffer.concat(chunks);
+      const audioBuffer = await Promise.race([synthesizeMsEdge(), timeoutPromise]);
       if (audioBuffer && audioBuffer.length > 0) {
-        return new Response(audioBuffer, {
+        return new Response(new Uint8Array(audioBuffer), {
           status: 200,
           headers: {
             "Content-Type": "audio/mpeg",
             "Content-Length": audioBuffer.length.toString(),
-            "Cache-Control": "no-store",
+            "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400",
             "X-TTS-Provider": "msedge",
           },
         });
@@ -115,7 +121,7 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
             headers: {
               "Content-Type": "audio/mpeg",
               "Content-Length": audioBuffer.length.toString(),
-              "Cache-Control": "no-store",
+              "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400",
               "X-TTS-Provider": "deepgram",
             },
           });
@@ -165,7 +171,7 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
             headers: {
               "Content-Type": "audio/mpeg",
               "Content-Length": audioBuffer.length.toString(),
-              "Cache-Control": "no-store",
+              "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400",
               "X-TTS-Provider": "elevenlabs",
             },
           });

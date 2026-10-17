@@ -74,7 +74,7 @@ export function InstructionsBlock({
   proseClassName = "prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10",
   togglePlacement = "top-row",
 }: InstructionsBlockProps) {
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(() => typeof window !== 'undefined');
   useEffect(() => {
     setMounted(true);
   }, []);

@@ -6,6 +6,9 @@ import { unstable_cache } from "next/cache"
 // 1. Caching topics query
 const fetchTopics = async () => {
   return prisma.flashcardTopic.findMany({
+    where: {
+      classes: { none: {} }
+    },
     orderBy: {
       name: 'asc'
     },
@@ -21,8 +24,8 @@ const fetchTopics = async () => {
 
 export const getCachedFlashcardTopics = unstable_cache(
   fetchTopics,
-  ["flashcard-topics-cache-v5"],
-  { revalidate: 43200, tags: ["flashcard-categories-v5"] } // v5: includes new cefrLevel distribution
+  ["flashcard-topics-cache-v8"],
+  { revalidate: 43200, tags: ["flashcard-categories-v8", "flashcard-categories"] }
 );
 
 /**
@@ -54,7 +57,7 @@ const fetchFlashcardsByTopic = async (topicId: string) => {
 
 export const getCachedFlashcardsByTopic = unstable_cache(
   fetchFlashcardsByTopic,
-  ["flashcards-by-topic-cache-v3"],
+  ["flashcards-by-topic-cache-v5"],
   { revalidate: 43200, tags: ["flashcards"] } // Cache for 12 hours
 );
 

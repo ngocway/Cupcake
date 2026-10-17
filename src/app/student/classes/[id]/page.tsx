@@ -13,7 +13,7 @@ import StudentClassDetailLoading from './loading';
 import { fetchWithRedis } from '@/lib/cached-queries';
 
 async function getCachedClassStructure(classId: string) {
-  return fetchWithRedis(`class:structure:v5:${classId}`, 86400, async () => {
+  return fetchWithRedis(`class:structure:v12:${classId}`, 86400, async () => {
     // 1. Fetch class info, all 268 assignments, and 45 groups
     const [cls, rawAssignments, allGroups] = await Promise.all([
       prisma.class.findUnique({
@@ -456,26 +456,41 @@ async function StudentClassDetailContent({
     let finalInstructions = ac.assignment.instructions;
     let finalTranslations = (ac.assignment as any).instructionsTranslations;
 
-    // Resolve real HTML instructions from grammarLessonMap if assignment.instructions is a JSON metadata pointer
-    let lessonKey = (ac.assignment as any).grammarLesson;
-    if (!lessonKey && finalInstructions && finalInstructions.trim().startsWith('{')) {
+    // Resolve real HTML instructions from grammarLessonMap ONLY for actual LESSON items (never for child games/flashcards/exercises)
+    let isChildOrInteractive = false;
+    if (finalInstructions && finalInstructions.trim().startsWith('{')) {
       try {
         const meta = JSON.parse(finalInstructions);
-        if (meta.rawId) {
-          const raw = String(meta.rawId);
-          if (raw.startsWith('grammar:')) {
-            const parts = raw.replace(/^grammar:/, '').split(':');
-            lessonKey = parts.length >= 2 ? parts[1] : parts[0];
-          } else {
-            lessonKey = raw;
-          }
+        if (meta.kind && meta.kind !== 'LESSON') {
+          isChildOrInteractive = true;
         }
       } catch {}
     }
-    if (lessonKey && grammarLessonMap.has(lessonKey)) {
-      const gl = grammarLessonMap.get(lessonKey)!;
-      if (gl.instructions) finalInstructions = gl.instructions;
-      if (gl.instructionsTranslations) finalTranslations = gl.instructionsTranslations;
+    if (ac.assignment.materialType === 'FLASHCARD') {
+      isChildOrInteractive = true;
+    }
+
+    if (!isChildOrInteractive) {
+      let lessonKey = (ac.assignment as any).grammarLesson;
+      if (!lessonKey && finalInstructions && finalInstructions.trim().startsWith('{')) {
+        try {
+          const meta = JSON.parse(finalInstructions);
+          if (meta.rawId) {
+            const raw = String(meta.rawId);
+            if (raw.startsWith('grammar:')) {
+              const parts = raw.replace(/^grammar:/, '').split(':');
+              lessonKey = parts.length >= 2 ? parts[1] : parts[0];
+            } else {
+              lessonKey = raw;
+            }
+          }
+        } catch {}
+      }
+      if (lessonKey && grammarLessonMap.has(lessonKey)) {
+        const gl = grammarLessonMap.get(lessonKey)!;
+        if (gl.instructions) finalInstructions = gl.instructions;
+        if (gl.instructionsTranslations) finalTranslations = gl.instructionsTranslations;
+      }
     }
 
     const groupKey = ac.groupId ? `${ac.assignment.id}_${ac.groupId}` : null;
@@ -666,7 +681,8 @@ async function StudentClassDetailContent({
         name: cls.name,
         gradeLevel: cls.gradeLevel,
         joinCode: cls.joinCode,
-        teacher: cls.teacher
+        teacher: cls.teacher,
+        zaloGroupUrl: cls.zaloGroupUrl,
       }}
       enrolledClasses={allEnrolledClasses.map(e => e.class)}
       heroBanner={

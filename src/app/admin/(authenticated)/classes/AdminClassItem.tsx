@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { adminToggleBlockClass } from "@/actions/admin-classes"
 
 export function AdminClassItem({ cls }: { cls: any }) {
@@ -53,7 +54,13 @@ export function AdminClassItem({ cls }: { cls: any }) {
         </div>
 
         <div className="flex gap-2">
-           <button className="flex-grow py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold rounded-xl transition-all border border-neutral-700">Xem chi tiết</button>
+           <Link 
+             href={`/admin/classes/${cls.id}`}
+             className="flex-grow py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold rounded-xl transition-all border border-neutral-700 flex items-center justify-center gap-1.5 hover:border-blue-500/40"
+           >
+             <span className="material-symbols-outlined text-[16px] text-blue-400">tune</span>
+             Xem chi tiết & Quản lý
+           </Link>
            
            {showConfirm ? (
              <div className={`flex items-center gap-2 border rounded-xl px-2 py-1 animate-in slide-in-from-right-4 duration-200 ${localIsBlocked ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>

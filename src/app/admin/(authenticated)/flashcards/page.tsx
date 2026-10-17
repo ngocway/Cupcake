@@ -10,11 +10,21 @@ export default async function AdminFlashcardsPage() {
   const targetAudiencesRaw = englishSubject?.ageGroups || [];
   const targetAudiences = targetAudiencesRaw.map((a: any) => ({ ...a, name: a.label }));
 
-  // 2. Lấy toàn bộ các chủ đề (Topics) - Sắp xếp theo ngày tạo mới nhất lên đầu như yêu cầu!
+  // 2. Lấy toàn bộ các lớp học đang hoạt động để gán chủ đề
+  const classes = await prisma.class.findMany({
+    where: { deletedAt: null },
+    select: { id: true, name: true, classCode: true },
+    orderBy: { name: 'asc' }
+  });
+
+  // 3. Lấy toàn bộ các chủ đề (Topics) kèm quan hệ lớp học - Sắp xếp theo ngày tạo mới nhất lên đầu!
   const topics = await prisma.flashcardTopic.findMany({
     include: {
       _count: {
         select: { flashcards: true }
+      },
+      classes: {
+        select: { id: true, name: true, classCode: true }
       }
     },
     orderBy: {
@@ -22,7 +32,7 @@ export default async function AdminFlashcardsPage() {
     }
   });
 
-  // 3. Lấy toàn bộ các thẻ flashcard - Sắp xếp theo ngày tạo mới nhất lên đầu để dễ theo dõi
+  // 4. Lấy toàn bộ các thẻ flashcard - Sắp xếp theo ngày tạo mới nhất lên đầu để dễ theo dõi
   const flashcards = await prisma.globalFlashcard.findMany({
     include: {
       topic: true,
@@ -42,6 +52,7 @@ export default async function AdminFlashcardsPage() {
 
       <AdminFlashcardsClient 
         targetAudiences={targetAudiences}
+        classes={classes}
         initialTopics={topics}
         initialFlashcards={flashcards}
       />

@@ -279,7 +279,7 @@ export async function adminDeleteFlashcardsBulk(ids: string[]) {
 // PHÂN HỆ 2: CRUD TOPICS (CHỦ ĐỀ)
 // ============================================================================
 
-export async function adminCreateTopic(targetAudiences: string[], name: string, iconUrl?: string) {
+export async function adminCreateTopic(targetAudiences: string[], name: string, iconUrl?: string, classIds?: string[]) {
   await checkAdminAuth()
 
   try {
@@ -290,8 +290,13 @@ export async function adminCreateTopic(targetAudiences: string[], name: string, 
       return { success: false, error: "Tên chủ đề không hợp lệ." }
     }
 
-    if (!targetAudiences || targetAudiences.length === 0) {
-      return { success: false, error: "Vui lòng chọn ít nhất 1 nhóm tuổi." }
+    const hasClasses = Array.isArray(classIds) && classIds.length > 0
+
+    // Khi đã chọn thuộc 1 lớp nào đó: không còn set nhóm tuổi. Nếu là kho chung: bắt buộc có ít nhất 1 nhóm tuổi.
+    const finalAudiences = hasClasses ? [] : targetAudiences
+
+    if (!hasClasses && (!finalAudiences || finalAudiences.length === 0)) {
+      return { success: false, error: "Vui lòng chọn ít nhất 1 nhóm tuổi cho chủ đề thư viện dùng chung." }
     }
 
     // Kiểm tra trùng lặp slug
@@ -312,10 +317,20 @@ export async function adminCreateTopic(targetAudiences: string[], name: string, 
 
     const newTopic = await prisma.flashcardTopic.create({
       data: {
-        targetAudiences,
+        targetAudiences: finalAudiences,
         name: trimmedName,
         slug,
-        iconUrl: safeIconUrl
+        iconUrl: safeIconUrl,
+        ...(hasClasses && {
+          classes: {
+            connect: classIds!.map((cid) => ({ id: cid }))
+          }
+        })
+      },
+      include: {
+        classes: {
+          select: { id: true, name: true, classCode: true }
+        }
       }
     })
 
@@ -328,7 +343,7 @@ export async function adminCreateTopic(targetAudiences: string[], name: string, 
   }
 }
 
-export async function adminUpdateTopic(id: string, name: string, targetAudiences: string[], iconUrl?: string) {
+export async function adminUpdateTopic(id: string, name: string, targetAudiences: string[], iconUrl?: string, classIds?: string[]) {
   await checkAdminAuth()
 
   try {
@@ -339,8 +354,11 @@ export async function adminUpdateTopic(id: string, name: string, targetAudiences
       return { success: false, error: "Tên chủ đề không hợp lệ." }
     }
 
-    if (!targetAudiences || targetAudiences.length === 0) {
-      return { success: false, error: "Vui lòng chọn ít nhất 1 nhóm tuổi." }
+    const hasClasses = Array.isArray(classIds) && classIds.length > 0
+    const finalAudiences = hasClasses ? [] : targetAudiences
+
+    if (!hasClasses && (!finalAudiences || finalAudiences.length === 0)) {
+      return { success: false, error: "Vui lòng chọn ít nhất 1 nhóm tuổi cho chủ đề thư viện dùng chung." }
     }
 
     // Kiểm tra xem có bị trùng slug với chủ đề khác không
@@ -366,9 +384,17 @@ export async function adminUpdateTopic(id: string, name: string, targetAudiences
       where: { id },
       data: {
         name: trimmedName,
-        targetAudiences,
+        targetAudiences: finalAudiences,
         slug,
-        iconUrl: safeIconUrl
+        iconUrl: safeIconUrl,
+        classes: {
+          set: hasClasses ? classIds!.map((cid) => ({ id: cid })) : []
+        }
+      },
+      include: {
+        classes: {
+          select: { id: true, name: true, classCode: true }
+        }
       }
     })
 

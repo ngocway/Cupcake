@@ -12,7 +12,12 @@ export const metadata = {
   description: "Learn English vocabulary with interactive 3D flashcards on Dolcake. Native pronunciation, example sentences, and fun quizzes for kids aged 2–12 and older learners.",
 }
 
-export default async function FlashcardsPage() {
+export default async function FlashcardsPage(props: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const searchParams = props.searchParams ? await props.searchParams : undefined;
+  const isEmbedded = searchParams?.embedded === 'true';
+
   const config = await getOnboardingConfig()
   const englishSubject = (config as any)?.subjects?.find((s: any) => s.id === 'english');
   const targetAudiences = englishSubject?.ageGroups || [];
@@ -46,6 +51,20 @@ export default async function FlashcardsPage() {
       flashcardCount: t._count?.flashcards ?? 0
     }))
   }))
+
+  if (isEmbedded) {
+    return (
+      <main className="w-full h-screen overflow-hidden bg-slate-50 dark:bg-slate-950/20">
+        <Suspense fallback={
+          <div className="flex h-screen w-full items-center justify-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin shadow-md" />
+          </div>
+        }>
+          <FlashcardsClient initialCategories={categories as any} studyAgeGroup={studyAgeGroup} />
+        </Suspense>
+      </main>
+    )
+  }
 
   return (
     <HomeShell>

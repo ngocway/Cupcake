@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { text, exampleSentence, voice, speed, mode } = await req.json();
+    const { text, exampleSentence, voice, speed, mode, isClassTopic, provider } = await req.json();
     if (!text) {
       return NextResponse.json({ success: false, error: "Missing text input" }, { status: 400 });
     }
@@ -66,6 +66,23 @@ export async function POST(req: Request) {
       // Cấu trúc: Từ vựng. Từ vựng. Câu ví dụ. Từ vựng.
       // Dấu chấm giúp AI đọc có nhịp nghỉ (pause) tự nhiên giữa các phần
       speechText = `${text}. ${text}. ${exampleSentence} ${text}.`;
+    }
+
+    // If card belongs to a class or requested edge child voice, use Edge TTS child voice
+    if (isClassTopic || provider === "edge" || voice === "en-US-AnaNeural") {
+      try {
+        const { generateAndUploadEdgeChildAudio } = await import("@/lib/edge-child-tts");
+        const edgeUrl = await generateAndUploadEdgeChildAudio(speechText, mode || "card", text);
+        if (edgeUrl) {
+          return NextResponse.json({
+            success: true,
+            url: edgeUrl,
+            audioUrl: edgeUrl,
+          });
+        }
+      } catch (edgeErr: any) {
+        console.error("[TTS API] Edge Child TTS error, falling back:", edgeErr);
+      }
     }
 
     // Use unified TTS helper with fallback and retries

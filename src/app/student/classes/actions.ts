@@ -313,7 +313,7 @@ export async function getStudentBookData(assignmentId: string) {
   });
 
   if (!bookData) {
-    throw new Error("Không tìm thấy dữ liệu sách đọc.");
+    return null;
   }
 
   return bookData;

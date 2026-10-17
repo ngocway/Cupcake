@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { InstructionsBlock } from '@/components/common/InstructionsBlock';
-import { BookOpen, RefreshCw, AlertCircle } from 'lucide-react';
+import { BookOpen, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
 import { getCachedGrammarData, fetchGrammarDataWithCache } from '../_utils/assignmentCache';
 
 interface EmbeddedGrammarContainerProps {
@@ -71,6 +71,20 @@ export function EmbeddedGrammarContainer({
     loadData();
   }, [loadData]);
 
+  const handleContainerClick = (e: React.MouseEvent) => {
+    const anchor = (e.target as HTMLElement).closest('a');
+    if (anchor) {
+      const href = anchor.getAttribute('href');
+      if (href && (href.includes('/flashcards') || href.includes('tiny-vocab-fc') || href.includes('assignmentId='))) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onNextActivity) {
+          onNextActivity();
+        }
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
@@ -122,22 +136,42 @@ export function EmbeddedGrammarContainer({
   }
 
   return (
-    <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar px-4 sm:px-8 md:px-10 lg:px-12 py-5 sm:py-7 pb-16 animate-in fade-in duration-200">
+    <div
+      onClick={handleContainerClick}
+      className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar px-4 sm:px-8 md:px-10 lg:px-12 py-5 sm:py-7 pb-16"
+    >
       <div className="w-full space-y-8">
         {/* Lesson Theory Body - Full Width & Borderless */}
         <div className="w-full">
           {data.instructions ? (
-            <InstructionsBlock
-              instructions={data.instructions}
-              instructionsTranslations={data.instructionsTranslations}
-              isLoggedIn={true}
-              togglePlacement="inside-corner"
-              proseClassName="prose prose-slate max-w-none dark:prose-invert
-                [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
-                [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
-                [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
-                [&_div]:rounded-lg [&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4"
-            />
+            <>
+              <InstructionsBlock
+                instructions={data.instructions}
+                instructionsTranslations={data.instructionsTranslations}
+                isLoggedIn={true}
+                togglePlacement="inside-corner"
+                proseClassName="prose prose-slate max-w-none dark:prose-invert
+                  [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
+                  [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
+                  [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
+                  [&_div]:rounded-lg [&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4"
+              />
+
+              {onNextActivity && (
+                <div className="pt-8 mt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    Bé đã xem xong phần giới thiệu bài học & truyện ngắn!
+                  </div>
+                  <button
+                    onClick={onNextActivity}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
+                  >
+                    <span>🚀 Bắt đầu học 20 từ Flashcard ngay</span>
+                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="p-12 text-center text-slate-400">
               <BookOpen className="w-12 h-12 mx-auto mb-3 stroke-[1.5]" />

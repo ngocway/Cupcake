@@ -119,6 +119,7 @@ model Class {
   isJoinable      Boolean           @default(true)
   autoApprove     Boolean           @default(true)
   dailyDripUnlock Boolean           @default(false)
+  zaloGroupUrl    String?
   teacherId       String
   deletedAt       DateTime?
   createdAt       DateTime          @default(now())
@@ -130,6 +131,7 @@ model Class {
   enrollments     ClassEnrollment[]
   assignedLessons LessonClass[]
   submissions     Submission[]
+  flashcardTopics FlashcardTopic[]
 }
 
 model ClassEnrollment {
@@ -663,6 +665,7 @@ model FlashcardTopic {
   slug            String            @unique
   iconUrl         String?
   cefrLevel       String?           @default("a1") // a1 | a2 | b1 | b2 | c1
+  classes         Class[]
   flashcards      GlobalFlashcard[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt

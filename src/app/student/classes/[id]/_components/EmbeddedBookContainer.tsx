@@ -31,6 +31,9 @@ export function EmbeddedBookContainer({
     setError(null);
     try {
       const res = await fetchBookDataWithCache(assignmentId, force);
+      if (!res || !res.book) {
+        setError('Không tìm thấy dữ liệu sách đọc.');
+      }
       setData(res);
     } catch (err: any) {
       console.error('Failed to load book reader data:', err);

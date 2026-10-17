@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition, useEffect, useRef } from "react"
 import { toast } from "sonner"
-import { Plus, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, ArrowRightLeft, MessageSquare, Pencil, Check, Volume2, VolumeX } from "lucide-react"
+import { Plus, Trash2, Search, Image as ImageIcon, CheckCircle2, Gamepad2, ArrowRightLeft, MessageSquare, Pencil, Check, Volume2, VolumeX, X, RotateCcw } from "lucide-react"
 import { searchImagesAction } from "@/actions/image-search-actions"
 import { uploadUrlMedia } from "@/actions/upload-actions"
 import { useRouter } from "next/navigation"
@@ -98,6 +98,9 @@ export function AdminSentenceBuilderClient({
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
   const [showImageSearch, setShowImageSearch] = useState(false)
   const [imageSearchStyle, setImageSearchStyle] = useState<"REALISTIC" | "CARTOON">("REALISTIC")
+  const [imageSearchQuery, setImageSearchQuery] = useState("")
+  const [imageSearchOriginalWord, setImageSearchOriginalWord] = useState("")
+  const imageSearchInputRef = useRef<HTMLInputElement>(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   // --- Game Actions ---
@@ -258,14 +261,39 @@ export function AdminSentenceBuilderClient({
   }
 
   // --- Image Search Actions ---
-  const handleSearchImage = async (wordToSearch?: string | React.MouseEvent) => {
+  const handleSearchImage = async (wordToSearch?: string | React.MouseEvent, styleOverride?: "REALISTIC" | "CARTOON") => {
     const word = typeof wordToSearch === 'string' ? wordToSearch : questionForm.expected;
-    if (!word) return toast.error("Vui lòng nhập câu trước khi tìm ảnh")
+    if (!word || !word.trim()) return toast.error("Vui lòng nhập câu trước khi tìm ảnh")
+    const trimmed = word.trim()
+    setImageSearchQuery(trimmed)
+    setImageSearchOriginalWord(trimmed)
     setIsSearchingImage(true)
     setShowImageSearch(true)
+
+    setTimeout(() => {
+      imageSearchInputRef.current?.focus()
+      imageSearchInputRef.current?.select()
+    }, 150)
     
-    const searchTerm = imageSearchStyle === "CARTOON" ? `${word} cartoon illustration` : word
+    const currentStyle = styleOverride || imageSearchStyle
+    const searchTerm = currentStyle === "CARTOON" ? `${trimmed} cartoon illustration` : trimmed
     
+    try {
+      const results = await searchImagesAction(searchTerm)
+      setImageSearchResults(results || [])
+    } catch (err: any) {
+      toast.error("Lỗi tìm ảnh: " + err.message)
+    } finally {
+      setIsSearchingImage(false)
+    }
+  }
+
+  const handleExecuteImageSearch = async (queryText: string, styleOverride?: "REALISTIC" | "CARTOON") => {
+    const trimmed = queryText.trim()
+    if (!trimmed) return toast.error("Vui lòng nhập từ khóa tìm kiếm ảnh")
+    setIsSearchingImage(true)
+    const currentStyle = styleOverride || imageSearchStyle
+    const searchTerm = currentStyle === "CARTOON" ? `${trimmed} cartoon illustration` : trimmed
     try {
       const results = await searchImagesAction(searchTerm)
       setImageSearchResults(results || [])
@@ -726,15 +754,135 @@ export function AdminSentenceBuilderClient({
       {showImageSearch && (
         <div className="fixed inset-0 z-[60] bg-black/95 flex flex-col p-4 md:p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto w-full bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[90vh]">
-            <div className="p-6 border-b border-neutral-800 flex justify-between items-center bg-neutral-950 shrink-0">
-              <h2 className="text-2xl font-black text-white flex items-center gap-3">
-                <Search className="text-indigo-400" /> Chọn ảnh
+            <div className="p-5 border-b border-neutral-800 flex justify-between items-center bg-neutral-950 shrink-0">
+              <h2 className="text-xl font-black text-white flex items-center gap-2.5">
+                <Search className="text-indigo-400 w-5 h-5" /> 
+                <span>Tìm & Chọn ảnh</span>
               </h2>
-              <button onClick={() => setShowImageSearch(false)} className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold">Đóng</button>
+              <button 
+                onClick={() => setShowImageSearch(false)} 
+                className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                title="Đóng"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex gap-3 justify-center">
-              <button onClick={() => { setImageSearchStyle("REALISTIC"); handleSearchImage(); }} className={`px-6 py-2.5 rounded-xl font-bold ${imageSearchStyle === "REALISTIC" ? "bg-indigo-600 text-white" : "bg-neutral-800 text-neutral-400"}`}>Ảnh thật</button>
-              <button onClick={() => { setImageSearchStyle("CARTOON"); handleSearchImage(); }} className={`px-6 py-2.5 rounded-xl font-bold ${imageSearchStyle === "CARTOON" ? "bg-indigo-600 text-white" : "bg-neutral-800 text-neutral-400"}`}>Hoạt hình</button>
+
+            {/* Search Controls Bar */}
+            <div className="p-4 border-b border-neutral-800 bg-neutral-900/60 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                {/* Input with Clear Button */}
+                <div className="relative flex-1 w-full flex items-center">
+                  <input
+                    ref={imageSearchInputRef}
+                    type="text"
+                    value={imageSearchQuery}
+                    onChange={(e) => setImageSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        handleExecuteImageSearch(imageSearchQuery, imageSearchStyle)
+                      }
+                    }}
+                    placeholder="Nhập từ khóa tìm kiếm ảnh..."
+                    className="w-full pl-3 pr-8 py-2.5 bg-neutral-950 border border-neutral-700 focus:border-indigo-500 rounded-xl text-white text-sm font-semibold outline-none transition-all placeholder:text-neutral-500"
+                  />
+                  {imageSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageSearchQuery("")
+                        imageSearchInputRef.current?.focus()
+                      }}
+                      className="absolute right-2.5 text-neutral-400 hover:text-white p-1 transition-colors cursor-pointer"
+                      title="Xóa trắng"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Style Switcher */}
+                <div className="flex items-center bg-neutral-950 rounded-xl p-1 border border-neutral-700 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSearchStyle("REALISTIC")
+                      handleExecuteImageSearch(imageSearchQuery, "REALISTIC")
+                    }}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      imageSearchStyle === "REALISTIC" ? "bg-indigo-600 text-white" : "text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    📷 Thực tế
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageSearchStyle("CARTOON")
+                      handleExecuteImageSearch(imageSearchQuery, "CARTOON")
+                    }}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      imageSearchStyle === "CARTOON" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"
+                    }`}
+                  >
+                    🎨 Hoạt hình
+                  </button>
+                </div>
+
+                {/* Search Button */}
+                <button
+                  type="button"
+                  disabled={isSearchingImage}
+                  onClick={() => handleExecuteImageSearch(imageSearchQuery, imageSearchStyle)}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-md cursor-pointer shrink-0"
+                >
+                  {isSearchingImage ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                  <span>Tìm ảnh</span>
+                </button>
+              </div>
+
+              {/* Sub-bar: Reset and Quick Context Chips */}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-neutral-500 font-bold text-[11px] mr-1">Gợi ý nhanh:</span>
+                  {["shape", "math", "icon", "clipart", "object", "cute"].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        const alreadyHas = imageSearchQuery.toLowerCase().includes(tag)
+                        const newQuery = alreadyHas ? imageSearchQuery : `${imageSearchQuery.trim()} ${tag}`.trim()
+                        setImageSearchQuery(newQuery)
+                        handleExecuteImageSearch(newQuery, imageSearchStyle)
+                      }}
+                      className="px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 active:scale-95 text-[11px] font-bold text-neutral-300 hover:text-white rounded-md border border-neutral-700 transition-all cursor-pointer"
+                    >
+                      +{tag}
+                    </button>
+                  ))}
+                </div>
+
+                {imageSearchOriginalWord && imageSearchQuery.trim() !== imageSearchOriginalWord.trim() && (
+                  <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+                    <span className="truncate max-w-[200px]">Gốc: <b className="text-neutral-200">{imageSearchOriginalWord}</b></span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageSearchQuery(imageSearchOriginalWord)
+                        handleExecuteImageSearch(imageSearchOriginalWord, imageSearchStyle)
+                      }}
+                      className="text-indigo-400 hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Khôi phục
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6 bg-neutral-950">
               {isSearchingImage ? (

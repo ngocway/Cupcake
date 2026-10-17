@@ -30,6 +30,7 @@ export interface ClassData {
   isJoinable?: boolean;
   autoApprove?: boolean;
   dailyDripUnlock?: boolean;
+  zaloGroupUrl?: string | null;
   createdAt: string;
   _count: { enrollments: number };
 }
@@ -44,6 +45,7 @@ interface EditClassModalProps {
 export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditClassModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [zaloGroupUrl, setZaloGroupUrl] = useState("");
   const [isJoinable, setIsJoinable] = useState(true);
   const [autoApprove, setAutoApprove] = useState(true);
   const [dailyDripUnlock, setDailyDripUnlock] = useState(false);
@@ -62,6 +64,7 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
     if (classData) {
       setName(classData.name || "");
       setDescription(classData.description || "");
+      setZaloGroupUrl(classData.zaloGroupUrl || "");
       setIsJoinable(classData.isJoinable ?? true);
       setAutoApprove(classData.autoApprove ?? true);
       setDailyDripUnlock(classData.dailyDripUnlock ?? false);
@@ -129,6 +132,7 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
         isJoinable,
         autoApprove,
         dailyDripUnlock,
+        zaloGroupUrl,
       });
 
       if (res.success) {
@@ -216,6 +220,24 @@ export function EditClassModal({ classData, isOpen, onClose, onSuccess }: EditCl
                 placeholder="Thông tin giới thiệu, mục tiêu hoặc ghi chú cho lớp học..."
                 rows={2}
                 className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 focus:ring-2 focus:ring-primary/40 focus:border-primary text-sm font-medium resize-none transition-all"
+              />
+            </div>
+
+            {/* Link nhóm Zalo hỗ trợ */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#0068FF]" />
+                  Link nhóm Zalo hỗ trợ lớp học
+                </span>
+                <span className="text-[11px] font-normal text-slate-400 lowercase">Tự động hiện icon Zalo nổi cho học sinh</span>
+              </label>
+              <input 
+                type="url"
+                value={zaloGroupUrl}
+                onChange={(e) => setZaloGroupUrl(e.target.value)}
+                placeholder="Ví dụ: https://zalo.me/g/..."
+                className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 focus:ring-2 focus:ring-[#0068FF]/30 focus:border-[#0068FF] text-sm font-medium transition-all"
               />
             </div>
 

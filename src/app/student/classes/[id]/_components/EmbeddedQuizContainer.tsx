@@ -167,7 +167,7 @@ export function EmbeddedQuizContainer({
   return (
     <div className="w-full h-full min-h-[580px] lg:min-h-[660px] relative bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       <KidTeenQuizRunner
-        key={`${assignmentId}_${data.submissionId}`}
+        key={assignmentId}
         assignment={data.assignment}
         submissionId={data.submissionId}
         questions={data.questions}

@@ -4,11 +4,13 @@ import { useSyncExternalStore } from 'react';
 import { getStudentGrammarLessonData } from '@/app/student/classes/actions';
 import { getStudentQuizRunnerData, getBatchStudentQuizRunnerData } from '@/app/student/assignments/[id]/run/actions';
 import { getStudentBookData } from '@/app/student/classes/actions';
+import { getFlashcardsByTopic } from '@/actions/flashcards-actions';
 
 // In-memory data caches (persist throughout the client session)
 const grammarCache = new Map<string, any>();
 const quizCache = new Map<string, any>();
 const bookCache = new Map<string, any>();
+const flashcardCache = new Map<string, any[]>();
 const gameCache = new Set<string>();
 
 // In-flight request promises to prevent duplicate simultaneous fetches
@@ -61,7 +63,7 @@ export function useAssignmentPreloadProgress(): Record<string, number> {
 }
 
 export function isAssignmentCached(id: string): boolean {
-  return grammarCache.has(id) || quizCache.has(id) || bookCache.has(id) || gameCache.has(id) || (progressMap.get(id) === 100);
+  return grammarCache.has(id) || quizCache.has(id) || bookCache.has(id) || flashcardCache.has(id) || gameCache.has(id) || (progressMap.get(id) === 100);
 }
 
 export function getAssignmentProgress(id: string): number {
@@ -211,6 +213,46 @@ export async function fetchBookDataWithCache(id: string, force = false): Promise
   return p;
 }
 
+export function getCachedFlashcardData(topicId: string): any[] | null {
+  return flashcardCache.get(topicId) || null;
+}
+
+export function setCachedFlashcardData(topicId: string, data: any[]) {
+  flashcardCache.set(topicId, data);
+}
+
+export async function fetchFlashcardDataWithCache(topicId: string, force = false): Promise<any[]> {
+  if (!force && flashcardCache.has(topicId)) {
+    return flashcardCache.get(topicId)!;
+  }
+  const key = `flashcard_${topicId}`;
+  if (!force && pendingRequests.has(key)) {
+    return pendingRequests.get(key);
+  }
+  const p = getFlashcardsByTopic(topicId)
+    .then(data => {
+      flashcardCache.set(topicId, data);
+      pendingRequests.delete(key);
+      // Pre-warm the first 3 images into browser cache so they appear with 0ms delay!
+      if (typeof window !== 'undefined' && Array.isArray(data)) {
+        for (let i = 0; i < Math.min(3, data.length); i++) {
+          const url = data[i]?.imageUrl;
+          if (url) {
+            const img = new Image();
+            img.src = url;
+          }
+        }
+      }
+      return data;
+    })
+    .catch(err => {
+      pendingRequests.delete(key);
+      throw err;
+    });
+  pendingRequests.set(key, p);
+  return p;
+}
+
 // ══════════════════════════════════════════════════════════════════
 // SMART CONCURRENCY-LIMITED PRELOAD QUEUE & PROGRESS SIMULATION
 // ══════════════════════════════════════════════════════════════════
@@ -296,16 +338,71 @@ function launchPreloadItem(entry: QueueEntry) {
   }
 
   const titleLower = item.assignment.title.toLowerCase();
-  const isGame = kind === 'GAME' || matType === 'GAME';
-  const isGrammar = !isGame && (
+  let meta: any = {};
+  if (item.assignment.instructions) {
+    try {
+      meta = JSON.parse(item.assignment.instructions);
+      if (meta.kind) kind = meta.kind;
+    } catch {}
+  }
+
+  const isMatchGame = Boolean(
+    (meta.playUrl && (
+      meta.playUrl.includes('flashcard-match') ||
+      meta.playUrl.includes('/student/game/') ||
+      meta.playUrl.includes('/games/')
+    )) ||
+    meta.gameMode === 'match' ||
+    (item.assignment.instructions && (
+      item.assignment.instructions.includes('flashcard-match') ||
+      item.assignment.instructions.includes('"match"')
+    ))
+  );
+
+  const isFlashcardUrlOrMeta = !isMatchGame && Boolean(
+    (meta.playUrl && meta.playUrl.includes('/flashcards') && !meta.playUrl.includes('/game')) ||
+    meta.gameMode === 'puzzle' ||
+    meta.gameMode === 'type' ||
+    meta.gameMode === 'hint' ||
+    meta.mode === 'scramble' ||
+    meta.mode === 'type' ||
+    Boolean((item.assignment as any).flashcardTopicId)
+  );
+
+  const isFlashcard = !isMatchGame && Boolean(
+    isFlashcardUrlOrMeta ||
+    kind === 'FLASHCARD' ||
+    matType === 'FLASHCARD' ||
+    (item.assignment.instructions && item.assignment.instructions.includes('/flashcard') && !item.assignment.instructions.includes('/game/'))
+  );
+
+  const isGame = Boolean(
+    isMatchGame ||
+    (!isFlashcard && (
+      kind === 'GAME' ||
+      matType === 'GAME' ||
+      (item.assignment.instructions && (
+        item.assignment.instructions.includes('/game/') ||
+        item.assignment.instructions.includes('/games/')
+      ))
+    ))
+  );
+  const isDirectHtml = Boolean(
+    item.assignment.instructions && 
+    !item.assignment.instructions.trim().startsWith('{')
+  );
+  const isGrammar = !isFlashcard && !isGame && matType !== 'READING' && kind !== 'READING' && kind !== 'BOOK' && (
     kind === 'LESSON' ||
     matType === 'LESSON' ||
+    Boolean((item.assignment as any).grammarLesson) ||
+    Boolean((item.assignment as any).grammarTopic) ||
+    isDirectHtml ||
     titleLower.includes('lý thuyết') ||
     titleLower.includes('ly thuyet') ||
     titleLower.includes('grammar lesson') ||
     (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
   );
-  const isBook = !isGame && !isGrammar && (
+  const isBook = !isFlashcard && !isGame && !isGrammar && (
     kind === 'READING' ||
     kind === 'BOOK' ||
     matType === 'READING' ||
@@ -313,7 +410,24 @@ function launchPreloadItem(entry: QueueEntry) {
   );
 
   let fetchPromise: Promise<any>;
-  if (isGame) {
+  if (isFlashcard) {
+    let topicId = aid;
+    try {
+      if (meta.topicId) topicId = meta.topicId;
+      else if (meta.playUrl) {
+        const u = new URL(meta.playUrl, 'http://localhost');
+        const t = u.searchParams.get('topic');
+        if (t) topicId = t;
+      } else if ((item.assignment as any).flashcardTopicId) {
+        topicId = (item.assignment as any).flashcardTopicId;
+      }
+    } catch {}
+    fetchPromise = fetchFlashcardDataWithCache(topicId).then((cards) => {
+      flashcardCache.set(aid, cards);
+      if (topicId) flashcardCache.set(topicId, cards);
+      return cards;
+    });
+  } else if (isGame) {
     gameCache.add(aid);
     fetchPromise = new Promise(resolve => setTimeout(resolve, 200));
   } else if (isGrammar) {
@@ -448,23 +562,32 @@ export function queueGroupForPreload(
       } catch {}
     }
     const titleLower = item.assignment.title.toLowerCase();
-    const isGame = kind === 'GAME' || matType === 'GAME';
-    const isGrammar = !isGame && (
+    const isFlashcard =
+      kind === 'FLASHCARD' ||
+      matType === 'FLASHCARD' ||
+      (item.assignment.instructions && item.assignment.instructions.includes('/flashcard'));
+    const isGame = !isFlashcard && (
+      kind === 'GAME' ||
+      matType === 'GAME' ||
+      (item.assignment.instructions && item.assignment.instructions.includes('/game/'))
+    );
+    const isGrammar = !isFlashcard && !isGame && (
       kind === 'LESSON' ||
       matType === 'LESSON' ||
+      Boolean((item.assignment as any).grammarLesson) ||
       titleLower.includes('lý thuyết') ||
       titleLower.includes('ly thuyet') ||
       titleLower.includes('grammar lesson') ||
       (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
     );
-    const isBook = !isGame && !isGrammar && (
+    const isBook = !isFlashcard && !isGame && !isGrammar && (
       kind === 'READING' ||
       kind === 'BOOK' ||
       matType === 'READING' ||
       (item.assignment.instructions && item.assignment.instructions.includes('/student/books/'))
     );
 
-    if (isGame || isGrammar || isBook) {
+    if (isFlashcard || isGame || isGrammar || isBook) {
       otherItems.push(item);
     } else {
       exerciseItems.push(item);
@@ -502,7 +625,7 @@ export function queueGroupForPreload(
       setAssignmentProgress(aid, 100);
       return;
     }
-    prefetchAssignmentData(item);
+    prefetchAssignmentData(item, classId, groupId);
   });
 
   if (exerciseItems.length === 0) return;
@@ -619,8 +742,8 @@ export function queueGrammarLessonsIdlePreload(
   stopGrammarLessonsIdlePreload();
   isIdlePreloadActive = true;
 
-  // Filter items that are not yet cached
-  const queue = items.filter(it => it?.assignment?.id && !isAssignmentCached(it.assignment.id));
+  // Filter items that are not yet cached (capped at 10 to avoid server congestion)
+  const queue = items.filter(it => it?.assignment?.id && !isAssignmentCached(it.assignment.id)).slice(0, 10);
   if (queue.length === 0) return;
 
   function runNext() {
