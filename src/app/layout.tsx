@@ -63,7 +63,7 @@ export const metadata: Metadata = {
       "Interactive English learning for kids and teens. Explore lessons, flashcards, quizzes, and games on Dolcake.",
     images: [
       {
-        url: "/images/og-image.png",
+        url: "/images/og-image-v2.png",
         width: 1200,
         height: 630,
         alt: "Dolcake – Interactive English Learning Platform",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     title: "Dolcake – Learn English with Fun Lessons & Games",
     description:
       "Interactive English learning for kids and teens. Explore lessons, flashcards, quizzes, and games on Dolcake.",
-    images: ["/images/og-image.png"],
+    images: ["/images/og-image-v2.png"],
     site: "@dolcake",
   },
   robots: {
@@ -123,7 +123,7 @@ export default async function RootLayout({
                   "@id": "https://dolcake.com/#organization",
                   "name": "Dolcake",
                   "url": "https://dolcake.com",
-                  "logo": "https://dolcake.com/images/og-image.png",
+                  "logo": "https://dolcake.com/images/og-image-v2.png",
                   "description":
                     "Interactive English learning platform for kids, teens, and learners of all ages. Lessons, flashcards, quizzes, and games.",
                   "knowsAbout": ["English Language Learning", "Educational Games", "Flashcards", "Quizzes"],
