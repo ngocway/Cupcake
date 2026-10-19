@@ -83,6 +83,10 @@ const EmbeddedGrammarContainer = dynamic(
   () => import('./EmbeddedGrammarContainer').then((mod) => mod.EmbeddedGrammarContainer),
   { loading: () => <ActivityCanvasLoadingFallback /> }
 );
+const EmbeddedReadingLessonContainer = dynamic(
+  () => import('./EmbeddedReadingLessonContainer').then((mod) => mod.EmbeddedReadingLessonContainer),
+  { loading: () => <ActivityCanvasLoadingFallback /> }
+);
 const EmbeddedBookContainer = dynamic(
   () => import('./EmbeddedBookContainer').then((mod) => mod.EmbeddedBookContainer),
   { loading: () => <ActivityCanvasLoadingFallback /> }
@@ -365,6 +369,24 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
   }
 
   const titleLower = item.assignment.title.toLowerCase();
+  const isExplicitTheory = 
+    kind === 'LESSON' || 
+    targetUrl.includes('/grammar/') || 
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson');
+
+  const isExplicitReading = 
+    !isExplicitTheory && (
+      kind === 'READING' || 
+      item.assignment.materialType === 'READING' || 
+      kind === 'BOOK' || 
+      item.assignment.materialType === 'BOOK' ||
+      titleLower.includes('bài đọc') || 
+      titleLower.includes('bai doc') || 
+      titleLower.startsWith('reading:')
+    );
+
   const isExplicitChildType = 
     kind === 'FLASHCARD' || 
     kind === 'GAME' || 
@@ -375,7 +397,7 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     targetUrl.includes('/flashcard');
 
   const isGrammarLesson = 
-    !isExplicitChildType && (
+    !isExplicitChildType && !isExplicitReading && (
       kind === 'LESSON' || 
       item.assignment.materialType === 'LESSON' ||
       Boolean(item.assignment.grammarLesson) ||
@@ -391,7 +413,7 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
 
   if (isGrammarLesson) {
     kind = 'LESSON';
-  } else if (item.assignment.materialType === 'READING') {
+  } else if (isExplicitReading || item.assignment.materialType === 'READING') {
     kind = 'READING';
   } else if (kind === 'GAME' || item.assignment.materialType === 'GAME' || targetUrl.includes('/game/') || targetUrl.includes('/games/')) {
     kind = 'GAME';
@@ -1378,6 +1400,7 @@ export function StudentAssignmentsView({
       import('./EmbeddedGameContainer').catch(() => {});
       import('./EmbeddedQuizContainer').catch(() => {});
       import('./EmbeddedGrammarContainer').catch(() => {});
+      import('./EmbeddedReadingLessonContainer').catch(() => {});
       import('@/app/student/assignments/[id]/run/quiz/KidTeenQuizRunner').catch(() => {});
     }
   }, []);
@@ -1434,8 +1457,29 @@ export function StudentAssignmentsView({
   );
 
   const activeTitleLower = activeItemConfig?.item?.assignment?.title?.toLowerCase() || '';
+  const isCurrentTheory = 
+    currentItemKind === 'LESSON' ||
+    parseItemConfig(activeItemConfig.item).targetUrl.includes('/grammar/') ||
+    activeTitleLower.includes('lý thuyết') ||
+    activeTitleLower.includes('ly thuyet') ||
+    activeTitleLower.includes('grammar lesson');
+
+  const isCurrentReading = Boolean(
+    activeItemConfig && !isCurrentTheory && (
+      currentItemKind === 'READING' ||
+      currentItemStage === 'reading' ||
+      activeItemConfig.item.assignment.materialType === 'READING' ||
+      activeTitleLower.includes('[bài đọc]') ||
+      activeTitleLower.includes('bài đọc') ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/student/lessons/') ||
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('/lessons/') ||
+      Boolean((activeItemConfig.item.assignment as any).lessonSlug) ||
+      Boolean((activeItemConfig.item.assignment as any).lessonId)
+    )
+  );
+
   const isCurrentLesson = Boolean(
-    activeItemConfig && !isCurrentFlashcard && !isCurrentGame && !isCurrentExercise && (
+    activeItemConfig && !isCurrentFlashcard && !isCurrentGame && !isCurrentExercise && !isCurrentReading && (
       currentItemKind === 'LESSON' ||
       currentItemStage === 'lesson' ||
       activeItemConfig.item.assignment.materialType === 'LESSON' ||
@@ -1450,17 +1494,15 @@ export function StudentAssignmentsView({
   );
 
   const isCurrentBook = Boolean(
-    activeItemConfig && !isCurrentGame && !isCurrentLesson && (
-      currentItemKind === 'READING' ||
+    activeItemConfig && !isCurrentGame && !isCurrentLesson && !isCurrentReading && (
       currentItemKind === 'BOOK' ||
-      currentItemStage === 'reading' ||
-      activeItemConfig.item.assignment.materialType === 'READING' ||
+      activeItemConfig.item.assignment.materialType === 'BOOK' ||
       parseItemConfig(activeItemConfig.item).targetUrl.includes('/student/books/')
     )
   );
 
   const isCurrentQuiz = Boolean(
-    activeItemConfig && !isCurrentGame && !isCurrentLesson && !isCurrentBook
+    activeItemConfig && !isCurrentGame && !isCurrentLesson && !isCurrentBook && !isCurrentReading
   );
 
   // Overall student progress calculation (only scored assignments: exercises & reading)
@@ -2409,11 +2451,13 @@ export function StudentAssignmentsView({
                       className={`text-lg sm:text-xl md:text-2xl font-black leading-tight ${
                         isCurrentLesson 
                           ? 'text-emerald-600 dark:text-emerald-400' 
-                          : isCurrentFlashcard
-                            ? 'text-amber-600 dark:text-amber-400'
-                            : isCurrentGame
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-slate-900 dark:text-white'
+                          : isCurrentReading
+                            ? 'text-emerald-700 dark:text-emerald-300'
+                            : isCurrentFlashcard
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : isCurrentGame
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-slate-900 dark:text-white'
                       }`}
                       title={
                         isCurrentFlashcard
@@ -2709,8 +2753,29 @@ export function StudentAssignmentsView({
                   );
 
                   const itemTitleLower = (cfg.item.assignment.title || '').toLowerCase();
+                  const isTheory = 
+                    itemKind === 'LESSON' ||
+                    targetUrl.includes('/grammar/') ||
+                    itemTitleLower.includes('lý thuyết') ||
+                    itemTitleLower.includes('ly thuyet') ||
+                    itemTitleLower.includes('grammar lesson');
+
+                  const isReading = Boolean(
+                    !isTheory && (
+                      itemKind === 'READING' ||
+                      itemStage === 'reading' ||
+                      cfg.item.assignment.materialType === 'READING' ||
+                      itemTitleLower.includes('[bài đọc]') ||
+                      itemTitleLower.includes('bài đọc') ||
+                      targetUrl.includes('/student/lessons/') ||
+                      targetUrl.includes('/lessons/') ||
+                      Boolean((cfg.item.assignment as any).lessonSlug) ||
+                      Boolean((cfg.item.assignment as any).lessonId)
+                    )
+                  );
+
                   const isLesson = Boolean(
-                    !isFlashcard && !isGame && !isExercise && (
+                    !isFlashcard && !isGame && !isExercise && !isReading && (
                       itemKind === 'LESSON' ||
                       itemStage === 'lesson' ||
                       cfg.item.assignment.materialType === 'LESSON' ||
@@ -2725,16 +2790,14 @@ export function StudentAssignmentsView({
                   );
 
                   const isBook = Boolean(
-                    !isFlashcard && !isGame && !isLesson && (
-                      itemKind === 'READING' ||
+                    !isFlashcard && !isGame && !isLesson && !isReading && (
                       itemKind === 'BOOK' ||
-                      itemStage === 'reading' ||
-                      cfg.item.assignment.materialType === 'READING' ||
+                      cfg.item.assignment.materialType === 'BOOK' ||
                       parseItemConfig(cfg.item).targetUrl.includes('/student/books/')
                     )
                   );
 
-                  const isQuiz = Boolean(!isFlashcard && !isGame && !isLesson && !isBook);
+                  const isQuiz = Boolean(!isFlashcard && !isGame && !isLesson && !isBook && !isReading);
 
                   return (
                     <div
@@ -2755,6 +2818,14 @@ export function StudentAssignmentsView({
                       ) : isGame ? (
                         <EmbeddedGameContainer
                           assignment={cfg.item.assignment}
+                          onComplete={handleActivityComplete}
+                          isActive={isActive}
+                        />
+                      ) : isReading ? (
+                        <EmbeddedReadingLessonContainer
+                          assignmentId={aid}
+                          classId={classId}
+                          groupId={cfg.item.groupId}
                           onComplete={handleActivityComplete}
                           isActive={isActive}
                         />

@@ -319,4 +319,60 @@ export async function getStudentBookData(assignmentId: string) {
   return bookData;
 }
 
+export async function getStudentReadingLessonData(assignmentId: string, classId?: string, groupId?: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const data = await fetchWithRedis(`reading:lesson-template:v3:${assignmentId}`, 3600, async () => {
+    const assignment = await prisma.assignment.findFirst({
+      where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        level: true,
+        readingText: true,
+        readingTextProcessed: true,
+        audioUrl: true,
+        ttsSpeed: true,
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            level: true,
+            audioUrl: true,
+          }
+        },
+        questions: {
+          orderBy: { orderIndex: 'asc' },
+          select: {
+            id: true,
+            type: true,
+            content: true,
+            explanation: true,
+            explanationTranslations: true,
+            orderIndex: true,
+            points: true,
+            audioUrl: true,
+          }
+        }
+      }
+    });
+    if (!assignment) return null;
+    return assignment;
+  });
+
+  if (!data) return null;
+
+  return {
+    assignmentId: data.id,
+    title: data.title,
+    level: data.level || data.lesson?.level || 'Pre-A1 / A1',
+    audioUrl: data.audioUrl || data.lesson?.audioUrl || null,
+    readingText: data.readingTextProcessed || data.readingText || '',
+    questions: data.questions || []
+  };
+}
+
+
 

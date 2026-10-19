@@ -1,13 +1,13 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { getStudentGrammarLessonData } from '@/app/student/classes/actions';
+import { getStudentGrammarLessonData, getStudentBookData, getStudentReadingLessonData } from '@/app/student/classes/actions';
 import { getStudentQuizRunnerData, getBatchStudentQuizRunnerData } from '@/app/student/assignments/[id]/run/actions';
-import { getStudentBookData } from '@/app/student/classes/actions';
 import { getFlashcardsByTopic } from '@/actions/flashcards-actions';
 import { buildGroupTree } from './assignmentOrder';
 
 // In-memory data caches (persist throughout the client session)
+const readingCache = new Map<string, any>();
 const grammarCache = new Map<string, any>();
 const quizCache = new Map<string, any>();
 const bookCache = new Map<string, any>();
@@ -64,7 +64,7 @@ export function useAssignmentPreloadProgress(): Record<string, number> {
 }
 
 export function isAssignmentCached(id: string): boolean {
-  return grammarCache.has(id) || quizCache.has(id) || bookCache.has(id) || flashcardCache.has(id) || gameCache.has(id) || (progressMap.get(id) === 100);
+  return readingCache.has(id) || grammarCache.has(id) || quizCache.has(id) || bookCache.has(id) || flashcardCache.has(id) || gameCache.has(id) || (progressMap.get(id) === 100);
 }
 
 export function getAssignmentProgress(id: string): number {
@@ -108,6 +108,52 @@ export function getCachedBookData(id: string) {
 export function setCachedBookData(id: string, data: any) {
   bookCache.set(id, data);
   setAssignmentProgress(id, 100);
+}
+
+export function getCachedReadingData(id: string) {
+  if (readingCache.has(id)) return readingCache.get(id);
+  const plainId = id.split('_')[0];
+  if (readingCache.has(plainId)) return readingCache.get(plainId);
+  for (const [k, v] of readingCache.entries()) {
+    if (k.startsWith(plainId)) return v;
+  }
+  return undefined;
+}
+
+export function setCachedReadingData(id: string, data: any) {
+  readingCache.set(id, data);
+  setAssignmentProgress(id, 100);
+}
+
+export async function fetchReadingDataWithCache(
+  id: string,
+  force = false,
+  classId?: string,
+  groupId?: string
+): Promise<any> {
+  const cacheKey = `${id}_${classId || ''}_${groupId || ''}`;
+  if (!force && (readingCache.has(cacheKey) || readingCache.has(id))) {
+    setAssignmentProgress(id, 100);
+    return readingCache.get(cacheKey) || readingCache.get(id);
+  }
+  const key = `reading_${cacheKey}`;
+  if (!force && pendingRequests.has(key)) {
+    return pendingRequests.get(key);
+  }
+  const p = getStudentReadingLessonData(id, classId, groupId)
+    .then(data => {
+      readingCache.set(id, data);
+      readingCache.set(cacheKey, data);
+      setAssignmentProgress(id, 100);
+      pendingRequests.delete(key);
+      return data;
+    })
+    .catch(err => {
+      pendingRequests.delete(key);
+      throw err;
+    });
+  pendingRequests.set(key, p);
+  return p;
 }
 
 export async function fetchGrammarDataWithCache(
@@ -396,7 +442,27 @@ function launchPreloadItem(entry: QueueEntry) {
     item.assignment.instructions && 
     !item.assignment.instructions.trim().startsWith('{')
   );
-  const isGrammar = !isFlashcard && !isGame && !isExercise && (
+  const isExplicitTheory = 
+    kind === 'LESSON' ||
+    (item.assignment.instructions && item.assignment.instructions.includes('/grammar/')) ||
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson');
+
+  const isReading = !isExplicitTheory && Boolean(
+    kind === 'READING' ||
+    matType === 'READING' ||
+    titleLower.includes('[bài đọc]') ||
+    titleLower.includes('bài đọc') ||
+    (item.assignment.instructions && (
+      item.assignment.instructions.includes('/student/lessons/') ||
+      item.assignment.instructions.includes('/lessons/')
+    )) ||
+    Boolean((item.assignment as any).lessonSlug) ||
+    Boolean((item.assignment as any).lessonId)
+  );
+
+  const isGrammar = !isFlashcard && !isGame && !isExercise && !isReading && (
     isDirectHtml ||
     kind === 'LESSON' ||
     matType === 'LESSON' ||
@@ -407,10 +473,9 @@ function launchPreloadItem(entry: QueueEntry) {
     titleLower.includes('grammar lesson') ||
     (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
   );
-  const isBook = !isFlashcard && !isGame && !isGrammar && (
-    kind === 'READING' ||
+  const isBook = !isFlashcard && !isGame && !isGrammar && !isReading && (
     kind === 'BOOK' ||
-    matType === 'READING' ||
+    matType === 'BOOK' ||
     (item.assignment.instructions && item.assignment.instructions.includes('/student/books/'))
   );
 
@@ -435,6 +500,8 @@ function launchPreloadItem(entry: QueueEntry) {
   } else if (isGame) {
     gameCache.add(aid);
     fetchPromise = new Promise(resolve => setTimeout(resolve, 200));
+  } else if (isReading) {
+    fetchPromise = fetchReadingDataWithCache(aid, false, classId, groupId);
   } else if (isGrammar) {
     const ins = item.assignment.instructions?.trim();
     const isDirectHtml = Boolean(ins && !ins.startsWith('{'));
@@ -746,7 +813,27 @@ export async function loadAssignmentUrgent(
     item.assignment.instructions && 
     !item.assignment.instructions.trim().startsWith('{')
   );
-  const isGrammar = !isFlashcard && !isGame && !isExercise && (
+  const isExplicitTheory = 
+    kind === 'LESSON' || 
+    (item.assignment.instructions && item.assignment.instructions.includes('/grammar/')) ||
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson');
+
+  const isReading = !isExplicitTheory && Boolean(
+    kind === 'READING' ||
+    matType === 'READING' ||
+    titleLower.includes('[bài đọc]') ||
+    titleLower.includes('bài đọc') ||
+    (item.assignment.instructions && (
+      item.assignment.instructions.includes('/student/lessons/') ||
+      item.assignment.instructions.includes('/lessons/')
+    )) ||
+    Boolean((item.assignment as any).lessonSlug) ||
+    Boolean((item.assignment as any).lessonId)
+  );
+
+  const isGrammar = !isFlashcard && !isGame && !isExercise && !isReading && (
     isDirectHtml ||
     kind === 'LESSON' ||
     matType === 'LESSON' ||
@@ -757,10 +844,9 @@ export async function loadAssignmentUrgent(
     titleLower.includes('grammar lesson') ||
     (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
   );
-  const isBook = !isFlashcard && !isGame && !isGrammar && (
-    kind === 'READING' ||
+  const isBook = !isFlashcard && !isGame && !isGrammar && !isReading && (
     kind === 'BOOK' ||
-    matType === 'READING' ||
+    matType === 'BOOK' ||
     (item.assignment.instructions && item.assignment.instructions.includes('/student/books/'))
   );
 
@@ -785,6 +871,8 @@ export async function loadAssignmentUrgent(
     } else if (isGame) {
       gameCache.add(aid);
       await new Promise(r => setTimeout(r, 100));
+    } else if (isReading) {
+      await fetchReadingDataWithCache(aid, false, classId, groupId);
     } else if (isGrammar) {
       const ins = item.assignment.instructions?.trim();
       if (isDirectHtml) {

@@ -32,6 +32,9 @@ interface Props {
   assignmentTitle: string;
   questions: QuestionData[];
   isLoggedIn: boolean;
+  classId?: string;
+  groupId?: string;
+  onComplete?: (score: number, assignmentId: string) => void;
 }
 
 const OPTION_STYLES = [
@@ -177,6 +180,9 @@ export function LessonInlineQuiz({
   assignmentTitle,
   questions,
   isLoggedIn,
+  classId,
+  groupId,
+  onComplete,
 }: Props) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showHints, setShowHints] = useState<Record<string, boolean>>({});
@@ -373,11 +379,18 @@ export function LessonInlineQuiz({
       }
     }, 250);
 
+    if (onComplete) {
+      const calculatedScore = Math.round((correctCount / total) * 100) / 10;
+      onComplete(calculatedScore, assignmentId);
+    }
+
     if (isLoggedIn) {
       startTransition(async () => {
         await submitLessonInlineQuizAction({
           assignmentId,
           answers,
+          classId,
+          groupId,
         });
       });
     }

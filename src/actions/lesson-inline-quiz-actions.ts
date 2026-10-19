@@ -6,10 +6,14 @@ import { completeSubmission } from "@/actions/submission-actions";
 
 export async function submitLessonInlineQuizAction({
   assignmentId,
-  answers
+  answers,
+  classId,
+  groupId,
 }: {
   assignmentId: string;
   answers: Record<string, any>;
+  classId?: string;
+  groupId?: string;
 }) {
   try {
     const session = await auth();
@@ -23,6 +27,8 @@ export async function submitLessonInlineQuizAction({
       where: {
         assignmentId,
         studentId: userId,
+        classId: classId || null,
+        groupId: groupId || null,
         submittedAt: null
       },
       orderBy: { startedAt: "desc" }
@@ -33,6 +39,8 @@ export async function submitLessonInlineQuizAction({
         where: {
           assignmentId,
           studentId: userId,
+          classId: classId || null,
+          groupId: groupId || null,
           submittedAt: { not: null }
         }
       });
@@ -41,6 +49,8 @@ export async function submitLessonInlineQuizAction({
         data: {
           assignmentId,
           studentId: userId,
+          classId: classId || null,
+          groupId: groupId || null,
           attemptNumber: completedCount + 1
         }
       });

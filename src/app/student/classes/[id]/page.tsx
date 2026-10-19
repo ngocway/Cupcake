@@ -13,7 +13,7 @@ import StudentClassDetailLoading from './loading';
 import { fetchWithRedis } from '@/lib/cached-queries';
 
 async function getCachedClassStructure(classId: string) {
-  return fetchWithRedis(`class:structure:v16:${classId}`, 86400, async () => {
+  return fetchWithRedis(`class:structure:v23:${classId}`, 86400, async () => {
     // 1. Fetch class info, all 268 assignments, and 45 groups
     const [cls, rawAssignments, allGroups] = await Promise.all([
       prisma.class.findUnique({

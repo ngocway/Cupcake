@@ -57,8 +57,26 @@ export function getItemStage(item: {
     kind === 'EXERCISE' || 
     kind === 'GRAMMAR';
 
+  const isExplicitTheory = 
+    kind === 'LESSON' || 
+    targetUrl.includes('/grammar/') || 
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson');
+
+  const isExplicitReading = 
+    !isExplicitTheory && (
+      kind === 'READING' || 
+      item.assignment.materialType === 'READING' || 
+      kind === 'BOOK' || 
+      item.assignment.materialType === 'BOOK' ||
+      titleLower.includes('bài đọc') || 
+      titleLower.includes('bai doc') || 
+      titleLower.startsWith('reading:')
+    );
+
   const isGrammarLesson = 
-    !isExplicitChildType && (
+    !isExplicitChildType && !isExplicitReading && (
       kind === 'LESSON' || 
       item.assignment.materialType === 'LESSON' ||
       Boolean(item.assignment.grammarLesson) ||
@@ -73,6 +91,7 @@ export function getItemStage(item: {
     );
 
   if (isReview) return 'review';
+  if (isExplicitReading) return 'reading';
   if (isGrammarLesson || kind === 'LESSON') return 'lesson';
   if (kind === 'GAME') return 'game';
   if (kind === 'READING' || kind === 'BOOK') return 'reading';
@@ -237,33 +256,42 @@ export function buildGroupTree<T extends {
     grammarTopic?: string | null;
   };
 }>(items: T[]): GroupTreeStructure<T> {
-  const lessons: T[] = [];
+  const grammarLessons: T[] = [];
+  const readingLessons: T[] = [];
   const nonLessons: T[] = [];
 
   items.forEach((it) => {
-    if (getItemStage(it) === 'lesson') {
-      lessons.push(it);
+    const stage = getItemStage(it);
+    if (stage === 'lesson') {
+      grammarLessons.push(it);
+    } else if (stage === 'reading') {
+      readingLessons.push(it);
     } else {
       nonLessons.push(it);
     }
   });
 
-  // Nếu không có bài lý thuyết nào trong nhóm, toàn bộ đưa vào supplementary
-  if (lessons.length === 0) {
+  // Nếu không có bài lý thuyết hay bài đọc nào trong nhóm, toàn bộ đưa vào supplementary
+  if (grammarLessons.length === 0 && readingLessons.length === 0) {
     return {
       clusters: [],
       supplementaryItems: nonLessons,
     };
   }
 
-  const clusters: { lesson: T; exercises: T[] }[] = lessons.map((lesson) => ({
+  const grammarClusters: { lesson: T; exercises: T[] }[] = grammarLessons.map((lesson) => ({
+    lesson,
+    exercises: [],
+  }));
+
+  const readingClusters: { lesson: T; exercises: T[] }[] = readingLessons.map((lesson) => ({
     lesson,
     exercises: [],
   }));
 
   const normalizeKey = (k: string) => (k || '').toLowerCase().replace(/^day-\d+-/i, '').replace(/^(grammar|topic):/i, '').trim();
 
-  const lessonMetaList = lessons.map((l) => {
+  const lessonMetaList = grammarLessons.map((l) => {
     const meta = extractGrammarKey(l);
     return {
       ...meta,
@@ -312,15 +340,17 @@ export function buildGroupTree<T extends {
 
     // 4. Smart Fallback: Nếu trong nhóm chỉ có duy nhất 1 bài Lý thuyết VÀ bài tập này KHÔNG PHẢI bài ôn tập (review)
     // (tức là bài thực hành mới của ngày hôm đó), tự động gán vào làm con của bài lý thuyết duy nhất đó!
-    if (matchedClusterIndex === -1 && lessons.length === 1 && exStage !== 'review') {
+    if (matchedClusterIndex === -1 && grammarLessons.length === 1 && exStage !== 'review') {
       matchedClusterIndex = 0;
     }
 
     if (matchedClusterIndex !== -1) {
-      clusters[matchedClusterIndex].exercises.push(exercise);
+      grammarClusters[matchedClusterIndex].exercises.push(exercise);
       assignedExerciseIds.add(exercise.assignment.id);
     }
   });
+
+  const clusters: { lesson: T; exercises: T[] }[] = [...grammarClusters, ...readingClusters];
 
   // Sort child exercises within each cluster by pedagogical roadmap order (Flashcard -> Exercise -> Game -> Review)
   // And for games: Word Puzzle (subOrder: 1) -> Type (subOrder: 2)
@@ -487,7 +517,9 @@ export function buildGroupTree<T extends {
 
       const subA = getGameSubOrder(a);
       const subB = getGameSubOrder(b);
-      if (subA !== subB) return subA - subB;
+      const timeA = (a as any).assignedAt ? new Date((a as any).assignedAt).getTime() : 0;
+      const timeB = (b as any).assignedAt ? new Date((b as any).assignedAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
 
       return (a.assignment.title || '').localeCompare(b.assignment.title || '');
     });
