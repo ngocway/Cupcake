@@ -13,7 +13,7 @@ import StudentClassDetailLoading from './loading';
 import { fetchWithRedis } from '@/lib/cached-queries';
 
 async function getCachedClassStructure(classId: string) {
-  return fetchWithRedis(`class:structure:v12:${classId}`, 86400, async () => {
+  return fetchWithRedis(`class:structure:v16:${classId}`, 86400, async () => {
     // 1. Fetch class info, all 268 assignments, and 45 groups
     const [cls, rawAssignments, allGroups] = await Promise.all([
       prisma.class.findUnique({
@@ -566,10 +566,32 @@ async function StudentClassDetailContent({
   } else {
     // 4. Calculate locked / unlock progression status per group (Chế độ thông thường)
     assignmentGroups.forEach((g) => {
-      if (is45DaysGrammarClass || g.forceUnlocked || !g.prerequisiteGroupId) {
+      if (is45DaysGrammarClass) {
         g.isLocked = false;
         g.isWaiting5Am = false;
         g.unlockAt = null;
+        return;
+      }
+
+      // Hard Lock: Nếu group không được mở (forceUnlocked=false) và không có điều kiện mở tự động
+      if (!g.forceUnlocked && !g.prerequisiteGroupId) {
+        g.isLocked = true;
+        g.isWaiting5Am = false;
+        g.unlockAt = null;
+        g.lockReason = g.title.includes('Bài')
+          ? 'Bài học đang tạm khóa. Bé hãy hoàn thành thật tốt Bài 1 nhé!'
+          : 'Chặng học đang tạm khóa. Bé hãy hoàn thành thật tốt Chặng 1 nhé!';
+        return;
+      }
+
+      if (g.forceUnlocked) {
+        g.isLocked = false;
+        g.isWaiting5Am = false;
+        g.unlockAt = null;
+        return;
+      }
+
+      if (!g.prerequisiteGroupId) {
         return;
       }
 

@@ -1,18 +1,30 @@
 import prisma from "@/lib/prisma";
 import { uploadBufferToR2 } from "@/actions/upload-actions";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
+import { synthesizeGeminiTTS } from "@/lib/gemini-tts";
 
 /**
  * Synthesizes audio for a single word/phrase on the server side:
- * 1. MsEdgeTTS (en-US-AnaNeural, child voice, clean, zero hiss)
- * 2. Deepgram (Aura-2, ultra fast ~300ms, natural fallback)
- * 3. ElevenLabs (Alice, final emergency fallback)
+ * 1. Google Gemini TTS (Voice: Aoede, Rate: x-slow)
+ * 2. MsEdgeTTS (fallback)
+ * 3. Deepgram (Aura-2, ultra fast ~300ms, natural fallback)
+ * 4. ElevenLabs (Alice, final emergency fallback)
  */
 export async function synthesizeWordAudio(word: string): Promise<Buffer | null> {
   const cleanText = word.trim();
   if (!cleanText) return null;
 
-  // 1. Primary: MsEdgeTTS (Child-friendly en-US-AnaNeural, clean audio, no ellipsis padding)
+  // 1. Primary: Google Gemini TTS Aoede (x-slow)
+  try {
+    const geminiBuf = await synthesizeGeminiTTS(cleanText, "Aoede", "x-slow");
+    if (geminiBuf && geminiBuf.length > 0) {
+      return geminiBuf;
+    }
+  } catch (err: any) {
+    console.warn(`[Server TTS] Gemini Aoede failed for "${cleanText}", falling back to MsEdgeTTS:`, err?.message || err);
+  }
+
+  // 2. Fallback: MsEdgeTTS
   try {
     const tts = new MsEdgeTTS();
     await tts.setMetadata("en-US-AnaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);

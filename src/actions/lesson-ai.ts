@@ -821,7 +821,7 @@ export async function generateTTSHelper(text: string, voice = "Aoede", speed = 1
       if (speed !== undefined && speed !== null) {
         rateStr = `${Math.round(speed * 100)}%`;
       } else if (mode !== "inline" && mode !== "global") {
-        rateStr = "slow";
+        rateStr = "x-slow";
       }
 
       const escapedText = escapeXml(text);

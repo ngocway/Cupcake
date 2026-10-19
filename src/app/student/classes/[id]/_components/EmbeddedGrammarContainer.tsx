@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { InstructionsBlock } from '@/components/common/InstructionsBlock';
 import { BookOpen, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
 import { getCachedGrammarData, fetchGrammarDataWithCache } from '../_utils/assignmentCache';
+import type { ActivityStage } from '../_utils/assignmentOrder';
 
 interface EmbeddedGrammarContainerProps {
   assignmentId: string;
@@ -12,7 +13,8 @@ interface EmbeddedGrammarContainerProps {
   initialInstructions?: string | null;
   initialInstructionsTranslations?: any;
   onComplete?: (score: number, assignmentId: string) => void;
-  onNextActivity?: () => void;
+  onNextActivity?: (targetStage?: ActivityStage) => void;
+  isVocabClass?: boolean;
 }
 
 export function EmbeddedGrammarContainer({
@@ -23,6 +25,7 @@ export function EmbeddedGrammarContainer({
   initialInstructionsTranslations,
   onComplete,
   onNextActivity,
+  isVocabClass,
 }: EmbeddedGrammarContainerProps) {
   const cached = getCachedGrammarData(assignmentId);
   const isValidCached = cached?.instructions && !String(cached.instructions).trim().startsWith('{');
@@ -75,12 +78,21 @@ export function EmbeddedGrammarContainer({
     const anchor = (e.target as HTMLElement).closest('a');
     if (anchor) {
       const href = anchor.getAttribute('href');
-      if (href && (href.includes('/flashcards') || href.includes('tiny-vocab-fc') || href.includes('assignmentId='))) {
+      if (href && (href.includes('/flashcards') || href.includes('tiny-vocab-fc'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onNextActivity) {
+          onNextActivity('flashcard');
+        }
+        return;
+      }
+      if (href && href.includes('assignmentId=')) {
         e.preventDefault();
         e.stopPropagation();
         if (onNextActivity) {
           onNextActivity();
         }
+        return;
       }
     }
   };
@@ -145,17 +157,29 @@ export function EmbeddedGrammarContainer({
         <div className="w-full">
           {data.instructions ? (
             <>
-              <InstructionsBlock
-                instructions={data.instructions}
-                instructionsTranslations={data.instructionsTranslations}
-                isLoggedIn={true}
-                togglePlacement="inside-corner"
-                proseClassName="prose prose-slate max-w-none dark:prose-invert
-                  [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
-                  [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
-                  [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
-                  [&_div]:rounded-lg [&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4"
-              />
+              {(() => {
+                const is45Vocab = Boolean(
+                  isVocabClass ||
+                  classId === 'tiny-vocab-wonders' ||
+                  assignmentId?.startsWith('tiny-vocab') ||
+                  data?.title?.toLowerCase().includes('từ vựng') ||
+                  data?.assignmentId?.startsWith('tiny-vocab')
+                );
+                return (
+                  <InstructionsBlock
+                    instructions={data.instructions}
+                    instructionsTranslations={data.instructionsTranslations}
+                    isLoggedIn={true}
+                    togglePlacement={is45Vocab ? "none" : "inside-corner"}
+                    forceLanguage={is45Vocab ? "vi" : undefined}
+                    proseClassName="prose prose-slate max-w-none dark:prose-invert
+                      [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
+                      [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
+                      [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
+                      [&_div]:rounded-lg [&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4"
+                  />
+                );
+              })()}
 
               {onNextActivity && (
                 <div className="pt-8 mt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -163,10 +187,10 @@ export function EmbeddedGrammarContainer({
                     Bé đã xem xong phần giới thiệu bài học & truyện ngắn!
                   </div>
                   <button
-                    onClick={onNextActivity}
+                    onClick={() => onNextActivity && onNextActivity('flashcard')}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
                   >
-                    <span>🚀 Bắt đầu học 20 từ Flashcard ngay</span>
+                    <span>🚀 Mở bộ lật thẻ tương tác 3D ngay</span>
                     <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>

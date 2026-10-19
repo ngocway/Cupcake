@@ -13,6 +13,14 @@ When generating audio using ElevenLabs (e.g. for flashcards, quiz questions, or 
 - **Workaround (Padding)**: Prepend `"... "` to the text to generate natural silence at the beginning.
 - **Processing**: Keep the silence in the output file (**do NOT trim the silence**), as this gives browser/hardware audio output time to initialize and prevents clipping the first word.
 
+# 45 Vocab / Flashcards & Games TTS Voice Configuration (Google Gemini TTS)
+When generating audio for flashcards, daily vocab lessons, or games in 45 Vocab:
+- **Voice**: `Aoede`
+- **Speed / Rate**: `x-slow`
+- **Models**: `gemini-2.5-flash-preview-tts` (fallback: `gemini-3.1-flash-tts-preview`, `gemini-2.5-pro-preview-tts`)
+- **Audio Format**: 24kHz 16-bit mono PCM (WAV header)
+- **Fallback**: Graceful fallback to MsEdgeTTS if Gemini quota is unavailable.
+
 # Testing Constraint
 - **Do NOT run tests** (automated tests, unit tests, E2E tests, e.g. `vitest`, `playwright`) unless the user explicitly requests it.
 

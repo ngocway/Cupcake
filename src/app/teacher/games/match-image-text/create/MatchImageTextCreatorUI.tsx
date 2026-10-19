@@ -87,7 +87,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
   const [description, setDescription] = useState("");
   const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
   const [currentGameMode, setCurrentGameMode] = useState<string>(() => searchParams?.get("gameMode") || "match");
-  const maxPairsPerRound = currentGameMode === "train" ? 4 : 7;
+  const maxPairsPerRound = currentGameMode === "train" ? 4 : currentGameMode === "line" ? 5 : 7;
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -256,7 +256,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
       toast.error(
         currentGameMode === "train"
           ? `Vòng ${activeRoundIndex + 1} đã đạt tối đa 4 cặp thẻ (đủ 4 toa tàu). Vui lòng bấm [+ Thêm Vòng Mới] để tạo chuyến tàu tiếp theo!`
-          : `Vòng ${activeRoundIndex + 1} đã đạt tối đa 7 cặp thẻ. Vui lòng bấm [+ Thêm Vòng Mới] để tạo vòng tiếp theo!`
+          : `Vòng ${activeRoundIndex + 1} đã đạt tối đa ${maxPairsPerRound} cặp thẻ. Vui lòng bấm [+ Thêm Vòng Mới] để tạo vòng tiếp theo!`
       );
       return;
     }
@@ -303,7 +303,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
       toast.error(
         currentGameMode === "train"
           ? `${targetRound.title} đã có 4 cặp thẻ (đủ 4 toa tàu)!`
-          : `${targetRound.title} đã có 7 cặp thẻ (đã đầy)!`,
+          : `${targetRound.title} đã có ${maxPairsPerRound} cặp thẻ (đã đầy)!`,
         { position: "top-center" }
       );
       return;
@@ -816,12 +816,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
         setValidationModalMessage(`${r.title} phải có ít nhất 2 cặp thẻ để học sinh nối. Vui lòng bấm [+ Thêm 1 cặp]!`);
         return;
       }
-      if (r.pairs.length > maxPairsPerRound) {
+      const effectiveMax = topicId ? Math.max(maxPairsPerRound, 7) : maxPairsPerRound;
+      if (r.pairs.length > effectiveMax) {
         setActiveRoundIndex(rIdx);
         setValidationModalMessage(
           currentGameMode === "train"
             ? `${r.title} đang có ${r.pairs.length} cặp thẻ (vượt quá tối đa 4 toa cho game Đoàn Tàu). Vui lòng chuyển bớt sang vòng khác hoặc xóa bớt!`
-            : `${r.title} đang có ${r.pairs.length} cặp thẻ (vượt quá tối đa 7 cặp thẻ). Vui lòng chuyển bớt sang vòng khác!`
+            : `${r.title} đang có ${r.pairs.length} cặp thẻ (vượt quá tối đa ${maxPairsPerRound} cặp thẻ). Vui lòng chuyển bớt sang vòng khác!`
         );
         return;
       }

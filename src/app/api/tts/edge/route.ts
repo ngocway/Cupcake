@@ -3,8 +3,8 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 
 export const maxDuration = 30;
 
-// Child-friendly voice for storybook reading
-const VOICE = "en-US-AnaNeural"; // Microsoft's child voice
+// Default voice for fallback TTS (warm, natural voice)
+const VOICE = "en-US-JennyNeural";
 
 /**
  * POST /api/tts/edge
@@ -61,7 +61,44 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
 
     const targetVoice = voice || VOICE;
 
-    // 1. Primary: MsEdgeTTS (Child-friendly en-US-AnaNeural, clean audio, no padding)
+    // 1. Primary Fast Provider: Deepgram Aura-2 (ultra fast ~250ms, natural studio voice)
+    const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+    if (deepgramApiKey && !forceEdge) {
+      try {
+        const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
+        const speed = process.env.DEEPGRAM_TTS_SPEED || "0.75";
+        console.log(`[Edge TTS Route -> Deepgram] Synthesizing with model=${model} speed=${speed}: "${cleanText.substring(0, 30)}..."`);
+
+        const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&speed=${speed}`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Token ${deepgramApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text: cleanText }),
+        });
+
+        if (response.ok) {
+          const audioBuffer = Buffer.from(await response.arrayBuffer());
+          return new Response(audioBuffer, {
+            status: 200,
+            headers: {
+              "Content-Type": "audio/mpeg",
+              "Content-Length": audioBuffer.length.toString(),
+              "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400",
+              "X-TTS-Provider": "deepgram",
+            },
+          });
+        } else {
+          const errorText = await response.text();
+          console.warn(`[Edge TTS Route] Deepgram API returned (${response.status}):`, errorText);
+        }
+      } catch (err: any) {
+        console.warn(`[Edge TTS Route] Deepgram synthesis failed, falling back:`, err.message);
+      }
+    }
+
+    // 2. Secondary: MsEdgeTTS (Voice: Jenny)
     try {
       console.log(`[Edge TTS Route -> MsEdgeTTS] Synthesizing with voice=${targetVoice}: "${cleanText.substring(0, 30)}..."`);
       
@@ -94,44 +131,7 @@ async function handleTTSRequest({ text, voice, forceEdge }: { text?: string | nu
         });
       }
     } catch (err: any) {
-      console.warn(`[Edge TTS Route] MsEdgeTTS synthesis failed, falling back to Deepgram:`, err.message || err);
-    }
-
-    // 2. Secondary Fallback: Deepgram (Aura-2, ultra fast ~300ms, natural)
-    const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
-    if (deepgramApiKey) {
-      try {
-        const model = process.env.DEEPGRAM_TTS_MODEL || "aura-2-thalia-en";
-        const speed = process.env.DEEPGRAM_TTS_SPEED || "0.8";
-        console.log(`[Edge TTS Route -> Deepgram Fallback] Synthesizing with model=${model} speed=${speed}: "${cleanText.substring(0, 30)}..."`);
-
-        const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}&speed=${speed}`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Token ${deepgramApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ text: cleanText }),
-        });
-
-        if (response.ok) {
-          const audioBuffer = Buffer.from(await response.arrayBuffer());
-          return new Response(audioBuffer, {
-            status: 200,
-            headers: {
-              "Content-Type": "audio/mpeg",
-              "Content-Length": audioBuffer.length.toString(),
-              "Cache-Control": "public, max-age=604800, stale-while-revalidate=86400",
-              "X-TTS-Provider": "deepgram",
-            },
-          });
-        } else {
-          const errorText = await response.text();
-          console.warn(`[Edge TTS Route] Deepgram API failed (${response.status}), falling back to ElevenLabs:`, errorText);
-        }
-      } catch (err: any) {
-        console.warn(`[Edge TTS Route] Deepgram synthesis failed, falling back to ElevenLabs:`, err.message);
-      }
+      console.warn(`[Edge TTS Route] MsEdgeTTS synthesis failed:`, err.message || err);
     }
 
     // 3. Final Fallback: ElevenLabs (Alice, high stability)

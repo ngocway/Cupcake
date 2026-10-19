@@ -1,13 +1,14 @@
 import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import { uploadBufferToR2 } from "@/actions/upload-actions";
+import { synthesizeGeminiTTS } from "@/lib/gemini-tts";
 
 export const EDGE_CHILD_VOICE = "en-US-AnaNeural";
 export const EDGE_CHILD_RATE = "-15%";
 
 /**
- * Synthesizes text using Microsoft Edge TTS child voice (en-US-AnaNeural).
- * Uses child-friendly slower pacing (-15%) by default.
- * Returns Buffer of MP3 audio or null on failure.
+ * Synthesizes text prioritizing Google Gemini TTS (Voice: Aoede, Rate: x-slow)
+ * and falls back to Microsoft Edge TTS.
+ * Returns Buffer of audio or null on failure.
  */
 export async function synthesizeEdgeChildAudio(
   text: string,
@@ -16,6 +17,17 @@ export async function synthesizeEdgeChildAudio(
   const clean = text?.trim();
   if (!clean) return null;
 
+  // 1. Primary: Google Gemini TTS Aoede (x-slow)
+  try {
+    const geminiBuf = await synthesizeGeminiTTS(clean, "Aoede", "x-slow");
+    if (geminiBuf && geminiBuf.length > 0) {
+      return geminiBuf;
+    }
+  } catch (err: any) {
+    console.warn(`[Edge Child TTS] Gemini Aoede failed for "${clean.substring(0, 30)}", falling back to Edge:`, err?.message || err);
+  }
+
+  // 2. Fallback: MsEdgeTTS
   try {
     const tts = new MsEdgeTTS();
     await tts.setMetadata(EDGE_CHILD_VOICE, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);

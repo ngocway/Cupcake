@@ -168,6 +168,7 @@ export function AdminFlashcardsClient({
   const [isSearchingImage, setIsSearchingImage] = useState(false)
   const [imageSearchStyle, setImageSearchStyle] = useState<"REALISTIC" | "CARTOON">("REALISTIC")
   const [isUploadingVocabImage, setIsUploadingVocabImage] = useState(false)
+  const [uploadingCardImageIds, setUploadingCardImageIds] = useState<string[]>([])
   const [showImageSearchDrawer, setShowImageSearchDrawer] = useState(false)
   const [activeOuterCardForImage, setActiveOuterCardForImage] = useState<Flashcard | null>(null)
   const [imageSearchResults, setImageSearchResults] = useState<any[]>([])
@@ -639,44 +640,54 @@ export function AdminFlashcardsClient({
   }
 
   // -------------------------------------------------------------
-  // IMAGE SELECT & R2 UPLOAD HANDLER
+  // IMAGE SELECT & R2 UPLOAD HANDLER (Độc lập cho từng thẻ)
   // -------------------------------------------------------------
-  const handleImageSelect = async (imageUrl: string) => {
-    setIsUploadingVocabImage(true)
+  const handleImageSelect = async (imageUrl: string, targetCardArg?: Flashcard | null) => {
+    // Snapshot thẻ mục tiêu ngay tại thời điểm chọn ảnh để tiến trình upload chạy độc lập
+    const targetCard = targetCardArg !== undefined ? targetCardArg : activeOuterCardForImage
+
+    if (targetCard) {
+      setUploadingCardImageIds(prev => [...prev, targetCard.id])
+      toast.info(`Đang tải ảnh lên Cloudflare cho "${targetCard.word}"...`)
+    } else {
+      setIsUploadingVocabImage(true)
+      toast.info("Đang đồng bộ ảnh về R2...")
+    }
+
+    // Đóng drawer ngay để người dùng có thể tiếp tục chọn card khác
     setShowImageSearchDrawer(false)
-    toast.info("Đang đồng bộ ảnh về R2...")
+    setActiveOuterCardForImage(null)
 
     try {
       const result = await uploadUrlMedia(imageUrl)
       if (result.success && result.url) {
-        if (activeOuterCardForImage) {
-          const res = await adminUpdateFlashcard(activeOuterCardForImage.id, {
-            topicId: activeOuterCardForImage.topicId,
-            word: activeOuterCardForImage.word,
-            phonetic: activeOuterCardForImage.phonetic,
+        if (targetCard) {
+          const res = await adminUpdateFlashcard(targetCard.id, {
+            topicId: targetCard.topicId,
+            word: targetCard.word,
+            phonetic: targetCard.phonetic,
             imageUrl: result.url,
-            audioUrl: activeOuterCardForImage.audioUrl,
-            audioWordUrl: activeOuterCardForImage.audioWordUrl || undefined,
-            audioSentenceUrl: activeOuterCardForImage.audioSentenceUrl || undefined,
-            quizQuestion: activeOuterCardForImage.quizQuestion || undefined,
-            quizAudioUrl: activeOuterCardForImage.quizAudioUrl || undefined,
-            definition: activeOuterCardForImage.definition,
-            definitionVi: activeOuterCardForImage.definitionVi,
-            definitionTh: activeOuterCardForImage.definitionTh,
-            definitionId: activeOuterCardForImage.definitionId,
-            exampleSentence: activeOuterCardForImage.exampleSentence
+            audioUrl: targetCard.audioUrl,
+            audioWordUrl: targetCard.audioWordUrl || undefined,
+            audioSentenceUrl: targetCard.audioSentenceUrl || undefined,
+            quizQuestion: targetCard.quizQuestion || undefined,
+            quizAudioUrl: targetCard.quizAudioUrl || undefined,
+            definition: targetCard.definition,
+            definitionVi: targetCard.definitionVi,
+            definitionTh: targetCard.definitionTh,
+            definitionId: targetCard.definitionId,
+            exampleSentence: targetCard.exampleSentence
           })
 
           if (res.success && res.card) {
-            setFlashcards(prev => prev.map(c => c.id === activeOuterCardForImage.id ? {
+            setFlashcards(prev => prev.map(c => c.id === targetCard.id ? {
               ...c,
               imageUrl: result.url
             } : c))
-            toast.success("Cập nhật ảnh cho thẻ học thành công!")
+            toast.success(`Cập nhật ảnh cho từ "${targetCard.word}" thành công!`)
           } else {
-            toast.error("Lỗi cập nhật CSDL: " + res.error)
+            toast.error(`Lỗi cập nhật CSDL cho "${targetCard.word}": ${res.error}`)
           }
-          setActiveOuterCardForImage(null)
         } else {
           setCardForm(prev => ({ ...prev, imageUrl: result.url }))
           toast.success("Lưu ảnh lên Cloudflare R2 thành công!")
@@ -688,7 +699,11 @@ export function AdminFlashcardsClient({
       console.error("Image upload URL error:", err)
       toast.error("Lỗi đồng bộ ảnh: " + (err.message || String(err)))
     } finally {
-      setIsUploadingVocabImage(false)
+      if (targetCard) {
+        setUploadingCardImageIds(prev => prev.filter(id => id !== targetCard.id))
+      } else {
+        setIsUploadingVocabImage(false)
+      }
     }
   }
 
@@ -1469,29 +1484,42 @@ export function AdminFlashcardsClient({
                         
                         <div className="flex gap-3.5 min-w-0 flex-1">
                           {/* Thumbnail frame */}
-                          <div 
-                            onClick={() => {
-                              setActiveOuterCardForImage(card)
-                              handleGoogleImageSearch(card.word)
-                            }}
-                            className="w-20 h-20 rounded-xl overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0 cursor-pointer group/thumb hover:border-violet-500/50 transition-all"
-                            title={card.imageUrl ? "Click để đổi ảnh từ Internet" : "Click để tìm & gán ảnh từ Internet"}
-                          >
-                            {card.imageUrl ? (
-                              <>
-                                <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300" />
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-[10px] font-bold text-white transition-opacity gap-1">
-                                  <ImageIcon className="w-3.5 h-3.5 text-violet-400" />
-                                  <span>Đổi ảnh</span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center text-neutral-500 hover:text-violet-400 bg-neutral-900/80 gap-1 transition-colors p-1 text-center">
-                                <Plus className="w-4 h-4 text-violet-400" />
-                                <span className="text-[9px] font-black tracking-tight text-neutral-400 leading-tight">Thêm ảnh</span>
+                          {(() => {
+                            const isThisCardUploading = uploadingCardImageIds.includes(card.id)
+                            return (
+                              <div 
+                                onClick={() => {
+                                  if (isThisCardUploading) return
+                                  setActiveOuterCardForImage(card)
+                                  handleGoogleImageSearch(card.word)
+                                }}
+                                className={`w-20 h-20 rounded-xl overflow-hidden relative border border-neutral-800 bg-neutral-950 shrink-0 cursor-pointer group/thumb hover:border-violet-500/50 transition-all ${
+                                  isThisCardUploading ? "ring-2 ring-blue-500/60 pointer-events-none" : ""
+                                }`}
+                                title={isThisCardUploading ? "Đang đồng bộ ảnh lên Cloudflare R2..." : (card.imageUrl ? "Click để đổi ảnh từ Internet" : "Click để tìm & gán ảnh từ Internet")}
+                              >
+                                {isThisCardUploading ? (
+                                  <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-950/90 text-blue-400 gap-1.5 p-1 text-center animate-pulse">
+                                    <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                                    <span className="text-[8px] font-black tracking-tight text-blue-300 leading-tight">Đang tải...</span>
+                                  </div>
+                                ) : card.imageUrl ? (
+                                  <>
+                                    <img src={card.imageUrl} alt={card.word} className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300" />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center text-[10px] font-bold text-white transition-opacity gap-1">
+                                      <ImageIcon className="w-3.5 h-3.5 text-violet-400" />
+                                      <span>Đổi ảnh</span>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="w-full h-full flex flex-col items-center justify-center text-neutral-500 hover:text-violet-400 bg-neutral-900/80 gap-1 transition-colors p-1 text-center">
+                                    <Plus className="w-4 h-4 text-violet-400" />
+                                    <span className="text-[9px] font-black tracking-tight text-neutral-400 leading-tight">Thêm ảnh</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
+                            )
+                          })()}
 
                           <div className="min-w-0 flex-1 flex flex-col justify-between py-0.5 gap-1">
                             {/* Tags line */}
@@ -1627,14 +1655,19 @@ export function AdminFlashcardsClient({
 
                           <div className="flex items-center gap-1.5">
                             <button
+                              disabled={uploadingCardImageIds.includes(card.id)}
                               onClick={() => {
                                 setActiveOuterCardForImage(card)
                                 handleGoogleImageSearch(card.word)
                               }}
-                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95"
-                              title="Tìm ảnh trên Web"
+                              className="w-8 h-8 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center transition-all border border-neutral-700 shadow-sm active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={uploadingCardImageIds.includes(card.id) ? "Đang đồng bộ ảnh lên Cloudflare..." : "Tìm ảnh trên Web"}
                             >
-                              <Globe className="w-4 h-4" />
+                              {uploadingCardImageIds.includes(card.id) ? (
+                                <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Globe className="w-4 h-4" />
+                              )}
                             </button>
                             <button
                               onClick={() => openCardModal(card)}
@@ -2424,9 +2457,11 @@ export function AdminFlashcardsClient({
           
           {/* Header */}
           <div className="flex justify-between items-center mb-3">
-            <h4 className="text-base font-bold text-white flex items-center gap-2">
-              <Globe className="text-blue-500 w-5 h-5" />
-              <span>Tìm ảnh Internet</span>
+            <h4 className="text-base font-bold text-white flex items-center gap-2 min-w-0">
+              <Globe className="text-blue-500 w-5 h-5 shrink-0" />
+              <span className="truncate">
+                Tìm ảnh {activeOuterCardForImage ? <>cho <b className="text-blue-400">"{activeOuterCardForImage.word}"</b></> : "Internet"}
+              </span>
             </h4>
             <button 
               type="button" 
@@ -2568,7 +2603,7 @@ export function AdminFlashcardsClient({
                     <div 
                       key={img.id} 
                       className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer border border-neutral-850 hover:border-blue-500 hover:shadow-lg transition-all" 
-                      onClick={() => handleImageSelect(img.url)}
+                      onClick={() => handleImageSelect(img.url, activeOuterCardForImage)}
                     >
                       <img 
                         src={img.thumb} 

@@ -5,6 +5,7 @@ import { getStudentGrammarLessonData } from '@/app/student/classes/actions';
 import { getStudentQuizRunnerData, getBatchStudentQuizRunnerData } from '@/app/student/assignments/[id]/run/actions';
 import { getStudentBookData } from '@/app/student/classes/actions';
 import { getFlashcardsByTopic } from '@/actions/flashcards-actions';
+import { buildGroupTree } from './assignmentOrder';
 
 // In-memory data caches (persist throughout the client session)
 const grammarCache = new Map<string, any>();
@@ -391,12 +392,12 @@ function launchPreloadItem(entry: QueueEntry) {
     item.assignment.instructions && 
     !item.assignment.instructions.trim().startsWith('{')
   );
-  const isGrammar = !isFlashcard && !isGame && matType !== 'READING' && kind !== 'READING' && kind !== 'BOOK' && (
+  const isGrammar = !isFlashcard && !isGame && (
+    isDirectHtml ||
     kind === 'LESSON' ||
     matType === 'LESSON' ||
     Boolean((item.assignment as any).grammarLesson) ||
     Boolean((item.assignment as any).grammarTopic) ||
-    isDirectHtml ||
     titleLower.includes('lý thuyết') ||
     titleLower.includes('ly thuyet') ||
     titleLower.includes('grammar lesson') ||
@@ -441,6 +442,7 @@ function launchPreloadItem(entry: QueueEntry) {
       });
       finishSmoothProgress(aid, true);
       inProgressAids.delete(aid);
+      processPreloadQueue();
       return;
     }
     fetchPromise = fetchGrammarDataWithCache(aid);
@@ -523,9 +525,11 @@ export async function batchPreloadGroupQuizzes(
 }
 
 /**
- * Queue all items in an expanded group for preloading:
- * 1. Priority 1: Priority item (active item or immediate next uncompleted item) loads first (~1s).
- * 2. Priority 2: Remaining exercises of the group are batch-loaded together in 1 single network request (~2s).
+ * Cluster-based Priority Preloading:
+ * 1. Top Priority (Priority >= 1000): Toàn bộ cụm bài đang mở (Lý thuyết -> Flashcard -> Games của cụm bài đó).
+ * 2. Background Priority (Priority 500 -> 10): Các cụm bài tiếp theo (activeCluster + 1, activeCluster + 2...)
+ *    được tải ngầm tuần tự từng bài một (MAX_CONCURRENT_PRELOADS = 1).
+ * 3. Tuyệt đối KHÔNG gán 100% trước cho các bài lý thuyết ở xa; các bài đó sẽ hiển thị "Chưa sẵn sàng (Chờ tải)" cho đến khi tiến trình ngầm chạy đến.
  */
 export function queueGroupForPreload(
   items: Array<{
@@ -543,132 +547,262 @@ export function queueGroupForPreload(
 ) {
   if (!items || items.length === 0) return;
 
-  const exerciseItems: typeof items = [];
-  const otherItems: typeof items = [];
+  // Clear existing preload queue so we don't keep loading old irrelevant items
+  clearPreloadQueue();
 
-  items.forEach(item => {
-    const aid = item.assignment?.id;
-    if (!aid || aid.startsWith('locked_') || isAssignmentCached(aid)) {
-      if (aid) setAssignmentProgress(aid, 100);
-      return;
-    }
+  // 1. Phân nhóm theo Cụm bài học (Clusters)
+  const tree = buildGroupTree(items);
 
-    const matType = item.assignment.materialType;
-    let kind = matType;
-    if (item.assignment.instructions) {
-      try {
-        const meta = JSON.parse(item.assignment.instructions);
-        if (meta.kind) kind = meta.kind;
-      } catch {}
-    }
-    const titleLower = item.assignment.title.toLowerCase();
-    const isFlashcard =
-      kind === 'FLASHCARD' ||
-      matType === 'FLASHCARD' ||
-      (item.assignment.instructions && item.assignment.instructions.includes('/flashcard'));
-    const isGame = !isFlashcard && (
-      kind === 'GAME' ||
-      matType === 'GAME' ||
-      (item.assignment.instructions && item.assignment.instructions.includes('/game/'))
+  // 2. Xác định Cụm bài học đang mở (Active Cluster)
+  let activeClusterIdx = -1;
+  if (activeAssignmentId) {
+    activeClusterIdx = tree.clusters.findIndex(c => 
+      c.lesson.assignment.id === activeAssignmentId || 
+      c.exercises.some(e => e.assignment.id === activeAssignmentId)
     );
-    const isGrammar = !isFlashcard && !isGame && (
-      kind === 'LESSON' ||
-      matType === 'LESSON' ||
-      Boolean((item.assignment as any).grammarLesson) ||
-      titleLower.includes('lý thuyết') ||
-      titleLower.includes('ly thuyet') ||
-      titleLower.includes('grammar lesson') ||
-      (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
-    );
-    const isBook = !isFlashcard && !isGame && !isGrammar && (
-      kind === 'READING' ||
-      kind === 'BOOK' ||
-      matType === 'READING' ||
-      (item.assignment.instructions && item.assignment.instructions.includes('/student/books/'))
-    );
-
-    if (isFlashcard || isGame || isGrammar || isBook) {
-      otherItems.push(item);
-    } else {
-      exerciseItems.push(item);
-    }
-  });
-
-  // Preload other items (Grammar / Game / Book) quickly
-  otherItems.forEach(item => {
-    const aid = item.assignment.id;
-    const matType = item.assignment.materialType;
-    let kind = matType;
-    if (item.assignment.instructions) {
-      try {
-        const meta = JSON.parse(item.assignment.instructions);
-        if (meta.kind) kind = meta.kind;
-      } catch {}
-    }
-    const titleLower = item.assignment.title.toLowerCase();
-    const isGrammar = (
-      kind === 'LESSON' ||
-      matType === 'LESSON' ||
-      titleLower.includes('lý thuyết') ||
-      titleLower.includes('ly thuyet') ||
-      titleLower.includes('grammar lesson') ||
-      (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
-    );
-    const ins = item.assignment.instructions?.trim();
-    const isDirectHtml = Boolean(ins && !ins.startsWith('{'));
-    if (isGrammar && isDirectHtml) {
-      grammarCache.set(aid, {
-        assignmentId: aid,
-        instructions: item.assignment.instructions,
-        instructionsTranslations: (item.assignment as any).instructionsTranslations || null,
-      });
-      setAssignmentProgress(aid, 100);
-      return;
-    }
-    prefetchAssignmentData(item, classId, groupId);
-  });
-
-  if (exerciseItems.length === 0) return;
-
-  // 1. Identify priority item: active exercise or first uncompleted exercise
-  const activeExercise = exerciseItems.find(i => i.assignment.id === activeAssignmentId);
-  const firstUncompleted = exerciseItems.find(i => !i.isSubmitted);
-  const priorityItem = activeExercise || firstUncompleted || exerciseItems[0];
-
-  // 2. Build ordered list: priority item first, then remaining exercises in natural sequence
-  const orderedExerciseItems: typeof exerciseItems = [];
-  if (priorityItem) {
-    orderedExerciseItems.push(priorityItem);
   }
-  exerciseItems.forEach(it => {
-    if (it.assignment.id !== priorityItem?.assignment.id) {
-      orderedExerciseItems.push(it);
+  if (activeClusterIdx === -1) {
+    const uncompletedIdx = tree.clusters.findIndex(c => 
+      !c.lesson.isSubmitted || c.exercises.some(e => !e.isSubmitted)
+    );
+    activeClusterIdx = uncompletedIdx >= 0 ? uncompletedIdx : 0;
+  }
+
+  // 3. Sắp xếp các cụm bài theo thứ tự ưu tiên:
+  // - Cụm đang mở trước tiên
+  // - Các cụm tiếp theo (activeClusterIdx + 1, activeClusterIdx + 2, ...)
+  // - Các cụm trước đó (nếu còn bài chưa học)
+  const orderedClusters: typeof tree.clusters = [];
+  if (tree.clusters[activeClusterIdx]) {
+    orderedClusters.push(tree.clusters[activeClusterIdx]);
+  }
+  for (let i = activeClusterIdx + 1; i < tree.clusters.length; i++) {
+    orderedClusters.push(tree.clusters[i]);
+  }
+  for (let i = 0; i < activeClusterIdx; i++) {
+    orderedClusters.push(tree.clusters[i]);
+  }
+
+  // 4. Đưa các bài vào hàng đợi tải (preloadQueue):
+  let basePriority = 1000;
+  orderedClusters.forEach((cluster, clusterOrderIdx) => {
+    const isCurrentActiveCluster = clusterOrderIdx === 0;
+
+    // Trong 1 cụm bài:
+    // a. Bài Lý thuyết cha:
+    const lessonItem = cluster.lesson;
+    const lessonAid = lessonItem.assignment.id;
+
+    // Nếu là cụm đang mở VÀ là direct HTML: Nạp vào grammarCache ngay lập tức để học sinh đọc được ngay
+    const ins = lessonItem.assignment.instructions?.trim();
+    const isDirectHtml = Boolean(ins && !ins.startsWith('{'));
+    if (isCurrentActiveCluster && isDirectHtml) {
+      grammarCache.set(lessonAid, {
+        assignmentId: lessonAid,
+        instructions: lessonItem.assignment.instructions,
+        instructionsTranslations: (lessonItem.assignment as any).instructionsTranslations || null,
+      });
+      setAssignmentProgress(lessonAid, 100);
+    } else if (!isAssignmentCached(lessonAid)) {
+      // Đối với các cụm bài ở xa hoặc cần fetch: xếp vào hàng đợi ngầm theo độ ưu tiên
+      preloadQueue.push({
+        item: lessonItem,
+        priority: isCurrentActiveCluster ? basePriority + 50 : basePriority,
+        classId,
+        groupId,
+      });
+    }
+
+    // b. Các bài con trong cụm (Flashcard, Games, Bài tập):
+    cluster.exercises.forEach((exItem, exIdx) => {
+      const exAid = exItem.assignment.id;
+      if (!isAssignmentCached(exAid)) {
+        // Nếu bài này đang là bài active được chọn: ưu tiên tối thượng!
+        const isThisActive = exAid === activeAssignmentId;
+        const priority = isThisActive
+          ? 9999
+          : isCurrentActiveCluster
+            ? basePriority + 40 - exIdx * 2
+            : basePriority - exIdx * 2;
+
+        preloadQueue.push({
+          item: exItem,
+          priority,
+          classId,
+          groupId,
+        });
+      }
+    });
+
+    // Giảm độ ưu tiên cho các cụm bài phía sau
+    basePriority -= 100;
+  });
+
+  // c. Các bài tập bổ trợ (supplementary items nếu có)
+  tree.supplementaryItems.forEach((supItem, supIdx) => {
+    const aid = supItem.assignment.id;
+    if (!isAssignmentCached(aid)) {
+      preloadQueue.push({
+        item: supItem,
+        priority: 50 - supIdx,
+        classId,
+        groupId,
+      });
     }
   });
 
-  // 3. Enqueue all exercises sequentially with descending priority (100, 90, 80...)
-  orderedExerciseItems.forEach((it, idx) => {
-    const aid = it.assignment.id;
-    if (isAssignmentCached(aid)) {
-      setAssignmentProgress(aid, 100);
-      return;
-    }
-    const priority = 100 - idx * 10;
-    const existingIdx = preloadQueue.findIndex(e => e.item.assignment.id === aid);
-    if (existingIdx >= 0) {
-      preloadQueue[existingIdx].priority = priority;
-      if (classId) preloadQueue[existingIdx].classId = classId;
-      if (groupId) preloadQueue[existingIdx].groupId = groupId;
-    } else {
-      preloadQueue.push({ item: it, priority, classId, groupId });
-    }
-  });
-
-  // Sort queue by priority descending so the active/next item always executes first
+  // Sắp xếp hàng đợi theo độ ưu tiên giảm dần
   preloadQueue.sort((a, b) => b.priority - a.priority);
 
-  // Trigger sequential worker (only 1 item runs at a time due to MAX_CONCURRENT_PRELOADS = 1)
+  // Kích hoạt tiến trình tải ngầm
   processPreloadQueue();
+}
+
+/**
+ * Express Lane: Tải ngay lập tức 1 bài tập với độ ưu tiên tối thượng (khi học sinh click).
+ * Trả về Promise để UI có thể await và mở bài ngay khi xong (0.2s - 0.5s).
+ */
+export async function loadAssignmentUrgent(
+  item: {
+    assignment: {
+      id: string;
+      materialType: string;
+      instructions?: string | null;
+      title: string;
+    };
+  },
+  classId?: string,
+  groupId?: string
+): Promise<boolean> {
+  const aid = item?.assignment?.id;
+  if (!aid) return false;
+
+  // Nếu bài đã sẵn sàng trong cache -> xong ngay 0ms
+  if (isAssignmentCached(aid)) {
+    setAssignmentProgress(aid, 100);
+    return true;
+  }
+
+  // Đưa lên đầu hàng đợi ưu tiên cao nhất
+  promoteAssignmentPriority(aid, classId, groupId);
+
+  const matType = item.assignment.materialType;
+  let kind = matType;
+  let meta: any = {};
+  if (item.assignment.instructions) {
+    try {
+      meta = JSON.parse(item.assignment.instructions);
+      if (meta.kind) kind = meta.kind;
+    } catch {}
+  }
+  const titleLower = item.assignment.title.toLowerCase();
+  const isMatchGame = Boolean(
+    (meta.playUrl && (
+      meta.playUrl.includes('flashcard-match') ||
+      meta.playUrl.includes('/student/game/') ||
+      meta.playUrl.includes('/games/')
+    )) ||
+    meta.gameMode === 'match' ||
+    (item.assignment.instructions && (
+      item.assignment.instructions.includes('flashcard-match') ||
+      item.assignment.instructions.includes('"match"')
+    ))
+  );
+  const isFlashcardUrlOrMeta = !isMatchGame && Boolean(
+    (meta.playUrl && meta.playUrl.includes('/flashcards') && !meta.playUrl.includes('/game')) ||
+    meta.gameMode === 'puzzle' ||
+    meta.gameMode === 'type' ||
+    meta.gameMode === 'hint' ||
+    meta.mode === 'scramble' ||
+    meta.mode === 'type' ||
+    Boolean((item.assignment as any).flashcardTopicId)
+  );
+  const isFlashcard = !isMatchGame && Boolean(
+    isFlashcardUrlOrMeta ||
+    kind === 'FLASHCARD' ||
+    matType === 'FLASHCARD' ||
+    (item.assignment.instructions && item.assignment.instructions.includes('/flashcard') && !item.assignment.instructions.includes('/game/'))
+  );
+  const isGame = Boolean(
+    isMatchGame ||
+    (!isFlashcard && (
+      kind === 'GAME' ||
+      matType === 'GAME' ||
+      (item.assignment.instructions && (
+        item.assignment.instructions.includes('/game/') ||
+        item.assignment.instructions.includes('/games/')
+      ))
+    ))
+  );
+  const isDirectHtml = Boolean(
+    item.assignment.instructions && 
+    !item.assignment.instructions.trim().startsWith('{')
+  );
+  const isGrammar = !isFlashcard && !isGame && (
+    isDirectHtml ||
+    kind === 'LESSON' ||
+    matType === 'LESSON' ||
+    Boolean((item.assignment as any).grammarLesson) ||
+    Boolean((item.assignment as any).grammarTopic) ||
+    titleLower.includes('lý thuyết') ||
+    titleLower.includes('ly thuyet') ||
+    titleLower.includes('grammar lesson') ||
+    (item.assignment.instructions && item.assignment.instructions.includes('/grammar/'))
+  );
+  const isBook = !isFlashcard && !isGame && !isGrammar && (
+    kind === 'READING' ||
+    kind === 'BOOK' ||
+    matType === 'READING' ||
+    (item.assignment.instructions && item.assignment.instructions.includes('/student/books/'))
+  );
+
+  startSmoothProgress(aid);
+
+  try {
+    if (isFlashcard) {
+      let topicId = aid;
+      try {
+        if (meta.topicId) topicId = meta.topicId;
+        else if (meta.playUrl) {
+          const u = new URL(meta.playUrl, 'http://localhost');
+          const t = u.searchParams.get('topic');
+          if (t) topicId = t;
+        } else if ((item.assignment as any).flashcardTopicId) {
+          topicId = (item.assignment as any).flashcardTopicId;
+        }
+      } catch {}
+      const cards = await fetchFlashcardDataWithCache(topicId);
+      flashcardCache.set(aid, cards);
+      if (topicId) flashcardCache.set(topicId, cards);
+    } else if (isGame) {
+      gameCache.add(aid);
+      await new Promise(r => setTimeout(r, 100));
+    } else if (isGrammar) {
+      const ins = item.assignment.instructions?.trim();
+      if (isDirectHtml) {
+        grammarCache.set(aid, {
+          assignmentId: aid,
+          instructions: item.assignment.instructions,
+          instructionsTranslations: (item.assignment as any).instructionsTranslations || null,
+        });
+      } else {
+        await fetchGrammarDataWithCache(aid);
+      }
+    } else if (isBook) {
+      await fetchBookDataWithCache(aid);
+    } else {
+      await fetchQuizDataWithCache(aid, false, true, classId, groupId);
+    }
+    finishSmoothProgress(aid, true);
+    return true;
+  } catch (err) {
+    console.warn(`[Preload] Urgent load failed for ${aid}:`, err);
+    finishSmoothProgress(aid, false);
+    throw err;
+  } finally {
+    inProgressAids.delete(aid);
+    processPreloadQueue();
+  }
 }
 
 /**

@@ -25,9 +25,12 @@ export const STAGE_ROADMAP_ORDER: Record<ActivityStage, number> = {
  */
 export function getItemStage(item: {
   assignment: {
+    id?: string | null;
     title: string;
     instructions?: string | null;
     materialType?: string | null;
+    grammarLesson?: string | null;
+    grammarTopic?: string | null;
   };
 }): ActivityStage {
   let kind = (item.assignment.materialType || 'EXERCISE').toUpperCase();
@@ -57,6 +60,11 @@ export function getItemStage(item: {
   const isGrammarLesson = 
     !isExplicitChildType && (
       kind === 'LESSON' || 
+      item.assignment.materialType === 'LESSON' ||
+      Boolean(item.assignment.grammarLesson) ||
+      Boolean((item.assignment as any).grammarTopic) ||
+      (item.assignment.id && item.assignment.id.startsWith('tiny-vocab-day-')) ||
+      /^(?:day|ngày)\s*\d+/i.test(titleLower) ||
       isDirectHtml ||
       targetUrl.includes('/grammar/') || 
       titleLower.includes('lý thuyết') ||
@@ -259,7 +267,8 @@ export function buildGroupTree<T extends {
     const meta = extractGrammarKey(l);
     return {
       ...meta,
-      normLessonKey: normalizeKey(meta.lessonKey),
+      id: l.assignment.id,
+      normLessonKey: normalizeKey(meta.lessonKey || l.assignment.id),
     };
   });
   const assignedExerciseIds = new Set<string>();
@@ -275,6 +284,7 @@ export function buildGroupTree<T extends {
     if (exNormKey) {
       matchedClusterIndex = lessonMetaList.findIndex(
         (l) => (l.normLessonKey && l.normLessonKey === exNormKey) ||
+               (l.id && l.id === exNormKey) ||
                (l.lessonKey && (l.lessonKey.includes(exNormKey) || exNormKey.includes(l.normLessonKey)))
       );
     }
@@ -315,6 +325,142 @@ export function buildGroupTree<T extends {
   // Sort child exercises within each cluster by pedagogical roadmap order (Flashcard -> Exercise -> Game -> Review)
   // And for games: Word Puzzle (subOrder: 1) -> Type (subOrder: 2)
   clusters.forEach((cluster) => {
+    // Tự động sinh 3 Game cho bộ Flashcard nếu bài học có Flashcard mà chưa có game tương ứng
+    const flashcardItem = cluster.exercises.find((ex) => {
+      const stage = getItemStage(ex);
+      return stage === 'flashcard' || ex.assignment.materialType === 'FLASHCARD';
+    });
+
+    if (flashcardItem) {
+      let topicId = '';
+      let topicSlug = '';
+      let lessonKey = '';
+      if (flashcardItem.assignment.instructions) {
+        try {
+          const meta = JSON.parse(flashcardItem.assignment.instructions);
+          if (meta.topicId) topicId = meta.topicId;
+          else if (meta.playUrl) {
+            const u = new URL(meta.playUrl, 'http://localhost');
+            const t = u.searchParams.get('topic') || u.searchParams.get('topicId');
+            if (t) topicId = t;
+          }
+          if (meta.topicSlug) topicSlug = meta.topicSlug;
+          if (meta.lessonKey) lessonKey = meta.lessonKey;
+        } catch {}
+      }
+      if (!lessonKey) {
+        lessonKey = (flashcardItem.assignment as any).grammarLesson || cluster.lesson.assignment.id;
+      }
+      if (!topicId) {
+        topicId = flashcardItem.assignment.id;
+      }
+
+      const hasScramble = cluster.exercises.some((e) => {
+        const title = (e.assignment.title || '').toLowerCase();
+        if (title.includes('puzzle') || title.includes('ghép chữ') || title.includes('ghep chu')) return true;
+        try {
+          const m = JSON.parse(e.assignment.instructions || '{}');
+          return m.mode === 'scramble' || m.gameMode === 'puzzle';
+        } catch { return false; }
+      });
+
+      const hasType = cluster.exercises.some((e) => {
+        const title = (e.assignment.title || '').toLowerCase();
+        if (title.includes('type') || title.includes('gõ từ') || title.includes('go tu')) return true;
+        try {
+          const m = JSON.parse(e.assignment.instructions || '{}');
+          return m.mode === 'type' || m.gameMode === 'type';
+        } catch { return false; }
+      });
+
+      const hasMatch = cluster.exercises.some((e) => {
+        const title = (e.assignment.title || '').toLowerCase();
+        if (title.includes('nối thẻ') || title.includes('noi the') || title.includes('flashcard-match')) return true;
+        try {
+          const m = JSON.parse(e.assignment.instructions || '{}');
+          return m.mode === 'match' || m.gameMode === 'match' || (m.playUrl && m.playUrl.includes('flashcard-match'));
+        } catch { return false; }
+      });
+
+      if (!hasScramble) {
+        cluster.exercises.push({
+          ...flashcardItem,
+          assignment: {
+            ...flashcardItem.assignment,
+            id: `${flashcardItem.assignment.id}__game_puzzle`,
+            title: 'Game: Ghép chữ (Word Puzzle)',
+            materialType: 'FLASHCARD',
+            grammarLesson: lessonKey,
+            instructions: JSON.stringify({
+              kind: 'GAME',
+              mode: 'scramble',
+              gameMode: 'puzzle',
+              subOrder: 1,
+              topicId,
+              topicSlug,
+              lessonKey,
+              playUrl: `/flashcards?topic=${topicId}&mode=scramble&embedded=true`,
+            }),
+          },
+          isSubmitted: false,
+          score: null,
+          submittedAt: null,
+        });
+      }
+
+      if (!hasType) {
+        cluster.exercises.push({
+          ...flashcardItem,
+          assignment: {
+            ...flashcardItem.assignment,
+            id: `${flashcardItem.assignment.id}__game_type`,
+            title: 'Game: Gõ từ (Type)',
+            materialType: 'FLASHCARD',
+            grammarLesson: lessonKey,
+            instructions: JSON.stringify({
+              kind: 'GAME',
+              mode: 'type',
+              gameMode: 'type',
+              subOrder: 2,
+              topicId,
+              topicSlug,
+              lessonKey,
+              playUrl: `/flashcards?topic=${topicId}&mode=type&embedded=true`,
+            }),
+          },
+          isSubmitted: false,
+          score: null,
+          submittedAt: null,
+        });
+      }
+
+      if (!hasMatch) {
+        cluster.exercises.push({
+          ...flashcardItem,
+          assignment: {
+            ...flashcardItem.assignment,
+            id: `${flashcardItem.assignment.id}__game_match`,
+            title: 'Game: Nối thẻ',
+            materialType: 'FLASHCARD',
+            grammarLesson: lessonKey,
+            instructions: JSON.stringify({
+              kind: 'GAME',
+              mode: 'match',
+              gameMode: 'match',
+              subOrder: 3,
+              topicId,
+              topicSlug,
+              lessonKey,
+              playUrl: `/student/game/flashcard-match?topicId=${topicId}`,
+            }),
+          },
+          isSubmitted: false,
+          score: null,
+          submittedAt: null,
+        });
+      }
+    }
+
     cluster.exercises.sort((a, b) => {
       const stageA = getItemStage(a);
       const stageB = getItemStage(b);

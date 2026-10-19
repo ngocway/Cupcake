@@ -64,6 +64,8 @@ interface InstructionsBlockProps {
   proseClassName?: string;
   /** Placement for the language toggle: "top-row" (default separate row) | "inside-corner" (inside top-right of content) | "none" */
   togglePlacement?: "top-row" | "inside-corner" | "none";
+  /** Force a specific language (e.g. "vi") and hide the toggle button */
+  forceLanguage?: "vi" | "en";
 }
 
 export function InstructionsBlock({
@@ -73,6 +75,7 @@ export function InstructionsBlock({
   isLoggedIn,
   proseClassName = "prose prose-slate dark:prose-invert max-w-none prose-p:leading-relaxed prose-p:text-base bg-secondary/5 p-6 rounded-2xl border border-secondary/10",
   togglePlacement = "top-row",
+  forceLanguage,
 }: InstructionsBlockProps) {
   const [mounted, setMounted] = useState(() => typeof window !== 'undefined');
   useEffect(() => {
@@ -83,19 +86,21 @@ export function InstructionsBlock({
   const showNativeLang = useContentStore((s) => s.showNativeLang);
   const setShowNativeLang = useContentStore((s) => s.setShowNativeLang);
 
-  const isNativeEnglish = nativeLanguage === "en";
-  const translatedText = instructionsTranslations?.[nativeLanguage] ?? null;
-  const hasTranslation = !isNativeEnglish && SUPPORTED_LOCALES.includes(nativeLanguage);
-  const nativeLabel = LANG_LABELS[nativeLanguage] ?? nativeLanguage.toUpperCase();
+  const effectiveLang = forceLanguage ?? nativeLanguage;
+  const isNativeEnglish = effectiveLang === "en";
+  const translatedText = instructionsTranslations?.[effectiveLang] ?? null;
+  const hasTranslation = !isNativeEnglish && SUPPORTED_LOCALES.includes(effectiveLang);
+  const nativeLabel = LANG_LABELS[effectiveLang] ?? effectiveLang.toUpperCase();
 
-  // Guard against SSR hydration mismatch when localStorage has showNativeLang=true
-  const effectiveShowNative = mounted ? showNativeLang : false;
-  const showTranslated = hasTranslation && effectiveShowNative;
+  // If forceLanguage is provided, hide toggle and lock to that language
+  const effectiveShowNative = forceLanguage ? (forceLanguage !== "en") : (mounted ? showNativeLang : false);
+  const showTranslated = forceLanguage ? Boolean(translatedText) : (hasTranslation && effectiveShowNative);
+  const effectiveTogglePlacement = forceLanguage ? "none" : togglePlacement;
 
   return (
-    <div className={togglePlacement === "inside-corner" ? "w-full" : "space-y-3"}>
+    <div className={effectiveTogglePlacement === "inside-corner" ? "w-full" : "space-y-3"}>
       {/* Language toggle row — only when native ≠ English and placement is 'top-row' */}
-      {hasTranslation && togglePlacement === "top-row" && (
+      {hasTranslation && effectiveTogglePlacement === "top-row" && (
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-1.5 text-xs text-secondary font-semibold">
             <Globe className="w-3.5 h-3.5" />
@@ -112,7 +117,7 @@ export function InstructionsBlock({
       {/* Content */}
       <div className="relative w-full">
         {/* Inside-corner language toggle */}
-        {hasTranslation && togglePlacement === "inside-corner" && (
+        {hasTranslation && effectiveTogglePlacement === "inside-corner" && (
           <div className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-20 shadow-xs rounded-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs border border-slate-200/80 dark:border-slate-700/80 p-0.5">
             <LangTogglePill
               showNative={effectiveShowNative}
