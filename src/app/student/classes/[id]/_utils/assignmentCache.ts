@@ -388,11 +388,15 @@ function launchPreloadItem(entry: QueueEntry) {
       ))
     ))
   );
+  const isExercise = Boolean(
+    kind === 'EXERCISE' ||
+    matType === 'EXERCISE'
+  );
   const isDirectHtml = Boolean(
     item.assignment.instructions && 
     !item.assignment.instructions.trim().startsWith('{')
   );
-  const isGrammar = !isFlashcard && !isGame && (
+  const isGrammar = !isFlashcard && !isGame && !isExercise && (
     isDirectHtml ||
     kind === 'LESSON' ||
     matType === 'LESSON' ||
@@ -734,11 +738,15 @@ export async function loadAssignmentUrgent(
       ))
     ))
   );
+  const isExercise = Boolean(
+    kind === 'EXERCISE' ||
+    matType === 'EXERCISE'
+  );
   const isDirectHtml = Boolean(
     item.assignment.instructions && 
     !item.assignment.instructions.trim().startsWith('{')
   );
-  const isGrammar = !isFlashcard && !isGame && (
+  const isGrammar = !isFlashcard && !isGame && !isExercise && (
     isDirectHtml ||
     kind === 'LESSON' ||
     matType === 'LESSON' ||

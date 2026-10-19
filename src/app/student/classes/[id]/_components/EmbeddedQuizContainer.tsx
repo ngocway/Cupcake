@@ -72,14 +72,23 @@ export function EmbeddedQuizContainer({
     setError(null);
     try {
       let res = await fetchQuizDataWithCache(assignmentId, forceNew, false, classId, groupId);
-      if (res && !res.submissionId && !res.isReviewMode) {
-        const sub = await ensureStudentSubmission(assignmentId, classId, groupId);
-        if (sub?.id) {
-          res = { ...res, submissionId: sub.id, submissionScore: sub.score };
-          setCachedQuizData(cacheKey, res);
+      if (res) {
+        setData(res);
+        setIsLoading(false);
+        if (!res.submissionId && !res.isReviewMode) {
+          ensureStudentSubmission(assignmentId, classId, groupId)
+            .then(sub => {
+              if (sub?.id) {
+                const updated = { ...res, submissionId: sub.id, submissionScore: sub.score };
+                setCachedQuizData(cacheKey, updated);
+                setData(updated);
+              }
+            })
+            .catch(e => {
+              console.error('Failed to ensure submission JIT:', e);
+            });
         }
       }
-      setData(res);
     } catch (err: any) {
       console.error('Failed to load quiz runner data:', err);
       setError(err?.message || 'Không thể tải bài tập. Vui lòng thử lại.');
