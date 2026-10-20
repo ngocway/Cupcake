@@ -211,6 +211,7 @@ export interface StudentAssignmentsViewProps {
     joinCode?: string | null;
     teacher?: any;
     zaloGroupUrl?: string | null;
+    slug?: string | null;
   };
   enrolledClasses?: {
     id: string;

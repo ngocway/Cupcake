@@ -217,7 +217,7 @@ export async function getInactiveStudentsRoster(filterClassId?: string): Promise
   // Map latest submission per student:class
   const latestSubmissionMap = new Map<string, Date>()
   submissions.forEach((s) => {
-    if (s.classId) {
+    if (s.classId && s.submittedAt) {
       const key = `${s.studentId}:${s.classId}`
       if (!latestSubmissionMap.has(key)) {
         latestSubmissionMap.set(key, s.submittedAt)
