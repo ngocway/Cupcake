@@ -262,9 +262,15 @@ export function buildGroupTree<T extends {
 
   items.forEach((it) => {
     const stage = getItemStage(it);
+    // Nếu là bài đọc thực hành có gán vào bài học cha (ví dụ [BÀI ĐỌC] có grammarLesson khác id của chính nó)
+    // thì đây là bài tập con (nonLessons) thuộc bài cha đó chứ KHÔNG PHẢI là bài học cha!
+    const isChildReadingExercise = 
+      stage === 'reading' && 
+      Boolean(it.assignment.grammarLesson && it.assignment.grammarLesson !== it.assignment.id);
+
     if (stage === 'lesson') {
       grammarLessons.push(it);
-    } else if (stage === 'reading') {
+    } else if (stage === 'reading' && !isChildReadingExercise) {
       readingLessons.push(it);
     } else {
       nonLessons.push(it);
@@ -279,45 +285,99 @@ export function buildGroupTree<T extends {
     };
   }
 
-  const grammarClusters: { lesson: T; exercises: T[] }[] = grammarLessons.map((lesson) => ({
-    lesson,
-    exercises: [],
-  }));
-
-  const readingClusters: { lesson: T; exercises: T[] }[] = readingLessons.map((lesson) => ({
+  // Danh sách các bài học cha (bao gồm cả lý thuyết ngữ pháp và bài đọc / bài học từ vựng theo ngày)
+  const parentLessons: T[] = [...grammarLessons, ...readingLessons];
+  const clusters: { lesson: T; exercises: T[] }[] = parentLessons.map((lesson) => ({
     lesson,
     exercises: [],
   }));
 
   const normalizeKey = (k: string) => (k || '').toLowerCase().replace(/^day-\d+-/i, '').replace(/^(grammar|topic):/i, '').trim();
 
-  const lessonMetaList = grammarLessons.map((l) => {
+  const extractDayNumber = (str?: string | null): number | null => {
+    if (!str) return null;
+    const m = str.match(/(?:day|ngày)[-_\s]*0*(\d+)/i);
+    if (m && m[1]) return parseInt(m[1], 10);
+    return null;
+  };
+
+  const extractCoreTitle = (title?: string | null): string => {
+    if (!title) return '';
+    return title
+      .toLowerCase()
+      .replace(/^[📘📗📕📙📓📖\s]*\[?(?:lý thuyết|ly thuyet|grammar lesson|grammar exercise|bài tập|thực hành|bài đọc|đọc hiểu|shadowing|flashcard\s*(?:\(\d+\))?|game:[^:]+)\]?:?\s*/i, '')
+      .replace(/^(?:day|ngày)\s*\d+[-_\s]*:?\s*/i, '')
+      .replace(/^flashcard\s*(?:\(\d+\))?\s*:?\s*/i, '')
+      .replace(/^game\s*:\s*[^–—\-:]+[-–—:]\s*/i, '')
+      .replace(/\(.*?\)/g, '')
+      .trim();
+  };
+
+  const lessonMetaList = clusters.map((c, idx) => {
+    const l = c.lesson;
     const meta = extractGrammarKey(l);
+    const id = (l.assignment.id || '').toLowerCase().trim();
+    const lessonKey = (meta.lessonKey || l.assignment.grammarLesson || '').toLowerCase().trim();
+    const topicKey = (meta.topicKey || (l.assignment as any).grammarTopic || '').toLowerCase().trim();
+    const dayNumber = extractDayNumber(l.assignment.title) ?? extractDayNumber(id) ?? extractDayNumber(lessonKey);
+    const coreTitle = extractCoreTitle(l.assignment.title);
+
     return {
-      ...meta,
-      id: l.assignment.id,
-      normLessonKey: normalizeKey(meta.lessonKey || l.assignment.id),
+      index: idx,
+      id,
+      lessonKey,
+      topicKey,
+      dayNumber,
+      coreTitle,
+      cleanTitle: meta.cleanTitle,
+      normLessonKey: normalizeKey(lessonKey || id),
     };
   });
   const assignedExerciseIds = new Set<string>();
 
-  // Gắn các bài tập vào bài lý thuyết phù hợp nhất
+  // Gắn các bài tập / flashcard / game vào bài học cha phù hợp nhất
   nonLessons.forEach((exercise) => {
     const exStage = getItemStage(exercise);
     const exMeta = extractGrammarKey(exercise);
-    const exNormKey = normalizeKey(exMeta.lessonKey);
+    const exId = (exercise.assignment.id || '').toLowerCase().trim();
+    const exLessonKey = (exMeta.lessonKey || exercise.assignment.grammarLesson || '').toLowerCase().trim();
+    const exTopicKey = (exMeta.topicKey || (exercise.assignment as any).grammarTopic || '').toLowerCase().trim();
+    const exNormKey = normalizeKey(exLessonKey);
+    const exDayNumber = extractDayNumber(exercise.assignment.title) ??
+                        extractDayNumber(exLessonKey) ??
+                        extractDayNumber(exId);
+    const exCoreTitle = extractCoreTitle(exercise.assignment.title);
+
     let matchedClusterIndex = -1;
 
-    // 1. Khớp theo lessonKey (chính xác nhất từ database/instructions hoặc chuẩn hóa bỏ day-XX-)
-    if (exNormKey) {
+    // 1. Khớp theo ID bài học hoặc lessonKey (chính xác nhất từ database/instructions hoặc chuẩn hóa)
+    if (exLessonKey) {
       matchedClusterIndex = lessonMetaList.findIndex(
-        (l) => (l.normLessonKey && l.normLessonKey === exNormKey) ||
-               (l.id && l.id === exNormKey) ||
-               (l.lessonKey && (l.lessonKey.includes(exNormKey) || exNormKey.includes(l.normLessonKey)))
+        (l) => l.id === exLessonKey ||
+               (l.lessonKey && l.lessonKey === exLessonKey) ||
+               (l.normLessonKey && exNormKey && l.normLessonKey === exNormKey) ||
+               (l.normLessonKey && exNormKey && (l.normLessonKey.includes(exNormKey) || exNormKey.includes(l.normLessonKey)))
       );
     }
 
-    // 2. Khớp theo cleanTitle (nếu tiêu đề chứa nhau)
+    // 2. Khớp theo số Ngày (Day number: Day 01, Day 02, Day 03...)
+    if (matchedClusterIndex === -1 && exDayNumber !== null) {
+      matchedClusterIndex = lessonMetaList.findIndex((l) => l.dayNumber === exDayNumber);
+    }
+
+    // 3. Khớp theo coreTitle (tiêu đề cốt lõi bỏ qua tiền tố Day/Flashcard/Game)
+    if (matchedClusterIndex === -1 && exCoreTitle) {
+      matchedClusterIndex = lessonMetaList.findIndex((l) => {
+        if (!l.coreTitle) return false;
+        return (
+          l.coreTitle === exCoreTitle ||
+          l.coreTitle.includes(exCoreTitle) ||
+          exCoreTitle.includes(l.coreTitle)
+        );
+      });
+    }
+
+    // 4. Khớp theo cleanTitle (nếu tiêu đề chứa nhau)
     if (matchedClusterIndex === -1 && exMeta.cleanTitle) {
       matchedClusterIndex = lessonMetaList.findIndex((l) => {
         if (!l.cleanTitle) return false;
@@ -328,29 +388,24 @@ export function buildGroupTree<T extends {
       });
     }
 
-    // 3. Khớp theo topicKey nếu bài tập không có lessonKey riêng và trong nhóm có 1 bài lý thuyết cùng topic
-    if (matchedClusterIndex === -1 && !exMeta.lessonKey && exMeta.topicKey) {
-      const candidates = lessonMetaList
-        .map((l, idx) => (l.topicKey === exMeta.topicKey ? idx : -1))
-        .filter((idx) => idx !== -1);
+    // 5. Khớp theo topicKey nếu bài tập không có lessonKey riêng và trong nhóm có 1 bài lý thuyết cùng topic
+    if (matchedClusterIndex === -1 && !exLessonKey && exTopicKey) {
+      const candidates = lessonMetaList.filter((l) => l.topicKey === exTopicKey);
       if (candidates.length === 1) {
-        matchedClusterIndex = candidates[0];
+        matchedClusterIndex = candidates[0].index;
       }
     }
 
-    // 4. Smart Fallback: Nếu trong nhóm chỉ có duy nhất 1 bài Lý thuyết VÀ bài tập này KHÔNG PHẢI bài ôn tập (review)
-    // (tức là bài thực hành mới của ngày hôm đó), tự động gán vào làm con của bài lý thuyết duy nhất đó!
-    if (matchedClusterIndex === -1 && grammarLessons.length === 1 && exStage !== 'review') {
+    // 6. Smart Fallback: Nếu trong nhóm chỉ có duy nhất 1 bài Lý thuyết/Bài học chính VÀ bài tập này KHÔNG PHẢI bài ôn tập (review)
+    if (matchedClusterIndex === -1 && clusters.length === 1 && exStage !== 'review') {
       matchedClusterIndex = 0;
     }
 
     if (matchedClusterIndex !== -1) {
-      grammarClusters[matchedClusterIndex].exercises.push(exercise);
+      clusters[matchedClusterIndex].exercises.push(exercise);
       assignedExerciseIds.add(exercise.assignment.id);
     }
   });
-
-  const clusters: { lesson: T; exercises: T[] }[] = [...grammarClusters, ...readingClusters];
 
   // Sort child exercises within each cluster by pedagogical roadmap order (Flashcard -> Exercise -> Game -> Review)
   // And for games: Word Puzzle (subOrder: 1) -> Type (subOrder: 2)
@@ -494,8 +549,19 @@ export function buildGroupTree<T extends {
     cluster.exercises.sort((a, b) => {
       const stageA = getItemStage(a);
       const stageB = getItemStage(b);
-      const orderDiff = (STAGE_ROADMAP_ORDER[stageA] ?? 99) - (STAGE_ROADMAP_ORDER[stageB] ?? 99);
-      if (orderDiff !== 0) return orderDiff;
+
+      // Thứ tự các bài con trong 1 ngày: Flashcard (1) -> Games (2) -> Bài đọc hiểu (3) -> Ôn tập (4)
+      const CHILD_STAGE_ORDER: Record<string, number> = {
+        flashcard: 1,
+        game: 2,
+        reading: 3,
+        exercise: 3,
+        review: 4,
+      };
+
+      const orderA = CHILD_STAGE_ORDER[stageA] ?? (STAGE_ROADMAP_ORDER[stageA] ?? 99);
+      const orderB = CHILD_STAGE_ORDER[stageB] ?? (STAGE_ROADMAP_ORDER[stageB] ?? 99);
+      if (orderA !== orderB) return orderA - orderB;
 
       const getGameSubOrder = (item: any) => {
         let subOrder = 99;
@@ -517,6 +583,8 @@ export function buildGroupTree<T extends {
 
       const subA = getGameSubOrder(a);
       const subB = getGameSubOrder(b);
+      if (subA !== subB) return subA - subB;
+
       const timeA = (a as any).assignedAt ? new Date((a as any).assignedAt).getTime() : 0;
       const timeB = (b as any).assignedAt ? new Date((b as any).assignedAt).getTime() : 0;
       if (timeA !== timeB) return timeA - timeB;

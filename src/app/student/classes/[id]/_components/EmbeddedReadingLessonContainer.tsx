@@ -55,6 +55,13 @@ export function EmbeddedReadingLessonContainer({
     loadData();
   }, [loadData]);
 
+  const displayLevel = React.useMemo(() => {
+    if (!data?.level) return 'Pre-A1 / A1';
+    const unique = [...new Set(String(data.level).split(',').map(s => s.trim()))].filter(Boolean);
+    if (unique.length === 0) return 'Pre-A1 / A1';
+    return unique.map(s => s.replace(/pre-a1-a1/gi, 'Pre-A1 / A1').replace(/-/g, ' ')).join(' / ').toUpperCase();
+  }, [data?.level]);
+
   if (isLoading) {
     return (
       <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
@@ -97,13 +104,6 @@ export function EmbeddedReadingLessonContainer({
       </div>
     );
   }
-
-  const displayLevel = React.useMemo(() => {
-    if (!data?.level) return 'Pre-A1 / A1';
-    const unique = [...new Set(String(data.level).split(',').map(s => s.trim()))].filter(Boolean);
-    if (unique.length === 0) return 'Pre-A1 / A1';
-    return unique.map(s => s.replace(/pre-a1-a1/gi, 'Pre-A1 / A1').replace(/-/g, ' ')).join(' / ').toUpperCase();
-  }, [data?.level]);
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 p-4 sm:p-6 md:p-8 animate-in fade-in duration-300">

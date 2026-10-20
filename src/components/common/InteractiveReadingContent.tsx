@@ -305,7 +305,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
       const rect = marker.getBoundingClientRect();
       const POPUP_WIDTH = 560;
       const MARGIN = 20;
-      const POPUP_HEIGHT = 400;
+      const POPUP_HEIGHT = 480;
       
       const spaceAbove = rect.top;
       const side = spaceAbove < POPUP_HEIGHT ? 'bottom' : 'top';
@@ -415,7 +415,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
             <div className="w-[200px] flex flex-col">
 
               {activeVocab.image && !imageError && (
-                <div className="h-28 w-full rounded-[4px] overflow-hidden mb-4">
+                <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 shadow-sm flex-shrink-0">
                   <img 
                     src={activeVocab.image} 
                     alt={activeVocab.word} 
@@ -425,7 +425,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
                 </div>
               )}
               
-              <div className="space-y-1 mb-6">
+              <div className="space-y-1 mb-4">
                 <h4 className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
                   {activeVocab.word}
                 </h4>
@@ -487,7 +487,7 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
                   }
                   // TODO: Add word to user's vocabulary list
                 }}
-                className="w-full h-12 bg-primary text-white rounded-2xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 mt-6 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+                className="w-full h-11 bg-primary text-white rounded-2xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 mt-4 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
               >
                 <PlusCircle className="w-4 h-4" />
                 Add Word
