@@ -7,6 +7,7 @@ import { registerStudent, resetPassword } from "@/actions/auth-actions"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight, User, HelpCircle } from "lucide-react"
 import { CenteredLoginLoader } from "@/components/shared/CenteredLoginLoader"
+import { trackEvent } from "@/lib/analytics"
 export interface StudentLoginFormProps {
   onSuccess?: () => void;
   joinNotice?: {
@@ -56,6 +57,7 @@ export function StudentLoginForm({ onSuccess, joinNotice, locale = "vi" }: Stude
         setErrorMessage(t("invalidCredentials"));
         setIsPending(false);
       } else if (res?.ok) {
+        trackEvent('auth_login', { method: 'credentials', role: 'STUDENT' });
         if (onSuccess) {
           onSuccess();
         } else {
@@ -93,11 +95,13 @@ export function StudentLoginForm({ onSuccess, joinNotice, locale = "vi" }: Stude
         setErrorMessage(res.error);
         setIsPending(false);
     } else if (res.success) {
+        trackEvent('auth_signup', { role: 'STUDENT' });
         setSuccessMessage(res.success);
         const email = formData.get("email") as string;
         try {
           const signInRes = await signIn("credentials", { email, password, redirect: false });
           if (signInRes?.ok) {
+            trackEvent('auth_login', { method: 'credentials', role: 'STUDENT' });
             if (onSuccess) onSuccess();
             else {
               const searchParams = new URLSearchParams(window.location.search);
@@ -153,6 +157,7 @@ export function StudentLoginForm({ onSuccess, joinNotice, locale = "vi" }: Stude
       }
     }
     
+    trackEvent('auth_login', { method: 'google', role: 'STUDENT' });
     signIn("google", { callbackUrl }).catch(() => setIsPending(false));
   }
 

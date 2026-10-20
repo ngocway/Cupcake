@@ -25,6 +25,7 @@ import {
   FolderPlus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 import { searchImagesClient, SearchImageResult } from "@/lib/image-search-client";
 import { uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import {
@@ -269,6 +270,11 @@ export function AutoGenerateCandyQuizModal({
 
       setReviewQuestions(questionsWithMedia);
       setStep("REVIEW");
+      trackEvent('teacher_game_ai_used', {
+        input_mode: inputMode,
+        difficulty,
+        question_count: questionsWithMedia.length,
+      });
       const missingCount = questionsWithMedia.filter((q) => !q.imageUrl).length;
       if (imageMode !== "NONE" && missingCount > 0) {
         toast.warning(
@@ -401,6 +407,11 @@ export function AutoGenerateCandyQuizModal({
         isCorrect: opt.isCorrect,
       })),
     }));
+
+    trackEvent('teacher_game_ai_applied', {
+      count: finalQuestions.length,
+      allocation_mode: allocationMode,
+    });
 
     onApply({
       questions: finalQuestions,

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { resetPassword } from "@/actions/auth-actions"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { CenteredLoginLoader } from "@/components/shared/CenteredLoginLoader"
+import { trackEvent } from "@/lib/analytics"
 
 export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const [mode, setMode] = useState<"login" | "forgot">("login");
@@ -46,6 +47,7 @@ export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
         setErrorMessage("Tài khoản hoặc mật khẩu không chính xác.");
         setIsPending(false);
       } else if (res?.ok) {
+        trackEvent('auth_login', { method: 'credentials', role: 'TEACHER' });
         if (onSuccess) {
           onSuccess();
         }
@@ -77,6 +79,7 @@ export function TeacherLoginForm({ onSuccess }: { onSuccess?: () => void }) {
 
   const handleGoogleLogin = () => {
     setIsPending(true);
+    trackEvent('auth_login', { method: 'google', role: 'TEACHER' });
     // Set role intent in cookie for NextAuth server callback verification
     document.cookie = "login_role_intent=TEACHER; path=/; max-age=300; SameSite=Lax";
     signIn("google", { callbackUrl: "/teacher" }).catch(() => setIsPending(false));

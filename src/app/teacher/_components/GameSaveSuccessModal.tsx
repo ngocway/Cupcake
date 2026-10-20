@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 interface GameSaveSuccessModalProps {
   isOpen: boolean;
@@ -69,6 +70,12 @@ export function GameSaveSuccessModal({
     if (!isOpen || !mounted) return;
     toast.dismiss();
 
+    trackEvent('teacher_game_saved', {
+      game_type: gameType,
+      title: title || 'Untitled Game',
+      has_code: !!gameCode,
+    });
+
     if (typeof window !== "undefined") {
       try {
         const url = new URL(window.location.href);
@@ -84,7 +91,7 @@ export function GameSaveSuccessModal({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, mounted, onClose]);
+  }, [isOpen, mounted, onClose, gameType, title, gameCode]);
 
   if (!mounted || !isOpen) return null;
 
@@ -99,6 +106,7 @@ export function GameSaveSuccessModal({
   const handleCopyLink = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(fullUrl);
+      trackEvent('teacher_game_share_link', { game_type: gameType, method: 'copy_link' });
       setCopied(true);
       toast.success("Đã sao chép đường dẫn bài tập! Bạn có thể dán và gửi cho học sinh ngay.");
       setTimeout(() => setCopied(false), 2500);
@@ -110,6 +118,7 @@ export function GameSaveSuccessModal({
     const canvas = qrRef.current.querySelector("canvas");
     if (!canvas) return;
 
+    trackEvent('teacher_game_share_link', { game_type: gameType, method: 'download_qr' });
     const url = canvas.toDataURL("image/png");
     const a = document.createElement("a");
     a.href = url;

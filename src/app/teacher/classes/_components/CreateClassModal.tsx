@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, ImagePlus } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 interface CreateClassModalProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export function CreateClassModal({ isOpen, onClose, onSuccess }: CreateClassModa
       }
 
       const newClass = await res.json();
+      trackEvent('teacher_class_created', { class_id: newClass.id, class_name: name });
       onSuccess?.();
       onClose();
       router.push(`/teacher/classes/${newClass.id}`);

@@ -51,6 +51,7 @@ import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment,
 import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 import dynamic from 'next/dynamic';
 import { FloatingZaloWidget } from './FloatingZaloWidget';
+import { trackEvent } from '@/lib/analytics';
 
 export function ActivityCanvasLoadingFallback() {
   return (
@@ -617,6 +618,13 @@ export function StudentAssignmentsView({
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
+  const courseType = useMemo(() => {
+    const text = `${currentClass?.name || ''} ${currentClass?.slug || ''} ${pathname || ''}`.toLowerCase();
+    if (text.includes('vocab') || text.includes('từ vựng')) return 'vocab_45';
+    if (text.includes('grammar') || text.includes('ngữ pháp')) return 'grammar_45';
+    return 'general_class';
+  }, [currentClass?.name, currentClass?.slug, pathname]);
+
   // Sidebar collapse state (default false to prevent SSR hydration mismatch)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
@@ -1106,6 +1114,11 @@ export function StudentAssignmentsView({
   const executeSelectAssignment = useCallback((item: StudentGroupItem, parentGroupId: string) => {
     const grp = assignmentGroups.find(g => g.id === parentGroupId);
     if (grp?.isLocked) {
+      trackEvent('course_locked_day_clicked', {
+        course_type: courseType,
+        day_title: grp.title,
+        status: 'locked',
+      });
       setLockedGroupModal(grp);
       return;
     }
@@ -1123,6 +1136,14 @@ export function StudentAssignmentsView({
     setActiveAssignmentId(item.assignment.id);
     setActiveStageId(cfg.stage);
     updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
+
+    trackEvent('course_day_selected', {
+      course_type: courseType,
+      class_id: classId,
+      day_title: grp?.title || item.assignment.title,
+      item_title: item.assignment.title,
+      stage: cfg.stage,
+    });
 
     // Tự động mở cụm bài học chứa bài này và gập các cụm khác
     if (grp) {
@@ -1143,11 +1164,15 @@ export function StudentAssignmentsView({
       setIsSidebarCollapsed(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [assignmentGroups, selectedGroupId, classId, pathname]);
+  }, [assignmentGroups, selectedGroupId, classId, pathname, courseType]);
 
   // Thực hiện chuyển Stage Tab (Internal)
   const executeSelectStageTab = useCallback((stageId: ActivityStage) => {
     setActiveStageId(stageId);
+    trackEvent('course_activity_switched', {
+      course_type: courseType,
+      activity_type: stageId,
+    });
     const stageObj = availableStages.find(s => s.id === stageId);
     if (stageObj && stageObj.items.length > 0) {
       const itemInStage = stageObj.items.find(i => i.item.assignment.id === activeAssignmentId);
@@ -1832,6 +1857,11 @@ export function StudentAssignmentsView({
                     }
 
                     // Nếu bài chưa sẵn sàng: Ưu tiên tối thượng tải ngay trong 0.2s - 0.5s và tự động mở
+                    trackEvent('course_locked_day_clicked', {
+                      course_type: courseType,
+                      day_title: parsed.cleanTitle,
+                      status: 'not_ready',
+                    });
                     setLoadingAssignmentId(item.assignment.id);
                     try {
                       await loadAssignmentUrgent(item, classId, group.id);

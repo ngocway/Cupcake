@@ -23,6 +23,7 @@ import {
   Puzzle
 } from "lucide-react"
 import { completeClassActivityAction } from "@/actions/activity-completion-actions"
+import { trackEvent } from "@/lib/analytics"
 
 // Định nghĩa kiểu dữ liệu
 interface Topic {
@@ -336,32 +337,48 @@ export function FlashcardsClient({
 
   useEffect(() => {
     if (isFlipped && flashcards.length > 0) {
+      trackEvent('flashcard_flipped', {
+        word: flashcards[currentIndex]?.word,
+        topic: selectedTopic?.name || 'Flashcard',
+      });
+
       setFlippedIndices((prev) => {
         const next = new Set(prev)
         next.add(currentIndex)
 
         const ratio = next.size / flashcards.length
-        if (ratio >= 0.8 && !assignmentCompleted && activeAssignmentId) {
-          setAssignmentCompleted(true)
-          completeClassActivityAction({ assignmentId: activeAssignmentId, score: null }).catch((err) => {
-            console.error("Failed to auto-complete flashcards:", err)
-          })
-          if (onComplete) {
-            onComplete(10, activeAssignmentId)
-          }
-          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-            window.parent.postMessage({
-              type: 'ACTIVITY_COMPLETED',
-              assignmentId: activeAssignmentId,
-              isCompleted: true,
-              score: 10
-            }, '*')
+        if (ratio >= 0.8 && !assignmentCompleted) {
+          trackEvent('flashcard_practice_completed', {
+            topic: selectedTopic?.name || 'Flashcard',
+            total_cards: flashcards.length,
+          });
+          trackEvent('vocab_day_completed', {
+            topic: selectedTopic?.name || 'Flashcard',
+            total_cards: flashcards.length,
+          });
+
+          if (activeAssignmentId) {
+            setAssignmentCompleted(true)
+            completeClassActivityAction({ assignmentId: activeAssignmentId, score: null }).catch((err) => {
+              console.error("Failed to auto-complete flashcards:", err)
+            })
+            if (onComplete) {
+              onComplete(10, activeAssignmentId)
+            }
+            if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+              window.parent.postMessage({
+                type: 'ACTIVITY_COMPLETED',
+                assignmentId: activeAssignmentId,
+                isCompleted: true,
+                score: 10
+              }, '*')
+            }
           }
         }
         return next
       })
     }
-  }, [isFlipped, currentIndex, flashcards.length, assignmentCompleted, activeAssignmentId, onComplete])
+  }, [isFlipped, currentIndex, flashcards.length, assignmentCompleted, activeAssignmentId, onComplete, selectedTopic, flashcards])
   
   // Trạng thái ngôn ngữ dịch nghĩa (đồng bộ hóa với vocab settings & localStorage)
   const currentLang = useContentStore(s => s.nativeLanguage)
@@ -627,6 +644,10 @@ export function FlashcardsClient({
   const handlePlayAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
+    trackEvent('flashcard_audio_played', {
+      word: card.word,
+      topic: selectedTopic?.name || 'Flashcard',
+    })
 
     // Phương án Hybrid: audioUrl -> audioWordUrl từ Cloudflare -> Edge TTS on-the-fly
     const customUrl = (card.audioUrl && card.audioUrl.trim())
@@ -663,6 +684,10 @@ export function FlashcardsClient({
   const handlePlayWordAudio = (card: any, onEnded?: () => void) => {
     if (!card) return
     stopCurrentAudio()
+    trackEvent('flashcard_audio_played', {
+      word: card.word,
+      topic: selectedTopic?.name || 'Flashcard',
+    })
 
     // Phương án Hybrid: Ưu tiên audioWordUrl từ Cloudflare, nếu không có -> Edge TTS on-the-fly
     const urlToPlay = resolveAudioUrl(card.audioWordUrl, card.word)
@@ -744,6 +769,10 @@ export function FlashcardsClient({
 
   // Xử lý chuyển đổi chế độ học (Gợi ý, Ghép chữ, Tự gõ)
   const handleModeChange = (newMode: 'hint' | 'scramble' | 'type') => {
+    trackEvent('vocab_mode_changed', {
+      new_mode: newMode,
+      topic: selectedTopic?.name || 'Flashcard',
+    });
     setChallengeMode(newMode)
     setWordAudioEnded(false)
     setShakeItemId(null)
@@ -1580,6 +1609,10 @@ export function FlashcardsClient({
         {isEmbedded || searchParams.get("embedded") === "true" ? (
           <button 
             onClick={() => {
+              trackEvent('vocab_restart_clicked', {
+                topic: selectedTopic?.name || 'Flashcard',
+                total_cards: flashcards.length,
+              });
               if (isEmbedded) {
                 const baseCards = initialCards && initialCards.length > 0 ? initialCards : flashcards;
                 const reshuffled = shuffleArray(baseCards);
@@ -2048,7 +2081,15 @@ export function FlashcardsClient({
           {!isFlipped ? (
             challengeMode === 'hint' ? (
               <button
-                onClick={() => setIsFlipped(true)}
+                onClick={() => {
+                  trackEvent('vocab_card_revealed', {
+                    word: activeCard?.word,
+                    card_index: currentIndex + 1,
+                    total_cards: flashcards.length,
+                    topic: selectedTopic?.name || 'Flashcard',
+                  });
+                  setIsFlipped(true);
+                }}
                 className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
                   isKidMode
                     ? `px-12 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`
@@ -2142,7 +2183,15 @@ export function FlashcardsClient({
 
                   {/* Reveal Details button */}
                   <button
-                    onClick={() => setIsFlipped(true)}
+                    onClick={() => {
+                      trackEvent('vocab_card_revealed', {
+                        word: activeCard?.word,
+                        card_index: currentIndex + 1,
+                        total_cards: flashcards.length,
+                        topic: selectedTopic?.name || 'Flashcard',
+                      });
+                      setIsFlipped(true);
+                    }}
                     className={`transition-all duration-300 font-black uppercase tracking-widest flex items-center gap-2 group active:scale-95 ${
                       isKidMode
                         ? `px-8 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`

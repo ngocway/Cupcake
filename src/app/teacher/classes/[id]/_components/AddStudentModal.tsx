@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { X, Mail, Check, AlertCircle, Users } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -72,6 +73,7 @@ export function AddStudentModal({ isOpen, onClose, classId, onAddSuccess }: AddS
         throw new Error(msg);
       }
 
+      trackEvent('teacher_student_added', { class_id: classId, count: validEmails.length });
       onAddSuccess();
       onClose();
     } catch (err) {

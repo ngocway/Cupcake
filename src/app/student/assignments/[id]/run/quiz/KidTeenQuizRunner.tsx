@@ -19,6 +19,7 @@ import {
 
 import { LoginModal } from "@/components/LoginButton";
 import { completeSubmission } from "@/actions/submission-actions";
+import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
 import { SelectionTranslator } from "@/components/common/SelectionTranslator";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
@@ -480,6 +481,11 @@ export default function KidTeenQuizRunner({
         }
 
         if (submissionId) {
+          trackEvent('student_assignment_submitted', {
+            assignment_id: assignment?.id,
+            assignment_title: assignment?.title,
+            class_id: classId || (isFromClass ? 'from_class' : null),
+          });
           completeSubmission(submissionId, answers).catch((err) => {
             console.error("Failed to auto-complete submission:", err);
           });

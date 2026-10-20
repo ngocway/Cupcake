@@ -8,6 +8,7 @@ import {
   searchAssignableContentAction,
   AssignableLibraryItem 
 } from '@/actions/material-actions';
+import { trackEvent } from '@/lib/analytics';
 
 interface AssignContentModalProps {
   classId: string;
@@ -207,6 +208,11 @@ export function AssignContentModal({
           unlockThreshold: Number(unlockThreshold) || 60
         } : undefined
       );
+      trackEvent('teacher_class_assign_content', {
+        class_id: classId,
+        total_items: selectedItems.length,
+        group_title: groupTitle || 'Default',
+      });
       onAssigned?.();
       onClose();
     } catch (err: any) {

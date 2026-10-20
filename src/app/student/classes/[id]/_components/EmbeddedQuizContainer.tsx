@@ -19,6 +19,7 @@ const KidTeenQuizRunner = dynamic(
 import { getStudentQuizRunnerData, ensureStudentSubmission } from '@/app/student/assignments/[id]/run/actions';
 import { Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import { getCachedQuizData, setCachedQuizData, fetchQuizDataWithCache } from '../_utils/assignmentCache';
+import { trackEvent } from '@/lib/analytics';
 
 interface EmbeddedQuizContainerProps {
   assignmentId: string;
@@ -100,6 +101,25 @@ export function EmbeddedQuizContainer({
   useEffect(() => {
     loadData(false);
   }, [loadData, retryKey]);
+
+  useEffect(() => {
+    if (data?.assignment) {
+      trackEvent('grammar_quiz_started', {
+        assignment_id: assignmentId,
+        class_id: classId,
+        question_count: data.questions?.length,
+      });
+    }
+  }, [assignmentId, classId, data?.assignment, data?.questions?.length]);
+
+  const handleComplete = useCallback((score: number, aid: string) => {
+    trackEvent('grammar_day_completed', {
+      assignment_id: aid,
+      score,
+      is_passed: score >= 8,
+    });
+    onComplete?.(score, aid);
+  }, [onComplete]);
 
   const handleRetry = useCallback(async () => {
     setForceAutoStart(true);
@@ -191,7 +211,7 @@ export function EmbeddedQuizContainer({
         submissionScore={data.submissionScore}
         isFromClass={true}
         autoStart={autoStart || forceAutoStart}
-        onComplete={onComplete}
+        onComplete={handleComplete}
         onRetry={handleRetry}
         isEmbeddedInCanvas={true}
       />

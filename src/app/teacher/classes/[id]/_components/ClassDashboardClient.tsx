@@ -6,6 +6,7 @@ import { AddStudentModal } from './AddStudentModal';
 import { StudentUpdateModal } from './StudentUpdateModal';
 import { StudentNoteModal } from './StudentNoteModal';
 import { ClassQRModal } from './ClassQRModal';
+import { trackEvent } from '@/lib/analytics';
 import { AssignmentsTab, type Assignment } from './AssignmentsTab';
 import { GradesTab } from './GradesTab';
 import { ClassFeedTab } from './ClassFeedTab';
@@ -84,6 +85,7 @@ export default function ClassDashboardClient({
     const url = `${window.location.origin}/join/${joinCode}`;
     try {
       await navigator.clipboard.writeText(url);
+      trackEvent('teacher_class_share_code', { class_id: classId, share_method: 'copy_link' });
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch {
@@ -351,7 +353,10 @@ export default function ClassDashboardClient({
                 <span>{dailyDripUnlock ? 'Daily Drip: 5h sáng (Bật)' : 'Mở tự do'}</span>
               </button>
               <button
-                onClick={() => setIsQRModalOpen(true)}
+                onClick={() => {
+                  setIsQRModalOpen(true);
+                  trackEvent('teacher_class_share_code', { class_id: classId, share_method: 'qr_view' });
+                }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-700 border border-[#f0f2f4] dark:border-gray-600 rounded-xl text-sm font-bold hover:bg-gray-50 hover:border-primary/30 hover:text-primary transition-colors shrink-0"
               >
                 <span className="material-symbols-outlined text-[20px]">qr_code_2</span>

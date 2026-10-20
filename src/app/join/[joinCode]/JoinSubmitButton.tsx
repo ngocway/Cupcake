@@ -3,6 +3,7 @@
 import React, { useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, ArrowRight } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 interface JoinSubmitButtonProps {
   classId: string;
@@ -26,6 +27,7 @@ export function JoinSubmitButton({ classId, isAutoApprove, onJoin }: JoinSubmitB
       try {
         const result = await onJoin();
         if (result?.success && result.redirectUrl) {
+          trackEvent('student_class_joined', { class_id: classId, is_auto_approve: isAutoApprove });
           // 2. Chuyển hướng Client-side ngay lập tức -> Hiển thị tức thì Skeleton Loading của lớp học
           router.push(result.redirectUrl);
         } else if (result?.error) {

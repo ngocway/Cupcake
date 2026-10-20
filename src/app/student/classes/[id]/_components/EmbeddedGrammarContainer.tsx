@@ -5,6 +5,7 @@ import { InstructionsBlock } from '@/components/common/InstructionsBlock';
 import { BookOpen, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
 import { getCachedGrammarData, fetchGrammarDataWithCache } from '../_utils/assignmentCache';
 import type { ActivityStage } from '../_utils/assignmentOrder';
+import { trackEvent } from '@/lib/analytics';
 
 interface EmbeddedGrammarContainerProps {
   assignmentId: string;
@@ -74,7 +75,19 @@ export function EmbeddedGrammarContainer({
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (data?.instructions) {
+      trackEvent('grammar_theory_started', {
+        assignment_id: assignmentId,
+        class_id: classId,
+      });
+    }
+  }, [assignmentId, classId, data?.instructions]);
+
   const handleContainerClick = (e: React.MouseEvent) => {
+    trackEvent('grammar_rule_expanded', {
+      assignment_id: assignmentId,
+    });
     const anchor = (e.target as HTMLElement).closest('a');
     if (anchor) {
       const href = anchor.getAttribute('href');

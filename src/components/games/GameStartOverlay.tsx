@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Play, Volume2, ArrowLeft, Sparkles } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 interface GameStartOverlayProps {
   isOpen: boolean;
@@ -126,6 +127,11 @@ export function GameStartOverlay({
     } catch (e) {}
 
     setIsClosing(true);
+    trackEvent('game_started', {
+      game_type: gameMode || 'game',
+      title: title || 'Game',
+      age_group: ageGroup || 'all',
+    });
     setTimeout(() => {
       onStart();
     }, 250);
