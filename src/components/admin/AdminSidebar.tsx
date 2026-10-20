@@ -43,6 +43,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
     {
       label: "Operations",
       items: [
+        { href: "/admin/reminders", icon: "mail", label: "Quản lý Email" },
         { href: "/admin/verifications", icon: "verified_user", label: "Xác minh" },
         { href: "/admin/reviews", icon: "rate_review", label: "Duyệt đánh giá" },
         { href: "/admin/moderation", icon: "report", label: "Kiểm duyệt" },

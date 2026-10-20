@@ -6,6 +6,7 @@ import { AdminUsersActivityChart } from "./AdminUsersActivityChart"
 import { AdminUsersFilters } from "./AdminUsersFilters"
 import { AdminUsersTable } from "./AdminUsersTable"
 import { AdminUsersPagination } from "./AdminUsersPagination"
+import { AdminReminderTriggerButton } from "./AdminReminderTriggerButton"
 import { EnhancedAdminUser, FrequencyTag } from "./types"
 
 const PAGE_SIZE = 25
@@ -220,6 +221,9 @@ export default async function AdminUsersPage({
             Theo dõi lưu lượng truy cập, tần suất quay lại và mức độ học tập của Giáo viên & Học sinh.
           </p>
         </div>
+
+        {/* Manual Trigger Reminders Button */}
+        <AdminReminderTriggerButton />
       </div>
 
       {/* 2. Top Metric KPI Cards */}
