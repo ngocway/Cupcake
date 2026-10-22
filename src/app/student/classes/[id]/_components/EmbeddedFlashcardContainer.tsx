@@ -18,12 +18,14 @@ interface EmbeddedFlashcardContainerProps {
   };
   onComplete?: (score: number | null, assignmentId: string) => void;
   isActive?: boolean;
+  onOpenStations?: () => void;
 }
 
 export function EmbeddedFlashcardContainer({
   assignment,
   onComplete,
   isActive = true,
+  onOpenStations,
 }: EmbeddedFlashcardContainerProps) {
   // Extract topicId and initialMode from assignment.instructions or fallback to assignment.id
   const { topicId, initialMode } = React.useMemo(() => {
@@ -126,7 +128,7 @@ function shuffleCards<T>(arr: T[]): T[] {
 
   if (isLoading && (!cards || cards.length === 0)) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-gradient-to-tr from-amber-50 via-pink-50/50 to-sky-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150 rounded-b-[1.75rem]">
+      <div className="w-full h-full bg-gradient-to-tr from-amber-50 via-pink-50/50 to-sky-50 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150 rounded-b-[1.75rem]">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white/90 dark:bg-slate-900/90 border-2 border-amber-200/80 shadow-lg text-center space-y-4 backdrop-blur-md">
           <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
             <Layers className="w-7 h-7 animate-pulse" />
@@ -149,7 +151,7 @@ function shuffleCards<T>(arr: T[]): T[] {
 
   if (error && (!cards || cards.length === 0)) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 rounded-b-[1.75rem]">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 rounded-b-[1.75rem]">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-red-200 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center mx-auto">
             <AlertCircle className="w-6 h-6" />
@@ -181,6 +183,7 @@ function shuffleCards<T>(arr: T[]): T[] {
       lockMode={true}
       onComplete={onComplete}
       isActive={isActive}
+      onOpenStations={onOpenStations}
     />
   );
 }

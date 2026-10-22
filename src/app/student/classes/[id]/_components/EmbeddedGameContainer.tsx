@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Gamepad2, Loader2, Sparkles, RefreshCw, Maximize2, Minimize2, Play } from 'lucide-react';
+import { Gamepad2, Loader2, Sparkles, RefreshCw, Maximize2, Minimize2, Play, Layers } from 'lucide-react';
 import { completeClassActivityAction } from '@/actions/activity-completion-actions';
 
 interface EmbeddedGameContainerProps {
   assignment: any;
   onComplete?: (score: number | null, assignmentId: string) => void;
   isActive?: boolean;
+  onOpenStations?: () => void;
 }
 
 export function resolveDirectGameUrl(rawUrl: string, assignment?: any): string {
@@ -86,6 +87,7 @@ export function EmbeddedGameContainer({
   assignment,
   onComplete,
   isActive = true,
+  onOpenStations,
 }: EmbeddedGameContainerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [showBypassBtn, setShowBypassBtn] = useState(false);
@@ -241,17 +243,30 @@ export function EmbeddedGameContainer({
 
   if (!gameDirectUrl) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-transparent rounded-b-[1.75rem]" />
+      <div className="w-full h-full bg-transparent rounded-b-[1.75rem]" />
     );
   }
 
   return (
     <div 
       ref={containerRef}
-      className={`w-full h-full min-h-[580px] lg:min-h-[660px] relative bg-slate-900 rounded-b-[1.75rem] overflow-hidden flex flex-col ${
+      className={`w-full h-full relative bg-slate-900 rounded-b-[1.75rem] overflow-hidden flex flex-col ${
         isFullscreen ? 'fixed inset-0 z-[9999] rounded-none !min-h-screen' : ''
       }`}
     >
+      {/* Floating Open Stations Button (Top-Left) */}
+      {onOpenStations && (
+        <button
+          type="button"
+          onClick={onOpenStations}
+          className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white/90 hover:text-white backdrop-blur-md border border-white/20 text-xs font-black transition-all shadow-lg active:scale-95 cursor-pointer"
+          title="Mở danh sách các trạm học trong ngày"
+        >
+          <Layers className="w-3.5 h-3.5 text-amber-400" />
+          <span>Vào trạm</span>
+        </button>
+      )}
+
       {/* Floating Fullscreen Toggle Button */}
       <button
         type="button"
@@ -320,7 +335,7 @@ export function EmbeddedGameContainer({
         src={gameDirectUrl}
         onLoad={() => setIsLoading(false)}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; microphone; fullscreen"
-        className={`w-full h-full border-0 flex-1 min-h-[580px] lg:min-h-[660px] transition-opacity duration-300 ${
+        className={`w-full h-full border-0 flex-1 transition-opacity duration-300 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         title={assignment?.title || 'Interactive Game'}

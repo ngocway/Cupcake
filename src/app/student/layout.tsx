@@ -3,6 +3,7 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { MainContentWrapper } from "@/app/student/_components/MainContentWrapper"
 import { PublicHeader } from "@/components/public/PublicHeader"
+import { PublicHeaderWrapper } from "@/app/student/_components/PublicHeaderWrapper"
 import { getTranslations } from "next-intl/server"
 import { fetchWithRedis } from "@/lib/cached-queries"
 import prisma from "@/lib/prisma"
@@ -50,7 +51,9 @@ export default async function StudentLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen font-body text-slate-900 dark:text-white relative">
       <MainContentWrapper isTeacher={isTeacher}>
-        <PublicHeader session={publicSession} />
+        <PublicHeaderWrapper>
+          <PublicHeader session={publicSession} />
+        </PublicHeaderWrapper>
         {children}
       </MainContentWrapper>
     </div>

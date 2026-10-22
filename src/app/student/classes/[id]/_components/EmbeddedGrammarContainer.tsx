@@ -112,7 +112,7 @@ export function EmbeddedGrammarContainer({
 
   if (isLoading) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto shadow-xs">
             <BookOpen className="w-6 h-6 animate-pulse" />
@@ -135,7 +135,7 @@ export function EmbeddedGrammarContainer({
 
   if (error || !data) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
             <AlertCircle className="w-6 h-6" />
@@ -163,7 +163,7 @@ export function EmbeddedGrammarContainer({
   return (
     <div
       onClick={handleContainerClick}
-      className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar px-4 sm:px-8 md:px-10 lg:px-12 py-5 sm:py-7 pb-16"
+      className="w-full h-full bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar px-4 sm:px-8 md:px-10 lg:px-12 py-5 sm:py-7 pb-16"
     >
       <div className="w-full space-y-8">
         {/* Lesson Theory Body - Full Width & Borderless */}

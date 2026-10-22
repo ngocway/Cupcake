@@ -1,32 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
-import { 
-  GraduationCap, 
-  ClipboardList, 
-  BookOpen, 
-  Layers, 
-  Gamepad2, 
-  Compass,
-  ChevronDown, 
-  User, 
-  LogOut, 
-  Menu, 
-  X,
-  LayoutDashboard,
-  ShieldCheck,
-  Briefcase,
-  CircleHelp,
-  BookOpenText
-} from "lucide-react";
-import { NotificationBell } from "@/components/common/NotificationBell";
-import { useContentStore } from "@/store/useContentStore";
 
 interface StudentClassHeaderProps {
-  session: {
+  session?: {
     id: string;
     name: string | null;
     image: string | null;
@@ -37,302 +15,41 @@ interface StudentClassHeaderProps {
 }
 
 export function StudentClassHeader({ session }: StudentClassHeaderProps) {
-  const pathname = usePathname();
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const setActiveTab = useContentStore((s) => (s as any).setActiveTab);
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Navigation Items matching Homepage Quick Practice (100% English)
-  const navItems = [
-    {
-      label: "Class",
-      href: "/?tab=classes",
-      tabId: "classes",
-      icon: GraduationCap,
-      isActive: true, // Active on class pages
-    },
-    {
-      label: "Grammar",
-      href: "/?tab=exercises",
-      tabId: "exercises",
-      icon: CircleHelp,
-      isActive: false,
-    },
-    {
-      label: "Reading",
-      href: "/?tab=lessons",
-      tabId: "lessons",
-      icon: BookOpen,
-      isActive: false,
-    },
-    {
-      label: "Flashcards",
-      href: "/?tab=flashcards",
-      tabId: "flashcards",
-      icon: Layers,
-      isActive: false,
-    },
-    {
-      label: "Games",
-      href: "/?tab=games",
-      tabId: "games",
-      icon: Gamepad2,
-      isActive: false,
-    },
-    {
-      label: "Shadowing",
-      href: "/?tab=shadowing",
-      tabId: "shadowing",
-      icon: BookOpenText,
-      isActive: false,
-    },
-  ];
-
-  const isTeacherAccount = session?.role === "TEACHER" || session?.role === "ADMIN";
-  const isAdmin = session?.role?.toUpperCase() === "ADMIN";
-
   return (
-    <header className="sticky top-0 z-50 w-full h-14 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
-      <div className="w-full h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-        
-        {/* ════════════════════════════════════════════════════════════════
-            LEFT: LOGO DOLCAKE (Không kèm dòng phụ theo yêu cầu)
-            ════════════════════════════════════════════════════════════════ */}
-        <div className="flex items-center gap-3 shrink-0">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <img 
-              src="/images/logo.png" 
-              alt="Dolcake" 
-              className="w-8 h-8 object-contain transition-transform duration-300 group-hover:scale-105" 
-            />
-            <span className="font-headline font-black text-xl tracking-tight text-primary">
-              Dolcake
-            </span>
-          </Link>
-        </div>
-
-        {/* ════════════════════════════════════════════════════════════════
-            CENTER: HORIZONTAL NAVIGATION MENU (Anhngu24h style)
-            ════════════════════════════════════════════════════════════════ */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => {
-                  if (setActiveTab) setActiveTab(item.tabId);
-                }}
-                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  item.isActive
-                    ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-extrabold shadow-2xs"
-                    : "text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 stroke-[2.2px] ${item.isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"}`} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* ════════════════════════════════════════════════════════════════
-            RIGHT: NOTIFICATIONS & USER PROFILE
-            ════════════════════════════════════════════════════════════════ */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          
-          {/* Nút Tham gia nhóm FB */}
-          <a
-            href="https://www.facebook.com/groups/2340951663410999"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold text-xs shadow-xs hover:shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
-            title="Tham gia nhóm Facebook Dolcake"
-          >
-            <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            <span className="hidden sm:inline">Tham gia nhóm FB</span>
-            <span className="sm:hidden">Nhóm FB</span>
-          </a>
-
-          {/* Notification Bell */}
-          <div className="relative">
-            <NotificationBell />
-          </div>
-
-          {/* User Profile Dropdown */}
-          {session ? (
-            <div className="relative" ref={userMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsUserMenuOpen(prev => !prev)}
-                className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-full border border-slate-200/80 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
-              >
-                <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0">
-                  <img
-                    src={session.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.id}`}
-                    alt="Avatar"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${session.id}`;
-                    }}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span className="hidden sm:inline-block max-w-[110px] truncate text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {session.name || "Học sinh"}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isUserMenuOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {/* Dropdown Menu */}
-              {isUserMenuOpen && (
-                <div className="absolute top-full right-0 mt-2 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
-                    <p className="font-extrabold text-xs text-slate-900 dark:text-white truncate">{session.name}</p>
-                    {session.email && (
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{session.email}</p>
-                    )}
-                  </div>
-
-                  <div className="py-1">
-                    <Link
-                      href="/student/dashboard"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="w-full px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 flex items-center gap-2.5 transition-colors"
-                    >
-                      <LayoutDashboard className="w-4 h-4 text-slate-400" />
-                      <span>Bảng điều khiển</span>
-                    </Link>
-
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="w-full px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 flex items-center gap-2.5 transition-colors"
-                    >
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span>Hồ sơ cá nhân</span>
-                    </Link>
-
-                    {isTeacherAccount && (
-                      <Link
-                        href="/teacher/classes"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="w-full px-4 py-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 flex items-center gap-2.5 transition-colors"
-                      >
-                        <Briefcase className="w-4 h-4 text-blue-500" />
-                        <span>Chuyển sang Giáo viên</span>
-                      </Link>
-                    )}
-
-                    {isAdmin && (
-                      <Link
-                        href="/admin"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="w-full px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-2.5 transition-colors"
-                      >
-                        <ShieldCheck className="w-4 h-4 text-amber-500" />
-                        <span>Trang Quản trị Admin</span>
-                      </Link>
-                    )}
-                  </div>
-
-                  <div className="pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        signOut({ callbackUrl: "/" });
-                      }}
-                      className="w-full px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 flex items-center gap-2.5 transition-colors cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4 text-rose-500" />
-                      <span>Đăng xuất</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Link
-              href="/student/login"
-              className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs"
-            >
-              Đăng nhập
-            </Link>
-          )}
-
-          {/* Mobile Menu Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setIsMobileNavOpen(prev => !prev)}
-            className="lg:hidden p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            aria-label="Toggle Navigation"
-          >
-            {isMobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-      </div>
+    <>
+      {/* ════════════════════════════════════════════════════════════════
+          1. FLOATING DOLCAKE LOGO (Top-Left - Quay về Trang Chủ)
+          ════════════════════════════════════════════════════════════════ */}
+      <Link 
+        href="/" 
+        className="fixed top-3 left-3 sm:top-4 sm:left-4 z-40 inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg shadow-black/10 border-2 border-white/80 dark:border-slate-700 hover:scale-105 active:scale-95 transition-all group cursor-pointer"
+        title="Về trang chủ Dolcake"
+      >
+        <img 
+          src="/images/logo.png" 
+          alt="Dolcake" 
+          className="w-7 h-7 sm:w-8 sm:h-8 object-contain transition-transform duration-300 group-hover:scale-110" 
+        />
+        <span className="font-headline font-black text-sm sm:text-base tracking-tight text-primary">
+          Dolcake
+        </span>
+      </Link>
 
       {/* ════════════════════════════════════════════════════════════════
-          MOBILE NAVIGATION DRAWER
+          2. FLOATING FACEBOOK GROUP BUTTON (Bottom-Right)
           ════════════════════════════════════════════════════════════════ */}
-      {isMobileNavOpen && (
-        <div className="lg:hidden w-full bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 py-3 shadow-lg animate-in slide-in-from-top-2 duration-200">
-          <div className="grid grid-cols-2 gap-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => {
-                    if (setActiveTab) setActiveTab(item.tabId);
-                    setIsMobileNavOpen(false);
-                  }}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    item.isActive
-                      ? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400"
-                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 shrink-0 ${item.isActive ? "text-blue-600" : "text-slate-400"}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* Nút Tham gia nhóm FB Mobile */}
-          <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-            <a
-              href="https://www.facebook.com/groups/2340951663410999"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#1877F2] text-white font-bold text-xs shadow-xs hover:bg-[#166fe5] transition-all"
-            >
-              <svg className="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-              <span>Tham gia nhóm FB</span>
-            </a>
-          </div>
-        </div>
-      )}
-    </header>
+      <a
+        href="https://www.facebook.com/groups/2340951663410999"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 inline-flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-2.5 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white font-black text-xs sm:text-sm shadow-xl shadow-blue-600/30 hover:shadow-2xl hover:shadow-blue-600/45 hover:scale-105 active:scale-95 transition-all cursor-pointer border-2 border-white/90 dark:border-slate-800 backdrop-blur-xs group"
+        title="Tham gia nhóm Facebook Dolcake"
+      >
+        <svg className="w-4 h-4 fill-current shrink-0 group-hover:rotate-12 transition-transform" viewBox="0 0 24 24">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+        <span>Tham gia nhóm FB</span>
+      </a>
+    </>
   );
 }

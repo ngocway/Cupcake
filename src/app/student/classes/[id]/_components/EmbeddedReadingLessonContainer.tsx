@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Globe, BookText, RefreshCw, AlertCircle } from 'lucide-react';
+import { Globe, BookText, RefreshCw, AlertCircle, Layers } from 'lucide-react';
 import { getCachedReadingData, fetchReadingDataWithCache } from '../_utils/assignmentCache';
 import { CustomAudioPlayer } from '@/components/common/CustomAudioPlayer';
 import { InteractiveReadingContent } from '@/components/common/InteractiveReadingContent';
@@ -13,6 +13,7 @@ interface EmbeddedReadingLessonContainerProps {
   groupId?: string;
   onComplete?: (score: number | null, assignmentId: string) => void;
   isActive?: boolean;
+  onOpenStations?: () => void;
 }
 
 export function EmbeddedReadingLessonContainer({
@@ -21,6 +22,7 @@ export function EmbeddedReadingLessonContainer({
   groupId,
   onComplete,
   isActive = true,
+  onOpenStations,
 }: EmbeddedReadingLessonContainerProps) {
   const cached = getCachedReadingData(assignmentId);
   const [data, setData] = useState<any>(cached || null);
@@ -64,7 +66,7 @@ export function EmbeddedReadingLessonContainer({
 
   if (isLoading) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
             <BookText className="w-6 h-6 animate-pulse text-emerald-500" />
@@ -87,7 +89,7 @@ export function EmbeddedReadingLessonContainer({
 
   if (error || !data) {
     return (
-      <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center p-6 text-center">
+      <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mb-3">
           <AlertCircle className="w-6 h-6" />
         </div>
@@ -111,9 +113,22 @@ export function EmbeddedReadingLessonContainer({
       <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-[28px] p-6 sm:p-8 md:p-10 shadow-xl shadow-emerald-500/5 border-2 border-emerald-100 dark:border-slate-800 max-w-full overflow-hidden">
         {/* Top bar: Level badge + Tap word to translate */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4">
-          <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow">
-            {displayLevel}
-          </span>
+          <div className="flex items-center gap-2">
+            {onOpenStations && (
+              <button
+                type="button"
+                onClick={onOpenStations}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 shadow-sm transition-all active:scale-95 cursor-pointer"
+                title="Mở danh sách các trạm học trong ngày"
+              >
+                <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Vào trạm</span>
+              </button>
+            )}
+            <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow">
+              {displayLevel}
+            </span>
+          </div>
           <div className="flex items-center gap-1.5 select-none bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 rounded-full px-3 py-1">
             <Globe className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">

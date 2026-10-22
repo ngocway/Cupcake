@@ -49,7 +49,7 @@ export function EmbeddedBookContainer({
 
   if (isLoading) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-xs">
             <BookText className="w-6 h-6 animate-pulse text-emerald-500" />
@@ -72,7 +72,7 @@ export function EmbeddedBookContainer({
 
   if (error || !data?.book) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
             <AlertCircle className="w-6 h-6" />
@@ -98,7 +98,7 @@ export function EmbeddedBookContainer({
   }
 
   return (
-    <div className="w-full h-full min-h-[580px] lg:min-h-[660px] relative bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="w-full h-full relative bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <BookReaderClient
         book={data.book}
         assignmentId={assignmentId}

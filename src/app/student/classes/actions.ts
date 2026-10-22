@@ -323,8 +323,8 @@ export async function getStudentReadingLessonData(assignmentId: string, classId?
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  const data = await fetchWithRedis(`reading:lesson-template:v3:${assignmentId}`, 3600, async () => {
-    const assignment = await prisma.assignment.findFirst({
+  const data = await fetchWithRedis(`reading:lesson-template:v4:${assignmentId}`, 3600, async () => {
+    let assignment = await prisma.assignment.findFirst({
       where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
       select: {
         id: true,
@@ -359,6 +359,55 @@ export async function getStudentReadingLessonData(assignmentId: string, classId?
       }
     });
     if (!assignment) return null;
+
+    // If target assignment is a day shell without reading text, resolve its child reading assignment
+    if (!assignment.readingText && !assignment.readingTextProcessed) {
+      const childReading = await prisma.assignment.findFirst({
+        where: {
+          grammarLesson: assignment.id,
+          OR: [
+            { id: { startsWith: 'tiny-vocab-reading-' } },
+            { title: { contains: 'BÀI ĐỌC', mode: 'insensitive' } },
+            { readingText: { not: null } },
+          ]
+        },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          level: true,
+          readingText: true,
+          readingTextProcessed: true,
+          audioUrl: true,
+          ttsSpeed: true,
+          lesson: {
+            select: {
+              id: true,
+              title: true,
+              level: true,
+              audioUrl: true,
+            }
+          },
+          questions: {
+            orderBy: { orderIndex: 'asc' },
+            select: {
+              id: true,
+              type: true,
+              content: true,
+              explanation: true,
+              explanationTranslations: true,
+              orderIndex: true,
+              points: true,
+              audioUrl: true,
+            }
+          }
+        }
+      });
+      if (childReading && (childReading.readingText || childReading.readingTextProcessed)) {
+        assignment = childReading;
+      }
+    }
+
     return assignment;
   });
 

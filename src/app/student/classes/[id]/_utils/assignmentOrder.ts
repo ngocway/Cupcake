@@ -57,14 +57,21 @@ export function getItemStage(item: {
     kind === 'EXERCISE' || 
     kind === 'GRAMMAR';
 
+  const isDayShell = Boolean(
+    (item.assignment.id && item.assignment.id.startsWith('tiny-vocab-day-')) ||
+    (item.assignment.title && /^(?:day|ngày)\s*\d+[-_\s]*:/i.test(item.assignment.title) && !item.assignment.title.toLowerCase().includes('bài đọc'))
+  );
+
   const isExplicitTheory = 
     kind === 'LESSON' || 
+    isDayShell ||
     targetUrl.includes('/grammar/') || 
     titleLower.includes('lý thuyết') ||
     titleLower.includes('ly thuyet') ||
     titleLower.includes('grammar lesson');
 
   const isExplicitReading = 
+    !isDayShell &&
     !isExplicitTheory && (
       kind === 'READING' || 
       item.assignment.materialType === 'READING' || 
@@ -81,7 +88,7 @@ export function getItemStage(item: {
       item.assignment.materialType === 'LESSON' ||
       Boolean(item.assignment.grammarLesson) ||
       Boolean((item.assignment as any).grammarTopic) ||
-      (item.assignment.id && item.assignment.id.startsWith('tiny-vocab-day-')) ||
+      isDayShell ||
       /^(?:day|ngày)\s*\d+/i.test(titleLower) ||
       isDirectHtml ||
       targetUrl.includes('/grammar/') || 
@@ -91,6 +98,7 @@ export function getItemStage(item: {
     );
 
   if (isReview) return 'review';
+  if (isDayShell) return 'lesson';
   if (isExplicitReading) return 'reading';
   if (isGrammarLesson || kind === 'LESSON') return 'lesson';
   if (kind === 'GAME') return 'game';

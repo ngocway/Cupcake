@@ -23,6 +23,7 @@ import {
   Lock,
   Award,
   GraduationCap,
+  Play,
   X,
   Volume2,
   RotateCcw,
@@ -44,14 +45,18 @@ import {
   Puzzle,
   Keyboard,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Compass,
+  Map as MapIcon,
+  Trophy
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree } from '../_utils/assignmentOrder';
+import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree, getItemStage } from '../_utils/assignmentOrder';
 import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 import dynamic from 'next/dynamic';
 import { FloatingZaloWidget } from './FloatingZaloWidget';
 import { trackEvent } from '@/lib/analytics';
+import { ClassAdventureMap, parseDayTitle, extractDayNumber } from './ClassAdventureMap';
 
 export function ActivityCanvasLoadingFallback() {
   return (
@@ -371,14 +376,21 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
   }
 
   const titleLower = item.assignment.title.toLowerCase();
+  const isDayShell = Boolean(
+    (item.assignment.id && item.assignment.id.startsWith('tiny-vocab-day-')) ||
+    (item.assignment.title && /^(?:day|ngày)\s*\d+[-_\s]*:/i.test(item.assignment.title) && !item.assignment.title.toLowerCase().includes('bài đọc'))
+  );
+
   const isExplicitTheory = 
     kind === 'LESSON' || 
+    isDayShell ||
     targetUrl.includes('/grammar/') || 
     titleLower.includes('lý thuyết') ||
     titleLower.includes('ly thuyet') ||
     titleLower.includes('grammar lesson');
 
   const isExplicitReading = 
+    !isDayShell &&
     !isExplicitTheory && (
       kind === 'READING' || 
       item.assignment.materialType === 'READING' || 
@@ -404,7 +416,7 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
       item.assignment.materialType === 'LESSON' ||
       Boolean(item.assignment.grammarLesson) ||
       Boolean(item.assignment.grammarTopic) ||
-      (item.assignment.id && item.assignment.id.startsWith('tiny-vocab-day-')) ||
+      isDayShell ||
       /^(?:day|ngày)\s*\d+/i.test(titleLower) ||
       isDirectHtml ||
       targetUrl.includes('/grammar/') || 
@@ -413,9 +425,9 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
       titleLower.includes('grammar lesson')
     );
 
-  if (isGrammarLesson) {
+  if (isDayShell || isGrammarLesson) {
     kind = 'LESSON';
-  } else if (isExplicitReading || item.assignment.materialType === 'READING') {
+  } else if (isExplicitReading) {
     kind = 'READING';
   } else if (kind === 'GAME' || item.assignment.materialType === 'GAME' || targetUrl.includes('/game/') || targetUrl.includes('/games/')) {
     kind = 'GAME';
@@ -626,25 +638,42 @@ export function StudentAssignmentsView({
     return 'general_class';
   }, [currentClass?.name, currentClass?.slug, pathname]);
 
-  // Sidebar collapse state (default false to prevent SSR hydration mismatch)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  // Detect whether current class or its groups follow Vocab curriculum ('bài') vs Grammar curriculum ('ngày')
+  const isVocabClass = useMemo(() => {
+    return classId === 'tiny-vocab-wonders' ||
+      currentClass?.joinCode === 'VOCAB45' ||
+      currentClass?.name?.toLowerCase().includes('vocab') ||
+      currentClass?.name?.toLowerCase().includes('từ vựng') ||
+      assignmentGroups.some(g => g.title.toLowerCase().includes('bài'));
+  }, [classId, currentClass, assignmentGroups]);
+
+  // Sidebar collapse state (default true for Focus Mode so canvas is front-and-center)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
 
   useEffect(() => {
     try {
+      if (isVocabClass) {
+        setIsSidebarCollapsed(true);
+        return;
+      }
       const isMobile = window.innerWidth < 1024;
-      const urlAssignmentId = searchParams?.get('assignmentId') || initialAssignmentId;
-      if (isMobile && urlAssignmentId) {
+      if (isMobile) {
+        // On mobile, collapse sidebar by default so the Adventure Map or Canvas is immediately visible!
         setIsSidebarCollapsed(true);
       } else {
         const saved = localStorage.getItem('dolcake_classroom_sidebar_collapsed');
-        if (saved === 'true') {
+        if (saved !== null) {
+          setIsSidebarCollapsed(saved === 'true');
+        } else {
+          // Focus Mode default: collapse tree sidebar
           setIsSidebarCollapsed(true);
         }
       }
     } catch {}
-  }, [initialAssignmentId, searchParams]);
+  }, [initialAssignmentId, searchParams, isVocabClass]);
 
   const toggleSidebar = () => {
+    if (isVocabClass) return;
     setIsSidebarCollapsed(prev => {
       const next = !prev;
       try {
@@ -658,6 +687,22 @@ export function StudentAssignmentsView({
 
   // Fullscreen / Zen mode for Canvas (Area 3)
   const [isZenMode, setIsZenMode] = useState(false);
+  // Accordion: which station is expanded in the left vocab sidebar
+  const [expandedStationId, setExpandedStationId] = useState<string | null>('game');
+  // Mobile bottom sheet: opens vocab station nav on small screens
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+
+  // View mode: 'map' (Bản đồ hành trình toàn khóa kiểu Duolingo/Lingokids) | 'activity' (Làm bài tập)
+  const [viewMode, setViewMode] = useState<'map' | 'activity'>(() => {
+    const paramAid = searchParams.get('assignmentId') ?? initialAssignmentId;
+    const paramMode = searchParams.get('mode');
+    if (paramMode === 'map') return 'map';
+    if (paramMode === 'activity' && paramAid) return 'activity';
+    // If student arrived via direct assignment link, open in activity mode
+    if (paramAid) return 'activity';
+    // Default to map mode so students see the exciting adventure roadmap first!
+    return 'map';
+  });
 
   // Class Switcher Dropdown state
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
@@ -693,15 +738,6 @@ export function StudentAssignmentsView({
 
   // Search query in Area 1
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Detect whether current class or its groups follow Vocab curriculum ('bài') vs Grammar curriculum ('ngày')
-  const isVocabClass = useMemo(() => {
-    return classId === 'tiny-vocab-wonders' ||
-      currentClass?.joinCode === 'VOCAB45' ||
-      currentClass?.name?.toLowerCase().includes('vocab') ||
-      currentClass?.name?.toLowerCase().includes('từ vựng') ||
-      assignmentGroups.some(g => g.title.toLowerCase().includes('bài'));
-  }, [classId, currentClass, assignmentGroups]);
 
   // Stages detected across course assignment groups (e.g. Chặng 1, Chặng 2, ...)
   const courseStages = useMemo(() => {
@@ -878,12 +914,63 @@ export function StudentAssignmentsView({
     const paramAid = searchParams.get('assignmentId') ?? initialAssignmentId;
     const initialGrp = assignmentGroups.find(g => g.id === initialTargetGroupId) || assignmentGroups[0];
     if (paramAid && initialGrp?.items.some(i => i.assignment.id === paramAid)) {
+      if (isVocabClass && paramAid.startsWith('tiny-vocab-day-')) {
+        const paramTab = searchParams.get('tab');
+        const tree = buildGroupTree(initialGrp.items);
+        const dayCluster = tree.clusters.find(c => c.lesson.assignment.id === paramAid);
+        const clusterItems = dayCluster ? [dayCluster.lesson, ...dayCluster.exercises] : initialGrp.items;
+        if (paramTab === 'reading') {
+          const r = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-reading-') || it.assignment.title.toLowerCase().includes('bài đọc'));
+          if (r) return r.assignment.id;
+        } else if (paramTab === 'game') {
+          const g = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-game-') || getItemStage(it) === 'game');
+          if (g) return g.assignment.id;
+        } else {
+          const fc = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-fc-') || getItemStage(it) === 'flashcard');
+          if (fc) return fc.assignment.id;
+        }
+      }
       return paramAid;
     }
-    // Prefer first uncompleted item in the target group
-    const firstUncompleted = initialGrp?.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted);
-    return firstUncompleted?.assignment.id || initialGrp?.items[0]?.assignment.id || '';
+    // Prefer first uncompleted item in the target group (skipping day shell)
+    const firstUncompleted = initialGrp?.items.find(i => !submissionsState[i.assignment.id]?.isSubmitted && !i.assignment.id.startsWith('tiny-vocab-day-'));
+    return firstUncompleted?.assignment.id || initialGrp?.items.find(i => !i.assignment.id.startsWith('tiny-vocab-day-'))?.assignment.id || initialGrp?.items[0]?.assignment.id || '';
   });
+
+  // In vocab classes, auto-forward shell assignment ('tiny-vocab-day-XX') to the real activity
+  useEffect(() => {
+    if (!isVocabClass || !activeAssignmentId.startsWith('tiny-vocab-day-')) return;
+    if (!activeGroup) return;
+
+    const paramTab = searchParams.get('tab');
+    const tree = buildGroupTree(activeGroup.items);
+    const dayCluster = tree.clusters.find(c => c.lesson.assignment.id === activeAssignmentId);
+    const clusterItems = dayCluster ? [dayCluster.lesson, ...dayCluster.exercises] : activeGroup.items;
+
+    let targetItem: StudentGroupItem | undefined;
+    if (paramTab === 'reading') {
+      targetItem = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-reading-') || it.assignment.title.toLowerCase().includes('bài đọc'));
+    } else if (paramTab === 'game') {
+      targetItem = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-game-') || getItemStage(it) === 'game');
+    } else {
+      targetItem = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-fc-') || getItemStage(it) === 'flashcard');
+    }
+
+    if (!targetItem) {
+      targetItem = clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-fc-')) ||
+                   clusterItems.find(it => it.assignment.id.startsWith('tiny-vocab-reading-')) ||
+                   clusterItems.find(it => !it.assignment.id.startsWith('tiny-vocab-day-'));
+    }
+
+    if (targetItem && targetItem.assignment.id !== activeAssignmentId) {
+      setActiveAssignmentId(targetItem.assignment.id);
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('assignmentId', targetItem.assignment.id);
+        window.history.replaceState(null, '', url.toString());
+      }
+    }
+  }, [isVocabClass, activeAssignmentId, activeGroup, searchParams]);
 
   // Single-open accordion for Lesson Clusters within each group (groupId -> activeLessonAssignmentId)
   const [expandedLessonClusters, setExpandedLessonClusters] = useState<Record<string, string>>(() => {
@@ -946,6 +1033,213 @@ export function StudentAssignmentsView({
   const activeItemConfig = useMemo(() => {
     return activeGroupParsedItems.find(p => p.item.assignment.id === activeAssignmentId) || activeGroupParsedItems[0] || null;
   }, [activeGroupParsedItems, activeAssignmentId]);
+
+  // Active Day Cluster and 4-Station Stepper for Focus Mode
+  const activeDayCluster = useMemo(() => {
+    if (!activeGroup) return null;
+    const tree = buildGroupTree(activeGroup.items);
+    if (tree.clusters.length > 0) {
+      const matched = tree.clusters.find(c => 
+        c.lesson.assignment.id === activeAssignmentId || 
+        c.exercises.some(e => e.assignment.id === activeAssignmentId)
+      );
+      if (matched) return matched;
+      const expId = expandedLessonClusters[activeGroup.id];
+      if (expId) {
+        const fromExp = tree.clusters.find(c => c.lesson.assignment.id === expId);
+        if (fromExp) return fromExp;
+      }
+      return tree.clusters[0];
+    }
+    return null;
+  }, [activeGroup, activeAssignmentId, expandedLessonClusters]);
+
+  const currentDayQuestStations = useMemo(() => {
+    const dayItems: StudentGroupItem[] = activeDayCluster 
+      ? [activeDayCluster.lesson, ...activeDayCluster.exercises] 
+      : (activeGroup?.items || []);
+
+    if (dayItems.length === 0) return null;
+
+    const dayRawTitle = activeDayCluster?.lesson.assignment.title || activeGroup?.title || '';
+    const parsedDay = parseDayTitle(dayRawTitle);
+    const dayNum = extractDayNumber(dayRawTitle) || 1;
+    const stageNum = Math.ceil(dayNum / 15) || 1;
+
+    // Group real activities into the 4 target categories: Vocab, Practice, Game, Quiz
+    // 1. Vocab item: Prefer flashcard in vocab classes; skip day shell
+    const vocabItem = 
+      dayItems.find(it => getItemStage(it) === 'flashcard') ||
+      dayItems.find(it => {
+        const id = it.assignment.id || '';
+        return !id.startsWith('tiny-vocab-day-') && getItemStage(it) === 'lesson';
+      }) ||
+      dayItems[0];
+
+    // 2. Practice / Reading item: Prefer actual reading assignment with reading text or title [BÀI ĐỌC]
+    const practiceItem = 
+      dayItems.find(it => {
+        const id = it.assignment.id || '';
+        const titleLower = (it.assignment.title || '').toLowerCase();
+        return id.startsWith('tiny-vocab-reading-') || titleLower.includes('bài đọc');
+      }) ||
+      dayItems.find(it => {
+        const id = it.assignment.id || '';
+        if (id.startsWith('tiny-vocab-day-')) return false;
+        const stg = getItemStage(it);
+        return it !== vocabItem && (stg === 'reading' || stg === 'exercise');
+      }) ||
+      null;
+
+    // Collect ALL game items (there can be multiple per day)
+    const gameItems = dayItems.filter(it => getItemStage(it) === 'game');
+    const gameItem = gameItems[0] ?? null;
+
+    const quizItem = dayItems.find(it => {
+      const stg = getItemStage(it);
+      return it !== vocabItem && it !== practiceItem && (stg === 'review' || stg === 'exercise');
+    });
+
+    // Detect if station 2 is a reading assignment (vs pronunciation practice)
+    const isPracticeReading = practiceItem ? getItemStage(practiceItem) === 'reading' : false;
+
+    const isVocabDone = vocabItem ? Boolean(submissionsState[vocabItem.assignment.id]?.isSubmitted) : false;
+    const isPracticeDone = practiceItem ? Boolean(submissionsState[practiceItem.assignment.id]?.isSubmitted) : false;
+    // Game station is "done" when every sub-game is submitted
+    const isGameDone = gameItems.length > 0
+      ? gameItems.some(it => Boolean(submissionsState[it.assignment.id]?.isSubmitted))
+      : false;
+    const isQuizDone = quizItem ? Boolean(submissionsState[quizItem.assignment.id]?.isSubmitted) : false;
+
+    // Standardize 3 stations for 45 Vocab class, 4 stations for Grammar classes
+    const stations = isVocabClass ? [
+      {
+        step: 1,
+        id: 'vocab',
+        title: 'Thẻ Từ Vựng',
+        shortTitle: '1. Thẻ Từ',
+        item: vocabItem || dayItems[0],
+        isDone: isVocabDone,
+        isLocked: false,
+        icon: Layers,
+        badgeColor: 'bg-emerald-500 text-white',
+        activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
+      },
+      {
+        step: 2,
+        id: 'game',
+        title: 'Trò Chơi Phản Xạ',
+        shortTitle: '2. Mini Game',
+        item: gameItem || dayItems[1] || dayItems[0],
+        gameItems,          // all sub-game items for accordion
+        isDone: isGameDone,
+        isLocked: false,
+        icon: Gamepad2,
+        badgeColor: 'bg-amber-500 text-white',
+        activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+      },
+      {
+        step: 3,
+        id: 'reading',
+        title: 'Bài Đọc Hiểu',
+        shortTitle: '3. Bài Đọc',
+        item: practiceItem || dayItems[2] || dayItems[0],
+        isDone: isPracticeDone,
+        isLocked: false,
+        icon: BookOpen,
+        badgeColor: 'bg-sky-500 text-white',
+        activeColor: 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50',
+      },
+    ] : [
+      {
+        step: 1,
+        id: 'vocab',
+        title: 'Thẻ Từ Vựng',
+        shortTitle: '1. Thẻ Từ',
+        item: vocabItem || dayItems[0],
+        isDone: isVocabDone,
+        isLocked: false,
+        icon: Layers,
+        badgeColor: 'bg-emerald-500 text-white',
+        activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
+      },
+      {
+        step: 2,
+        id: 'practice',
+        title: isPracticeReading ? 'Bài Đọc Hiểu' : 'Luyện Phát Âm',
+        shortTitle: isPracticeReading ? '2. Reading' : '2. Phát Âm',
+        item: practiceItem || dayItems[1] || dayItems[0],
+        isDone: isPracticeDone,
+        // Reading is always unlocked; pronunciation is locked until vocab is done
+        isLocked: isPracticeReading ? false : !isVocabDone,
+        icon: isPracticeReading ? BookOpen : Mic,
+        badgeColor: isPracticeReading ? 'bg-sky-500 text-white' : 'bg-purple-600 text-white',
+        activeColor: isPracticeReading
+          ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600'
+          : 'bg-purple-600 text-white shadow-md shadow-purple-500/30 ring-2 ring-purple-300 dark:ring-purple-600',
+        inactiveColor: isPracticeReading
+          ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50'
+          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-purple-400 hover:bg-purple-50/50',
+      },
+      {
+        step: 3,
+        id: 'game',
+        title: 'Trò Chơi Phản Xạ',
+        shortTitle: '3. Mini Game',
+        item: gameItem || dayItems[2] || dayItems[0],
+        gameItems,          // all sub-game items for accordion
+        isDone: isGameDone,
+        isLocked: false,
+        icon: Gamepad2,
+        badgeColor: 'bg-amber-500 text-white',
+        activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+      },
+      {
+        step: 4,
+        id: 'quiz',
+        title: 'Thử Thách Bài Học',
+        shortTitle: '4. Mở Rương ⭐',
+        item: quizItem || dayItems[3] || dayItems[0],
+        isDone: isQuizDone,
+        isLocked: false,
+        icon: Trophy,
+        badgeColor: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950',
+        activeColor: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 font-black shadow-md shadow-amber-500/40 ring-2 ring-yellow-300',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+      },
+    ];
+
+    return {
+      dayNumber: dayNum,
+      stageNumber: stageNum,
+      enTitle: parsedDay.enTitle || dayRawTitle,
+      viTitle: parsedDay.viTitle,
+      stations,
+    };
+  }, [activeDayCluster, activeGroup, submissionsState, isVocabClass]);
+
+  const activeStationStep = useMemo(() => {
+    if (!currentDayQuestStations) return 1;
+    const match = currentDayQuestStations.stations.find(st => {
+      if (st.item?.assignment.id === activeAssignmentId) return true;
+      // Also match any sub-game in the game station
+      if ('gameItems' in st && Array.isArray((st as any).gameItems)) {
+        return (st as any).gameItems.some((gi: any) => gi.assignment.id === activeAssignmentId);
+      }
+      return false;
+    });
+    return match?.step || 1;
+  }, [currentDayQuestStations, activeAssignmentId]);
+
+  const completedQuestStationsCount = useMemo(() => {
+    if (!currentDayQuestStations) return 0;
+    return currentDayQuestStations.stations.filter(s => s.isDone).length;
+  }, [currentDayQuestStations]);
 
   // Keep-Alive Pool: Preserves visited component instances and their user progress in DOM
   const [visitedConfigs, setVisitedConfigs] = useState<Record<string, ParsedItemConfig>>(() => {
@@ -1041,9 +1335,15 @@ export function StudentAssignmentsView({
       params.set('tab', stageId);
       params.delete('viewAll');
       const query = params.toString();
-      window.history.pushState(null, '', query ? `${pathname}?${query}` : pathname);
+      window.history.replaceState(null, '', query ? `${pathname}?${query}` : pathname);
     } catch {}
   };
+
+  // NOTE: handlePopState listener removed.
+  // URL is kept in sync via replaceState (not pushState), so there is only ever
+  // one class-page history entry. Pressing Back should navigate away from the
+  // class entirely — the popstate listener was intercepting that and instead
+  // re-routing to a "previous" assignment, making Back feel like going to a previous card.
 
   // State lưu trữ yêu cầu chuyển bài/nhóm/tab đang chờ học sinh xác nhận
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
@@ -1136,6 +1436,7 @@ export function StudentAssignmentsView({
     setExpandedGroups({ [parentGroupId]: true });
     setActiveAssignmentId(item.assignment.id);
     setActiveStageId(cfg.stage);
+    setViewMode('activity');
     updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
 
     trackEvent('course_day_selected', {
@@ -1161,7 +1462,8 @@ export function StudentAssignmentsView({
       }
     }
 
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    if (typeof window !== 'undefined') {
+      // Focus Mode: keep sidebar collapsed so canvas is front-and-center
       setIsSidebarCollapsed(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1443,13 +1745,7 @@ export function StudentAssignmentsView({
   // Real-time preload progress for currently active assignment
   const activeAssignmentProgress = activeAssignmentId ? (preloadProgress[activeAssignmentId] ?? 0) : 100;
   const isActiveAssignmentCached = activeAssignmentId ? isAssignmentCached(activeAssignmentId) : true;
-  const isCurrentItemLoading = Boolean(
-    activeAssignmentId &&
-    activeItemConfig &&
-    !isActiveAssignmentCached &&
-    activeAssignmentProgress < 100
-  );
-  const currentItemSplashPercent = Math.max(15, activeAssignmentProgress || 20);
+
 
   const currentItemKind = activeItemConfig ? parseItemConfig(activeItemConfig.item).kind : null;
   const currentItemStage = activeItemConfig?.stage;
@@ -2107,7 +2403,15 @@ export function StudentAssignmentsView({
   }
 
   return (
-    <div className={`w-full transition-all duration-300 font-['Nunito',_sans-serif] ${isZenMode ? 'fixed inset-0 z-[100] bg-slate-950 p-2 sm:p-4 overflow-hidden' : 'space-y-4'}`}>
+    <div className={`w-full transition-all duration-300 font-['Nunito',_sans-serif] ${
+      isZenMode 
+        ? 'fixed inset-0 z-[100] bg-slate-950 p-2 sm:p-4 overflow-hidden' 
+        : viewMode === 'map'
+          ? 'h-screen overflow-hidden'
+          : isVocabClass
+            ? 'h-screen overflow-hidden flex flex-col'
+            : 'space-y-4'
+    }`}>
       
       {/* Dynamic Font Loading for Baloo 2 & Nunito */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -2151,15 +2455,29 @@ export function StudentAssignmentsView({
           0%, 100% { transform: translateY(0) rotate(0); }
           50% { transform: translateY(-4px) rotate(-6deg); }
         }
+        @keyframes map-to-activity-zoom {
+          0% { opacity: 0; transform: scale(0.94) translateY(8px); }
+          60% { opacity: 1; transform: scale(1.01) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-map-to-activity {
+          animation: map-to-activity-zoom 320ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+        }
       `}</style>
 
       {/* ── UNIFIED 3-AREA WORKSPACE ── */}
-      <div className={`flex flex-col lg:flex-row items-stretch gap-4 sm:gap-5 w-full ${isZenMode ? 'h-full' : 'min-h-[820px]'}`}>
+      <div className={`w-full ${
+        viewMode === 'map'
+          ? 'h-screen flex flex-col p-0 m-0 overflow-hidden'
+          : isVocabClass
+            ? `flex flex-row items-stretch ${isZenMode ? 'h-full' : 'h-screen'} overflow-hidden`
+            : `max-w-[1700px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pb-12 pt-3 sm:pt-4 flex flex-col lg:flex-row items-stretch gap-4 sm:gap-5 ${isZenMode ? 'h-full' : 'min-h-[820px]'}`
+      }`}>
 
         {/* ══════════════════════════════════════════════════════════════════
-            KHU VỰC 1: SIDEBAR CÂY ĐIỀU HƯỚNG (Hierarchy Tree Drawer)
+            KHU VỰC 1: SIDEBAR CÂY ĐIỀU HƯỚNG (Chỉ mở khi KHÔNG PHẢI lớp vocab)
             ══════════════════════════════════════════════════════════════════ */}
-        {!isZenMode && !isSidebarCollapsed && (
+        {!isVocabClass && !isZenMode && viewMode === 'activity' && !isSidebarCollapsed && (
           <aside className="w-full lg:w-[330px] xl:w-[360px] transition-all duration-300 flex flex-col shrink-0 animate-in fade-in slide-in-from-left-3 duration-200">
               <div className="bg-[#FBF3DF]/75 dark:bg-slate-900/90 backdrop-blur-md border border-[#F0E2BF] dark:border-slate-800 rounded-[24px] shadow-sm flex flex-col h-full overflow-hidden max-h-[860px]">
                 
@@ -2170,22 +2488,20 @@ export function StudentAssignmentsView({
                       Lớp học hiện tại
                     </p>
                     <div className="flex items-center gap-2">
-                      {activeAssignmentId && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsSidebarCollapsed(true);
-                            if (typeof window !== 'undefined') {
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
-                            }
-                          }}
-                          className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95"
-                          title="Vào bài tập đang chọn"
-                        >
-                          <span>Làm bài</span>
-                          <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsSidebarCollapsed(true);
+                          if (typeof window !== 'undefined') {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }
+                        }}
+                        className="lg:hidden inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95"
+                        title="Vào bài tập đang chọn"
+                      >
+                        <span>Làm bài</span>
+                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                      </button>
                       <button
                         type="button"
                         onClick={toggleSidebar}
@@ -2196,6 +2512,24 @@ export function StudentAssignmentsView({
                       </button>
                     </div>
                   </div>
+
+                  {/* Quick Switch to Adventure Map (Duolingo style) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopAllAudioAndTts();
+                      setViewMode('map');
+                      // Always collapse sidebar when returning to map (full-width map experience)
+                      setIsSidebarCollapsed(true);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer active:scale-98 bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-800/60 hover:bg-amber-100/70"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Compass className="w-4 h-4 stroke-[2.2px] animate-spin-slow" />
+                      <span>🗺️ Bản đồ hành trình 45 Ngày</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                  </button>
 
                   <div className="relative w-full" ref={classDropdownRef}>
                     <button
@@ -2455,156 +2789,509 @@ export function StudentAssignmentsView({
             </aside>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════════
-            KHU VỰC 2 & 3: MAIN VIEW (Header + Stage Tabs + Embedded Canvas)
-            ══════════════════════════════════════════════════════════════════ */}
-        <main className="flex-1 flex flex-col min-w-0 gap-3 sm:gap-4 transition-all duration-300">
-          
-          {/* ════════════════════════════════════════════════════════════════
-              KHU VỰC 2: TOP ACTION BAR (Tiêu đề bài học & Điều hướng nhanh)
-              ════════════════════════════════════════════════════════════════ */}
-          {!isSidebarCollapsed && (
-            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-[#F0E2BF]/80 dark:border-slate-800/80 rounded-[24px] p-3.5 sm:p-4 shadow-xs animate-in fade-in slide-in-from-top-3 duration-200 font-['Nunito',_sans-serif]">
-              
-              {/* Top row: Breadcrumb, Title & Global Action CTAs */}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  {/* Breadcrumb */}
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 mb-1 flex-wrap">
-                    <span title={currentClass?.name || 'Lớp học'}>{currentClass?.name || 'Lớp học'}</span>
-                    <span>/</span>
-                    <span className="text-slate-600 dark:text-slate-300 truncate" title={cleanGroupTitle(activeGroup?.title)}>{cleanGroupTitle(activeGroup?.title)}</span>
-                  </div>
+        {/* ── VOCAB CLASS: LEFT STAGE NAV SIDEBAR (desktop sm+) ── */}
+        {isVocabClass && viewMode === 'activity' && (
+          <aside className="hidden sm:flex sm:w-44 md:w-52 shrink-0 flex-col bg-[#FBF3DF]/90 dark:bg-slate-900 border-r border-[#F0E2BF] dark:border-slate-800 overflow-hidden">
+            {/* Back to map + Day info */}
+            <div className="p-3 border-b border-[#F0E2BF]/80 dark:border-slate-800 shrink-0 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => { stopAllAudioAndTts(); setViewMode('map'); setIsSidebarCollapsed(true); }}
+                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <Compass className="w-3.5 h-3.5 stroke-[2.4px] animate-spin-slow shrink-0" />
+                <span>← Về Bản đồ</span>
+              </button>
 
-                  {/* Active Activity Title */}
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <h2 
-                      className={`text-lg sm:text-xl md:text-2xl font-black leading-tight ${
-                        isCurrentLesson 
-                          ? 'text-emerald-600 dark:text-emerald-400' 
-                          : isCurrentReading
-                            ? 'text-emerald-700 dark:text-emerald-300'
-                            : isCurrentFlashcard
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : isCurrentGame
-                                ? 'text-rose-600 dark:text-rose-400'
-                                : 'text-slate-900 dark:text-white'
-                      }`}
-                      title={
-                        isCurrentFlashcard
-                          ? `Flashcard (${activeItemConfig?.cardCount || 20})`
-                          : isCurrentGame
-                            ? 'Game'
-                            : (activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu')
+              {currentDayQuestStations && (
+                <div className="px-1 space-y-0.5">
+                  <span className="inline-flex px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[11px] font-black uppercase tracking-wider">
+                    Ngày {currentDayQuestStations.dayNumber}
+                  </span>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white truncate leading-snug mt-0.5" title={currentDayQuestStations.enTitle}>
+                    {currentDayQuestStations.enTitle}
+                  </h3>
+                  {currentDayQuestStations.viTitle && (
+                    <p className="text-xs font-bold text-amber-600 dark:text-amber-400 truncate">
+                      {currentDayQuestStations.viTitle}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Stage tabs — vertical list with accordion for multi-game */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 no-scrollbar">
+              {currentDayQuestStations?.stations.map((st) => {
+                const isActive = st.step === activeStationStep;
+                const IconComp = st.icon;
+                const stAny = st as any;
+                const hasMultipleGames = st.id === 'game' && Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1;
+                const isExpanded = expandedStationId === st.id;
+
+                const stationBtn = (
+                  <button
+                    key={st.id}
+                    type="button"
+                    onClick={() => {
+                      if (st.isLocked) {
+                        toast.info('🔒 Bài Luyện Phát Âm đang khóa. Bé hãy hoàn thành Thẻ Từ Vựng ở Trạm 1 trước nhé!', { icon: '🔒', duration: 3500 });
+                        return;
                       }
-                    >
-                      {isCurrentFlashcard ? (
-                        <span className="inline-flex items-center gap-2">
-                          <Layers className="w-5 h-5 text-amber-500 inline-block stroke-[2.5px]" />
-                          <span>Flashcard</span>
-                          <span className="text-sm sm:text-base font-bold text-amber-600/80 dark:text-amber-400/80 tabular-nums">({activeItemConfig?.cardCount || 20})</span>
-                        </span>
-                      ) : isCurrentGame ? (
-                        (() => {
-                          let mode = '';
-                          if (activeItemConfig?.item.assignment.instructions) {
-                            try {
-                              const meta = JSON.parse(activeItemConfig.item.assignment.instructions);
-                              mode = meta.mode || meta.gameMode || '';
-                            } catch {}
-                          }
-                          const titleLower = (activeItemConfig?.item.assignment.title || '').toLowerCase();
-                          if (mode === 'scramble' || mode === 'puzzle' || titleLower.includes('puzzle') || titleLower.includes('ghép chữ') || titleLower.includes('ghep chu')) {
-                            return (
-                              <span className="inline-flex items-center gap-2">
-                                <Puzzle className="w-5 h-5 text-purple-500 inline-block stroke-[2.5px]" />
-                                <span>Game: Ghép chữ (Word Puzzle)</span>
-                              </span>
-                            );
-                          }
-                          if (mode === 'type' || titleLower.includes('type') || titleLower.includes('gõ từ') || titleLower.includes('go tu')) {
-                            return (
-                              <span className="inline-flex items-center gap-2">
-                                <Keyboard className="w-5 h-5 text-indigo-500 inline-block stroke-[2.5px]" />
-                                <span>Game: Gõ từ (Type)</span>
-                              </span>
-                            );
-                          }
-                          if (mode === 'match' || titleLower.includes('nối thẻ') || titleLower.includes('noi the') || titleLower.includes('flashcard-match')) {
-                            return (
-                              <span className="inline-flex items-center gap-2">
-                                <Target className="w-5 h-5 text-emerald-500 inline-block stroke-[2.5px]" />
-                                <span>Game: Nối thẻ</span>
-                              </span>
-                            );
-                          }
-                          return (
-                            <span className="inline-flex items-center gap-2">
-                              <Gamepad2 className="w-5 h-5 text-rose-500 inline-block stroke-[2.5px]" />
-                              <span>Game</span>
-                            </span>
-                          );
-                        })()
+                      if (hasMultipleGames) {
+                        setExpandedStationId(prev => prev === st.id ? null : st.id);
+                        if (!isActive && st.item) executeSelectAssignment(st.item, selectedGroupId);
+                        return;
+                      }
+                      if (st.item) executeSelectAssignment(st.item, selectedGroupId);
+                    }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-black text-xs text-left transition-all cursor-pointer ${
+                      isActive
+                        ? `${st.activeColor} scale-[1.02] shadow-sm`
+                        : st.isLocked
+                          ? 'bg-slate-100/90 dark:bg-slate-800/60 text-slate-400 opacity-70 border border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                          : st.isDone
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100/60'
+                            : `${st.inactiveColor} hover:opacity-90`
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-white/25 text-white'
+                        : st.isLocked ? 'bg-slate-200 dark:bg-slate-700 text-slate-400'
+                        : st.isDone ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      {st.isLocked ? (
+                        <Lock className="w-3 h-3 stroke-[2.6px]" />
+                      ) : st.isDone ? (
+                        <Check className="w-3 h-3 stroke-[3px]" />
                       ) : (
-                        activeItemConfig?.cleanTitle || 'Chọn bài học để bắt đầu'
+                        <IconComp className="w-3 h-3 stroke-[2.4px]" />
                       )}
-                    </h2>
+                    </div>
+                    <span className="flex-1 truncate leading-snug">{st.shortTitle}</span>
+                    {hasMultipleGames ? (
+                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                        isActive ? 'text-white/70' : 'text-slate-400'
+                      } ${isExpanded ? 'rotate-180' : ''}`} />
+                    ) : (
+                      st.isDone && <Check className="w-3 h-3 text-emerald-500 shrink-0 stroke-[3px]" />
+                    )}
+                  </button>
+                );
 
-                    {/* Status Badges - Ẩn hoàn toàn khi là bài Lý thuyết */}
-                    {activeItemConfig && !isCurrentLesson && (
-                      <div className="flex items-center gap-1.5">
-                        {isCurrentSubmitted ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] border border-emerald-200/60 dark:border-emerald-800/60">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>{typeof currentScore === 'number' ? formatScore(currentScore) : 'Đã làm'}</span>
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-extrabold text-[11px]">
-                              <CircleDashed className="w-3.5 h-3.5" /> Chưa làm
-                            </span>
-                            {isActiveAssignmentCached ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-black text-[10.5px] border border-emerald-200/60 dark:border-emerald-900/60 shadow-2xs">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Sẵn sàng
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 font-black text-[10.5px] border border-amber-200/60 dark:border-amber-900/60 shadow-2xs">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Chưa sẵn sàng
-                              </span>
-                            )}
-                          </div>
-                        )}
+                if (!hasMultipleGames) return stationBtn;
+
+                return (
+                  <div key={st.id}>
+                    {stationBtn}
+                    {isExpanded && (
+                      <div className="ml-3 pl-2.5 border-l-2 border-amber-200/80 dark:border-amber-700/40 space-y-1 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {stAny.gameItems.map((gi: any) => {
+                          const isSubActive = gi.assignment.id === activeAssignmentId;
+                          const isSubDone = Boolean(submissionsState[gi.assignment.id]?.isSubmitted);
+                          const subLabel = gi.assignment.title
+                            .replace(/^game\s*:\s*[^\-\u2014\u2013«»:]+[\-\u2014\u2013«»:]\s*/i, '')
+                            .replace(/^\[[^\]]+\]\s*/i, '')
+                            .trim() || gi.assignment.title;
+                          return (
+                            <button
+                              key={gi.assignment.id}
+                              type="button"
+                              onClick={() => executeSelectAssignment(gi, selectedGroupId)}
+                              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-black text-left transition-all cursor-pointer ${
+                                isSubActive
+                                  ? 'bg-amber-500 text-white shadow-sm'
+                                  : isSubDone
+                                    ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
+                                    : 'text-slate-600 dark:text-slate-300 hover:bg-amber-50/70 dark:hover:bg-amber-950/40'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                                isSubActive ? 'bg-white/25' : isSubDone ? 'bg-emerald-500 text-white' : 'bg-slate-200/80 dark:bg-slate-700'
+                              }`}>
+                                {isSubDone
+                                  ? <Check className="w-2.5 h-2.5 stroke-[3px]" />
+                                  : <Gamepad2 className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                }
+                              </div>
+                              <span className="flex-1 truncate">{subLabel}</span>
+                              {isSubActive && <span className="text-white/70 shrink-0">▶</span>}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
-                </div>
+                );
+              })}
+            </div>
 
-                {/* Vị trí bôi đỏ: Badge trình độ & chủ đề khi là bài lý thuyết + Nút Thu gọn sidebar */}
-                <div className="shrink-0 flex items-center gap-2">
-                  {isCurrentLesson && activeGrammarMeta && (
+            {/* Bottom: progress + zen */}
+            <div className="p-3 border-t border-[#F0E2BF]/80 dark:border-slate-800 shrink-0 space-y-2">
+              {currentDayQuestStations && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60">
+                  <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+                  <span className="text-[11px] font-black text-amber-700 dark:text-amber-300">{completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 3} Trạm xong</span>
+                </div>
+              )}
+              <button
+                type="button"
+                title={isZenMode ? 'Thu nhỏ về chế độ thường' : 'Mở rộng toàn màn hình'}
+                onClick={() => setIsZenMode(prev => !prev)}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-black transition-all cursor-pointer"
+              >
+                {isZenMode ? <Minimize2 className="w-3.5 h-3.5 stroke-[2.2px]" /> : <Maximize2 className="w-3.5 h-3.5 stroke-[2.2px]" />}
+                <span>{isZenMode ? 'Thu nhỏ' : 'Zen Mode'}</span>
+              </button>
+            </div>
+          </aside>
+        )}
+
+        {/* ── MOBILE: Floating trigger + Bottom Sheet for vocab class station nav ── */}
+        {isVocabClass && viewMode === 'activity' && (
+          <>
+            {/* Backdrop */}
+            {isBottomSheetOpen && (
+              <div
+                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 sm:hidden animate-in fade-in duration-200"
+                onClick={() => setIsBottomSheetOpen(false)}
+              />
+            )}
+
+            {/* Bottom Sheet */}
+            <div
+              className={`fixed inset-x-0 bottom-0 z-50 sm:hidden bg-[#FBF3DF] dark:bg-slate-900 rounded-t-[28px] shadow-2xl border-t border-[#F0E2BF] dark:border-slate-800 transition-transform duration-300 ease-out ${
+                isBottomSheetOpen ? 'translate-y-0' : 'translate-y-full'
+              }`}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1.5">
+                <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+              </div>
+
+              {/* Sheet header: day info + close */}
+              <div className="px-4 pb-3 border-b border-[#F0E2BF]/80 dark:border-slate-800 flex items-start justify-between gap-3">
+                <div className="space-y-1 min-w-0">
+                  {currentDayQuestStations && (
                     <>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${activeGrammarMeta.lvlCfg.bg} ${activeGrammarMeta.lvlCfg.color} border ${activeGrammarMeta.lvlCfg.border}`}>
-                        {activeGrammarMeta.lvlCfg.label}
+                      <span className="inline-flex px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[11px] font-black uppercase tracking-wider">
+                        Ngày {currentDayQuestStations.dayNumber}
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 shadow-xs">
-                        <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
-                        {activeGrammarMeta.topicLabel}
-                      </span>
+                      <h3 className="text-sm font-black text-slate-800 dark:text-white leading-snug">
+                        {currentDayQuestStations.enTitle}
+                      </h3>
+                      {currentDayQuestStations.viTitle && (
+                        <p className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                          {currentDayQuestStations.viTitle}
+                        </p>
+                      )}
                     </>
                   )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBottomSheetOpen(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                </button>
+              </div>
 
-                  {!isZenMode && (
+              {/* Về Bản đồ */}
+              <div className="px-4 pt-3">
+                <button
+                  type="button"
+                  onClick={() => { stopAllAudioAndTts(); setViewMode('map'); setIsSidebarCollapsed(true); setIsBottomSheetOpen(false); }}
+                  className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-white font-black text-xs cursor-pointer active:scale-95 transition-all"
+                >
+                  <Compass className="w-3.5 h-3.5 stroke-[2.4px] animate-spin-slow shrink-0" />
+                  <span>← Về Bản đồ</span>
+                </button>
+              </div>
+
+              {/* Station list */}
+              <div className="px-4 py-3 space-y-1.5 overflow-y-auto max-h-[50vh]">
+                {currentDayQuestStations?.stations.map((st) => {
+                  const isActive = st.step === activeStationStep;
+                  const IconComp = st.icon;
+                  const stAny = st as any;
+                  const hasMultipleGames = st.id === 'game' && Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1;
+                  const isExpanded = expandedStationId === st.id;
+
+                  const stationBtn = (
+                    <button
+                      key={`bs-${st.id}`}
+                      type="button"
+                      onClick={() => {
+                        if (st.isLocked) {
+                          toast.info('🔒 Bài Luyện Phát Âm đang khóa. Bé hãy hoàn thành Thẻ Từ Vựng ở Trạm 1 trước nhé!', { icon: '🔒', duration: 3500 });
+                          return;
+                        }
+                        if (hasMultipleGames) {
+                          setExpandedStationId(prev => prev === st.id ? null : st.id);
+                          if (!isActive && st.item) { executeSelectAssignment(st.item, selectedGroupId); setIsBottomSheetOpen(false); }
+                          return;
+                        }
+                        if (st.item) { executeSelectAssignment(st.item, selectedGroupId); setIsBottomSheetOpen(false); }
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl font-black text-xs text-left transition-all cursor-pointer ${
+                        isActive
+                          ? `${st.activeColor} scale-[1.02] shadow-sm`
+                          : st.isLocked
+                            ? 'bg-slate-100/90 text-slate-400 opacity-70 border border-slate-200 cursor-not-allowed'
+                            : st.isDone
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100/60'
+                              : `${st.inactiveColor} hover:opacity-90`
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                        isActive ? 'bg-white/25 text-white'
+                          : st.isLocked ? 'bg-slate-200 text-slate-400'
+                          : st.isDone ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-200/80 text-slate-600'
+                      }`}>
+                        {st.isLocked ? (
+                          <Lock className="w-3 h-3 stroke-[2.6px]" />
+                        ) : st.isDone ? (
+                          <Check className="w-3 h-3 stroke-[3px]" />
+                        ) : (
+                          <IconComp className="w-3 h-3 stroke-[2.4px]" />
+                        )}
+                      </div>
+                      <span className="flex-1 truncate leading-snug">{st.shortTitle}</span>
+                      {hasMultipleGames ? (
+                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                          isActive ? 'text-white/70' : 'text-slate-400'
+                        } ${isExpanded ? 'rotate-180' : ''}`} />
+                      ) : (
+                        st.isDone && <Check className="w-3 h-3 text-emerald-500 shrink-0 stroke-[3px]" />
+                      )}
+                    </button>
+                  );
+
+                  if (!hasMultipleGames) return stationBtn;
+
+                  return (
+                    <div key={`bs-acc-${st.id}`}>
+                      {stationBtn}
+                      {isExpanded && (
+                        <div className="ml-3 pl-2.5 border-l-2 border-amber-200/80 space-y-1 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                          {stAny.gameItems.map((gi: any) => {
+                            const isSubActive = gi.assignment.id === activeAssignmentId;
+                            const isSubDone = Boolean(submissionsState[gi.assignment.id]?.isSubmitted);
+                            const subLabel = gi.assignment.title
+                              .replace(/^game\s*:\s*[^\-\u2014\u2013«»:]+[\-\u2014\u2013«»:]\s*/i, '')
+                              .replace(/^\[[^\]]+\]\s*/i, '')
+                              .trim() || gi.assignment.title;
+                            return (
+                              <button
+                                key={`bs-gi-${gi.assignment.id}`}
+                                type="button"
+                                onClick={() => { executeSelectAssignment(gi, selectedGroupId); setIsBottomSheetOpen(false); }}
+                                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-black text-left transition-all cursor-pointer ${
+                                  isSubActive
+                                    ? 'bg-amber-500 text-white shadow-sm'
+                                    : isSubDone
+                                      ? 'text-emerald-600 hover:bg-emerald-50'
+                                      : 'text-slate-600 hover:bg-amber-50/70'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                                  isSubActive ? 'bg-white/25' : isSubDone ? 'bg-emerald-500 text-white' : 'bg-slate-200/80'
+                                }`}>
+                                  {isSubDone
+                                    ? <Check className="w-2.5 h-2.5 stroke-[3px]" />
+                                    : <Gamepad2 className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                  }
+                                </div>
+                                <span className="flex-1 truncate">{subLabel}</span>
+                                {isSubActive && <span className="text-white/70 shrink-0">▶</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Progress footer + safe area */}
+              <div className="px-4 pt-2 pb-8 border-t border-[#F0E2BF]/80 dark:border-slate-800">
+                {currentDayQuestStations && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60">
+                    <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+                    <span className="text-[11px] font-black text-amber-700 dark:text-amber-300">
+                      {completedQuestStationsCount}/{currentDayQuestStations.stations.length} Trạm xong
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════
+            KHU VỰC 2 & 3: MAIN VIEW (Header + Stage Tabs + Embedded Canvas)
+            ══════════════════════════════════════════════════════════════════ */}
+        <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
+          viewMode === 'map' ? 'p-0 m-0 h-full overflow-hidden' : isVocabClass ? 'h-full overflow-hidden p-3 sm:p-4' : 'gap-3 sm:gap-4'
+        }`}>
+          
+          {/* ════════════════════════════════════════════════════════════════
+              KHU VỰC 2: TOP ACTION BAR - FOCUS & QUEST STEPPER HEADER
+              ════════════════════════════════════════════════════════════════ */}
+          {viewMode === 'activity' && !isVocabClass && (
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-amber-200/80 dark:border-slate-800 rounded-[24px] sm:rounded-[28px] p-2.5 sm:p-3.5 shadow-sm animate-in fade-in slide-in-from-top-3 duration-200 font-['Nunito',_sans-serif]">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-2.5 sm:gap-3">
+                
+                {/* 1. LEFT: Back to Map & Day Info */}
+                <div className="flex items-center justify-between w-full lg:w-auto gap-2.5 shrink-0">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      title="Thu gọn menu & thanh trên để tối đa khung làm bài"
-                      onClick={toggleSidebar}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-bold text-xs transition-all cursor-pointer border border-slate-200/60 dark:border-slate-700/60 shadow-xs"
+                      title="Quay lại bản đồ hành trình toàn khóa 45 Ngày"
+                      onClick={() => {
+                        stopAllAudioAndTts();
+                        setViewMode('map');
+                        setIsSidebarCollapsed(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-xs sm:text-sm transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
                     >
-                      <PanelLeftClose className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Thu gọn</span>
+                      <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4px] animate-spin-slow" />
+                      <span>← Về Bản đồ</span>
+                    </button>
+
+                    {currentDayQuestStations && (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="hidden sm:inline-block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[10px] sm:text-[11px] font-black uppercase tracking-wider shrink-0">
+                              Ngày {currentDayQuestStations.dayNumber}
+                            </span>
+                            <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-white truncate max-w-[130px] sm:max-w-[200px]" title={currentDayQuestStations.enTitle}>
+                              {currentDayQuestStations.enTitle}
+                            </h3>
+                          </div>
+                          {currentDayQuestStations.viTitle && (
+                            <p className="text-[10.5px] font-bold text-amber-600 dark:text-amber-400 truncate max-w-[200px] hidden sm:block">
+                              {currentDayQuestStations.viTitle}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mobile Right: Completion Badge on small screens */}
+                  {currentDayQuestStations && (
+                    <div className="lg:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 font-black text-xs text-amber-700 dark:text-amber-300">
+                      <Sparkles className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      <span>{completedQuestStationsCount}/4</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. CENTER: 4 Quest Stations Stepper Bar */}
+                {currentDayQuestStations && (
+                  <div className="flex items-center justify-center gap-1 sm:gap-2 w-full lg:w-auto overflow-x-auto no-scrollbar py-0.5">
+                    {currentDayQuestStations.stations.map((st, idx) => {
+                      const isActive = st.step === activeStationStep;
+                      const IconComp = st.icon;
+
+                      return (
+                        <React.Fragment key={st.id}>
+                          {idx > 0 && (
+                            <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600 shrink-0 hidden sm:block" />
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (st.isLocked) {
+                                toast.info('🔒 Bài Luyện Phát Âm đang khóa. Bé hãy hoàn thành Thẻ Từ Vựng ở Trạm 1 trước nhé!', {
+                                  icon: '🔒',
+                                  duration: 3500,
+                                });
+                                return;
+                              }
+                              if (st.item) {
+                                executeSelectAssignment(st.item, selectedGroupId);
+                              }
+                            }}
+                            className={`group relative flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-black text-xs sm:text-[13px] transition-all cursor-pointer shrink-0 ${
+                              isActive
+                                ? `${st.activeColor} scale-102 shadow-sm`
+                                : st.isLocked
+                                  ? 'bg-slate-100/90 dark:bg-slate-800/60 text-slate-400 opacity-60 border border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                                  : st.isDone
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 hover:bg-emerald-100/60'
+                                    : st.inactiveColor
+                            }`}
+                          >
+                            {/* Icon badge */}
+                            <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 ${
+                              isActive
+                                ? 'bg-white/25 text-white'
+                                : st.isLocked
+                                  ? 'bg-slate-200 dark:bg-slate-700 text-slate-400'
+                                  : st.isDone
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}>
+                              {st.isLocked ? (
+                                <Lock className="w-3 h-3 stroke-[2.6px]" />
+                              ) : st.isDone ? (
+                                <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3px]" />
+                              ) : (
+                                <IconComp className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.4px]" />
+                              )}
+                            </div>
+
+                            <span className="hidden sm:inline whitespace-nowrap">{st.shortTitle}</span>
+                            <span className="sm:hidden font-black">T{st.step}</span>
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 3. RIGHT: Completion Badge, Zen Toggle & Course Menu */}
+                <div className="hidden lg:flex items-center gap-2 shrink-0">
+                  {currentDayQuestStations && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60 font-black text-xs text-amber-700 dark:text-amber-300">
+                      <Sparkles className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      <span>{completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 4} Trạm xong</span>
+                    </div>
+                  )}
+
+                  {/* Zen Mode / Fullscreen Toggle */}
+                  <button
+                    type="button"
+                    title={isZenMode ? "Thu nhỏ về chế độ thường" : "Mở rộng toàn màn hình làm bài"}
+                    onClick={() => setIsZenMode(prev => !prev)}
+                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200/80 dark:border-slate-700"
+                  >
+                    {isZenMode ? <Minimize2 className="w-4 h-4 stroke-[2.2px]" /> : <Maximize2 className="w-4 h-4 stroke-[2.2px]" />}
+                  </button>
+
+                  {/* Course Tree Toggle - Chỉ hiện cho lớp khác nếu cần */}
+                  {!isVocabClass && (
+                    <button
+                      type="button"
+                      title={isSidebarCollapsed ? "Mở danh sách bài học cả khóa" : "Thu gọn danh sách bài học"}
+                      onClick={toggleSidebar}
+                      className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all cursor-pointer shadow-2xs border border-slate-200/80 dark:border-slate-700"
+                    >
+                      <PanelLeftOpen className="w-4 h-4 stroke-[2.2px]" />
                     </button>
                   )}
                 </div>
+
               </div>
             </div>
           )}
@@ -2612,12 +3299,16 @@ export function StudentAssignmentsView({
           {/* ════════════════════════════════════════════════════════════════
               KHU VỰC 3: MAIN EMBEDDED ACTIVITY CANVAS
               ════════════════════════════════════════════════════════════════ */}
-          <div className={`relative flex-1 bg-white dark:bg-slate-900 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800/80 shadow-sm overflow-hidden flex flex-col transition-all duration-300 ${
-            isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
+          <div className={`relative flex-1 overflow-hidden flex flex-col transition-all duration-300 ${
+            viewMode === 'map'
+              ? 'w-full h-full p-0 m-0 border-0 rounded-none shadow-none bg-transparent'
+              : `bg-white dark:bg-slate-900 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800/80 shadow-sm ${
+                  isVocabClass ? 'h-full' : isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
+                }`
           }`}>
             
-            {/* ── FLOATING EXPAND TAB (HƯỚNG 1: Notion / ChatGPT / VS Code style) ── */}
-            {isSidebarCollapsed && !isZenMode && (
+            {/* ── FLOATING EXPAND TAB (Chỉ hiện khi KHÔNG PHẢI lớp vocab và chưa có quest stepper) ── */}
+            {!isVocabClass && isSidebarCollapsed && !isZenMode && viewMode === 'activity' && !currentDayQuestStations && (
               <button
                 type="button"
                 aria-label="Mở lại menu bài học"
@@ -2641,85 +3332,32 @@ export function StudentAssignmentsView({
             )}
 
             {/* Embedded Activity Canvas (Keep-Alive Pool: 100% Native & 0ms Instant Switch) */}
-            <div className="relative flex-1 w-full h-full bg-white dark:bg-slate-900 overflow-hidden">
-              {/* ── Area 3: Soft Splash Loading Overlay (Hướng 3: Mỏng nhẹ, êm dịu, không gián đoạn) ── */}
-              {isCurrentItemLoading && activeItemConfig && (
-                <div 
-                  key={`splash-${activeAssignmentId}`}
-                  className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 bg-white/92 dark:bg-slate-900/95 backdrop-blur-md animate-in fade-in duration-200"
-                >
-                  <div className="relative flex flex-col items-center max-w-sm w-full mx-auto text-center space-y-4">
-                    {/* Soft pulsating glow behind icon */}
-                    <div 
-                      className="absolute -top-3 w-28 h-28 rounded-full blur-2xl opacity-40 animate-pulse pointer-events-none"
-                      style={{ backgroundColor: activeItemConfig.pastel.activeBorder }}
-                    />
+            {/* Outer shell: animation trigger only — does NOT unmount the inner pool */}
+            <div className={`relative flex-1 w-full h-full overflow-hidden ${viewMode === 'activity' ? 'animate-map-to-activity' : ''}`}>
+            {/* Inner pool: persists across mode switches so Keep-Alive containers are never destroyed */}
+            <div className={`relative w-full h-full overflow-hidden ${viewMode === 'map' ? 'bg-transparent' : 'bg-white dark:bg-slate-900'}`}>
 
-                    {/* Item Icon Card with soft bounce */}
-                    <div 
-                      className="relative w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg border-2 border-white/80 dark:border-slate-800 transition-transform animate-bounce"
-                      style={{
-                        backgroundColor: activeItemConfig.pastel.tileBg,
-                        color: activeItemConfig.pastel.tileColor,
-                      }}
-                    >
-                      <div className="scale-150">
-                        {activeItemConfig.iconNode}
-                      </div>
-                    </div>
 
-                    {/* Stage Badge & Title */}
-                    <div className="space-y-1.5 w-full">
-                      <div 
-                        className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-2xs"
-                        style={{
-                          backgroundColor: activeItemConfig.pastel.tileBg,
-                          color: activeItemConfig.pastel.tileColor,
-                        }}
-                      >
-                        <Sparkles className="w-3 h-3 animate-spin" />
-                        <span>{activeItemConfig.stageLabel}</span>
-                      </div>
-
-                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white line-clamp-2 px-2">
-                        {activeItemConfig.cleanTitle}
-                      </h3>
-
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                        {currentItemSplashPercent >= 85 
-                          ? 'Sẵn sàng khởi chạy bài tập...' 
-                          : currentItemSplashPercent >= 50 
-                            ? 'Đang chuẩn bị nội dung bài học...' 
-                            : 'Đang kết nối dữ liệu câu hỏi...'}
-                      </p>
-                    </div>
-
-                    {/* Smooth Progress Bar */}
-                    <div className="w-56 sm:w-64 space-y-1.5 pt-1">
-                      <div className="w-full h-2 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 shadow-inner">
-                        <div 
-                          className="h-full rounded-full bg-gradient-to-r from-amber-400 via-sky-500 to-emerald-500 transition-all duration-300 ease-out relative overflow-hidden"
-                          style={{ width: `${currentItemSplashPercent}%` }}
-                        >
-                          <div className="absolute inset-0 bg-white/30 animate-pulse" />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[10.5px] font-black text-slate-400 dark:text-slate-500 px-1">
-                        <span>
-                          {currentItemSplashPercent >= 85 
-                            ? 'Hoàn tất dữ liệu' 
-                            : currentItemSplashPercent >= 50 
-                              ? 'Tối ưu hóa dữ liệu' 
-                              : 'Tải nội dung'}
-                        </span>
-                        <span className="tabular-nums">{currentItemSplashPercent}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {Object.keys(displayConfigs).length > 0 ? (
+              {viewMode === 'map' ? (
+                <ClassAdventureMap
+                  assignmentGroups={assignmentGroups}
+                  submissionsState={submissionsState}
+                  currentClass={currentClass}
+                  onSelectActivity={(assignmentId, groupId) => {
+                    const grp = assignmentGroups.find(g => g.id === groupId);
+                    const itm = grp?.items.find(i => i.assignment.id === assignmentId);
+                    if (itm) {
+                      // executeSelectAssignment handles sidebar open/close per device
+                      executeSelectAssignment(itm, groupId);
+                    } else {
+                      setActiveAssignmentId(assignmentId);
+                      setSelectedGroupId(groupId);
+                      setViewMode('activity');
+                      setIsSidebarCollapsed(true);
+                    }
+                  }}
+                />
+              ) : Object.keys(displayConfigs).length > 0 ? (
                 <Suspense fallback={<ActivityCanvasLoadingFallback />}>
                   {Object.values(displayConfigs).map((cfg) => {
                     const aid = cfg.item.assignment.id;
@@ -2792,21 +3430,29 @@ export function StudentAssignmentsView({
                     itemTitleLower.includes('grammar lesson');
 
                   const isReading = Boolean(
-                    !isTheory && (
-                      itemKind === 'READING' ||
-                      itemStage === 'reading' ||
-                      cfg.item.assignment.materialType === 'READING' ||
-                      itemTitleLower.includes('[bài đọc]') ||
-                      itemTitleLower.includes('bài đọc') ||
-                      targetUrl.includes('/student/lessons/') ||
-                      targetUrl.includes('/lessons/') ||
-                      Boolean((cfg.item.assignment as any).lessonSlug) ||
-                      Boolean((cfg.item.assignment as any).lessonId)
-                    )
+                    isVocabClass
+                      ? (!isFlashcard && !isGame && (
+                          itemKind === 'READING' ||
+                          itemStage === 'reading' ||
+                          aid.startsWith('tiny-vocab-reading-') ||
+                          aid.startsWith('tiny-vocab-day-') ||
+                          itemTitleLower.includes('bài đọc')
+                        ))
+                      : (!isTheory && (
+                          itemKind === 'READING' ||
+                          itemStage === 'reading' ||
+                          cfg.item.assignment.materialType === 'READING' ||
+                          itemTitleLower.includes('[bài đọc]') ||
+                          itemTitleLower.includes('bài đọc') ||
+                          targetUrl.includes('/student/lessons/') ||
+                          targetUrl.includes('/lessons/') ||
+                          Boolean((cfg.item.assignment as any).lessonSlug) ||
+                          Boolean((cfg.item.assignment as any).lessonId)
+                        ))
                   );
 
                   const isLesson = Boolean(
-                    !isFlashcard && !isGame && !isExercise && !isReading && (
+                    !isVocabClass && !isFlashcard && !isGame && !isExercise && !isReading && (
                       itemKind === 'LESSON' ||
                       itemStage === 'lesson' ||
                       cfg.item.assignment.materialType === 'LESSON' ||
@@ -2845,12 +3491,14 @@ export function StudentAssignmentsView({
                           assignment={cfg.item.assignment}
                           onComplete={handleActivityComplete}
                           isActive={isActive}
+                          onOpenStations={() => setIsBottomSheetOpen(true)}
                         />
                       ) : isGame ? (
                         <EmbeddedGameContainer
                           assignment={cfg.item.assignment}
                           onComplete={handleActivityComplete}
                           isActive={isActive}
+                          onOpenStations={() => setIsBottomSheetOpen(true)}
                         />
                       ) : isReading ? (
                         <EmbeddedReadingLessonContainer
@@ -2859,6 +3507,7 @@ export function StudentAssignmentsView({
                           groupId={cfg.item.groupId}
                           onComplete={handleActivityComplete}
                           isActive={isActive}
+                          onOpenStations={() => setIsBottomSheetOpen(true)}
                         />
                       ) : isLesson ? (
                         <EmbeddedGrammarContainer
@@ -2909,7 +3558,8 @@ export function StudentAssignmentsView({
                   <p className="font-bold text-sm">Vui lòng chọn một bài học từ menu bên trái.</p>
                 </div>
               )}
-            </div>
+            </div>{/* /inner pool */}
+            </div>{/* /outer animation shell */}
           </div>
         </main>
       </div>

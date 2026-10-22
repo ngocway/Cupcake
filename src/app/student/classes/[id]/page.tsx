@@ -744,7 +744,7 @@ export default async function StudentClassDetailPage({
     <div className="relative min-h-screen">
       {/* Nền trắng riêng biệt cho trang lớp học này (chống nhấp nháy SSR) */}
       <div className="fixed inset-0 -z-40 bg-white dark:bg-slate-950 pointer-events-none" />
-      <div className="max-w-[1700px] w-full mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pb-12 pt-3 sm:pt-4 relative z-0">
+      <div className="w-full relative z-0">
         <Suspense fallback={<StudentClassDetailLoading />}>
           <StudentClassDetailContent 
             id={id} 

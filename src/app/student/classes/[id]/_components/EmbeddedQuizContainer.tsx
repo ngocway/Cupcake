@@ -7,7 +7,7 @@ const KidTeenQuizRunner = dynamic(
   () => import('@/app/student/assignments/[id]/run/quiz/KidTeenQuizRunner'),
   {
     loading: () => (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Đang tải bài tập...</p>
@@ -145,7 +145,7 @@ export function EmbeddedQuizContainer({
 
   if (isLoading) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 animate-in fade-in duration-150">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto shadow-xs">
             <Sparkles className="w-6 h-6 animate-spin text-blue-500" style={{ animationDuration: '3s' }} />
@@ -168,7 +168,7 @@ export function EmbeddedQuizContainer({
 
   if (error || !data) {
     return (
-      <div className="w-full h-full min-h-[580px] lg:min-h-[660px] bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
+      <div className="w-full h-full bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6">
         <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 shadow-sm text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
             <AlertCircle className="w-6 h-6" />
@@ -194,7 +194,7 @@ export function EmbeddedQuizContainer({
   }
 
   return (
-    <div className="w-full h-full min-h-[580px] lg:min-h-[660px] relative bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+    <div className="w-full h-full relative bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       <KidTeenQuizRunner
         key={assignmentId}
         assignment={data.assignment}

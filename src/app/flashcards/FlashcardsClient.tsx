@@ -182,6 +182,7 @@ interface FlashcardsClientProps {
   lockMode?: boolean
   isActive?: boolean
   onComplete?: (score: number | null, assignmentId: string) => void
+  onOpenStations?: () => void
 }
 
 const EMPTY_CATEGORIES: Category[] = [];
@@ -226,6 +227,7 @@ export function FlashcardsClient({
   lockMode = false,
   isActive = true,
   onComplete,
+  onOpenStations,
 }: FlashcardsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -1606,40 +1608,54 @@ export function FlashcardsClient({
       
       {/* Floating Header Actions (Transparent) */}
       <div className="absolute top-[max(16px,env(safe-area-inset-top,16px))] left-4 right-4 md:top-6 md:left-8 md:right-8 z-50 flex justify-between items-center pointer-events-none">
-        {isEmbedded || searchParams.get("embedded") === "true" ? (
-          <button 
-            onClick={() => {
-              trackEvent('vocab_restart_clicked', {
-                topic: selectedTopic?.name || 'Flashcard',
-                total_cards: flashcards.length,
-              });
-              if (isEmbedded) {
-                const baseCards = initialCards && initialCards.length > 0 ? initialCards : flashcards;
-                const reshuffled = shuffleArray(baseCards);
-                setFlashcards(reshuffled);
-                setIsImageLoading(!isImageAlreadyLoaded(reshuffled[0]?.imageUrl));
-              }
-              setCurrentIndex(0)
-              setIsFlipped(false)
-              setFlippedIndices(new Set())
-              setAssignmentCompleted(false)
-              stopCurrentAudio()
-            }}
-            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold pointer-events-auto ${backButtonClass}`}
-            title="Làm lại từ thẻ đầu tiên (xáo trộn ngẫu nhiên)"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Học lại từ đầu</span>
-          </button>
-        ) : (
-          <button 
-            onClick={handleBackToSelection}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto ${backButtonClass}`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden md:inline">Back to Topics</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {onOpenStations && (
+            <button
+              type="button"
+              onClick={onOpenStations}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold pointer-events-auto cursor-pointer ${backButtonClass}`}
+              title="Mở danh sách các trạm học trong ngày"
+            >
+              <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>Vào trạm</span>
+            </button>
+          )}
+
+          {isEmbedded || searchParams.get("embedded") === "true" ? (
+            <button 
+              onClick={() => {
+                trackEvent('vocab_restart_clicked', {
+                  topic: selectedTopic?.name || 'Flashcard',
+                  total_cards: flashcards.length,
+                });
+                if (isEmbedded) {
+                  const baseCards = initialCards && initialCards.length > 0 ? initialCards : flashcards;
+                  const reshuffled = shuffleArray(baseCards);
+                  setFlashcards(reshuffled);
+                  setIsImageLoading(!isImageAlreadyLoaded(reshuffled[0]?.imageUrl));
+                }
+                setCurrentIndex(0)
+                setIsFlipped(false)
+                setFlippedIndices(new Set())
+                setAssignmentCompleted(false)
+                stopCurrentAudio()
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold pointer-events-auto cursor-pointer ${backButtonClass}`}
+              title="Làm lại từ thẻ đầu tiên (xáo trộn ngẫu nhiên)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Học lại từ đầu</span>
+            </button>
+          ) : (
+            <button 
+              onClick={handleBackToSelection}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto cursor-pointer ${backButtonClass}`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden md:inline">Back to Topics</span>
+            </button>
+          )}
+        </div>
 
         {/* Mode Switcher Segmented Control (Top Right) - Completely hidden in classes/assigned assignments */}
         {!isClassOrAssigned && (
@@ -2064,7 +2080,7 @@ export function FlashcardsClient({
                         } scale-100 shadow-sm` 
                       : (challengeMode === 'scramble'
                           ? "border-transparent bg-transparent text-transparent opacity-0 pointer-events-none scale-50"
-                          : `${isKidMode ? "bg-slate-50/80 border-slate-200 text-slate-300" : "bg-slate-50/60 border-slate-200/80 text-slate-300"} border-dashed scale-95`)
+                          : `${isKidMode ? "bg-slate-50/80 border-emerald-400 text-slate-300" : "bg-slate-50/60 border-emerald-400/80 text-slate-300"} border-dashed scale-95`)
                   }`}
                 >
                   {isWrong && wrongTypedLetter
