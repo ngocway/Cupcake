@@ -45,7 +45,7 @@ export function FloatingZaloWidget({
   return (
     <aside
       aria-label="Hỗ trợ qua Zalo"
-      className={`fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 flex items-center select-none transition-all duration-300 font-['Baloo_2',_'Nunito',_sans-serif] ${
+      className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center select-none transition-all duration-300 font-['Baloo_2',_'Nunito',_sans-serif] ${
         isQuizActive ? "opacity-45 hover:opacity-100 scale-90" : "opacity-100"
       }`}
     >

@@ -8,9 +8,23 @@ interface QuestionAudioPlayButtonProps {
   text?: string;
   className?: string;
   playbackRate?: number;
+  useDeepgram?: boolean;
+  deepgramModel?: string;
+  deepgramSpeed?: number;
 }
 
-export function QuestionAudioPlayButton({ src, text, className = "", playbackRate = 1.0 }: QuestionAudioPlayButtonProps) {
+// Module-level cache for synthesized Deepgram audio blobs
+const deepgramBlobCache = new Map<string, string>();
+
+export function QuestionAudioPlayButton({
+  src,
+  text,
+  className = "",
+  playbackRate = 1.0,
+  useDeepgram = true,
+  deepgramModel = "aura-2-thalia-en",
+  deepgramSpeed = 0.85,
+}: QuestionAudioPlayButtonProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -66,7 +80,55 @@ export function QuestionAudioPlayButton({ src, text, className = "", playbackRat
     window.speechSynthesis.speak(utterance);
   };
 
-  const handlePlay = (e: React.MouseEvent) => {
+  const playAudioSource = (audioUrl: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    setIsLoading(true);
+    const audio = new Audio(audioUrl);
+    audio.defaultPlaybackRate = playbackRate;
+    audio.playbackRate = playbackRate;
+    audioRef.current = audio;
+
+    audio.addEventListener('canplaythrough', () => setIsLoading(false));
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
+      window.dispatchEvent(new CustomEvent('hintAudioPause'));
+    });
+    audio.addEventListener('pause', () => {
+      setIsPlaying(false);
+      window.dispatchEvent(new CustomEvent('hintAudioPause'));
+    });
+    audio.addEventListener('play', () => {
+      audio.playbackRate = playbackRate;
+      setIsPlaying(true);
+      window.dispatchEvent(new CustomEvent('hintAudioPlay'));
+    });
+    audio.addEventListener('playing', () => {
+      audio.playbackRate = playbackRate;
+    });
+    audio.addEventListener('error', () => {
+      setIsLoading(false);
+      if (text) {
+        playTTS();
+      } else {
+        setIsPlaying(false);
+      }
+    });
+
+    audio.play().catch(() => {
+      setIsLoading(false);
+      if (text) {
+        playTTS();
+      } else {
+        setIsPlaying(false);
+      }
+    });
+  };
+
+  const handlePlay = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
     if (isPlaying) {
@@ -83,59 +145,54 @@ export function QuestionAudioPlayButton({ src, text, className = "", playbackRat
     // Pause all other audio
     window.dispatchEvent(new CustomEvent('pauseAllAudio', { detail: { source: 'QuestionAudio' } }));
 
-    if (!src) {
-      if (text) {
+    // 1. If pre-recorded audio src is provided, use it
+    if (src) {
+      playAudioSource(src);
+      return;
+    }
+
+    // 2. If text is provided, synthesize via Deepgram or fallback
+    if (!text) return;
+
+    if (useDeepgram) {
+      const cacheKey = `${deepgramModel}_${deepgramSpeed}_${text}`;
+      const cachedBlobUrl = deepgramBlobCache.get(cacheKey);
+
+      if (cachedBlobUrl) {
+        playAudioSource(cachedBlobUrl);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/tts/deepgram', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            model: deepgramModel,
+            speed: deepgramSpeed,
+          }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Deepgram TTS response failed: ${res.status}`);
+        }
+
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        deepgramBlobCache.set(cacheKey, blobUrl);
+        playAudioSource(blobUrl);
+      } catch (err) {
+        console.warn('[QuestionAudioPlayButton] Deepgram TTS failed, falling back to Web Speech:', err);
+        setIsLoading(false);
         playTTS();
       }
       return;
     }
 
-    if (!audioRef.current) {
-      setIsLoading(true);
-      const audio = new Audio(src);
-      audio.defaultPlaybackRate = playbackRate;
-      audio.playbackRate = playbackRate;
-      audioRef.current = audio;
-
-      audio.addEventListener('canplaythrough', () => setIsLoading(false));
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-        window.dispatchEvent(new CustomEvent('hintAudioPause'));
-      });
-      audio.addEventListener('pause', () => {
-        setIsPlaying(false);
-        window.dispatchEvent(new CustomEvent('hintAudioPause'));
-      });
-      audio.addEventListener('play', () => {
-        audio.playbackRate = playbackRate;
-        setIsPlaying(true);
-        window.dispatchEvent(new CustomEvent('hintAudioPlay'));
-      });
-      audio.addEventListener('playing', () => {
-        audio.playbackRate = playbackRate;
-      });
-      audio.addEventListener('error', () => {
-        setIsLoading(false);
-        if (text) {
-          playTTS();
-        } else {
-          setIsPlaying(false);
-        }
-      });
-    }
-
-    audioRef.current.play().then(() => {
-      if (audioRef.current) {
-        audioRef.current.playbackRate = playbackRate;
-      }
-    }).catch(() => {
-      setIsLoading(false);
-      if (text) {
-        playTTS();
-      } else {
-        setIsPlaying(false);
-      }
-    });
+    // Fallback to browser Web Speech API
+    playTTS();
   };
 
   useEffect(() => {

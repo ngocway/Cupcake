@@ -268,13 +268,15 @@ export function buildGroupTree<T extends {
   const readingLessons: T[] = [];
   const nonLessons: T[] = [];
 
+  const hasLessonInGroup = items.some((it) => getItemStage(it) === 'lesson');
+
   items.forEach((it) => {
     const stage = getItemStage(it);
     // Nếu là bài đọc thực hành có gán vào bài học cha (ví dụ [BÀI ĐỌC] có grammarLesson khác id của chính nó)
-    // thì đây là bài tập con (nonLessons) thuộc bài cha đó chứ KHÔNG PHẢI là bài học cha!
+    // HOẶC trong nhóm bài học đã có bài Lý thuyết / Bài học theo ngày (lesson) thì bài đọc là một trạm con trong ngày đó!
     const isChildReadingExercise = 
       stage === 'reading' && 
-      Boolean(it.assignment.grammarLesson && it.assignment.grammarLesson !== it.assignment.id);
+      (Boolean(it.assignment.grammarLesson && it.assignment.grammarLesson !== it.assignment.id) || hasLessonInGroup);
 
     if (stage === 'lesson') {
       grammarLessons.push(it);

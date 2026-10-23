@@ -134,7 +134,7 @@ export function ExplanationBlock({
       {/* Accordion Content */}
       <div
         className={`overflow-hidden transition-all duration-400 ease-in-out ${
-          isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="p-5 bg-amber-50 border-2 border-amber-200 rounded-2xl space-y-3">

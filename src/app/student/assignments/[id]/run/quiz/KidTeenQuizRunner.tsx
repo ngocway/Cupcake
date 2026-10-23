@@ -250,6 +250,21 @@ export default function KidTeenQuizRunner({
     return {};
   });
 
+  const cardBodyRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll card body smoothly to reveal explanation when opened
+  useEffect(() => {
+    if (expandedExplanations[currentQuestion?.id] && cardBodyRef.current) {
+      const timer = setTimeout(() => {
+        cardBodyRef.current?.scrollTo({
+          top: cardBodyRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [expandedExplanations, currentQuestion?.id]);
+
   useEffect(() => {
     if (initialAnswers && Object.keys(initialAnswers).length > 0) {
       setAnswers(initialAnswers);
@@ -705,7 +720,7 @@ export default function KidTeenQuizRunner({
           >
             <div
               className={`bg-white rounded-[48px] shadow-xl overflow-visible transition-all duration-500 relative border-[6px] flex flex-col ${
-                isChecked && quizMode !== "autoplay" ? "max-h-[60dvh]" : "max-h-[85dvh]"
+                isChecked && quizMode !== "autoplay" ? "max-h-[78dvh] sm:max-h-[82dvh]" : "max-h-[85dvh]"
               } ${
                 isCorrectNow
                   ? "border-emerald-400"
@@ -775,9 +790,10 @@ export default function KidTeenQuizRunner({
 
               {/* Card Body */}
               <div
-                className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+                ref={cardBodyRef}
+                className={`flex-1 overflow-y-auto min-h-0 relative transition-all duration-500 [scrollbar-width:thin] [scrollbar-color:rgba(154,137,255,0.4)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-purple-300/80 hover:[&::-webkit-scrollbar-thumb]:bg-purple-400 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent ${
                   isChecked && quizMode !== "autoplay"
-                    ? "px-[clamp(0.75rem,3vw,2rem)] pt-1 pb-[clamp(0.5rem,1.5dvh,1rem)] space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
+                    ? "px-[clamp(0.75rem,3vw,2rem)] pt-1 pb-6 space-y-[clamp(0.5rem,1.5dvh,0.75rem)]"
                     : "px-[clamp(1rem,4vw,3rem)] pt-2 pb-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
                 }`}
               >

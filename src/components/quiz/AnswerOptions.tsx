@@ -76,10 +76,7 @@ export default function AnswerOptions({ question, idx, showCorrect }: Props) {
         </div>
       </div>
 
-      <div className={cn(
-        "grid gap-4",
-        isTrueFalse ? "grid-cols-2" : "grid-cols-1"
-      )}>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {options.length > 0 && options.map((opt: any, i: number) => {
           const optId = opt.id || String(i);
           const isSelected = isTrueFalse 
@@ -90,13 +87,16 @@ export default function AnswerOptions({ question, idx, showCorrect }: Props) {
             ? (optId === 'true' ? content.isTrue === true : content.isTrue === false)
             : !!opt.isCorrect;
 
+          const isOddLast = options.length % 2 === 1 && i === options.length - 1;
+
           return (
             <button
               key={optId}
               type="button"
               onClick={() => toggleOption(optId)}
               className={cn(
-                "flex items-center gap-4 p-5 rounded-2xl border-2 transition-all text-left group relative outline-none",
+                "flex items-center gap-2 sm:gap-4 p-3 sm:p-5 rounded-2xl border-2 transition-all text-left group relative outline-none",
+                isOddLast && "col-span-2 sm:col-span-1",
                 showCorrect && isCorrect
                    ? "bg-emerald-50 border-emerald-500 ring-4 ring-emerald-500/10"
                    : showCorrect && isSelected && !isCorrect
@@ -111,7 +111,7 @@ export default function AnswerOptions({ question, idx, showCorrect }: Props) {
               {!isTrueFalse && (
                 <div
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center rounded-xl font-black text-lg transition-all",
+                    "w-7 h-7 sm:w-10 sm:h-10 shrink-0 flex items-center justify-center rounded-lg sm:rounded-xl font-black text-xs sm:text-lg transition-all",
                     showCorrect && isCorrect
                       ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200 scale-110"
                       : isSelected
@@ -124,13 +124,13 @@ export default function AnswerOptions({ question, idx, showCorrect }: Props) {
               )}
               
               <div className={cn(
-                "flex-1",
-                isTrueFalse && "text-center py-2"
+                "flex-1 min-w-0",
+                isTrueFalse && "text-center py-1 sm:py-2"
               )}>
                  <span className={cn(
-                   "text-lg font-bold transition-colors",
+                   "text-xs sm:text-lg font-bold transition-colors break-words block",
                    showCorrect && isCorrect ? "text-emerald-900" : isSelected ? "text-indigo-900" : "text-slate-700",
-                   isTrueFalse && "text-xl uppercase tracking-wider"
+                   isTrueFalse && "text-sm sm:text-xl uppercase tracking-wider"
                  )}>
                      {opt.text || (isTrueFalse ? (i === 0 ? "TRUE" : "FALSE") : "Phương án " + (i + 1))}
                  </span>

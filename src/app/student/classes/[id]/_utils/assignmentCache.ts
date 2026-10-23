@@ -206,11 +206,12 @@ export async function fetchQuizDataWithCache(
   groupId?: string
 ): Promise<any> {
   const cacheKey = `${id}_${classId || ''}_${groupId || ''}`;
-  if (!force && quizCache.has(cacheKey)) {
+  const existing = quizCache.get(cacheKey) || quizCache.get(id);
+  if (!force && existing) {
     setAssignmentProgress(id, 100);
-    return quizCache.get(cacheKey);
+    return existing;
   }
-  const key = `quiz_${cacheKey}_${forPreload ? 'preload' : 'run'}`;
+  const key = `quiz_${cacheKey}`;
   if (!force && pendingRequests.has(key)) {
     return pendingRequests.get(key);
   }
@@ -904,7 +905,12 @@ export async function loadAssignmentUrgent(
 /**
  * Promote an assignment to top priority (e.g. when user clicks on it).
  */
-export function promoteAssignmentPriority(assignmentId: string, classId?: string, groupId?: string) {
+export function promoteAssignmentPriority(
+  assignmentId: string, 
+  classId?: string, 
+  groupId?: string,
+  item?: { assignment: { id: string; materialType: string; instructions?: string | null; title: string } }
+) {
   if (!assignmentId) return;
   if (isAssignmentCached(assignmentId)) {
     setAssignmentProgress(assignmentId, 100);
@@ -917,6 +923,8 @@ export function promoteAssignmentPriority(assignmentId: string, classId?: string
     if (classId) entry.classId = classId;
     if (groupId) entry.groupId = groupId;
     preloadQueue.unshift(entry);
+  } else if (item) {
+    preloadQueue.unshift({ item, priority: 9999, classId, groupId });
   }
   // Express Lane: Immediately start user-clicked item without waiting in queue
   processPreloadQueue(true);

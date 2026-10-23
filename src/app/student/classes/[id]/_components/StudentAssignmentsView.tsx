@@ -48,7 +48,8 @@ import {
   AlertCircle,
   Compass,
   Map as MapIcon,
-  Trophy
+  Trophy,
+  Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree, getItemStage } from '../_utils/assignmentOrder';
@@ -57,6 +58,7 @@ import dynamic from 'next/dynamic';
 import { FloatingZaloWidget } from './FloatingZaloWidget';
 import { trackEvent } from '@/lib/analytics';
 import { ClassAdventureMap, parseDayTitle, extractDayNumber } from './ClassAdventureMap';
+import { GrammarAgentMap, GRAMMAR_DAY_TOPICS } from './GrammarAgentMap';
 
 export function ActivityCanvasLoadingFallback() {
   return (
@@ -638,21 +640,31 @@ export function StudentAssignmentsView({
     return 'general_class';
   }, [currentClass?.name, currentClass?.slug, pathname]);
 
-  // Detect whether current class or its groups follow Vocab curriculum ('bài') vs Grammar curriculum ('ngày')
+  // Detect whether current class or its groups follow Grammar curriculum vs Vocab curriculum
+  const isGrammarClass = useMemo(() => {
+    return classId === 'cmuvbigbg0001vta43ikcsjbk' ||
+      currentClass?.joinCode === 'GM45VN' ||
+      currentClass?.name?.toLowerCase().includes('ngữ pháp') ||
+      currentClass?.name?.toLowerCase().includes('grammar');
+  }, [classId, currentClass]);
+
   const isVocabClass = useMemo(() => {
+    if (isGrammarClass) return false;
     return classId === 'tiny-vocab-wonders' ||
       currentClass?.joinCode === 'VOCAB45' ||
       currentClass?.name?.toLowerCase().includes('vocab') ||
       currentClass?.name?.toLowerCase().includes('từ vựng') ||
-      assignmentGroups.some(g => g.title.toLowerCase().includes('bài'));
-  }, [classId, currentClass, assignmentGroups]);
+      assignmentGroups.some(g => /\bbài\s+\d+/i.test(g.title));
+  }, [classId, currentClass, assignmentGroups, isGrammarClass]);
+
+  const isDayQuestClass = isVocabClass || isGrammarClass;
 
   // Sidebar collapse state (default true for Focus Mode so canvas is front-and-center)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(true);
 
   useEffect(() => {
     try {
-      if (isVocabClass) {
+      if (isDayQuestClass) {
         setIsSidebarCollapsed(true);
         return;
       }
@@ -670,10 +682,10 @@ export function StudentAssignmentsView({
         }
       }
     } catch {}
-  }, [initialAssignmentId, searchParams, isVocabClass]);
+  }, [initialAssignmentId, searchParams, isDayQuestClass]);
 
   const toggleSidebar = () => {
-    if (isVocabClass) return;
+    if (isDayQuestClass) return;
     setIsSidebarCollapsed(prev => {
       const next = !prev;
       try {
@@ -687,9 +699,9 @@ export function StudentAssignmentsView({
 
   // Fullscreen / Zen mode for Canvas (Area 3)
   const [isZenMode, setIsZenMode] = useState(false);
-  // Accordion: which station is expanded in the left vocab sidebar
-  const [expandedStationId, setExpandedStationId] = useState<string | null>('game');
-  // Mobile bottom sheet: opens vocab station nav on small screens
+  // Accordion: which station is expanded in the left vocab/grammar sidebar
+  const [expandedStationId, setExpandedStationId] = useState<string | null>(null);
+  // Mobile bottom sheet: opens vocab/grammar station nav on small screens
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
 
   // View mode: 'map' (Bản đồ hành trình toàn khóa kiểu Duolingo/Lingokids) | 'activity' (Làm bài tập)
@@ -707,6 +719,8 @@ export function StudentAssignmentsView({
   // Class Switcher Dropdown state
   const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false);
   const classDropdownRef = useRef<HTMLDivElement | null>(null);
+  // Track whether student entered activity mode from the adventure map
+  const enteredFromMapRef = useRef<boolean>(false);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -1055,13 +1069,17 @@ export function StudentAssignmentsView({
   }, [activeGroup, activeAssignmentId, expandedLessonClusters]);
 
   const currentDayQuestStations = useMemo(() => {
-    const dayItems: StudentGroupItem[] = activeDayCluster 
-      ? [activeDayCluster.lesson, ...activeDayCluster.exercises] 
-      : (activeGroup?.items || []);
+    const dayItems: StudentGroupItem[] = isGrammarClass
+      ? (activeGroup?.items || [])
+      : (activeDayCluster 
+          ? [activeDayCluster.lesson, ...activeDayCluster.exercises] 
+          : (activeGroup?.items || []));
 
     if (dayItems.length === 0) return null;
 
-    const dayRawTitle = activeDayCluster?.lesson.assignment.title || activeGroup?.title || '';
+    const dayRawTitle = isGrammarClass
+      ? (activeGroup?.title || '')
+      : (activeDayCluster?.lesson.assignment.title || activeGroup?.title || '');
     const parsedDay = parseDayTitle(dayRawTitle);
     const dayNum = extractDayNumber(dayRawTitle) || 1;
     const stageNum = Math.ceil(dayNum / 15) || 1;
@@ -1111,130 +1129,242 @@ export function StudentAssignmentsView({
       : false;
     const isQuizDone = quizItem ? Boolean(submissionsState[quizItem.assignment.id]?.isSubmitted) : false;
 
-    // Standardize 3 stations for 45 Vocab class, 4 stations for Grammar classes
-    const stations = isVocabClass ? [
-      {
-        step: 1,
-        id: 'vocab',
-        title: 'Thẻ Từ Vựng',
-        shortTitle: '1. Thẻ Từ',
-        item: vocabItem || dayItems[0],
-        isDone: isVocabDone,
+    // Grammar class specific activity separation
+    const grammarTheoryItem = isGrammarClass ? dayItems.find(it => {
+      const titleLower = (it.assignment.title || '').toLowerCase();
+      return titleLower.includes('lý thuyết') || titleLower.includes('ly thuyet') || titleLower.includes('grammar lesson') || getItemStage(it) === 'lesson';
+    }) : undefined;
+
+    const grammarReadingItem = isGrammarClass ? dayItems.find(it => {
+      const titleLower = (it.assignment.title || '').toLowerCase();
+      return it !== grammarTheoryItem && (titleLower.includes('[bài đọc]') || titleLower.includes('bài đọc') || getItemStage(it) === 'reading');
+    }) : undefined;
+
+    const grammarExercises = isGrammarClass ? dayItems.filter(it => it !== grammarTheoryItem && it !== grammarReadingItem) : [];
+    const grammarNewExercises = isGrammarClass ? (dayNum === 1 ? grammarExercises : grammarExercises.slice(0, 3)) : [];
+    const grammarReviewExercises = isGrammarClass ? (dayNum === 1 ? [] : grammarExercises.slice(3)) : [];
+
+    const isGrammarTheoryDone = grammarTheoryItem ? Boolean(submissionsState[grammarTheoryItem.assignment.id]?.isSubmitted) : false;
+    const isGrammarNewDone = grammarNewExercises.length > 0 && grammarNewExercises.every(it => Boolean(submissionsState[it.assignment.id]?.isSubmitted));
+    const isGrammarReviewDone = grammarReviewExercises.length > 0 && grammarReviewExercises.every(it => Boolean(submissionsState[it.assignment.id]?.isSubmitted));
+    const isGrammarReadingDone = grammarReadingItem ? Boolean(submissionsState[grammarReadingItem.assignment.id]?.isSubmitted) : false;
+
+    let stations;
+    if (isVocabClass) {
+      stations = [
+        {
+          step: 1,
+          id: 'vocab',
+          title: 'Thẻ Từ Vựng',
+          shortTitle: '1. Thẻ Từ',
+          item: vocabItem || dayItems[0],
+          isDone: isVocabDone,
+          isLocked: false,
+          icon: Layers,
+          badgeColor: 'bg-emerald-500 text-white',
+          activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
+        },
+        {
+          step: 2,
+          id: 'game',
+          title: 'Trò Chơi Phản Xạ',
+          shortTitle: '2. Mini Game',
+          item: gameItem || dayItems[1] || dayItems[0],
+          gameItems,          // all sub-game items for accordion
+          isDone: isGameDone,
+          isLocked: false,
+          icon: Gamepad2,
+          badgeColor: 'bg-amber-500 text-white',
+          activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+        },
+        {
+          step: 3,
+          id: 'reading',
+          title: 'Bài Đọc Hiểu',
+          shortTitle: '3. Bài Đọc',
+          item: practiceItem || dayItems[2] || dayItems[0],
+          isDone: isPracticeDone,
+          isLocked: false,
+          icon: BookOpen,
+          badgeColor: 'bg-sky-500 text-white',
+          activeColor: 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50',
+        },
+      ];
+    } else if (isGrammarClass) {
+      const list = [
+        {
+          step: 1,
+          id: 'grammar-theory',
+          title: 'Lý thuyết ngữ pháp',
+          shortTitle: '1. Lý thuyết',
+          item: grammarTheoryItem || dayItems.find(it => it !== grammarReadingItem) || dayItems[0],
+          isDone: isGrammarTheoryDone,
+          isLocked: false,
+          icon: BookOpen,
+          badgeColor: 'bg-emerald-500 text-white',
+          activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
+        },
+        {
+          step: 2,
+          id: 'grammar-practice',
+          title: 'Bài tập vận dụng ngữ pháp',
+          shortTitle: '2. Vận dụng',
+          item: grammarNewExercises.find(it => !submissionsState[it.assignment.id]?.isSubmitted) || grammarNewExercises[0] || dayItems[0],
+          items: grammarNewExercises,
+          gameItems: grammarNewExercises,
+          isDone: isGrammarNewDone,
+          isLocked: false,
+          icon: Zap,
+          badgeColor: 'bg-sky-500 text-white',
+          activeColor: 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50',
+        },
+      ];
+
+      if (grammarReviewExercises.length > 0) {
+        list.push({
+          step: 3,
+          id: 'grammar-review',
+          title: 'Ôn tập bài cũ',
+          shortTitle: '3. Ôn Tập',
+          item: grammarReviewExercises.find(it => !submissionsState[it.assignment.id]?.isSubmitted) || grammarReviewExercises[0] || dayItems[0],
+          items: grammarReviewExercises,
+          gameItems: grammarReviewExercises,
+          isDone: isGrammarReviewDone,
+          isLocked: false,
+          icon: RotateCcw,
+          badgeColor: 'bg-amber-500 text-white',
+          activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+        });
+      }
+
+      list.push({
+        step: grammarReviewExercises.length > 0 ? 4 : 3,
+        id: 'grammar-reading',
+        title: 'Bài reading',
+        shortTitle: `${grammarReviewExercises.length > 0 ? 4 : 3}. Bài reading ⭐`,
+        item: grammarReadingItem || dayItems.find(it => it !== grammarTheoryItem) || dayItems[dayItems.length - 1] || dayItems[0],
+        isDone: isGrammarReadingDone,
         isLocked: false,
-        icon: Layers,
-        badgeColor: 'bg-emerald-500 text-white',
-        activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
-        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
-      },
-      {
-        step: 2,
-        id: 'game',
-        title: 'Trò Chơi Phản Xạ',
-        shortTitle: '2. Mini Game',
-        item: gameItem || dayItems[1] || dayItems[0],
-        gameItems,          // all sub-game items for accordion
-        isDone: isGameDone,
-        isLocked: false,
-        icon: Gamepad2,
-        badgeColor: 'bg-amber-500 text-white',
-        activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
-        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
-      },
-      {
-        step: 3,
-        id: 'reading',
-        title: 'Bài Đọc Hiểu',
-        shortTitle: '3. Bài Đọc',
-        item: practiceItem || dayItems[2] || dayItems[0],
-        isDone: isPracticeDone,
-        isLocked: false,
-        icon: BookOpen,
-        badgeColor: 'bg-sky-500 text-white',
-        activeColor: 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600',
-        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50',
-      },
-    ] : [
-      {
-        step: 1,
-        id: 'vocab',
-        title: 'Thẻ Từ Vựng',
-        shortTitle: '1. Thẻ Từ',
-        item: vocabItem || dayItems[0],
-        isDone: isVocabDone,
-        isLocked: false,
-        icon: Layers,
-        badgeColor: 'bg-emerald-500 text-white',
-        activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
-        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
-      },
-      {
-        step: 2,
-        id: 'practice',
-        title: isPracticeReading ? 'Bài Đọc Hiểu' : 'Luyện Phát Âm',
-        shortTitle: isPracticeReading ? '2. Reading' : '2. Phát Âm',
-        item: practiceItem || dayItems[1] || dayItems[0],
-        isDone: isPracticeDone,
-        // Reading is always unlocked; pronunciation is locked until vocab is done
-        isLocked: isPracticeReading ? false : !isVocabDone,
-        icon: isPracticeReading ? BookOpen : Mic,
-        badgeColor: isPracticeReading ? 'bg-sky-500 text-white' : 'bg-purple-600 text-white',
-        activeColor: isPracticeReading
-          ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600'
-          : 'bg-purple-600 text-white shadow-md shadow-purple-500/30 ring-2 ring-purple-300 dark:ring-purple-600',
-        inactiveColor: isPracticeReading
-          ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50'
-          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-purple-400 hover:bg-purple-50/50',
-      },
-      {
-        step: 3,
-        id: 'game',
-        title: 'Trò Chơi Phản Xạ',
-        shortTitle: '3. Mini Game',
-        item: gameItem || dayItems[2] || dayItems[0],
-        gameItems,          // all sub-game items for accordion
-        isDone: isGameDone,
-        isLocked: false,
-        icon: Gamepad2,
-        badgeColor: 'bg-amber-500 text-white',
-        activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
-        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
-      },
-      {
-        step: 4,
-        id: 'quiz',
-        title: 'Thử Thách Bài Học',
-        shortTitle: '4. Mở Rương ⭐',
-        item: quizItem || dayItems[3] || dayItems[0],
-        isDone: isQuizDone,
-        isLocked: false,
-        icon: Trophy,
-        badgeColor: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950',
-        activeColor: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 font-black shadow-md shadow-amber-500/40 ring-2 ring-yellow-300',
-        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
-      },
-    ];
+        icon: Star,
+        badgeColor: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
+        activeColor: 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/30 ring-2 ring-purple-300 dark:ring-purple-600',
+        inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-purple-400 hover:bg-purple-50/50',
+      });
+
+      stations = list;
+    } else {
+      stations = [
+        {
+          step: 1,
+          id: 'vocab',
+          title: 'Thẻ Từ Vựng',
+          shortTitle: '1. Thẻ Từ',
+          item: vocabItem || dayItems[0],
+          isDone: isVocabDone,
+          isLocked: false,
+          icon: Layers,
+          badgeColor: 'bg-emerald-500 text-white',
+          activeColor: 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300 dark:ring-emerald-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50',
+        },
+        {
+          step: 2,
+          id: 'practice',
+          title: isPracticeReading ? 'Bài Đọc Hiểu' : 'Luyện Phát Âm',
+          shortTitle: isPracticeReading ? '2. Reading' : '2. Phát Âm',
+          item: practiceItem || dayItems[1] || dayItems[0],
+          isDone: isPracticeDone,
+          // Reading is always unlocked; pronunciation is locked until vocab is done
+          isLocked: isPracticeReading ? false : !isVocabDone,
+          icon: isPracticeReading ? BookOpen : Mic,
+          badgeColor: isPracticeReading ? 'bg-sky-500 text-white' : 'bg-purple-600 text-white',
+          activeColor: isPracticeReading
+            ? 'bg-sky-500 text-white shadow-md shadow-sky-500/30 ring-2 ring-sky-300 dark:ring-sky-600'
+            : 'bg-purple-600 text-white shadow-md shadow-purple-500/30 ring-2 ring-purple-300 dark:ring-purple-600',
+          inactiveColor: isPracticeReading
+            ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-sky-400 hover:bg-sky-50/50'
+            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-purple-400 hover:bg-purple-50/50',
+        },
+        {
+          step: 3,
+          id: 'game',
+          title: 'Trò Chơi Phản Xạ',
+          shortTitle: '3. Mini Game',
+          item: gameItem || dayItems[2] || dayItems[0],
+          gameItems,          // all sub-game items for accordion
+          isDone: isGameDone,
+          isLocked: false,
+          icon: Gamepad2,
+          badgeColor: 'bg-amber-500 text-white',
+          activeColor: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-orange-500/30 ring-2 ring-amber-300 dark:ring-amber-600',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+        },
+        {
+          step: 4,
+          id: 'quiz',
+          title: 'Thử Thách Bài Học',
+          shortTitle: '4. Mở Rương ⭐',
+          item: quizItem || dayItems[3] || dayItems[0],
+          isDone: isQuizDone,
+          isLocked: false,
+          icon: Trophy,
+          badgeColor: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950',
+          activeColor: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-amber-950 font-black shadow-md shadow-amber-500/40 ring-2 ring-yellow-300',
+          inactiveColor: 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50',
+        },
+      ];
+    }
+
+    let enTitle = parsedDay.enTitle || dayRawTitle;
+    let viTitle = parsedDay.viTitle;
+
+    if (isGrammarClass && GRAMMAR_DAY_TOPICS[dayNum]) {
+      enTitle = GRAMMAR_DAY_TOPICS[dayNum].en;
+      viTitle = GRAMMAR_DAY_TOPICS[dayNum].vi;
+    }
 
     return {
       dayNumber: dayNum,
       stageNumber: stageNum,
-      enTitle: parsedDay.enTitle || dayRawTitle,
-      viTitle: parsedDay.viTitle,
+      enTitle,
+      viTitle,
       stations,
     };
-  }, [activeDayCluster, activeGroup, submissionsState, isVocabClass]);
+  }, [activeDayCluster, activeGroup, submissionsState, isVocabClass, isGrammarClass]);
 
   const activeStationStep = useMemo(() => {
     if (!currentDayQuestStations) return 1;
     const match = currentDayQuestStations.stations.find(st => {
       if (st.item?.assignment.id === activeAssignmentId) return true;
-      // Also match any sub-game in the game station
+      // Also match any sub-game in the game station or items in practice/review station
       if ('gameItems' in st && Array.isArray((st as any).gameItems)) {
         return (st as any).gameItems.some((gi: any) => gi.assignment.id === activeAssignmentId);
+      }
+      if ('items' in st && Array.isArray((st as any).items)) {
+        return (st as any).items.some((gi: any) => gi.assignment.id === activeAssignmentId);
       }
       return false;
     });
     return match?.step || 1;
   }, [currentDayQuestStations, activeAssignmentId]);
+
+  // Auto-expand accordion when switching between stations with sub-items
+  useEffect(() => {
+    if (!currentDayQuestStations) return;
+    const activeSt = currentDayQuestStations.stations.find(st => st.step === activeStationStep);
+    const stAny = activeSt as any;
+    const targetId = (stAny && Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1)
+      ? activeSt?.id ?? null
+      : null;
+
+    setExpandedStationId(prev => (prev === targetId ? prev : targetId));
+  }, [activeStationStep, Boolean(currentDayQuestStations)]);
 
   const completedQuestStationsCount = useMemo(() => {
     if (!currentDayQuestStations) return 0;
@@ -1326,24 +1456,135 @@ export function StudentAssignmentsView({
   }, [activeItemConfig]);
 
 
-  // Synchronize URL query params
-  const updateQueryParams = (groupId: string, assignmentId: string, stageId: string) => {
+  // Synchronize URL query params & browser history state
+  const updateQueryParams = useCallback((
+    groupId: string,
+    assignmentId: string,
+    stageId: string,
+    historyAction: 'push' | 'replace' = 'replace'
+  ) => {
     try {
       const params = new URLSearchParams(window.location.search);
-      params.set('groupId', groupId);
-      params.set('assignmentId', assignmentId);
-      params.set('tab', stageId);
-      params.delete('viewAll');
-      const query = params.toString();
-      window.history.replaceState(null, '', query ? `${pathname}?${query}` : pathname);
-    } catch {}
-  };
+      if (groupId) params.set('groupId', groupId);
+      else params.delete('groupId');
 
-  // NOTE: handlePopState listener removed.
-  // URL is kept in sync via replaceState (not pushState), so there is only ever
-  // one class-page history entry. Pressing Back should navigate away from the
-  // class entirely — the popstate listener was intercepting that and instead
-  // re-routing to a "previous" assignment, making Back feel like going to a previous card.
+      if (assignmentId) params.set('assignmentId', assignmentId);
+      else params.delete('assignmentId');
+
+      if (stageId) params.set('tab', stageId);
+      else params.delete('tab');
+
+      params.delete('viewAll');
+      params.delete('mode');
+
+      const query = params.toString();
+      const newUrl = query ? `${pathname}?${query}` : pathname;
+      const stateData = {
+        viewMode: assignmentId ? 'activity' : 'map',
+        assignmentId: assignmentId || null,
+        groupId: groupId || null,
+        tab: stageId || null,
+      };
+
+      if (historyAction === 'push') {
+        window.history.pushState(stateData, '', newUrl);
+        enteredFromMapRef.current = true;
+      } else {
+        window.history.replaceState(stateData, '', newUrl);
+      }
+    } catch {}
+  }, [pathname]);
+
+  // Handle return to map (from either in-app CTA or browser back)
+  const handleReturnToMap = useCallback(() => {
+    stopAllAudioAndTts();
+    setIsBottomSheetOpen(false);
+    setIsSidebarCollapsed(true);
+
+    if (enteredFromMapRef.current && typeof window !== 'undefined' && window.history.length > 1) {
+      setViewMode('map');
+      window.history.back();
+    } else {
+      setViewMode('map');
+      try {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('assignmentId');
+        params.delete('groupId');
+        params.delete('tab');
+        params.delete('viewAll');
+        params.delete('mode');
+        const query = params.toString();
+        const newUrl = query ? `${pathname}?${query}` : pathname;
+        window.history.replaceState({ viewMode: 'map', assignmentId: null, groupId: null, tab: null }, '', newUrl);
+      } catch {}
+    }
+  }, [pathname]);
+
+  // Synchronize browser history (Back / Forward navigation)
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const hasAid = Boolean(params.get('assignmentId') ?? initialAssignmentId);
+        const initialMode = hasAid ? 'activity' : 'map';
+        if (!window.history.state || window.history.state.viewMode !== initialMode) {
+          window.history.replaceState(
+            {
+              ...window.history.state,
+              viewMode: initialMode,
+              assignmentId: params.get('assignmentId') ?? initialAssignmentId ?? null,
+              groupId: params.get('groupId') ?? null,
+              tab: params.get('tab') ?? null,
+            },
+            '',
+            window.location.href
+          );
+        }
+      }
+    } catch {}
+
+    const handlePopState = (e: PopStateEvent) => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const aidInUrl = params.get('assignmentId');
+        const gidInUrl = params.get('groupId');
+        const tabInUrl = params.get('tab');
+        const stateViewMode = e.state?.viewMode;
+
+        // Nếu pop về màn hình Bản đồ (state là 'map' HOẶC URL không còn assignmentId)
+        if (stateViewMode === 'map' || (!aidInUrl && !stateViewMode)) {
+          stopAllAudioAndTts();
+          setViewMode('map');
+          setIsSidebarCollapsed(true);
+          enteredFromMapRef.current = false;
+          return;
+        }
+
+        // Nếu pop về màn hình Làm bài (hoặc Forward từ Map sang Làm bài)
+        if (stateViewMode === 'activity' || aidInUrl) {
+          stopAllAudioAndTts();
+          const targetAid = aidInUrl || (e.state?.assignmentId as string | undefined);
+          const targetGid = gidInUrl || (e.state?.groupId as string | undefined);
+          const targetTab = tabInUrl || (e.state?.tab as string | undefined);
+
+          if (targetAid) {
+            setActiveAssignmentId(targetAid);
+          }
+          if (targetGid) {
+            setSelectedGroupId(targetGid);
+            setExpandedGroups(prev => ({ ...prev, [targetGid]: true }));
+          }
+          if (targetTab) {
+            setActiveStageId(targetTab as ActivityStage);
+          }
+          setViewMode('activity');
+        }
+      } catch {}
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [initialAssignmentId]);
 
   // State lưu trữ yêu cầu chuyển bài/nhóm/tab đang chờ học sinh xác nhận
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null);
@@ -1429,15 +1670,24 @@ export function StudentAssignmentsView({
     }
 
     prefetchAssignmentData(item, classId, parentGroupId);
-    promoteAssignmentPriority(item.assignment.id, classId, parentGroupId);
+    promoteAssignmentPriority(item.assignment.id, classId, parentGroupId, item);
 
+    // Queue remaining items of this day for background idle preload
+    if (grp?.items) {
+      const otherItems = grp.items.filter(i => i.assignment.id !== item.assignment.id);
+      otherItems.forEach(oi => {
+        prefetchAssignmentData(oi, classId, parentGroupId);
+      });
+    }
+
+    const isTransitionFromMap = viewMode === 'map';
     const cfg = parseItemConfig(item);
     setSelectedGroupId(parentGroupId);
     setExpandedGroups({ [parentGroupId]: true });
     setActiveAssignmentId(item.assignment.id);
     setActiveStageId(cfg.stage);
     setViewMode('activity');
-    updateQueryParams(parentGroupId, item.assignment.id, cfg.stage);
+    updateQueryParams(parentGroupId, item.assignment.id, cfg.stage, isTransitionFromMap ? 'push' : 'replace');
 
     trackEvent('course_day_selected', {
       course_type: courseType,
@@ -1467,7 +1717,7 @@ export function StudentAssignmentsView({
       setIsSidebarCollapsed(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [assignmentGroups, selectedGroupId, classId, pathname, courseType]);
+  }, [assignmentGroups, selectedGroupId, classId, pathname, courseType, viewMode, updateQueryParams]);
 
   // Thực hiện chuyển Stage Tab (Internal)
   const executeSelectStageTab = useCallback((stageId: ActivityStage) => {
@@ -2408,7 +2658,7 @@ export function StudentAssignmentsView({
         ? 'fixed inset-0 z-[100] bg-slate-950 p-2 sm:p-4 overflow-hidden' 
         : viewMode === 'map'
           ? 'h-screen overflow-hidden'
-          : isVocabClass
+          : isDayQuestClass
             ? 'h-screen overflow-hidden flex flex-col'
             : 'space-y-4'
     }`}>
@@ -2469,15 +2719,15 @@ export function StudentAssignmentsView({
       <div className={`w-full ${
         viewMode === 'map'
           ? 'h-screen flex flex-col p-0 m-0 overflow-hidden'
-          : isVocabClass
+          : isDayQuestClass
             ? `flex flex-row items-stretch ${isZenMode ? 'h-full' : 'h-screen'} overflow-hidden`
             : `max-w-[1700px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 pb-12 pt-3 sm:pt-4 flex flex-col lg:flex-row items-stretch gap-4 sm:gap-5 ${isZenMode ? 'h-full' : 'min-h-[820px]'}`
       }`}>
 
         {/* ══════════════════════════════════════════════════════════════════
-            KHU VỰC 1: SIDEBAR CÂY ĐIỀU HƯỚNG (Chỉ mở khi KHÔNG PHẢI lớp vocab)
+            KHU VỰC 1: SIDEBAR CÂY ĐIỀU HƯỚNG (Chỉ mở khi KHÔNG PHẢI lớp vocab/grammar)
             ══════════════════════════════════════════════════════════════════ */}
-        {!isVocabClass && !isZenMode && viewMode === 'activity' && !isSidebarCollapsed && (
+        {!isDayQuestClass && !isZenMode && viewMode === 'activity' && !isSidebarCollapsed && (
           <aside className="w-full lg:w-[330px] xl:w-[360px] transition-all duration-300 flex flex-col shrink-0 animate-in fade-in slide-in-from-left-3 duration-200">
               <div className="bg-[#FBF3DF]/75 dark:bg-slate-900/90 backdrop-blur-md border border-[#F0E2BF] dark:border-slate-800 rounded-[24px] shadow-sm flex flex-col h-full overflow-hidden max-h-[860px]">
                 
@@ -2516,12 +2766,7 @@ export function StudentAssignmentsView({
                   {/* Quick Switch to Adventure Map (Duolingo style) */}
                   <button
                     type="button"
-                    onClick={() => {
-                      stopAllAudioAndTts();
-                      setViewMode('map');
-                      // Always collapse sidebar when returning to map (full-width map experience)
-                      setIsSidebarCollapsed(true);
-                    }}
+                    onClick={handleReturnToMap}
                     className="w-full flex items-center justify-between gap-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer active:scale-98 bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-200/80 dark:border-amber-800/60 hover:bg-amber-100/70"
                   >
                     <div className="flex items-center gap-2">
@@ -2789,30 +3034,30 @@ export function StudentAssignmentsView({
             </aside>
         )}
 
-        {/* ── VOCAB CLASS: LEFT STAGE NAV SIDEBAR (desktop sm+) ── */}
-        {isVocabClass && viewMode === 'activity' && (
-          <aside className="hidden sm:flex sm:w-44 md:w-52 shrink-0 flex-col bg-[#FBF3DF]/90 dark:bg-slate-900 border-r border-[#F0E2BF] dark:border-slate-800 overflow-hidden">
+        {/* ── VOCAB / GRAMMAR CLASS: LEFT STAGE NAV SIDEBAR (desktop sm+) ── */}
+        {isDayQuestClass && viewMode === 'activity' && (
+          <aside className="hidden sm:flex sm:w-56 md:w-60 shrink-0 flex-col bg-[#FBF3DF]/90 dark:bg-slate-900 border-r border-[#F0E2BF] dark:border-slate-800 overflow-hidden">
             {/* Back to map + Day info */}
             <div className="p-3 border-b border-[#F0E2BF]/80 dark:border-slate-800 shrink-0 space-y-2.5">
               <button
                 type="button"
-                onClick={() => { stopAllAudioAndTts(); setViewMode('map'); setIsSidebarCollapsed(true); }}
-                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+                onClick={handleReturnToMap}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 <Compass className="w-3.5 h-3.5 stroke-[2.4px] animate-spin-slow shrink-0" />
-                <span>← Về Bản đồ</span>
+                <span className="truncate">← Về Bản đồ</span>
               </button>
 
               {currentDayQuestStations && (
-                <div className="px-1 space-y-0.5">
+                <div className="px-1 space-y-1">
                   <span className="inline-flex px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 text-[11px] font-black uppercase tracking-wider">
                     Ngày {currentDayQuestStations.dayNumber}
                   </span>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white truncate leading-snug mt-0.5" title={currentDayQuestStations.enTitle}>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white leading-snug mt-0.5 whitespace-normal break-words" title={currentDayQuestStations.enTitle}>
                     {currentDayQuestStations.enTitle}
                   </h3>
                   {currentDayQuestStations.viTitle && (
-                    <p className="text-xs font-bold text-amber-600 dark:text-amber-400 truncate">
+                    <p className="text-xs font-bold text-amber-600 dark:text-amber-400 leading-snug whitespace-normal break-words">
                       {currentDayQuestStations.viTitle}
                     </p>
                   )}
@@ -2826,7 +3071,10 @@ export function StudentAssignmentsView({
                 const isActive = st.step === activeStationStep;
                 const IconComp = st.icon;
                 const stAny = st as any;
-                const hasMultipleGames = st.id === 'game' && Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1;
+                const hasMultipleGames = Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1;
+                const subGames = hasMultipleGames ? (stAny.gameItems as any[]) : [];
+                const doneSubCount = subGames.filter((gi: any) => submissionsState[gi.assignment.id]?.isSubmitted).length;
+                const totalSubCount = subGames.length;
                 const isExpanded = expandedStationId === st.id;
 
                 const stationBtn = (
@@ -2835,7 +3083,8 @@ export function StudentAssignmentsView({
                     type="button"
                     onClick={() => {
                       if (st.isLocked) {
-                        toast.info('🔒 Bài Luyện Phát Âm đang khóa. Bé hãy hoàn thành Thẻ Từ Vựng ở Trạm 1 trước nhé!', { icon: '🔒', duration: 3500 });
+                        const pronoun = isGrammarClass ? 'Bạn' : 'Bé';
+                        toast.info(`🔒 Bài học đang khóa. ${pronoun} hãy hoàn thành các bài trước nhé!`, { icon: '🔒', duration: 3500 });
                         return;
                       }
                       if (hasMultipleGames) {
@@ -2869,14 +3118,42 @@ export function StudentAssignmentsView({
                         <IconComp className="w-3 h-3 stroke-[2.4px]" />
                       )}
                     </div>
-                    <span className="flex-1 truncate leading-snug">{st.shortTitle}</span>
-                    {hasMultipleGames ? (
-                      <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
-                        isActive ? 'text-white/70' : 'text-slate-400'
-                      } ${isExpanded ? 'rotate-180' : ''}`} />
-                    ) : (
-                      st.isDone && <Check className="w-3 h-3 text-emerald-500 shrink-0 stroke-[3px]" />
-                    )}
+                    <span className="flex-1 whitespace-normal break-words leading-snug">{st.shortTitle}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {hasMultipleGames ? (
+                        <>
+                          {st.isDone ? (
+                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                              isActive 
+                                ? 'bg-white/30 text-white' 
+                                : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                            }`}>
+                              {totalSubCount}/{totalSubCount}
+                              <Check className="w-2.5 h-2.5 stroke-[3.5px]" />
+                            </span>
+                          ) : doneSubCount > 0 ? (
+                            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                              isActive 
+                                ? 'bg-white/20 text-white' 
+                                : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}>
+                              {doneSubCount}/{totalSubCount}
+                            </span>
+                          ) : null}
+                          <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                            isActive ? 'text-white/80' : 'text-slate-400'
+                          } ${isExpanded ? 'rotate-180' : ''}`} />
+                        </>
+                      ) : (
+                        st.isDone && (
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                            isActive ? 'bg-white/30 text-white' : 'bg-emerald-500 text-white shadow-xs'
+                          }`}>
+                            <Check className="w-2.5 h-2.5 stroke-[3.5px]" />
+                          </span>
+                        )
+                      )}
+                    </div>
                   </button>
                 );
 
@@ -2887,36 +3164,49 @@ export function StudentAssignmentsView({
                     {stationBtn}
                     {isExpanded && (
                       <div className="ml-3 pl-2.5 border-l-2 border-amber-200/80 dark:border-amber-700/40 space-y-1 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                        {stAny.gameItems.map((gi: any) => {
+                        {stAny.gameItems.map((gi: any, subIdx: number) => {
                           const isSubActive = gi.assignment.id === activeAssignmentId;
                           const isSubDone = Boolean(submissionsState[gi.assignment.id]?.isSubmitted);
-                          const subLabel = gi.assignment.title
+                          const rawTitle = gi.assignment.title
                             .replace(/^game\s*:\s*[^\-\u2014\u2013«»:]+[\-\u2014\u2013«»:]\s*/i, '')
                             .replace(/^\[[^\]]+\]\s*/i, '')
                             .trim() || gi.assignment.title;
+                          const subLabel = isGrammarClass
+                            ? (st.id === 'grammar-practice' ? `Bài ${subIdx + 1}: ${rawTitle}` : `Ôn ${subIdx + 1}: ${rawTitle}`)
+                            : rawTitle;
+                          const subActiveColor = isGrammarClass && st.id === 'grammar-practice'
+                            ? 'bg-sky-500 text-white shadow-sm'
+                            : 'bg-amber-500 text-white shadow-sm';
                           return (
                             <button
                               key={gi.assignment.id}
                               type="button"
                               onClick={() => executeSelectAssignment(gi, selectedGroupId)}
-                              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-black text-left transition-all cursor-pointer ${
+                              className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-[11px] font-black text-left transition-all cursor-pointer ${
                                 isSubActive
-                                  ? 'bg-amber-500 text-white shadow-sm'
+                                  ? subActiveColor
                                   : isSubDone
                                     ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
                                     : 'text-slate-600 dark:text-slate-300 hover:bg-amber-50/70 dark:hover:bg-amber-950/40'
                               }`}
                             >
-                              <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                              <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
                                 isSubActive ? 'bg-white/25' : isSubDone ? 'bg-emerald-500 text-white' : 'bg-slate-200/80 dark:bg-slate-700'
                               }`}>
-                                {isSubDone
-                                  ? <Check className="w-2.5 h-2.5 stroke-[3px]" />
-                                  : <Gamepad2 className="w-2.5 h-2.5 stroke-[2.3px]" />
-                                }
+                                {isSubDone ? (
+                                  <Check className="w-2.5 h-2.5 stroke-[3px]" />
+                                ) : isGrammarClass ? (
+                                  st.id === 'grammar-practice' ? (
+                                    <Zap className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                  ) : (
+                                    <RotateCcw className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                  )
+                                ) : (
+                                  <Gamepad2 className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                )}
                               </div>
-                              <span className="flex-1 truncate">{subLabel}</span>
-                              {isSubActive && <span className="text-white/70 shrink-0">▶</span>}
+                              <span className="flex-1 whitespace-normal break-words leading-tight" title={subLabel}>{subLabel}</span>
+                              {isSubActive && <span className="text-white/70 shrink-0 mt-0.5">▶</span>}
                             </button>
                           );
                         })}
@@ -2926,31 +3216,26 @@ export function StudentAssignmentsView({
                 );
               })}
             </div>
-
-            {/* Bottom: progress + zen */}
-            <div className="p-3 border-t border-[#F0E2BF]/80 dark:border-slate-800 shrink-0 space-y-2">
-              {currentDayQuestStations && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60">
-                  <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
-                  <span className="text-[11px] font-black text-amber-700 dark:text-amber-300">{completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 3} Trạm xong</span>
-                </div>
-              )}
-              <button
-                type="button"
-                title={isZenMode ? 'Thu nhỏ về chế độ thường' : 'Mở rộng toàn màn hình'}
-                onClick={() => setIsZenMode(prev => !prev)}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-black transition-all cursor-pointer"
-              >
-                {isZenMode ? <Minimize2 className="w-3.5 h-3.5 stroke-[2.2px]" /> : <Maximize2 className="w-3.5 h-3.5 stroke-[2.2px]" />}
-                <span>{isZenMode ? 'Thu nhỏ' : 'Zen Mode'}</span>
-              </button>
-            </div>
           </aside>
         )}
 
-        {/* ── MOBILE: Floating trigger + Bottom Sheet for vocab class station nav ── */}
-        {isVocabClass && viewMode === 'activity' && (
+        {/* ── MOBILE: Floating trigger + Bottom Sheet for vocab / grammar class station nav ── */}
+        {isDayQuestClass && viewMode === 'activity' && (
           <>
+            {/* Mobile floating button to open stations */}
+            {!isBottomSheetOpen && (
+              <div className="sm:hidden fixed top-3 left-3 z-40 animate-in fade-in slide-in-from-top-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBottomSheetOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-lg shadow-amber-500/30 active:scale-95 transition-all cursor-pointer border border-white/20 backdrop-blur-md"
+                >
+                  <Compass className="w-3.5 h-3.5 stroke-[2.4px]" />
+                  <span>Trạm học ({completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 4})</span>
+                </button>
+              </div>
+            )}
+
             {/* Backdrop */}
             {isBottomSheetOpen && (
               <div
@@ -3002,7 +3287,7 @@ export function StudentAssignmentsView({
               <div className="px-4 pt-3">
                 <button
                   type="button"
-                  onClick={() => { stopAllAudioAndTts(); setViewMode('map'); setIsSidebarCollapsed(true); setIsBottomSheetOpen(false); }}
+                  onClick={handleReturnToMap}
                   className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 text-white font-black text-xs cursor-pointer active:scale-95 transition-all"
                 >
                   <Compass className="w-3.5 h-3.5 stroke-[2.4px] animate-spin-slow shrink-0" />
@@ -3016,7 +3301,10 @@ export function StudentAssignmentsView({
                   const isActive = st.step === activeStationStep;
                   const IconComp = st.icon;
                   const stAny = st as any;
-                  const hasMultipleGames = st.id === 'game' && Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1;
+                  const hasMultipleGames = Array.isArray(stAny.gameItems) && stAny.gameItems.length > 1;
+                  const subGames = hasMultipleGames ? (stAny.gameItems as any[]) : [];
+                  const doneSubCount = subGames.filter((gi: any) => submissionsState[gi.assignment.id]?.isSubmitted).length;
+                  const totalSubCount = subGames.length;
                   const isExpanded = expandedStationId === st.id;
 
                   const stationBtn = (
@@ -3025,7 +3313,8 @@ export function StudentAssignmentsView({
                       type="button"
                       onClick={() => {
                         if (st.isLocked) {
-                          toast.info('🔒 Bài Luyện Phát Âm đang khóa. Bé hãy hoàn thành Thẻ Từ Vựng ở Trạm 1 trước nhé!', { icon: '🔒', duration: 3500 });
+                          const pronoun = isGrammarClass ? 'Bạn' : 'Bé';
+                          toast.info(`🔒 Bài học đang khóa. ${pronoun} hãy hoàn thành các bài trước nhé!`, { icon: '🔒', duration: 3500 });
                           return;
                         }
                         if (hasMultipleGames) {
@@ -3059,14 +3348,42 @@ export function StudentAssignmentsView({
                           <IconComp className="w-3 h-3 stroke-[2.4px]" />
                         )}
                       </div>
-                      <span className="flex-1 truncate leading-snug">{st.shortTitle}</span>
-                      {hasMultipleGames ? (
-                        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
-                          isActive ? 'text-white/70' : 'text-slate-400'
-                        } ${isExpanded ? 'rotate-180' : ''}`} />
-                      ) : (
-                        st.isDone && <Check className="w-3 h-3 text-emerald-500 shrink-0 stroke-[3px]" />
-                      )}
+                      <span className="flex-1 whitespace-normal break-words leading-snug">{st.shortTitle}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {hasMultipleGames ? (
+                          <>
+                            {st.isDone ? (
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                                isActive 
+                                  ? 'bg-white/30 text-white' 
+                                  : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {totalSubCount}/{totalSubCount}
+                                <Check className="w-2.5 h-2.5 stroke-[3.5px]" />
+                              </span>
+                            ) : doneSubCount > 0 ? (
+                              <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
+                                isActive 
+                                  ? 'bg-white/20 text-white' 
+                                  : 'bg-slate-200 text-slate-600'
+                              }`}>
+                                {doneSubCount}/{totalSubCount}
+                              </span>
+                            ) : null}
+                            <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                              isActive ? 'text-white/80' : 'text-slate-400'
+                            } ${isExpanded ? 'rotate-180' : ''}`} />
+                          </>
+                        ) : (
+                          st.isDone && (
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                              isActive ? 'bg-white/30 text-white' : 'bg-emerald-500 text-white shadow-xs'
+                            }`}>
+                              <Check className="w-2.5 h-2.5 stroke-[3.5px]" />
+                            </span>
+                          )
+                        )}
+                      </div>
                     </button>
                   );
 
@@ -3077,36 +3394,49 @@ export function StudentAssignmentsView({
                       {stationBtn}
                       {isExpanded && (
                         <div className="ml-3 pl-2.5 border-l-2 border-amber-200/80 space-y-1 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                          {stAny.gameItems.map((gi: any) => {
+                          {stAny.gameItems.map((gi: any, subIdx: number) => {
                             const isSubActive = gi.assignment.id === activeAssignmentId;
                             const isSubDone = Boolean(submissionsState[gi.assignment.id]?.isSubmitted);
-                            const subLabel = gi.assignment.title
+                            const rawTitle = gi.assignment.title
                               .replace(/^game\s*:\s*[^\-\u2014\u2013«»:]+[\-\u2014\u2013«»:]\s*/i, '')
                               .replace(/^\[[^\]]+\]\s*/i, '')
                               .trim() || gi.assignment.title;
+                            const subLabel = isGrammarClass
+                              ? (st.id === 'grammar-practice' ? `Bài ${subIdx + 1}: ${rawTitle}` : `Ôn ${subIdx + 1}: ${rawTitle}`)
+                              : rawTitle;
+                            const subActiveColor = isGrammarClass && st.id === 'grammar-practice'
+                              ? 'bg-sky-500 text-white shadow-sm'
+                              : 'bg-amber-500 text-white shadow-sm';
                             return (
                               <button
                                 key={`bs-gi-${gi.assignment.id}`}
                                 type="button"
                                 onClick={() => { executeSelectAssignment(gi, selectedGroupId); setIsBottomSheetOpen(false); }}
-                                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-black text-left transition-all cursor-pointer ${
+                                className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-[11px] font-black text-left transition-all cursor-pointer ${
                                   isSubActive
-                                    ? 'bg-amber-500 text-white shadow-sm'
+                                    ? subActiveColor
                                     : isSubDone
                                       ? 'text-emerald-600 hover:bg-emerald-50'
                                       : 'text-slate-600 hover:bg-amber-50/70'
                                 }`}
                               >
-                                <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 ${
+                                <div className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
                                   isSubActive ? 'bg-white/25' : isSubDone ? 'bg-emerald-500 text-white' : 'bg-slate-200/80'
                                 }`}>
-                                  {isSubDone
-                                    ? <Check className="w-2.5 h-2.5 stroke-[3px]" />
-                                    : <Gamepad2 className="w-2.5 h-2.5 stroke-[2.3px]" />
-                                  }
+                                  {isSubDone ? (
+                                    <Check className="w-2.5 h-2.5 stroke-[3px]" />
+                                  ) : isGrammarClass ? (
+                                    st.id === 'grammar-practice' ? (
+                                      <Zap className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                    ) : (
+                                      <RotateCcw className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                    )
+                                  ) : (
+                                    <Gamepad2 className="w-2.5 h-2.5 stroke-[2.3px]" />
+                                  )}
                                 </div>
-                                <span className="flex-1 truncate">{subLabel}</span>
-                                {isSubActive && <span className="text-white/70 shrink-0">▶</span>}
+                                <span className="flex-1 whitespace-normal break-words leading-tight" title={subLabel}>{subLabel}</span>
+                                {isSubActive && <span className="text-white/70 shrink-0 mt-0.5">▶</span>}
                               </button>
                             );
                           })}
@@ -3117,17 +3447,8 @@ export function StudentAssignmentsView({
                 })}
               </div>
 
-              {/* Progress footer + safe area */}
-              <div className="px-4 pt-2 pb-8 border-t border-[#F0E2BF]/80 dark:border-slate-800">
-                {currentDayQuestStations && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/60">
-                    <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
-                    <span className="text-[11px] font-black text-amber-700 dark:text-amber-300">
-                      {completedQuestStationsCount}/{currentDayQuestStations.stations.length} Trạm xong
-                    </span>
-                  </div>
-                )}
-              </div>
+              {/* Safe area bottom padding */}
+              <div className="pb-8" />
             </div>
 
           </>
@@ -3137,13 +3458,13 @@ export function StudentAssignmentsView({
             KHU VỰC 2 & 3: MAIN VIEW (Header + Stage Tabs + Embedded Canvas)
             ══════════════════════════════════════════════════════════════════ */}
         <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          viewMode === 'map' ? 'p-0 m-0 h-full overflow-hidden' : isVocabClass ? 'h-full overflow-hidden p-3 sm:p-4' : 'gap-3 sm:gap-4'
+          viewMode === 'map' ? 'p-0 m-0 h-full overflow-hidden' : isDayQuestClass ? 'h-full overflow-hidden p-3 sm:p-4' : 'gap-3 sm:gap-4'
         }`}>
           
           {/* ════════════════════════════════════════════════════════════════
               KHU VỰC 2: TOP ACTION BAR - FOCUS & QUEST STEPPER HEADER
               ════════════════════════════════════════════════════════════════ */}
-          {viewMode === 'activity' && !isVocabClass && (
+          {viewMode === 'activity' && !isDayQuestClass && (
             <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-amber-200/80 dark:border-slate-800 rounded-[24px] sm:rounded-[28px] p-2.5 sm:p-3.5 shadow-sm animate-in fade-in slide-in-from-top-3 duration-200 font-['Nunito',_sans-serif]">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-2.5 sm:gap-3">
                 
@@ -3152,12 +3473,8 @@ export function StudentAssignmentsView({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      title="Quay lại bản đồ hành trình toàn khóa 45 Ngày"
-                      onClick={() => {
-                        stopAllAudioAndTts();
-                        setViewMode('map');
-                        setIsSidebarCollapsed(true);
-                      }}
+                      title={isGrammarClass ? "Quay lại bản đồ hành trình 45 Ngày" : "Quay lại bản đồ hành trình toàn khóa 45 Ngày"}
+                      onClick={handleReturnToMap}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-xs sm:text-sm transition-all cursor-pointer shadow-xs active:scale-95 shrink-0"
                     >
                       <Compass className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4px] animate-spin-slow" />
@@ -3303,12 +3620,12 @@ export function StudentAssignmentsView({
             viewMode === 'map'
               ? 'w-full h-full p-0 m-0 border-0 rounded-none shadow-none bg-transparent'
               : `bg-white dark:bg-slate-900 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800/80 shadow-sm ${
-                  isVocabClass ? 'h-full' : isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
+                  isDayQuestClass ? 'h-full' : isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
                 }`
           }`}>
             
-            {/* ── FLOATING EXPAND TAB (Chỉ hiện khi KHÔNG PHẢI lớp vocab và chưa có quest stepper) ── */}
-            {!isVocabClass && isSidebarCollapsed && !isZenMode && viewMode === 'activity' && !currentDayQuestStations && (
+            {/* ── FLOATING EXPAND TAB (Chỉ hiện khi KHÔNG PHẢI lớp day quest và chưa có quest stepper) ── */}
+            {!isDayQuestClass && isSidebarCollapsed && !isZenMode && viewMode === 'activity' && !currentDayQuestStations && (
               <button
                 type="button"
                 aria-label="Mở lại menu bài học"
@@ -3339,24 +3656,47 @@ export function StudentAssignmentsView({
 
 
               {viewMode === 'map' ? (
-                <ClassAdventureMap
-                  assignmentGroups={assignmentGroups}
-                  submissionsState={submissionsState}
-                  currentClass={currentClass}
-                  onSelectActivity={(assignmentId, groupId) => {
-                    const grp = assignmentGroups.find(g => g.id === groupId);
-                    const itm = grp?.items.find(i => i.assignment.id === assignmentId);
-                    if (itm) {
-                      // executeSelectAssignment handles sidebar open/close per device
-                      executeSelectAssignment(itm, groupId);
-                    } else {
-                      setActiveAssignmentId(assignmentId);
-                      setSelectedGroupId(groupId);
-                      setViewMode('activity');
-                      setIsSidebarCollapsed(true);
-                    }
-                  }}
-                />
+                isGrammarClass ? (
+                  <GrammarAgentMap
+                    assignmentGroups={assignmentGroups}
+                    submissionsState={submissionsState}
+                    currentClass={currentClass}
+                    onSelectActivity={(assignmentId, groupId) => {
+                      const grp = assignmentGroups.find(g => g.id === groupId);
+                      const itm = grp?.items.find(i => i.assignment.id === assignmentId);
+                      if (itm) {
+                        // executeSelectAssignment handles sidebar open/close per device
+                        executeSelectAssignment(itm, groupId);
+                      } else {
+                        setActiveAssignmentId(assignmentId);
+                        setSelectedGroupId(groupId);
+                        setViewMode('activity');
+                        setIsSidebarCollapsed(true);
+                        updateQueryParams(groupId, assignmentId, '', 'push');
+                      }
+                    }}
+                  />
+                ) : (
+                  <ClassAdventureMap
+                    assignmentGroups={assignmentGroups}
+                    submissionsState={submissionsState}
+                    currentClass={currentClass}
+                    onSelectActivity={(assignmentId, groupId) => {
+                      const grp = assignmentGroups.find(g => g.id === groupId);
+                      const itm = grp?.items.find(i => i.assignment.id === assignmentId);
+                      if (itm) {
+                        // executeSelectAssignment handles sidebar open/close per device
+                        executeSelectAssignment(itm, groupId);
+                      } else {
+                        setActiveAssignmentId(assignmentId);
+                        setSelectedGroupId(groupId);
+                        setViewMode('activity');
+                        setIsSidebarCollapsed(true);
+                        updateQueryParams(groupId, assignmentId, '', 'push');
+                      }
+                    }}
+                  />
+                )
               ) : Object.keys(displayConfigs).length > 0 ? (
                 <Suspense fallback={<ActivityCanvasLoadingFallback />}>
                   {Object.values(displayConfigs).map((cfg) => {

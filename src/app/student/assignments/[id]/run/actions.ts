@@ -151,11 +151,9 @@ export async function getStudentQuizRunnerData(
     });
 
     if (latestCompleted) {
-      // Clean up orphaned empty draft so it does not leave clutter in DB
+      // Clean up orphaned empty draft asynchronously in background so user doesn't wait
       if (submission.id) {
-        try {
-          await prisma.submission.delete({ where: { id: submission.id } });
-        } catch {}
+        prisma.submission.delete({ where: { id: submission.id } }).catch(() => {});
       }
       submission = latestCompleted;
     }
@@ -248,21 +246,9 @@ export async function getStudentQuizRunnerData(
     }
 
     if (!submission) {
-      if (forPreload) {
-        // Fast path for preload: do NOT write to database
-        submission = null;
-      } else {
-        submission = await prisma.submission.create({
-          data: {
-            assignmentId: actualAssignmentId,
-            studentId: userId,
-            classId: classId || null,
-            groupId: classId ? (groupId || null) : null,
-            attemptNumber: 1
-          },
-          include: { answers: true }
-        });
-      }
+      // JIT Optimization: Return immediately with template data without waiting on DB insert.
+      // ensureStudentSubmission will create the submission record asynchronously in background.
+      submission = null;
     }
   }
 

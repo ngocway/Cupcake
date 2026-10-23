@@ -138,7 +138,12 @@ export async function completeSubmission(submissionId: string, answers: any) {
       final_score = (total_achieved_points / total_max_points) * 10
     }
 
+    // 1. Core submission update inside isolated transaction with increased timeout
     await prisma.$transaction(async (tx) => {
+      await tx.submissionAnswer.deleteMany({
+        where: { submissionId }
+      })
+
       await tx.submission.update({
         where: { id: submissionId },
         data: {
@@ -150,8 +155,13 @@ export async function completeSubmission(submissionId: string, answers: any) {
           }
         }
       })
+    }, {
+      maxWait: 5000,
+      timeout: 15000
+    })
 
-      // Send notification
+    // 2. Secondary side effects (Notification & Lesson Progress) - do NOT block or rollback submission
+    try {
       const { createNotification } = await import('@/actions/notification-actions');
       await createNotification(
         session.user.id,
@@ -160,28 +170,32 @@ export async function completeSubmission(submissionId: string, answers: any) {
         `Bạn đã hoàn thành bài tập "${submission.assignment.title}" với điểm số ${final_score.toFixed(2)}/10.0`,
         `/student/assignments/${submission.assignmentId}/run`
       );
+    } catch (notifErr) {
+      console.error("[COMPLETE_SUBMISSION] Failed to send notification:", notifErr);
+    }
 
-      // 3. Complete lesson progress if linked
-      if (submission.assignment.lesson) {
+    // 3. Complete lesson progress if linked
+    if (submission.assignment.lesson) {
+      try {
         const lessonId = submission.assignment.lesson.id;
         const studentId = submission.studentId;
         
-        const existingProgress = await tx.lessonProgress.findFirst({
+        const existingProgress = await prisma.lessonProgress.findFirst({
           where: { lessonId, studentId, completedAt: null },
           orderBy: { attemptNumber: 'desc' }
         });
         
         if (existingProgress) {
-          await tx.lessonProgress.update({
+          await prisma.lessonProgress.update({
             where: { id: existingProgress.id },
             data: { completedAt: new Date() }
           });
         } else {
-          const alreadyCompleted = await tx.lessonProgress.findFirst({
+          const alreadyCompleted = await prisma.lessonProgress.findFirst({
             where: { lessonId, studentId, NOT: { completedAt: null } }
           });
           if (!alreadyCompleted) {
-            await tx.lessonProgress.create({
+            await prisma.lessonProgress.create({
               data: {
                 lessonId,
                 studentId,
@@ -191,14 +205,20 @@ export async function completeSubmission(submissionId: string, answers: any) {
             });
           }
         }
+      } catch (progressErr) {
+        console.error("[COMPLETE_SUBMISSION] Failed to update lesson progress:", progressErr);
       }
-    })
+    }
 
     if (submission.classId) {
-      const { invalidateStudentClassDetailCache } = await import('@/lib/cached-queries');
-      await invalidateStudentClassDetailCache(submission.classId, submission.studentId);
-      revalidatePath(`/student/classes/${submission.classId}`);
-      revalidatePath(`/teacher/classes/${submission.classId}`);
+      try {
+        const { invalidateStudentClassDetailCache } = await import('@/lib/cached-queries');
+        await invalidateStudentClassDetailCache(submission.classId, submission.studentId);
+        revalidatePath(`/student/classes/${submission.classId}`);
+        revalidatePath(`/teacher/classes/${submission.classId}`);
+      } catch (cacheErr) {
+        console.warn("[COMPLETE_SUBMISSION] Failed to invalidate cache:", cacheErr);
+      }
     }
 
     revalidatePath(`/student/my-learning/assignments`)

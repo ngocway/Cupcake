@@ -1320,7 +1320,7 @@ export default function QuizClientRunner({
 
                   <div className="space-y-6 flex flex-col items-center">
                      {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
-                       <div className="flex flex-wrap justify-center gap-4 w-full">
+                       <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full max-w-xl mx-auto">
                          {(() => {
                            const blobShapes = [
                              "rounded-[2rem_3.5rem_2rem_4rem_/_3.5rem_2rem_4rem_2.5rem]",
@@ -1329,7 +1329,8 @@ export default function QuizClientRunner({
                              "rounded-[4rem_2.5rem_4rem_3rem_/_2.5rem_4.5rem_3rem_4.5rem]",
                              "rounded-[3rem_4rem_2.5rem_4.5rem_/_4.5rem_2.5rem_4.5rem_3rem]",
                            ];
-                           return (questionData.options || []).map((option: any, i: number) => {
+                           const opts = questionData.options || [];
+                           return opts.map((option: any, i: number) => {
                              const blobShape = blobShapes[i % blobShapes.length];
                              const optionVal = option.originalIndex !== undefined ? option.originalIndex : i;
                              const isSelected = isMultiSelect 
@@ -1363,24 +1364,26 @@ export default function QuizClientRunner({
                                }
                              }
 
+                             const isOddLast = opts.length % 2 === 1 && i === opts.length - 1;
+
                              return (
                                <button 
                                  key={i}
                                  disabled={isChecked}
                                  onClick={() => handleAnswerChange(q, optionVal)}
-                               className={`px-6 py-4 ${blobShape} border-2 text-left font-bold transition-all duration-300 relative inline-flex items-center gap-4 ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'}`}
-                             >
+                                 className={`px-3 sm:px-6 py-2.5 sm:py-4 ${blobShape} border-2 text-left font-bold transition-all duration-300 relative flex items-center gap-2 sm:gap-4 ${isOddLast ? 'col-span-2 sm:col-span-1' : ''} ${borderClass} ${bgClass} ${textClass} ${isChecked ? 'cursor-default' : 'hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5'}`}
+                               >
                                <div className={`w-6 h-6 flex items-center justify-center text-xs font-black shrink-0 transition-all shadow-sm ${isMultiSelect ? 'rounded-md border-2' : 'rounded-full'} ${!isSelected && isMultiSelect ? 'border-primary/20 bg-white/50 dark:bg-slate-800/50' : 'border-transparent'} ${iconClass}`}>
                                  {isMultiSelect ? (
                                     <Check className={`w-4 h-4 transition-all duration-300 ${isSelected ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`} strokeWidth={3.5} />
                                  ) : String.fromCharCode(65 + i)}
                                </div>
-                               <span className="text-sm">{option.text}</span>
+                               <span className="text-xs sm:text-sm font-bold flex-1 break-words">{option.text}</span>
                                {isChecked && isCorrect && (
-                                 <CheckCircle2 className="text-emerald-600 ml-2 w-5 h-5 stroke-[2px]" />
+                                 <CheckCircle2 className="text-emerald-600 ml-1 sm:ml-2 w-4 h-4 sm:w-5 sm:h-5 stroke-[2px] shrink-0" />
                                )}
                                {isChecked && isSelected && !isCorrect && (
-                                 <XCircle className="text-rose-600 ml-2 w-5 h-5 stroke-[2px]" />
+                                 <XCircle className="text-rose-600 ml-1 sm:ml-2 w-4 h-4 sm:w-5 sm:h-5 stroke-[2px] shrink-0" />
                                )}
                              </button>
                            );

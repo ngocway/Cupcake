@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { 
   CheckCircle2, 
   XCircle, 
@@ -12,17 +13,21 @@ import {
   Trophy,
   RotateCcw,
   Volume2,
-  VolumeX
+  VolumeX,
+  Globe,
+  ChevronDown,
 } from "lucide-react";
 import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
 import { submitLessonInlineQuizAction } from "@/actions/lesson-inline-quiz-actions";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
+import { extractClueSentence, parseBilingualExplanation } from "@/utils/readingHintExtractor";
 
 interface QuestionData {
   id: string;
   type: string;
   content: string;
   explanation: string | null;
+  explanationTranslations?: any;
   orderIndex: number;
   points: number;
 }
@@ -35,6 +40,7 @@ interface Props {
   classId?: string;
   groupId?: string;
   onComplete?: (score: number, assignmentId: string) => void;
+  readingText?: string | null;
 }
 
 const OPTION_STYLES = [
@@ -183,14 +189,25 @@ export function LessonInlineQuiz({
   classId,
   groupId,
   onComplete,
+  readingText,
 }: Props) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showHints, setShowHints] = useState<Record<string, boolean>>({});
+  const [expandedVi, setExpandedVi] = useState<Record<string, boolean>>({});
   const [isSubmitting, startTransition] = useTransition();
   const [isChecked, setIsChecked] = useState(false);
   const [revealedCount, setRevealedCount] = useState<number>(0);
   const [scoreResult, setScoreResult] = useState<{ score: number; total: number } | null>(null);
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const toggleVi = (qId: string) => {
+    setExpandedVi((prev) => ({ ...prev, [qId]: !prev[qId] }));
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || questions.length === 0) return;
@@ -241,6 +258,15 @@ export function LessonInlineQuiz({
       };
     });
   }, [questions]);
+
+  // Split questions into rows of max 10 for compact multi-row navigation bar
+  const questionRows = useMemo(() => {
+    const rows: (typeof parsedQuestions)[] = [];
+    for (let i = 0; i < parsedQuestions.length; i += 10) {
+      rows.push(parsedQuestions.slice(i, i + 10));
+    }
+    return rows;
+  }, [parsedQuestions]);
 
   const handleSelectOption = (questionId: string, optionIndex: number) => {
     if (isChecked) return;
@@ -386,12 +412,19 @@ export function LessonInlineQuiz({
 
     if (isLoggedIn) {
       startTransition(async () => {
-        await submitLessonInlineQuizAction({
-          assignmentId,
-          answers,
-          classId,
-          groupId,
-        });
+        try {
+          const res = await submitLessonInlineQuizAction({
+            assignmentId,
+            answers,
+            classId,
+            groupId,
+          });
+          if (!res?.success) {
+            console.error("[LessonInlineQuiz] Failed to submit inline quiz:", res?.message);
+          }
+        } catch (err) {
+          console.error("[LessonInlineQuiz] Error submitting inline quiz:", err);
+        }
       });
     }
   };
@@ -402,6 +435,7 @@ export function LessonInlineQuiz({
     setRevealedCount(0);
     setScoreResult(null);
     setShowHints({});
+    setExpandedVi({});
   };
 
   const answeredCount = Object.keys(answers).length;
@@ -483,6 +517,27 @@ export function LessonInlineQuiz({
             qData.type === "TRUE_FALSE" ||
             (qData.statement && (!options || options.length === 0));
 
+          // Determine correct answer text for evidence clue matching
+          let correctAnswerText = "";
+          if (Array.isArray(options)) {
+            const correctOpt = options.find((o: any) => o.isCorrect === true);
+            if (correctOpt) {
+              correctAnswerText = correctOpt.text || correctOpt.label || correctOpt.optionText || "";
+            }
+          }
+          if (!correctAnswerText && qData.isTrue !== undefined) {
+            correctAnswerText = qData.isTrue ? "True" : "False";
+          }
+
+          // Extract single clue evidence sentence from reading passage or explanation
+          const clueSentence = extractClueSentence({
+            explanation: q.explanation || qData.explanation,
+            readingText,
+            questionText: typeof questionText === "string" ? questionText.replace(/\{\{.*?\}\}/g, "") : "",
+            correctAnswerText,
+            hintText: qData.hint || (q as any).hint,
+          });
+
           return (
             <React.Fragment key={q.id}>
               {qIndex > 0 && (
@@ -504,8 +559,10 @@ export function LessonInlineQuiz({
                     </h4>
                     {" "}
                     <QuestionAudioPlayButton
-                      src={qData.audioUrl || (q as any).audioUrl}
-                      text={typeof questionText === "string" ? questionText.replace(/\{\{.*?\}\}/g, "...") : questionText}
+                      text={clueSentence}
+                      useDeepgram={true}
+                      deepgramModel="aura-2-thalia-en"
+                      deepgramSpeed={0.85}
                       className="inline-flex align-middle ml-2 my-0.5"
                     />
                   </div>
@@ -605,7 +662,7 @@ export function LessonInlineQuiz({
                 ) : (
                   /* Options Grid (Multiple choice) */
                   options.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 pt-2">
                       {options.map((opt: any, optIndex: number) => {
                         const style = OPTION_STYLES[optIndex % OPTION_STYLES.length];
                         const isSelected = userAns === optIndex;
@@ -631,19 +688,23 @@ export function LessonInlineQuiz({
                           }
                         }
 
+                        const isLastOdd = optIndex === options.length - 1 && options.length % 2 === 1;
+
                         return (
                           <button
                             key={opt.id || optIndex}
                             onClick={() => handleSelectOption(q.id, optIndex)}
                             disabled={isChecked}
                             style={{ borderRadius: style.borderRadius }}
-                            className={`group relative flex items-center justify-center p-4 pt-6 border-2 transition-all duration-300 shadow-sm text-center min-h-[72px] cursor-pointer ${
+                            className={`group relative flex items-center justify-center p-2.5 sm:p-4 pt-5 sm:pt-6 border-2 transition-all duration-300 shadow-sm text-center min-h-[60px] sm:min-h-[72px] cursor-pointer ${
+                              isLastOdd ? "col-span-2 sm:col-span-1" : ""
+                            } ${
                               !isChecked ? "hover:scale-[1.02] active:scale-95" : ""
                             } ${optionStateClass}`}
                           >
                             {/* Option Letter Badge (A, B, C, D) */}
                             <span
-                              className={`absolute -top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shadow-md transition-transform duration-300 group-hover:scale-110 ${
+                              className={`absolute -top-2.5 sm:-top-3 left-2 sm:left-3 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-black shadow-md transition-transform duration-300 group-hover:scale-110 ${
                                 isSelected ? style.badgeSelectedBg : style.badgeBg
                               }`}
                             >
@@ -651,22 +712,22 @@ export function LessonInlineQuiz({
                             </span>
 
                             {/* Option Text */}
-                            <span className="font-headline font-black text-base sm:text-lg leading-snug px-2">
+                            <span className="font-headline font-black text-xs sm:text-base md:text-lg leading-snug px-1 sm:px-2 break-words max-w-full">
                               {opt.text || opt.label || opt.optionText}
                             </span>
 
                             {/* Pre-check Selected Dot Indicator */}
                             {!isChecked && isSelected && (
-                              <span className="absolute top-2.5 right-2.5 w-3 h-3 rounded-full bg-white animate-pulse shadow-sm" />
+                              <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-white animate-pulse shadow-sm" />
                             )}
 
                             {/* Post-check Status Icon Indicator */}
                             {isChecked && isSelected && (
-                              <span className="absolute top-2.5 right-2.5">
+                              <span className="absolute top-2 right-2 sm:top-2.5 sm:right-2.5">
                                 {isCorrectOption ? (
-                                  <CheckCircle2 className="w-5 h-5 text-emerald-600 fill-emerald-100" />
+                                  <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 fill-emerald-100" />
                                 ) : (
-                                  <XCircle className="w-5 h-5 text-rose-600 fill-rose-100" />
+                                  <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-rose-600 fill-rose-100" />
                                 )}
                               </span>
                             )}
@@ -677,112 +738,181 @@ export function LessonInlineQuiz({
                   )
                 )}
 
-                {/* Explanation Block (Displayed after checking answers for all questions) */}
-                {isChecked && (q.explanation || qData.explanation) && (
-                  <div className="bg-emerald-50/90 border-2 border-emerald-200 rounded-2xl p-5 text-emerald-950 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm">
-                    <span className="font-black uppercase tracking-wider text-xs text-emerald-700 block mb-1">
-                      Explanation
-                    </span>
-                    <p className="leading-relaxed font-semibold">{q.explanation || qData.explanation}</p>
-                  </div>
-                )}
+                {/* Explanation Block with English Default + Vietnamese Accordion Toggle */}
+                {isChecked && (() => {
+                  const rawExp = q.explanation || qData.explanation;
+                  const translations = (q as any).explanationTranslations || qData.explanationTranslations;
+                  const parsedExp = parseBilingualExplanation(rawExp, translations);
+
+                  if (!parsedExp.en && !parsedExp.vi) return null;
+
+                  const isViOpen = !!expandedVi[q.id];
+
+                  return (
+                    <div className="bg-emerald-50/90 dark:bg-emerald-950/20 border-2 border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-5 text-emerald-950 dark:text-emerald-100 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm space-y-3">
+                      {/* Top Header: Badge + Toggle Button */}
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700">
+                          <Lightbulb className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                          <span>Explanation</span>
+                        </span>
+
+                        {/* Vietnamese Translation Toggle Button */}
+                        {parsedExp.vi && (
+                          <button
+                            type="button"
+                            onClick={() => toggleVi(q.id)}
+                            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer select-none border active:scale-95 shadow-xs ${
+                              isViOpen
+                                ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700"
+                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700"
+                            }`}
+                            title={isViOpen ? "Thu gọn bản dịch tiếng Việt" : "Xem bản dịch tiếng Việt"}
+                          >
+                            <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span>{isViOpen ? "Thu gọn dịch" : "Dịch tiếng Việt"}</span>
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                isViOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* English Explanation (Default, Always visible) */}
+                      {parsedExp.en && (
+                        <p className="leading-relaxed font-semibold text-slate-800 dark:text-slate-100 text-[15px]">
+                          {parsedExp.en}
+                        </p>
+                      )}
+
+                      {/* Collapsible Vietnamese Translation Accordion */}
+                      {parsedExp.vi && isViOpen && (
+                        <div className="pt-3 border-t border-emerald-200/80 dark:border-emerald-800/60 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <div className="flex items-center gap-1.5 mb-1.5 text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                            <span>🇻🇳 Dịch nghĩa tiếng Việt:</span>
+                          </div>
+                          <div className="leading-relaxed text-slate-700 dark:text-slate-300 font-medium bg-white/80 dark:bg-slate-900/60 p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/40 text-[14px]">
+                            {parsedExp.vi}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </React.Fragment>
           );
         })}
       </div>
 
-      {/* Sticky Question Navigation Bubbles Bar */}
-      <div className="sticky bottom-4 z-40 my-6 bg-gradient-to-r from-emerald-500/[0.08] via-teal-500/[0.08] to-emerald-600/[0.08] backdrop-blur-xl rounded-full border-2 border-emerald-400/30 shadow-2xl shadow-emerald-600/10 px-4 py-3 max-w-2xl mx-auto flex items-center justify-center gap-2 sm:gap-3 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {parsedQuestions.map((q, i) => {
-          const active = i === activeQuestionIndex;
-          const ans = answers[q.id];
+      {/* Floating Question Navigation Bubbles Bar (Rows of max 10, Portal to body for true floating) */}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <aside
+          role="navigation"
+          aria-label="Question navigation"
+          className={`fixed bottom-6 sm:bottom-7 left-1/2 -translate-x-1/2 z-50 w-fit max-w-[calc(100vw-1rem)] sm:max-w-2xl px-2 py-1.5 sm:px-4 sm:py-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl ${
+            questionRows.length > 1 ? "rounded-2xl" : "rounded-full"
+          } border border-emerald-300/80 dark:border-emerald-700/80 shadow-2xl shadow-emerald-950/20 dark:shadow-black/40 flex flex-col items-center justify-center gap-1 sm:gap-2 pointer-events-auto transition-all duration-300 animate-in fade-in slide-in-from-bottom-3`}
+        >
+          {questionRows.map((row, rowIdx) => (
+            <div key={rowIdx} className="flex items-center justify-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap">
+              {row.map((q, inRowIdx) => {
+                const i = rowIdx * 10 + inRowIdx;
+                const active = i === activeQuestionIndex;
+                const ans = answers[q.id];
 
-          let isAnswered = false;
-          if (ans !== undefined && ans !== null) {
-            if (typeof ans === "object" && ans.inputs) {
-              isAnswered = Object.keys(ans.inputs).length > 0;
-            } else {
-              isAnswered = true;
-            }
-          }
+                let isAnswered = false;
+                if (ans !== undefined && ans !== null) {
+                  if (typeof ans === "object" && ans.inputs) {
+                    isAnswered = Object.keys(ans.inputs).length > 0;
+                  } else {
+                    isAnswered = true;
+                  }
+                }
 
-          const getQuestionStatus = (qItem: any, userAns: any) => {
-            if (userAns === undefined || userAns === null) return "incorrect";
-            const isFillInTheBlank =
-              qItem.type === "CLOZE_TEST" ||
-              qItem.type === "FILL_BLANK" ||
-              (typeof qItem.content === "string" && qItem.content.includes("{{"));
+                const getQuestionStatus = (qItem: any, userAns: any) => {
+                  if (userAns === undefined || userAns === null) return "incorrect";
+                  const isFillInTheBlank =
+                    qItem.type === "CLOZE_TEST" ||
+                    qItem.type === "FILL_BLANK" ||
+                    (typeof qItem.content === "string" && qItem.content.includes("{{"));
 
-            const isTrueFalse =
-              qItem.type === "TRUE_FALSE" ||
-              qItem.parsedData?.type === "TRUE_FALSE" ||
-              (qItem.parsedData?.statement && (!qItem.parsedData?.options || qItem.parsedData?.options.length === 0));
+                  const isTrueFalse =
+                    qItem.type === "TRUE_FALSE" ||
+                    qItem.parsedData?.type === "TRUE_FALSE" ||
+                    (qItem.parsedData?.statement && (!qItem.parsedData?.options || qItem.parsedData?.options.length === 0));
 
-            if (isFillInTheBlank) {
-              return checkIsFillBlankCorrect(qItem, userAns) ? "correct" : "incorrect";
-            } else if (isTrueFalse) {
-              return checkIsTrueFalseCorrect(qItem, userAns) ? "correct" : "incorrect";
-            } else if (qItem.parsedData?.options && typeof userAns === "number") {
-              return qItem.parsedData.options[userAns]?.isCorrect ? "correct" : "incorrect";
-            }
-            return "incorrect";
-          };
+                  if (isFillInTheBlank) {
+                    return checkIsFillBlankCorrect(qItem, userAns) ? "correct" : "incorrect";
+                  } else if (isTrueFalse) {
+                    return checkIsTrueFalseCorrect(qItem, userAns) ? "correct" : "incorrect";
+                  } else if (qItem.parsedData?.options && typeof userAns === "number") {
+                    return qItem.parsedData.options[userAns]?.isCorrect ? "correct" : "incorrect";
+                  }
+                  return "incorrect";
+                };
 
-          const isGraded = isChecked && i < revealedCount;
-          const isCurrentlyRevealing = isChecked && i === revealedCount - 1;
-          let status = "pending";
-          if (isGraded) {
-            status = getQuestionStatus(q, ans);
-          }
+                const isGraded = isChecked && i < revealedCount;
+                const isCurrentlyRevealing = isChecked && i === revealedCount - 1;
+                let status = "pending";
+                if (isGraded) {
+                  status = getQuestionStatus(q, ans);
+                }
 
-          let btnClass = "";
-          if (isGraded) {
-            if (status === "correct") {
-              btnClass = active
-                ? "bg-emerald-500 text-white border-4 border-emerald-200 shadow-lg shadow-emerald-500/40 scale-110 animate-in zoom-in-75 duration-300"
-                : "bg-emerald-500 text-white border-2 border-emerald-600 hover:bg-emerald-600 opacity-90 animate-in zoom-in-75 duration-300";
-            } else {
-              btnClass = active
-                ? "bg-rose-500 text-white border-4 border-rose-200 shadow-lg shadow-rose-500/40 scale-110 animate-in zoom-in-75 duration-300"
-                : "bg-rose-500 text-white border-2 border-rose-600 hover:bg-rose-600 opacity-90 animate-in zoom-in-75 duration-300";
-            }
-          } else if (isCurrentlyRevealing) {
-            btnClass = "bg-amber-400 text-white border-4 border-amber-200 scale-125 shadow-xl animate-pulse ring-4 ring-amber-300 z-30";
-          } else {
-            if (active) {
-              btnClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/40 border-4 border-orange-200 scale-110 z-10";
-            } else if (isAnswered) {
-              btnClass = "bg-purple-500 border-2 border-purple-600 text-white shadow-md shadow-purple-500/20 hover:bg-purple-600 hover:border-purple-700";
-            } else {
-              btnClass = "bg-white border-2 border-slate-200 text-slate-400 hover:border-purple-300 hover:text-purple-500";
-            }
-          }
+                let btnClass = "";
+                if (isGraded) {
+                  if (status === "correct") {
+                    btnClass = active
+                      ? "bg-emerald-500 text-white border-2 border-emerald-200 shadow-md shadow-emerald-500/40 scale-110"
+                      : "bg-emerald-500 text-white border border-emerald-600 opacity-90";
+                  } else {
+                    btnClass = active
+                      ? "bg-rose-500 text-white border-2 border-rose-200 shadow-md shadow-rose-500/40 scale-110"
+                      : "bg-rose-500 text-white border border-rose-600 opacity-90";
+                  }
+                } else if (isCurrentlyRevealing) {
+                  btnClass = "bg-amber-400 text-white border-2 border-amber-200 scale-115 shadow-lg animate-pulse ring-2 ring-amber-300 z-30";
+                } else {
+                  if (active) {
+                    btnClass = "bg-orange-500 text-white shadow-md shadow-orange-500/40 border-2 border-orange-200 scale-110 z-10";
+                  } else if (isAnswered) {
+                    btnClass = "bg-purple-500 border border-purple-600 text-white shadow-sm shadow-purple-500/20";
+                  } else {
+                    btnClass = "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-300 hover:border-purple-300 hover:text-purple-500";
+                  }
+                }
 
-          return (
-            <button
-              key={q.id}
-              onClick={() => scrollToQuestion(i)}
-              className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all duration-300 shrink-0 flex items-center justify-center font-black text-xs sm:text-base cursor-pointer ${btnClass}`}
-            >
-              <span>{i + 1}</span>
-              {isGraded && !active && status === "correct" && (
-                <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-sm animate-in zoom-in-50 spin-in-12 duration-300">
-                  <Check className="w-[70%] h-[70%] text-emerald-600" strokeWidth={4} />
-                </div>
-              )}
-              {isGraded && !active && status === "incorrect" && (
-                <div className="absolute -top-[5%] -right-[5%] w-[38%] h-[38%] bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-sm animate-in zoom-in-50 spin-in-12 duration-300">
-                  <X className="w-[70%] h-[70%] text-rose-600" strokeWidth={4} />
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => scrollToQuestion(i)}
+                    className={`relative w-[27px] h-[27px] sm:w-8 sm:h-8 rounded-full transition-all duration-300 shrink-0 flex items-center justify-center font-black text-[11px] sm:text-xs cursor-pointer ${btnClass}`}
+                    title={`Câu hỏi ${i + 1}`}
+                  >
+                    <span>{i + 1}</span>
+                    {isGraded && !active && status === "correct" && (
+                      <div className="absolute -top-[3px] -right-[3px] w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-100 rounded-full border border-emerald-500 flex items-center justify-center shadow-xs">
+                        <Check className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-emerald-600" strokeWidth={4} />
+                      </div>
+                    )}
+                    {isGraded && !active && status === "incorrect" && (
+                      <div className="absolute -top-[3px] -right-[3px] w-3 h-3 sm:w-3.5 sm:h-3.5 bg-rose-100 rounded-full border border-rose-500 flex items-center justify-center shadow-xs">
+                        <X className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-rose-600" strokeWidth={4} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </aside>,
+        document.body
+      )}
 
       {/* Main Submit & Action Footer */}
-      <div className="pt-6 border-t border-emerald-100 flex flex-col items-center justify-center text-center space-y-4">
+      <div className="pt-6 pb-28 sm:pb-20 border-t border-emerald-100 flex flex-col items-center justify-center text-center space-y-4">
         {!isChecked ? (
           <div className="flex flex-col items-center gap-3">
             <button

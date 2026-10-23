@@ -53,27 +53,7 @@ export function MultipleChoiceBlock({
   quizMode,
   handleAnswerChange,
 }: MultipleChoiceBlockProps) {
-  // Dynamically analyze text length to pick the most ergonomic mobile & desktop grid layout
-  const { isShort, isMedium, gridLayoutClass } = useMemo(() => {
-    const maxLen = options.reduce((max, opt) => {
-      const len = String(opt?.text || "").trim().length;
-      return Math.max(max, len);
-    }, 0);
-
-    const short = maxLen <= 18;
-    const medium = maxLen <= 40;
-
-    let gridClass = "grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 pt-2 w-full max-w-2xl mx-auto";
-    if (short) {
-      // 2 columns on Mobile AND Desktop (2x2 grid)
-      gridClass = "grid grid-cols-2 gap-2.5 sm:gap-5 pt-1.5 w-full max-w-xl mx-auto";
-    } else if (!medium) {
-      // Very long sentences: 1 column on all screens
-      gridClass = "grid grid-cols-1 gap-3 sm:gap-4 pt-2 w-full max-w-2xl mx-auto";
-    }
-
-    return { isShort: short, isMedium: medium, gridLayoutClass: gridClass };
-  }, [options]);
+  const gridLayoutClass = "grid grid-cols-2 gap-2.5 sm:gap-5 pt-1.5 w-full max-w-xl sm:max-w-2xl mx-auto";
 
   return (
     <div className={gridLayoutClass}>
@@ -111,30 +91,23 @@ export function MultipleChoiceBlock({
           iconClass = `${theme.selectedIconBg} ${theme.selectedIconColor} scale-110 -rotate-6 shadow-md`;
         }
 
-        const btnHeightAndPadding = isShort
-          ? "min-h-[3.75rem] sm:min-h-[4.75rem] py-2.5 sm:py-3.5 px-3 sm:px-5"
-          : "min-h-[4.25rem] sm:min-h-[5.25rem] py-3.5 sm:py-4 px-4 sm:px-6";
-
-        const badgeDimensions = isShort
-          ? "-top-2.5 -left-1.5 sm:-top-3 sm:-left-2 w-7 h-7 sm:w-8 sm:h-8 text-xs sm:text-sm font-[900]"
-          : "-top-3 -left-2 sm:-top-3.5 sm:-left-2.5 w-8 h-8 sm:w-9 sm:h-9 text-sm sm:text-base font-[900]";
-
-        const textFontSize = isShort
-          ? "text-[clamp(0.95rem,2.2dvh,1.15rem)] font-[800]"
-          : "text-[clamp(0.95rem,2.2dvh,1.15rem)] font-[800]";
+        const isOddLast = options.length % 2 === 1 && i === options.length - 1;
+        const btnHeightAndPadding = "min-h-[3.5rem] sm:min-h-[4.75rem] py-2 sm:py-3.5 px-2.5 sm:px-5";
+        const badgeDimensions = "-top-2.5 -left-1.5 sm:-top-3 sm:-left-2 w-6 h-6 sm:w-8 sm:h-8 text-[11px] sm:text-sm font-[900]";
+        const textFontSize = "text-xs sm:text-[clamp(0.95rem,2.2dvh,1.15rem)] font-[800] leading-snug text-center break-words max-w-full px-1";
 
         return (
           <button
             key={i}
             disabled={isChecked}
             onClick={() => handleAnswerChange(currentQuestion, optionVal)}
-            className={`group relative w-full ${blobShape} ${btnHeightAndPadding} transition-all duration-500 flex flex-col items-center justify-center border-[3px] shadow-md cursor-pointer ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.02]" : ""}`}
+            className={`group relative w-full ${blobShape} ${btnHeightAndPadding} ${isOddLast ? "col-span-2 sm:col-span-1" : ""} transition-all duration-500 flex flex-col items-center justify-center border-[3px] shadow-md cursor-pointer ${containerClass} ${!isChecked && !isSelected ? "hover:scale-[1.02]" : ""}`}
             style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
           >
             {/* Floating Badge (A, B, C, D) */}
             <div className={`absolute rounded-full shadow-md transition-all duration-500 flex items-center justify-center ${badgeDimensions} ${iconClass} ${!isChecked && !isSelected ? "group-hover:scale-110 group-hover:-rotate-12" : ""}`}>
               {isMultiSelect
-                ? <Check className={`w-4 h-4 sm:w-5 sm:h-5 transition-all ${isSelected ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} strokeWidth={4} />
+                ? <Check className={`w-3.5 h-3.5 sm:w-5 sm:h-5 transition-all ${isSelected ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} strokeWidth={4} />
                 : String.fromCharCode(65 + i)}
             </div>
 

@@ -6,7 +6,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const hasRedisUrl = !!process.env.REDIS_URL;
 
 function createRedisClient(): Redis {
-  if (isProduction && !hasRedisUrl) {
+  if (!hasRedisUrl) {
     return new Proxy({} as Redis, {
       get(_target, prop) {
         if (prop === 'status') return 'offline';

@@ -169,6 +169,10 @@ export async function POST(
 
     // Transaction to update submission and audit trails
     const updated = await prisma.$transaction(async (tx) => {
+      await tx.submissionAnswer.deleteMany({
+        where: { submissionId: id }
+      });
+
       const sub = await tx.submission.update({
         where: { id },
         data: {
@@ -186,18 +190,25 @@ export async function POST(
         }
       })
 
-      // Send completion notification
+      return sub
+    }, {
+      maxWait: 5000,
+      timeout: 15000
+    })
+
+    // Send completion notification outside transaction
+    try {
       const { createNotification } = await import('@/actions/notification-actions');
       await createNotification(
         session.user.id,
         'GRADING_UPDATE',
         'Bài tập đã hoàn thành',
-        `Bạn đã hoàn thành bài tập "${sub.assignment.title}" với điểm số ${final_score.toFixed(2)}/10.0`,
-        `/student/assignments/${sub.assignmentId}/run`
+        `Bạn đã hoàn thành bài tập "${updated.assignment.title}" với điểm số ${final_score.toFixed(2)}/10.0`,
+        `/student/assignments/${updated.assignmentId}/run`
       );
-
-      return sub
-    })
+    } catch (notifErr) {
+      console.warn("[SUBMISSION_SUBMIT] Failed to create notification:", notifErr);
+    }
 
     if (updated.classId) {
       try {

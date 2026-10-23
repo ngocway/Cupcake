@@ -44,10 +44,18 @@ export function EmbeddedQuizContainer({
   const [retryKey, setRetryKey] = useState(0);
   const [forceAutoStart, setForceAutoStart] = useState(false);
 
-  // Reset forceAutoStart if assignment changes
+  // Sync state when assignmentId changes
   useEffect(() => {
     setForceAutoStart(false);
-  }, [assignmentId]);
+    const existing = getCachedQuizData(cacheKey) || getCachedQuizData(assignmentId);
+    if (existing) {
+      setData(existing);
+      setIsLoading(false);
+    } else {
+      setData(null);
+      setIsLoading(true);
+    }
+  }, [assignmentId, cacheKey]);
 
   const loadData = useCallback(async (forceNew = false) => {
     const existing = getCachedQuizData(cacheKey) || getCachedQuizData(assignmentId);

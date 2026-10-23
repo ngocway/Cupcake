@@ -108,75 +108,78 @@ export function EmbeddedReadingLessonContainer({
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8 p-4 sm:p-6 md:p-8 animate-in fade-in duration-300">
-      {/* Main Lesson Card (Exact Middle Column styling) */}
-      <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-[28px] p-6 sm:p-8 md:p-10 shadow-xl shadow-emerald-500/5 border-2 border-emerald-100 dark:border-slate-800 max-w-full overflow-hidden">
-        {/* Top bar: Level badge + Tap word to translate */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4">
-          <div className="flex items-center gap-2">
-            {onOpenStations && (
-              <button
-                type="button"
-                onClick={onOpenStations}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 shadow-sm transition-all active:scale-95 cursor-pointer"
-                title="Mở danh sách các trạm học trong ngày"
-              >
-                <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Vào trạm</span>
-              </button>
-            )}
-            <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow">
-              {displayLevel}
-            </span>
+    <div className="w-full h-full overflow-y-auto custom-scrollbar bg-slate-50/50 dark:bg-slate-950/50 px-3 sm:px-6 md:px-8 py-5 sm:py-7 pb-28">
+      <div className="w-full max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
+        {/* Main Lesson Card (Exact Middle Column styling) */}
+        <div className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-[28px] p-6 sm:p-8 md:p-10 shadow-xl shadow-emerald-500/5 border-2 border-emerald-100 dark:border-slate-800 max-w-full overflow-hidden">
+          {/* Top bar: Level badge + Tap word to translate */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4">
+            <div className="flex items-center gap-2">
+              {onOpenStations && (
+                <button
+                  type="button"
+                  onClick={onOpenStations}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 shadow-sm transition-all active:scale-95 cursor-pointer"
+                  title="Mở danh sách các trạm học trong ngày"
+                >
+                  <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Vào trạm</span>
+                </button>
+              )}
+              <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow">
+                {displayLevel}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 select-none bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 rounded-full px-3 py-1">
+              <Globe className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                Tap word to translate
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 select-none bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 rounded-full px-3 py-1">
-            <Globe className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-              Tap word to translate
-            </span>
-          </div>
+
+          {/* Title */}
+          <h2 className="font-headline text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase leading-tight">
+            {data.title}
+          </h2>
+
+          {/* Audio Player */}
+          {data.audioUrl && (
+            <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
+              <CustomAudioPlayer 
+                src={data.audioUrl} 
+                title="Nghe bài đọc" 
+                subtitle="Audio Lesson (Aura-2 Thalia)" 
+              />
+            </div>
+          )}
+
+          {/* Reading Content */}
+          {data.readingText && (
+            <div className="mt-8 animate-in fade-in duration-500">
+              <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
+                <InteractiveReadingContent html={data.readingText} isLoggedIn={true} />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Title */}
-        <h2 className="font-headline text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase leading-tight">
-          {data.title}
-        </h2>
-
-        {/* Audio Player */}
-        {data.audioUrl && (
-          <div className="mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <CustomAudioPlayer 
-              src={data.audioUrl} 
-              title="Nghe bài đọc" 
-              subtitle="Audio Lesson (Aura-2 Thalia)" 
+        {/* Practice Questions Section (8 questions) */}
+        {data.questions && data.questions.length > 0 && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+            <LessonInlineQuiz
+              assignmentId={data.assignmentId}
+              assignmentTitle={data.title}
+              questions={data.questions}
+              isLoggedIn={true}
+              classId={classId}
+              groupId={groupId}
+              onComplete={onComplete}
+              readingText={data.readingText}
             />
           </div>
         )}
-
-        {/* Reading Content */}
-        {data.readingText && (
-          <div className="mt-8 animate-in fade-in duration-500">
-            <div className="prose prose-slate text-lg font-medium leading-loose text-on-surface-variant max-w-none dark:prose-invert [&_p]:text-lg [&_p]:font-medium [&_p]:leading-loose">
-              <InteractiveReadingContent html={data.readingText} isLoggedIn={true} />
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Practice Questions Section (8 questions) */}
-      {data.questions && data.questions.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <LessonInlineQuiz
-            assignmentId={data.assignmentId}
-            assignmentTitle={data.title}
-            questions={data.questions}
-            isLoggedIn={true}
-            classId={classId}
-            groupId={groupId}
-            onComplete={onComplete}
-          />
-        </div>
-      )}
     </div>
   );
 }
