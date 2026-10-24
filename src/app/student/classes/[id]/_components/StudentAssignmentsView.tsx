@@ -2805,6 +2805,17 @@ export function StudentAssignmentsView({
                           >
                             {currentClass?.name || 'Lớp học của tôi'}
                           </h4>
+                          {(isVocabClass || isGrammarClass) && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                                {isVocabClass ? 'Từ vựng' : 'Ngữ pháp'}
+                              </span>
+                              <span className="text-[10px] text-slate-300 dark:text-slate-600">•</span>
+                              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate">
+                                {isVocabClass ? 'Mẫu giáo - Tiểu học' : 'Lấy lại căn bản'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       <ChevronDown className={`w-4 h-4 transition-transform duration-300 shrink-0 ${

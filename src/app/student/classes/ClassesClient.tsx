@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { cancelJoinRequest } from './actions';
+import { useLocale } from 'next-intl';
 import { 
   Hourglass, 
   GraduationCap, 
@@ -49,6 +50,8 @@ interface ClassesClientProps {
 
 export default function ClassesClient({ activeClasses, pendingRequests, translations }: ClassesClientProps) {
   const router = useRouter();
+  const locale = useLocale();
+  const isEn = locale === 'en';
   const [cancelingId, setCancelingId] = useState<string | null>(null);
   const [enteringClassId, setEnteringClassId] = useState<string | null>(null);
 
@@ -143,6 +146,22 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
             const bgGradient = gradients[i % gradients.length];
             const hasPending = item.pendingCount > 0;
 
+            const nameLower = (item.class.name || '').toLowerCase();
+            const isVocab = item.id === 'tiny-vocab-wonders' || item.class.id === 'tiny-vocab-wonders' || nameLower.includes('vocab') || nameLower.includes('từ vựng');
+            const isGrammar = item.id === 'cmuvbigbg0001vta43ikcsjbk' || item.class.id === 'cmuvbigbg0001vta43ikcsjbk' || nameLower.includes('grammar') || nameLower.includes('ngữ pháp');
+
+            const subjectLabel = isVocab 
+              ? (isEn ? 'Vocab' : 'Từ vựng') 
+              : isGrammar 
+                ? (isEn ? 'Grammar' : 'Ngữ pháp') 
+                : (isEn ? 'Class' : 'Lớp học');
+
+            const audienceLabel = isVocab 
+              ? (isEn ? 'Preschool & Primary' : 'Mẫu giáo - Tiểu học') 
+              : isGrammar 
+                ? (isEn ? 'Foundation' : 'Lấy lại căn bản') 
+                : null;
+
             return (
               <Link 
                 key={item.id} 
@@ -163,19 +182,26 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
                   <div className="absolute -left-6 -top-6 w-24 h-24 bg-white/15 rounded-full blur-xl pointer-events-none" />
 
                   {/* Top Pill Badges */}
-                  <div className="flex items-center justify-between z-10 w-full">
-                    <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5" />
-                      Lớp học
-                    </span>
+                  <div className="flex items-center justify-between z-10 w-full gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-black uppercase tracking-wider bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs flex items-center gap-1.5">
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        {subjectLabel}
+                      </span>
+                      {audienceLabel && (
+                        <span className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-bold bg-white/25 backdrop-blur-md text-white border border-white/30 shadow-xs">
+                          {audienceLabel}
+                        </span>
+                      )}
+                    </div>
 
                     {hasPending ? (
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black bg-white/95 text-rose-600 shadow-md flex items-center gap-1 border border-rose-100 animate-pulse">
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black bg-white/95 text-rose-600 shadow-md flex items-center gap-1 border border-rose-100 animate-pulse shrink-0">
                         <Flame className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
                         {item.pendingCount} bài mới
                       </span>
                     ) : (
-                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black bg-white/95 text-emerald-600 shadow-md flex items-center gap-1 border border-emerald-100">
+                      <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-black bg-white/95 text-emerald-600 shadow-md flex items-center gap-1 border border-emerald-100 shrink-0">
                         <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
                         Đã xong hết
                       </span>

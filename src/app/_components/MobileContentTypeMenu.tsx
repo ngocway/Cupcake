@@ -4,7 +4,15 @@ import { useContentStore } from "@/store/useContentStore";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useMemo } from "react";
-import { Lock } from "lucide-react";
+import { 
+  GraduationCap, 
+  Gamepad2, 
+  Layers, 
+  BookOpen, 
+  CircleHelp, 
+  BookOpenText, 
+  Lock 
+} from "lucide-react";
 
 export function MobileContentTypeMenu() {
   const router = useRouter();
@@ -83,42 +91,42 @@ export function MobileContentTypeMenu() {
     {
       id: "classes",
       label: locale === "vi" ? "Lớp học" : "Class",
-      icon: "school",
+      icon: GraduationCap,
       bgClass: "bg-[#FFF3D6] text-[#C26C08] border-[#E58A1F]",
       activeStyle: "border-[#E58A1F] ring-2 ring-[#E58A1F]/40 shadow-md scale-[1.03]",
     },
     {
       id: "games",
       label: locale === "vi" ? "Trò chơi" : "Games",
-      icon: "sports_esports",
+      icon: Gamepad2,
       bgClass: "bg-[#FCD5DF] text-[#D9436C] border-[#FF6F96]",
       activeStyle: "border-[#FF6F96] ring-2 ring-[#FF6F96]/40 shadow-md scale-[1.03]",
     },
     {
       id: "flashcards",
       label: locale === "vi" ? "Flashcards" : "Flashcards",
-      icon: "layers",
+      icon: Layers,
       bgClass: "bg-[#DFD7FC] text-[#5A3EDB] border-[#7B5CFA]",
       activeStyle: "border-[#7B5CFA] ring-2 ring-[#7B5CFA]/40 shadow-md scale-[1.03]",
     },
     {
       id: "lessons",
       label: locale === "vi" ? "Bài đọc" : "Reading",
-      icon: "menu_book",
+      icon: BookOpen,
       bgClass: "bg-[#C4EFE0] text-[#0B7A58] border-[#0B7A58]",
       activeStyle: "border-[#0B7A58] ring-2 ring-[#0B7A58]/40 shadow-md scale-[1.03]",
     },
     {
       id: "exercises",
       label: locale === "vi" ? "Ngữ pháp" : "Grammar",
-      icon: "quiz",
+      icon: CircleHelp,
       bgClass: "bg-[#CFE9FC] text-[#1C7FC2] border-[#3FA9F5]",
       activeStyle: "border-[#3FA9F5] ring-2 ring-[#3FA9F5]/40 shadow-md scale-[1.03]",
     },
     {
       id: "shadowing",
       label: locale === "vi" ? "Shadowing" : "Shadowing",
-      icon: "auto_stories",
+      icon: BookOpenText,
       bgClass: "bg-[#FFE0CC] text-[#E26D33] border-[#E26D33]",
       activeStyle: "border-[#E26D33] ring-2 ring-[#E26D33]/40 shadow-md scale-[1.03]",
     },
@@ -131,6 +139,7 @@ export function MobileContentTypeMenu() {
         {items.map((item) => {
           const isActive = activeTab === item.id;
           const locked = isTabLocked(item.id);
+          const Icon = item.icon;
 
           return (
             <button
@@ -141,9 +150,7 @@ export function MobileContentTypeMenu() {
                 item.bgClass
               } ${isActive ? item.activeStyle : "border-transparent opacity-85 hover:opacity-100"}`}
             >
-              <span className="material-symbols-rounded !text-[20px] shrink-0">
-                {item.icon}
-              </span>
+              <Icon className="w-5 h-5 shrink-0 stroke-[2.3]" />
               <span className="truncate">{item.label}</span>
               {locked && <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
             </button>

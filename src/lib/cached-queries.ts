@@ -505,6 +505,8 @@ export type PublicClassItemType = {
   gradeLevel: string | null;
   subjectBadge: string;
   subjectBadgeClass: string;
+  audienceBadge?: string;
+  audienceBadgeClass?: string;
   typeBadge: string;
   typeBadgeClass: string;
   thumbnail: string;
@@ -577,6 +579,22 @@ export async function getCachedPublicClasses(): Promise<PublicClassItemType[]> {
 
       return classes.map((c, index) => {
         const palette = palettes[index % palettes.length];
+        const nameLower = (c.name || '').toLowerCase();
+        const isVocab = c.id === 'tiny-vocab-wonders' || nameLower.includes('vocab') || nameLower.includes('từ vựng');
+        const isGrammar = c.id === 'cmuvbigbg0001vta43ikcsjbk' || nameLower.includes('grammar') || nameLower.includes('ngữ pháp');
+
+        const subjectBadge = isVocab ? 'Từ vựng' : isGrammar ? 'Ngữ pháp' : 'Tiếng Anh';
+        const audienceBadge = isVocab 
+          ? 'Mẫu giáo - Tiểu học' 
+          : isGrammar 
+            ? 'Lấy lại căn bản' 
+            : (c.gradeLevel ? (c.gradeLevel.toLowerCase().startsWith('lớp') ? c.gradeLevel : `Lớp ${c.gradeLevel}`) : 'Tiểu học');
+        const audienceBadgeClass = isVocab 
+          ? 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa]' 
+          : isGrammar 
+            ? 'bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]' 
+            : 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]';
+
         const grade = c.gradeLevel ? `Lớp ${c.gradeLevel}` : 'Tiểu học';
         const teacherName = c.teacher?.name || 'Giáo viên Dolcake';
         const teacherAvatar = c.teacher?.image || '/assests/Classes/avatars/teacher-avatar-ms-jessica.png';
@@ -586,8 +604,10 @@ export async function getCachedPublicClasses(): Promise<PublicClassItemType[]> {
           title: c.name,
           description: c.description || `Lớp học tiếng Anh ${grade} tương tác sinh động cùng giáo viên ${teacherName}.`,
           gradeLevel: c.gradeLevel,
-          subjectBadge: `English • ${grade}`,
-          subjectBadgeClass: palette.subjectBadgeClass,
+          subjectBadge,
+          subjectBadgeClass: isGrammar ? 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]' : isVocab ? 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]' : palette.subjectBadgeClass,
+          audienceBadge,
+          audienceBadgeClass,
           typeBadge: palette.typeBadge,
           typeBadgeClass: palette.typeBadgeClass,
           thumbnail: c.thumbnail || palette.fallbackThumb,

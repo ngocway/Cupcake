@@ -243,6 +243,11 @@ export function ClassDetailClient({ classData }: Props) {
                   <span className={`px-3.5 py-1 rounded-full text-xs font-black border ${classData.subjectBadgeClass}`}>
                     {content.subjectBadge}
                   </span>
+                  {content.audienceBadge && (
+                    <span className={`px-3.5 py-1 rounded-full text-xs font-black border ${classData.audienceBadgeClass || classData.subjectBadgeClass}`}>
+                      {content.audienceBadge}
+                    </span>
+                  )}
                   <span className={`px-3.5 py-1 rounded-full text-xs font-black border ${classData.typeBadgeClass}`}>
                     {content.typeBadge}
                   </span>

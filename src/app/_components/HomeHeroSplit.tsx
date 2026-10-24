@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { SessionContext } from 'next-auth/react'
+import { useLocale } from 'next-intl'
 import { useContentStore } from '@/store/useContentStore'
 import { GraduationCap, ArrowRight } from 'lucide-react'
 import { LoginModal } from '@/components/LoginButton'
@@ -53,6 +54,8 @@ const STUDENT_CARDS = [
 ]
 
 export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
+  const locale = useLocale()
+  const isVi = locale === 'vi'
   const sessionContext = React.useContext(SessionContext)
   const clientSession = sessionContext?.data
   const session = clientSession ?? initialSession
@@ -128,8 +131,22 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         </Link>
       </div>
 
+      {/* Mobile-only Teacher Action Pill (Top-Right, opposite Dolcake Logo - Luxury Black Frosted Glass) */}
+      {!isStudent && (
+        <div className="lg:hidden absolute top-4 sm:top-5 right-4 sm:right-6 z-30">
+          <Link
+            href={isTeacher ? "/teacher/dashboard" : "/teacher/login"}
+            className="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-xl border border-white/25 hover:border-white/40 text-white font-bold text-xs tracking-wide shadow-[0_4px_16px_rgba(0,0,0,0.35),inset_0_1px_0_0_rgba(255,255,255,0.25)] ring-1 ring-white/10 active:scale-95 transition-all duration-300 cursor-pointer"
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-white/90 group-hover:rotate-12 transition-transform shrink-0" />
+            <span className="truncate">Teacher access</span>
+            <ArrowRight className="w-3.5 h-3.5 text-white/70 group-hover:translate-x-0.5 transition-transform shrink-0" />
+          </Link>
+        </div>
+      )}
+
       {/* Main Content Container: 2 Centered Halves (Adaptive Dynamic Spacing) - Elevated to z-20 with room for overlapping cards */}
-      <div className="relative z-20 w-full flex flex-col lg:flex-row items-stretch min-h-[620px] lg:min-h-[clamp(640px,80vh,880px)] pb-16 sm:pb-20 lg:pb-24">
+      <div className="relative z-20 w-full flex flex-col lg:flex-row items-stretch min-h-0 lg:min-h-[clamp(640px,80vh,880px)] pb-10 sm:pb-14 lg:pb-24">
         
         {/* ========================================================================= */}
         {/* 1. KHÔNG GIAN HỌC SINH (NỬA TRÁI - STUDENT REALM)                         */}
@@ -137,7 +154,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         <div className="relative w-full lg:w-1/2 px-6 sm:px-10 lg:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10">
           
           {/* Top Title Group: Student Realm */}
-          <div className="w-full max-w-[480px] mx-auto flex flex-col items-center pt-10 sm:pt-12 lg:pt-8 mb-6">
+          <div className="w-full max-w-[480px] mx-auto flex flex-col items-center pt-12 sm:pt-14 lg:pt-8 mb-6">
             <h2 className="text-3xl sm:text-4xl lg:text-[40px] font-black text-[#1e293b] tracking-tight font-headline">
               Student Realm
             </h2>
@@ -223,18 +240,9 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
         </div>
 
         {/* ========================================================================= */}
-        {/* MOBILE WAVE DIVIDER (Visible on small screens only)                       */}
+        {/* 2. KHÔNG GIAN GIÁO VIÊN (NỬA PHẢI - TEACHER REALM) - Desktop Only        */}
         {/* ========================================================================= */}
-        <div className="lg:hidden w-full h-12 bg-[#131938] relative -mt-1 pointer-events-none overflow-hidden">
-          <svg className="w-full h-12" preserveAspectRatio="none" viewBox="0 0 400 48" fill="none">
-            <path d="M0 0 C 150 42, 250 8, 400 36 L 400 48 L 0 48 Z" fill="#131938" />
-          </svg>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* 2. KHÔNG GIAN GIÁO VIÊN (NỬA PHẢI - TEACHER REALM)                         */}
-        {/* ========================================================================= */}
-        <div className="relative w-full lg:w-1/2 px-4 sm:px-10 lg:px-6 xl:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex flex-col justify-between items-center text-center z-10 text-white max-lg:bg-gradient-to-b max-lg:from-[#131938] max-lg:via-[#131938] max-lg:to-transparent lg:bg-transparent lg:[background-image:none]">
+        <div className="relative hidden lg:flex w-full lg:w-1/2 px-4 sm:px-10 lg:px-6 xl:px-12 py-6 sm:py-8 lg:py-[clamp(2rem,4vh,3.75rem)] flex-col justify-between items-center text-center z-10 text-white lg:bg-transparent">
           
           {/* Top Title Group: Teacher Realm */}
           <div className="w-full max-w-[700px] mx-auto flex flex-col items-center pt-2 sm:pt-4 lg:pt-8 mb-3 sm:mb-4">

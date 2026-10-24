@@ -34,6 +34,8 @@ type PublicClassItem = {
   description: string;
   subjectBadge: string;
   subjectBadgeClass: string;
+  audienceBadge?: string;
+  audienceBadgeClass?: string;
   typeBadge: string;
   typeBadgeClass: string;
   thumbnail: string;
@@ -53,8 +55,10 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     id: 'tiny-vocab-wonders',
     title: 'Tiny Vocab Wonders (45 Days)',
     description: 'Learn 180+ first English words through audio flashcards, illustrated mini-stories, and joyful games.',
-    subjectBadge: 'Vocab • Grades K-1',
+    subjectBadge: 'Vocab',
     subjectBadgeClass: 'bg-[#fef3c7]/95 text-[#92400e] border-[#fde68a]/70',
+    audienceBadge: 'Preschool & Primary',
+    audienceBadgeClass: 'bg-[#ffedd5]/95 text-[#c2410c] border-[#fed7aa]/70',
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
@@ -74,6 +78,8 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     description: 'Master English grammar from zero to B1 with 268 interactive spaced-repetition exercises.',
     subjectBadge: 'Grammar',
     subjectBadgeClass: 'bg-[#ede9fe]/95 text-[#4338ca] border-[#c7d2fe]/70',
+    audienceBadge: 'Foundation',
+    audienceBadgeClass: 'bg-[#e0e7ff]/95 text-[#3730a3] border-[#c7d2fe]/70',
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
@@ -91,8 +97,10 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     id: 'english-adventure-club',
     title: 'English Adventure Club',
     description: 'Learn English through storytelling, interactive games, and joyful daily challenges.',
-    subjectBadge: 'English • Grades 2-3',
+    subjectBadge: 'English',
     subjectBadgeClass: 'bg-[#dcfce7]/95 text-[#14532d] border-[#86efac]/70',
+    audienceBadge: 'Grades 2-3',
+    audienceBadgeClass: 'bg-[#ecfdf5]/95 text-[#047857] border-[#a7f3d0]/70',
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
@@ -110,8 +118,10 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     id: 'phonics-happy-reading',
     title: 'Phonics & Happy Reading',
     description: 'Master phonics, correct pronunciation, and build confident reading habits.',
-    subjectBadge: 'Phonics • Grades 1-2',
+    subjectBadge: 'Phonics',
     subjectBadgeClass: 'bg-[#ffedd5]/95 text-[#7c2d12] border-[#fdba74]/70',
+    audienceBadge: 'Grades 1-2',
+    audienceBadgeClass: 'bg-[#fef3c7]/95 text-[#92400e] border-[#fde68a]/70',
     typeBadge: '🔥 Hot',
     typeBadgeClass: 'bg-[#fee2e2]/95 text-[#991b1b] border-[#fca5a5]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
@@ -129,8 +139,10 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     id: 'little-speaking-stars',
     title: 'Little Speaking Stars',
     description: 'Boost conversation skills through role-playing, dialogues, and kid-friendly topics.',
-    subjectBadge: 'Speaking • Grades 3-5',
+    subjectBadge: 'Speaking',
     subjectBadgeClass: 'bg-[#ede9fe]/95 text-[#4c1d95] border-[#c4b5fd]/70',
+    audienceBadge: 'Grades 3-5',
+    audienceBadgeClass: 'bg-[#f3e8ff]/95 text-[#6b21a8] border-[#e9d5ff]/70',
     typeBadge: '✨ Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
@@ -145,6 +157,59 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     btnGradient: 'from-[#a855f7] to-[#6366f1] hover:from-[#9333ea] hover:to-[#4f46e5] shadow-indigo-500/20',
   },
 ];
+
+function localizePublicClass(cls: PublicClassItem, isVi: boolean): PublicClassItem {
+  if (!isVi) return cls;
+  switch (cls.id) {
+    case 'tiny-vocab-wonders':
+      return {
+        ...cls,
+        title: 'Tiny Vocab Wonders: Bé Khám Phá Từ Vựng (45 Ngày)',
+        description: 'Hành trình 45 ngày xây dựng vốn từ vựng đầu đời cho bé Mầm non & Lớp 1 qua Flashcard phát âm chuẩn, truyện tranh mini và trò chơi.',
+        subjectBadge: 'Từ vựng',
+        audienceBadge: 'Mẫu giáo - Tiểu học',
+        typeBadge: '🔥 Miễn phí',
+      };
+    case 'cmuvbigbg0001vta43ikcsjbk':
+      return {
+        ...cls,
+        title: 'Làm chủ ngữ pháp tiếng Anh từ Mất gốc đến B1 (45 Ngày)',
+        description: 'Khóa học 45 ngày củng cố toàn diện nền tảng ngữ pháp tiếng Anh từ căn bản mất gốc đến B1 với 268 bài tập phân hóa Spaced Repetition.',
+        subjectBadge: 'Ngữ pháp',
+        audienceBadge: 'Lấy lại căn bản',
+        typeBadge: '🔥 Miễn phí',
+      };
+    case 'english-adventure-club':
+      return {
+        ...cls,
+        title: 'English Adventure Club',
+        description: 'Học tiếng Anh qua truyện kể, trò chơi và các thử thách vui nhộn mỗi ngày.',
+        subjectBadge: 'Tiếng Anh',
+        audienceBadge: 'Lớp 2-3',
+        typeBadge: '🔥 Miễn phí',
+      };
+    case 'phonics-happy-reading':
+      return {
+        ...cls,
+        title: 'Phonics & Happy Reading',
+        description: 'Làm quen phonics, phát âm chuẩn và xây dựng thói quen đọc tiếng Anh tự tin.',
+        subjectBadge: 'Phát âm',
+        audienceBadge: 'Lớp 1-2',
+        typeBadge: '🔥 Hot',
+      };
+    case 'little-speaking-stars':
+      return {
+        ...cls,
+        title: 'Little Speaking Stars',
+        description: 'Luyện phản xạ giao tiếp qua hội thoại, đóng vai và các chủ đề gần gũi với bé.',
+        subjectBadge: 'Giao tiếp',
+        audienceBadge: 'Lớp 3-5',
+        typeBadge: '✨ Miễn phí',
+      };
+    default:
+      return cls;
+  }
+}
 
 type FormattedClassInfo = {
   id: string;
@@ -165,7 +230,7 @@ type FormattedClassInfo = {
 };
 
 // Helper: match enrolled class with rich public class artwork / avatar / badge
-function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherName?: string }) {
+function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherName?: string; gradeLevel?: string | null }) {
   const cId = (clsItem.id || '').toLowerCase();
   const cName = (clsItem.name || '').toLowerCase();
 
@@ -176,7 +241,11 @@ function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherN
       pId === cId ||
       pTitle === cName ||
       (cName.length > 0 && pTitle.includes(cName)) ||
-      (cName.length > 0 && cName.includes(pTitle))
+      (cName.length > 0 && cName.includes(pTitle)) ||
+      (cName.includes('vocab') && pId.includes('vocab')) ||
+      (cName.includes('từ vựng') && pId.includes('vocab')) ||
+      (cName.includes('ngữ pháp') && (pId.includes('grammar') || pId === 'cmuvbigbg0001vta43ikcsjbk')) ||
+      (cName.includes('grammar') && (pId.includes('grammar') || pId === 'cmuvbigbg0001vta43ikcsjbk'))
     );
   });
 
@@ -186,8 +255,10 @@ function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherN
     id: clsItem.id || 'custom-class',
     title: clsItem.name || 'Lớp học Dolcake',
     description: '',
-    subjectBadge: 'English • Lớp học',
+    subjectBadge: 'English',
     subjectBadgeClass: 'bg-[#dcfce7]/95 text-[#14532d] border-[#86efac]/70',
+    audienceBadge: clsItem.gradeLevel || 'Lớp học',
+    audienceBadgeClass: 'bg-[#ecfdf5]/95 text-[#047857] border-[#a7f3d0]/70',
     typeBadge: '',
     typeBadgeClass: '',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
@@ -216,7 +287,8 @@ function EnrolledClassRowCard({
   enteringClassId,
   onEnter,
 }: EnrolledClassRowCardProps) {
-  const matched = findMatchingPublicClass(item.class);
+  const rawMatched = findMatchingPublicClass(item.class);
+  const matched = localizePublicClass(rawMatched, isVi);
   const totalAssignments = item.class.totalAssignments;
   const completedCount = item.class.completedAssignments ?? Math.max(0, totalAssignments - (item.pendingCount ?? 0));
   const pendingCount = item.pendingCount ?? Math.max(0, totalAssignments - completedCount);
@@ -271,10 +343,33 @@ function EnrolledClassRowCard({
           className="object-cover group-hover:scale-105 transition-transform duration-500"
           onError={() => setThumbSrc('/assests/Classes/thumbnails/class-thumb-neutral-default.jpg')}
         />
+        {/* Floating badge for mobile */}
+        <div className="absolute top-2 left-2 flex items-center gap-1 z-10 pointer-events-none md:hidden">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border backdrop-blur-md ${matched.subjectBadgeClass}`}>
+            {matched.subjectBadge}
+          </span>
+          {matched.audienceBadge && (
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border backdrop-blur-md ${matched.audienceBadgeClass || matched.subjectBadgeClass}`}>
+              {matched.audienceBadge}
+            </span>
+          )}
+        </div>
       </Link>
 
       {/* 2. Title & Teacher Info */}
       <div className="flex-1 min-w-0 md:min-w-[170px] lg:min-w-[210px] flex flex-col justify-center">
+        {/* Dual Chips: Môn học + Đối tượng học */}
+        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-black tracking-tight border shadow-2xs backdrop-blur-md ${matched.subjectBadgeClass}`}>
+            {matched.subjectBadge}
+          </span>
+          {matched.audienceBadge && (
+            <span className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold tracking-tight border shadow-2xs backdrop-blur-md ${matched.audienceBadgeClass || matched.subjectBadgeClass}`}>
+              {matched.audienceBadge}
+            </span>
+          )}
+        </div>
+
         <Link
           href={classUrl}
           onClick={() => onEnter(targetClassId)}
@@ -441,24 +536,37 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
           className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
-        {/* Badges on Top */}
-        <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10 pointer-events-none">
-          <span
-            className={`px-3 py-1 rounded-full text-xs sm:text-[13px] font-black tracking-tight shadow-sm border backdrop-blur-md ${cls.subjectBadgeClass}`}
-          >
-            {cls.subjectBadge}
-          </span>
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs sm:text-[13px] font-black tracking-tight shadow-sm border backdrop-blur-md ${cls.typeBadgeClass}`}
-          >
-            {cls.typeBadge}
-          </span>
-        </div>
+        {/* Type Badge on Top Right */}
+        {cls.typeBadge && (
+          <div className="absolute top-3 right-3 z-10 pointer-events-none">
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs sm:text-[13px] font-black tracking-tight shadow-sm border backdrop-blur-md ${cls.typeBadgeClass}`}
+            >
+              {cls.typeBadge}
+            </span>
+          </div>
+        )}
       </Link>
 
       {/* Card Body */}
       <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
         <div>
+          {/* Dual Chips: Môn học + Đối tượng học (Phía trên tiêu đề lớp) */}
+          <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-black tracking-tight border shadow-2xs backdrop-blur-md ${cls.subjectBadgeClass}`}
+            >
+              {cls.subjectBadge}
+            </span>
+            {cls.audienceBadge && (
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-bold tracking-tight border shadow-2xs backdrop-blur-md ${cls.audienceBadgeClass || cls.subjectBadgeClass}`}
+              >
+                {cls.audienceBadge}
+              </span>
+            )}
+          </div>
+
           <Link href={`/classes/${cls.id}`} className="block">
             <h3 className="font-headline font-black text-slate-900 dark:text-white text-lg sm:text-[19px] leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {cls.title}
@@ -468,39 +576,26 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
             {cls.description}
           </p>
 
-          {/* Teacher & Class Code Info */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="relative size-10 rounded-full overflow-hidden border-2 border-white dark:border-slate-700 shadow-xs shrink-0">
-              <Image
-                src={cls.teacher.avatar}
-                alt={cls.teacher.name}
-                fill
-                className="object-cover"
-              />
+          {/* Class Code Info Pill (Gợi ý A: Gọn & Hiện đại, bỏ avatar & tên GV) */}
+          {cls.joinCode && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={handleCopyCode}
+                title="Bấm để sao chép mã lớp"
+                className="group/code inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-blue-50 dark:bg-slate-700/60 dark:hover:bg-blue-900/40 text-slate-700 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-300 border border-slate-200/80 dark:border-slate-600/70 shadow-2xs transition-all cursor-pointer active:scale-95"
+              >
+                <span className="text-xs sm:text-[12.5px] font-mono font-black tracking-wide leading-none">
+                  Code: {cls.joinCode}
+                </span>
+                {copied ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[2.5]" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5 text-slate-400 group-hover/code:text-blue-500 transition-colors" />
+                )}
+              </button>
             </div>
-            <div className="flex flex-col text-left min-w-0 flex-1">
-              <div className="flex items-center">
-                <button
-                  type="button"
-                  onClick={handleCopyCode}
-                  title="Bấm để sao chép mã lớp"
-                  className="group/code inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-slate-700/70 dark:hover:bg-blue-900/40 text-slate-800 hover:text-blue-600 dark:text-slate-200 dark:hover:text-blue-300 border border-slate-200/80 dark:border-slate-600/80 transition-all cursor-pointer active:scale-95"
-                >
-                  <span className="text-xs sm:text-[13px] font-mono font-extrabold tracking-wide leading-tight">
-                    Code: {cls.joinCode || '---'}
-                  </span>
-                  {copied ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[2.5]" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-slate-400 group-hover/code:text-blue-500 transition-colors" />
-                  )}
-                </button>
-              </div>
-              <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1">
-                {cls.teacher.name}
-              </span>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -694,15 +789,18 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
     return (
       <div className="w-full animate-in fade-in duration-300">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
-          {PUBLIC_CLASSES.map((cls, index) => (
-            <PublicClassCard
-              key={cls.id}
-              cls={cls}
-              isLoggedIn={false}
-              priority={index < 2}
-              onPreview={setSelectedClassDetail}
-            />
-          ))}
+          {PUBLIC_CLASSES.map((rawCls, index) => {
+            const cls = localizePublicClass(rawCls, isVi);
+            return (
+              <PublicClassCard
+                key={cls.id}
+                cls={cls}
+                isLoggedIn={false}
+                priority={index < 2}
+                onPreview={setSelectedClassDetail}
+              />
+            );
+          })}
 
           {/* CARD 4: Tham gia bằng mã code */}
           <JoinWithCodeCard onOpen={() => setIsJoinModalOpen(true)} />
@@ -784,14 +882,21 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
                   fill
                   className="object-cover"
                 />
-                <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
-                  <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md border ${selectedClassDetail.subjectBadgeClass}`}>
-                    {selectedClassDetail.subjectBadge}
-                  </span>
+                <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10 gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                    <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md border ${selectedClassDetail.subjectBadgeClass}`}>
+                      {selectedClassDetail.subjectBadge}
+                    </span>
+                    {selectedClassDetail.audienceBadge && (
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-md border ${selectedClassDetail.audienceBadgeClass || selectedClassDetail.subjectBadgeClass}`}>
+                        {selectedClassDetail.audienceBadge}
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setSelectedClassDetail(null)}
-                    className="size-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors cursor-pointer"
+                    className="size-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors cursor-pointer shrink-0"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1133,15 +1238,18 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
 
         {/* Grid of recommended classes (filtered) + Join with code card */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-7">
-          {recommendedClasses.map((cls, index) => (
-            <PublicClassCard
-              key={cls.id}
-              cls={cls}
-              isLoggedIn={true}
-              priority={index < 2}
-              onPreview={setSelectedClassDetail}
-            />
-          ))}
+          {recommendedClasses.map((rawCls, index) => {
+            const cls = localizePublicClass(rawCls, isVi);
+            return (
+              <PublicClassCard
+                key={cls.id}
+                cls={cls}
+                isLoggedIn={true}
+                priority={index < 2}
+                onPreview={setSelectedClassDetail}
+              />
+            );
+          })}
 
           {/* CARD: Tham gia bằng mã code */}
           <JoinWithCodeCard onOpen={() => setIsJoinModalOpen(true)} />
@@ -1224,14 +1332,21 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
                 fill
                 className="object-cover"
               />
-              <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10">
-                <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md border ${selectedClassDetail.subjectBadgeClass}`}>
-                  {selectedClassDetail.subjectBadge}
-                </span>
+              <div className="absolute top-4 inset-x-4 flex items-center justify-between z-10 gap-2">
+                <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                  <span className={`px-3 py-1 rounded-full text-xs font-black shadow-md border ${selectedClassDetail.subjectBadgeClass}`}>
+                    {selectedClassDetail.subjectBadge}
+                  </span>
+                  {selectedClassDetail.audienceBadge && (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-md border ${selectedClassDetail.audienceBadgeClass || selectedClassDetail.subjectBadgeClass}`}>
+                      {selectedClassDetail.audienceBadge}
+                    </span>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => setSelectedClassDetail(null)}
-                  className="size-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors cursor-pointer"
+                  className="size-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-colors cursor-pointer shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>

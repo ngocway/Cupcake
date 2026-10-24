@@ -39,6 +39,7 @@ export type ClassLangContent = {
   shortDescription: string;
   heroDescription: string;
   subjectBadge: string;
+  audienceBadge?: string;
   typeBadge: string;
   studentsCount: string;
   lessonsCount: number;
@@ -61,6 +62,7 @@ export type PublicClassDetail = {
   id: string;
   thumbnail: string;
   subjectBadgeClass: string;
+  audienceBadgeClass?: string;
   typeBadgeClass: string;
   rating: number;
   reviewsCount: number;
@@ -74,6 +76,7 @@ export type PublicClassDetail = {
   shortDescription: string;
   heroDescription: string;
   subjectBadge: string;
+  audienceBadge?: string;
   typeBadge: string;
   studentsCount: string;
   lessonsCount: number;
@@ -148,6 +151,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     id: 'cmuvbigbg0001vta43ikcsjbk',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
     subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
+    audienceBadgeClass: 'bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]',
     typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
     rating: 5.0,
     reviewsCount: 45,
@@ -160,6 +164,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       shortDescription: 'Comprehensive 45-day course to solidify your English grammar foundations from zero to B1 with 268 spaced-repetition exercises.',
       heroDescription: 'Join Dolcake Teacher in this 45-day intensive grammar mastery program! Featuring bilingual visual theory, 268 adaptive exercises, and spaced-repetition retention for confident daily communication.',
       subjectBadge: 'Grammar',
+      audienceBadge: 'Foundation',
       typeBadge: '🔥 Free',
       studentsCount: '12+ students',
       lessonsCount: 268,
@@ -233,7 +238,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Làm chủ ngữ pháp tiếng Anh từ Mất gốc đến B1 (45 Ngày)',
       shortDescription: 'Khóa học 45 ngày củng cố toàn diện nền tảng ngữ pháp tiếng Anh từ căn bản mất gốc đến B1 với 268 bài tập phân hóa theo phương pháp Spaced Repetition.',
       heroDescription: 'Cùng Dolcake Teacher củng cố toàn diện nền tảng ngữ pháp tiếng Anh suốt 45 ngày! Tích hợp lý thuyết trực quan song ngữ, hệ thống 5 bài tập phân hóa mỗi ngày (3 bài thực hành mới + 2 bài ôn tập ngắt quãng Spaced Repetition) giúp học sâu, nhớ chắc và tự tin sử dụng.',
-      subjectBadge: 'Grammar',
+      subjectBadge: 'Ngữ pháp',
+      audienceBadge: 'Lấy lại căn bản',
       typeBadge: '🔥 Free',
       studentsCount: '12+ học viên',
       lessonsCount: 268,
@@ -307,6 +313,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },
     get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
     get typeBadge() { return this.en.typeBadge; },
     get studentsCount() { return this.en.studentsCount; },
     get lessonsCount() { return this.en.lessonsCount; },
@@ -322,6 +329,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     id: 'tiny-vocab-wonders',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
     subjectBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
+    audienceBadgeClass: 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa]',
     typeBadgeClass: 'bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]',
     rating: 5.0,
     reviewsCount: 38,
@@ -333,7 +341,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Tiny Vocab Wonders: Flashcard, Story & Play (45 Days)',
       shortDescription: 'Joyful 45-day vocabulary journey for Preschool & Grade 1 kids through native audio flashcards, illustrated mini-stories, and playful games.',
       heroDescription: 'Welcome little learners to Tiny Vocab Wonders! An interactive 45-day English journey crafted specifically for preschoolers and 1st graders. Featuring a 3-step routine: Native Audio Flashcards, Delightful Mini-Stories, and Joyful Interactive Games. Zero pressure, pure curiosity, and lasting retention!',
-      subjectBadge: 'Vocab • Grades K-1',
+      subjectBadge: 'Vocab',
+      audienceBadge: 'Preschool & Primary',
       typeBadge: '🔥 Free',
       studentsCount: '60+ students',
       lessonsCount: 45,
@@ -407,7 +416,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Tiny Vocab Wonders: Bé Khám Phá Từ Vựng (45 Ngày)',
       shortDescription: 'Hành trình 45 ngày xây dựng vốn từ vựng đầu đời cho bé Mầm non & Lớp 1 qua Flashcard phát âm chuẩn, truyện tranh mini và trò chơi tương tác.',
       heroDescription: 'Chào mừng các bé đến với Tiny Vocab Wonders! Khóa học 45 ngày được thiết kế riêng cho sự tập trung của bé 4 - 6 tuổi theo chu trình 3 bước vàng: Chạm Flashcard nghe giọng đọc ấm áp ➔ Đọc câu chuyện tranh mini ➔ Chơi minigame tương tác. Bé học mà chơi, không áp lực và tự giác khám phá mỗi ngày.',
-      subjectBadge: 'Từ Vựng • Mầm Non - Lớp 1',
+      subjectBadge: 'Từ vựng',
+      audienceBadge: 'Mẫu giáo - Tiểu học',
       typeBadge: '🔥 Free',
       studentsCount: '60+ học viên',
       lessonsCount: 45,
@@ -481,6 +491,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },
     get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
     get typeBadge() { return this.en.typeBadge; },
     get studentsCount() { return this.en.studentsCount; },
     get lessonsCount() { return this.en.lessonsCount; },
@@ -495,7 +506,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
   'english-adventure-club': {
     id: 'english-adventure-club',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
-    subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
+    subjectBadgeClass: 'bg-[#dcfce7] text-[#14532d] border-[#86efac]',
+    audienceBadgeClass: 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]',
     typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
     rating: 4.9,
     reviewsCount: 68,
@@ -507,7 +519,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'English Adventure Club',
       shortDescription: 'Learn English through interactive storytelling, games, and joyful daily challenges.',
       heroDescription: 'Join Ms. Jessica into a vibrant English world filled with fun storytelling, interactive minigames, and cheerful daily challenges!',
-      subjectBadge: 'English • Grade 2-3',
+      subjectBadge: 'English',
+      audienceBadge: 'Grades 2-3',
       typeBadge: '🔥 Free',
       studentsCount: '120 students',
       lessonsCount: 15,
@@ -682,7 +695,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'English Adventure Club',
       shortDescription: 'Học tiếng Anh qua truyện kể, trò chơi và các thử thách vui nhộn mỗi ngày.',
       heroDescription: 'Cùng cô Jessica bước vào thế giới tiếng Anh sinh động qua từng câu chuyện kể, minigame và thử thách vui nhộn mỗi ngày!',
-      subjectBadge: 'English • Lớp 2-3',
+      subjectBadge: 'Tiếng Anh',
+      audienceBadge: 'Lớp 2-3',
       typeBadge: '🔥 Miễn phí',
       studentsCount: '120 học viên',
       lessonsCount: 15,
@@ -857,6 +871,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },
     get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
     get typeBadge() { return this.en.typeBadge; },
     get studentsCount() { return this.en.studentsCount; },
     get lessonsCount() { return this.en.lessonsCount; },
@@ -872,6 +887,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     id: 'phonics-happy-reading',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
     subjectBadgeClass: 'bg-[#ffedd5] text-[#9a3412] border-[#fed7aa]',
+    audienceBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
     typeBadgeClass: 'bg-[#ffe4e6] text-[#be123c] border-[#fecdd3]',
     rating: 5.0,
     reviewsCount: 92,
@@ -883,7 +899,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Phonics & Happy Reading',
       shortDescription: 'Master natural phonics, accurate pronunciation, and build confident English reading habits.',
       heroDescription: 'Help young learners master natural phonics, blend sounds effortlessly, and confidently read their first English storybooks!',
-      subjectBadge: 'Phonics • Grade 1-2',
+      subjectBadge: 'Phonics',
+      audienceBadge: 'Grades 1-2',
       typeBadge: '🔥 Hot',
       studentsCount: '85+ students',
       lessonsCount: 20,
@@ -1058,7 +1075,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Phonics & Happy Reading',
       shortDescription: 'Làm quen phonics, phát âm chuẩn và xây dựng thói quen đọc tiếng Anh tự tin.',
       heroDescription: 'Giúp bé nắm vững ngữ âm tự nhiên, ghép vần chuẩn bản xứ và tự tin đọc trôi chảy những cuốn sách tiếng Anh đầu đời!',
-      subjectBadge: 'Phonics • Lớp 1-2',
+      subjectBadge: 'Phát âm',
+      audienceBadge: 'Lớp 1-2',
       typeBadge: '🔥 Hot',
       studentsCount: '85+ học viên',
       lessonsCount: 20,
@@ -1233,6 +1251,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },
     get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
     get typeBadge() { return this.en.typeBadge; },
     get studentsCount() { return this.en.studentsCount; },
     get lessonsCount() { return this.en.lessonsCount; },
@@ -1247,7 +1266,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
   'little-speaking-stars': {
     id: 'little-speaking-stars',
     thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
-    subjectBadgeClass: 'bg-[#f3e8ff] text-[#6b21a8] border-[#e9d5ff]',
+    subjectBadgeClass: 'bg-[#ede9fe] text-[#4c1d95] border-[#c4b5fd]',
+    audienceBadgeClass: 'bg-[#f3e8ff] text-[#6b21a8] border-[#e9d5ff]',
     typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
     rating: 4.9,
     reviewsCount: 115,
@@ -1259,7 +1279,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Little Speaking Stars',
       shortDescription: 'Practice conversational reflexes through roleplay dialogues and everyday familiar themes.',
       heroDescription: 'Build natural English speaking reflexes, expand everyday conversational patterns, and confidently present real-life topics in front of an audience!',
-      subjectBadge: 'Speaking • Grade 3-5',
+      subjectBadge: 'Speaking',
+      audienceBadge: 'Grades 3-5',
       typeBadge: '🔥 Free',
       studentsCount: '200+ students',
       lessonsCount: 18,
@@ -1434,7 +1455,8 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       title: 'Little Speaking Stars',
       shortDescription: 'Luyện phản xạ giao tiếp qua hội thoại, đóng vai và các chủ đề gần gũi với bé.',
       heroDescription: 'Rèn luyện phản xạ nghe nói tự nhiên, mở rộng vốn câu đàm thoại và tự tin thuyết trình các chủ đề đời sống trước đám đông!',
-      subjectBadge: 'Speaking • Lớp 3-5',
+      subjectBadge: 'Giao tiếp',
+      audienceBadge: 'Lớp 3-5',
       typeBadge: '🔥 Miễn phí',
       studentsCount: '200+ học viên',
       lessonsCount: 18,
@@ -1609,6 +1631,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },
     get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
     get typeBadge() { return this.en.typeBadge; },
     get studentsCount() { return this.en.studentsCount; },
     get lessonsCount() { return this.en.lessonsCount; },
