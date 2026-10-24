@@ -104,16 +104,16 @@ export function QuizQuestionNumbers({
   };
 
   return (
-    <div className="w-full mt-3 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3.5 sm:px-5 py-2.5 max-w-full overflow-x-auto scrollbar-none flex flex-col gap-2 items-center justify-center">
+    <div className="w-full mt-2.5 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-2.5 sm:px-5 py-2 sm:py-2.5 max-w-full overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex flex-col gap-1.5 sm:gap-2 items-center justify-center">
         {/* Hàng 1: Từ trái qua phải */}
-        <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 flex-nowrap">
+        <div className="flex items-center justify-center gap-1 sm:gap-2.5 flex-nowrap">
           {row1.map((q, idx) => renderQuestionButton(q, idx))}
         </div>
 
         {/* Hàng 2: Từ trái qua phải */}
         {row2.length > 0 && (
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5 flex-nowrap">
+          <div className="flex items-center justify-center gap-1 sm:gap-2.5 flex-nowrap">
             {row2.map((q, idx) => renderQuestionButton(q, half + idx))}
           </div>
         )}

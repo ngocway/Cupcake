@@ -393,165 +393,321 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
     if (!activeVocab || !mounted) return null;
 
     return createPortal(
-      <div 
-        className="fixed z-[9999] p-4 pointer-events-auto" // Thêm padding p-4 để tạo vùng đệm cho chuột
-        style={{ 
-          left: `${position.x}px`, 
-          top: `${position.y}px`,
-          transform: position.side === 'top' ? 'translateX(0) translateY(-100%)' : 'translateX(0) translateY(0)',
-          margin: position.side === 'top' ? '0 0 -16px 0' : '-16px 0 0 0' // Bù trừ cho padding đệm
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-[560px] bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_35px_100px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-slate-800 p-8 animate-in fade-in zoom-in-95 duration-200 relative">
-          <button 
-            onClick={() => setActiveVocab(null)}
-            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="flex gap-8 items-stretch">
-            {/* Left Column */}
-            <div className="w-[200px] flex flex-col">
+      <>
+        {/* ── MOBILE: Bottom Sheet trượt từ dưới lên (< sm) ── */}
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[9998] sm:hidden animate-in fade-in duration-200"
+          onClick={() => setActiveVocab(null)}
+        />
+        <div 
+          className="fixed inset-x-0 bottom-0 z-[9999] sm:hidden bg-white dark:bg-slate-900 rounded-t-[28px] shadow-[0_-12px_36px_rgba(0,0,0,0.25)] border-t border-slate-100 dark:border-slate-800 p-5 pb-8 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-300 pointer-events-auto space-y-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Grab Handle & Close Button */}
+          <div className="relative">
+            <div className="w-10 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto" />
+            <button 
+              type="button"
+              onClick={() => setActiveVocab(null)}
+              className="absolute -top-1.5 right-0 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-              {activeVocab.image && !imageError && (
-                <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 shadow-sm flex-shrink-0">
-                  <img 
-                    src={activeVocab.image} 
-                    alt={activeVocab.word} 
-                    className="w-full h-full object-cover" 
-                    onError={() => setImageError(true)}
-                  />
-                </div>
-              )}
-              
-              <div className="space-y-1 mb-4">
-                <h4 className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
-                  {activeVocab.word}
-                </h4>
-                <div 
-                  className="flex items-center gap-1.5 text-primary/60 font-bold text-xs cursor-pointer hover:text-primary transition-colors w-fit"
-                  onClick={handlePlayAudio}
-                  title="Listen to pronunciation"
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span className="font-mono tracking-wider">{activeVocab.pronunciation.replace(/^\/+/, '/').replace(/\/+$/, '/')}</span>
-                </div>
+          {/* Word Header + Audio + Image */}
+          <div className="flex items-start gap-4">
+            {activeVocab.image && !imageError && (
+              <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 shadow-sm shrink-0">
+                <img 
+                  src={activeVocab.image} 
+                  alt={activeVocab.word} 
+                  className="w-full h-full object-cover" 
+                  onError={() => setImageError(true)}
+                />
               </div>
+            )}
+            
+            <div className="flex-1 min-w-0 space-y-1">
+              <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                {activeVocab.word}
+              </h4>
+              <button 
+                type="button"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-primary dark:text-emerald-400 font-bold text-xs cursor-pointer hover:bg-emerald-100 active:scale-95 transition-all"
+                onClick={handlePlayAudio}
+                title="Listen to pronunciation"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span className="font-mono tracking-wider">{activeVocab.pronunciation.replace(/^\/+/, '/').replace(/\/+$/, '/')}</span>
+              </button>
+            </div>
+          </div>
 
-              <div className="mb-auto space-y-1">
-                {/* TRANSLATION label + flag switcher on same row */}
-                <div className="flex items-center justify-between">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">TRANSLATION</p>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setDisplayLang('en')}
-                      title="English"
-                      className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                        displayLang === 'en'
-                          ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
-                          : 'opacity-40 hover:opacity-80'
-                      }`}
-                    >
-                      <img src="/flags/flag-en.png" alt="English" className="w-full h-full object-cover" />
-                    </button>
-                    
-                    {currentLang !== 'en' && currentLang !== 'other' && (
+          {/* Translation Box */}
+          <div className="bg-emerald-50/60 dark:bg-emerald-950/20 rounded-2xl p-3.5 border border-emerald-100/80 dark:border-emerald-900/40 space-y-1">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black text-primary/70 dark:text-emerald-400 uppercase tracking-[0.15em]">TRANSLATION</p>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setDisplayLang('en')}
+                  title="English"
+                  className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 cursor-pointer ${
+                    displayLang === 'en'
+                      ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                      : 'opacity-40 hover:opacity-80'
+                  }`}
+                >
+                  <img src="/flags/flag-en.png" alt="English" className="w-full h-full object-cover" />
+                </button>
+                
+                {currentLang !== 'en' && currentLang !== 'other' && (
+                  <button
+                    type="button"
+                    onClick={() => setDisplayLang(currentLang)}
+                    title={getLangTitle(currentLang)}
+                    className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 cursor-pointer ${
+                      displayLang === currentLang
+                        ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                        : 'opacity-40 hover:opacity-80'
+                    }`}
+                  >
+                    <img src={getFlagUrl(currentLang)} alt={getLangTitle(currentLang)} className="w-full h-full object-cover" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-snug">
+              {displayLang === 'en' || displayLang === 'other'
+                ? capitalize(activeVocab.explanationEn)
+                : capitalize(getDefinitionText(activeVocab, displayLang))}
+            </p>
+          </div>
+
+          {/* English Definition */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-100 dark:border-slate-800/80 space-y-1">
+            <div className="flex items-center gap-1.5 text-slate-400">
+              <BookOpen className="w-3.5 h-3.5" />
+              <p className="text-[10px] font-black uppercase tracking-[0.15em]">English Definition</p>
+            </div>
+            <p className="text-slate-700 dark:text-slate-200 text-sm font-medium leading-relaxed">
+              {activeVocab.explanationEn}
+            </p>
+          </div>
+
+          {/* Example Sentence */}
+          {activeVocab.examples[0] && (
+            <div className="bg-amber-50/60 dark:bg-amber-950/20 rounded-2xl p-3.5 border border-amber-200/50 dark:border-amber-900/30 space-y-1">
+              <p className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-[0.15em]">Example</p>
+              <p className="text-slate-700 dark:text-slate-200 text-sm italic font-medium leading-relaxed">
+                "{activeVocab.examples[0]}"
+              </p>
+            </div>
+          )}
+
+          {/* Action Button */}
+          <button 
+            type="button"
+            onClick={() => {
+              if (!isLoggedIn) {
+                setShowLoginPrompt(true);
+                return;
+              }
+              // TODO: Add word to user's vocabulary list
+            }}
+            className="w-full h-11 bg-primary text-white rounded-2xl font-black text-[11px] tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:bg-primary/90 active:scale-98 transition-all cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Add Word</span>
+          </button>
+
+          {showLoginPrompt && !isLoggedIn && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-2">
+                You need to log in to save vocabulary
+              </p>
+              <button 
+                type="button"
+                onClick={() => {
+                  setActiveVocab(null);
+                  setShowLoginModal(true);
+                }}
+                className="flex items-center justify-center gap-2 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Log in now</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── DESKTOP: Floating Tooltip có mũi tên (>= sm) ── */}
+        <div 
+          className="hidden sm:block fixed z-[9999] p-4 pointer-events-auto"
+          style={{ 
+            left: `${position.x}px`, 
+            top: `${position.y}px`,
+            transform: position.side === 'top' ? 'translateX(0) translateY(-100%)' : 'translateX(0) translateY(0)',
+            margin: position.side === 'top' ? '0 0 -16px 0' : '-16px 0 0 0'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-[560px] bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_35px_100px_rgba(0,0,0,0.4)] border border-slate-100 dark:border-slate-800 p-8 animate-in fade-in zoom-in-95 duration-200 relative">
+            <button 
+              type="button"
+              onClick={() => setActiveVocab(null)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex gap-8 items-stretch">
+              {/* Left Column */}
+              <div className="w-[200px] flex flex-col">
+
+                {activeVocab.image && !imageError && (
+                  <div className="w-full aspect-square rounded-2xl overflow-hidden mb-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 shadow-sm flex-shrink-0">
+                    <img 
+                      src={activeVocab.image} 
+                      alt={activeVocab.word} 
+                      className="w-full h-full object-cover" 
+                      onError={() => setImageError(true)}
+                    />
+                  </div>
+                )}
+                
+                <div className="space-y-1 mb-4">
+                  <h4 className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight">
+                    {activeVocab.word}
+                  </h4>
+                  <div 
+                    className="flex items-center gap-1.5 text-primary/60 font-bold text-xs cursor-pointer hover:text-primary transition-colors w-fit"
+                    onClick={handlePlayAudio}
+                    title="Listen to pronunciation"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span className="font-mono tracking-wider">{activeVocab.pronunciation.replace(/^\/+/, '/').replace(/\/+$/, '/')}</span>
+                  </div>
+                </div>
+
+                <div className="mb-auto space-y-1">
+                  {/* TRANSLATION label + flag switcher on same row */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">TRANSLATION</p>
+                    <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => setDisplayLang(currentLang)}
-                        title={getLangTitle(currentLang)}
-                        className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 ${
-                          displayLang === currentLang
+                        type="button"
+                        onClick={() => setDisplayLang('en')}
+                        title="English"
+                        className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 cursor-pointer ${
+                          displayLang === 'en'
                             ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
                             : 'opacity-40 hover:opacity-80'
                         }`}
                       >
-                        <img src={getFlagUrl(currentLang)} alt={getLangTitle(currentLang)} className="w-full h-full object-cover" />
+                        <img src="/flags/flag-en.png" alt="English" className="w-full h-full object-cover" />
                       </button>
-                    )}
+                      
+                      {currentLang !== 'en' && currentLang !== 'other' && (
+                        <button
+                          type="button"
+                          onClick={() => setDisplayLang(currentLang)}
+                          title={getLangTitle(currentLang)}
+                          className={`w-5 h-5 rounded-full overflow-hidden transition-all duration-200 hover:scale-110 cursor-pointer ${
+                            displayLang === currentLang
+                              ? 'ring-2 ring-offset-1 ring-primary shadow-sm scale-110'
+                              : 'opacity-40 hover:opacity-80'
+                          }`}
+                        >
+                          <img src={getFlagUrl(currentLang)} alt={getLangTitle(currentLang)} className="w-full h-full object-cover" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <p className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-tight">
-                  {displayLang === 'en' || displayLang === 'other'
-                    ? capitalize(activeVocab.explanationEn)
-                    : capitalize(getDefinitionText(activeVocab, displayLang))}
-                </p>
-              </div>
-
-
-              <button 
-                onClick={() => {
-                  if (!isLoggedIn) {
-                    setShowLoginPrompt(true);
-                    return;
-                  }
-                  // TODO: Add word to user's vocabulary list
-                }}
-                className="w-full h-11 bg-primary text-white rounded-2xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 mt-4 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Add Word
-              </button>
-              {showLoginPrompt && !isLoggedIn && (
-                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                  <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-2">
-                    You need to log in to save vocabulary
-                  </p>
-                  <button 
-                    onClick={() => {
-                      setActiveVocab(null);
-                      setShowLoginModal(true);
-                    }}
-                    className="flex items-center justify-center gap-2 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
-                  >
-                    <LogIn className="w-3.5 h-3.5" />
-                    Log in now
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column */}
-            <div className="flex-1 space-y-5 border-l border-slate-100 dark:border-slate-800 pl-8">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">English Definition</p>
-                </div>
-                <p className="text-slate-600 dark:text-slate-300 text-[14px] font-medium leading-relaxed">
-                  {activeVocab.explanationEn}
-                </p>
-              </div>
-
-              {activeVocab.examples[0] && (
-                <div className="space-y-2 pt-2">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Example</p>
-                  <p className="text-slate-600 dark:text-slate-300 text-[14px] italic font-medium leading-relaxed">
-                    "{activeVocab.examples[0]}"
+                  <p className="text-slate-800 dark:text-white font-black text-lg tracking-tight leading-tight">
+                    {displayLang === 'en' || displayLang === 'other'
+                      ? capitalize(activeVocab.explanationEn)
+                      : capitalize(getDefinitionText(activeVocab, displayLang))}
                   </p>
                 </div>
-              )}
+
+
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      setShowLoginPrompt(true);
+                      return;
+                    }
+                    // TODO: Add word to user's vocabulary list
+                  }}
+                  className="w-full h-11 bg-primary text-white rounded-2xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 mt-4 shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Add Word</span>
+                </button>
+                {showLoginPrompt && !isLoggedIn && (
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 mb-2">
+                      You need to log in to save vocabulary
+                    </p>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setActiveVocab(null);
+                        setShowLoginModal(true);
+                      }}
+                      className="flex items-center justify-center gap-2 w-full py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>Log in now</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column */}
+              <div className="flex-1 space-y-5 border-l border-slate-100 dark:border-slate-800 pl-8">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5 text-slate-400" />
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">English Definition</p>
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-[14px] font-medium leading-relaxed">
+                    {activeVocab.explanationEn}
+                  </p>
+                </div>
+
+                {activeVocab.examples[0] && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Example</p>
+                    <p className="text-slate-600 dark:text-slate-300 text-[14px] italic font-medium leading-relaxed">
+                      "{activeVocab.examples[0]}"
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-          
-          {/* Dynamic Arrow */}
-          <div 
-            className={`absolute w-4 h-4 pointer-events-none ${position.side === 'top' ? 'bottom-0 translate-y-full' : 'top-0 -translate-y-full'}`}
-            style={{ 
-              left: `${position.arrowX}px`,
-              transform: `translateX(-50%)`
-            }}
-          >
+            
+            {/* Dynamic Arrow */}
             <div 
-              className={`w-4 h-4 bg-white dark:bg-slate-900 rotate-45 border-slate-100 dark:border-slate-800 ${
-                position.side === 'top' 
-                ? 'border-r border-b -translate-y-2' 
-                : 'border-l border-t translate-y-2'
-              }`} 
-            />
+              className={`absolute w-4 h-4 pointer-events-none ${position.side === 'top' ? 'bottom-0 translate-y-full' : 'top-0 -translate-y-full'}`}
+              style={{ 
+                left: `${position.arrowX}px`, 
+                transform: `translateX(-50%)`
+              }}
+            >
+              <div 
+                className={`w-4 h-4 bg-white dark:bg-slate-900 rotate-45 border-slate-100 dark:border-slate-800 ${
+                  position.side === 'top' 
+                  ? 'border-r border-b -translate-y-2' 
+                  : 'border-l border-t translate-y-2'
+                }`} 
+              />
+            </div>
           </div>
         </div>
-      </div>,
+      </>,
       document.body
     );
   };
@@ -572,6 +728,26 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
       scopedCss = scopedCss.replace(/\bbody\s+/gi, '.interactive-reading-content ');
       return `<style>${scopedCss}</style>`;
     });
+
+    // 3. Khung tiêu đề sơ đồ tư duy: bo góc 12px và bỏ thanh xám connector bên dưới
+    // Bỏ hoàn toàn thanh xám kết nối (#cbd5e1) bên dưới tiêu đề sơ đồ tư duy
+    fixedHtml = fixedHtml
+      .replace(/<div[^>]*style="[^"]*margin:\s*-10px\s+auto[^"]*"[^>]*>(?:<\/div>)?/gi, '')
+      .replace(/<div[^>]*style="[^"]*background:\s*#cbd5e1[^"]*"[^>]*>(?:<\/div>)?/gi, '')
+      .replace(/<div[^>]*style="[^"]*height:\s*18px[^"]*background:\s*#cbd5e1[^"]*"[^>]*>(?:<\/div>)?/gi, '');
+
+    // Đổi bo góc khung tiêu đề sơ đồ tư duy thành 12px (thay vì 9999px)
+    fixedHtml = fixedHtml
+      .replace(/(style="[^"]*background:\s*linear-gradient[^"]*?)border-radius:\s*9999px/gi, '$1border-radius: 12px')
+      .replace(/(style="[^"]*?)border-radius:\s*9999px([^"]*background:\s*linear-gradient)/gi, '$1border-radius: 12px$2')
+      .replace(/border-radius:\s*9999px;/gi, 'border-radius: 12px;');
+
+    // 4. Loại bỏ hoàn toàn khối "Part 2. Key Vocabulary" trong tất cả bài đọc
+    if (fixedHtml.includes('Key Vocabulary') || fixedHtml.includes('Part 2')) {
+      fixedHtml = fixedHtml
+        .replace(/<div\s+class="mt-12\s+pt-8\s+border-t-2[^"]*"[\s\S]*?(?:Part\s*2|Key\s*Vocabulary)[\s\S]*?<\/div>\s*<\/div>/gi, '')
+        .replace(/<div[^>]*class="[^"]*(?:border-t|mt-)[^"]*"[^>]*>[\s\S]*?(?:Part\s*2\.?\s*Key\s*Vocabulary|Key\s*Vocabulary\s*—\s*\d+\s*Words)[\s\S]*?<\/div>\s*<\/div>/gi, '');
+    }
   }
 
   return (
@@ -596,6 +772,17 @@ export function InteractiveReadingContent({ html, isLoggedIn = false, playbackRa
         .interactive-reading-content p {
           line-height: 2.2 !important;
           margin-bottom: 1.2em !important;
+        }
+
+        /* ===== Mindmap Title 12px & Gray Connector Removal ===== */
+        .interactive-reading-content div[style*="linear-gradient"] {
+          border-radius: 12px !important;
+        }
+        .interactive-reading-content div[style*="background: #cbd5e1"],
+        .interactive-reading-content div[style*="background:#cbd5e1"],
+        .interactive-reading-content div[style*="margin: -10px auto"],
+        .interactive-reading-content div[style*="margin:-10px auto"] {
+          display: none !important;
         }
 
         @media (max-width: 767px) {

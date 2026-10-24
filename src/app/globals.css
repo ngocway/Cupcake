@@ -235,10 +235,27 @@
   scrollbar-width: none;
 }
 
+@utility scrollbar-none {
+  &::-webkit-scrollbar { display: none; }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @utility custom-scrollbar {
   &::-webkit-scrollbar { display: none; }
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 .material-symbols-outlined {
@@ -357,4 +374,15 @@
     font-size: 0.9rem !important;
     height: 1.25rem !important;
   }
+}
+
+/* ===== Mindmap Title 12px & Gray Connector Removal ===== */
+.interactive-reading-content div[style*="linear-gradient"] {
+  border-radius: 12px !important;
+}
+.interactive-reading-content div[style*="background: #cbd5e1"],
+.interactive-reading-content div[style*="background:#cbd5e1"],
+.interactive-reading-content div[style*="margin: -10px auto"],
+.interactive-reading-content div[style*="margin:-10px auto"] {
+  display: none !important;
 }

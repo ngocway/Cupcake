@@ -163,9 +163,9 @@ export function EmbeddedGrammarContainer({
   return (
     <div
       onClick={handleContainerClick}
-      className="w-full h-full bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar px-4 sm:px-8 md:px-10 lg:px-12 py-5 sm:py-7 pb-16"
+      className="w-full h-full bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar px-3 sm:px-8 md:px-10 lg:px-12 pt-14 sm:pt-7 pb-16"
     >
-      <div className="w-full space-y-8">
+      <div className="w-full space-y-6 sm:space-y-8">
         {/* Lesson Theory Body - Full Width & Borderless */}
         <div className="w-full">
           {data.instructions ? (
@@ -189,7 +189,8 @@ export function EmbeddedGrammarContainer({
                       [&_h2]:text-orange-500 [&_h2]:font-black [&_h2]:text-sm [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mt-6 [&_h2]:mb-2
                       [&_p]:text-slate-700 [&_p]:dark:text-slate-300 [&_p]:leading-relaxed
                       [&_ul]:space-y-1.5 [&_li]:text-slate-700 [&_li]:dark:text-slate-300
-                      [&_div]:rounded-lg [&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4"
+                      [&_div]:rounded-lg [&_[style*='padding:_24px']]:!p-3 sm:[&_[style*='padding:_24px']]:!p-4 [&_[style*='margin-bottom:_32px']]:!mb-4
+                      [&_[style*='border-radius']]:!p-3 sm:[&_[style*='border-radius']]:!p-4 [&_[style*='border-radius']]:!text-sm sm:[&_[style*='border-radius']]:!text-base"
                   />
                 );
               })()}

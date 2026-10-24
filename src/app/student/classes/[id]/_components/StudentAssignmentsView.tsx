@@ -55,7 +55,8 @@ import { toast } from 'sonner';
 import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment, buildGroupTree, getItemStage } from '../_utils/assignmentOrder';
 import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 import dynamic from 'next/dynamic';
-import { FloatingZaloWidget } from './FloatingZaloWidget';
+import { ClassCommunityLinks } from './ClassCommunityLinks';
+import { useContentStore } from '@/store/useContentStore';
 import { trackEvent } from '@/lib/analytics';
 import { ClassAdventureMap, parseDayTitle, extractDayNumber } from './ClassAdventureMap';
 import { GrammarAgentMap, GRAMMAR_DAY_TOPICS } from './GrammarAgentMap';
@@ -1047,6 +1048,9 @@ export function StudentAssignmentsView({
   const activeItemConfig = useMemo(() => {
     return activeGroupParsedItems.find(p => p.item.assignment.id === activeAssignmentId) || activeGroupParsedItems[0] || null;
   }, [activeGroupParsedItems, activeAssignmentId]);
+
+  const showNativeLang = useContentStore((s) => s.showNativeLang);
+  const setShowNativeLang = useContentStore((s) => s.setShowNativeLang);
 
   // Active Day Cluster and 4-Station Stepper for Focus Mode
   const activeDayCluster = useMemo(() => {
@@ -3031,6 +3035,12 @@ export function StudentAssignmentsView({
                   </div>
                 </div>
               </div>
+
+              {/* Community Links Footer */}
+              <ClassCommunityLinks
+                zaloUrl={currentClass?.zaloGroupUrl}
+                variant="sidebar"
+              />
             </aside>
         )}
 
@@ -3216,25 +3226,63 @@ export function StudentAssignmentsView({
                 );
               })}
             </div>
+
+            {/* Community Links Footer */}
+            <ClassCommunityLinks
+              zaloUrl={currentClass?.zaloGroupUrl}
+              variant="sidebar"
+            />
           </aside>
         )}
 
         {/* ── MOBILE: Floating trigger + Bottom Sheet for vocab / grammar class station nav ── */}
         {isDayQuestClass && viewMode === 'activity' && (
           <>
-            {/* Mobile floating button to open stations */}
-            {!isBottomSheetOpen && (
-              <div className="sm:hidden fixed top-3 left-3 z-40 animate-in fade-in slide-in-from-top-2">
-                <button
-                  type="button"
-                  onClick={() => setIsBottomSheetOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-lg shadow-amber-500/30 active:scale-95 transition-all cursor-pointer border border-white/20 backdrop-blur-md"
-                >
-                  <Compass className="w-3.5 h-3.5 stroke-[2.4px]" />
-                  <span>Trạm học ({completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 4})</span>
-                </button>
-              </div>
-            )}
+            {/* Mobile Top App Bar (Unified Header: Stations + Language Switch) */}
+            <header className="sm:hidden fixed top-0 left-0 right-0 h-11 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-[#F0E2BF]/80 dark:border-slate-800 flex items-center justify-between px-3 shadow-2xs font-['Baloo_2',_'Nunito',_sans-serif]">
+              {/* Left: Button to open stations bottom sheet */}
+              <button
+                type="button"
+                onClick={() => setIsBottomSheetOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs shadow-xs active:scale-95 transition-all cursor-pointer border border-white/20"
+              >
+                <Compass className="w-3.5 h-3.5 stroke-[2.4px]" />
+                <span>Trạm học ({completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 4})</span>
+              </button>
+
+              {/* Right: Language switch for theory / reading */}
+              {activeItemConfig?.stage === 'lesson' || activeItemConfig?.stage === 'reading' ? (
+                <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-full p-0.5 text-xs font-bold border border-slate-200/60 dark:border-slate-700/60">
+                  <button
+                    type="button"
+                    onClick={() => setShowNativeLang(true)}
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-black transition-all cursor-pointer ${
+                      showNativeLang
+                        ? "bg-amber-500 text-white shadow-xs"
+                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                    }`}
+                  >
+                    Tiếng Việt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNativeLang(false)}
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-black transition-all cursor-pointer ${
+                      !showNativeLang
+                        ? "bg-slate-600 text-white shadow-xs"
+                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                    }`}
+                  >
+                    EN
+                  </button>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-800/40 text-amber-700 dark:text-amber-300 font-black text-[11px]">
+                  <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500" />
+                  <span>{currentDayQuestStations ? `Ngày ${currentDayQuestStations.dayNumber}` : 'Dolcake'}</span>
+                </div>
+              )}
+            </header>
 
             {/* Backdrop */}
             {isBottomSheetOpen && (
@@ -3447,8 +3495,14 @@ export function StudentAssignmentsView({
                 })}
               </div>
 
+              {/* Community Links in Mobile Bottom Sheet */}
+              <ClassCommunityLinks
+                zaloUrl={currentClass?.zaloGroupUrl}
+                variant="bottom-sheet"
+              />
+
               {/* Safe area bottom padding */}
-              <div className="pb-8" />
+              <div className="pb-safe" />
             </div>
 
           </>
@@ -3458,7 +3512,7 @@ export function StudentAssignmentsView({
             KHU VỰC 2 & 3: MAIN VIEW (Header + Stage Tabs + Embedded Canvas)
             ══════════════════════════════════════════════════════════════════ */}
         <main className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          viewMode === 'map' ? 'p-0 m-0 h-full overflow-hidden' : isDayQuestClass ? 'h-full overflow-hidden p-3 sm:p-4' : 'gap-3 sm:gap-4'
+          viewMode === 'map' ? 'p-0 m-0 h-full overflow-hidden' : isDayQuestClass ? 'h-full overflow-hidden p-0 sm:p-4' : 'gap-3 sm:gap-4'
         }`}>
           
           {/* ════════════════════════════════════════════════════════════════
@@ -3619,7 +3673,7 @@ export function StudentAssignmentsView({
           <div className={`relative flex-1 overflow-hidden flex flex-col transition-all duration-300 ${
             viewMode === 'map'
               ? 'w-full h-full p-0 m-0 border-0 rounded-none shadow-none bg-transparent'
-              : `bg-white dark:bg-slate-900 rounded-[1.75rem] border border-slate-200/80 dark:border-slate-800/80 shadow-sm ${
+              : `bg-white dark:bg-slate-900 rounded-none sm:rounded-[1.75rem] border-0 sm:border border-slate-200/80 dark:border-slate-800/80 shadow-none sm:shadow-sm ${
                   isDayQuestClass ? 'h-full' : isZenMode ? 'h-[calc(100vh-140px)]' : isSidebarCollapsed ? 'min-h-[760px] xl:min-h-[850px]' : 'min-h-[640px] xl:min-h-[720px]'
                 }`
           }`}>
@@ -4102,12 +4156,13 @@ export function StudentAssignmentsView({
         </div>
       )}
 
-      {/* Floating Zalo Support Widget */}
-      <FloatingZaloWidget 
-        zaloGroupUrl={currentClass?.zaloGroupUrl} 
-        classNameTitle={currentClass?.name}
-        isQuizActive={!isCurrentLesson && Boolean(activeAssignmentId)}
-      />
+      {/* Community Links on Map View */}
+      {viewMode === 'map' && (
+        <ClassCommunityLinks 
+          zaloUrl={currentClass?.zaloGroupUrl} 
+          variant="map-floating"
+        />
+      )}
 
     </div>
   );

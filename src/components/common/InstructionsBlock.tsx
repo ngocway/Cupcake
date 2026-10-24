@@ -116,9 +116,9 @@ export function InstructionsBlock({
 
       {/* Content */}
       <div className="relative w-full">
-        {/* Inside-corner language toggle */}
+        {/* Inside-corner language toggle (Desktop only, mobile uses Top Bar) */}
         {hasTranslation && effectiveTogglePlacement === "inside-corner" && (
-          <div className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-20 shadow-xs rounded-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs border border-slate-200/80 dark:border-slate-700/80 p-0.5">
+          <div className="hidden sm:block absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 z-20 shadow-xs rounded-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-xs border border-slate-200/80 dark:border-slate-700/80 p-0.5">
             <LangTogglePill
               showNative={effectiveShowNative}
               onToggle={setShowNativeLang}
