@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Gamepad2, Loader2, Sparkles, RefreshCw, Maximize2, Minimize2, Play, Layers } from 'lucide-react';
+import { Gamepad2, Loader2, Sparkles, RefreshCw, Maximize2, Minimize2, Play } from 'lucide-react';
 import { completeClassActivityAction } from '@/actions/activity-completion-actions';
 
 interface EmbeddedGameContainerProps {
@@ -254,18 +254,7 @@ export function EmbeddedGameContainer({
         isFullscreen ? 'fixed inset-0 z-[9999] rounded-none !min-h-screen' : ''
       }`}
     >
-      {/* Floating Open Stations Button (Top-Left) */}
-      {onOpenStations && (
-        <button
-          type="button"
-          onClick={onOpenStations}
-          className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-900 text-white/90 hover:text-white backdrop-blur-md border border-white/20 text-xs font-black transition-all shadow-lg active:scale-95 cursor-pointer"
-          title="Mở danh sách các trạm học trong ngày"
-        >
-          <Layers className="w-3.5 h-3.5 text-amber-400" />
-          <span>Vào trạm</span>
-        </button>
-      )}
+
 
       {/* Floating Fullscreen Toggle Button */}
       <button

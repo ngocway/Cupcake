@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Globe, BookText, RefreshCw, AlertCircle, Layers } from 'lucide-react';
+import { Globe, BookText, RefreshCw, AlertCircle } from 'lucide-react';
 import { getCachedReadingData, fetchReadingDataWithCache } from '../_utils/assignmentCache';
 import { CustomAudioPlayer } from '@/components/common/CustomAudioPlayer';
 import { InteractiveReadingContent } from '@/components/common/InteractiveReadingContent';
@@ -115,17 +115,6 @@ export function EmbeddedReadingLessonContainer({
           {/* Top bar: Level badge + Tap word to translate */}
           <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4">
             <div className="flex items-center gap-2">
-              {onOpenStations && (
-                <button
-                  type="button"
-                  onClick={onOpenStations}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-amber-100 hover:bg-amber-200 border-2 border-amber-300 text-amber-900 shadow-sm transition-all active:scale-95 cursor-pointer"
-                  title="Mở danh sách các trạm học trong ngày"
-                >
-                  <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  <span>Vào trạm</span>
-                </button>
-              )}
               <span className="bg-emerald-500 text-white px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow">
                 {displayLevel}
               </span>
@@ -176,6 +165,7 @@ export function EmbeddedReadingLessonContainer({
               groupId={groupId}
               onComplete={onComplete}
               readingText={data.readingText}
+              isActive={isActive}
             />
           </div>
         )}

@@ -41,6 +41,7 @@ interface Props {
   groupId?: string;
   onComplete?: (score: number, assignmentId: string) => void;
   readingText?: string | null;
+  isActive?: boolean;
 }
 
 const OPTION_STYLES = [
@@ -190,6 +191,7 @@ export function LessonInlineQuiz({
   groupId,
   onComplete,
   readingText,
+  isActive = true,
 }: Props) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showHints, setShowHints] = useState<Record<string, boolean>>({});
@@ -808,7 +810,7 @@ export function LessonInlineQuiz({
       </div>
 
       {/* Floating Question Navigation Bubbles Bar (Rows of max 10, Portal to body for true floating) */}
-      {mounted && typeof document !== "undefined" && createPortal(
+      {isActive && mounted && typeof document !== "undefined" && createPortal(
         <aside
           role="navigation"
           aria-label="Question navigation"

@@ -1040,9 +1040,9 @@ export function FlashcardsClient({
     }
   }, [isActive, wordAudioEnded, currentIndex, flashcards, isFlipped, challengeMode])
 
-  // 4. Lắng nghe phím gõ từ bàn phím cứng (Chế độ Tự gõ)
+  // 4. Lắng nghe phím gõ từ bàn phím cứng (Cả chế độ Tự gõ và Ghép chữ)
   useEffect(() => {
-    if (challengeMode !== 'type' || isFlipped) return
+    if ((challengeMode !== 'type' && challengeMode !== 'scramble') || isFlipped) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -1062,29 +1062,55 @@ export function FlashcardsClient({
       hiddenInputRef.current?.blur()  // ← Unikey không còn target nào để compose vào
 
       const nextIdx = getNextUnrevealedIndex(card.word, revealedIndices)
-      if (nextIdx !== -1) {
-        if (card.word[nextIdx].toLowerCase() === key) {
-          const nextRevealed = [...revealedIndices, nextIdx]
-          setRevealedIndices(nextRevealed)
+      if (nextIdx === -1) return
 
-          const checkNext = getNextUnrevealedIndex(card.word, nextRevealed)
-          if (checkNext === -1) {
-            triggerSuccessCelebration(card)
+      // Chế độ Ghép chữ (Scramble): Bấm phím chữ cái sẽ kích hoạt bong bóng chữ cái tương ứng
+      if (challengeMode === 'scramble') {
+        const targetLetter = card.word[nextIdx].toLowerCase()
+        if (key === targetLetter) {
+          const matchingBubble = scrambledLetters.find(l => !l.used && l.letter.toLowerCase() === key)
+          if (matchingBubble) {
+            handleScrambleClick(matchingBubble)
           }
         } else {
-          setWrongTypedIndex(nextIdx)
-          // Hiện ký tự thực tế học sinh đã gõ (bao gồm ký tự Unikey như Ỉ, ơ, ...)
-          // e.key phản ánh những gì browser/OS nhận được sau khi Unikey convert
-          const displayChar = e.key.length === 1 ? e.key : key.toUpperCase()
-          setWrongTypedLetter(displayChar)
-          // Phát hiện Unikey: e.key khác với phím vật lý
-          if (e.key.length === 1 && e.key.toLowerCase() !== key) {
-            setUnikeyDetected(true)
+          // Bấm sai: rung lắc bong bóng chứa chữ cái vừa gõ (nếu có) hoặc báo lỗi slot
+          const wrongBubble = scrambledLetters.find(l => !l.used && l.letter.toLowerCase() === key)
+          if (wrongBubble) {
+            setShakeItemId(wrongBubble.id)
+            setTimeout(() => setShakeItemId(null), 500)
+          } else {
+            setWrongTypedIndex(nextIdx)
+            setWrongTypedLetter(key.toUpperCase())
+            setWrongFading(false)
+            setTimeout(() => setWrongFading(true), 700)
+            setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
           }
-          setWrongFading(false)
-          setTimeout(() => setWrongFading(true), 700)
-          setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
         }
+        return
+      }
+
+      // Chế độ Tự gõ (Type)
+      if (card.word[nextIdx].toLowerCase() === key) {
+        const nextRevealed = [...revealedIndices, nextIdx]
+        setRevealedIndices(nextRevealed)
+
+        const checkNext = getNextUnrevealedIndex(card.word, nextRevealed)
+        if (checkNext === -1) {
+          triggerSuccessCelebration(card)
+        }
+      } else {
+        setWrongTypedIndex(nextIdx)
+        // Hiện ký tự thực tế học sinh đã gõ (bao gồm ký tự Unikey như Ỉ, ơ, ...)
+        // e.key phản ánh những gì browser/OS nhận được sau khi Unikey convert
+        const displayChar = e.key.length === 1 ? e.key : key.toUpperCase()
+        setWrongTypedLetter(displayChar)
+        // Phát hiện Unikey: e.key khác với phím vật lý
+        if (e.key.length === 1 && e.key.toLowerCase() !== key) {
+          setUnikeyDetected(true)
+        }
+        setWrongFading(false)
+        setTimeout(() => setWrongFading(true), 700)
+        setTimeout(() => { setWrongTypedIndex(null); setWrongTypedLetter(null); setWrongFading(false) }, 1100)
       }
     }
 
@@ -1092,7 +1118,7 @@ export function FlashcardsClient({
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [challengeMode, isFlipped, currentIndex, flashcards, revealedIndices])
+  }, [challengeMode, isFlipped, currentIndex, flashcards, revealedIndices, scrambledLetters])
 
   // 5. Tự động hiển thị bàn phím ảo trên Mobile khi ở chế độ Tự gõ
   useEffect(() => {
@@ -1252,7 +1278,7 @@ export function FlashcardsClient({
     }
   }, [categories, studyAgeGroup, serverStudyAgeGroup, searchParams, selectedCategory, selectedTopic, handleSelectTopic, focusMode])
 
-  // Hỗ trợ bấm phím mũi tên & Space để lật/chuyển thẻ
+  // Hỗ trợ bấm phím mũi tên & Space để lật/chuyển thẻ (chặn Space lật tắt khi đang trong mini-game)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!focusMode || flashcards.length === 0) return
@@ -1262,7 +1288,11 @@ export function FlashcardsClient({
         if (isFlipped) {
           handleNext()
         } else {
-          setIsFlipped(true)
+          // Chỉ cho phép Space lật thẻ ở chế độ hint / thẻ từ thông thường
+          // Chặn Space lật tắt ở chế độ scramble và type để tránh bỏ qua thử thách
+          if (challengeMode === 'hint') {
+            setIsFlipped(true)
+          }
         }
       } else if (e.key === "ArrowRight") {
         handleNext()
@@ -1275,7 +1305,7 @@ export function FlashcardsClient({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [focusMode, flashcards, currentIndex, isFlipped, handleNext, handlePrev, handleBackToSelection])
+  }, [focusMode, flashcards, currentIndex, isFlipped, challengeMode, handleNext, handlePrev, handleBackToSelection])
 
   const activeCard = flashcards[currentIndex]
   const progressPercent = flashcards.length > 0 ? ((currentIndex + 1) / flashcards.length) * 100 : 0
@@ -1647,44 +1677,7 @@ export function FlashcardsClient({
       {/* Floating Header Actions (Transparent) */}
       <div className="absolute top-[max(16px,env(safe-area-inset-top,16px))] left-4 right-4 md:top-6 md:left-8 md:right-8 z-50 flex justify-between items-center pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
-          {onOpenStations && (
-            <button
-              type="button"
-              onClick={onOpenStations}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold pointer-events-auto cursor-pointer ${backButtonClass}`}
-              title="Mở danh sách các trạm học trong ngày"
-            >
-              <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-              <span>Vào trạm</span>
-            </button>
-          )}
-
-          {isEmbedded || searchParams.get("embedded") === "true" ? (
-            <button 
-              onClick={() => {
-                trackEvent('vocab_restart_clicked', {
-                  topic: selectedTopic?.name || 'Flashcard',
-                  total_cards: flashcards.length,
-                });
-                if (isEmbedded) {
-                  const baseCards = initialCards && initialCards.length > 0 ? initialCards : flashcards;
-                  const reshuffled = shuffleArray(baseCards);
-                  setFlashcards(reshuffled);
-                  setIsImageLoading(!isImageAlreadyLoaded(reshuffled[0]?.imageUrl));
-                }
-                setCurrentIndex(0)
-                setIsFlipped(false)
-                setFlippedIndices(new Set())
-                setAssignmentCompleted(false)
-                stopCurrentAudio()
-              }}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold pointer-events-auto cursor-pointer ${backButtonClass}`}
-              title="Làm lại từ thẻ đầu tiên (xáo trộn ngẫu nhiên)"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Học lại từ đầu</span>
-            </button>
-          ) : (
+          {!isEmbedded && searchParams.get("embedded") !== "true" && (
             <button 
               onClick={handleBackToSelection}
               className={`flex items-center gap-2 px-4 py-2 text-xs font-bold pointer-events-auto cursor-pointer ${backButtonClass}`}
@@ -2344,7 +2337,23 @@ export function FlashcardsClient({
         <div className={`text-center text-[10px] font-black uppercase tracking-widest hidden sm:block select-none ${
           isKidMode ? "text-amber-500/80" : "text-slate-400"
         }`}>
-          Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> to flip / next card, use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch cards
+          {isFlipped ? (
+            <>
+              Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> or <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Enter</kbd> for next card • Use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch
+            </>
+          ) : challengeMode === 'scramble' ? (
+            <>
+              Tip: Click or type letters in the correct order to spell the word • Use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch
+            </>
+          ) : challengeMode === 'type' ? (
+            <>
+              Tip: Type letters on your keyboard to spell the word • Use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch
+            </>
+          ) : (
+            <>
+              Tip: Press <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>Space</kbd> to reveal details • Use <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>←</kbd> <kbd className={`px-1.5 py-0.5 rounded border shadow-sm font-sans ${isKidMode ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>→</kbd> to switch cards
+            </>
+          )}
         </div>
       </footer>
 

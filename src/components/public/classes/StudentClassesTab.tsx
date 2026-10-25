@@ -307,9 +307,8 @@ function EnrolledClassRowCard({
       ? item.class.thumbnail
       : matched.thumbnail || item.class.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
 
-  // Real thumbnail and teacher avatar from database with defensive error fallback
+  // Real thumbnail from database with defensive error fallback
   const [thumbSrc, setThumbSrc] = useState(resolvedThumbnail);
-  const [avatarSrc, setAvatarSrc] = useState(item.class.teacherAvatar || matched.teacher.avatar);
 
   useEffect(() => {
     const nextThumb =
@@ -318,10 +317,6 @@ function EnrolledClassRowCard({
         : matched.thumbnail || item.class.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
     setThumbSrc(nextThumb);
   }, [item.class.thumbnail, matched.thumbnail]);
-
-  useEffect(() => {
-    setAvatarSrc(item.class.teacherAvatar || matched.teacher.avatar);
-  }, [item.class.teacherAvatar, matched.teacher.avatar]);
 
   return (
     <div
@@ -383,20 +378,6 @@ function EnrolledClassRowCard({
             {item.class.name || matched.title}
           </h3>
         </Link>
-        <div className="flex items-center gap-2 mt-2">
-          <div className="relative size-6 sm:size-7 rounded-full overflow-hidden border border-white dark:border-slate-700 shadow-2xs shrink-0">
-            <Image
-              src={avatarSrc}
-              alt={item.class.teacherName || matched.teacher.name}
-              fill
-              className="object-cover"
-              onError={() => setAvatarSrc('/assests/Classes/avatars/teacher-avatar-ms-jessica.png')}
-            />
-          </div>
-          <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">
-            {item.class.teacherName || matched.teacher.name}
-          </span>
-        </div>
       </div>
 
       {/* 3. Progress Bar */}
