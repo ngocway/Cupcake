@@ -152,27 +152,46 @@ export function parseBilingualExplanation(
   let vi = '';
 
   // 1. Check explanationTranslations object if available
-  if (translations && typeof translations === 'object') {
-    if (translations.en && typeof translations.en === 'string') {
-      en = translations.en.trim();
+  let parsedTranslations = translations;
+  if (typeof translations === 'string') {
+    try {
+      parsedTranslations = JSON.parse(translations);
+    } catch {}
+  }
+
+  if (parsedTranslations && typeof parsedTranslations === 'object') {
+    if (parsedTranslations.en && typeof parsedTranslations.en === 'string') {
+      en = parsedTranslations.en.trim();
     }
-    if (translations.vi && typeof translations.vi === 'string') {
-      vi = translations.vi.trim();
+    if (parsedTranslations.vi && typeof parsedTranslations.vi === 'string') {
+      vi = parsedTranslations.vi.trim();
     }
   }
 
   // 2. If en or vi not yet extracted, parse from rawExplanation string
-  if (!en && !vi && rawExplanation) {
+  if ((!en || !vi) && rawExplanation) {
     const raw = rawExplanation.trim();
 
     if (raw.includes('[VI]')) {
       const parts = raw.split(/\[VI\]/i);
-      en = parts[0].replace(/^\[EN\]/i, '').trim();
-      vi = parts[1] ? parts[1].trim() : '';
+      if (!en) en = parts[0].replace(/^\[EN\]/i, '').trim();
+      if (!vi) vi = parts[1] ? parts[1].trim() : '';
     } else if (raw.includes('[EN]')) {
-      en = raw.replace(/^\[EN\]/i, '').trim();
+      if (!en) en = raw.replace(/^\[EN\]/i, '').trim();
     } else {
-      en = raw;
+      if (!en) {
+        if (vi) {
+          en = raw;
+        } else {
+          // If neither en nor vi is set, check whether rawExplanation is Vietnamese
+          const isVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(raw);
+          if (isVietnamese) {
+            vi = raw;
+          } else {
+            en = raw;
+          }
+        }
+      }
     }
   }
 

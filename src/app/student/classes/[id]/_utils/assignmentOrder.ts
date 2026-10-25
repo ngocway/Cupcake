@@ -477,6 +477,15 @@ export function buildGroupTree<T extends {
         } catch { return false; }
       });
 
+      const hasSentenceBuilder = cluster.exercises.some((e) => {
+        const title = (e.assignment.title || '').toLowerCase();
+        if (title.includes('ghép câu') || title.includes('ghep cau') || title.includes('sentence-builder')) return true;
+        try {
+          const m = JSON.parse(e.assignment.instructions || '{}');
+          return m.mode === 'sentence-builder' || m.gameMode === 'sentence-builder' || (m.playUrl && m.playUrl.includes('flashcard-sentence-builder'));
+        } catch { return false; }
+      });
+
       if (!hasScramble) {
         cluster.exercises.push({
           ...flashcardItem,
@@ -554,6 +563,32 @@ export function buildGroupTree<T extends {
           submittedAt: null,
         });
       }
+
+      if (!hasSentenceBuilder) {
+        cluster.exercises.push({
+          ...flashcardItem,
+          assignment: {
+            ...flashcardItem.assignment,
+            id: `${flashcardItem.assignment.id}__game_sb`,
+            title: 'Game: Ghép câu',
+            materialType: 'FLASHCARD',
+            grammarLesson: lessonKey,
+            instructions: JSON.stringify({
+              kind: 'GAME',
+              mode: 'sentence-builder',
+              gameMode: 'sentence-builder',
+              subOrder: 4,
+              topicId,
+              topicSlug,
+              lessonKey,
+              playUrl: `/student/game/flashcard-sentence-builder?topicId=${topicId}&embedded=true`,
+            }),
+          },
+          isSubmitted: false,
+          score: null,
+          submittedAt: null,
+        });
+      }
     }
 
     cluster.exercises.sort((a, b) => {
@@ -582,12 +617,14 @@ export function buildGroupTree<T extends {
             if (meta.mode === 'scramble' || meta.gameMode === 'puzzle') return 1;
             if (meta.mode === 'type' || meta.gameMode === 'type') return 2;
             if (meta.mode === 'match' || meta.gameMode === 'match') return 3;
+            if (meta.mode === 'sentence-builder' || meta.gameMode === 'sentence-builder') return 4;
           } catch {}
         }
         const title = (item.assignment.title || '').toLowerCase();
         if (title.includes('puzzle') || title.includes('ghép chữ') || title.includes('ghep chu')) return 1;
         if (title.includes('type') || title.includes('gõ từ') || title.includes('go tu')) return 2;
         if (title.includes('nối thẻ') || title.includes('noi the') || title.includes('flashcard-match')) return 3;
+        if (title.includes('ghép câu') || title.includes('ghep cau') || title.includes('sentence-builder')) return 4;
         return subOrder;
       };
 

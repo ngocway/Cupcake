@@ -195,7 +195,7 @@ export function LessonInlineQuiz({
 }: Props) {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showHints, setShowHints] = useState<Record<string, boolean>>({});
-  const [expandedVi, setExpandedVi] = useState<Record<string, boolean>>({});
+  const [explanationLangs, setExplanationLangs] = useState<Record<string, 'en' | 'vi'>>({});
   const [isSubmitting, startTransition] = useTransition();
   const [isChecked, setIsChecked] = useState(false);
   const [revealedCount, setRevealedCount] = useState<number>(0);
@@ -207,8 +207,8 @@ export function LessonInlineQuiz({
     setMounted(true);
   }, []);
 
-  const toggleVi = (qId: string) => {
-    setExpandedVi((prev) => ({ ...prev, [qId]: !prev[qId] }));
+  const setExplanationLang = (qId: string, lang: 'en' | 'vi') => {
+    setExplanationLangs((prev) => ({ ...prev, [qId]: lang }));
   };
 
   useEffect(() => {
@@ -437,7 +437,7 @@ export function LessonInlineQuiz({
     setRevealedCount(0);
     setScoreResult(null);
     setShowHints({});
-    setExpandedVi({});
+    setExplanationLangs({});
   };
 
   const answeredCount = Object.keys(answers).length;
@@ -740,7 +740,7 @@ export function LessonInlineQuiz({
                   )
                 )}
 
-                {/* Explanation Block with English Default + Vietnamese Accordion Toggle */}
+                {/* Explanation Block with 2-Tab Switch [English] / [Tiếng Việt] */}
                 {isChecked && (() => {
                   const rawExp = q.explanation || qData.explanation;
                   const translations = (q as any).explanationTranslations || qData.explanationTranslations;
@@ -748,58 +748,63 @@ export function LessonInlineQuiz({
 
                   if (!parsedExp.en && !parsedExp.vi) return null;
 
-                  const isViOpen = !!expandedVi[q.id];
+                  const hasBoth = Boolean(parsedExp.en && parsedExp.vi);
+                  const activeTab = explanationLangs[q.id] || (parsedExp.en ? 'en' : 'vi');
 
                   return (
-                    <div className="bg-emerald-50/90 dark:bg-emerald-950/20 border-2 border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-5 text-emerald-950 dark:text-emerald-100 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm space-y-3">
-                      {/* Top Header: Badge + Toggle Button */}
-                      <div className="flex items-center justify-between gap-3">
+                    <div className="bg-emerald-50/90 dark:bg-emerald-950/20 border-2 border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 sm:p-5 text-emerald-950 dark:text-emerald-100 text-sm font-medium animate-in fade-in slide-in-from-top-2 duration-300 shadow-sm space-y-3">
+                      {/* Top Header: Badge + 2-Tab Segmented Switcher */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700">
                           <Lightbulb className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                           <span>Explanation</span>
                         </span>
 
-                        {/* Vietnamese Translation Toggle Button */}
-                        {parsedExp.vi && (
-                          <button
-                            type="button"
-                            onClick={() => toggleVi(q.id)}
-                            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer select-none border active:scale-95 shadow-xs ${
-                              isViOpen
-                                ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700"
-                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700"
-                            }`}
-                            title={isViOpen ? "Thu gọn bản dịch tiếng Việt" : "Xem bản dịch tiếng Việt"}
-                          >
-                            <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>{isViOpen ? "Thu gọn dịch" : "Dịch tiếng Việt"}</span>
-                            <ChevronDown
-                              className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                                isViOpen ? "rotate-180" : ""
+                        {/* 2 Tabs: [English] / [Tiếng Việt] */}
+                        {hasBoth && (
+                          <div className="inline-flex items-center p-0.5 rounded-full bg-emerald-200/50 dark:bg-emerald-900/50 border border-emerald-300/70 dark:border-emerald-700/60 text-xs shadow-2xs">
+                            <button
+                              type="button"
+                              onClick={() => setExplanationLang(q.id, 'en')}
+                              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                activeTab === 'en'
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "text-emerald-800 dark:text-emerald-200 hover:text-emerald-950 dark:hover:text-white"
                               }`}
-                            />
-                          </button>
+                            >
+                              <span className="sm:hidden">En</span>
+                              <span className="hidden sm:inline">🇬🇧 English</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setExplanationLang(q.id, 'vi')}
+                              className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                activeTab === 'vi'
+                                  ? "bg-emerald-600 text-white shadow-xs"
+                                  : "text-emerald-800 dark:text-emerald-200 hover:text-emerald-950 dark:hover:text-white"
+                              }`}
+                            >
+                              <span className="sm:hidden">Vi</span>
+                              <span className="hidden sm:inline">🇻🇳 Tiếng Việt</span>
+                            </button>
+                          </div>
                         )}
                       </div>
 
-                      {/* English Explanation (Default, Always visible) */}
-                      {parsedExp.en && (
-                        <p className="leading-relaxed font-semibold text-slate-800 dark:text-slate-100 text-[15px]">
-                          {parsedExp.en}
-                        </p>
-                      )}
+                      {/* Explanation Content */}
+                      <div className="pt-1">
+                        {activeTab === 'en' && parsedExp.en && (
+                          <p className="leading-relaxed font-semibold text-slate-800 dark:text-slate-100 text-[15px] whitespace-pre-line animate-in fade-in duration-200">
+                            {parsedExp.en}
+                          </p>
+                        )}
 
-                      {/* Collapsible Vietnamese Translation Accordion */}
-                      {parsedExp.vi && isViOpen && (
-                        <div className="pt-3 border-t border-emerald-200/80 dark:border-emerald-800/60 animate-in fade-in slide-in-from-top-1 duration-200">
-                          <div className="flex items-center gap-1.5 mb-1.5 text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                            <span>🇻🇳 Dịch nghĩa tiếng Việt:</span>
-                          </div>
-                          <div className="leading-relaxed text-slate-700 dark:text-slate-300 font-medium bg-white/80 dark:bg-slate-900/60 p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-900/40 text-[14px]">
+                        {activeTab === 'vi' && parsedExp.vi && (
+                          <div className="leading-relaxed font-medium text-slate-800 dark:text-slate-200 text-[14.5px] whitespace-pre-line bg-white/80 dark:bg-slate-900/60 p-3.5 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 animate-in fade-in duration-200">
                             {parsedExp.vi}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   );
                 })()}
@@ -814,7 +819,7 @@ export function LessonInlineQuiz({
         <aside
           role="navigation"
           aria-label="Question navigation"
-          className={`fixed bottom-6 sm:bottom-7 left-1/2 -translate-x-1/2 z-50 w-fit max-w-[calc(100vw-1rem)] sm:max-w-2xl px-2 py-1.5 sm:px-4 sm:py-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl ${
+          className={`fixed bottom-6 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 w-fit max-w-[calc(100vw-1rem)] sm:max-w-2xl px-2 py-1.5 sm:px-4 sm:py-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl ${
             questionRows.length > 1 ? "rounded-2xl" : "rounded-full"
           } border border-emerald-300/80 dark:border-emerald-700/80 shadow-2xl shadow-emerald-950/20 dark:shadow-black/40 flex flex-col items-center justify-center gap-1 sm:gap-2 pointer-events-auto transition-all duration-300 animate-in fade-in slide-in-from-bottom-3`}
         >

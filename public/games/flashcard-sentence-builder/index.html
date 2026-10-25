@@ -921,14 +921,31 @@
             wordPool.innerHTML = '';
 
             createConfetti(150);
+
+            // Notify parent container (EmbeddedGameContainer)
+            try {
+                window.parent.postMessage({
+                    type: 'ACTIVITY_COMPLETED',
+                    isCompleted: true,
+                    score: 10
+                }, '*');
+            } catch (e) {}
         }
+
+        // Listen for parent audio pause commands
+        window.addEventListener('message', (e) => {
+            if (e.data && (e.data.type === 'STOP_ALL_AUDIO' || e.data.action === 'stop_audio' || e.data.action === 'pause_audio')) {
+                if (typeof bgMusic !== 'undefined' && bgMusic) bgMusic.pause();
+                if (typeof sentenceAudio !== 'undefined' && sentenceAudio) sentenceAudio.pause();
+                stopHint();
+            }
+        });
 
         function createConfetti(amount) {
             for(let i = 0; i < amount; i++) {
                 const c = document.createElement('div');
                 c.classList.add('confetti');
                 c.style.left = Math.random() * 100 + '%';
-                c.style.top = -20 + 'px';
                 const colors = ['#ff7675', '#0984e3', '#fdcb6e', '#00b894', '#a29bfe'];
                 c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
                 if (Math.random() > 0.5) c.style.borderRadius = '50%';
@@ -966,6 +983,9 @@
                         currentQuestions = shuffle(data.game.questions);
                         currentQuestionIndex = 0;
                         initQuestion();
+                        try {
+                            window.parent.postMessage({ type: 'GAME_READY' }, '*');
+                        } catch (e) {}
                     } else {
                         progressText.textContent = "Error loading game.";
                     }

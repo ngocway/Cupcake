@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { 
@@ -44,6 +45,7 @@ import {
   Clock,
   Puzzle,
   Keyboard,
+  AlignLeft,
   Loader2,
   AlertCircle,
   Compass,
@@ -56,7 +58,6 @@ import { ActivityStage, STAGE_ROADMAP_ORDER, sortGroupItems, isScoredAssignment,
 import { CEFR_LEVELS, GRAMMAR_TOPICS } from '@/lib/grammar-taxonomy';
 import dynamic from 'next/dynamic';
 import { ClassCommunityLinks } from './ClassCommunityLinks';
-import { useContentStore } from '@/store/useContentStore';
 import { trackEvent } from '@/lib/analytics';
 import { ClassAdventureMap, parseDayTitle, extractDayNumber } from './ClassAdventureMap';
 import { GrammarAgentMap, GRAMMAR_DAY_TOPICS } from './GrammarAgentMap';
@@ -704,6 +705,23 @@ export function StudentAssignmentsView({
   const [expandedStationId, setExpandedStationId] = useState<string | null>(null);
   // Mobile bottom sheet: opens vocab/grammar station nav on small screens
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (isBottomSheetOpen) {
+      document.body.classList.add('station-sheet-open');
+    } else {
+      document.body.classList.remove('station-sheet-open');
+    }
+    return () => {
+      document.body.classList.remove('station-sheet-open');
+    };
+  }, [isBottomSheetOpen]);
 
   // View mode: 'map' (Bản đồ hành trình toàn khóa kiểu Duolingo/Lingokids) | 'activity' (Làm bài tập)
   const [viewMode, setViewMode] = useState<'map' | 'activity'>(() => {
@@ -1048,9 +1066,6 @@ export function StudentAssignmentsView({
   const activeItemConfig = useMemo(() => {
     return activeGroupParsedItems.find(p => p.item.assignment.id === activeAssignmentId) || activeGroupParsedItems[0] || null;
   }, [activeGroupParsedItems, activeAssignmentId]);
-
-  const showNativeLang = useContentStore((s) => s.showNativeLang);
-  const setShowNativeLang = useContentStore((s) => s.setShowNativeLang);
 
   // Active Day Cluster and 4-Station Stepper for Focus Mode
   const activeDayCluster = useMemo(() => {
@@ -2353,6 +2368,9 @@ export function StudentAssignmentsView({
                     if (mode === 'match' || titleLower.includes('nối thẻ') || titleLower.includes('noi the') || titleLower.includes('flashcard-match')) {
                       return <Target className="w-3.5 h-3.5 stroke-[2.3px]" />;
                     }
+                    if (mode === 'sentence-builder' || titleLower.includes('ghép câu') || titleLower.includes('ghep cau') || titleLower.includes('sentence-builder')) {
+                      return <AlignLeft className="w-3.5 h-3.5 stroke-[2.3px]" />;
+                    }
                     return <Gamepad2 className="w-3.5 h-3.5 stroke-[2.3px]" />;
                   })()
                 : isChild && (parsed.stage === 'review' || parsed.stage === 'exercise')
@@ -2376,6 +2394,9 @@ export function StudentAssignmentsView({
               }
               if (mode === 'match' || titleLower.includes('nối thẻ') || titleLower.includes('noi the') || titleLower.includes('flashcard-match')) {
                 return 'Game: Nối thẻ';
+              }
+              if (mode === 'sentence-builder' || titleLower.includes('ghép câu') || titleLower.includes('ghep cau') || titleLower.includes('sentence-builder')) {
+                return 'Game: Ghép câu';
               }
               if (parsed.cleanTitle && parsed.cleanTitle.toLowerCase().startsWith('game')) {
                 return parsed.cleanTitle;
@@ -2673,6 +2694,10 @@ export function StudentAssignmentsView({
       <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
 
       <style>{`
+        body.station-sheet-open aside[aria-label="Question navigation"] {
+          display: none !important;
+        }
+
         .cefr-redesign-section-label {
           font-family: 'Baloo 2', 'Nunito', sans-serif;
           font-size: 11px;
@@ -3110,7 +3135,6 @@ export function StudentAssignmentsView({
                       }
                       if (hasMultipleGames) {
                         setExpandedStationId(prev => prev === st.id ? null : st.id);
-                        if (!isActive && st.item) executeSelectAssignment(st.item, selectedGroupId);
                         return;
                       }
                       if (st.item) executeSelectAssignment(st.item, selectedGroupId);
@@ -3249,7 +3273,7 @@ export function StudentAssignmentsView({
         {/* ── MOBILE: Floating trigger + Bottom Sheet for vocab / grammar class station nav ── */}
         {isDayQuestClass && viewMode === 'activity' && (
           <>
-            {/* Mobile Top App Bar (Unified Header: Stations + Language Switch) */}
+            {/* Mobile Top App Bar (Unified Header: Stations + Day Badge) */}
             <header className="sm:hidden fixed top-0 left-0 right-0 h-11 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-[#F0E2BF]/80 dark:border-slate-800 flex items-center justify-between px-3 shadow-2xs font-['Baloo_2',_'Nunito',_sans-serif]">
               {/* Left: Button to open stations bottom sheet */}
               <button
@@ -3261,54 +3285,30 @@ export function StudentAssignmentsView({
                 <span>Trạm học ({completedQuestStationsCount}/{currentDayQuestStations?.stations.length ?? 4})</span>
               </button>
 
-              {/* Right: Language switch for theory / reading */}
-              {activeItemConfig?.stage === 'lesson' || activeItemConfig?.stage === 'reading' ? (
-                <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-full p-0.5 text-xs font-bold border border-slate-200/60 dark:border-slate-700/60">
-                  <button
-                    type="button"
-                    onClick={() => setShowNativeLang(true)}
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-black transition-all cursor-pointer ${
-                      showNativeLang
-                        ? "bg-amber-500 text-white shadow-xs"
-                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                    }`}
-                  >
-                    Tiếng Việt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowNativeLang(false)}
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-black transition-all cursor-pointer ${
-                      !showNativeLang
-                        ? "bg-slate-600 text-white shadow-xs"
-                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                    }`}
-                  >
-                    EN
-                  </button>
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-800/40 text-amber-700 dark:text-amber-300 font-black text-[11px]">
-                  <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  <span>{currentDayQuestStations ? `Ngày ${currentDayQuestStations.dayNumber}` : 'Dolcake'}</span>
-                </div>
-              )}
+              {/* Right: Day Badge (unified across all stations) */}
+              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-800/40 text-amber-700 dark:text-amber-300 font-black text-[11px]">
+                <Sparkles className="w-3 h-3 fill-amber-500 text-amber-500" />
+                <span>{currentDayQuestStations ? `Ngày ${currentDayQuestStations.dayNumber}` : 'Dolcake'}</span>
+              </div>
             </header>
 
-            {/* Backdrop */}
-            {isBottomSheetOpen && (
-              <div
-                className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 sm:hidden animate-in fade-in duration-200"
-                onClick={() => setIsBottomSheetOpen(false)}
-              />
-            )}
+            {/* Backdrop & Bottom Sheet portaled directly to document.body to avoid stacking context traps */}
+            {isMounted && typeof document !== 'undefined' && createPortal(
+              <>
+                {/* Backdrop */}
+                {isBottomSheetOpen && (
+                  <div
+                    className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[9998] sm:hidden animate-in fade-in duration-200"
+                    onClick={() => setIsBottomSheetOpen(false)}
+                  />
+                )}
 
-            {/* Bottom Sheet */}
-            <div
-              className={`fixed inset-x-0 bottom-0 z-50 sm:hidden bg-[#FBF3DF] dark:bg-slate-900 rounded-t-[28px] shadow-2xl border-t border-[#F0E2BF] dark:border-slate-800 transition-transform duration-300 ease-out ${
-                isBottomSheetOpen ? 'translate-y-0' : 'translate-y-full'
-              }`}
-            >
+                {/* Bottom Sheet */}
+                <div
+                  className={`fixed inset-x-0 bottom-0 z-[9999] sm:hidden bg-[#FBF3DF] dark:bg-slate-900 rounded-t-[28px] shadow-2xl border-t border-[#F0E2BF] dark:border-slate-800 transition-transform duration-300 ease-out ${
+                    isBottomSheetOpen ? 'translate-y-0 pointer-events-auto' : 'translate-y-full pointer-events-none'
+                  }`}
+                >
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1.5">
                 <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
@@ -3378,7 +3378,6 @@ export function StudentAssignmentsView({
                         }
                         if (hasMultipleGames) {
                           setExpandedStationId(prev => prev === st.id ? null : st.id);
-                          if (!isActive && st.item) { executeSelectAssignment(st.item, selectedGroupId); setIsBottomSheetOpen(false); }
                           return;
                         }
                         if (st.item) { executeSelectAssignment(st.item, selectedGroupId); setIsBottomSheetOpen(false); }
@@ -3515,6 +3514,9 @@ export function StudentAssignmentsView({
               {/* Safe area bottom padding */}
               <div className="pb-safe" />
             </div>
+          </>,
+          document.body
+        )}
 
           </>
         )}
