@@ -43,8 +43,7 @@ import { Suspense } from "react";
 
 import type { Metadata } from "next";
 
-// Reuse data fetching from student page
-import { getLessonBasic, getLessonExtra, getTeacherBasic, getLessonReviews, getRelatedLessons, getLessonReadingText, getLessonInlineQuestions } from "@/app/student/lessons/[id]/data";
+import { getLessonBasic, getLessonExtra, getLessonReviews, getRelatedLessons, getLessonReadingText, getLessonInlineQuestions } from "@/app/student/lessons/[id]/data";
 import { fetchWithRedis } from "@/lib/cached-queries";
 import { LessonInlineQuiz } from "@/components/lessons/LessonInlineQuiz";
 
@@ -259,16 +258,12 @@ async function KeyVocabularyWrapper({ lessonId }: { lessonId: string }) {
   return <KeyVocabularyWidget vocabulary={vocabularyList} />;
 }
 
-async function PublicSidebarWrapper({ teacherId, lessonId, isGuest }: { teacherId: string | null, lessonId: string, isGuest: boolean }) {
-  const [teacher, relatedLessons] = await Promise.all([
-    teacherId ? getTeacherBasic(teacherId) : Promise.resolve(null),
-    getRelatedLessons(lessonId)
-  ]);
+async function PublicSidebarWrapper({ lessonId, isGuest }: { lessonId: string, isGuest: boolean }) {
+  const relatedLessons = await getRelatedLessons(lessonId);
 
   return (
-    <div className="animate-in fade-in slide-in-from-right-4 duration-700 h-full">
+    <div className="animate-in fade-in slide-in-from-right-4 duration-700">
       <LearningSidebar 
-        teacher={teacher} 
         relatedItems={relatedLessons.map(l => ({ ...l, thumbnail: l.thumbnail || null }))} 
         isGuest={isGuest}
       />
@@ -490,20 +485,9 @@ export default async function PublicLessonPage({
 
       <PublicHeader session={session as any} />
 
-      {/* ===== 3-column layout ===== */}
+      {/* ===== 2-column layout ===== */}
       <div className="relative pt-10 pb-16">
-        <div className="w-full flex flex-col lg:flex-row items-start gap-8 px-4 sm:px-6 md:px-10 max-w-[1600px] mx-auto">
-
-          {/* === LEFT SIDEBAR: Key Vocabulary === */}
-          <aside className="w-full lg:w-[300px] shrink-0">
-            <div className="lg:sticky lg:top-6">
-              <Suspense fallback={
-                <div className="h-64 sm:h-80 lg:h-96 rounded-[28px] bg-white/70 animate-pulse border-2 border-emerald-100/80 shadow-xl hidden lg:block" />
-              }>
-                <KeyVocabularyWrapper lessonId={lesson.id} />
-              </Suspense>
-            </div>
-          </aside>
+        <div className="w-full flex flex-col lg:flex-row items-start gap-8 px-4 sm:px-6 md:px-10 max-w-[1500px] mx-auto">
 
           {/* === MAIN CONTENT === */}
           <main className="flex-1 min-w-0 space-y-8 w-full max-w-full">
@@ -611,13 +595,19 @@ export default async function PublicLessonPage({
             </div>
           </main>
 
-          {/* === RIGHT SIDEBAR: Teacher + Related Lessons === */}
-          <aside className="w-full lg:w-[320px] shrink-0">
-            <div className="lg:sticky lg:top-6">
+          {/* === RIGHT SIDEBAR: Key Vocabulary + Related Lessons === */}
+          <aside className="w-full lg:w-[350px] xl:w-[380px] shrink-0">
+            <div className="lg:sticky lg:top-6 space-y-6">
+              <Suspense fallback={
+                <div className="h-64 sm:h-80 rounded-[28px] bg-white/70 animate-pulse border-2 border-emerald-100/80 shadow-xl" />
+              }>
+                <KeyVocabularyWrapper lessonId={lesson.id} />
+              </Suspense>
+
               <Suspense fallback={
                 <div className="w-full h-64 bg-white/30 animate-pulse rounded-[28px]" />
               }>
-                <PublicSidebarWrapper teacherId={lesson.teacherId} lessonId={lesson.id} isGuest={!session} />
+                <PublicSidebarWrapper lessonId={lesson.id} isGuest={!session} />
               </Suspense>
             </div>
           </aside>

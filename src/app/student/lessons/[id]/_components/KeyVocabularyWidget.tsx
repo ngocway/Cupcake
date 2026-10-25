@@ -141,21 +141,8 @@ export function KeyVocabularyWidget({ vocabulary }: KeyVocabularyWidgetProps) {
 
   return (
     <>
-      {/* Top Inline Slider Button for Mobile */}
-      <button
-        type="button"
-        onClick={() => setIsDrawerOpen(true)}
-        className="lg:hidden w-full inline-flex items-center justify-between px-5 py-3.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md border border-emerald-400/40 transition-all duration-200"
-      >
-        <div className="flex items-center gap-2.5">
-          <BookOpen className="w-4 h-4 text-emerald-200" />
-          <span>Key Vocabulary ({vocabulary.length} Words)</span>
-        </div>
-        <ChevronRight className="w-4 h-4 text-emerald-200" />
-      </button>
-
-      {/* Main Desktop Widget */}
-      <div className="hidden lg:block bg-white/85 backdrop-blur-xl border-2 border-emerald-100 rounded-[28px] p-5 shadow-xl shadow-primary/5 space-y-4 animate-in fade-in duration-500 relative">
+      {/* Main Widget */}
+      <div className="block bg-white/85 backdrop-blur-xl border-2 border-emerald-100 rounded-[28px] p-5 shadow-xl shadow-primary/5 space-y-4 animate-in fade-in duration-500 relative">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-emerald-100 pb-3">
           <div className="flex items-center gap-2">
@@ -172,7 +159,7 @@ export function KeyVocabularyWidget({ vocabulary }: KeyVocabularyWidgetProps) {
         </div>
 
         {/* Vocabulary List */}
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1.5">
           {vocabulary.map((item, index) => {
             const meaning = getMeaning(item);
             return (

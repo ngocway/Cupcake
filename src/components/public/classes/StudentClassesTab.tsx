@@ -359,7 +359,11 @@ function EnrolledClassRowCard({
       {/* 2. Title & Teacher Info */}
       <div className="flex-1 min-w-0 md:min-w-[170px] lg:min-w-[210px] flex flex-col justify-center">
         {/* Dual Chips: Môn học + Đối tượng học */}
-        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+        <Link
+          href={classUrl}
+          onClick={() => onEnter(targetClassId)}
+          className="inline-flex items-center gap-1.5 mb-1.5 flex-wrap cursor-pointer group/chips hover:opacity-90 active:scale-[0.98] transition-all"
+        >
           <span className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-black tracking-tight border shadow-2xs backdrop-blur-md ${matched.subjectBadgeClass}`}>
             {matched.subjectBadge}
           </span>
@@ -368,14 +372,14 @@ function EnrolledClassRowCard({
               {matched.audienceBadge}
             </span>
           )}
-        </div>
+        </Link>
 
         <Link
           href={classUrl}
           onClick={() => onEnter(targetClassId)}
-          className="block"
+          className="block cursor-pointer group/title active:scale-[0.99] transition-transform"
         >
-          <h3 className="font-headline font-black text-slate-900 dark:text-white text-base sm:text-lg leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          <h3 className="font-headline font-black text-slate-900 dark:text-white text-base sm:text-lg leading-tight group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {item.class.name || matched.title}
           </h3>
         </Link>
@@ -508,7 +512,14 @@ interface PublicClassCardProps {
 }
 
 function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCardProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const classUrl = `/classes/${cls.id}`;
+
+  const handleNavigate = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push(classUrl);
+  };
 
   const handleCopyCode = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -524,8 +535,10 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
     <div className="bg-white dark:bg-slate-800 rounded-[28px] sm:rounded-[32px] overflow-hidden border border-slate-100 dark:border-slate-700/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between h-full group">
       {/* Thumbnail Container with Badges */}
       <Link
-        href={`/classes/${cls.id}`}
-        className="relative w-full aspect-[16/10] overflow-hidden rounded-t-[28px] sm:rounded-t-[32px] bg-slate-100 dark:bg-slate-900 block cursor-pointer"
+        href={classUrl}
+        prefetch={true}
+        onClick={handleNavigate}
+        className="relative w-full aspect-[16/10] overflow-hidden rounded-t-[28px] sm:rounded-t-[32px] bg-slate-100 dark:bg-slate-900 block cursor-pointer group/thumb"
       >
         <Image
           src={cls.thumbnail}
@@ -533,7 +546,7 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
           fill
           priority={priority}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          className="object-cover group-hover/thumb:scale-105 transition-transform duration-500"
         />
 
         {/* Type Badge on Top Right */}
@@ -552,7 +565,12 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
       <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between">
         <div>
           {/* Dual Chips: Môn học + Đối tượng học (Phía trên tiêu đề lớp) */}
-          <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
+          <Link
+            href={classUrl}
+            prefetch={true}
+            onClick={handleNavigate}
+            className="inline-flex items-center gap-1.5 mb-2.5 flex-wrap cursor-pointer group/chips hover:opacity-90 active:scale-[0.98] transition-all"
+          >
             <span
               className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-black tracking-tight border shadow-2xs backdrop-blur-md ${cls.subjectBadgeClass}`}
             >
@@ -565,10 +583,16 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
                 {cls.audienceBadge}
               </span>
             )}
-          </div>
+          </Link>
 
-          <Link href={`/classes/${cls.id}`} className="block">
-            <h3 className="font-headline font-black text-slate-900 dark:text-white text-lg sm:text-[19px] leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+          {/* Title: Bấm vào mở trang như nút Join Class */}
+          <Link 
+            href={classUrl} 
+            prefetch={true}
+            onClick={handleNavigate}
+            className="block cursor-pointer group/title active:scale-[0.99] transition-transform"
+          >
+            <h3 className="font-headline font-black text-slate-900 dark:text-white text-lg sm:text-[19px] leading-tight group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {cls.title}
             </h3>
           </Link>
@@ -576,7 +600,7 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
             {cls.description}
           </p>
 
-          {/* Class Code Info Pill (Gợi ý A: Gọn & Hiện đại, bỏ avatar & tên GV) */}
+          {/* Class Code Info Pill */}
           {cls.joinCode && (
             <div className="mb-4">
               <button
@@ -601,7 +625,9 @@ function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCa
         {/* Actions */}
         <div className="pt-2">
           <Link
-            href={`/classes/${cls.id}`}
+            href={classUrl}
+            prefetch={true}
+            onClick={handleNavigate}
             className={`w-full py-3 px-4 rounded-2xl bg-gradient-to-r ${cls.btnGradient || 'from-blue-600 to-indigo-600 shadow-blue-500/20'} text-white font-black text-sm shadow-md transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 cursor-pointer`}
           >
             <Sparkles className="w-4 h-4 stroke-[2.5]" />

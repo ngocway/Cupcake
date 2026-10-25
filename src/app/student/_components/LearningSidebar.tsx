@@ -1,11 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { User, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { LoginPromptModal } from "./LoginPromptModal";
-import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 
 interface TeacherInfo {
   id: string;
@@ -36,7 +35,7 @@ export function LearningSidebar({
   relatedItems,
   isGuest = false
 }: { 
-  teacher: TeacherInfo | null
+  teacher?: TeacherInfo | null
   relatedItems: RelatedItem[]
   isGuest?: boolean
 }) {
@@ -45,41 +44,6 @@ export function LearningSidebar({
   
   return (
     <aside className="w-full flex flex-col bg-transparent space-y-6">
-       {/* Teacher Profile Card */}
-       {teacher?.isPortfolioPublished && (
-         <div className="glass rounded-3xl p-8 space-y-8 flex flex-col items-center text-center shadow-xl">
-            <div className="space-y-4 flex flex-col items-center w-full">
-                <div className="w-28 h-28 rounded-full border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden bg-white">
-                  <TeacherAvatar
-                    src={teacher.image}
-                    name={teacher.name}
-                    className="w-full h-full object-cover"
-                    fallback={
-                      <div className="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                        <User className="w-12 h-12" />
-                      </div>
-                    }
-                  />
-                </div>
-               
-               <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{teacher.name}</h3>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{teacher.professionalTitle || t("teacherTitle")}</p>
-               </div>
-            </div>
-
-            <p className="text-lg font-medium text-slate-600 dark:text-slate-300 leading-loose max-w-[280px]">
-               {teacher.bio || t("defaultBio")}
-            </p>
-
-            <Link 
-               href={`/public/teachers/${teacher.id}`}
-               className="w-full py-4 bg-white dark:bg-slate-800 text-slate-800 dark:text-white rounded-full font-black text-sm shadow-sm hover:shadow-md transition-all flex items-center justify-center"
-            >
-               {t("viewProfile")}
-            </Link>
-         </div>
-       )}
 
        {/* Related Lessons Card */}
        <div className="bg-white/70 backdrop-blur-xl border-2 border-emerald-100 rounded-[28px] p-5 sm:p-6 space-y-5 shadow-xl shadow-primary/5">

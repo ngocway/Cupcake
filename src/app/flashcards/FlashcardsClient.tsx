@@ -415,6 +415,14 @@ export function FlashcardsClient({
   // Trạng thái hiển thị từng chữ cái lần lượt ngẫu nhiên
   const [revealedIndices, setRevealedIndices] = useState<number[]>([])
   const [wordAudioEnded, setWordAudioEnded] = useState<boolean>(false)
+  const HINT_COUNTDOWN_SECONDS = 5
+  const [hintCountdown, setHintCountdown] = useState<number>(HINT_COUNTDOWN_SECONDS)
+  const [lastRevealedIndex, setLastRevealedIndex] = useState<number | null>(null)
+  const revealedIndicesRef = useRef<number[]>([])
+
+  useEffect(() => {
+    revealedIndicesRef.current = revealedIndices
+  }, [revealedIndices])
 
   // Trạng thái cho chế độ Thử thách từ vựng (Gợi ý, Ghép chữ, Tự gõ)
   const [challengeMode, setChallengeMode] = useState<'hint' | 'scramble' | 'type'>(() => {
@@ -933,6 +941,9 @@ export function FlashcardsClient({
       }
     }
     setRevealedIndices(initialIndices)
+    revealedIndicesRef.current = initialIndices
+    setHintCountdown(HINT_COUNTDOWN_SECONDS)
+    setLastRevealedIndex(null)
 
     if (challengeMode === 'scramble') {
       generateScrambledLetters(card.word)
@@ -968,48 +979,64 @@ export function FlashcardsClient({
     }
   }, [isActive, isFlipped, currentIndex, selectedCategory, flashcards])
 
-  // 3. Tự động hiển thị gợi ý từng chữ cái ngẫu nhiên (Chỉ hoạt động ở chế độ Gợi ý)
+  // 3. Tự động đếm ngược 5 giây & hiển thị gợi ý từng chữ cái ngẫu nhiên (Chỉ hoạt động ở chế độ Gợi ý)
   useEffect(() => {
     const card = flashcards[currentIndex]
     if (!isActive || !wordAudioEnded || !card || isFlipped || challengeMode !== 'hint') return
 
     const word = card.word
-    const initialIndices: number[] = []
-    for (let i = 0; i < word.length; i++) {
-      if (!/[a-zA-Z]/.test(word[i])) {
-        initialIndices.push(i)
-      }
-    }
-    
-    setRevealedIndices(initialIndices)
+    let currentSeconds = HINT_COUNTDOWN_SECONDS
+    setHintCountdown(HINT_COUNTDOWN_SECONDS)
 
-    let timeoutId: ReturnType<typeof setTimeout>
-
-    const revealNext = (currentRevealed: number[]) => {
+    const getUnrevealed = (currRevealed: number[]) => {
       const unrevealed: number[] = []
       for (let i = 0; i < word.length; i++) {
-        if (/[a-zA-Z]/.test(word[i]) && !currentRevealed.includes(i)) {
+        if (/[a-zA-Z]/.test(word[i]) && !currRevealed.includes(i)) {
           unrevealed.push(i)
         }
       }
-
-      if (unrevealed.length === 0) return
-
-      timeoutId = setTimeout(() => {
-        const randomIndex = unrevealed[Math.floor(Math.random() * unrevealed.length)]
-        const nextRevealed = [...currentRevealed, randomIndex]
-        setRevealedIndices(nextRevealed)
-        
-        handlePlayWordAudio(card)
-
-        revealNext(nextRevealed)
-      }, 4500)
+      return unrevealed
     }
 
-    revealNext(initialIndices)
+    if (getUnrevealed(revealedIndicesRef.current).length === 0) {
+      setHintCountdown(0)
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      const unrevealed = getUnrevealed(revealedIndicesRef.current)
+      if (unrevealed.length === 0) {
+        clearInterval(intervalId)
+        setHintCountdown(0)
+        return
+      }
+
+      currentSeconds -= 1
+      if (currentSeconds > 0) {
+        setHintCountdown(currentSeconds)
+      } else {
+        // Hết 5 giây: bốc ngẫu nhiên 1 chữ cái & phát lại audio từ vựng
+        const randomIndex = unrevealed[Math.floor(Math.random() * unrevealed.length)]
+        const nextRevealed = [...revealedIndicesRef.current, randomIndex]
+        revealedIndicesRef.current = nextRevealed
+        setRevealedIndices(nextRevealed)
+        setLastRevealedIndex(randomIndex)
+
+        handlePlayWordAudio(card)
+
+        const remaining = getUnrevealed(nextRevealed)
+        if (remaining.length === 0) {
+          clearInterval(intervalId)
+          setHintCountdown(0)
+        } else {
+          currentSeconds = HINT_COUNTDOWN_SECONDS
+          setHintCountdown(HINT_COUNTDOWN_SECONDS)
+        }
+      }
+    }, 1000)
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId)
+      clearInterval(intervalId)
     }
   }, [isActive, wordAudioEnded, currentIndex, flashcards, isFlipped, challengeMode])
 
@@ -1252,6 +1279,17 @@ export function FlashcardsClient({
 
   const activeCard = flashcards[currentIndex]
   const progressPercent = flashcards.length > 0 ? ((currentIndex + 1) / flashcards.length) * 100 : 0
+
+  const isAllLettersRevealed = useMemo(() => {
+    if (!activeCard) return false;
+    const word = activeCard.word;
+    for (let i = 0; i < word.length; i++) {
+      if (/[a-zA-Z]/.test(word[i]) && !revealedIndices.includes(i)) {
+        return false;
+      }
+    }
+    return true;
+  }, [activeCard, revealedIndices]);
 
   // Tải trước ảnh của thẻ tiếp theo và thẻ trước đó để tránh bóng ma/độ trễ
   useEffect(() => {
@@ -2012,12 +2050,49 @@ export function FlashcardsClient({
 
         {/* Native Language Definition — below card, in flow (no overlap) */}
         {activeCard && !isFlipped && (
-          <div className={`mt-3 sm:mt-4 text-center px-4 ${isEmbedded ? "" : "animate-in fade-in zoom-in-95 duration-300"}`}>
+          <div className={`mt-3 sm:mt-4 flex items-center justify-center gap-2.5 px-4 ${isEmbedded ? "" : "animate-in fade-in zoom-in-95 duration-300"}`}>
             <span className={`font-black tracking-wide text-xl md:text-2xl lg:text-3xl ${
               isKidMode ? "text-amber-900 dark:text-amber-100" : "text-slate-800 dark:text-slate-100"
             }`}>
               {activeCard.definitionVi || getDefinitionText(activeCard, currentLang) || activeCard.definition}
             </span>
+
+            {/* Circular Timer Countdown (Hint Mode only - Clean standalone SVG circle placed next to vocabulary title) */}
+            {challengeMode === 'hint' && (
+              <div 
+                className="relative w-7 h-7 md:w-8 md:h-8 flex items-center justify-center shrink-0 select-none animate-in fade-in zoom-in duration-300"
+                title={isAllLettersRevealed ? "Tất cả chữ cái đã được gợi ý!" : `Đọc lại và gợi ý chữ tiếp theo sau ${hintCountdown}s`}
+              >
+                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 36 36">
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="14"
+                    className="stroke-amber-200/60 dark:stroke-amber-900/30"
+                    strokeWidth="3.5"
+                    fill="none"
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="14"
+                    className="stroke-amber-500 transition-all duration-1000 ease-linear"
+                    strokeWidth="3.5"
+                    strokeDasharray={2 * Math.PI * 14}
+                    strokeDashoffset={
+                      isAllLettersRevealed
+                        ? 0
+                        : 2 * Math.PI * 14 * (1 - (hintCountdown / HINT_COUNTDOWN_SECONDS))
+                    }
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                </svg>
+                <span className="absolute font-black text-amber-700 dark:text-amber-300 text-[11px] md:text-xs">
+                  {isAllLettersRevealed ? "✨" : hintCountdown}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -2045,6 +2120,7 @@ export function FlashcardsClient({
               const isSpace = char === " ";
               const isLetterChar = /[a-zA-Z]/.test(char);
               const isRevealed = !isLetterChar || revealedIndices.includes(index);
+              const isJustRevealed = challengeMode === 'hint' && isRevealed && index === lastRevealedIndex;
               
               // Hiệu ứng rung đỏ khi gõ sai chữ cái
               const isWrong = wrongTypedIndex === index;
@@ -2069,23 +2145,32 @@ export function FlashcardsClient({
               return (
                 <span 
                   key={index} 
-                  className={`${sizeClass} flex items-center justify-center font-black border-2 transition-all duration-500 ${
+                  className={`relative ${sizeClass} flex items-center justify-center font-black transition-all duration-300 ${
                     isWrong
-                      ? `animate-shake border-red-500 bg-red-100 text-red-600 ${wrongFading ? 'opacity-0 scale-90' : 'opacity-100'}`
+                      ? `animate-shake border-2 border-red-500 bg-red-100 text-red-600 ${wrongFading ? 'opacity-0 scale-90' : 'opacity-100'}`
                       : isRevealed 
                       ? `${challengeMode === 'scramble' ? 'animate-fly-in' : ''} ${
-                          isKidMode 
-                            ? "bg-amber-100 border-amber-300 text-amber-950" 
-                            : "bg-indigo-50 border-indigo-200 text-indigo-950"
-                        } scale-100 shadow-sm` 
-                      : (challengeMode === 'scramble'
+                          challengeMode === 'hint'
+                            ? `bg-gradient-to-b from-amber-100 to-amber-200 border-2 border-amber-300 text-amber-950 shadow-md ${
+                                isJustRevealed ? 'animate-in zoom-in-75 ring-4 ring-amber-400/50 scale-105 duration-300' : 'scale-100'
+                              }`
+                            : isKidMode 
+                            ? "border-2 bg-amber-100 border-amber-300 text-amber-950 scale-100 shadow-sm" 
+                            : "border-2 bg-indigo-50 border-indigo-200 text-indigo-950 scale-100 shadow-sm"
+                        }` 
+                      : (challengeMode === 'hint'
+                          ? "border-2 border-transparent bg-transparent text-transparent opacity-0 pointer-events-none scale-95 select-none"
+                          : challengeMode === 'scramble'
                           ? "border-transparent bg-transparent text-transparent opacity-0 pointer-events-none scale-50"
-                          : `${isKidMode ? "bg-slate-50/80 border-emerald-400 text-slate-300" : "bg-slate-50/60 border-emerald-400/80 text-slate-300"} border-dashed scale-95`)
+                          : `${isKidMode ? "bg-slate-50/80 border-emerald-400 text-slate-300" : "bg-slate-50/60 border-emerald-400/80 text-slate-300"} border-2 border-dashed scale-95`)
                   }`}
                 >
                   {isWrong && wrongTypedLetter
                     ? wrongTypedLetter
                     : isRevealed ? char.toUpperCase() : ""}
+                  {isJustRevealed && (
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400 absolute -top-2 -right-2 animate-bounce pointer-events-none" />
+                  )}
                 </span>
               );
             })}
@@ -2110,6 +2195,10 @@ export function FlashcardsClient({
                   isKidMode
                     ? `px-12 py-4.5 rounded-full border-4 shadow-xl hover:scale-105 text-base bg-gradient-to-r ${themeConfig.revealBg}`
                     : `px-8 py-3.5 rounded-full shadow-md hover:scale-105 text-sm bg-gradient-to-r ${themeConfig.revealBg}`
+                } ${
+                  isAllLettersRevealed
+                    ? "ring-4 ring-amber-400/80 ring-offset-2 animate-pulse shadow-amber-400/40"
+                    : ""
                 }`}
               >
                 <span>Reveal Details</span>
