@@ -61,12 +61,15 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   ]);
 
   const userTypeCookie = cookieStore.get("user_type")?.value
-  let initialUserType = userTypeCookie || "learner"
-  let hasUserPreference = !!userTypeCookie
-
   const studySubjectCookie = cookieStore.get("study_subject")?.value
   const studyLevelCookie = cookieStore.get("study_level")?.value
   const studyAgeGroupCookie = cookieStore.get("study_age_group")?.value
+  const studyGoalCookie = cookieStore.get("study_goal")?.value
+
+  let initialUserType = userTypeCookie || "learner"
+  let hasUserPreference = !!(userTypeCookie || studyAgeGroupCookie || studyGoalCookie)
+  let initialStudyGoal = studyGoalCookie || ""
+
   let studySubject = studySubjectCookie || "english"
   let studyAgeGroup = studyAgeGroupCookie || ""
   let studyLevel = studyLevelCookie || ""
@@ -160,7 +163,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           !isLoggedIn ? "-mt-10 sm:-mt-14 lg:-mt-16" : "pt-4 sm:pt-6 lg:pt-8"
         }`}
       >
-        <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} />
+        <HomeSidebar searchParams={params} initialUserType={initialUserType} studySubject={studySubject} studyAgeGroup={studyAgeGroup} initialStudyGoal={initialStudyGoal} />
 
         <main className="w-full flex-1 space-y-2 lg:space-y-12 min-w-0">
           <LandingPage
@@ -179,6 +182,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             initialStudySubject={studySubject}
             initialStudyAgeGroup={studyAgeGroup}
             initialStudyLevel={studyLevel}
+            initialStudyGoal={initialStudyGoal}
             onboardingConfig={config}
           />
         </main>

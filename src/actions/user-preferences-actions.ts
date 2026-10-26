@@ -39,7 +39,8 @@ export async function updateAllPreferences(data: {
   nativeLanguage?: string,
   studySubject?: string,
   studyAgeGroup?: string,
-  studyLevel?: string
+  studyLevel?: string,
+  studyGoal?: string
 }) {
   const cookieStore = await cookies()
   const cookieOpts = { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production" }
@@ -49,6 +50,7 @@ export async function updateAllPreferences(data: {
   if (data.studySubject) cookieStore.set("study_subject", data.studySubject, cookieOpts)
   if (data.studyAgeGroup) cookieStore.set("study_age_group", data.studyAgeGroup, cookieOpts)
   if (data.studyLevel) cookieStore.set("study_level", data.studyLevel, cookieOpts)
+  if (data.studyGoal) cookieStore.set("study_goal", data.studyGoal, cookieOpts)
 
   const session = await auth()
   if (session?.user?.id) {

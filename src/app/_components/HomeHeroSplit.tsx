@@ -60,6 +60,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
   const clientSession = sessionContext?.data
   const session = clientSession ?? initialSession
   const setActiveTab = useContentStore((s) => (s as any).setActiveTab)
+  const isFilterModalOpen = useContentStore((s) => (s as any).isFilterModalOpen)
 
   const isTeacher = session?.user && (session.user as any).role === 'TEACHER'
   const isStudent = session?.user && (session.user as any).role !== 'TEACHER'
@@ -309,20 +310,22 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
       </div>
 
       {/* Floating Minimalist Mouse Scroll Indicator */}
-      <div className="absolute bottom-20 sm:bottom-24 lg:bottom-28 left-1/2 -translate-x-1/2 z-40 hidden sm:flex flex-col items-center pointer-events-auto">
-        <button
-          onClick={handleScrollDown}
-          className="group flex flex-col items-center gap-2 cursor-pointer animate-mouse-breathe hover:scale-110 active:scale-95 transition-transform duration-300"
-          title="Cuộn xuống khám phá kho bài giảng"
-          aria-label="Cuộn xuống khám phá kho bài giảng"
-        >
-          {/* Mouse Frame with High-Contrast Deep Slate & Glowing Amber Rim */}
-          <div className="w-[45px] h-[72px] rounded-full border-[3px] border-amber-400 bg-slate-900/90 backdrop-blur-md shadow-[0_8px_28px_rgba(0,0,0,0.4),0_0_24px_rgba(251,191,36,0.5)] ring-[3px] ring-amber-400/25 group-hover:border-amber-300 group-hover:bg-slate-900 group-hover:shadow-[0_0_32px_rgba(251,191,36,0.8)] flex justify-center pt-3 transition-all duration-300">
-            {/* Smooth Scrolling Wheel Indicator */}
-            <div className="w-[9px] h-[18px] rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.95)] animate-mouse-wheel" />
-          </div>
-        </button>
-      </div>
+      {!isFilterModalOpen && (
+        <div className="absolute bottom-20 sm:bottom-24 lg:bottom-28 left-1/2 -translate-x-1/2 z-20 hidden sm:flex flex-col items-center pointer-events-auto">
+          <button
+            onClick={handleScrollDown}
+            className="group flex flex-col items-center gap-2 cursor-pointer animate-mouse-breathe hover:scale-110 active:scale-95 transition-transform duration-300"
+            title="Cuộn xuống khám phá kho bài giảng"
+            aria-label="Cuộn xuống khám phá kho bài giảng"
+          >
+            {/* Mouse Frame with High-Contrast Deep Slate & Glowing Amber Rim */}
+            <div className="w-[45px] h-[72px] rounded-full border-[3px] border-amber-400 bg-slate-900/90 backdrop-blur-md shadow-[0_8px_28px_rgba(0,0,0,0.4),0_0_24px_rgba(251,191,36,0.5)] ring-[3px] ring-amber-400/25 group-hover:border-amber-300 group-hover:bg-slate-900 group-hover:shadow-[0_0_32px_rgba(251,191,36,0.8)] flex justify-center pt-3 transition-all duration-300">
+              {/* Smooth Scrolling Wheel Indicator */}
+              <div className="w-[9px] h-[18px] rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.95)] animate-mouse-wheel" />
+            </div>
+          </button>
+        </div>
+      )}
 
       <LoginModal
         isOpen={isStudentModalOpen}

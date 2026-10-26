@@ -2,7 +2,7 @@ import { SubjectSelector } from "./SubjectSelector";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getOnboardingConfig } from "@/actions/user-preferences-actions";
 
-export async function SidebarContent({ searchParams, initialUserType, studySubject, studyAgeGroup }: { searchParams: any, initialUserType: string, studySubject?: string, studyAgeGroup?: string }) {
+export async function SidebarContent({ searchParams, initialUserType, studySubject, studyAgeGroup, initialStudyGoal }: { searchParams: any, initialUserType: string, studySubject?: string, studyAgeGroup?: string, initialStudyGoal?: string }) {
   const config = await getOnboardingConfig() as any;
   const locale = await getLocale();
 
@@ -66,6 +66,7 @@ export async function SidebarContent({ searchParams, initialUserType, studySubje
         locale={locale}
         initialStudySubject={studySubject}
         initialStudyAgeGroup={studyAgeGroup}
+        initialStudyGoal={initialStudyGoal}
       />
     </div>
   );

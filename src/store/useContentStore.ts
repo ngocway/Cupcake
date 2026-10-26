@@ -36,6 +36,9 @@ interface ContentState {
   studyLevel: string
   setStudyLevel: (val: string) => void
 
+  studyGoal: string
+  setStudyGoal: (val: string) => void
+
   nativeLanguage: string
   setNativeLanguage: (val: string) => void
 
@@ -200,6 +203,14 @@ export const useContentStore = create<ContentState>((set, get) => ({
 
   studyLevel: "",
   setStudyLevel: (val) => set({ studyLevel: val }),
+
+  studyGoal: typeof window !== "undefined" ? (localStorage.getItem("cupcakes_study_goal") || "") : "",
+  setStudyGoal: (val) => set(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("cupcakes_study_goal", val)
+    }
+    return { studyGoal: val }
+  }),
 
   nativeLanguage: typeof window !== "undefined" ? (localStorage.getItem("cupcakes_native_language") || "vi") : "vi",
   setNativeLanguage: (val) => set((state) => {

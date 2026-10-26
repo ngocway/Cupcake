@@ -29,6 +29,7 @@ interface Props {
   locale?: string;
   initialStudySubject?: string;
   initialStudyAgeGroup?: string;
+  initialStudyGoal?: string;
 }
 
 const subjectStyles: Record<string, { bg: string; activeBg: string; border: string; activeBorder: string; text: string; activeText: string; icon: string }> = {
@@ -59,7 +60,7 @@ function getStyle(subjectId: string) {
   return subjectStyles[subjectId] || defaultStyle;
 }
 
-export function SubjectSelector({ subjects, config, locale = "en", initialStudySubject, initialStudyAgeGroup }: Props) {
+export function SubjectSelector({ subjects, config, locale = "en", initialStudySubject, initialStudyAgeGroup, initialStudyGoal }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -86,6 +87,9 @@ export function SubjectSelector({ subjects, config, locale = "en", initialStudyS
   const setStudyAgeGroup = useContentStore(s => (s as any).setStudyAgeGroup);
   const studyLevel = useContentStore(s => (s as any).studyLevel);
   const setStudyLevel = useContentStore(s => (s as any).setStudyLevel);
+  const studyGoalFromStore = useContentStore(s => (s as any).studyGoal);
+  const studyGoal = studyGoalFromStore || initialStudyGoal || "";
+  const setFilterModalOpen = useContentStore(s => (s as any).setFilterModalOpen);
   const userType = useContentStore(s => s.userType);
 
   const handleSelect = (subjectId: string) => {
@@ -126,8 +130,74 @@ export function SubjectSelector({ subjects, config, locale = "en", initialStudyS
 
   // locale is passed as prop from server component
 
+  const getGoalInfo = () => {
+    switch (studyGoal) {
+      case "kindergarten_vocab":
+        return {
+          icon: "🧁",
+          label: locale === "vi" ? "1. Bé mẫu giáo (Phonics & Từ vựng)" : "1. Preschool: Phonics & Vocab",
+        };
+      case "kids_primary":
+        return {
+          icon: "🎒",
+          label: locale === "vi" ? "2. Bé từ 5 đến 10 tuổi" : "2. Kids (Ages 5 - 10)",
+        };
+      case "english_basic":
+        return {
+          icon: "🌱",
+          label: locale === "vi" ? "3. Tiếng Anh căn bản" : "3. Beginner English",
+        };
+      case "communication":
+        return {
+          icon: "💬",
+          label: locale === "vi" ? "4. Tiếng Anh giao tiếp" : "4. Conversational English",
+        };
+      case "exam_prep":
+        return {
+          icon: "🏆",
+          label: locale === "vi" ? "5. Luyện thi (Cambridge, IELTS)" : "5. Exam Prep (IELTS, Cam)",
+        };
+      default:
+        if (studyAgeGroup === "kindergarten" || (typeof studyAgeGroup === "string" && studyAgeGroup.includes("kindergarten"))) {
+          return { icon: "🧁", label: locale === "vi" ? "Bé mẫu giáo" : "Preschool" };
+        }
+        if (studyAgeGroup === "kid" || userType === "kid") {
+          return { icon: "🎒", label: locale === "vi" ? "Bé 5 - 10 tuổi" : "Kids (5 - 10)" };
+        }
+        return { icon: "🌱", label: locale === "vi" ? "Học tiếng Anh" : "English Learner" };
+    }
+  };
+  const goalInfo = getGoalInfo();
+
   return (
     <div className="animate-in fade-in slide-in-from-left duration-700">
+      {/* Learning Goal Widget */}
+      <div className="mb-4 p-3 rounded-2xl bg-[#FCFBF8] border-2 border-[#F0E2BF] shadow-xs">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="cefr-redesign-section-label !mb-0">
+            {locale === "vi" ? "Mục tiêu học" : "Learning Goal"}
+          </p>
+          <button
+            type="button"
+            onClick={() => setFilterModalOpen && setFilterModalOpen(true)}
+            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-100/70 hover:bg-emerald-200/70 px-2 py-0.5 rounded-full transition-colors cursor-pointer flex items-center gap-1"
+          >
+            <span>{locale === "vi" ? "Đổi" : "Change"}</span>
+          </button>
+        </div>
+        <div 
+          onClick={() => setFilterModalOpen && setFilterModalOpen(true)}
+          className="flex items-center gap-2.5 cursor-pointer hover:opacity-85 transition-opacity mt-1"
+        >
+          <div className="w-8 h-8 rounded-xl bg-emerald-100/80 flex items-center justify-center text-emerald-800 shrink-0 font-black text-sm shadow-xs">
+            {goalInfo.icon}
+          </div>
+          <span className="font-bold text-xs text-[#3E3524] line-clamp-1 leading-snug">
+            {goalInfo.label}
+          </span>
+        </div>
+      </div>
+
       <p className="cefr-redesign-section-label" style={{ marginBottom: "8px" }}>
         {locale === "vi" ? "Môn học" : "Subject"}
       </p>

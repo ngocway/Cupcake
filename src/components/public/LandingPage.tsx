@@ -15,6 +15,7 @@ import { getBestAgeGroupForSubject } from "@/lib/user-preferences-utils"
 import { getFlashcardTopics } from "@/actions/flashcards-actions"
 import { getPublishedTeacherGamesAction } from "@/actions/admin-teacher-games"
 import { X, SlidersHorizontal } from "lucide-react"
+import { OnboardingGoalModal, GoalSelectionData } from "@/components/public/OnboardingGoalModal"
 import {
   Select,
   SelectContent,
@@ -45,6 +46,7 @@ interface Props {
   initialStudySubject?: string
   initialStudyAgeGroup?: string
   initialStudyLevel?: string
+  initialStudyGoal?: string
   onboardingConfig?: any
   initialIsLoggedIn?: boolean
 }
@@ -960,7 +962,7 @@ function MobileSubjectBar({ subjects, activeSubject, onSelect, isPending }: { su
   );
 }
 
-export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "", onboardingConfig: serverOnboardingConfig, initialIsLoggedIn }: Props) {
+export function LandingPage({ promises, searchParams, initialUserType = "learner", hasUserPreference = false, initialStudySubject = "", initialStudyAgeGroup = "", initialStudyLevel = "", initialStudyGoal = "", onboardingConfig: serverOnboardingConfig, initialIsLoggedIn }: Props) {
   const currentParams = useSearchParams()
   const { data: session } = useSession()
   const router = useRouter()
@@ -1094,6 +1096,8 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
   const setStudyAgeGroup    = useContentStore(s => (s as any).setStudyAgeGroup)
   const studyLevel          = useContentStore(s => (s as any).studyLevel)
   const setStudyLevel       = useContentStore(s => (s as any).setStudyLevel)
+  const studyGoal           = useContentStore(s => (s as any).studyGoal)
+  const setStudyGoal        = useContentStore(s => (s as any).setStudyGoal)
 
   // ─── Lessons per CEFR level (Option B: parallel per-level fetch) ──────────
   const CEFR_LEVELS_LIST = ['a1', 'a2', 'b1', 'b2', 'c1'] as const;
@@ -1334,11 +1338,15 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       setStudyLevel(initialStudyLevel);
       document.cookie = `study_level=${initialStudyLevel}${cookieOpts}`;
     }
+    if (initialStudyGoal) {
+      setStudyGoal(initialStudyGoal);
+      document.cookie = `study_goal=${initialStudyGoal}${cookieOpts}`;
+    }
     const savedLang = localStorage.getItem("cupcakes_native_language");
     if (savedLang) {
       setNativeLanguage(savedLang);
     }
-  }, [initialUserType, initialStudySubject, initialStudyAgeGroup, initialStudyLevel, setUserType, setStudySubject, setStudyAgeGroup, setStudyLevel, setNativeLanguage]);
+  }, [initialUserType, initialStudySubject, initialStudyAgeGroup, initialStudyLevel, initialStudyGoal, setUserType, setStudySubject, setStudyAgeGroup, setStudyLevel, setStudyGoal, setNativeLanguage]);
 
   // Sync URL goal → store selectedCategoryId / selectedSubCategoryId (used as goal compatibility bridge)
   const urlGoal = currentParams.get("goal") || currentParams.get("categoryId") || "";
@@ -1436,117 +1444,86 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
   // Level selection removed from popup — now handled in sidebar
   // Subject selection also removed — now handled in sidebar, defaults to "english"
-  const isAllStepsCompleted = !!tempStudyAgeGroup;
-  const isReadyEnabled = isAllStepsCompleted && !!tempNativeLanguage;
-  const isFirstTimeSetup = !initialStudyAgeGroup;
+  const effectiveAgeGroup = studyAgeGroup || initialStudyAgeGroup;
+  const effectiveGoal = studyGoal || initialStudyGoal;
+  const isFirstTimeSetup = !hasUserPreference && (!effectiveAgeGroup || !effectiveGoal);
 
-
-  // Auto-detect native language if not set
+  // Auto-open modal immediately for brand new guests without preferences
   useEffect(() => {
-    if (!hasUserPreference) {
-      const localPref = localStorage.getItem("cupcakes_native_language")
-      if (localPref) {
-        setNativeLanguage(localPref)
-        setTempNativeLanguage(localPref)
-      } else {
-        if (typeof navigator !== "undefined") {
-          const browserLang = navigator.language.toLowerCase()
-          let defaultLang = 'vi'
-          if (browserLang.includes('th')) defaultLang = 'th'
-          else if (browserLang.includes('id')) defaultLang = 'id'
-          else if (browserLang.includes('vi')) defaultLang = 'vi'
-          
-          setNativeLanguage(defaultLang)
-          setTempNativeLanguage(defaultLang)
-          localStorage.setItem("cupcakes_native_language", defaultLang)
-        }
-      }
+    if (isFirstTimeSetup && !hasAutoOpened) {
+      setIsFilterModalOpen(true);
+      setHasAutoOpened(true);
     }
-  }, [hasUserPreference, setNativeLanguage])
+  }, [isFirstTimeSetup, hasAutoOpened, setIsFilterModalOpen]);
 
-  // Auto-open modal disabled: user browses freely until triggering on-demand selection or clicking change age
-  // useEffect(() => {
-  //   const effectiveAgeGroup = studyAgeGroup || initialStudyAgeGroup;
-  //   if (!effectiveAgeGroup && !hasAutoOpened) {
-  //     setIsFilterModalOpen(true)
-  //     setHasAutoOpened(true)
-  //   }
-  // }, [hasAutoOpened, studyAgeGroup, initialStudyAgeGroup])
-
-  const handleOpenModal = () => {
-    setTempUserType(userType)
-    setTempNativeLanguage(nativeLanguage)
-    setTempCategoryId(selectedCategoryId)
-    setTempSubCategoryId(selectedSubCategoryId)
-    setTempStudySubject(studySubject)
-    setTempStudyAgeGroup(studyAgeGroup)
-    setTempStudyLevel(studyLevel)
-    setIsFilterModalOpen(true)
-  }
-
-  const handleCloseModalDiscard = () => {
-    setIsFilterModalOpen(false)
-  }
-
-  const handleApplyFilters = async () => {
-    setIsFilterModalOpen(false) // Close modal instantly
+  const handleApplyGoal = async (data: GoalSelectionData) => {
+    setIsFilterModalOpen(false);
 
     // 1. Update all client state instantly (optimistic UI)
-    if (userType !== tempUserType) {
-      setUserType(tempUserType)
-    }
+    setUserType(data.userType);
+    setStudyAgeGroup(data.ageGroup);
+    setStudyGoal(data.goalId);
+    setNativeLanguage(data.language);
 
-    if (nativeLanguage !== tempNativeLanguage) {
-      setNativeLanguage(tempNativeLanguage)
-      localStorage.setItem("cupcakes_native_language", tempNativeLanguage)
-    }
-
-    // Subject defaults to "english" if not already set (subject is now managed in sidebar)
     const effectiveSubject = studySubject || "english";
     if (effectiveSubject !== studySubject) {
-      setStudySubject(effectiveSubject)
+      setStudySubject(effectiveSubject);
     }
-    if (studyAgeGroup !== tempStudyAgeGroup) {
-      setStudyAgeGroup(tempStudyAgeGroup || "")
-      // Level is not set from popup — user selects from sidebar
-      setStudyLevel("")
-    }
+    setStudyLevel("");
 
     // 2. Commit category and sub-category
-    setSelectedCategoryId("")
-    setSelectedSubCategoryId("")
+    setSelectedCategoryId("");
+    setSelectedSubCategoryId("");
 
     // 3. Set cookies immediately on the client side so next request has them instantly
-    if (tempUserType) document.cookie = `user_type=${tempUserType}; path=/; max-age=31536000; samesite=lax`;
-    if (tempNativeLanguage) document.cookie = `native_language=${tempNativeLanguage}; path=/; max-age=31536000; samesite=lax`;
-    // Subject defaults to "english" — managed in sidebar
-    const subjectToSave = studySubject || "english";
-    document.cookie = `study_subject=${subjectToSave}; path=/; max-age=31536000; samesite=lax`;
-    if (tempStudyAgeGroup) document.cookie = `study_age_group=${tempStudyAgeGroup}; path=/; max-age=31536000; samesite=lax`;
-    // Clear level when age group changes (level is now selected from sidebar)
-    document.cookie = `study_level=; path=/; max-age=31536000; samesite=lax`;
+    const cookieOpts = "; path=/; max-age=31536000; samesite=lax";
+    document.cookie = `user_type=${data.userType}${cookieOpts}`;
+    document.cookie = `study_age_group=${data.ageGroup}${cookieOpts}`;
+    document.cookie = `study_goal=${data.goalId}${cookieOpts}`;
+    document.cookie = `native_language=${data.language}${cookieOpts}`;
+    document.cookie = `study_subject=${effectiveSubject}${cookieOpts}`;
+    document.cookie = `study_level=${cookieOpts}`;
 
-    // 4. Update preferences on server and AWAIT it to prevent client/server race condition
+    // 4. Save to localStorage
+    localStorage.setItem("cupcakes_native_language", data.language);
+    localStorage.setItem("cupcakes_study_goal", data.goalId);
+    localStorage.setItem("preferred-locale", data.language);
+
+    // 5. Update preferences on server and AWAIT it to prevent client/server race condition
     await updateAllPreferences({
-      userType: tempUserType,
-      nativeLanguage: tempNativeLanguage,
-      studySubject: studySubject || "english",
-      studyAgeGroup: tempStudyAgeGroup,
-      studyLevel: "" // Level is now selected from sidebar, reset on age group change
+      userType: data.userType,
+      nativeLanguage: data.language,
+      studySubject: effectiveSubject,
+      studyAgeGroup: data.ageGroup,
+      studyGoal: data.goalId,
+      studyLevel: "",
     }).catch(console.error);
 
-    // 5. Update URL goal and categoryId
-    const qs = new URLSearchParams(window.location.search)
-    qs.delete("categoryId")
-    qs.delete("goal")
-    localStorage.removeItem("cupcakes_preferred_category_id")
-    localStorage.removeItem("cupcakes_preferred_goal_id")
+    // 6. Update URL goal and categoryId
+    const qs = new URLSearchParams(window.location.search);
+    qs.delete("categoryId");
+    qs.delete("goal");
+    localStorage.removeItem("cupcakes_preferred_category_id");
+    localStorage.removeItem("cupcakes_preferred_goal_id");
 
-    // Transition instantly, no artificial delay
+    // 7. If language changed, sync NEXT_LOCALE and reload for full locale update
+    if (data.language !== locale) {
+      document.cookie = `NEXT_LOCALE=${data.language}${cookieOpts}`;
+      try {
+        await fetch("/api/locale", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locale: data.language }),
+        });
+      } catch (e) {}
+      window.location.reload();
+      return;
+    }
+
     startTransition(() => {
-      router.push(`/?${qs.toString()}`, { scroll: false })
-      router.refresh()
-    })
+      router.push(`/?${qs.toString()}`, { scroll: false });
+      router.refresh();
+    });
 
     // Execute any pending action that was queued before onboarding popup opened
     const pendingAction = (useContentStore.getState() as any).pendingOnboardingAction;
@@ -1556,20 +1533,7 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
         pendingAction();
       }, 50);
     }
-
-    // 6. Close the modal
-    setIsFilterModalOpen(false)
-
-    // 7. Scroll to content tabs if no pending action
-    if (!pendingAction) {
-      setTimeout(() => {
-        document.getElementById("content-tabs")?.scrollIntoView({ 
-          behavior: "smooth", 
-          block: "start" 
-        })
-      }, 150)
-    }
-  }
+  };
 
   // ── Sync URL → state on browser Back / Forward (popstate) ──────────────────
   useEffect(() => {
@@ -1602,17 +1566,6 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
     router.push(`?${p.toString()}`, { scroll: false })
   }, [router])
 
-  // Listen for escape key press to close modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFilterModalOpen) {
-        handleCloseModalDiscard()
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isFilterModalOpen])
-
   const feedKey = `feed-${initialUserType}-${initialStudySubject}-${initialStudyLevel}-${searchParams.goal || searchParams.categoryId || ''}-${searchParams.search || ''}`
 
   return (
@@ -1621,143 +1574,19 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
       {/* Hướng 2: Top progress bar */}
       <LoadingBar active={isFiltering} />
 
-      {/* Center Overlay Modal Popup for Filters */}
-      {isFilterModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/80 z-[999] flex items-center justify-center p-4 animate-in fade-in duration-300"
-          onClick={!isFirstTimeSetup ? handleCloseModalDiscard : undefined}
-        >
-          <div 
-            className="bg-[#FAF8F5] dark:bg-slate-900 border-[6px] border-primary/20 dark:border-primary/40 rounded-[2.5rem] p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto no-scrollbar shadow-2xl relative animate-in zoom-in-95 duration-300 flex flex-col gap-6 modal-card"
-            onClick={(e) => e.stopPropagation()}
-          >
-            
-            {/* Close button (X) */}
-            {!isFirstTimeSetup && (
-              <button
-                onClick={handleCloseModalDiscard}
-                className="absolute top-6 right-6 text-primary/60 hover:text-primary dark:text-slate-400 dark:hover:text-white p-2 hover:bg-primary/5 rounded-full transition-colors cursor-pointer"
-                aria-label="Close modal"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            )}
-            
-            {/* Subject Selection removed — now managed in sidebar */}
-
-            {/* Age Group Selection (Step 1 — was Step 2 before subject removal) */}
-            {onboardingConfig && (
-              <>
-                <div className="space-y-4">
-                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight">
-                    {t("whoAreYou")}
-                  </h2>
-                  <div className="flex flex-wrap gap-4 sm:gap-6 justify-around items-center py-2">
-                    {/* Use the first subject's (english) age groups as reference */}
-                    {(onboardingConfig.subjects[0]?.ageGroups || []).map((age: any) => {
-                      const isActive = tempStudyAgeGroup === age.id;
-                      return (
-                         <button
-                          key={age.id}
-                          onClick={() => {
-                            setTempStudyAgeGroup(age.id);
-                            setTempStudyLevel("");
-                            // Map age back to "kindergarten/kid/teen/learner" for target filtering
-                            if (age.id === "kindergarten" || age.id === "kindergarden" || age.id === "kids-2-5" || age.id.toLowerCase().includes("kindergarten")) setTempUserType("kindergarten");
-                            else if (age.id === "kid" || age.id === "kids" || age.id.startsWith("grade")) setTempUserType("kid");
-                            else if (age.id === "teen" || age.id === "teens" || age.id === "primary") setTempUserType("teen");
-                            else setTempUserType("learner");
-                          }}
-                          className="shake-on-hover group flex flex-col items-center gap-3 transition-all duration-500 cursor-pointer avatar-btn"
-                         >
-                            <div className={`relative w-[90px] h-[90px] rounded-full overflow-hidden transition-all duration-500 border-[5px] avatar-container ${
-                              isActive 
-                                ? "border-primary shadow-xl shadow-primary/30 scale-110 rotate-3" 
-                                : "border-transparent shadow-md opacity-60 group-hover:opacity-100 group-hover:border-primary/30 group-hover:scale-105 group-hover:-translate-y-1.5 group-hover:rotate-[-3deg]"
-                            }`}>
-                              <img src={age.avatar || "/images/avatars/kid.png"} alt={age.label} className="shake-target w-full h-full object-cover" />
-                            </div>
-                            <span className={`text-sm font-black uppercase tracking-[0.1em] transition-all duration-300 ${
-                              isActive ? "text-primary scale-110" : "text-primary/50 group-hover:text-primary"
-                            }`}>{(age.id === "kindergarten" || age.id === "kindergarden") ? "< 6 years" : age.label}</span>
-                         </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Level Selection removed from popup — now in sidebar */}
-
-            {/* Native Language Section */}
-            {isAllStepsCompleted && (
-              <>
-                <hr className="border-primary/10" />
-                <div className="flex flex-wrap items-center justify-start gap-4 animate-in slide-in-from-bottom-4 fade-in duration-500 py-2">
-                  <h2 className="text-xl md:text-2xl font-headline font-black text-primary leading-none tracking-tight shrink-0 flex items-center h-full pt-1">
-                    {locale === "vi" ? "My native language is" : "My native language is"}
-                  </h2>
-                  <div className="shrink-0 inline-flex items-center">
-                    <Select
-                      value={tempNativeLanguage}
-                      onValueChange={setTempNativeLanguage}
-                    >
-                      <SelectTrigger 
-                        className="bg-emerald-50 border-[3px] border-emerald-400 text-emerald-900 font-headline font-black rounded-[3.5rem_2rem_4rem_2.5rem_/_2rem_3.5rem_2.5rem_4rem] px-6 py-3 h-auto text-lg md:text-xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 hover:border-emerald-500 hover:shadow-lg hover:-translate-y-1 hover:scale-[1.03] transition-all duration-300 ease-out cursor-pointer shadow-[0_4px_0_0_rgba(52,211,153,0.4)] hover:shadow-[0_6px_0_0_rgba(52,211,153,0.4)] active:translate-y-1 active:shadow-none active:scale-[0.98] min-w-[180px] flex gap-2 items-center"
-                      >
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[1000] bg-white dark:bg-slate-900 rounded-[1.5rem] border-[3px] border-emerald-200 shadow-xl overflow-hidden font-bold text-emerald-900 p-2 max-h-[300px] overflow-y-auto">
-                        <SelectItem value="vi" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇻🇳</span> Tiếng Việt</SelectItem>
-                        <SelectItem value="th" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇹🇭</span> Thailand</SelectItem>
-                        <SelectItem value="id" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇮🇩</span> Indonesia</SelectItem>
-                        <SelectItem value="zh" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇨🇳</span> Mandarin Chinese</SelectItem>
-                        <SelectItem value="hi" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇮🇳</span> Hindi</SelectItem>
-                        <SelectItem value="ja" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇯🇵</span> Japanese</SelectItem>
-                        <SelectItem value="es" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇪🇸</span> Spanish</SelectItem>
-                        <SelectItem value="ar" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇸🇦</span> Arabic</SelectItem>
-                        <SelectItem value="fr" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇫🇷</span> French</SelectItem>
-                        <SelectItem value="ko" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇰🇷</span> Korean</SelectItem>
-                        <SelectItem value="pt" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇵🇹</span> Portuguese</SelectItem>
-                        <SelectItem value="ru" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇷🇺</span> Russian</SelectItem>
-                        <SelectItem value="de" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🇩🇪</span> German</SelectItem>
-                        <SelectItem value="other" className="focus:bg-emerald-100 focus:text-emerald-900 cursor-pointer py-3 pr-4 pl-10 rounded-xl transition-colors font-headline text-lg"><span className="mr-2 text-2xl align-middle">🌐</span> Other language</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Ready / Cancel footer */}
-
-            <div className="flex justify-end items-center gap-4 mt-4 pt-4 border-t border-primary/10 modal-footer">
-              <button
-                onClick={handleCloseModalDiscard}
-                className="px-8 py-3 rounded-full text-xs font-black transition-all border-2 border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 uppercase tracking-[0.1em] cursor-pointer"
-              >
-                {locale === "vi" ? "CANCEL" : "CANCEL"}
-              </button>
-              <button
-                onClick={handleApplyFilters}
-                disabled={!isReadyEnabled}
-                className={`px-10 py-3.5 rounded-full text-xs font-black transition-all uppercase tracking-[0.1em] ${
-                  isReadyEnabled
-                    ? "bg-primary border-2 border-primary text-on-primary shadow-lg hover:shadow-primary/30 hover:scale-[1.03] active:scale-95 cursor-pointer"
-                    : "bg-slate-200 border-2 border-slate-200 dark:bg-slate-800 dark:border-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60"
-                }`}
-              >
-                {locale === "vi" ? "READY" : "READY"}
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
+      {/* Center Overlay Modal Popup for Onboarding Goals */}
+      <OnboardingGoalModal
+        isOpen={isFilterModalOpen}
+        isFirstTimeSetup={isFirstTimeSetup}
+        currentGoalId={studyGoal || initialStudyGoal}
+        currentLanguage={nativeLanguage}
+        currentLocale={locale}
+        onClose={() => setIsFilterModalOpen(false)}
+        onConfirm={handleApplyGoal}
+      />
 
       {/* Background content wrapped for blurring during first time setup */}
-      <div className={`transition-all duration-700 ${isFilterModalOpen ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
+      <div className={`transition-all duration-700 ${isFilterModalOpen && isFirstTimeSetup ? 'blur-md opacity-40 grayscale pointer-events-none select-none' : ''}`}>
 
 
 
