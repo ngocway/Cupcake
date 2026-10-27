@@ -637,7 +637,7 @@ export function ClassAdventureMap({
       {/* ══════════════════════════════════════════════════════════════════
           1. FLOATING STAGE PILL BAR (centered top, no full HUD)
           ══════════════════════════════════════════════════════════════════ */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl px-2 py-1.5 shadow-xl shadow-black/20">
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 sm:top-4 sm:left-4 sm:translate-x-0 md:left-6 z-20 flex items-center gap-1.5 bg-black/30 backdrop-blur-xl border border-white/20 rounded-2xl px-2 py-1.5 shadow-xl shadow-black/20">
         {stagesList.map((stg) => {
           const isActive = stg.stageNumber === selectedStage;
           const isHardLocked = stg.stageNumber > 1;
@@ -677,7 +677,7 @@ export function ClassAdventureMap({
           ══════════════════════════════════════════════════════════════════ */}
       {selectedStage === 1 ? (
         <div
-          className="absolute inset-0 w-full h-full flex flex-col items-center justify-between pt-14 sm:pt-16 pb-2 sm:pb-3 overflow-hidden bg-cover bg-center select-none"
+          className="absolute inset-0 w-full h-full flex flex-col items-center justify-between pt-14 sm:pt-4 pb-2 sm:pb-3 overflow-hidden bg-cover bg-center select-none"
           style={{ backgroundImage: `url('/assests/Vocab/dolcake_15_islands/background_2to1.jpg')` }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -686,7 +686,7 @@ export function ClassAdventureMap({
           <div className="absolute inset-0 bg-gradient-to-b from-sky-950/25 via-transparent to-slate-950/45 pointer-events-none" />
 
           {/* ── 3D COVERFLOW STAGE CONTAINER ── */}
-          <div className="relative w-full flex-1 flex items-center justify-center overflow-hidden [perspective:1400px] [transform-style:preserve-3d]">
+          <div className="relative w-full flex-1 flex items-center justify-center overflow-visible [perspective:1400px] [transform-style:preserve-3d]">
             {/* ── 15 ISLANDS PERMANENTLY MOUNTED IN 3D SPACE (Zero unmount for 60fps) ── */}
             {Array.from({ length: 15 }).map((_, idx) => {
               const dayNum = 1 + idx;
@@ -849,7 +849,7 @@ export function ClassAdventureMap({
 
                     {/* ── MASCOT AVATAR PIN (Bouncing over Active Day) ── */}
                     {isCurrent && isCenter && (
-                      <div className="absolute -top-10 sm:-top-12 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-40 pointer-events-none whitespace-nowrap">
+                      <div className="absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-40 pointer-events-none whitespace-nowrap">
                         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-xs sm:text-sm shadow-xl tracking-wide uppercase flex items-center gap-1.5 border-2 border-white ring-2 ring-amber-400/50">
                           <Flame className="w-4 h-4 fill-amber-300 text-amber-300" />
                           <span>Bé đang ở đây!</span>
