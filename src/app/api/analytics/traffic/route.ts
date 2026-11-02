@@ -46,7 +46,8 @@ export async function GET(req: NextRequest) {
     // 1. Fetch current period logs
     const currentLogs = await prisma.pageViewLog.findMany({
       where: {
-        createdAt: { gte: startDate, lte: now }
+        createdAt: { gte: startDate, lte: now },
+        NOT: { path: { startsWith: "/__event__/" } }
       },
       orderBy: { createdAt: "asc" }
     });
@@ -54,7 +55,8 @@ export async function GET(req: NextRequest) {
     // 2. Fetch previous period logs (for comparison metrics)
     const prevLogs = await prisma.pageViewLog.findMany({
       where: {
-        createdAt: { gte: prevStartDate, lte: prevEndDate }
+        createdAt: { gte: prevStartDate, lte: prevEndDate },
+        NOT: { path: { startsWith: "/__event__/" } }
       }
     });
 

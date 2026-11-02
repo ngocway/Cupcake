@@ -16,6 +16,7 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
       label: "Core Management",
       items: [
         { href: "/admin/dashboard", icon: "dashboard", label: "Tổng quan" },
+        { href: "/admin/analytics", icon: "monitoring", label: "Phân tích sâu" },
         { href: "/admin/users", icon: "group", label: "Người dùng" },
         { href: "/admin/tags", icon: "sell", label: "Quản lý Thẻ" },
         { href: "/admin/materials", icon: "auto_stories", label: "Học liệu" },
@@ -47,7 +48,6 @@ export default function AdminSidebar({ userName }: AdminSidebarProps) {
         { href: "/admin/verifications", icon: "verified_user", label: "Xác minh" },
         { href: "/admin/reviews", icon: "rate_review", label: "Duyệt đánh giá" },
         { href: "/admin/moderation", icon: "report", label: "Kiểm duyệt" },
-        { href: "/admin/analytics", icon: "monitoring", label: "Phân tích sâu" },
       ]
     },
     {

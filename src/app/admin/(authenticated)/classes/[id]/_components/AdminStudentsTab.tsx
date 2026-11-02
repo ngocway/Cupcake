@@ -18,9 +18,10 @@ interface AdminStudentsTabProps {
   classId: string
   initialStudents: AdminStudentItem[]
   onRefresh: () => void
+  onInspectStudentBehavior?: (studentId: string) => void
 }
 
-export function AdminStudentsTab({ classId, initialStudents, onRefresh }: AdminStudentsTabProps) {
+export function AdminStudentsTab({ classId, initialStudents, onRefresh, onInspectStudentBehavior }: AdminStudentsTabProps) {
   const [students, setStudents] = useState<AdminStudentItem[]>(initialStudents)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("ALL")
@@ -234,6 +235,17 @@ export function AdminStudentsTab({ classId, initialStudents, onRefresh }: AdminS
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
+                      {onInspectStudentBehavior && (
+                        <button
+                          type="button"
+                          onClick={() => onInspectStudentBehavior(s.id)}
+                          title="Xem phân tích hành vi của học sinh này"
+                          className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">monitoring</span>
+                          <span>Hành vi</span>
+                        </button>
+                      )}
                       {isLoading ? (
                         <div className="size-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                       ) : (

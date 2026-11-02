@@ -244,13 +244,31 @@ export function AdminUserDrawer({ userId, onClose }: AdminUserDrawerProps) {
                   </p>
                 ) : (
                   <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-neutral-800">
-                    {data.pageviews.map((pv: any) => (
+                    {data.pageviews.map((pv: any) => {
+                      let displayPath = pv.path;
+                      let isCustomEvent = false;
+                      if (typeof pv.path === "string" && pv.path.startsWith("/__event__/")) {
+                        isCustomEvent = true;
+                        const parts = pv.path.split("?");
+                        const segs = parts[0].split("/");
+                        const evName = decodeURIComponent(segs[segs.length - 1] || "");
+                        const qs = new URLSearchParams(parts[1] || "");
+                        const day = qs.get("dayNumber") || "?";
+                        const title = qs.get("title") || qs.get("stationTitle") || qs.get("gameTitle") || "";
+                        if (evName === "island_open_modal") displayPath = `🚀 Mở Đảo Ngày ${day}: ${title}`;
+                        else if (evName === "island_preview_slide") displayPath = `🏝️ Xem trước Đảo Ngày ${day}: ${title}`;
+                        else if (evName === "island_locked_click") displayPath = `🔒 Bấm Đảo đang khóa (Ngày ${day})`;
+                        else if (evName === "station_card_clicked") displayPath = `🎯 Chọn Trạm: ${title} (Ngày ${day})`;
+                        else if (evName === "game_picker_selected") displayPath = `🎮 Chọn Game: ${title} (Ngày ${day})`;
+                        else displayPath = `⚡ Sự kiện: ${evName} (Ngày ${day})`;
+                      }
+                      return (
                       <div key={pv.id} className="relative group">
-                        <span className="absolute -left-6 top-1.5 size-2 rounded-full bg-blue-500 ring-4 ring-neutral-950" />
+                        <span className={`absolute -left-6 top-1.5 size-2 rounded-full ring-4 ring-neutral-950 ${isCustomEvent ? "bg-amber-400" : "bg-blue-500"}`} />
                         <div className="bg-neutral-900 border border-neutral-800 p-3 rounded-2xl group-hover:border-neutral-700 transition-colors">
                           <div className="flex items-center justify-between text-[11px] mb-1">
-                            <span className="font-mono text-neutral-300 font-semibold truncate max-w-[280px]">
-                              {pv.path}
+                            <span className={`${isCustomEvent ? "text-amber-300 font-bold" : "font-mono text-neutral-300 font-semibold"} truncate max-w-[280px]`}>
+                              {displayPath}
                             </span>
                             <span className="text-neutral-500 font-medium whitespace-nowrap">
                               {new Date(pv.createdAt).toLocaleTimeString("vi-VN", {
@@ -271,7 +289,7 @@ export function AdminUserDrawer({ userId, onClose }: AdminUserDrawerProps) {
                           )}
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>

@@ -36,7 +36,14 @@ export type EventName =
   | "grammar_theory_started"
   | "grammar_rule_expanded"
   | "grammar_quiz_started"
-  | "grammar_day_completed";
+  | "grammar_day_completed"
+  // 7. Adventure Map & Station Funnel Events
+  | "island_preview_slide"
+  | "island_open_modal"
+  | "island_locked_click"
+  | "station_card_clicked"
+  | "game_picker_opened"
+  | "game_picker_selected";
 
 export type EventProperties = Record<
   string,
@@ -44,7 +51,7 @@ export type EventProperties = Record<
 >;
 
 /**
- * Safely track custom events to Vercel Analytics.
+ * Safely track custom events to both Vercel Analytics and internal Admin Analytics DB.
  * Handles client-side execution, suppresses runtime errors so UI never breaks.
  */
 export function trackEvent(name: EventName, properties?: EventProperties) {
@@ -61,15 +68,27 @@ export function trackEvent(name: EventName, properties?: EventProperties) {
       }
     }
 
+    // 1. Send to Vercel Analytics
     track(name, cleanedProps);
 
+    // 2. Non-blocking fire-and-forget to internal Admin DB
+    fetch("/api/analytics/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: name,
+        props: cleanedProps,
+      }),
+      keepalive: true,
+    }).catch(() => {});
+
     if (process.env.NODE_ENV === "development") {
-      console.log(`[Vercel Analytics Event] ${name}:`, cleanedProps);
+      console.log(`[Analytics Event] ${name}:`, cleanedProps);
     }
   } catch (err) {
     // Non-blocking: never let analytics crash the app
     if (process.env.NODE_ENV === "development") {
-      console.warn(`[Vercel Analytics Error] Failed to track ${name}:`, err);
+      console.warn(`[Analytics Error] Failed to track ${name}:`, err);
     }
   }
 }

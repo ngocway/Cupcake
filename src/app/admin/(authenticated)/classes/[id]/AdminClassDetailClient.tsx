@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AdminCurriculumTab, type AdminGroupItem, type AdminAssignmentItem } from "./_components/AdminCurriculumTab"
 import { AdminStudentsTab, type AdminStudentItem } from "./_components/AdminStudentsTab"
+import { AdminClassAnalyticsTab } from "./_components/AdminClassAnalyticsTab"
 import { adminUpdateClassSettingsAction } from "@/actions/admin-classes"
 
 export type AdminClassDetails = {
@@ -32,7 +33,8 @@ interface AdminClassDetailClientProps {
 export function AdminClassDetailClient({ initialData }: AdminClassDetailClientProps) {
   const router = useRouter()
   const [data, setData] = useState<AdminClassDetails>(initialData)
-  const [activeTab, setActiveTab] = useState<"curriculum" | "students">("curriculum")
+  const [activeTab, setActiveTab] = useState<"curriculum" | "students" | "analytics">("curriculum")
+  const [selectedAnalyticsStudentId, setSelectedAnalyticsStudentId] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
   const [isUpdatingSetting, setIsUpdatingSetting] = useState(false)
 
@@ -199,7 +201,7 @@ export function AdminClassDetailClient({ initialData }: AdminClassDetailClientPr
 
         <button
           onClick={() => setActiveTab("students")}
-          className={`pb-3.5 px-4 text-xs font-bold transition-all relative flex items-center gap-2 ${
+          className={`pb-3.5 px-4 text-xs font-bold transition-all relative flex items-center gap-2 cursor-pointer ${
             activeTab === "students"
               ? "text-white"
               : "text-neutral-400 hover:text-neutral-200"
@@ -209,6 +211,21 @@ export function AdminClassDetailClient({ initialData }: AdminClassDetailClientPr
           Học sinh & Mã PIN ({data.students.length})
           {activeTab === "students" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500 rounded-full animate-in fade-in" />
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("analytics")}
+          className={`pb-3.5 px-4 text-xs font-bold transition-all relative flex items-center gap-2 cursor-pointer ${
+            activeTab === "analytics"
+              ? "text-white"
+              : "text-neutral-400 hover:text-neutral-200"
+          }`}
+        >
+          <span className="material-symbols-outlined text-lg text-amber-400">monitoring</span>
+          Phân tích Hành vi (Đảo • Trạm • Game)
+          {activeTab === "analytics" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500 rounded-full animate-in fade-in" />
           )}
         </button>
       </div>
@@ -221,11 +238,22 @@ export function AdminClassDetailClient({ initialData }: AdminClassDetailClientPr
           ungroupedAssignments={data.ungroupedAssignments}
           onRefresh={handleRefresh}
         />
-      ) : (
+      ) : activeTab === "students" ? (
         <AdminStudentsTab
           classId={data.id}
           initialStudents={data.students}
           onRefresh={handleRefresh}
+          onInspectStudentBehavior={(studentId) => {
+            setSelectedAnalyticsStudentId(studentId)
+            setActiveTab("analytics")
+          }}
+        />
+      ) : (
+        <AdminClassAnalyticsTab
+          classId={data.id}
+          students={data.students}
+          selectedStudentId={selectedAnalyticsStudentId}
+          onSelectStudentId={setSelectedAnalyticsStudentId}
         />
       )}
     </div>

@@ -43,6 +43,7 @@ import {
 } from './StudentAssignmentsView';
 import { buildGroupTree, getItemStage, isScoredAssignment } from '../_utils/assignmentOrder';
 import { toast } from 'sonner';
+import { trackEvent } from '@/lib/analytics';
 
 export interface DayStationActivity {
   item: StudentGroupItem;
@@ -545,12 +546,25 @@ export function ClassAdventureMap({
   // Handle station click
   const handleStationClick = (station: DayStation) => {
     if (station.isLocked) {
+      trackEvent('island_locked_click', {
+        classId: currentClass?.id || 'tiny-vocab-wonders',
+        dayNumber: station.dayNumber,
+        stageNumber: station.stageNumber,
+        title: station.cleanTitle || station.title,
+      });
       toast.info(station.lockReason || `Ngày ${station.dayNumber} đang tạm khóa. Bé hãy hoàn thành các ngày trước nhé!`, {
         icon: '🔒',
         duration: 3500,
       });
       return;
     }
+    trackEvent('island_open_modal', {
+      classId: currentClass?.id || 'tiny-vocab-wonders',
+      dayNumber: station.dayNumber,
+      stageNumber: station.stageNumber,
+      title: station.cleanTitle || station.title,
+      percent: station.percent,
+    });
     setSelectedStation(station);
   };
 
@@ -581,8 +595,11 @@ export function ClassAdventureMap({
     }
   }, [selectedStage, currentStation]);
 
-  // Touch swipe support for Stage 1 3D Carousel
+  // Touch & Desktop mouse drag swipe support for Stage 1 3D Carousel
   const touchStartXRef = useRef<number | null>(null);
+  const mouseStartXRef = useRef<number | null>(null);
+  const didMouseDragRef = useRef<boolean>(false);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX;
   };
@@ -592,12 +609,52 @@ export function ClassAdventureMap({
     const diff = touchStartXRef.current - touchEndX;
     if (Math.abs(diff) > 40) {
       if (diff > 0) {
-        setActiveIslandIdx(prev => Math.min(14, prev + 1));
+        setActiveIslandIdx(prev => (prev + 1) % 15);
       } else {
-        setActiveIslandIdx(prev => Math.max(0, prev - 1));
+        setActiveIslandIdx(prev => (prev - 1 + 15) % 15);
       }
     }
     touchStartXRef.current = null;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    mouseStartXRef.current = e.clientX;
+    didMouseDragRef.current = false;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (mouseStartXRef.current === null) return;
+    const diff = mouseStartXRef.current - e.clientX;
+    if (Math.abs(diff) > 10) {
+      didMouseDragRef.current = true;
+    }
+    if (Math.abs(diff) > 85) {
+      if (diff > 0) {
+        setActiveIslandIdx(prev => (prev + 1) % 15);
+      } else {
+        setActiveIslandIdx(prev => (prev - 1 + 15) % 15);
+      }
+      mouseStartXRef.current = null;
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (mouseStartXRef.current === null) return;
+    const diff = mouseStartXRef.current - e.clientX;
+    if (Math.abs(diff) > 35) {
+      didMouseDragRef.current = true;
+      if (diff > 0) {
+        setActiveIslandIdx(prev => (prev + 1) % 15);
+      } else {
+        setActiveIslandIdx(prev => (prev - 1 + 15) % 15);
+      }
+    }
+    mouseStartXRef.current = null;
+  };
+
+  const handleMouseLeave = () => {
+    mouseStartXRef.current = null;
   };
 
   // Keyboard navigation for Stage 1 Carousel
@@ -606,9 +663,9 @@ export function ClassAdventureMap({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedStation) return;
       if (e.key === 'ArrowLeft') {
-        setActiveIslandIdx(prev => Math.max(0, prev - 1));
+        setActiveIslandIdx(prev => (prev - 1 + 15) % 15);
       } else if (e.key === 'ArrowRight') {
-        setActiveIslandIdx(prev => Math.min(14, prev + 1));
+        setActiveIslandIdx(prev => (prev + 1) % 15);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -677,16 +734,20 @@ export function ClassAdventureMap({
           ══════════════════════════════════════════════════════════════════ */}
       {selectedStage === 1 ? (
         <div
-          className="absolute inset-0 w-full h-full flex flex-col items-center justify-between pt-14 sm:pt-4 pb-2 sm:pb-3 overflow-hidden bg-cover bg-center select-none"
+          className="absolute inset-0 w-full h-full flex flex-col items-center justify-between pt-14 sm:pt-4 pb-2 sm:pb-3 overflow-hidden bg-cover bg-center select-none cursor-grab active:cursor-grabbing"
           style={{ backgroundImage: `url('/assests/Vocab/dolcake_15_islands/background_2to1.jpg')` }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
         >
           {/* Ambient Sky Gradient & Stardust Overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-sky-950/25 via-transparent to-slate-950/45 pointer-events-none" />
 
           {/* ── 3D COVERFLOW STAGE CONTAINER ── */}
-          <div className="relative w-full flex-1 flex items-center justify-center overflow-visible [perspective:1400px] [transform-style:preserve-3d]">
+          <div className="relative w-full flex-1 flex items-center justify-center overflow-visible [perspective:1400px]">
             {/* ── 15 ISLANDS PERMANENTLY MOUNTED IN 3D SPACE (Zero unmount for 60fps) ── */}
             {Array.from({ length: 15 }).map((_, idx) => {
               const dayNum = 1 + idx;
@@ -708,30 +769,17 @@ export function ClassAdventureMap({
                 firstUncompletedActivityId: null,
               };
 
-              // Determine offset & teaser preview status
+              // Determine circular shortest offset (-7 to +7) across 15 islands
               let offset = idx - activeIslandIdx;
-              let isDecorativePreview = false;
-
-              if (activeIslandIdx === 0) {
-                if (idx === 14) {
-                  offset = -1; // Day 15 teaser preview on the left of Day 1
-                  isDecorativePreview = true;
-                } else if (idx === 13) {
-                  offset = -2; // Day 14 teaser preview on PC
-                  isDecorativePreview = true;
-                }
-              } else if (activeIslandIdx === 1) {
-                if (idx === 14) {
-                  offset = -2; // Day 15 teaser preview on PC
-                  isDecorativePreview = true;
-                }
-              }
+              if (offset > 7) offset -= 15;
+              else if (offset < -7) offset += 15;
+              const isDecorativePreview = idx === 14 && offset < 0 && station.isLocked;
 
               const absOffset = Math.abs(offset);
               const isCenter = offset === 0;
               const isCurrent = station.dayNumber === currentStation?.dayNumber;
               const isCompleted = station.isCompleted;
-              const isLocked = isDecorativePreview || station.isLocked;
+              const isLocked = station.isLocked;
               const isShaking = shakingDay === dayNum;
               const islandImg = STAGE_1_ISLAND_IMAGES[dayNum] || '/assests/Vocab/dolcake_15_islands/01_my_body.png?v=2';
 
@@ -746,7 +794,7 @@ export function ClassAdventureMap({
               const direction = offset >= 0 ? 1 : -1;
 
               const transformValue = isOffscreen
-                ? `translate(-50%, -50%) translateX(${direction * 750}px) translateZ(-400px) rotateY(${direction * -35}deg) scale(0.35)`
+                ? `translate(-50%, -50%) translateX(${direction * 750}px) rotateY(${direction * -35}deg) scale(0.32)`
                 : `
                   translate(-50%, -50%)
                   translateX(${
@@ -759,13 +807,6 @@ export function ClassAdventureMap({
                           : offset === -2 
                             ? 'clamp(-560px, -46vw, -360px)' 
                             : 'clamp(360px, 46vw, 560px)'
-                  })
-                  translateZ(${
-                    offset === 0 
-                      ? '60px' 
-                      : absOffset === 1 
-                        ? '-100px' 
-                        : '-240px'
                   })
                   rotateY(${
                     offset === 0 
@@ -780,67 +821,90 @@ export function ClassAdventureMap({
                   })
                   scale(${
                     offset === 0 
-                      ? 1.18 
+                      ? 1.22 
                       : absOffset === 1 
-                        ? 0.78 
-                        : 0.54
+                        ? 0.73 
+                        : 0.46
                   })
                 `;
 
               const zIndexValue = isOffscreen ? 0 : offset === 0 ? 30 : absOffset === 1 ? 20 : 10;
-              const opacityValue = isOffscreen ? 0 : offset === 0 ? 1 : absOffset === 1 ? 0.8 : 0.42;
+              const opacityValue = isOffscreen ? 0 : offset === 0 ? 1 : absOffset === 1 ? 0.85 : 0.5;
+
+              const handleIslandSelect = () => {
+                if (didMouseDragRef.current) {
+                  didMouseDragRef.current = false;
+                  return;
+                }
+                if (isOffscreen) return;
+                if (isCenter) {
+                  if (isLocked) {
+                    trackEvent('island_locked_click', {
+                      classId: currentClass?.id || 'tiny-vocab-wonders',
+                      dayNumber: dayNum,
+                      stageNumber: selectedStage,
+                      title: station.cleanTitle || station.title,
+                    });
+                    setShakingDay(dayNum);
+                    setTimeout(() => setShakingDay(null), 500);
+                    toast.info(station.lockReason || `Ngày ${dayNum} đang tạm khóa. Bé hãy hoàn thành các bài trước nhé!`, {
+                      icon: '🔒',
+                      duration: 3000,
+                    });
+                  } else {
+                    handleStationClick(station);
+                  }
+                } else {
+                  // Click on any background island smoothly slides it into center!
+                  trackEvent('island_preview_slide', {
+                    classId: currentClass?.id || 'tiny-vocab-wonders',
+                    fromDay: activeIslandIdx + 1,
+                    dayNumber: dayNum,
+                    stageNumber: selectedStage,
+                    title: station.cleanTitle || station.title,
+                    isLocked: isLocked,
+                  });
+                  setActiveIslandIdx(idx);
+                }
+              };
 
               return (
                 <div
                   key={`island-node-${dayNum}`}
-                  onClick={() => {
-                    if (isOffscreen) return;
-                    if (isDecorativePreview) {
-                      setShakingDay(dayNum);
-                      setTimeout(() => setShakingDay(null), 500);
-                      toast.info(`👑 Đây là Đảo Đích Chặng (Ngày ${dayNum}). Bé hãy bắt đầu từ Ngày 1 để mở khóa nhé!`, {
-                        icon: '✨',
-                        duration: 3500,
-                      });
-                      return;
-                    }
-
-                    if (isCenter) {
-                      if (isLocked) {
-                        setShakingDay(dayNum);
-                        setTimeout(() => setShakingDay(null), 500);
-                        toast.info(station.lockReason || `Ngày ${dayNum} đang tạm khóa. Bé hãy hoàn thành các bài trước nhé!`, {
-                          icon: '🔒',
-                          duration: 3000,
-                        });
-                      } else {
-                        handleStationClick(station);
-                      }
-                    } else {
-                      // Click on left/right island slides it smoothly into center!
-                      setActiveIslandIdx(idx);
-                    }
-                  }}
-                  className={`absolute top-1/2 left-1/2 flex flex-col items-center justify-center cursor-pointer select-none ${
-                    absOffset === 2 ? 'hidden lg:flex' : isOffscreen ? 'pointer-events-none' : 'flex'
+                  className={`absolute top-1/2 left-1/2 flex flex-col items-center justify-center pointer-events-none select-none ${
+                    absOffset === 2 ? 'hidden lg:flex' : isOffscreen ? 'hidden' : 'flex'
                   }`}
                   style={{
                     transform: transformValue,
                     zIndex: zIndexValue,
                     opacity: opacityValue,
-                    pointerEvents: isOffscreen ? 'none' : 'auto',
                     filter: isCenter 
                       ? 'drop-shadow(0 25px 35px rgba(0,0,0,0.38)) brightness(1.03)' 
-                      : 'drop-shadow(0 12px 20px rgba(0,0,0,0.22)) brightness(0.88)',
+                      : 'drop-shadow(0 12px 20px rgba(0,0,0,0.22)) brightness(0.9)',
                     transition: 'transform 650ms cubic-bezier(0.34, 1.35, 0.64, 1), opacity 500ms ease, filter 500ms ease',
                     willChange: 'transform, opacity',
-                    transformStyle: 'preserve-3d',
-                    backfaceVisibility: 'hidden',
-                    WebkitBackfaceVisibility: 'hidden',
                   }}
                 >
-                  {/* Floating bobbing wrapper on the active center island & shake target */}
-                  <div className={`relative flex flex-col items-center ${isCenter ? 'animate-island-float' : ''} ${isShaking ? 'animate-locked-shake' : ''}`}>
+                  {/* Floating bobbing wrapper on the active center island & hover lift on side islands */}
+                  <div
+                    onClick={handleIslandSelect}
+                    className={`group/island relative flex flex-col items-center pointer-events-none ${
+                      isCenter
+                        ? 'animate-island-float'
+                        : 'transition-all duration-300 ease-out hover:-translate-y-3 hover:scale-105 hover:brightness-110'
+                    } ${isShaking ? 'animate-locked-shake' : ''}`}
+                  >
+                    {/* Dedicated tight hit target so center island's transparent PNG margins never overlap neighbor islands */}
+                    <div
+                      className={`absolute z-20 cursor-pointer ${
+                        isOffscreen
+                          ? 'pointer-events-none'
+                          : isCenter
+                            ? 'inset-x-[15%] inset-y-[6%] pointer-events-auto rounded-3xl'
+                            : 'inset-x-[6%] inset-y-[6%] pointer-events-auto rounded-3xl'
+                      }`}
+                      title={isCenter ? `Mở Ngày ${dayNum}` : `Xem Ngày ${dayNum}`}
+                    />
                     
                     {/* ── AMBIENT WARM SUNBEAM GLOW (Behind active center island) ── */}
                     {isCenter && (
@@ -921,12 +985,18 @@ export function ClassAdventureMap({
 
                       {/* ── CHUNKY 3D ACTION BUTTON DƯỚI ĐÁY ĐẢO TÂM ĐIỂM (🚀 MỞ / 🔒 ĐANG KHÓA) ── */}
                       {isCenter && (
-                        <div className="absolute bottom-1 sm:bottom-2 md:bottom-2.5 left-1/2 -translate-x-1/2 z-40">
+                        <div className="absolute bottom-1 sm:bottom-2 md:bottom-2.5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
                           {isLocked && !isCompleted ? (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                trackEvent('island_locked_click', {
+                                  classId: currentClass?.id || 'tiny-vocab-wonders',
+                                  dayNumber: dayNum,
+                                  stageNumber: selectedStage,
+                                  title: station.cleanTitle || station.title,
+                                });
                                 setShakingDay(dayNum);
                                 setTimeout(() => setShakingDay(null), 500);
                                 toast.info(station.lockReason || `Ngày ${dayNum} đang tạm khóa. Bé hãy hoàn thành các bài trước nhé!`, {
@@ -964,12 +1034,11 @@ export function ClassAdventureMap({
               );
             })}
 
-            {/* ── PREV / NEXT NAVIGATION ARROWS ── */}
+            {/* ── PREV / NEXT NAVIGATION ARROWS (Circular 1 <-> 15) ── */}
             <button
               type="button"
-              onClick={() => setActiveIslandIdx(prev => Math.max(0, prev - 1))}
-              disabled={activeIslandIdx === 0}
-              className="absolute left-2 sm:left-4 md:left-8 top-1/2 -translate-y-1/2 z-40 w-11 h-11 sm:w-13 sm:h-13 md:w-15 md:h-15 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center border-2 border-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-25 disabled:pointer-events-none cursor-pointer"
+              onClick={() => setActiveIslandIdx(prev => (prev - 1 + 15) % 15)}
+              className="absolute left-2 sm:left-4 md:left-8 top-1/2 -translate-y-1/2 z-40 w-11 h-11 sm:w-13 sm:h-13 md:w-15 md:h-15 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center border-2 border-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
               title="Đảo trước"
             >
               <ChevronLeft className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 stroke-[3px]" />
@@ -977,9 +1046,8 @@ export function ClassAdventureMap({
 
             <button
               type="button"
-              onClick={() => setActiveIslandIdx(prev => Math.min(14, prev + 1))}
-              disabled={activeIslandIdx === 14}
-              className="absolute right-2 sm:right-4 md:right-8 top-1/2 -translate-y-1/2 z-40 w-11 h-11 sm:w-13 sm:h-13 md:w-15 md:h-15 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-center border-2 border-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-25 disabled:pointer-events-none cursor-pointer"
+              onClick={() => setActiveIslandIdx(prev => (prev + 1) % 15)}
+              className="absolute right-2 sm:right-4 md:right-8 top-1/2 -translate-y-1/2 z-40 w-11 h-11 sm:w-13 sm:h-13 md:w-15 md:h-15 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex items-center justify-center border-2 border-white shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
               title="Đảo tiếp theo"
             >
               <ChevronRight className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 stroke-[3px]" />
@@ -1655,6 +1723,15 @@ export function ClassAdventureMap({
                             <div
                               key={gameActivity.item.assignment.id}
                               onClick={() => {
+                                trackEvent('game_picker_selected', {
+                                  classId: currentClass?.id || 'tiny-vocab-wonders',
+                                  dayNumber: selectedStation.dayNumber,
+                                  stageNumber: selectedStation.stageNumber,
+                                  gameId: gameActivity.item.assignment.id,
+                                  gameTitle: gameTitle,
+                                  gameMode: gameMode || gameModeLabel,
+                                  isDone: isDone,
+                                });
                                 handleLaunchDay(selectedStation, gameActivity.item.assignment.id);
                                 setGamePickerActivities(null);
                               }}
@@ -1731,6 +1808,15 @@ export function ClassAdventureMap({
                           <div
                             key={item.id}
                             onClick={() => {
+                              trackEvent('station_card_clicked', {
+                                classId: currentClass?.id || 'tiny-vocab-wonders',
+                                dayNumber: selectedStation.dayNumber,
+                                stageNumber: selectedStation.stageNumber,
+                                stationId: item.id,
+                                stationTitle: item.title,
+                                isDone: isDone,
+                                isLocked: isLocked,
+                              });
                               if (isLocked) {
                                 toast.info('🔒 Bài Luyện Phát Âm đang khóa. Bé hãy hoàn thành Thẻ Từ Vựng ở Trạm 1 trước nhé!', {
                                   icon: '🔒',
@@ -1741,6 +1827,12 @@ export function ClassAdventureMap({
                               if (act) {
                                 // Nếu là trạm Game và có nhiều games → mở Game Picker
                                 if (item.id === 'game' && hasMultipleGames) {
+                                  trackEvent('game_picker_opened', {
+                                    classId: currentClass?.id || 'tiny-vocab-wonders',
+                                    dayNumber: selectedStation.dayNumber,
+                                    stageNumber: selectedStation.stageNumber,
+                                    gamesCount: gameActivities.length,
+                                  });
                                   setGamePickerActivities(gameActivities);
                                   return;
                                 }

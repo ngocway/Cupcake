@@ -24,26 +24,12 @@ export function ClassCommunityLinks({
   );
 
   const ZaloIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
-    <svg className={`${className} fill-white shrink-0 drop-shadow-xs`} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M48.5 12C28.3 12 12 26.5 12 44.5c0 10.3 5.4 19.5 14 25.4-1.2 5.1-3.6 11.2-6.5 15.3-.6.9-.1 2 .9 2 .4 0 .9-.1 1.2-.3 7.8-4.5 15.4-7.4 19.8-8.9 2.3.4 4.7.6 7.1.6 20.2 0 36.5-14.5 36.5-32.5S68.7 12 48.5 12z"
-        fill="currentColor"
-        opacity="0.3"
-      />
-      <text
-        x="50%"
-        y="58%"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill="white"
-        fontFamily="'Nunito', 'Segoe UI', Arial, sans-serif"
-        fontWeight="900"
-        fontSize="36"
-        letterSpacing="-1.5"
-      >
-        Zalo
-      </text>
-    </svg>
+    <img
+      src="/images/icons/zalo-icon.png?v=2"
+      alt="Zalo"
+      className={`${className} object-contain shrink-0 drop-shadow-xs`}
+      draggable={false}
+    />
   );
 
   // Variant 1: Sidebar footer (Desktop sidebar)
@@ -58,7 +44,7 @@ export function ClassCommunityLinks({
             className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl bg-gradient-to-r from-[#0055D4] via-[#0068FF] to-[#2684FF] hover:from-[#0048b8] hover:to-[#0055d4] text-white font-extrabold text-xs shadow-xs hover:shadow-md active:scale-95 transition-all group cursor-pointer border border-white/40"
             title="Tham gia nhóm Zalo lớp học"
           >
-            <ZaloIcon className="w-3.5 h-3.5 shrink-0" />
+            <ZaloIcon className="w-4 h-4 shrink-0" />
             <span className="truncate">Nhóm Zalo</span>
           </a>
         )}
@@ -118,25 +104,12 @@ export function ClassCommunityLinks({
           title="Tham gia nhóm Zalo lớp học"
           aria-label="Tham gia nhóm Zalo lớp học"
         >
-          <svg className="w-8 h-8 sm:w-9 sm:h-9 drop-shadow-[0_4px_10px_rgba(0,104,255,0.4)] shrink-0" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M48.5 12C28.3 12 12 26.5 12 44.5c0 10.3 5.4 19.5 14 25.4-1.2 5.1-3.6 11.2-6.5 15.3-.6.9-.1 2 .9 2 .4 0 .9-.1 1.2-.3 7.8-4.5 15.4-7.4 19.8-8.9 2.3.4 4.7.6 7.1.6 20.2 0 36.5-14.5 36.5-32.5S68.7 12 48.5 12z"
-              fill="#0068FF"
-            />
-            <text
-              x="50%"
-              y="58%"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontFamily="'Nunito', 'Segoe UI', Arial, sans-serif"
-              fontWeight="900"
-              fontSize="36"
-              letterSpacing="-1.5"
-            >
-              Zalo
-            </text>
-          </svg>
+          <img
+            src="/images/icons/zalo-icon.png?v=2"
+            alt="Zalo"
+            className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-[0_3px_8px_rgba(0,70,180,0.45)] shrink-0"
+            draggable={false}
+          />
         </a>
       )}
       <a

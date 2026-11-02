@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, MessageCircle, ExternalLink } from "lucide-react";
+import { X, ExternalLink } from "lucide-react";
 
 interface FloatingZaloWidgetProps {
   zaloGroupUrl?: string | null;
@@ -92,34 +92,14 @@ export function FloatingZaloWidget({
           target="_blank"
           rel="noopener noreferrer"
           title={`Tham gia nhóm Zalo: ${classNameTitle}`}
-          className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-[#0055D4] via-[#0068FF] to-[#2684FF] text-white shadow-xl shadow-slate-900/20 hover:shadow-2xl border-2 border-white/90 dark:border-slate-800 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+          className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
         >
-          {/* Zalo Vector Icon */}
-          <svg
-            className="w-9 h-9 sm:w-11 sm:h-11 fill-white drop-shadow-xs transition-transform group-hover:scale-105"
-            viewBox="0 0 100 100"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Zalo speech bubble silhouette */}
-            <path
-              d="M48.5 12C28.3 12 12 26.5 12 44.5c0 10.3 5.4 19.5 14 25.4-1.2 5.1-3.6 11.2-6.5 15.3-.6.9-.1 2 .9 2 .4 0 .9-.1 1.2-.3 7.8-4.5 15.4-7.4 19.8-8.9 2.3.4 4.7.6 7.1.6 20.2 0 36.5-14.5 36.5-32.5S68.7 12 48.5 12z"
-              fill="currentColor"
-              opacity="0.22"
-            />
-            <text
-              x="50%"
-              y="59%"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontFamily="'Nunito', 'Segoe UI', Arial, sans-serif"
-              fontWeight="900"
-              fontSize="36"
-              letterSpacing="-1.5"
-            >
-              Zalo
-            </text>
-          </svg>
+          <img
+            src="/images/icons/zalo-icon.png?v=2"
+            alt="Zalo"
+            className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-[0_6px_14px_rgba(0,85,212,0.4)] transition-transform group-hover:scale-105"
+            draggable={false}
+          />
         </a>
       </div>
     </aside>
