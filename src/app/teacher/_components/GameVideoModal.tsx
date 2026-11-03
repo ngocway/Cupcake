@@ -5,6 +5,7 @@ import { Play, Pause, Plus, X, RotateCcw, Volume2, VolumeX, Sparkles } from "luc
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 export interface VideoModalGame {
   id: string;
@@ -31,6 +32,7 @@ export function GameVideoModal({
 }: GameVideoModalProps) {
   const pathname = usePathname();
   const isTeacherPortal = pathname.startsWith("/teacher");
+  const { t } = useTeacherLocale();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -172,11 +174,11 @@ export function GameVideoModal({
               href={isTeacherPortal ? game.createHref : "/teacher"} data-no-global-loader={isTeacherPortal && !isAuthenticated ? "true" : undefined}
               onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: game.title, category: game.badge, source: "video_modal", isAuthenticated }); if (isTeacherPortal && !isAuthenticated && onRequireAuth) { e.preventDefault(); onClose(); onRequireAuth(game.createHref, game.id, game.title); } else { onClose(); } }}
               className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sky-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-              title={isTeacherPortal ? "Tạo bài tập này" : "Đăng nhập Giáo viên để tạo"}
+              title={isTeacherPortal ? t.common.createThisExercise : t.common.loginToCreate}
             >
               <Plus className="w-4 h-4 stroke-[3px] shrink-0" />
               <span>
-                {isTeacherPortal ? "Tạo bài tập này" : "Đăng nhập Giáo viên để tạo"}
+                {isTeacherPortal ? t.common.createThisExercise : t.common.loginToCreate}
               </span>
             </Link>
 
@@ -184,7 +186,7 @@ export function GameVideoModal({
               type="button"
               onClick={onClose}
               className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md border border-white/20 active:scale-95"
-              title="Đóng video (Phím ESC)"
+              title={t.videoModal.closeTooltip}
             >
               <X className="w-5 h-5" />
             </button>
@@ -230,7 +232,7 @@ export function GameVideoModal({
                 type="button"
                 onClick={togglePlay}
                 className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                title={isPlaying ? "Tạm dừng" : "Phát tiếp"}
+                title={isPlaying ? t.videoModal.pause : t.videoModal.resume}
               >
                 {isPlaying ? (
                   <Pause className="w-4 h-4 fill-current" />
@@ -243,7 +245,7 @@ export function GameVideoModal({
                 type="button"
                 onClick={handleReplay}
                 className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                title="Phát lại từ đầu"
+                title={t.videoModal.replay}
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -252,7 +254,7 @@ export function GameVideoModal({
                 type="button"
                 onClick={toggleMute}
                 className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                title={isMuted ? t.videoModal.unmute : t.videoModal.mute}
               >
                 {isMuted ? (
                   <VolumeX className="w-4 h-4" />
@@ -264,14 +266,14 @@ export function GameVideoModal({
               <span className="text-xs text-slate-300 font-medium hidden sm:inline select-none">
                 {isPlaying
                   ? game.videoType === "guide"
-                    ? "Đang phát video hướng dẫn tạo bài (HD 1080p)"
-                    : "Đang phát video giới thiệu game (HD 1080p)"
-                  : "Đã tạm dừng"}
+                    ? t.videoModal.playingGuide
+                    : t.videoModal.playingDemo
+                  : t.videoModal.paused}
               </span>
             </div>
 
             <div className="text-[11px] text-slate-400 font-medium select-none">
-              Nhấp vào video để {isPlaying ? "tạm dừng" : "tiếp tục"}
+              {t.videoModal.clickToToggle} {isPlaying ? t.videoModal.clickPause : t.videoModal.clickResume}
             </div>
           </div>
         </div>

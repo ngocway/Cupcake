@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface GameSaveSuccessModalProps {
   isOpen: boolean;
@@ -39,6 +40,7 @@ export function GameSaveSuccessModal({
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+  const { t } = useTeacherLocale();
 
   useEffect(() => {
     setMounted(true);
@@ -108,7 +110,7 @@ export function GameSaveSuccessModal({
       navigator.clipboard.writeText(fullUrl);
       trackEvent('teacher_game_share_link', { game_type: gameType, method: 'copy_link' });
       setCopied(true);
-      toast.success("Đã sao chép đường dẫn bài tập! Bạn có thể dán và gửi cho học sinh ngay.");
+      toast.success(t.shareModal.linkCopiedToast);
       setTimeout(() => setCopied(false), 2500);
     }
   };
@@ -126,7 +128,7 @@ export function GameSaveSuccessModal({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast.success("Đã tải ảnh mã QR thành công!");
+    toast.success(t.shareModal.qrDownloadedToast);
   };
 
   const handleCloseAndRedirect = () => {
@@ -149,13 +151,13 @@ export function GameSaveSuccessModal({
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black text-[11px] uppercase tracking-wider mb-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Lưu bài tập thành công!
+              {t.saveSuccessModal.savedBadge}
             </span>
             <h3 className="font-headline font-black text-xl sm:text-2xl text-slate-800 dark:text-white leading-snug">
-              {title || "Bài tập mới"}
+              {title || t.saveSuccessModal.untitled}
             </h3>
             <p className="text-xs font-semibold text-slate-400 mt-1">
-              Dạng game: <span className="text-slate-600 dark:text-slate-300 font-bold">{gameType}</span>
+              {t.saveSuccessModal.gameFormatLabel} <span className="text-slate-600 dark:text-slate-300 font-bold">{gameType}</span>
             </p>
           </div>
         </div>
@@ -164,7 +166,7 @@ export function GameSaveSuccessModal({
         {gameCode && (
           <div className="bg-amber-50 dark:bg-amber-950/30 rounded-2xl p-3 border border-amber-200/60 dark:border-amber-800/60 space-y-0.5 max-w-xs mx-auto">
             <span className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider block">
-              Mã Bài Tập
+              {t.saveSuccessModal.assignmentCodeLabel}
             </span>
             <p className="font-mono font-black text-2xl text-amber-700 dark:text-amber-300 tracking-widest">
               {gameCode}
@@ -188,10 +190,10 @@ export function GameSaveSuccessModal({
           <div className="flex-1 space-y-2 text-center sm:text-left">
             <div className="space-y-0.5">
               <h4 className="font-headline font-black text-sm text-slate-800 dark:text-white">
-                Mã QR Chơi Ngay
+                {t.saveSuccessModal.qrInstantTitle}
               </h4>
               <p className="text-[11px] font-medium text-slate-400 leading-relaxed">
-                Học sinh quét mã QR bằng điện thoại hoặc camera để vào làm bài ngay lập tức.
+                {t.saveSuccessModal.qrInstantDesc}
               </p>
             </div>
             <button
@@ -200,7 +202,7 @@ export function GameSaveSuccessModal({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer active:scale-95"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Tải ảnh QR</span>
+              <span>{t.common.downloadQr}</span>
             </button>
           </div>
         </div>
@@ -208,7 +210,7 @@ export function GameSaveSuccessModal({
         {/* Copy Link Input Section */}
         <div className="space-y-2 text-left">
           <label className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider block">
-            Đường Link Trực Tiếp
+            {t.shareModal.directLinkLabel}
           </label>
           <div className="flex gap-2">
             <input
@@ -227,7 +229,7 @@ export function GameSaveSuccessModal({
               }`}
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? "Đã chép" : "Sao chép"}</span>
+              <span>{copied ? t.common.copied : t.common.copy}</span>
             </button>
           </div>
         </div>
@@ -241,7 +243,7 @@ export function GameSaveSuccessModal({
             onClick={handlePreviewGame}
             className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 group cursor-pointer active:scale-95"
           >
-            <span>Xem trước game</span>
+            <span>{t.saveSuccessModal.previewGame}</span>
             <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </a>
 
@@ -251,7 +253,7 @@ export function GameSaveSuccessModal({
             className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-wider rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
             <FolderOpen className="w-4 h-4" />
-            <span>Về danh sách bài tập</span>
+            <span>{t.saveSuccessModal.backToExercises}</span>
           </button>
         </div>
       </div>

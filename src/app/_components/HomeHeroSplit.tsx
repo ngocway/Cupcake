@@ -136,7 +136,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
       {!isStudent && (
         <div className="lg:hidden absolute top-4 sm:top-5 right-4 sm:right-6 z-30">
           <Link
-            href={isTeacher ? "/teacher/dashboard" : "/teacher/login"}
+            href="/teacher"
             className="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-xl border border-white/25 hover:border-white/40 text-white font-bold text-xs tracking-wide shadow-[0_4px_16px_rgba(0,0,0,0.35),inset_0_1px_0_0_rgba(255,255,255,0.25)] ring-1 ring-white/10 active:scale-95 transition-all duration-300 cursor-pointer"
           >
             <GraduationCap className="w-3.5 h-3.5 text-white/90 group-hover:rotate-12 transition-transform shrink-0" />
@@ -297,7 +297,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
           {/* Teacher CTA Button with Luxurious Black Frosted Glass - Elevated to z-30 */}
           <div className="w-full flex justify-center relative z-30">
             <Link
-              href={isTeacher ? "/teacher/dashboard" : isStudent ? "/teacher/dashboard" : "/teacher/login"}
+              href="/teacher"
               className="group inline-flex items-center gap-2.5 px-9 py-3.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-xl border border-white/20 hover:border-white/35 text-white font-bold text-sm sm:text-base tracking-wide shadow-[0_8px_32px_rgba(0,0,0,0.45),inset_0_1px_0_0_rgba(255,255,255,0.25)] hover:shadow-[0_14px_40px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.4)] ring-1 ring-white/10 hover:ring-white/20 hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
             >
               <GraduationCap className="w-5 h-5 text-white/80 group-hover:text-white group-hover:rotate-12 transition-transform" />

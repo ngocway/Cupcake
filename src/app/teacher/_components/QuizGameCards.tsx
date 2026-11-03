@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Play, Plus, Video } from "lucide-react";
 import Link from "next/link";
 import { GameVideoModal, VideoModalGame } from "./GameVideoModal"; import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface GameCard {
   id: string;
@@ -63,6 +64,8 @@ function QuizGameCardItem({
   game: GameCard;
   onPlayVideo?: (videoGame: VideoModalGame) => void; isAuthenticated?: boolean; onRequireAuth?: (href: string, gameId?: string, gameTitle?: string) => void;
 }) {
+  const { t } = useTeacherLocale();
+  const gameText = (t.quizCards.games as any)[game.id] || { title: game.title, badge: game.badge, desc: game.desc };
   const href = game.createHref || `/teacher/games/${game.id}/create`;
   const hasVideo = Boolean(game.videoId);
   const activeGuideVideoId = game.guideVideoId;
@@ -70,11 +73,11 @@ function QuizGameCardItem({
 
   const handleOpenDemo = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (hasVideo && onPlayVideo && game.videoId) { trackEvent("teacher_video_open", { gameId: game.id, gameTitle: game.title, category: "quiz", videoType: "demo", isAuthenticated });
+    if (hasVideo && onPlayVideo && game.videoId) { trackEvent("teacher_video_open", { gameId: game.id, gameTitle: gameText.title, category: "quiz", videoType: "demo", isAuthenticated });
       onPlayVideo({
         id: game.id,
-        title: game.title,
-        badge: game.badge,
+        title: gameText.title,
+        badge: gameText.badge,
         badgeBg: game.badgeBg,
         videoId: game.videoId,
         createHref: href,
@@ -85,11 +88,11 @@ function QuizGameCardItem({
 
   const handleOpenGuide = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (hasGuide && onPlayVideo && activeGuideVideoId) { trackEvent("teacher_video_open", { gameId: game.id, gameTitle: game.title, category: "quiz", videoType: "guide", isAuthenticated });
+    if (hasGuide && onPlayVideo && activeGuideVideoId) { trackEvent("teacher_video_open", { gameId: game.id, gameTitle: gameText.title, category: "quiz", videoType: "guide", isAuthenticated });
       onPlayVideo({
         id: game.id,
-        title: `${game.title} (Hướng dẫn tạo bài)`,
-        badge: "HƯỚNG DẪN",
+        title: `${gameText.title} (${t.common.guideSuffix})`,
+        badge: t.common.guideBadge,
         badgeBg: "bg-gradient-to-r from-sky-500 to-blue-600 text-white",
         videoId: activeGuideVideoId,
         createHref: href,
@@ -105,7 +108,7 @@ function QuizGameCardItem({
         <div
           onClick={hasVideo ? handleOpenDemo : undefined}
           className={`relative w-full h-full ${hasVideo ? "cursor-pointer group/thumb" : ""}`}
-          title={hasVideo ? "Xem video giới thiệu game" : undefined}
+          title={hasVideo ? t.common.watchDemoTooltip : undefined}
         >
           {/* Cover Image (Prioritize YouTube HD maxresdefault, fallback to hqdefault, then default image) */}
           <img
@@ -123,7 +126,7 @@ function QuizGameCardItem({
                 target.src = game.imageUrl;
               }
             }}
-            alt={game.title}
+            alt={gameText.title}
             className="w-full h-full object-cover scale-[1.18] group-hover/thumb:scale-[1.25] transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
@@ -147,7 +150,7 @@ function QuizGameCardItem({
           <span
             className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider shadow-md ${game.badgeBg}`}
           >
-            {game.badge}
+            {gameText.badge}
           </span>
         </div>
 
@@ -165,20 +168,20 @@ function QuizGameCardItem({
               type="button"
               onClick={handleOpenGuide}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-500 hover:bg-white text-white hover:text-sky-600 border-2 border-sky-500 text-xs font-bold shadow-md shadow-sky-500/30 cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 group/guide"
-              title="Xem video hướng dẫn"
+              title={t.common.watchGuideTooltip}
             >
               <Video className="w-3.5 h-3.5 text-white group-hover/guide:text-sky-600 transition-colors" />
-              <span>Hướng dẫn</span>
+              <span>{t.common.guide}</span>
             </button>
           ) : (
             <button
               type="button"
               disabled
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-sky-500/30 text-white/60 border border-sky-500/30 text-xs font-medium shadow-sm cursor-not-allowed opacity-80 select-none"
-              title="Chưa có video hướng dẫn (Sắp cập nhật)"
+              title={t.common.guideComingSoonTooltip}
             >
               <Video className="w-3.5 h-3.5 text-white/40" />
-              <span>Hướng dẫn</span>
+              <span>{t.common.guide}</span>
             </button>
           )}
         </div>
@@ -192,21 +195,21 @@ function QuizGameCardItem({
               game.titleColor || "text-pink-600 dark:text-pink-400"
             }`}
           >
-            {game.title}
+            {gameText.title}
           </h3>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-4 line-clamp-2">
-            {game.desc}
+            {gameText.desc}
           </p>
         </div>
 
         {/* Footer CTA Button */}
         <Link
           href={href}
-          prefetch={isAuthenticated} data-no-global-loader={!isAuthenticated ? "true" : undefined} onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: game.title, category: "quiz", source: "card", isAuthenticated }); if (!isAuthenticated && onRequireAuth) { e.preventDefault(); onRequireAuth(href, game.id, game.title); } }}
+          prefetch={isAuthenticated} data-no-global-loader={!isAuthenticated ? "true" : undefined} onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: gameText.title, category: "quiz", source: "card", isAuthenticated }); if (!isAuthenticated && onRequireAuth) { e.preventDefault(); onRequireAuth(href, game.id, gameText.title); } }}
           className="w-full py-3 px-3.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2 group/btn text-center"
         >
           <Plus className="w-4 h-4 stroke-[3px] group-hover/btn:rotate-90 transition-transform duration-300" />
-          <span>Tạo bài tập</span>
+          <span>{t.common.createExercise}</span>
         </Link>
       </div>
     </div>
@@ -215,16 +218,17 @@ function QuizGameCardItem({
 
 export function QuizGameCards({ isAuthenticated = true, onRequireAuth }: { isAuthenticated?: boolean; onRequireAuth?: (href: string, gameId?: string, gameTitle?: string) => void } = {}) {
   const [activeVideoGame, setActiveVideoGame] = useState<VideoModalGame | null>(null);
+  const { t } = useTeacherLocale();
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-300 relative">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
-            Tạo Game Trắc Nghiệm
+            {t.quizCards.sectionTitle}
           </h2>
           <p className="text-xs font-semibold text-slate-400 mt-1">
-            Chọn dạng game trắc nghiệm bạn muốn tạo cho học sinh làm bài
+            {t.quizCards.sectionSubtitle}
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { X, Check, Copy, Link2, Share2, Sparkles } from "lucide-react"; import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface ChoiceGameShareModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function ChoiceGameShareModal({
   directPath,
 }: ChoiceGameShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const { t } = useTeacherLocale();
 
   if (!isOpen) return null;
 
@@ -47,7 +49,7 @@ export function ChoiceGameShareModal({
 
         <div className="space-y-1">
           <h3 className="font-headline font-black text-xl text-slate-800 dark:text-white">
-            Chia Sẻ Bài Tập Bắn Súng
+            {t.shareModal.shareShooterTitle}
           </h3>
           <p className="text-xs font-semibold text-slate-400 truncate px-2">
             "{gameTitle}"
@@ -57,7 +59,7 @@ export function ChoiceGameShareModal({
         {/* Assignment Code Box */}
         <div className="bg-emerald-50/60 dark:bg-emerald-950/30 rounded-2xl p-3.5 border border-emerald-200/60 dark:border-emerald-800/60 space-y-0.5">
           <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider block">
-            Mã Bài Tập Học Sinh
+            {t.shareModal.studentCodeLabel}
           </span>
           <p className="font-mono font-black text-2xl text-emerald-700 dark:text-emerald-300 tracking-widest">
             {gameCode}
@@ -67,7 +69,7 @@ export function ChoiceGameShareModal({
         {/* Direct Link Box */}
         <div className="space-y-2 text-left">
           <label className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider block">
-            Đường Link Trực Tiếp
+            {t.shareModal.directLinkLabel}
           </label>
           <div className="flex gap-2">
             <input
@@ -82,7 +84,7 @@ export function ChoiceGameShareModal({
               className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-emerald-500/20 cursor-pointer whitespace-nowrap"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{copied ? "Đã chép" : "Sao chép"}</span>
+              <span>{copied ? t.common.copied : t.common.copy}</span>
             </button>
           </div>
         </div>
@@ -93,7 +95,7 @@ export function ChoiceGameShareModal({
             onClick={onClose}
             className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all"
           >
-            Đóng
+            {t.common.close}
           </button>
         </div>
       </div>

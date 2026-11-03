@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { resetPassword } from "@/actions/auth-actions"
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react"
@@ -71,12 +71,13 @@ export function TeacherLoginForm({
   const [successMessage, setSuccessMessage] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [internalLocale, setInternalLocale] = useState<"vi" | "en">(propLocale || "vi");
+  const [internalLocale, setInternalLocale] = useState<"vi" | "en">(propLocale || "en");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { update } = useSession();
 
   const activeLocale = propLocale || internalLocale;
-  const t = TEACHER_LOGIN_DICT[activeLocale] || TEACHER_LOGIN_DICT.vi;
+  const t = TEACHER_LOGIN_DICT[activeLocale] || TEACHER_LOGIN_DICT.en;
 
   useEffect(() => {
     if (propLocale) {
@@ -121,6 +122,7 @@ export function TeacherLoginForm({
     const password = formData.get("password") as string;
 
     try {
+      document.cookie = "login_role_intent=TEACHER; path=/; max-age=300; SameSite=Lax";
       const res = await signIn("credentials", {
         email,
         password,
@@ -138,6 +140,9 @@ export function TeacherLoginForm({
             method: "credentials",
           });
         }
+        try {
+          await update();
+        } catch {}
         if (onSuccess) {
           onSuccess();
         }

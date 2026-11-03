@@ -34,17 +34,26 @@ const nextAuth = NextAuth({
         if (parsedCredentials.success) {
           const { email, password } = parsedCredentials.data
           let targetDb = prisma
+          let intentRole: string | undefined
           try {
             const cookieStore = await cookies()
-            const intentRole = cookieStore.get("login_role_intent")?.value
+            intentRole = cookieStore.get("login_role_intent")?.value
             targetDb = getPrisma(intentRole)
           } catch (e) {}
 
-          const user = await targetDb.user.findUnique({ where: { email } })
+          let user = await targetDb.user.findUnique({ where: { email } })
+          if (!user && intentRole === "TEACHER") {
+            user = await prisma.user.findUnique({ where: { email } })
+          } else if (!user && !intentRole) {
+            user = await teacherPrisma.user.findUnique({ where: { email } })
+          }
           if (!user || !user.password) return null
           
           const passwordsMatch = await bcrypt.compare(password, user.password)
-          if (passwordsMatch) return { id: user.id, email: user.email, name: user.name, role: user.role }
+          if (passwordsMatch) {
+            const effectiveRole = intentRole === "TEACHER" && user.role !== "ADMIN" ? "TEACHER" : user.role
+            return { id: user.id, email: user.email, name: user.name, image: user.image, role: effectiveRole }
+          }
         }
         return null
       }
@@ -83,23 +92,35 @@ const nextAuth = NextAuth({
               role: intentRole as any,
             }
           })
-        } else if (dbUser && intentRole && dbUser.role !== intentRole) {
-          await targetDb.user.update({
+        } else if (dbUser && intentRole && dbUser.role !== intentRole && dbUser.role !== "ADMIN") {
+          dbUser = await targetDb.user.update({
             where: { email: user.email },
             data: { role: intentRole as any }
           })
+        }
+        if (dbUser?.role) {
+          ;(user as any).role = dbUser.role
+        } else if (intentRole) {
+          ;(user as any).role = intentRole
         }
       }
       return true
     },
     async jwt({ token, user, trigger, session }) {
-      if (user && !token.role) {
-        token.role = (user as any).role || "STUDENT"
+      if (user) {
+        token.role = (user as any).role || token.role || "STUDENT"
+        try {
+          const cookieStore = await cookies()
+          const intentRole = cookieStore.get("login_role_intent")?.value
+          if (intentRole === "TEACHER" && token.role !== "ADMIN") {
+            token.role = "TEACHER"
+          }
+        } catch (e) {}
       }
       if (trigger === "update" && session?.role) {
         token.role = session.role
       }
-      if (token.email && !token.role) {
+      if (token.email && (!token.role || token.role === "STUDENT")) {
         try {
           const cookieStore = await cookies()
           const intentRole = cookieStore.get("login_role_intent")?.value
@@ -111,8 +132,8 @@ const nextAuth = NextAuth({
               where: { email: token.email },
               select: { role: true }
             })
-            if (teacherUser) {
-              token.role = teacherUser.role || "TEACHER"
+            if (teacherUser && (teacherUser.role === "TEACHER" || teacherUser.role === "ADMIN")) {
+              token.role = teacherUser.role
             }
           }
         } catch (e) {}

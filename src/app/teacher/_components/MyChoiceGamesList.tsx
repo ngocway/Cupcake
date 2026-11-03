@@ -27,6 +27,7 @@ import {
 } from "@/actions/teacher-choice-games";
 import { ChoiceGameShareModal } from "./ChoiceGameShareModal";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 export interface UnifiedGameItem {
   id: string;
@@ -42,6 +43,7 @@ export function MyChoiceGamesList() {
   const [games, setGames] = useState<UnifiedGameItem[]>([]);
   const [shareGame, setShareGame] = useState<UnifiedGameItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const { t } = useTeacherLocale();
 
   const loadGames = async (isBackground = false) => {
     if (!isBackground && games.length === 0) setLoading(true);
@@ -105,7 +107,7 @@ export function MyChoiceGamesList() {
   }, []);
 
   const handleDelete = async (game: UnifiedGameItem) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa bài tập "${game.title}" không?`)) return;
+    if (!confirm(t.myGames.confirmDelete.replace("{name}", game.title))) return;
 
     // Delete from DB if present
     try {
@@ -119,7 +121,7 @@ export function MyChoiceGamesList() {
       deleteChoiceShooterGame(game.id);
     }
 
-    toast.success(`Đã xóa bài tập "${game.title}"!`);
+    toast.success(t.myGames.deletedToast.replace("{name}", game.title));
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("cached_teacher_choice_games");
     }
@@ -143,7 +145,7 @@ export function MyChoiceGamesList() {
       <div className="w-full h-96 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-emerald-500/10 p-8 flex flex-col items-center justify-center space-y-4">
         <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
         <span className="text-sm font-bold text-slate-500">
-          Đang tải danh sách bài tập Chọn đáp án...
+          {t.myGames.loadingChoice}
         </span>
       </div>
     );
@@ -160,10 +162,10 @@ export function MyChoiceGamesList() {
           </div>
           <div className="space-y-1 max-w-md">
             <h3 className="font-headline font-black text-xl text-slate-800 dark:text-white">
-              Bạn chưa tạo bài tập Chọn đáp án nào
+              {t.myGames.emptyChoiceTitle}
             </h3>
             <p className="text-xs text-slate-400 font-medium">
-              Hãy tạo các bài tập Chọn đáp án (Bắn súng, Đập trứng...) để học sinh rèn luyện tính nhẩm tốc độ!
+              {t.myGames.emptyChoiceDesc}
             </p>
           </div>
         </div>
@@ -185,11 +187,11 @@ export function MyChoiceGamesList() {
                     <div className="flex items-center gap-1.5 min-w-0">
                       {game.gameType === "egg" ? (
                         <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs shrink-0">
-                          🥚 Đập Trứng
+                          {t.myGames.badges.eggSmash}
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-xs shrink-0">
-                          🎯 Bắn Súng
+                          {t.myGames.badges.shooter}
                         </span>
                       )}
 
@@ -200,7 +202,7 @@ export function MyChoiceGamesList() {
 
                     <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                       <Layers className="w-3.5 h-3.5" />
-                      <span>{game.questionCount || game.questions?.length || 0} câu</span>
+                      <span>{game.questionCount || game.questions?.length || 0} {t.common.questionsCount}</span>
                     </div>
                   </div>
 
@@ -233,26 +235,26 @@ export function MyChoiceGamesList() {
                     href={playPath} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: game.gameType, gameTitle: game.title, gameId: game.id })}
                     target="_blank"
                     className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                    title="Xem thử bài tập trong tab mới"
+                    title={t.common.previewTooltip}
                   >
                     <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-                    <span>Xem thử</span>
+                    <span>{t.common.preview}</span>
                   </Link>
 
                   <Link
                     href={editPath}
                     className="py-2 px-3 bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-700 font-bold text-xs rounded-xl transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
-                    title="Chỉnh sửa bài tập này"
+                    title={t.common.editTooltip}
                   >
                     <Edit3 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
-                    <span>Sửa</span>
+                    <span>{t.common.edit}</span>
                   </Link>
 
                   <button
                     type="button"
                     onClick={() => handleDelete(game)}
                     className="w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 bg-slate-50 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-400 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                    title="Xóa bài tập này"
+                    title={t.common.deleteTooltip}
                   >
                     <Trash2 className="w-4 h-4 stroke-[2]" />
                   </button>
@@ -271,10 +273,10 @@ export function MyChoiceGamesList() {
                     type="button"
                     onClick={() => { trackEvent("teacher_my_game_action", { action: "share_open", gameType: game.gameType, gameTitle: game.title, gameId: game.id }); setShareGame(game); }}
                     className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
-                    title="Chia sẻ link làm bài cho học sinh"
+                    title={t.common.shareTooltip}
                   >
                     <Share2 className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span>Chia sẻ</span>
+                    <span>{t.common.share}</span>
                   </button>
                 </div>
               </div>

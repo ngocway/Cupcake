@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation"
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations } from "next-intl"
 import { TeacherLanguageSelector } from "@/components/teacher/TeacherLanguageSelector"
+import { TeacherLocaleSwitch } from "@/i18n/teacher-locale"
 import { StudentClassHeader } from "./StudentClassHeader"
 import { 
   Gamepad2, 
@@ -76,7 +77,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
   const [localSearch, setLocalSearch] = useState(search || "")
   const [isTeacherDomain, setIsTeacherDomain] = useState(false)
   const [teacherUrl, setTeacherUrl] = useState(process.env.NEXT_PUBLIC_TEACHER_URL || "https://teacher.dolcake.com")
-  const [currentLocale, setCurrentLocale] = useState<"vi" | "en">("vi")
+  const [currentLocale, setCurrentLocale] = useState<"vi" | "en">("en")
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -84,18 +85,11 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
         return match ? match[2] : null;
       };
-      const savedLocale = getCookie("NEXT_LOCALE") || localStorage.getItem("preferred-locale");
+      const savedLocale = localStorage.getItem("preferred-locale") || getCookie("NEXT_LOCALE");
       if (savedLocale === "vi" || savedLocale === "en") {
         setCurrentLocale(savedLocale as "vi" | "en");
       } else {
-        fetch("/api/locale")
-          .then((res) => res.json())
-          .then((data) => {
-            if (data?.locale === "vi" || data?.locale === "en") {
-              setCurrentLocale(data.locale);
-            }
-          })
-          .catch(() => {});
+        setCurrentLocale("en");
       }
 
       const handleLocaleChange = (e: any) => {
@@ -263,7 +257,8 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
           </div>
         )}
         
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {isTeacherSection && <TeacherLocaleSwitch />}
           {session ? (
             <div className="relative" ref={menuRef}>
               <button 
@@ -342,7 +337,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               }`}
                             >
                               <GraduationCap className="w-4 h-4" />
-                              <span>Lớp học</span>
+                              <span>{currentLocale === "vi" ? "Lớp học" : "Classes"}</span>
                             </Link>
                             <Link 
                               href="/teacher/lessons"
@@ -354,7 +349,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               }`}
                             >
                               <BookOpen className="w-4 h-4" />
-                              <span>Bài học</span>
+                              <span>{currentLocale === "vi" ? "Bài học" : "Lessons"}</span>
                             </Link>
                             <Link 
                               href="/teacher/profile"
@@ -366,7 +361,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               }`}
                             >
                               <User className="w-4 h-4" />
-                              <span>Quản lý Portfolio</span>
+                              <span>{currentLocale === "vi" ? "Quản lý Portfolio" : "Manage Portfolio"}</span>
                             </Link>
                             <Link 
                               href="/teacher/settings"
@@ -378,7 +373,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                               }`}
                             >
                               <Settings className="w-4 h-4" />
-                              <span>Cài đặt</span>
+                              <span>{currentLocale === "vi" ? "Cài đặt" : "Settings"}</span>
                             </Link>
                           </>
                         )}
@@ -389,7 +384,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
                           className="w-full text-left px-5 py-3 text-xs font-bold transition-colors flex items-center gap-3 text-error/80 hover:bg-error/10 hover:text-error"
                         >
                           <LogOut className="w-4 h-4" />
-                          <span>Đăng xuất</span>
+                          <span>{currentLocale === "vi" ? "Đăng xuất" : "Sign Out"}</span>
                         </button>
                       </>
                     ) : (
@@ -531,7 +526,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               )}
             </div>
           ) : (
-            <LoginButton defaultView="role" className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
+            <LoginButton defaultView={isTeacherSection ? "teacher-login" : "role"} className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
               {currentLocale === "vi" ? "Đăng nhập" : "GET STARTED"}
             </LoginButton>
           )}

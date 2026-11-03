@@ -9,9 +9,9 @@ import { useContentStore } from '@/store/useContentStore';
 
 import { MobileContentTypeMenu } from './MobileContentTypeMenu';
 
-function HomeShellContent({ children, hideHeader }: { children?: React.ReactNode; hideHeader?: boolean }) {
+function HomeShellContent({ children, hideHeader, initialSession }: { children?: React.ReactNode; hideHeader?: boolean; initialSession?: any }) {
   const sessionContext = React.useContext(SessionContext);
-  const session = sessionContext?.data;
+  const session = sessionContext?.data ?? initialSession;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -122,10 +122,10 @@ function HomeShellContent({ children, hideHeader }: { children?: React.ReactNode
   );
 }
 
-export function HomeShell({ children, hideHeader }: { children?: React.ReactNode; hideHeader?: boolean }) {
+export function HomeShell({ children, hideHeader, initialSession }: { children?: React.ReactNode; hideHeader?: boolean; initialSession?: any }) {
   return (
     <React.Suspense fallback={<HomeLoadingSkeleton />}>
-      <HomeShellContent hideHeader={hideHeader}>
+      <HomeShellContent hideHeader={hideHeader} initialSession={initialSession}>
         {children}
       </HomeShellContent>
     </React.Suspense>

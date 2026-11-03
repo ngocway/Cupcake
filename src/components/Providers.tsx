@@ -11,7 +11,7 @@ import viMessages from "@/messages/vi.json";
 
 export function Providers({
   children,
-  locale = "vi",
+  locale = "en",
   messages,
   session,
 }: {
@@ -35,7 +35,7 @@ export function Providers({
   );
 
   const [activeLocale, setActiveLocale] = useState<"vi" | "en">(
-    locale === "en" ? "en" : "vi"
+    locale === "vi" ? "vi" : "en"
   );
 
   useEffect(() => {
@@ -52,21 +52,11 @@ export function Providers({
       if (cookieLocale !== savedPref) {
         document.cookie = `NEXT_LOCALE=${savedPref};path=/;max-age=31536000;SameSite=Lax`;
       }
+    } else if (cookieLocale === "vi" || cookieLocale === "en") {
+      setActiveLocale(cookieLocale);
     } else {
-      // First-time visitor (or no explicit preference): detect via IP from /api/locale?detect=1
-      fetch("/api/locale?detect=1")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.locale === "vi" || data?.locale === "en") {
-            setActiveLocale(data.locale);
-            localStorage.setItem("preferred-locale", data.locale);
-            document.cookie = `NEXT_LOCALE=${data.locale};path=/;max-age=31536000;SameSite=Lax`;
-            window.dispatchEvent(
-              new CustomEvent("locale-change", { detail: data.locale })
-            );
-          }
-        })
-        .catch(() => {});
+      setActiveLocale("en");
+      document.cookie = `NEXT_LOCALE=en;path=/;max-age=31536000;SameSite=Lax`;
     }
 
     const handleLocaleChange = (e: any) => {

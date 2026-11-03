@@ -14,6 +14,7 @@ import {
   CheckCircle2 
 } from "lucide-react";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface MatchGameShareModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export function MatchGameShareModal({
 }: MatchGameShareModalProps) {
   const [copied, setCopied] = useState(false);
   const downloadCanvasRef = useRef<HTMLCanvasElement>(null);
+  const { t } = useTeacherLocale();
 
   const gameUrl =
     typeof window !== "undefined"
@@ -53,7 +55,7 @@ export function MatchGameShareModal({
     if (navigator.clipboard) {
       navigator.clipboard.writeText(gameUrl);
       setCopied(true);
-      toast.success("Đã sao chép đường dẫn bài tập! Bạn có thể dán và gửi cho học sinh ngay.");
+      toast.success(t.shareModal.linkCopiedToast);
       setTimeout(() => setCopied(false), 2500);
     }
   };
@@ -84,12 +86,12 @@ export function MatchGameShareModal({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobUrl);
-        toast.success("Đã tải xuống ảnh mã QR!");
+        toast.success(t.shareModal.qrDownloadedToast);
       },
       "image/jpeg",
       0.95
     );
-  }, [topicName]);
+  }, [topicName, t.shareModal.qrDownloadedToast]);
 
   if (!isOpen) return null;
 
@@ -122,7 +124,7 @@ export function MatchGameShareModal({
               </div>
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
-                  Chia sẻ bài tập
+                  {t.shareModal.headerTag}
                 </span>
                 <h3 className="font-headline font-black text-base text-slate-800 dark:text-white line-clamp-1">
                   {topicName}
@@ -155,10 +157,10 @@ export function MatchGameShareModal({
             <div className="space-y-1">
               <p className="text-sm font-bold text-slate-800 dark:text-white flex items-center justify-center gap-1.5">
                 <QrCode className="w-4 h-4 text-purple-500" />
-                <span>Quét mã QR để bắt đầu chơi ngay</span>
+                <span>{t.shareModal.qrScanTitle}</span>
               </p>
               <p className="text-xs text-slate-400 font-medium">
-                Giáo viên có thể chiếu lên máy chiếu/tivi cho học sinh quét camera điện thoại
+                {t.shareModal.qrScanSubtitle}
               </p>
             </div>
 
@@ -181,12 +183,12 @@ export function MatchGameShareModal({
                 {copied ? (
                   <>
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Đã chép</span>
+                    <span>{t.common.copied}</span>
                   </>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Sao chép</span>
+                    <span>{t.common.copy}</span>
                   </>
                 )}
               </button>
@@ -199,7 +201,7 @@ export function MatchGameShareModal({
                 className="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer border border-slate-200/60 dark:border-slate-700"
               >
                 <Download className="w-4 h-4" />
-                <span>Tải ảnh QR</span>
+                <span>{t.common.downloadQr}</span>
               </button>
 
               <a
@@ -209,7 +211,7 @@ export function MatchGameShareModal({
                 className="w-full py-2.5 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-2xl shadow-md shadow-sky-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Mở game</span>
+                <span>{t.common.openGame}</span>
               </a>
             </div>
           </div>

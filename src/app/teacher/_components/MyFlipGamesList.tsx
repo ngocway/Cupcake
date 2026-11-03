@@ -21,6 +21,7 @@ import { getTeacherFlipGamesAction, deleteTeacherMatchGameAction } from "@/actio
 import { MatchGamePreviewModal, PreviewGameTopic } from "./MatchGamePreviewModal";
 import { MatchGameShareModal } from "./MatchGameShareModal";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const [topics, setTopics] = useState<any[]>(initialTopics || []);
@@ -29,6 +30,7 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const [previewTopic, setPreviewTopic] = useState<PreviewGameTopic | null>(null);
   const [shareTopic, setShareTopic] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { t } = useTeacherLocale();
 
   const fetchGames = async (isBackground = false) => {
     if (!isBackground && topics.length === 0) setLoading(true);
@@ -61,16 +63,16 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
   }, [initialTopics]);
 
   const handleDelete = async (topicId: string, topicName: string) => {
-    if (!confirm(`Bạn có chắc chắn muốn xóa bài tập "${topicName}" không?`)) return;
+    if (!confirm(t.myGames.confirmDelete.replace("{name}", topicName))) return;
 
     setDeletingId(topicId);
-    const toastId = toast.loading(`Đang xử lý xóa bài tập "${topicName}"...`);
+    const toastId = toast.loading(t.myGames.deletingToast.replace("{name}", topicName));
     const res = await deleteTeacherMatchGameAction(topicId);
     toast.dismiss(toastId);
     setDeletingId(null);
 
     if (res.success) {
-      toast.success(`Đã xóa bài tập "${topicName}" thành công!`);
+      toast.success(t.myGames.deletedToast.replace("{name}", topicName));
       const updatedTopics = topics.filter(t => t.id !== topicId);
       setTopics(updatedTopics);
       if (typeof window !== "undefined") {
@@ -79,7 +81,7 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
         } catch (e) {}
       }
     } else {
-      toast.error(res.error || "Không thể xóa bài tập!");
+      toast.error(res.error || t.myGames.deleteErrorToast);
     }
   };
 
@@ -87,7 +89,7 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
     return (
       <div className="w-full h-96 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center space-y-4">
         <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm font-bold text-slate-500">Đang tải danh sách bài tập Lật Ảnh...</span>
+        <span className="text-sm font-bold text-slate-500">{t.myGames.loadingFlip}</span>
       </div>
     );
   }
@@ -103,10 +105,10 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
           </div>
           <div className="space-y-1 max-w-md">
             <h3 className="font-headline font-black text-xl text-slate-800 dark:text-white">
-              Bạn chưa tạo bài tập Lật ảnh nào
+              {t.myGames.emptyFlipTitle}
             </h3>
             <p className="text-xs text-slate-400 font-medium">
-              Hãy tạo các bộ thẻ Lật Ảnh-Ảnh hoặc Lật Ảnh-Chữ đầu tiên để học sinh rèn luyện trí nhớ và phản xạ!
+              {t.myGames.emptyFlipDesc}
             </p>
           </div>
         </div>
@@ -135,7 +137,7 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
                           ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-sm shadow-rose-500/30" 
                           : "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-500/30"
                       }`}>
-                        {isImageImage ? "Lật Ảnh - Ảnh" : "Lật Ảnh - Chữ"}
+                        {isImageImage ? t.myGames.badges.flipImageImage : t.myGames.badges.flipImageText}
                       </span>
 
                       {topic.createdAt && (
@@ -147,7 +149,7 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
 
                     <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">
                       <Layers className="w-3.5 h-3.5" />
-                      <span>{topic.totalItems || topic.items?.length || 0} cặp</span>
+                      <span>{topic.totalItems || topic.items?.length || 0} {t.common.pairsCount}</span>
                     </div>
                   </div>
 
@@ -209,10 +211,10 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-2 px-3 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                    title="Chơi thử game trong tab mới"
+                    title={t.common.previewTooltip}
                   >
                     <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-                    <span>Xem thử</span>
+                    <span>{t.common.preview}</span>
                   </a>
 
                   <Link
@@ -226,10 +228,10 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
                         ? "bg-slate-50 dark:bg-slate-800 hover:bg-rose-50 text-rose-800 dark:text-rose-200 border-rose-200/60 dark:border-rose-700" 
                         : "bg-slate-50 dark:bg-slate-800 hover:bg-orange-50 text-orange-800 dark:text-orange-200 border-orange-200/60 dark:border-orange-700"
                     }`}
-                    title="Chỉnh sửa bài tập"
+                    title={t.common.editTooltip}
                   >
                     <Edit3 className={`w-3.5 h-3.5 shrink-0 ${isImageImage ? "text-rose-600" : "text-orange-600"}`} />
-                    <span>Sửa</span>
+                    <span>{t.common.edit}</span>
                   </Link>
 
                   <button
@@ -242,7 +244,7 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
                           ? "bg-slate-50 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-400 border-rose-200/60 dark:border-rose-700 cursor-pointer"
                           : "bg-slate-50 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-400 border-orange-200/60 dark:border-orange-700 cursor-pointer"
                     }`}
-                    title={deletingId === topic.id ? "Đang xóa bài tập..." : "Xóa bài tập này"}
+                    title={deletingId === topic.id ? t.common.deletingTooltip : t.common.deleteTooltip}
                   >
                     {deletingId === topic.id ? (
                       <Loader2 className="w-4 h-4 text-rose-500 animate-spin" />
@@ -272,10 +274,10 @@ export function MyFlipGamesList({ initialTopics }: { initialTopics?: any[] }) {
                   <button
                     onClick={() => { trackEvent("teacher_my_game_action", { action: "share_open", gameType: "flip", gameTitle: topic.name, gameId: topic.id }); setShareTopic({ ...topic, customGamePath: gamePath }); }}
                     className="px-3 py-1.5 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white font-bold text-xs rounded-xl shadow-md shadow-rose-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
-                    title="Chia sẻ bài tập & mã QR cho học sinh"
+                    title={t.common.shareTooltip}
                   >
                     <Share2 className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span>Chia sẻ</span>
+                    <span>{t.common.share}</span>
                   </button>
                 </div>
               </div>

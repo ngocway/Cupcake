@@ -4,9 +4,10 @@ import { usePathname } from "next/navigation"
 import { Lexend } from "next/font/google"
 import Link from "next/link"
 import React, { useState, useRef, useEffect } from "react"
-import { signOut, useSession, SessionProvider } from "next-auth/react"
+import { signOut, useSession } from "next-auth/react"
 import { Bell, BellOff, ClipboardList, UserPlus, Star, FileText, Eye, Settings, HelpCircle, LogOut, BookOpen, Search, LayoutGrid, GraduationCap, Archive, Clock, Share2, Trash2, Book } from "lucide-react"
 import { useScrollDirection } from "@/hooks/useScrollDirection"
+import { TeacherLocaleSwitch, TeacherDomTranslator } from "@/i18n/teacher-locale"
 
 const lexend = Lexend({
   variable: "--font-lexend",
@@ -293,7 +294,7 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
                 <div className="size-10 bg-sky-500 rounded-xl flex items-center justify-center text-white shadow-sm">
                   <BookOpen className="w-5 h-5 stroke-[2px]" />
                 </div>
-                <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight hidden lg:block">Teacher's Library</h2>
+                <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight hidden lg:block">Teacher&apos;s Library</h2>
               </div>
               <div className="flex-1 max-w-xl">
                 <div className="relative group">
@@ -329,6 +330,7 @@ function TeacherLayoutContent({ children, session, pathname }: { children: React
                 <BookOpen className="w-3.5 h-3.5 text-emerald-600 group-hover:rotate-6 transition-transform stroke-[2.5px]" />
                 <span>Trang học tập</span>
               </Link>
+              <TeacherLocaleSwitch />
               <NotificationBell />
               <TeacherProfile />
             </div>
@@ -402,17 +404,17 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   // Skip layout chrome for root subdomain homepage, login page, /teacher homepage, and game creator pages
   if (pathname === '/' || pathname === '/teacher/login' || pathname === '/teacher' || pathname.startsWith('/teacher/games/')) {
     return (
-      <SessionProvider>
+      <>
+        <TeacherDomTranslator />
         {children}
-      </SessionProvider>
+      </>
     )
   }
 
   return (
-    <SessionProvider>
-      <TeacherLayoutWrapper>
-        {children}
-      </TeacherLayoutWrapper>
-    </SessionProvider>
+    <TeacherLayoutWrapper>
+      <TeacherDomTranslator />
+      {children}
+    </TeacherLayoutWrapper>
   )
 }

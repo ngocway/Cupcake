@@ -12,7 +12,7 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
   );
 
   return (
-    <HomeShell>
+    <HomeShell initialSession={session}>
 
       <TeacherDashboardClient initialTab={initialTab} isAuthenticated={isAuthenticated} />
     </HomeShell>

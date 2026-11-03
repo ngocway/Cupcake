@@ -80,7 +80,7 @@ function ModalLanguageSwitcher({ locale, onChange }: { locale: "vi" | "en"; onCh
 export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "role", callbackUrl, joinNotice }: LoginModalProps) {
   const [mounted, setMounted] = useState(false)
   const [view, setView] = useState<"role" | "studentLogin" | "teacherLogin">(defaultView)
-  const [locale, setLocale] = useState<"vi" | "en">("vi")
+  const [locale, setLocale] = useState<"vi" | "en">("en")
   const router = useRouter()
 
   useEffect(() => {
@@ -97,25 +97,16 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "rol
   useEffect(() => {
     if (isOpen) {
       setView(defaultView)
-      // Detect locale from cookie or localStorage or /api/locale
       if (typeof window !== "undefined") {
         const getCookie = (name: string) => {
           const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
           return match ? match[2] : null;
         };
-        const savedLocale = localStorage.getItem("preferred-locale");
+        const savedLocale = localStorage.getItem("preferred-locale") || getCookie("NEXT_LOCALE");
         if (savedLocale === "vi" || savedLocale === "en") {
           setLocale(savedLocale as "vi" | "en");
         } else {
-          fetch("/api/locale?detect=1")
-            .then((res) => res.json())
-            .then((data) => {
-              if (data?.locale === "vi" || data?.locale === "en") {
-                setLocale(data.locale); localStorage.setItem("preferred-locale", data.locale);
-                window.dispatchEvent(new CustomEvent("locale-change", { detail: data.locale }));
-              }
-            })
-            .catch(() => {});
+          setLocale("en");
         }
       }
     }

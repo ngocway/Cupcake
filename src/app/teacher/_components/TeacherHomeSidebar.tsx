@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { StickySidebarWrapper } from "@/app/_components/StickySidebarWrapper";
 import { useState, useEffect } from "react";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface TeacherHomeSidebarProps {
   activeTab?: string;
@@ -16,6 +17,7 @@ export function TeacherHomeSidebar({
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTeacherLocale();
 
   const rawActiveTab = propActiveTab ?? (searchParams?.get("tab") || "match");
   const activeTab = (rawActiveTab === "fill" || rawActiveTab === "my-fill-games") ? "match" : rawActiveTab;
@@ -300,7 +302,7 @@ export function TeacherHomeSidebar({
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
               <span className="material-symbols-rounded text-xl text-white">add_circle</span>
             </div>
-            <span>Danh mục Tạo mới</span>
+            <span>{t.sidebar.createNewTitle}</span>
             <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isCreateOpen ? "rotate-180" : ""}`}>
               expand_more
             </span>
@@ -319,7 +321,7 @@ export function TeacherHomeSidebar({
                     <span className="material-symbols-rounded">extension</span>
                   </div>
                 </div>
-                <p className="teacher-tile-label">Nối cặp</p>
+                <p className="teacher-tile-label">{t.sidebar.match}</p>
               </div>
 
               {/* Toán học */}
@@ -332,13 +334,13 @@ export function TeacherHomeSidebar({
                     <span className="material-symbols-rounded">calculate</span>
                   </div>
                 </div>
-                <p className="teacher-tile-label">Toán học</p>
+                <p className="teacher-tile-label">{t.sidebar.math}</p>
               </div>
 
               {/* Điền ô trống (Tạm khóa) */}
               <div
                 className="teacher-tile fill opacity-50 cursor-not-allowed pointer-events-none grayscale-[30%] relative"
-                title="Tính năng đang hoàn thiện"
+                title={t.sidebar.comingSoonTooltip}
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
@@ -346,7 +348,7 @@ export function TeacherHomeSidebar({
                   </div>
                   <span className="material-symbols-rounded text-purple-700/80 text-[18px]">lock</span>
                 </div>
-                <p className="teacher-tile-label">Điền ô trống</p>
+                <p className="teacher-tile-label">{t.sidebar.fillInBlanks}</p>
               </div>
 
               {/* Lật ảnh */}
@@ -359,7 +361,7 @@ export function TeacherHomeSidebar({
                     <span className="material-symbols-rounded">style</span>
                   </div>
                 </div>
-                <p className="teacher-tile-label">Lật ảnh</p>
+                <p className="teacher-tile-label">{t.sidebar.flipCards}</p>
               </div>
 
               {/* Trắc nghiệm */}
@@ -372,7 +374,7 @@ export function TeacherHomeSidebar({
                     <span className="material-symbols-rounded">quiz</span>
                   </div>
                 </div>
-                <p className="teacher-tile-label">Trắc nghiệm</p>
+                <p className="teacher-tile-label">{t.sidebar.quiz}</p>
               </div>
             </div>
           </div>
@@ -402,7 +404,7 @@ export function TeacherHomeSidebar({
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
               <span className="material-symbols-rounded text-xl text-white">folder_open</span>
             </div>
-            <span>Bài tập đã tạo</span>
+            <span>{t.sidebar.createdTitle}</span>
             <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isMyGamesOpen ? "rotate-180" : ""}`}>
               expand_more
             </span>
@@ -420,8 +422,8 @@ export function TeacherHomeSidebar({
                   <span className="material-symbols-rounded text-[22px]">auto_awesome_motion</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">Nối cặp đã tạo</span>
-                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Nối Cặp</span>
+                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdMatchTitle}</span>
+                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdMatchSub}</span>
                 </div>
               </div>
 
@@ -434,25 +436,25 @@ export function TeacherHomeSidebar({
                   <span className="material-symbols-rounded text-[22px]">calculate</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">Toán học đã tạo</span>
-                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Toán học</span>
+                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdMathTitle}</span>
+                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdMathSub}</span>
                 </div>
               </div>
 
               {/* Điền ô trống đã tạo (Tạm khóa) */}
               <div
                 className="teacher-list-item opacity-50 cursor-not-allowed pointer-events-none relative select-none grayscale-[30%]"
-                title="Tính năng đang hoàn thiện"
+                title={t.sidebar.comingSoonTooltip}
               >
                 <div className="w-9 h-9 rounded-xl bg-purple-100/70 text-purple-500 flex items-center justify-center shrink-0">
                   <span className="material-symbols-rounded text-[22px]">assignment</span>
                 </div>
                 <div className="flex flex-col flex-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-headline font-black text-sm text-slate-600">Điền ô trống đã tạo</span>
+                    <span className="font-headline font-black text-sm text-slate-600">{t.sidebar.createdFillTitle}</span>
                     <span className="material-symbols-rounded text-purple-600/80 text-[16px]">lock</span>
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Điền ô</span>
+                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdFillSub}</span>
                 </div>
               </div>
 
@@ -465,8 +467,8 @@ export function TeacherHomeSidebar({
                   <span className="material-symbols-rounded text-[22px]">style</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">Lật ảnh đã tạo</span>
-                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Lật ảnh</span>
+                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdFlipTitle}</span>
+                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdFlipSub}</span>
                 </div>
               </div>
 
@@ -479,8 +481,8 @@ export function TeacherHomeSidebar({
                   <span className="material-symbols-rounded text-[22px]">quiz</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">Trắc nghiệm đã tạo</span>
-                  <span className="text-[11px] font-semibold text-slate-400">Danh sách game Trắc nghiệm</span>
+                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdQuizTitle}</span>
+                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdQuizSub}</span>
                 </div>
               </div>
             </div>

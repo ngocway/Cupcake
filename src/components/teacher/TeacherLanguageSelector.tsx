@@ -8,22 +8,27 @@ interface TeacherLanguageSelectorProps {
 }
 
 export function TeacherLanguageSelector({ initialLocale, onLocaleChange }: TeacherLanguageSelectorProps) {
-  const [currentLocale, setCurrentLocale] = useState<string>(initialLocale || "vi");
+  const [currentLocale, setCurrentLocale] = useState<string>(initialLocale || "en");
   const [isSaving, setIsSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!initialLocale) {
-      fetch("/api/locale")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.locale) {
-            setCurrentLocale(data.locale);
-          }
-        })
-        .catch(() => {});
+    if (!initialLocale && typeof window !== "undefined") {
+      const saved = localStorage.getItem("preferred-locale");
+      if (saved === "vi" || saved === "en") {
+        setCurrentLocale(saved);
+      } else {
+        setCurrentLocale("en");
+      }
     }
+    const handleLocaleChange = (e: any) => {
+      if (e?.detail === "vi" || e?.detail === "en") {
+        setCurrentLocale(e.detail);
+      }
+    };
+    window.addEventListener("locale-change", handleLocaleChange);
+    return () => window.removeEventListener("locale-change", handleLocaleChange);
   }, [initialLocale]);
 
   useEffect(() => {
