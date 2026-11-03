@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Play, Plus, Video } from "lucide-react";
 import Link from "next/link";
-import { GameVideoModal, VideoModalGame } from "./GameVideoModal";
+import { GameVideoModal, VideoModalGame } from "./GameVideoModal"; import { trackEvent } from "@/lib/analytics";
 
 interface GameCard {
   id: string;
@@ -44,10 +44,10 @@ function getChoiceHref(game: GameCard) {
 
 function ChoiceGameCardItem({
   game,
-  onPlayVideo,
+  onPlayVideo, isAuthenticated = true, onRequireAuth,
 }: {
   game: GameCard;
-  onPlayVideo: (videoGame: VideoModalGame) => void;
+  onPlayVideo: (videoGame: VideoModalGame) => void; isAuthenticated?: boolean; onRequireAuth?: (href: string, gameId?: string, gameTitle?: string) => void;
 }) {
   const href = getChoiceHref(game);
   const hasVideo = Boolean(game.videoId);
@@ -56,7 +56,7 @@ function ChoiceGameCardItem({
 
   const handleOpenDemo = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (hasVideo && onPlayVideo && game.videoId) {
+    if (hasVideo && onPlayVideo && game.videoId) { trackEvent("teacher_video_open", { gameId: game.id, gameTitle: game.title, category: "choice", videoType: "demo", isAuthenticated });
       onPlayVideo({
         id: game.id,
         title: game.title,
@@ -71,7 +71,7 @@ function ChoiceGameCardItem({
 
   const handleOpenGuide = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (hasGuide && onPlayVideo && activeGuideVideoId) {
+    if (hasGuide && onPlayVideo && activeGuideVideoId) { trackEvent("teacher_video_open", { gameId: game.id, gameTitle: game.title, category: "choice", videoType: "guide", isAuthenticated });
       onPlayVideo({
         id: game.id,
         title: `${game.title} (Hướng dẫn tạo bài)`,
@@ -183,7 +183,7 @@ function ChoiceGameCardItem({
         {/* Footer CTA Button */}
         <Link
           href={href}
-          prefetch={true}
+          prefetch={isAuthenticated} data-no-global-loader={!isAuthenticated ? "true" : undefined} onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: game.title, category: "choice", source: "card", isAuthenticated }); if (!isAuthenticated && onRequireAuth) { e.preventDefault(); onRequireAuth(href, game.id, game.title); } }}
           className="w-full py-3 px-3.5 bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center gap-2 group/btn text-center"
         >
           <Plus className="w-4 h-4 stroke-[3px] group-hover/btn:rotate-90 transition-transform duration-300" />
@@ -194,7 +194,7 @@ function ChoiceGameCardItem({
   );
 }
 
-export function ChoiceGameCards() {
+export function ChoiceGameCards({ isAuthenticated = true, onRequireAuth }: { isAuthenticated?: boolean; onRequireAuth?: (href: string, gameId?: string, gameTitle?: string) => void } = {}) {
   const [activeVideoGame, setActiveVideoGame] = useState<VideoModalGame | null>(null);
 
   return (
@@ -215,7 +215,7 @@ export function ChoiceGameCards() {
           <ChoiceGameCardItem
             key={game.id}
             game={game}
-            onPlayVideo={(vg) => setActiveVideoGame(vg)}
+            onPlayVideo={(vg) => setActiveVideoGame(vg)} isAuthenticated={isAuthenticated} onRequireAuth={onRequireAuth}
           />
         ))}
       </div>
@@ -223,7 +223,7 @@ export function ChoiceGameCards() {
       {/* Reusable Cinema Video Modal */}
       <GameVideoModal
         game={activeVideoGame}
-        onClose={() => setActiveVideoGame(null)}
+        onClose={() => setActiveVideoGame(null)} isAuthenticated={isAuthenticated} onRequireAuth={onRequireAuth}
       />
     </div>
   );

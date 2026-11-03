@@ -541,3 +541,394 @@ export async function getPublishedTeacherGamesAction(): Promise<AdminTeacherGame
     return [];
   }
 }
+
+
+export interface TeacherTemplateAnalyticsItem {
+  id: string;
+  title: string;
+  category: "match" | "choice" | "flip" | "quiz";
+  categoryLabel: string;
+  badge: string;
+  demoViews: number;
+  guideViews: number;
+  createClicks: number;
+  guestCreateClicks: number;
+  createdCount: number;
+  shareCount: number;
+}
+
+export interface TeacherBehaviorEventLog {
+  id: string;
+  eventName: string;
+  actionLabel: string;
+  gameTitle: string;
+  categoryLabel: string;
+  userName: string;
+  userEmail: string | null;
+  isGuest: boolean;
+  device: "Mobile" | "Tablet" | "Desktop";
+  createdAt: string;
+}
+
+export interface AdminTeacherBehaviorAnalytics {
+  funnel: {
+    portalVisits: number;
+    uniqueVisitors: number;
+    videoOpens: number;
+    demoViews: number;
+    guideViews: number;
+    createClicks: number;
+    authCreateClicks: number;
+    guestCreateClicks: number;
+    cardCreateClicks: number;
+    modalCreateClicks: number;
+    authPrompts: number;
+    authConverted: number;
+    totalGamesCreated: number;
+    shareActions: number;
+  };
+  categoryStats: {
+    key: string;
+    label: string;
+    clicks: number;
+  }[];
+  templates: TeacherTemplateAnalyticsItem[];
+  recentEvents: TeacherBehaviorEventLog[];
+}
+
+const TEACHER_GAME_TEMPLATES: Omit<
+  TeacherTemplateAnalyticsItem,
+  "demoViews" | "guideViews" | "createClicks" | "guestCreateClicks" | "createdCount" | "shareCount"
+>[] = [
+  { id: "image-image", title: "Nối Cặp Ảnh - Ảnh", category: "match", categoryLabel: "Nối cặp", badge: "Ảnh - Ảnh" },
+  { id: "image-text", title: "Nối Cặp Ảnh - Chữ", category: "match", categoryLabel: "Nối cặp", badge: "Ảnh - Chữ" },
+  { id: "conveyor-drop", title: "Băng Chuyền Thả Khối", category: "match", categoryLabel: "Nối cặp", badge: "Băng Chuyền" },
+  { id: "line-image-image", title: "Nối Dây Ảnh - Ảnh", category: "match", categoryLabel: "Nối cặp", badge: "Nối Dây" },
+  { id: "line-image-text", title: "Nối Dây Ảnh - Chữ", category: "match", categoryLabel: "Nối cặp", badge: "Nối Dây" },
+  { id: "cut-rope-image-text", title: "Cắt Dây Ảnh - Chữ", category: "match", categoryLabel: "Nối cặp", badge: "Cắt Dây" },
+  { id: "train-vocab", title: "Nối Đoàn Tàu", category: "match", categoryLabel: "Nối cặp", badge: "Đoàn Tàu" },
+  { id: "shooter", title: "Bắn Súng Toán Học", category: "choice", categoryLabel: "Toán học", badge: "Bắn Súng" },
+  { id: "egg-crack", title: "Đập Trứng Toán Học", category: "choice", categoryLabel: "Toán học", badge: "Đập Trứng" },
+  { id: "flip-image-image", title: "Lật Ảnh-Ảnh", category: "flip", categoryLabel: "Lật ảnh", badge: "Ảnh - Ảnh" },
+  { id: "flip-image-text", title: "Lật Ảnh-Chữ", category: "flip", categoryLabel: "Lật ảnh", badge: "Ảnh - Chữ" },
+  { id: "candy-quiz", title: "Trắc nghiệm Kẹo Ngọt", category: "quiz", categoryLabel: "Trắc nghiệm", badge: "Kẹo Ngọt" },
+  { id: "treasure-hunt", title: "Truy tìm Kho báu", category: "quiz", categoryLabel: "Trắc nghiệm", badge: "Kho Báu" },
+  { id: "shooter-quiz", title: "Bắn súng Trắc nghiệm", category: "quiz", categoryLabel: "Trắc nghiệm", badge: "Bắn Súng" },
+];
+
+function mapCreatedGameToTemplateId(game: AdminTeacherGameItem): string {
+  const label = game.gameModeLabel;
+  if (label === "Trắc nghiệm Kẹo Ngọt") return "candy-quiz";
+  if (label === "Bắn súng Trắc nghiệm") return "shooter-quiz";
+  if (label === "Bắn súng Toán học") return "shooter";
+  if (label === "Đập trứng Toán học") return "egg-crack";
+  if (label === "Truy tìm Kho báu") return "treasure-hunt";
+  if (label === "Lật Ảnh - Chữ") return "flip-image-text";
+  if (label === "Lật Ảnh - Ảnh") return "flip-image-image";
+  if (label === "Băng chuyền thả khối") return "conveyor-drop";
+  if (label === "Nối dây Ảnh - Ảnh") return "line-image-image";
+  if (label === "Nối dây Ảnh - Chữ") return "line-image-text";
+  if (label === "Cắt Dây Ảnh - Chữ") return "cut-rope-image-text";
+  if (label === "Nối Đoàn Tàu") return "train-vocab";
+  if (label === "Nối cặp Ảnh - Chữ") return "image-text";
+  return "image-image";
+}
+
+export async function getAdminTeacherBehaviorAnalyticsAction(
+  existingGames?: AdminTeacherGameItem[]
+): Promise<AdminTeacherBehaviorAnalytics> {
+  const emptyResult: AdminTeacherBehaviorAnalytics = {
+    funnel: {
+      portalVisits: 0,
+      uniqueVisitors: 0,
+      videoOpens: 0,
+      demoViews: 0,
+      guideViews: 0,
+      createClicks: 0,
+      authCreateClicks: 0,
+      guestCreateClicks: 0,
+      cardCreateClicks: 0,
+      modalCreateClicks: 0,
+      authPrompts: 0,
+      authConverted: 0,
+      totalGamesCreated: existingGames?.length || 0,
+      shareActions: 0,
+    },
+    categoryStats: [
+      { key: "match", label: "Nối cặp", clicks: 0 },
+      { key: "choice", label: "Toán học", clicks: 0 },
+      { key: "flip", label: "Lật ảnh", clicks: 0 },
+      { key: "quiz", label: "Trắc nghiệm", clicks: 0 },
+      { key: "my-games", label: "Bài tập đã tạo", clicks: 0 },
+    ],
+    templates: TEACHER_GAME_TEMPLATES.map((t) => ({
+      ...t,
+      demoViews: 0,
+      guideViews: 0,
+      createClicks: 0,
+      guestCreateClicks: 0,
+      createdCount: 0,
+      shareCount: 0,
+    })),
+    recentEvents: [],
+  };
+
+  try {
+    const logs = await prisma.pageViewLog.findMany({
+      where: {
+        OR: [
+          { path: { startsWith: "/__event__/class/global/teacher_" } },
+          { path: "/teacher" },
+          { path: { startsWith: "/teacher?" } },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 2500,
+    });
+
+    const userIds = Array.from(
+      new Set(logs.map((l) => l.userId).filter((id): id is string => Boolean(id)))
+    );
+
+    const users =
+      userIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const templateMap = new Map<string, TeacherTemplateAnalyticsItem>();
+    for (const t of TEACHER_GAME_TEMPLATES) {
+      templateMap.set(t.id, {
+        ...t,
+        demoViews: 0,
+        guideViews: 0,
+        createClicks: 0,
+        guestCreateClicks: 0,
+        createdCount: 0,
+        shareCount: 0,
+      });
+    }
+
+    // Count actual created games per template
+    if (existingGames) {
+      for (const g of existingGames) {
+        const tid = mapCreatedGameToTemplateId(g);
+        const entry = templateMap.get(tid);
+        if (entry) {
+          entry.createdCount++;
+        }
+      }
+    }
+
+    const categoryClicksMap: Record<string, number> = {
+      match: 0,
+      choice: 0,
+      flip: 0,
+      quiz: 0,
+      "my-games": 0,
+    };
+
+    const uniqueVisitorsSet = new Set<string>();
+    let portalVisits = 0;
+    let videoOpens = 0;
+    let demoViews = 0;
+    let guideViews = 0;
+    let createClicks = 0;
+    let authCreateClicks = 0;
+    let guestCreateClicks = 0;
+    let cardCreateClicks = 0;
+    let modalCreateClicks = 0;
+    let authPrompts = 0;
+    let authConverted = 0;
+    let shareActions = 0;
+
+    const recentEvents: TeacherBehaviorEventLog[] = [];
+
+    for (const log of logs) {
+      uniqueVisitorsSet.add(log.userId || log.ipHash || log.id);
+
+      if (!log.path.startsWith("/__event__/")) {
+        portalVisits++;
+        continue;
+      }
+
+      const [rawPath, queryStr] = log.path.split("?");
+      const parts = rawPath.split("/");
+      const eventName = decodeURIComponent(parts[4] || "");
+      const params = new URLSearchParams(queryStr || "");
+
+      const gameId = params.get("gameId") || "";
+      const gameTitle = params.get("gameTitle") || "";
+      const category = params.get("category") || "";
+      const videoType = params.get("videoType") || "demo";
+      const source = params.get("source") || "card";
+      const tab = params.get("tab") || "";
+      const action = params.get("action") || "";
+      const targetUrl = params.get("targetUrl") || "";
+      const isAuthenticatedParam = params.get("isAuthenticated") === "true" || Boolean(log.userId);
+
+      const userObj = log.userId ? userMap.get(log.userId) : undefined;
+      const ua = log.userAgent || "";
+      const device: "Mobile" | "Tablet" | "Desktop" =
+        ua.includes("iPad") || ua.includes("Tablet")
+          ? "Tablet"
+          : ua.includes("Mobile") || ua.includes("Android") || ua.includes("iPhone")
+            ? "Mobile"
+            : "Desktop";
+
+      let actionLabel = eventName;
+      let displayTitle = gameTitle;
+      let displayCategory =
+        category === "match"
+          ? "Nối cặp"
+          : category === "choice"
+            ? "Toán học"
+            : category === "flip"
+              ? "Lật ảnh"
+              : category === "quiz"
+                ? "Trắc nghiệm"
+                : "Teacher Portal";
+
+      if (eventName === "teacher_category_click") {
+        portalVisits++;
+        if (tab.startsWith("my-")) {
+          categoryClicksMap["my-games"]++;
+          actionLabel = "Mở danh mục Bài tập đã tạo";
+          displayTitle =
+            tab === "my-match-games"
+              ? "Nối cặp đã tạo"
+              : tab === "my-choice-games"
+                ? "Toán học đã tạo"
+                : tab === "my-flip-games"
+                  ? "Lật ảnh đã tạo"
+                  : "Trắc nghiệm đã tạo";
+          displayCategory = "Bài tập đã tạo";
+        } else if (categoryClicksMap[tab] !== undefined) {
+          categoryClicksMap[tab]++;
+          actionLabel = "Chuyển danh mục Game";
+          displayTitle =
+            tab === "match"
+              ? "Tạo Game Nối cặp"
+              : tab === "choice"
+                ? "Tạo Game Toán học"
+                : tab === "flip"
+                  ? "Tạo Game Lật ảnh"
+                  : "Tạo Game Trắc nghiệm";
+          displayCategory = displayTitle;
+        }
+      } else if (eventName === "teacher_video_open") {
+        videoOpens++;
+        if (videoType === "guide") {
+          guideViews++;
+          actionLabel = "📹 Xem Video Hướng dẫn";
+        } else {
+          demoViews++;
+          actionLabel = "▶️ Xem Video Demo";
+        }
+        const tpl = templateMap.get(gameId);
+        if (tpl) {
+          if (videoType === "guide") tpl.guideViews++;
+          else tpl.demoViews++;
+          displayCategory = tpl.categoryLabel;
+        }
+      } else if (eventName === "teacher_create_click") {
+        createClicks++;
+        if (isAuthenticatedParam) authCreateClicks++;
+        else guestCreateClicks++;
+
+        if (source === "video_modal") {
+          modalCreateClicks++;
+          actionLabel = "➕ Bấm Tạo bài tập (từ Video)";
+        } else {
+          cardCreateClicks++;
+          actionLabel = "➕ Bấm + TẠO BÀI TẬP";
+        }
+
+        const tpl = templateMap.get(gameId);
+        if (tpl) {
+          tpl.createClicks++;
+          if (!isAuthenticatedParam) tpl.guestCreateClicks++;
+          displayCategory = tpl.categoryLabel;
+        }
+      } else if (eventName === "teacher_auth_prompt") {
+        authPrompts++;
+        actionLabel = "🔒 Hiện Popup Yêu cầu Đăng nhập GV";
+        if (!displayTitle && targetUrl) {
+          displayTitle = targetUrl;
+        }
+      } else if (eventName === "teacher_auth_converted") {
+        authConverted++;
+        actionLabel = "✅ Đăng nhập Giáo viên thành công từ Popup";
+        displayTitle = targetUrl || "/teacher";
+      } else if (eventName === "teacher_my_game_action") {
+        if (action === "copy_link" || action === "share_open" || action === "download_qr") {
+          shareActions++;
+        }
+        actionLabel =
+          action === "copy_link"
+            ? "🔗 Sao chép link gửi học sinh"
+            : action === "download_qr"
+              ? "📲 Tải mã QR bài tập"
+              : action === "share_open"
+                ? "📤 Mở hộp thoại Chia sẻ"
+                : action === "preview"
+                  ? "👁️ Chơi thử bài đã tạo"
+                  : `⚡ Thao tác: ${action}`;
+        displayCategory = "Bài tập đã tạo";
+      }
+
+      if (recentEvents.length < 60) {
+        recentEvents.push({
+          id: log.id,
+          eventName,
+          actionLabel,
+          gameTitle: displayTitle || "Khám phá chung",
+          categoryLabel: displayCategory,
+          userName: userObj?.name || (log.userId ? "Giáo viên" : "Khách vãng lai (Chưa đăng nhập)"),
+          userEmail: userObj?.email || null,
+          isGuest: !log.userId && !isAuthenticatedParam,
+          device,
+          createdAt: log.createdAt.toISOString(),
+        });
+      }
+    }
+
+    return {
+      funnel: {
+        portalVisits,
+        uniqueVisitors: uniqueVisitorsSet.size,
+        videoOpens,
+        demoViews,
+        guideViews,
+        createClicks,
+        authCreateClicks,
+        guestCreateClicks,
+        cardCreateClicks,
+        modalCreateClicks,
+        authPrompts,
+        authConverted,
+        totalGamesCreated: existingGames?.length || 0,
+        shareActions,
+      },
+      categoryStats: [
+        { key: "match", label: "Nối cặp", clicks: categoryClicksMap.match },
+        { key: "choice", label: "Toán học", clicks: categoryClicksMap.choice },
+        { key: "flip", label: "Lật ảnh", clicks: categoryClicksMap.flip },
+        { key: "quiz", label: "Trắc nghiệm", clicks: categoryClicksMap.quiz },
+        { key: "my-games", label: "Bài tập đã tạo", clicks: categoryClicksMap["my-games"] },
+      ],
+      templates: Array.from(templateMap.values()).sort(
+        (a, b) =>
+          b.createClicks + b.demoViews + b.createdCount - (a.createClicks + a.demoViews + a.createdCount)
+      ),
+      recentEvents,
+    };
+  } catch (err) {
+    console.error("Failed to fetch teacher behavior analytics:", err);
+    return emptyResult;
+  }
+}

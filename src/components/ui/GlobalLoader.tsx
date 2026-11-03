@@ -39,7 +39,7 @@ function GlobalLoaderContent() {
 
       // If it's a cross-origin link, we can still show loading, but the browser will navigate anyway
       if (targetUrl.origin !== currentUrl.origin) {
-         setIsNavigating(true);
+         setTimeout(() => { if (!e.defaultPrevented) setIsNavigating(true); }, 0);
          return;
       }
 
@@ -47,7 +47,7 @@ function GlobalLoaderContent() {
       // We check if it's actually changing the path or query
       if (targetUrl.pathname !== currentUrl.pathname || targetUrl.search !== currentUrl.search) {
         // Show the loader immediately!
-        setIsNavigating(true);
+        setTimeout(() => { if (!e.defaultPrevented) setIsNavigating(true); }, 0);
         
         // Also listen for pushState / replaceState just in case
       }

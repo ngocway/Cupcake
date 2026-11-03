@@ -15,7 +15,7 @@ import {
 import { getTeacherQuizGamesAction } from "@/actions/candy-quiz-actions";
 import { deleteTeacherMatchGameAction } from "@/actions/teacher-match-games";
 import { MatchGameShareModal } from "./MatchGameShareModal";
-import { toast } from "sonner";
+import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
 
 export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const [topics, setTopics] = useState<any[]>(initialTopics || []);
@@ -229,7 +229,7 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                   }`}
                 >
                   <a
-                    href={playUrl}
+                    href={playUrl} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: "quiz", gameTitle: topic.name, gameId: topic.id })}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`flex-1 py-2 px-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${
@@ -300,7 +300,7 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
 
                   <button
                     type="button"
-                    onClick={() => setShareTopic({ ...topic, customGamePath: playUrl })}
+                    onClick={() => { trackEvent("teacher_my_game_action", { action: "share_open", gameType: "quiz", gameTitle: topic.name, gameId: topic.id }); setShareTopic({ ...topic, customGamePath: playUrl }); }}
                     className={`px-3 py-1.5 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0 ${
                       isTreasure
                         ? "bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 shadow-amber-500/20"

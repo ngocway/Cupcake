@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 1.5 Check cookie NEXT_LOCALE
-    const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+    const cookieLocale = request.nextUrl.searchParams.get("detect") === "1" ? null : request.cookies.get("NEXT_LOCALE")?.value;
     if (cookieLocale && (cookieLocale === "vi" || cookieLocale === "en")) {
       return NextResponse.json({ locale: cookieLocale, source: "cookie" });
     }
@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
           ip.startsWith("192.168.") ||
           ip.startsWith("10.");
 
-        if (!isLocal) {
+        if (true) {
           try {
-            const geoRes = await fetch(`https://api.country.is/${ip}`, {
+            const geoRes = await fetch(`https://api.country.is/${isLocal ? "" : ip}`, {
               signal: AbortSignal.timeout(1500),
             });
             if (geoRes.ok) {

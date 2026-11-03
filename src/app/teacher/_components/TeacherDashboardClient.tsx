@@ -10,6 +10,8 @@ import { FlipGameCards } from "./FlipGameCards";
 import { MyFlipGamesList } from "./MyFlipGamesList";
 import { QuizGameCards } from "./QuizGameCards";
 import { MyQuizGamesList } from "./MyQuizGamesList";
+import { LoginModal } from "@/components/LoginButton";
+import { trackEvent } from "@/lib/analytics";
 
 interface TeacherDashboardClientProps {
   initialTab?: string;
@@ -20,12 +22,54 @@ export function TeacherDashboardClient({
   initialTab = "match",
   isAuthenticated,
 }: TeacherDashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<string>(initialTab);
-  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
-    () => new Set([initialTab])
-  );
+  const safeInitialTab =
+    !isAuthenticated && initialTab.startsWith("my-") ? "match" : initialTab;
 
-  const handleSelectTab = (tab: string) => {
+  const [activeTab, setActiveTab] = useState<string>(safeInitialTab);
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
+    () => new Set([safeInitialTab])
+  );
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string>("/teacher");
+
+  const handleRequireAuth = (targetHref: string, gameId?: string, gameTitle?: string) => { trackEvent("teacher_auth_prompt", { targetUrl: targetHref, gameId: gameId || "", gameTitle: gameTitle || "" });
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("hide-global-loader")); setPendingRedirectUrl(targetHref);
+    setLoginModalOpen(true);
+  };
+
+  // If unauthenticated user navigated directly to a "my-*-games" tab or returned with RoleStudentExists error, open Teacher Login modal
+  useEffect(() => {
+    if (!isAuthenticated && initialTab.startsWith("my-")) {
+      setPendingRedirectUrl(`/teacher?tab=${initialTab}`);
+      setLoginModalOpen(true);
+    } else if (!isAuthenticated && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("error") === "RoleStudentExists") {
+        setLoginModalOpen(true);
+      }
+    }
+  }, [isAuthenticated, initialTab]);
+
+  // If authentication state updates to true (e.g. after router.refresh()) and pendingRedirectUrl is a /teacher?tab=... URL, sync the activeTab
+  useEffect(() => {
+    if (isAuthenticated && initialTab && activeTab !== initialTab) {
+      setActiveTab(initialTab);
+      setVisitedTabs((prev) => {
+        if (prev.has(initialTab)) return prev;
+        const next = new Set(prev);
+        next.add(initialTab);
+        return next;
+      });
+    }
+  }, [isAuthenticated, initialTab]);
+
+  const handleSelectTab = (tab: string) => { trackEvent("teacher_category_click", { tab, isAuthenticated });
+    // Option A: Clicking "Bài tập đã tạo" tabs when not authenticated as Teacher immediately opens Teacher Login modal
+    if (tab.startsWith("my-") && !isAuthenticated) {
+      handleRequireAuth(`/teacher?tab=${tab}`);
+      return;
+    }
+
     setActiveTab(tab);
     setVisitedTabs((prev) => {
       if (prev.has(tab)) return prev;
@@ -47,6 +91,10 @@ export function TeacherDashboardClient({
     const handlePopState = () => {
       const url = new URL(window.location.href);
       const tab = url.searchParams.get("tab") || "match";
+      if (tab.startsWith("my-") && !isAuthenticated) {
+        handleRequireAuth(`/teacher?tab=${tab}`);
+        return;
+      }
       setActiveTab(tab);
       setVisitedTabs((prev) => {
         if (prev.has(tab)) return prev;
@@ -58,7 +106,7 @@ export function TeacherDashboardClient({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <div className="w-full pb-20 flex flex-col lg:flex-row items-stretch lg:items-start gap-2 lg:gap-10 px-4 md:px-10 max-w-[1600px] mx-auto">
@@ -73,12 +121,15 @@ export function TeacherDashboardClient({
         {/* 1. Nối cặp (Match Cards) */}
         {visitedTabs.has("match") && (
           <div className={activeTab === "match" ? "block" : "hidden"}>
-            <MatchGameCards />
+            <MatchGameCards
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={handleRequireAuth}
+            />
           </div>
         )}
 
         {/* 2. Bài tập Nối cặp đã tạo */}
-        {visitedTabs.has("my-match-games") && (
+        {isAuthenticated && visitedTabs.has("my-match-games") && (
           <div className={activeTab === "my-match-games" ? "block" : "hidden"}>
             <MyMatchGamesList />
           </div>
@@ -87,12 +138,15 @@ export function TeacherDashboardClient({
         {/* 3. Toán học (Choice Cards) */}
         {visitedTabs.has("choice") && (
           <div className={activeTab === "choice" ? "block" : "hidden"}>
-            <ChoiceGameCards />
+            <ChoiceGameCards
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={handleRequireAuth}
+            />
           </div>
         )}
 
         {/* 4. Bài tập Toán học đã tạo */}
-        {visitedTabs.has("my-choice-games") && (
+        {isAuthenticated && visitedTabs.has("my-choice-games") && (
           <div className={activeTab === "my-choice-games" ? "block" : "hidden"}>
             <MyChoiceGamesList />
           </div>
@@ -101,12 +155,15 @@ export function TeacherDashboardClient({
         {/* 5. Lật ảnh (Flip Cards) */}
         {visitedTabs.has("flip") && (
           <div className={activeTab === "flip" ? "block" : "hidden"}>
-            <FlipGameCards />
+            <FlipGameCards
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={handleRequireAuth}
+            />
           </div>
         )}
 
         {/* 6. Bài tập Lật ảnh đã tạo */}
-        {visitedTabs.has("my-flip-games") && (
+        {isAuthenticated && visitedTabs.has("my-flip-games") && (
           <div className={activeTab === "my-flip-games" ? "block" : "hidden"}>
             <MyFlipGamesList />
           </div>
@@ -115,12 +172,15 @@ export function TeacherDashboardClient({
         {/* 7. Trắc nghiệm (Quiz Cards) */}
         {visitedTabs.has("quiz") && (
           <div className={activeTab === "quiz" ? "block" : "hidden"}>
-            <QuizGameCards />
+            <QuizGameCards
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={handleRequireAuth}
+            />
           </div>
         )}
 
         {/* 8. Bài tập Trắc nghiệm đã tạo */}
-        {visitedTabs.has("my-quiz-games") && (
+        {isAuthenticated && visitedTabs.has("my-quiz-games") && (
           <div className={activeTab === "my-quiz-games" ? "block" : "hidden"}>
             <MyQuizGamesList />
           </div>
@@ -144,7 +204,7 @@ export function TeacherDashboardClient({
         )}
 
         {/* 10. Bài tập Điền ô trống đã tạo (Placeholder) */}
-        {visitedTabs.has("my-fill-games") && (
+        {isAuthenticated && visitedTabs.has("my-fill-games") && (
           <div className={activeTab === "my-fill-games" ? "block" : "hidden"}>
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">
               <div className="w-16 h-16 rounded-2xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center mb-4 shadow-sm">
@@ -160,6 +220,14 @@ export function TeacherDashboardClient({
           </div>
         )}
       </main>
+
+      {/* Teacher Login Modal on Demand (with Smart Redirect to clicked game or tab) */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        defaultView="teacherLogin"
+        callbackUrl={pendingRedirectUrl}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   QrCode, 
   CheckCircle2 
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
 
 interface MatchGameShareModalProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ export function MatchGameShareModal({
   }, [isOpen, onClose]);
 
   // Copy link handler
-  const handleCopyLink = () => {
+  const handleCopyLink = () => { trackEvent("teacher_my_game_action", { action: "copy_link", gameTitle: topicName, gameId: topicId });
     if (navigator.clipboard) {
       navigator.clipboard.writeText(gameUrl);
       setCopied(true);
@@ -59,7 +59,7 @@ export function MatchGameShareModal({
   };
 
   // Download QR image
-  const handleDownloadQR = useCallback(() => {
+  const handleDownloadQR = useCallback(() => { trackEvent("teacher_my_game_action", { action: "download_qr", gameTitle: topicName, gameId: topicId });
     const canvas = downloadCanvasRef.current;
     if (!canvas) return;
 

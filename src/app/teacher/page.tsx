@@ -1,6 +1,6 @@
 import { HomeShell } from "@/app/_components/HomeShell";
 import { auth } from "@/auth";
-import { TeacherLoginModalAuto } from "./_components/TeacherLoginModalAuto";
+
 import { TeacherDashboardClient } from "./_components/TeacherDashboardClient";
 
 export default async function TeacherHomePage({ searchParams }: { searchParams: Promise<any> }) {
@@ -13,7 +13,7 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
 
   return (
     <HomeShell>
-      <TeacherLoginModalAuto isAuthenticated={isAuthenticated} />
+
       <TeacherDashboardClient initialTab={initialTab} isAuthenticated={isAuthenticated} />
     </HomeShell>
   );

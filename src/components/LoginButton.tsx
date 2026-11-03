@@ -19,7 +19,7 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginSuccess?: () => void;
-  defaultView?: "role" | "studentLogin" | "teacherLogin";
+  defaultView?: "role" | "studentLogin" | "teacherLogin"; callbackUrl?: string;
   joinNotice?: {
     className: string;
   };
@@ -77,7 +77,7 @@ function ModalLanguageSwitcher({ locale, onChange }: { locale: "vi" | "en"; onCh
   );
 }
 
-export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "role", joinNotice }: LoginModalProps) {
+export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "role", callbackUrl, joinNotice }: LoginModalProps) {
   const [mounted, setMounted] = useState(false)
   const [view, setView] = useState<"role" | "studentLogin" | "teacherLogin">(defaultView)
   const [locale, setLocale] = useState<"vi" | "en">("vi")
@@ -103,15 +103,15 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "rol
           const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
           return match ? match[2] : null;
         };
-        const savedLocale = getCookie("NEXT_LOCALE") || localStorage.getItem("preferred-locale");
+        const savedLocale = localStorage.getItem("preferred-locale");
         if (savedLocale === "vi" || savedLocale === "en") {
           setLocale(savedLocale as "vi" | "en");
         } else {
-          fetch("/api/locale")
+          fetch("/api/locale?detect=1")
             .then((res) => res.json())
             .then((data) => {
               if (data?.locale === "vi" || data?.locale === "en") {
-                setLocale(data.locale);
+                setLocale(data.locale); localStorage.setItem("preferred-locale", data.locale);
                 window.dispatchEvent(new CustomEvent("locale-change", { detail: data.locale }));
               }
             })
@@ -276,7 +276,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess, defaultView = "rol
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar">
-              <TeacherLoginForm onSuccess={handleClose} />
+              <TeacherLoginForm onSuccess={onLoginSuccess || handleClose} callbackUrl={callbackUrl} locale={locale} />
             </div>
           </div>
         )}

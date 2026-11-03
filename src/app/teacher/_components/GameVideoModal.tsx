@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Play, Pause, Plus, X, RotateCcw, Volume2, VolumeX, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { trackEvent } from "@/lib/analytics";
 
 export interface VideoModalGame {
   id: string;
@@ -18,9 +19,16 @@ export interface VideoModalGame {
 interface GameVideoModalProps {
   game: VideoModalGame | null;
   onClose: () => void;
+  isAuthenticated?: boolean;
+  onRequireAuth?: (createHref: string, gameId?: string, gameTitle?: string) => void;
 }
 
-export function GameVideoModal({ game, onClose }: GameVideoModalProps) {
+export function GameVideoModal({
+  game,
+  onClose,
+  isAuthenticated = true,
+  onRequireAuth,
+}: GameVideoModalProps) {
   const pathname = usePathname();
   const isTeacherPortal = pathname.startsWith("/teacher");
 
@@ -161,8 +169,8 @@ export function GameVideoModal({ game, onClose }: GameVideoModalProps) {
 
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              href={isTeacherPortal ? game.createHref : "/teacher"}
-              onClick={onClose}
+              href={isTeacherPortal ? game.createHref : "/teacher"} data-no-global-loader={isTeacherPortal && !isAuthenticated ? "true" : undefined}
+              onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: game.title, category: game.badge, source: "video_modal", isAuthenticated }); if (isTeacherPortal && !isAuthenticated && onRequireAuth) { e.preventDefault(); onClose(); onRequireAuth(game.createHref, game.id, game.title); } else { onClose(); } }}
               className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sky-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
               title={isTeacherPortal ? "Tạo bài tập này" : "Đăng nhập Giáo viên để tạo"}
             >

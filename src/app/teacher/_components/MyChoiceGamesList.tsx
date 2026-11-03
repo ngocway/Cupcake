@@ -26,7 +26,7 @@ import {
   deleteTeacherChoiceGameAction,
 } from "@/actions/teacher-choice-games";
 import { ChoiceGameShareModal } from "./ChoiceGameShareModal";
-import { toast } from "sonner";
+import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
 
 export interface UnifiedGameItem {
   id: string;
@@ -230,7 +230,7 @@ export function MyChoiceGamesList() {
                 {/* Card Footer Actions */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                   <Link
-                    href={playPath}
+                    href={playPath} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: game.gameType, gameTitle: game.title, gameId: game.id })}
                     target="_blank"
                     className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                     title="Xem thử bài tập trong tab mới"
@@ -269,7 +269,7 @@ export function MyChoiceGamesList() {
 
                   <button
                     type="button"
-                    onClick={() => setShareGame(game)}
+                    onClick={() => { trackEvent("teacher_my_game_action", { action: "share_open", gameType: game.gameType, gameTitle: game.title, gameId: game.id }); setShareGame(game); }}
                     className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-500/20 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shrink-0"
                     title="Chia sẻ link làm bài cho học sinh"
                   >

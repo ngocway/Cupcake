@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check, Copy, Link2, Share2, Sparkles } from "lucide-react";
+import { X, Check, Copy, Link2, Share2, Sparkles } from "lucide-react"; import { trackEvent } from "@/lib/analytics";
 
 interface ChoiceGameShareModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export function ChoiceGameShareModal({
 
   const directLink = `${typeof window !== "undefined" ? window.location.origin : ""}${directPath || `/game/shooter/${gameCode}`}`;
 
-  const handleCopyLink = () => {
+  const handleCopyLink = () => { trackEvent("teacher_my_game_action", { action: "copy_link", gameTitle, gameId: gameCode });
     navigator.clipboard.writeText(directLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

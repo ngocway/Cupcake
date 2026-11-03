@@ -260,6 +260,12 @@ export function AdminUserDrawer({ userId, onClose }: AdminUserDrawerProps) {
                         else if (evName === "island_locked_click") displayPath = `🔒 Bấm Đảo đang khóa (Ngày ${day})`;
                         else if (evName === "station_card_clicked") displayPath = `🎯 Chọn Trạm: ${title} (Ngày ${day})`;
                         else if (evName === "game_picker_selected") displayPath = `🎮 Chọn Game: ${title} (Ngày ${day})`;
+                        else if (evName === "teacher_video_open") displayPath = `${qs.get("videoType") === "guide" ? "📹 Xem Video HD" : "▶️ Xem Video Demo"}: ${title}`;
+                        else if (evName === "teacher_create_click") displayPath = `➕ Bấm Tạo Bài Tập: ${title}`;
+                        else if (evName === "teacher_category_click") displayPath = `📂 Chuyển tab /teacher: ${qs.get("tab") || ""}`;
+                        else if (evName === "teacher_auth_prompt") displayPath = `🔒 Hiện Popup Đăng nhập GV: ${title || qs.get("targetUrl") || ""}`;
+                        else if (evName === "teacher_auth_converted") displayPath = `✅ Đăng nhập GV thành công từ Popup`;
+                        else if (evName === "teacher_my_game_action") displayPath = `🔗 Thao tác bài đã tạo (${qs.get("action")}): ${title}`;
                         else displayPath = `⚡ Sự kiện: ${evName} (Ngày ${day})`;
                       }
                       return (
