@@ -526,7 +526,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               )}
             </div>
           ) : (
-            <LoginButton defaultView={isTeacherSection ? "teacher-login" : "role"} className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
+            <LoginButton defaultView={isTeacherSection ? "teacherLogin" : "role"} className="bg-primary text-on-primary px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs md:text-small uppercase tracking-wider sm:tracking-widest hover:scale-105 hover:shadow-xl shadow-primary/30 transition-all">
               {currentLocale === "vi" ? "Đăng nhập" : "GET STARTED"}
             </LoginButton>
           )}
@@ -536,4 +536,3 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
 
   )
 }
-
