@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, Maximize2, Minimize2, RotateCw } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, RotateCw } from "lucide-react"; import { TeacherLocaleSwitch, TeacherDomTranslator } from "@/i18n/teacher-locale";
 
 interface ForcedLandscapeWrapperProps {
   children: ReactNode;
@@ -127,7 +127,7 @@ export function ForcedLandscapeWrapper({
             )}
 
             <div className="flex items-center gap-2 pointer-events-auto">
-              {extraControls}
+              {extraControls} <TeacherLocaleSwitch />
 
               {/* Nút đổi chiều xoay 90 / -90 độ: Chỉ hiển thị khi đang cầm máy dọc */}
               {isPortrait && (
@@ -155,7 +155,7 @@ export function ForcedLandscapeWrapper({
         )}
 
         {/* Nội dung game (Iframe hoặc Game Stage) */}
-        {children}
+        {children} <TeacherDomTranslator />
       </div>
     </div>
   );

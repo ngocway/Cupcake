@@ -23,7 +23,7 @@ import { MatchGamePreviewModal, PreviewGameTopic } from "./MatchGamePreviewModal
 import { MatchTextTextPreviewModal } from "./MatchTextTextPreviewModal";
 import { MatchGameShareModal } from "./MatchGameShareModal";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
 export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
   // Optimization: Hydration-safe initial state, then hydrate from sessionStorage
@@ -33,7 +33,7 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const [previewTopic, setPreviewTopic] = useState<PreviewGameTopic | null>(null);
   const [shareTopic, setShareTopic] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
 
   const fetchGames = async (isBackground = false) => {
     if (!isBackground && topics.length === 0) setLoading(true);
@@ -284,7 +284,7 @@ export function MyMatchGamesList({ initialTopics }: { initialTopics?: any[] }) {
                           : "border-orange-200/50 dark:border-orange-800/50"
                 }`}>
                   <a
-                    href={`${gamePath}?topicId=${topic.id}`} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: "match", gameTitle: topic.name, gameId: topic.id })}
+                    href={withLangParam(`${gamePath}?topicId=${topic.id}`, locale)} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: "match", gameTitle: topic.name, gameId: topic.id })}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 py-2 px-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-sky-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"

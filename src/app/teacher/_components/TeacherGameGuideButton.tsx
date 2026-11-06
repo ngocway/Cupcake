@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Video } from "lucide-react";
 import { GameVideoModal, VideoModalGame } from "./GameVideoModal";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, TeacherLocaleSwitch } from "@/i18n/teacher-locale";
 
 export interface TeacherGameGuideButtonProps {
   game: {
@@ -34,31 +34,34 @@ export function TeacherGameGuideButton({ game, className = "" }: TeacherGameGuid
 
   return (
     <>
-      {hasVideo ? (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className={`h-11 px-4 rounded-2xl bg-sky-500 hover:bg-white dark:hover:bg-slate-900 text-white hover:text-sky-600 dark:hover:text-sky-400 border-2 border-sky-500 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-sky-500/25 hover:shadow-xl hover:shadow-sky-500/20 transition-all duration-200 active:scale-95 cursor-pointer shrink-0 group/guide ${className}`}
-          title={t.common.watchGuideTooltip}
-        >
-          <div className="w-6 h-6 rounded-lg bg-white/20 group-hover/guide:bg-sky-500/15 text-white group-hover/guide:text-sky-600 dark:group-hover/guide:text-sky-400 flex items-center justify-center transition-colors">
-            <Video className="w-3.5 h-3.5" />
-          </div>
-          <span>{t.common.guide}</span>
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled
-          className={`h-11 px-4 rounded-2xl bg-sky-500/30 dark:bg-sky-950/30 border-2 border-sky-500/30 dark:border-sky-800/30 text-white/60 dark:text-white/40 font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-not-allowed opacity-75 select-none shrink-0 ${className}`}
-          title={t.common.guideComingSoonTooltip}
-        >
-          <div className="w-6 h-6 rounded-lg bg-white/10 text-white/50 flex items-center justify-center">
-            <Video className="w-3.5 h-3.5" />
-          </div>
-          <span>{t.common.guide}</span>
-        </button>
-      )}
+      <div className="flex items-center gap-3 shrink-0">
+        {hasVideo ? (
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className={`h-11 px-4 rounded-2xl bg-sky-500 hover:bg-white dark:hover:bg-slate-900 text-white hover:text-sky-600 dark:hover:text-sky-400 border-2 border-sky-500 font-black text-xs uppercase tracking-wider flex items-center gap-2 shadow-md shadow-sky-500/25 hover:shadow-xl hover:shadow-sky-500/20 transition-all duration-200 active:scale-95 cursor-pointer shrink-0 group/guide ${className}`}
+            title={t.common.watchGuideTooltip}
+          >
+            <div className="w-6 h-6 rounded-lg bg-white/20 group-hover/guide:bg-sky-500/15 text-white group-hover/guide:text-sky-600 dark:group-hover/guide:text-sky-400 flex items-center justify-center transition-colors">
+              <Video className="w-3.5 h-3.5" />
+            </div>
+            <span>{t.common.guide}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className={`h-11 px-4 rounded-2xl bg-sky-500/30 dark:bg-sky-950/30 border-2 border-sky-500/30 dark:border-sky-800/30 text-white/60 dark:text-white/40 font-bold text-xs uppercase tracking-wider flex items-center gap-2 cursor-not-allowed opacity-75 select-none shrink-0 ${className}`}
+            title={t.common.guideComingSoonTooltip}
+          >
+            <div className="w-6 h-6 rounded-lg bg-white/10 text-white/50 flex items-center justify-center">
+              <Video className="w-3.5 h-3.5" />
+            </div>
+            <span>{t.common.guide}</span>
+          </button>
+        )}
+        <TeacherLocaleSwitch />
+      </div>
 
       {/* Cinema Mode Popup */}
       {hasVideo && isOpen && (

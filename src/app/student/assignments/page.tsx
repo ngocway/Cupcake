@@ -97,6 +97,15 @@ export default async function StudentAssignmentsPage({
     const publicAssignmentsRaw = await prisma.assignment.findMany({
       where: {
         status: "PUBLIC",
+        lesson: null,
+        materialType: { not: "FLASHCARD" },
+        NOT: [
+          { id: { startsWith: "tiny-vocab-" } },
+          { slug: { startsWith: "vocab45-" } },
+          { title: { startsWith: "Game:" } },
+          { title: { startsWith: "Flashcard (" } },
+          { title: { startsWith: "[BÀI ĐỌC]" } }
+        ],
         deletedAt: null
       },
       include: {

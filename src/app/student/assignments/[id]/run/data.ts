@@ -260,15 +260,54 @@ export const getCachedQuizRunnerTemplate = async (assignmentId: string) => {
   });
 };
 
+const STOP_WORDS = new Set([
+  "the", "and", "for", "with", "from", "into", "onto", "part", "exercise", "exercises",
+  "practice", "quiz", "test", "lesson", "unit", "day", "bai", "tap", "doc", "game"
+]);
 
-export const getRelatedAssignmentsCached = async (assignmentId: string, assignmentTags: string | null, targetAudiences: string[]) => {
-  return fetchWithRedis(`assignment:related:v2:${assignmentId}`, 900, async () => {
-    // 1. Fetch assignment with pre-computed related IDs, title and lesson relation
+/**
+ * Filter out internal 45-Day Vocab sub-activities (Game wrappers, Flashcard wrappers, daily internal sub-items)
+ * so they don't pollute general related exercise recommendations.
+ */
+function isInternalClassSubItem(item: {
+  id?: string | null;
+  slug?: string | null;
+  title?: string | null;
+  materialType?: string | null;
+  grammarLesson?: string | null;
+}): boolean {
+  const id = (item.id || "").toLowerCase();
+  const slug = (item.slug || "").toLowerCase();
+  const title = (item.title || "").trim();
+  const grammarLesson = (item.grammarLesson || "").toLowerCase();
+
+  if (item.materialType === "FLASHCARD") return true;
+  if (id.startsWith("tiny-vocab-") || slug.startsWith("vocab45-")) return true;
+  if (grammarLesson.startsWith("tiny-vocab-")) return true;
+  if (/^(Game:\s*|Flashcard\s*\()/i.test(title)) return true;
+  return false;
+}
+
+export const getRelatedAssignmentsCached = async (
+  assignmentId: string,
+  assignmentTags: string | null,
+  targetAudiences: string[]
+) => {
+  return fetchWithRedis(`assignment:related:v4:${assignmentId}`, 900, async () => {
+    // 1. Fetch assignment with full metadata so tags/grammarTopic/level are always available
+    // even when caller passes null/empty arguments.
     const assignment = await prisma.assignment.findFirst({
       where: { OR: [{ id: assignmentId }, { slug: assignmentId }] },
       select: {
         id: true,
+        slug: true,
         title: true,
+        tags: true,
+        level: true,
+        materialType: true,
+        grammarTopic: true,
+        grammarLesson: true,
+        targetAudiences: true,
         relatedAssignmentIds: true,
         lesson: {
           select: {
@@ -281,12 +320,17 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
 
     const actualId = assignment?.id ?? assignmentId;
     const currentTitle = assignment?.title || "";
+    const resolvedTags = assignmentTags || assignment?.tags || null;
+    const resolvedAudiences =
+      targetAudiences && targetAudiences.length > 0
+        ? targetAudiences
+        : ((assignment?.targetAudiences as string[]) || []);
 
     // If this assignment is part of a lesson, recommend related lessons instead of exercises
     if (assignment?.lesson) {
       const parentLesson = assignment.lesson;
       let relatedLessonsList: any[] = [];
-      
+
       if (parentLesson.relatedLessonIds && parentLesson.relatedLessonIds.length > 0) {
         relatedLessonsList = await prisma.lesson.findMany({
           where: {
@@ -295,28 +339,27 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
           },
           include: { teacher: { select: { id: true, name: true, image: true } } }
         });
-        
+
         // Preserve AI-ranked order
         const orderMap = new Map(parentLesson.relatedLessonIds.map((id, i) => [id, i]));
         relatedLessonsList.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
       } else {
         // Fallback: fetch latest public lessons of the same level/targetAudience
-        const currentAudiences = targetAudiences || [];
         relatedLessonsList = await prisma.lesson.findMany({
           where: {
             id: { not: parentLesson.id },
             deletedAt: null,
-            ...(currentAudiences.length > 0 && {
-              targetAudiences: { hasSome: currentAudiences }
+            ...(resolvedAudiences.length > 0 && {
+              targetAudiences: { hasSome: resolvedAudiences }
             })
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 10,
           include: { teacher: { select: { id: true, name: true, image: true } } }
         });
       }
-      
-      return relatedLessonsList.map(l => ({
+
+      return relatedLessonsList.map((l) => ({
         id: l.id,
         slug: l.slug,
         title: l.title,
@@ -327,6 +370,22 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       }));
     }
 
+    // Common exclusion filter for public standalone exercises
+    const basePublicExerciseWhere: any = {
+      status: "PUBLIC",
+      id: { not: actualId },
+      deletedAt: null,
+      lesson: null,
+      materialType: { not: "FLASHCARD" },
+      NOT: [
+        { id: { startsWith: "tiny-vocab-" } },
+        { slug: { startsWith: "vocab45-" } },
+        { title: { startsWith: "Game:" } },
+        { title: { startsWith: "Flashcard (" } },
+        { title: { startsWith: "[BÀI ĐỌC]" } }
+      ]
+    };
+
     // 2. Fetch sibling parts (e.g. Part 2, Part 3) of the same exercise topic
     const hasPartSuffix = /\s+Part\s+\d+$/i.test(currentTitle);
     let siblingParts: any[] = [];
@@ -334,25 +393,20 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       const baseTitle = currentTitle.replace(/\s+Part\s+\d+$/i, "").trim();
       const potentialSiblings = await prisma.assignment.findMany({
         where: {
-          status: 'PUBLIC',
-          id: { not: actualId },
-          deletedAt: null,
-          lesson: null,
+          ...basePublicExerciseWhere,
           title: {
             startsWith: baseTitle,
-            mode: 'insensitive'
+            mode: "insensitive"
           }
         },
         include: { teacher: { select: { name: true, image: true } } }
       });
 
-      // Filter to keep only those with "Part \d+" at the end
-      siblingParts = potentialSiblings.filter(sibling => {
+      siblingParts = potentialSiblings.filter((sibling) => {
         const siblingTitle = sibling.title || "";
-        return /\s+Part\s+\d+$/i.test(siblingTitle);
+        return /\s+Part\s+\d+$/i.test(siblingTitle) && !isInternalClassSubItem(sibling);
       });
 
-      // Sort by part number ascending
       siblingParts.sort((a, b) => {
         const matchA = a.title.match(/Part\s+(\d+)$/i);
         const matchB = b.title.match(/Part\s+(\d+)$/i);
@@ -362,90 +416,162 @@ export const getRelatedAssignmentsCached = async (assignmentId: string, assignme
       });
     }
 
-    // 3. Get other related content (AI pre-computed or fallback query)
+    // 3. Get other related content (AI pre-computed -> Grammar Topic/Lesson -> Tag/Title keyword matching -> Same Level/Type fallback)
     let otherRelated: any[] = [];
     if (assignment?.relatedAssignmentIds && assignment.relatedAssignmentIds.length > 0) {
       const related = await prisma.assignment.findMany({
         where: {
           id: { in: assignment.relatedAssignmentIds },
-          status: 'PUBLIC',
+          status: "PUBLIC",
           deletedAt: null
         },
         include: { teacher: { select: { name: true, image: true } } }
       });
 
-      // Preserve AI-ranked order
       const orderMap = new Map(assignment.relatedAssignmentIds.map((id, i) => [id, i]));
       related.sort((a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99));
-      otherRelated = related;
-    } else {
-      // Fallback: tag-matching (for assignments not yet indexed by AI)
+      otherRelated = related.filter((item) => !isInternalClassSubItem(item));
+    }
+
+    if (otherRelated.length < 10) {
+      const existingIds = new Set<string>([
+        actualId,
+        ...siblingParts.map((s) => s.id),
+        ...otherRelated.map((r) => r.id)
+      ]);
+
+      // Build keyword & tag signals from the current assignment
       const popularTags = await prisma.tag.findMany({
         where: { isPopular: true },
         select: { name: true }
       });
-      const popularTagNames = new Set(popularTags.map(t => t.name.toLowerCase().trim()));
+      const popularTagNames = new Set(popularTags.map((t) => t.name.toLowerCase().trim()));
 
-      const currentTags = assignmentTags
-        ? assignmentTags.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean)
+      const currentTags = resolvedTags
+        ? resolvedTags
+            .split(",")
+            .map((t: string) => t.trim().toLowerCase())
+            .filter(Boolean)
         : [];
       const filteredTags = currentTags.filter((tag: string) => !popularTagNames.has(tag));
-      const currentAudiences = targetAudiences || [];
 
-      if (filteredTags.length > 0) {
-        const candidates = await prisma.assignment.findMany({
-          where: {
-            status: 'PUBLIC',
-            id: { not: actualId },
-            deletedAt: null,
-            lesson: null,
-            ...(currentAudiences.length > 0 && {
-              targetAudiences: { hasSome: currentAudiences }
-            }),
-            OR: filteredTags.map((tag: string) => ({
-              tags: { contains: tag, mode: 'insensitive' }
-            }))
-          },
-          take: 100,
-          include: { teacher: { select: { name: true, image: true } } }
-        });
+      // Extract meaningful keywords from title (e.g. "Past Simple", "Regular Verbs")
+      const titleKeywords = currentTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !STOP_WORDS.has(w))
+        .slice(0, 5);
 
-        const getOverlapCount = (tagsStr: string | null | undefined) => {
-          if (!tagsStr) return 0;
-          const tags = tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-          return tags.filter(tag => filteredTags.includes(tag)).length;
-        };
-
-        candidates.sort((a, b) => {
-          const overlapA = getOverlapCount(a.tags);
-          const overlapB = getOverlapCount(b.tags);
-          return overlapB - overlapA;
-        });
-
-        otherRelated = candidates.slice(0, 10);
+      const orConditions: any[] = [];
+      if (assignment?.grammarLesson && !assignment.grammarLesson.startsWith("tiny-vocab-")) {
+        orConditions.push({ grammarLesson: assignment.grammarLesson });
+      }
+      if (assignment?.grammarTopic) {
+        orConditions.push({ grammarTopic: assignment.grammarTopic });
+      }
+      for (const tag of filteredTags) {
+        orConditions.push({ tags: { contains: tag, mode: "insensitive" } });
+      }
+      for (const kw of titleKeywords) {
+        orConditions.push({ title: { contains: kw, mode: "insensitive" } });
+        orConditions.push({ tags: { contains: kw, mode: "insensitive" } });
       }
 
-      if (otherRelated.length === 0) {
-        otherRelated = await prisma.assignment.findMany({
+      if (orConditions.length > 0) {
+        const candidates = await prisma.assignment.findMany({
           where: {
-            status: 'PUBLIC',
-            id: { not: actualId },
-            deletedAt: null,
-            lesson: null,
-            ...(currentAudiences.length > 0 && {
-              targetAudiences: { hasSome: currentAudiences }
-            })
+            ...basePublicExerciseWhere,
+            id: { notIn: Array.from(existingIds) },
+            ...(resolvedAudiences.length > 0 && {
+              targetAudiences: { hasSome: resolvedAudiences }
+            }),
+            OR: orConditions
           },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 80,
           include: { teacher: { select: { name: true, image: true } } }
         });
+
+        const scoreCandidate = (cand: any) => {
+          let score = 0;
+          if (
+            assignment?.grammarLesson &&
+            cand.grammarLesson === assignment.grammarLesson
+          ) {
+            score += 50;
+          }
+          if (
+            assignment?.grammarTopic &&
+            cand.grammarTopic === assignment.grammarTopic
+          ) {
+            score += 30;
+          }
+          if (assignment?.materialType && cand.materialType === assignment.materialType) {
+            score += 10;
+          }
+          if (assignment?.level && cand.level === assignment.level) {
+            score += 8;
+          }
+          const candTags = cand.tags
+            ? cand.tags
+                .split(",")
+                .map((t: string) => t.trim().toLowerCase())
+                .filter(Boolean)
+            : [];
+          for (const t of candTags) {
+            if (filteredTags.includes(t)) score += 15;
+          }
+          const candTitleLower = (cand.title || "").toLowerCase();
+          for (const kw of titleKeywords) {
+            if (candTitleLower.includes(kw)) score += 6;
+            if (candTags.some((t: string) => t.includes(kw))) score += 4;
+          }
+          return score;
+        };
+
+        const validCandidates = candidates.filter((c) => !isInternalClassSubItem(c));
+        validCandidates.sort((a, b) => scoreCandidate(b) - scoreCandidate(a));
+
+        for (const cand of validCandidates) {
+          if (otherRelated.length >= 10) break;
+          if (!existingIds.has(cand.id)) {
+            otherRelated.push(cand);
+            existingIds.add(cand.id);
+          }
+        }
+      }
+
+      // Final fallback if still fewer than 10: fetch public exercises with same materialType / level (excluding internal 45vocab games/flashcards)
+      if (otherRelated.length < 10) {
+        const fallbackItems = await prisma.assignment.findMany({
+          where: {
+            ...basePublicExerciseWhere,
+            id: { notIn: Array.from(existingIds) },
+            ...(assignment?.materialType && assignment.materialType !== "FLASHCARD"
+              ? { materialType: assignment.materialType }
+              : {}),
+            ...(resolvedAudiences.length > 0 && {
+              targetAudiences: { hasSome: resolvedAudiences }
+            })
+          },
+          orderBy: { viewCount: "desc" },
+          take: 15,
+          include: { teacher: { select: { name: true, image: true } } }
+        });
+
+        for (const item of fallbackItems) {
+          if (otherRelated.length >= 10) break;
+          if (!existingIds.has(item.id) && !isInternalClassSubItem(item)) {
+            otherRelated.push(item);
+            existingIds.add(item.id);
+          }
+        }
       }
     }
 
     // 4. Combine: Put sibling parts first, deduplicate by ID, and limit to 10
-    const siblingIds = new Set(siblingParts.map(s => s.id));
-    const filteredOther = otherRelated.filter(item => !siblingIds.has(item.id));
+    const siblingIds = new Set(siblingParts.map((s) => s.id));
+    const filteredOther = otherRelated.filter((item) => !siblingIds.has(item.id));
     const combined = [...siblingParts, ...filteredOther].slice(0, 10);
 
     return combined;
@@ -468,4 +594,3 @@ export const prewarmAssignmentsData = async (assignmentIds: string[]) => {
     })
   ).catch(() => {});
 };
-

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 export type TeacherLocale = "en" | "vi";
 
@@ -511,6 +512,14 @@ export const TEACHER_DICT = {
 
 export function getStoredTeacherLocale(): TeacherLocale {
   if (typeof window === "undefined") return "en";
+  try {
+    const urlLang = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
+    if (urlLang === "vi" || urlLang === "en") {
+      localStorage.setItem("preferred-locale", urlLang);
+      document.cookie = `NEXT_LOCALE=${urlLang};path=/;max-age=31536000;SameSite=Lax`;
+      return urlLang;
+    }
+  } catch {}
   const saved = localStorage.getItem("preferred-locale");
   if (saved === "vi" || saved === "en") return saved;
   const match = document.cookie.match(/(^| )NEXT_LOCALE=([^;]+)/);
@@ -518,6 +527,26 @@ export function getStoredTeacherLocale(): TeacherLocale {
     return match[2] as TeacherLocale;
   }
   return "en";
+}
+
+export function withLangParam(rawUrl: string, locale: TeacherLocale): string {
+  if (!rawUrl) return rawUrl;
+  try {
+    if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+      const u = new URL(rawUrl);
+      u.searchParams.set("lang", locale);
+      return u.toString();
+    }
+    const [pathAndQuery, hash] = rawUrl.split("#");
+    const [pathname, query = ""] = pathAndQuery.split("?");
+    const params = new URLSearchParams(query);
+    params.set("lang", locale);
+    const qs = params.toString();
+    return `${pathname}${qs ? `?${qs}` : ""}${hash ? `#${hash}` : ""}`;
+  } catch {
+    const sep = rawUrl.includes("?") ? "&" : "?";
+    return `${rawUrl}${sep}lang=${locale}`;
+  }
 }
 
 export function setGlobalTeacherLocale(nextLocale: TeacherLocale) {
@@ -607,6 +636,7 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Nối Đoàn Tàu": "Vocabulary Train",
   "Nối Cặp Ảnh - Ảnh": "Match Image - Image",
   "Nối Dây Ảnh - Ảnh": "Line Match Image - Image",
+  "Nối Cặp Chữ - Chữ": "Match Text - Text",
   "Băng Chuyền Thả Khối": "Conveyor Belt Drop",
   "Lật Ảnh-Ảnh": "Flip Image - Image",
   "Lật Ảnh - Ảnh": "Flip Image - Image",
@@ -620,8 +650,12 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "BẮN SÚNG TRẮC NGHIỆM": "SPACE SHOOTER QUIZ",
   "Bắn Súng Toán Học": "Math Space Shooter",
   "Đập Trứng Toán Học": "Math Egg Smash",
+  "Bài tập Đập Trứng Toán học": "Math Egg Smash Exercise",
+  "Bài tập Bắn súng Toán học": "Math Space Shooter Exercise",
+  "Chơi thử Bài tập Bắn súng Toán học": "Test Play Math Space Shooter",
   "Ảnh - Chữ": "Image - Word",
   "Ảnh - Ảnh": "Image - Image",
+  "Chữ - Chữ": "Text - Text",
   "Nối Dây": "Line Match",
   "Cắt Dây": "Cut Rope",
   "Đoàn Tàu": "Train",
@@ -643,6 +677,8 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Chỉnh sửa Game Nối Cặp Ảnh - Ảnh": "Edit Match Image - Image Game",
   "Tạo mới Game Nối Dây Ảnh - Ảnh": "Create Line Match Image - Image Game",
   "Chỉnh sửa Game Nối Dây Ảnh - Ảnh": "Edit Line Match Image - Image Game",
+  "Tạo mới Game Nối Cặp Chữ - Chữ": "Create Match Text - Text Game",
+  "Chỉnh sửa Game Nối Cặp Chữ - Chữ": "Edit Match Text - Text Game",
   "Tạo Game Băng Chuyền Thả Khối": "Create Conveyor Belt Drop Game",
   "Chỉnh sửa Game Băng Chuyền Thả Khối": "Edit Conveyor Belt Drop Game",
   "Tạo mới Game Lật Ảnh-Ảnh": "Create Flip Image - Image Game",
@@ -659,11 +695,60 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Tạo Game Bắn Súng Toán Học": "Create Math Space Shooter Game",
   "Tạo Game Đập Trứng Toán Học": "Create Math Egg Smash Game",
   "• Tạo bài tập lật ghép 2 hình ảnh": "• Create a 2-image memory flip exercise",
+  "• Tạo bài tập ghép 2 hình ảnh": "• Create a 2-image matching exercise",
   "• Tạo bài tập ghép 2 hình ảnh tương ứng": "• Create a matching image pairs exercise",
+  "• Tạo bài tập ghép từ vựng, nghĩa & định nghĩa": "• Create a vocabulary & definition matching exercise",
   "• Tạo bài tập trắc nghiệm 4 đáp án Xứ sở Kẹo": "• Create a 4-option multiple choice quiz in Candy World",
   "• Tạo bài tập trắc nghiệm mở ô bản đồ Kho Báu": "• Create a pirate map treasure hunt multiple choice quiz",
+  "• Tạo bài tập trắc nghiệm Bản đồ Kho báu": "• Create a pirate map treasure hunt multiple choice quiz",
   "• Tạo bài tập trắc nghiệm Bắn súng Neon không gian": "• Create a Neon Space Shooter multiple choice quiz",
   "Hệ thống tự động sinh câu hỏi theo các dạng toán được chọn": "Automatically generates math questions from selected math types",
+  "Hệ thống tự động sinh câu hỏi đập trứng theo các dạng toán được chọn": "Automatically generates egg-smash math questions from selected math types",
+
+  // Split JSX Text Fragments (around {expressions})
+  "Cặp Ảnh #": "Image Pair #",
+  "Cặp Chữ #": "Text Pair #",
+  "Cặp thẻ #": "Card Pair #",
+  "CÂU HỎI #": "QUESTION #",
+  "Các đáp án (": "Options (",
+  "/4) • Chọn đáp án ĐÚNG:": "/4) • Select the CORRECT answer:",
+  "Danh Sách Câu Hỏi (": "Questions List (",
+  "câu)": "questions)",
+  "câu": "questions",
+  "cặp": "pairs",
+  "thẻ": "cards",
+  "từ": "words",
+  "/5 từ": "/5 words",
+  "/12 từ": "/12 words",
+  "Vượt quá 5 từ (": "Exceeds 5 words (",
+  "/5 từ). Vui lòng rút gọn!": "/5 words). Please shorten!",
+  "Vế A vượt quá 12 từ (Hiện tại:": "Side A exceeds 12 words (Current:",
+  "Vế B vượt quá 12 từ (Hiện tại:": "Side B exceeds 12 words (Current:",
+  "từ). Vui lòng rút gọn!": "words). Please shorten!",
+  "Chuyển sang": "Move to",
+  "Tìm kiếm hình ảnh cho Vế": "Search Image for Side",
+  "Vế A": "Side A",
+  "Vế B": "Side B",
+  "Vòng": "Rounds",
+  "Vòng)": "Rounds)",
+  "Vòng chơi": "Rounds",
+  "Chuyến tàu": "Trains",
+  "Chuyến tàu)": "Trains)",
+  "Tự động tạo": "Auto-create",
+  "từ vựng vừa nhập.": "entered words.",
+  "cặp chữ vừa nhập.": "entered text pairs.",
+  "Tạo câu hỏi thứ": "Create question",
+  "Đặt dấu": "Place",
+  "trước đáp án đúng (ví dụ:": "before the correct answer (e.g.,",
+  "Phát hiện": "Found",
+  "lỗi cần sửa:": "errors to fix:",
+  "Đã chọn:": "Selected:",
+  "Ví dụ:": "Example:",
+  "Dạng Toán Đã Chọn (": "Selected Math Types (",
+  "Bảng Xem Trước": "Preview",
+  "Câu Hỏi": "Questions",
+  "Thêm câu thứ": "Add question #",
+  "thủ công": "manually",
 
   // Section Headers, Labels & Placeholders
   "1. Thông tin bài tập": "1. Exercise Information",
@@ -688,6 +773,8 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "VD: Nhận biết động vật & bóng tương ứng...": "E.g., Match Animals & Their Shadows...",
   "VD: Thì Hiện Tại Đơn & Tiếp Diễn, Câu hỏi giao tiếp...": "E.g., Present Simple & Continuous, Daily Conversation...",
   "VD: English 2D Shapes, Animals Vocabulary...": "E.g., English 2D Shapes, Animals Vocabulary...",
+  "VD: Từ vựng Tiếng Anh ↔ Nghĩa tiếng Việt Bài 1...": "E.g., English Vocabulary ↔ Definitions Unit 1...",
+  "VD: Con mèo / Quả táo / Xinh đẹp...": "E.g., Cat / Apple / Beautiful...",
   "2. Danh sách các cặp thẻ Nối (Ảnh - Chữ)": "2. Matching Card Pairs (Image - Word)",
   "2. Danh sách các cặp thẻ Băng Chuyền (Ảnh - Chữ)": "2. Conveyor Belt Card Pairs (Image - Word)",
   "2. Danh sách các cặp thẻ Lật (Ảnh - Chữ)": "2. Flip Card Pairs (Image - Word)",
@@ -699,6 +786,8 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Không đọc": "No Audio",
   "Tạo bằng AI": "Create with AI",
   "Nhập nhanh nhiều từ": "Bulk Add Words",
+  "Dán danh sách hàng loạt": "Bulk Paste List",
+  "Dán danh sách cặp chữ hàng loạt": "Bulk Paste Text Pairs",
   "Tải bộ ảnh hàng loạt": "Bulk Upload Images",
   "Tải câu hỏi hàng loạt": "Bulk Upload Questions",
   "Thêm Vòng Mới": "Add New Round",
@@ -712,9 +801,11 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Mỗi Vòng chứa tối đa": "Each Round holds up to",
   "7 cặp thẻ": "7 card pairs",
   "8 cặp thẻ": "8 card pairs",
+  "15 cặp thẻ": "15 card pairs",
   "để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!": "for a clean visual layout. When students finish Round 1, the game automatically advances to Round 2!",
   "để Học sinh lật ghép không bị rối mắt. Khi Học sinh hoàn thành Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!": "for a clean memory board. When students finish Round 1, the game automatically advances to Round 2!",
   "để Học sinh quan sát băng chuyền không bị rối mắt. Khi Học sinh thả hết toàn bộ khối của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!": "for a clear conveyor view. When students finish Round 1, the game automatically advances to Round 2!",
+  "để Học sinh thả trực quan không bị rối mắt. Khi Học sinh hoàn thành hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!": "for a clear conveyor view. When students complete Round 1, the game automatically advances to Round 2!",
   "Chưa chọn ảnh": "No image selected",
   "Chọn ảnh Vế A": "Select Image A",
   "Chọn ảnh Vế B": "Select Image B",
@@ -765,6 +856,8 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "LƯU BÀI TẬP": "SAVE EXERCISE",
   "Đang lưu...": "Saving...",
   "Đang tải dữ liệu bài tập...": "Loading exercise data...",
+  "Đang tải dữ liệu bài tập Lật Ảnh-Ảnh...": "Loading Flip Image - Image exercise data...",
+  "Đang tải dữ liệu bài tập Nối Cặp...": "Loading Matching exercise data...",
   "Đang tải chi tiết bài tập...": "Loading exercise details...",
   "Đang tải trình tạo bài tập...": "Loading exercise studio...",
   "Hệ thống đang đồng bộ toàn bộ nội dung và danh sách các cặp thẻ từ CSDL": "Syncing exercise content and card pairs from database",
@@ -822,6 +915,12 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Nhập/dán danh sách từ vựng vào đây (ngăn cách bởi dấu phẩy hoặc xuống dòng):": "Enter or paste vocabulary words here (separated by commas or new lines):",
   "Số từ nhận diện:": "Detected words:",
   "Vượt quá tối đa 50 từ!": "Exceeds maximum of 50 words!",
+  "Ghi chú": "Note",
+  ": Mỗi dòng là 1 cặp (ngăn cách bởi dấu": ": One pair per line (separated by",
+  "hoặc phím": "or",
+  "Số cặp nhận diện:": "Detected pairs:",
+  "Vượt quá tối đa 70 cặp!": "Exceeds maximum of 70 pairs!",
+  "Phân tích & Tự động tạo Vòng": "Parse & Auto-Create Rounds",
   "Hủy bỏ": "Cancel",
   "Hủy": "Cancel",
   "Tạo danh sách các Vòng chơi": "Create Game Rounds",
@@ -839,6 +938,7 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Nhập từ khóa tiếng Anh (VD: Dog, Apple, Teacher)...": "Enter English keyword (e.g., Dog, Apple, Teacher)...",
   "Nhập từ khóa tìm kiếm tiếng Anh (VD: cat, dog, apple)...": "Enter English search keyword (e.g., cat, dog, apple)...",
   "Nhập từ khóa tiếng Anh hoặc tiếng Việt (VD: door, cat, school...)": "Enter keyword in English (e.g., door, cat, school...)",
+  "Nhập từ khóa tiếng Anh hoặc tiếng Việt (VD: ship, treasure, island...)": "Enter keyword in English (e.g., ship, treasure, island...)",
   "Gõ từ khóa tìm ảnh (tiếng Anh)...": "Enter English keyword to search images...",
   "Tìm kiếm": "Search",
   "Tìm": "Search",
@@ -851,21 +951,32 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Nhập từ khóa và bấm Tìm kiếm để xem kết quả hình ảnh": "Enter a keyword and click Search to view image results",
   "Nhập từ khóa và nhấn Tìm kiếm để xem kết quả.": "Enter a keyword and click Search to view results.",
   'Nhập từ khóa tiếng Anh và nhấn "Tìm" để xem gợi ý ảnh đẹp!': 'Enter an English keyword and click "Search" to see image suggestions!',
+  "Nhập từ khóa tiếng Anh và nhấn": "Enter an English keyword and click",
+  "để xem gợi ý ảnh đẹp!": "to see image suggestions!",
   "Tải Câu Hỏi Hàng Loạt": "Bulk Upload Questions",
   "Dán danh sách câu hỏi văn bản nhanh chóng": "Paste your list of questions in text format",
   "📋 Dán nội dung mẫu": "📋 Paste Sample Format",
   "Khung nhập văn bản:": "Text Input:",
   "Xóa trắng": "Clear all",
   'Sửa trực tiếp trong khung trên rồi bấm lại "Áp dụng"': 'Edit directly in the box above and click "Apply" again',
+  "Áp dụng": "Apply",
   "Áp dụng vào bài tập": "Apply to Exercise",
+  "Không tìm thấy nội dung câu hỏi nào trong văn bản! Vui lòng nhập theo định dạng mẫu.": "No questions found in text! Please follow the sample format.",
   "Thông báo": "Notice",
   "Cần hoàn thiện thông tin bài tập": "Incomplete Exercise Information",
   "Đã hiểu": "Got it",
+  "Đồng ý, tôi sẽ kiểm tra": "OK, I'll check",
+  "Đồng ý, tôi sẽ kiểm tra lại": "OK, I'll check again",
   "Cảnh báo rời khỏi trang": "Leave Page Warning",
   "Thay đổi chưa được lưu": "Unsaved changes",
+  "Thoát khỏi trang tạo bài tập?": "Leave exercise creator?",
   "Bạn chưa lưu các thay đổi của bài tập này. Nếu rời khỏi trang bây giờ, toàn bộ thông tin vừa nhập sẽ bị mất.": "You have unsaved changes in this exercise. If you leave now, your changes will be lost.",
+  "Bạn có dữ liệu chưa lưu. Nếu thoát bây giờ, các cặp ảnh vừa soạn sẽ bị mất.": "You have unsaved changes. If you leave now, your image pairs will be lost.",
+  "Bạn có dữ liệu chưa lưu. Nếu thoát bây giờ, các cặp chữ vừa soạn sẽ bị mất.": "You have unsaved changes. If you leave now, your text pairs will be lost.",
   "Hủy, ở lại trang": "Stay on Page",
+  "Ở lại tiếp tục": "Stay & Continue",
   "Rời khỏi trang": "Leave Page",
+  "Thoát không lưu": "Leave Without Saving",
 
   // AI Modals
   "Tạo Cặp Thẻ Tự Động Bằng AI": "AI Auto-Generate Card Pairs",
@@ -966,16 +1077,334 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Cài đặt hệ thống": "System Settings",
   "Trợ giúp & Hướng dẫn": "Help & Tutorials",
   "Đăng xuất": "Sign Out",
+  "Đang xử lý và tạo âm thanh bài tập...": "Processing and generating exercise audio...",
+  "Đang xử lý và tải lên file âm thanh...": "Processing and uploading audio files...",
+  "Đang xử lý và lưu bài tập...": "Processing and saving exercise...",
+  "Không thể lưu bài tập!": "Failed to save exercise!",
+  "Đã xảy ra lỗi khi lưu bài tập!": "An error occurred while saving the exercise!",
+  "Bài tập cần ít nhất 1 Vòng chơi!": "Exercise requires at least 1 Round!",
+  "Bài tập cần ít nhất 1 cặp thẻ!": "Exercise requires at least 1 card pair!",
+  "Apple - Quả táo\nBanana - Quả chuối\nCat - Con mèo\nDog - Con chó...": "Apple - Quả táo\nBanana - Quả chuối\nCat - Con mèo\nDog - Con chó...",
+
+  // --- AutoGenerateTopicModal & AutoGenerateCandyQuizModal split fragments ---
+  "Hỗ trợ chụp màn hình và nhấn": "Supports screenshots — press",
+  "· Tối đa 10MB": "· Max 10MB",
+  "1 Vòng chơi (tối đa": "1 Round (max",
+  "từ/vòng)": "words/round)",
+  "từ (": "words (",
+  "vòng)": "rounds)",
+  "(tương đương ~": "(approx. ~",
+  "AI sẽ tự động gán": "AI automatically assigns",
+  "Tranh vẽ hoạt hình (Cartoon) cho Vế A": "Cartoon Illustration to Side A",
+  "và": "and",
+  "Ảnh chụp thực tế (Realistic) cho Vế B": "Realistic Photo to Side B",
+  "để học sinh tìm ghép cặp tương ứng.": "for students to match pairs.",
+  "Đóng modal": "Close modal",
+  "Nguồn tạo thẻ": "Card generation source",
+  "Ảnh phân tích": "Analyzed image",
+  "Vui lòng tải lên file định dạng hình ảnh hợp lệ!": "Please upload a valid image file!",
+  "Dung lượng ảnh quá lớn (tối đa 10MB)!": "Image size is too large (max 10MB)!",
+  "Đã nhận ảnh từ Clipboard! Đang phân tích...": "Image pasted from Clipboard! Analyzing...",
+  "Lỗi khi gửi ảnh lên AI phân tích.": "Failed to send image for AI analysis.",
+  "Không thể nhận diện chủ đề từ ảnh. Bạn có thể tự gõ chủ đề bên dưới.": "Could not detect a topic from the image. You can type the topic below.",
+  "Vui lòng nhập chủ đề từ vựng hoặc tải ảnh để AI phân tích.": "Please enter a vocabulary topic or upload an image for AI analysis.",
+  "Số lượng từ hợp lệ từ 1 đến 70 từ.": "Valid word count is between 1 and 70 words.",
+  "AI không thể tạo từ vựng cho chủ đề này. Vui lòng thử lại!": "AI could not generate vocabulary for this topic. Please try again!",
+  "Đã xảy ra lỗi trong quá trình tạo.": "An error occurred during generation.",
+  "Thầy/cô có thể": "You can",
+  "chỉnh sửa câu hỏi, đáp án hoặc click chọn lại đáp án đúng": "edit questions, options, or click to change the correct answer",
+  "trước khi áp dụng vào game.": "before applying to the game.",
+  "Áp Dụng Vào Game (": "Apply to Game (",
+
+  // --- Preview Modals (MatchGamePreviewModal & MatchTextTextPreviewModal) ---
+  "Xem trước bài tập Nối Cặp": "Preview Matching Exercise",
+  "Xuất sắc! Đã nối thành công tất cả cặp thẻ": "Excellent! All card pairs matched!",
+  "Học sinh sẽ nhận được điểm và phần thưởng sau khi hoàn tất các cặp nối này.": "Students will earn points and rewards upon completing these pairs.",
+  "1. Từ vựng (Click chọn)": "1. Vocabulary (Click to select)",
+  "2. Hình ảnh tương ứng (Click chọn)": "2. Matching Image (Click to select)",
+  "Chế độ Chữ - Chữ (Nối Dây)": "Word - Word Mode (Line Match)",
+  "Xuất Sắc! Đã Nối Hoàn Thành!": "Excellent! Matching Completed!",
+  "Tất cả các vế A và B đã được nối chính xác.": "All Side A and Side B items have been matched accurately.",
+  "Thử lại từ đầu": "Play Again",
+  "Hàng A (Kéo hoặc Chạm ô để nối)": "Row A (Drag or tap to connect)",
+  "Hoàn thành": "Completed",
+  "Hàng B (Kết quả xáo trộn)": "Row B (Shuffled matches)",
+  "Chính xác!": "Correct!",
+
+  // --- ForcedLandscapeWrapper & GameStartOverlay ---
+  "Thoát Game": "Exit Game",
+  "Thoát game": "Exit Game",
+  "Thoát": "Exit",
+  "Quay về": "Back",
+  "Quay về Trang chủ": "Back to Home",
+  "Quay về bài tập": "Back to Exercises",
+  "Danh sách bài tập": "Exercises List",
+  "Đổi chiều xoay màn hình (90° / -90°)": "Flip screen rotation (90° / -90°)",
+  "Đổi chiều (90°)": "Rotate (90°)",
+  "Đổi chiều (-90°)": "Rotate (-90°)",
+  "Đổi chiều (": "Rotate (",
+  "Thu nhỏ": "Exit Fullscreen",
+  "Toàn màn hình": "Fullscreen",
+  "BẮT ĐẦU CHƠI": "START GAME",
+  "Sẵn sàng rèn luyện phản xạ và tiếng Anh cùng Dolcake!": "Get ready to practice reflexes and English with Dolcake!",
+  "Trắc Nghiệm Kẹo Ngọt": "Candy World Quiz",
+  "Truy Tìm Kho Báu": "Mystery Treasure Hunt",
+  "Đập Trứng Chọn Đáp Án": "Math Egg Smash",
+  "Lật Thẻ Trí Nhớ Đại Dương": "Ocean Memory Flip",
+  "Đoàn Tàu Từ Vựng": "Vocabulary Train",
+  "Cây Phép Thuật Nối Từ": "Magic Tree Cut the Rope",
+  "Cây Phép Thuật Cắt Dây Nối Từ": "Magic Tree Cut the Rope",
+  "Nối Từ Vựng Tương Tác": "Interactive Vocabulary Match",
+  "Nối Thẻ Bài Tương Tác": "Interactive Card Match",
+  "Nối Chữ Thần Tốc": "Speed Word Match",
+  "Game Nối Chữ - Chữ": "Word - Word Match Game",
+  "Bé 2-5 tuổi": "Ages 2-5",
+  "Lớp 1-5": "Grades 1-5",
+  "câu hỏi": "questions",
+
+  // --- Game Wrapper Loading & Error States ---
+  "Đang tải trò chơi Nối Cặp...": "Loading Matching Game...",
+  "Đang tải trò chơi Nối Chữ...": "Loading Word Match Game...",
+  "Đang nạp bài tập...": "Loading Exercise...",
+  "Đang nạp Game Cắt Dây...": "Loading Cut the Rope Game...",
+  "Đang chuẩn bị chuyến tàu từ vựng...": "Preparing Vocabulary Train...",
+  "Vui lòng đợi các toa tàu và hình ảnh nạp xong": "Please wait while carriages and images load",
+  "ĐANG NẠP THẾ GIỚI KẸO...": "LOADING CANDY WORLD...",
+  "Đang chuẩn bị...": "Preparing...",
+  "Đang nạp Game Đập Trứng...": "Loading Egg Smash Game...",
+  "Đang tải game Neon Math Shooter...": "Loading Neon Math Shooter...",
+  "Đang nạp dữ liệu Bắn súng Trắc nghiệm...": "Loading Space Shooter Quiz...",
+  "Đang khởi tạo...": "Initializing...",
+  "Không tìm thấy bài tập!": "Exercise Not Found!",
+  "Không thể tải bài tập!": "Could Not Load Exercise!",
+  "Không tìm thấy bài tập Bắn súng Trắc nghiệm!": "Space Shooter Quiz Not Found!",
+  "Lỗi hệ thống khi tải bài tập!": "System error while loading exercise!",
+  "Dữ liệu bài tập không tồn tại hoặc đã bị xóa.": "Exercise data does not exist or has been deleted.",
+  "Bài tập này chưa có câu hỏi nào hợp lệ để chơi!": "This exercise has no valid questions to play!",
+  "Mã bài tập \"": "Exercise code \"",
+  "\" không tồn tại hoặc đã bị xóa. Vui lòng kiểm tra lại đường link.": "\" does not exist or has been deleted. Please check the link.",
+  "Bắn súng Trắc nghiệm (Bản Mẫu)": "Space Shooter Quiz (Demo)",
+  "Chọn đáp án chính xác:": "Choose the correct answer:",
+
+  // --- SciFiNeonShooterGame ---
+  "Điểm Số": "Score",
+  "Xoay ngang màn hình để chơi đã mắt nhất!": "Rotate your device to landscape for the best experience!",
+  "HOÀN THÀNH!": "COMPLETED!",
+  "TỔNG ĐIỂM ĐẠT ĐƯỢC": "TOTAL SCORE",
+  "CHƠI LẠI": "PLAY AGAIN",
+  "Chơi lại": "Play Again",
+  "Chơi lại từ đầu": "Play Again",
+  "Chơi lại từ đầu 🔄": "Play Again 🔄",
+  "🔄 CHƠI LẠI TỪ ĐẦU": "🔄 PLAY AGAIN",
+  "BỎ LỠ! -5": "MISS! -5",
+  "LỖI! -5": "WRONG! -5",
+  "Bật âm thanh": "Unmute",
+  "Tắt âm thanh": "Mute",
+
+  // --- Memory Flip Game (src/app/game/memory-flip/page.tsx) ---
+  "Đang tải bài tập Lật Ảnh...": "Loading Flip Card Exercise...",
+  "Ghép Hình Đại Dương": "Ocean Memory Flip",
+  "Game Lật Ảnh": "Memory Flip Game",
+  "Ghép Hình": "Ocean",
+  "Đại Dương": "Memory Flip",
+  "Thời gian": "Time",
+  "Lượt lật": "Flips",
+  "Lượt": "Flips",
+  "Cặp thẻ": "Pairs",
+  "Vòng chơi ": "Round ",
+  "Âm thanh": "Sound",
+  "XUẤT SẮC! 🎉": "EXCELLENT! 🎉",
+  "Đã hoàn thành": "Completed",
+  "Tự động chuyển sang Vòng tiếp theo sau": "Advancing to the next Round in",
+  "Tiếp tục ngay": "Continue Now",
+  "CHIẾN THẮNG! 🏆": "VICTORY! 🏆",
+  "Chúc mừng bạn đã hoàn thành tất cả các Vòng của": "Congratulations on completing all Rounds of",
+  "TỔNG THỜI GIAN": "TOTAL TIME",
+  "TỔNG LƯỢT LẬT": "TOTAL FLIPS",
+  "Ảnh lỗi - Hiển thị chữ": "Image fallback - Text shown",
+
+  // --- Treasure Hunt Game (src/app/game/treasure-grid/page.tsx) ---
+  "Đang nạp bản đồ kho báu...": "Loading Treasure Map...",
+  "Vui lòng chờ trong giây lát": "Please wait a moment",
+  "Vòng ": "Round ",
+  "🔍 Phóng to": "🔍 Zoom In",
+  "Phóng to": "Zoom In",
+  "Phóng to ảnh": "Zoom Image",
+  "Nhấn để phóng to ảnh": "Click to zoom image",
+  "Bấm để phóng to ảnh": "Click to zoom image",
+  "Đóng phóng to (ESC)": "Close zoom (ESC)",
+  "Đóng phóng to": "Close zoom",
+  "CHÍNH XÁC!": "CORRECT!",
+  "Ô số": "Tile #",
+  "đã được giải thoát thành công! 🌟": "has been rescued! 🌟",
+  "Bấm vào ô trên bàn cờ để trả lời câu hỏi chính nhé!": "Click the tile on the board to answer the main question!",
+  "Tiếc quá!": "Too Bad!",
+  "Chưa giải cứu được ô số": "Could not rescue Tile #",
+  "Ô tiếp tục bị khoá. Nhường cơ hội cho bạn khác ở lượt sau!": "The tile remains locked. Another student can try on the next turn!",
+  "THỬ THÁCH GIẢI CỨU Ô SỐ": "RESCUE CHALLENGE — TILE #",
+  "Trả lời": "Answer",
+  "ĐÚNG": "CORRECTLY",
+  "câu hỏi này để giải cứu ô số": "this question to rescue Tile #",
+  "trở lại bàn cờ!": "back onto the board!",
+  "VÀO GIẢI CỨU NGAY": "START RESCUE NOW",
+  "🎉 MỞ KHÓA LINH VẬT VÒNG": "🎉 UNLOCKED ROUND MASCOT",
+  "đã gia nhập bộ sưu tập của bạn! ⭐": "has joined your collection! ⭐",
+  "🎉 HOÀN THÀNH": "🎉 COMPLETED",
+  "✨ LINH VẬT VỪA MỞ KHÓA ✨": "✨ MASCOT UNLOCKED ✨",
+  "SANG VÒNG": "NEXT ROUND",
+  "CHIẾN THẮNG": "VICTORY",
+  "Chúc mừng bạn đã chinh phục toàn bộ kho báu hải tặc!": "Congratulations! You conquered all the pirate treasures!",
+  "🌟 BỘ SƯU TẬP LINH VẬT CỦA BẠN (": "🌟 YOUR MASCOT COLLECTION (",
+  "BẢO VẬT) 🌟": "TREASURES) 🌟",
+  "Thùng vàng kho báu (Bấm để nghe tiếng vàng)": "Gold Barrel (Click for coin sound)",
+  "Thùng vàng": "Gold Barrel",
+  "Đang chơi": "Playing",
+  "Chưa mở khóa": "Locked",
+  "Đang chinh phục": "In Progress",
+  "Rương Kho Báu Thần Kỳ (Bấm để nghe âm thanh)": "Magic Treasure Chest (Click for sound)",
+  "Rương kho báu": "Treasure Chest",
+  "Bé Cua": "Baby Crab",
+  "Bé Cua (Bấm để nghe tiếng kêu)": "Baby Crab (Click for sound)",
+  "Đóng / Quay lại bàn cờ": "Close / Back to Board",
+  "Đóng thông báo giải cứu": "Close rescue notice",
+  // Treasure Hunt Mascots
+  "Bé Rồng Giữ Vàng": "Gold Guardian Dragon",
+  "Thần Hộ Mệnh Long Tộc": "Dragon Clan Guardian",
+  "Dũng Cảm & Cao Quý": "Brave & Noble",
+  "Chú Vẹt Hải Tặc": "Pirate Parrot",
+  "Hoa Tiêu Biển Cả": "Ocean Navigator",
+  "Thông Thái & Nhanh Nhẹn": "Wise & Agile",
+  "Bé Rùa Biển Vàng": "Golden Sea Turtle",
+  "Thần Hộ Mệnh Trầm Lặng": "Silent Guardian",
+  "Bình An & Kiên Trì": "Peaceful & Steadfast",
+  "Bé Cua Ngọc Bích": "Jade Baby Crab",
+  "Chiến Binh Càng Vàng": "Golden Claw Warrior",
+  "Khéo Léo & Tinh Anh": "Clever & Sharp",
+  "Slime Hoàng Kim": "Golden Slime",
+  "Tinh Linh Biển Sâu": "Deep Sea Spirit",
+  "Đáng Yêu & Diệu Kỳ": "Lovely & Magical",
+  "Rái Cá Thủy Thủ": "Sailor Otter",
+  "Thợ Lặn Đại Dương": "Ocean Diver",
+  "Chăm Chỉ & Tinh Nghịch": "Diligent & Playful",
+  "Cá Heo Hoàng Gia": "Royal Dolphin",
+  "Sứ Giả Biển Xanh": "Blue Sea Messenger",
+  "Thân Thiện & Hòa Bình": "Friendly & Peaceful",
+  "Cánh Cụt Thám Hiểm": "Explorer Penguin",
+  "Nhà Thám Hiểm Băng Giá": "Ice Explorer",
+  "Bền Bỉ & Quyết Đoán": "Persistent & Bold",
+  "Thỏ Con Phiêu Lưu": "Adventure Bunny",
+  "Sứ Giả Tốc Độ": "Speed Messenger",
+  "Nhanh Nhẹn & Hoạt Bát": "Fast & Energetic",
+  "Gấu Mèo Bản Đồ": "Map Raccoon",
+  "Chuyên Gia Dẫn Đường": "Pathfinder Expert",
+  "Sắc Sảo & Tỉ Mỉ": "Sharp & Careful",
+  "Mèo Con Cướp Biển": "Pirate Kitty",
+  "Thuyền Trưởng Tí Hon": "Tiny Captain",
+  "Dũng Cảm & Đáng Yêu": "Brave & Cute",
+  "Bạch Tuộc Xúc Tu Vàng": "Golden Tentacle Octopus",
+  "Chúa Tể Vực Sâu": "Lord of the Deep",
+  "Uy Quyền & Huyền Bí": "Mighty & Mysterious",
+  "Cá Mập Đại Dương": "Ocean Shark",
+  "Dũng Sĩ Biển Cả": "Sea Warrior",
+  "Mạnh Mẽ & Kiên Cường": "Strong & Resilient",
+  "Cừu Sừng Vàng": "Golden Horn Sheep",
+  "Thần Hộ Mệnh Núi Đá": "Rock Mountain Guardian",
+  "Vững Vàng & Trung Kiên": "Steady & Loyal",
+  "Bé Khỉ Giữ Khóa": "Keykeeper Monkey",
+  "Thần Hộ Vệ Kho Báu": "Treasure Protector",
+  "Thông Minh & Hài Hước": "Smart & Funny",
+  "Cú Mèo Thông Thái": "Wise Owl",
+  "Bậc Thầy Chiến Thuật": "Tactical Master",
+  "Tri Thức & Sáng Suốt": "Knowledgeable & Bright",
+  "Cáo Đỏ Thám Hiểm": "Explorer Red Fox",
+  "Trinh Sát Rừng Xanh": "Forest Scout",
+  "Mưu Trí & Nhạy Bén": "Clever & Keen",
+  "Hải Cẩu Ngọc Bích": "Jade Seal",
+  "Thần Hộ Vệ Băng Tuyết": "Snow Guardian",
+  "Hiền Hòa & May Mắn": "Gentle & Lucky",
+  "Cá Ngựa Hoàng Triều": "Royal Seahorse",
+  "Kỵ Sĩ San Hô": "Coral Knight",
+  "Quý Phái & Trung Thành": "Noble & Faithful",
+  "Bé Sao Biển Lấp Lánh": "Sparkling Starfish",
+  "Ngôi Sao Diệu Kỳ": "Wonder Star",
+  "Tỏa Sáng & Diệu Kỳ": "Shining & Magical",
+
+  // --- HTML5 Iframe Games (public/games/*) ---
+  // 1. candy-grammar-sugar-jelly
+  "Câu": "Q",
+  "Tự chuyển câu": "Auto Next",
+  "Tự chuyển câu: BẬT": "Auto Next: ON",
+  "Tự chuyển câu: TẮT": "Auto Next: OFF",
+  "Chạm vào bảng đáp án đúng nhé!": "Tap the correct answer board!",
+  "Sugar Burst! Chính xác! 🍬✨": "Sugar Burst! Correct! 🍬✨",
+  "Jelly Wobble! Chưa đúng, thử lại nhé!": "Jelly Wobble! Not quite, try again!",
+  "Vòng tiếp theo ➔": "Next Round ➔",
+  "Câu tiếp ➔": "Next ➔",
+  "Chiến Thắng!": "Victory!",
+  "Tuyệt đỉnh! Bé đã xuất sắc hoàn thành tất cả các câu hỏi của bài tập!": "Awesome! You have completed all questions in this exercise!",
+  "Thế giới kẹo ngọt đang chuẩn bị câu hỏi cho bé nhé!": "Candy World is preparing your questions!",
+  "Tạm Dừng": "Paused",
+  "Tạm dừng": "Paused",
+  "TẠM DỪNG": "PAUSED",
+  "Nhấn “Chơi tiếp” để quay lại Candy Land.": "Press “Resume” to return to Candy Land.",
+  "Chơi tiếp ▶": "Resume ▶",
+  "Chạm ra ngoài hoặc bấm dấu ✕ để đóng": "Tap outside or press ✕ to close",
+  "Đã bật âm thanh 🔊": "Sound ON 🔊",
+  "Đã tắt âm thanh 🔇": "Sound OFF 🔇",
+  "Đã bật âm thanh": "Sound ON",
+  "Đã tắt âm thanh": "Sound OFF",
+  // 2. conveyor-drop
+  "HOÀN THÀNH VÒNG": "ROUND COMPLETE",
+  "HOÀN THÀNH TẤT CẢ VÒNG!": "ALL ROUNDS COMPLETED!",
+  "Bạn đã thu thập xong đồ chơi!": "You collected all the toys!",
+  "Chúc mừng bạn đã hoàn thành toàn bộ bài tập!": "Congratulations! You completed the entire exercise!",
+  "TỔNG ĐIỂM": "TOTAL SCORE",
+  "▶ VÒNG TIẾP THEO": "▶ NEXT ROUND",
+  "▶ TIẾP TỤC": "▶ RESUME",
+  "✖ THOÁT GAME": "✖ EXIT GAME",
+  "⌛ ĐANG TẢI...": "⌛ LOADING...",
+  // 3. Doan-tau-tu-vung
+  "Ghép từ": "Match",
+  "XUẤT SẮC QUÁ!": "AWESOME JOB!",
+  "Bé đã hoàn thành tất cả các chặng tàu từ vựng! Đoàn tàu đã về đích an toàn!": "You completed all vocabulary train stages! The train reached the station safely!",
+  // 4. egg-smash-quiz-premium-ambient
+  "Chạm vào trứng để đập! ✨": "Tap an egg to smash! ✨",
+  "Bé bấm tiếp tục để chơi nhé.": "Press Resume to keep playing.",
+  "Tiếp tục": "Resume",
+  "Hoàn thành rồi!": "Completed!",
+  "Bé đã hoàn thành trò chơi.": "You completed the game!",
+  "✓ Đúng rồi! ✨": "✓ Correct! ✨",
+  "✕ Sai rồi, thử quả khác nhé!": "✕ Wrong, try another egg!",
+  "Sẵn sàng cho câu mới!": "Get ready for the next question!",
+  "Bắt đầu lại nhé! Chạm vào trứng để đập!": "Starting over! Tap an egg to smash!",
+  "Nhấp vào đây để nghe đọc phép tính 🔊": "Click here to hear the math question 🔊",
+  // 5. magic_tree_matching_game_v3
+  "Đang nạp cành cây và thẻ bài...": "Loading tree branches and cards...",
+  "Bấm để nghe phát âm": "Click to listen to pronunciation",
+  "Nghe lại phát âm": "Replay pronunciation",
+  "SẴN SÀNG NÀO!": "GET READY!",
+  "Tuyệt vời!": "Awesome!",
+  "Bạn đã hoàn thành bài tập.": "You have completed the exercise.",
+  "Tổng điểm:": "Total Score:",
+  // 6. match-text-text
+  "Đang nạp thẻ bài nối từ...": "Loading word matching cards...",
+  "Sẵn sàng để nối những cặp từ siêu vui nhé!": "Get ready to connect matching pairs!",
+  "Không tìm thấy thẻ bài nào": "No cards found",
+  "Vui lòng kiểm tra lại chủ đề": "Please check the exercise topic",
+  "Lỗi tải dữ liệu bài học": "Failed to load exercise data",
+  "Vui lòng thử tải lại trang": "Please try reloading the page",
 };
 
 const VI_TO_EN_PATTERNS: Array<[RegExp, string]> = [
   [/^Vòng\s+(\d+)$/i, "Round $1"],
-  [/^Xóa Vòng\s+(\d+)$/i, "Delete Round $1"],
-  [/^Chuyển sang Vòng\s+(\d+)$/i, "Move to Round $1"],
+  [/^Xóa (?:Vòng|Round)\s+(\d+)$/i, "Delete Round $1"],
+  [/^Chuyển sang (?:Vòng|Round)\s+(\d+)$/i, "Move to Round $1"],
   [/^Cặp Ảnh #(\d+)$/i, "Image Pair #$1"],
+  [/^Cặp Chữ #(\d+)$/i, "Text Pair #$1"],
   [/^Cặp thẻ #(\d+)$/i, "Card Pair #$1"],
   [/^CÂU HỎI #(\d+)$/, "QUESTION #$1"],
   [/^Câu hỏi #?(\d+)$/i, "Question #$1"],
+  [/^Câu #(\d+)(.*)$/i, "Question #$1$2"],
   [/^(\d+)\s+cặp$/i, "$1 pairs"],
   [/^(\d+)\s+câu$/i, "$1 questions"],
   [/^(\d+)\s+thẻ$/i, "$1 cards"],
@@ -985,11 +1414,12 @@ const VI_TO_EN_PATTERNS: Array<[RegExp, string]> = [
   [/^(\d+)\s+từ\s+\((\d+)\s+vòng\)$/i, "$1 words ($2 rounds)"],
   [/^\(tương đương ~(\d+)\s+vòng\)$/i, "(approx. ~$1 rounds)"],
   [/^1 Vòng chơi \(tối đa (\d+) từ\/vòng\)$/i, "1 Round (max $1 words/round)"],
-  [/^Tạo cặp thứ (\d+) cho Vòng (\d+)$/i, "Create pair #$1 for Round $2"],
-  [/^Tạo toa thứ (\d+) cho Vòng (\d+)$/i, "Create carriage #$1 for Round $2"],
-  [/^Đã đủ (\d+)\/(\d+) cặp cho Vòng (\d+)$/i, "Full $1/$2 pairs for Round $3"],
-  [/^Đã đủ (\d+)\/(\d+) toa cho Vòng (\d+)$/i, "Full $1/$2 carriages for Round $3"],
-  [/^Tạo câu hỏi thứ (\d+) cho Vòng (\d+)$/i, "Create question #$1 for Round $2"],
+  [/^1 Vòng chơi \(tối đa (\d+) cặp\/vòng\)$/i, "1 Round (max $1 pairs/round)"],
+  [/^Tạo cặp thứ (\d+) cho (?:Vòng|Round) (\d+)$/i, "Create pair #$1 for Round $2"],
+  [/^Tạo toa thứ (\d+) cho (?:Vòng|Round) (\d+)$/i, "Create carriage #$1 for Round $2"],
+  [/^Đã đủ (\d+)\/(\d+) cặp cho (?:Vòng|Round) (\d+)$/i, "Full $1/$2 pairs for Round $3"],
+  [/^Đã đủ (\d+)\/(\d+) toa cho (?:Vòng|Round) (\d+)$/i, "Full $1/$2 carriages for Round $3"],
+  [/^Tạo câu hỏi thứ (\d+) cho (?:Vòng|Round) (\d+)$/i, "Create question #$1 for Round $2"],
   [/^Thêm câu thứ (\d+) thủ công$/i, "Add question #$1 manually"],
   [/^Danh Sách Câu Hỏi \((\d+)\/(\d+) câu\)$/i, "Questions List ($1/$2 questions)"],
   [/^Các đáp án \((\d+)\/4\) • Chọn đáp án ĐÚNG:$/i, "Options ($1/4) • Select the CORRECT answer:"],
@@ -1007,6 +1437,88 @@ const VI_TO_EN_PATTERNS: Array<[RegExp, string]> = [
   [/^Tối đa (\d+) từ\. Hệ thống tự động chia thành các Chuyến tàu \(Mỗi vòng (\d+) toa tàu\)\.$/i, "Max $1 words. Automatically split into Trains ($2 carriages per round)."],
   [/^Vượt quá 5 từ \((\d+)\/5 từ\)\. Vui lòng rút gọn!$/i, "Exceeds 5 words ($1/5 words). Please shorten!"],
   [/^Phát hiện (\d+) lỗi cần sửa:$/i, "Found $1 errors to fix:"],
+  [/^(?:Vòng|Round) (\d+) cần (?:tối thiểu|ít nhất) (\d+) cặp thẻ!$/i, "Round $1 requires at least $2 card pairs!"],
+  [/^(?:Vòng|Round) (\d+) cần (?:tối thiểu|ít nhất) (\d+) câu hỏi!$/i, "Round $1 requires at least $2 questions!"],
+  [/^(?:Vòng|Round) (\d+), Cặp (?:thẻ|ảnh|chữ) (?:thứ )?#(\d+) thiếu hình ảnh Vế ([AB])!$/i, "Round $1, Pair #$2 is missing Image $3!"],
+  [/^(?:Vòng|Round) (\d+), Cặp (?:thẻ|ảnh|chữ) (?:thứ )?#(\d+) thiếu hình ảnh!$/i, "Round $1, Pair #$2 is missing an image!"],
+  [/^(?:Vòng|Round) (\d+), Cặp (?:thẻ|ảnh|chữ) (?:thứ )?#(\d+) thiếu từ vựng \/ chữ!$/i, "Round $1, Pair #$2 is missing text/vocabulary!"],
+  [/^(?:Vòng|Round) (\d+), Cặp (?:thẻ|ảnh|chữ) (?:thứ )?#(\d+) thiếu nội dung Vế ([AB])!$/i, "Round $1, Pair #$2 is missing Side $3 text!"],
+  [/^(\d+)\s+câu hỏi$/i, "$1 questions"],
+  [/^Hoàn thành Vòng (\d+)!$/i, "Round $1 Complete!"],
+  [/^Bé đã vượt qua (\d+) câu hỏi\. Sẵn sàng cho vòng tiếp theo nhé!$/i, "You answered $1 questions. Get ready for the next round!"],
+  [/^HOÀN THÀNH VÒNG (\d+)\/(\d+)$/i, "ROUND $1/$2 COMPLETE"],
+  [/^Bạn đã thu thập xong đồ chơi vòng (\d+)! Sẵn sàng sang vòng (\d+)!$/i, "You collected all toys in Round $1! Get ready for Round $2!"],
+  [/^▶ TIẾP TỤC VÒNG (\d+)$/i, "▶ CONTINUE TO ROUND $1"],
+  [/^Bé đã vượt qua (\d+)\/(\d+) câu\. Tổng xu: (\d+)\.$/i, "You completed $1/$2 questions. Total coins: $3."],
+  [/^Chính xác:\s*(.+)$/i, "Correct: $1"],
+  [/^🔥 SƯU TẦM COMBO x(\d+)! XUẤT SẮC!$/i, "🔥 COMBO x$1! EXCELLENT!"],
+  [/^Ghép chữ vào toa (\d+)$/i, "Match word to carriage $1"],
+  [/^Hình (\d+)$/i, "Image $1"],
+  [/^Đáp án (\d+)$/i, "Option $1"],
+];
+
+const EN_TO_VI_EXACT: Record<string, string> = (() => {
+  const rev: Record<string, string> = {};
+  for (const [vi, en] of Object.entries(VI_TO_EN_EXACT)) {
+    if (vi !== en && !(en in rev)) {
+      rev[en] = vi;
+    }
+  }
+  return rev;
+})();
+
+const EN_TO_VI_PATTERNS: Array<[RegExp, string]> = [
+  [/^Round\s+(\d+)$/i, "Vòng $1"],
+  [/^Delete Round\s+(\d+)$/i, "Xóa Vòng $1"],
+  [/^Move to Round\s+(\d+)$/i, "Chuyển sang Vòng $1"],
+  [/^Image Pair #(\d+)$/i, "Cặp Ảnh #$1"],
+  [/^Text Pair #(\d+)$/i, "Cặp Chữ #$1"],
+  [/^Card Pair #(\d+)$/i, "Cặp thẻ #$1"],
+  [/^QUESTION #(\d+)$/, "CÂU HỎI #$1"],
+  [/^Question #(\d+)$/i, "Câu hỏi #$1"],
+  [/^(\d+)\s+pairs$/i, "$1 cặp"],
+  [/^(\d+)\s+questions$/i, "$1 câu"],
+  [/^(\d+)\s+cards$/i, "$1 thẻ"],
+  [/^\((\d+)\s+Rounds\)$/i, "($1 Vòng)"],
+  [/^\((\d+)\s+Trains\)$/i, "($1 Chuyến tàu)"],
+  [/^(\d+)\s*\/\s*(\d+)\s+words$/i, "$1/$2 từ"],
+  [/^(\d+)\s+words\s+\((\d+)\s+rounds\)$/i, "$1 từ ($2 vòng)"],
+  [/^\(approx\.\s*~(\d+)\s+rounds\)$/i, "(tương đương ~$1 vòng)"],
+  [/^1 Round \(max (\d+) words\/round\)$/i, "1 Vòng chơi (tối đa $1 từ/vòng)"],
+  [/^1 Round \(max (\d+) pairs\/round\)$/i, "1 Vòng chơi (tối đa $1 cặp/vòng)"],
+  [/^Create pair #(\d+) for Round (\d+)$/i, "Tạo cặp thứ $1 cho Vòng $2"],
+  [/^Create carriage #(\d+) for Round (\d+)$/i, "Tạo toa thứ $1 cho Vòng $2"],
+  [/^Full (\d+)\/(\d+) pairs for Round (\d+)$/i, "Đã đủ $1/$2 cặp cho Vòng $3"],
+  [/^Full (\d+)\/(\d+) carriages for Round (\d+)$/i, "Đã đủ $1/$2 toa cho Vòng $3"],
+  [/^Create question #(\d+) for Round (\d+)$/i, "Tạo câu hỏi thứ $1 cho Vòng $2"],
+  [/^Add question #(\d+) manually$/i, "Thêm câu thứ $1 thủ công"],
+  [/^Questions List \((\d+)\/(\d+) questions\)$/i, "Danh Sách Câu Hỏi ($1/$2 câu)"],
+  [/^Options \((\d+)\/4\) • Select the CORRECT answer:$/i, "Các đáp án ($1/4) • Chọn đáp án ĐÚNG:"],
+  [/^Enter option ([A-D])\.\.\.$/i, "Nhập đáp án $1 (hỗ trợ câu dài)..."],
+  [/^Option ([A-D])\.\.\.$/i, "Đáp án $1..."],
+  [/^Remove option ([A-D])$/i, "Bỏ đáp án $1"],
+  [/^Preview (\d+) Questions$/i, "Bảng Xem Trước $1 Câu Hỏi"],
+  [/^Selected:\s*(\d+)\/(\d+)$/i, "Đã chọn: $1/$2"],
+  [/^Selected Math Types \((\d+)\)$/i, "Dạng Toán Đã Chọn ($1)"],
+  [/^Example:\s*(.+)$/i, "Ví dụ: $1"],
+  [/^Search Image for Side ([AB])$/i, "Tìm kiếm hình ảnh cho Vế $1"],
+  [/^Apply to Game \((\d+) questions\)$/i, "Áp Dụng Vào Game ($1 câu)"],
+  [/^Preview and edit (\d+) questions before inserting$/i, "Xem trước và chỉnh sửa $1 câu hỏi trước khi chèn"],
+  [/^Max (\d+) words\. Automatically split into Rounds \((\d+) words per round\)\.$/i, "Tối đa $1 từ. Hệ thống tự động chia thành các Vòng chơi (Mỗi vòng $2 từ)."],
+  [/^Max (\d+) words\. Automatically split into Trains \((\d+) carriages per round\)\.$/i, "Tối đa $1 từ. Hệ thống tự động chia thành các Chuyến tàu (Mỗi vòng $2 toa tàu)."],
+  [/^Exceeds 5 words \((\d+)\/5 words\)\. Please shorten!$/i, "Vượt quá 5 từ ($1/5 từ). Vui lòng rút gọn!"],
+  [/^Found (\d+) errors to fix:$/i, "Phát hiện $1 lỗi cần sửa:"],
+  [/^Round (\d+) Complete!$/i, "Hoàn thành Vòng $1!"],
+  [/^You answered (\d+) questions\. Get ready for the next round!$/i, "Bé đã vượt qua $1 câu hỏi. Sẵn sàng cho vòng tiếp theo nhé!"],
+  [/^ROUND (\d+)\/(\d+) COMPLETE$/i, "HOÀN THÀNH VÒNG $1/$2"],
+  [/^You collected all toys in Round (\d+)! Get ready for Round (\d+)!$/i, "Bạn đã thu thập xong đồ chơi vòng $1! Sẵn sàng sang vòng $2!"],
+  [/^▶ CONTINUE TO ROUND (\d+)$/i, "▶ TIẾP TỤC VÒNG $1"],
+  [/^You completed (\d+)\/(\d+) questions\. Total coins: (\d+)\.$/i, "Bé đã vượt qua $1/$2 câu. Tổng xu: $3."],
+  [/^Correct:\s*(.+)$/i, "Chính xác: $1"],
+  [/^🔥 COMBO x(\d+)! EXCELLENT!$/i, "🔥 SƯU TẦM COMBO x$1! XUẤT SẮC!"],
+  [/^Match word to carriage (\d+)$/i, "Ghép chữ vào toa $1"],
+  [/^Image (\d+)$/i, "Hình $1"],
+  [/^Option (\d+)$/i, "Đáp án $1"],
 ];
 
 export function translateTeacherViString(raw: string): string | null {
@@ -1031,69 +1543,120 @@ export function translateTeacherViString(raw: string): string | null {
   return null;
 }
 
-const origTextNodeMap = new WeakMap<Text, { vi: string; en: string }>();
+export function translateTeacherEnToViString(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const exact = EN_TO_VI_EXACT[trimmed];
+  if (exact) {
+    const leading = raw.match(/^\s*/)?.[0] || "";
+    const trailing = raw.match(/\s*$/)?.[0] || "";
+    return `${leading}${exact}${trailing}`;
+  }
+
+  for (const [regex, replacement] of EN_TO_VI_PATTERNS) {
+    if (regex.test(trimmed)) {
+      const leading = raw.match(/^\s*/)?.[0] || "";
+      const trailing = raw.match(/\s*$/)?.[0] || "";
+      return `${leading}${trimmed.replace(regex, replacement)}${trailing}`;
+    }
+  }
+
+  return null;
+}
+
+type OrigElementAttrRecord = {
+  placeholder?: { vi: string; en: string };
+  title?: { vi: string; en: string };
+  ariaLabel?: { vi: string; en: string };
+  alt?: { vi: string; en: string };
+};
+
+const globalStore = globalThis as unknown as {
+  __teacherOrigTextNodeMap?: WeakMap<Text, { vi: string; en: string }>;
+  __teacherOrigElementAttrMap?: WeakMap<Element, OrigElementAttrRecord>;
+};
+
+const origTextNodeMap =
+  globalStore.__teacherOrigTextNodeMap ||
+  (globalStore.__teacherOrigTextNodeMap = new WeakMap<Text, { vi: string; en: string }>());
+
+const origElementAttrMap =
+  globalStore.__teacherOrigElementAttrMap ||
+  (globalStore.__teacherOrigElementAttrMap = new WeakMap<Element, OrigElementAttrRecord>());
 
 export function TeacherDomTranslator() {
   const { locale } = useTeacherLocale();
+  const pathname = usePathname();
+  const lastPathnameRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
 
     let isApplying = false;
+    let rafId: number | null = null;
+    let initTimer: ReturnType<typeof setTimeout> | null = null;
+    let observer: MutationObserver | null = null;
+    const iframeObservers: MutationObserver[] = [];
+    const iframeLoadHandlers: Array<{ iframe: HTMLIFrameElement; handler: () => void }> = [];
+    const observedIframeDocs = new WeakSet<Document>();
+    const pendingNodes = new Set<Node>();
+
+    const translateElementAttr = (
+      el: Element,
+      attrName: "placeholder" | "title" | "aria-label" | "alt",
+      recordKey: keyof OrigElementAttrRecord
+    ) => {
+      const currentVal = el.getAttribute(attrName);
+      if (currentVal === null) return;
+      let attrRecord = origElementAttrMap.get(el);
+      const saved = attrRecord?.[recordKey];
+
+      if (locale === "en") {
+        const sourceVi = saved && currentVal === saved.en ? saved.vi : currentVal;
+        const translated = translateTeacherViString(sourceVi);
+        if (translated && currentVal !== translated) {
+          attrRecord = { ...attrRecord, [recordKey]: { vi: sourceVi, en: translated } };
+          origElementAttrMap.set(el, attrRecord);
+          el.setAttribute(attrName, translated);
+        }
+      } else if (locale === "vi") {
+        if (saved && currentVal === saved.en && currentVal !== saved.vi) {
+          el.setAttribute(attrName, saved.vi);
+        } else {
+          const restoredVi = translateTeacherEnToViString(currentVal);
+          if (restoredVi && currentVal !== restoredVi) {
+            attrRecord = { ...attrRecord, [recordKey]: { vi: restoredVi, en: currentVal } };
+            origElementAttrMap.set(el, attrRecord);
+            el.setAttribute(attrName, restoredVi);
+          }
+        }
+      }
+    };
 
     const processNode = (root: Node) => {
       if (isApplying) return;
       isApplying = true;
 
       try {
-        // 1. Process Element attributes (placeholder, title)
+        // 1. Process Element attributes (placeholder, title, aria-label, alt) using WeakMap
         const elements: Element[] = [];
         if (root.nodeType === Node.ELEMENT_NODE) {
           elements.push(root as Element);
-          const descendants = (root as Element).querySelectorAll("[placeholder], [title], input[value]");
+          const descendants = (root as Element).querySelectorAll("[placeholder], [title], [aria-label], [alt]");
           descendants.forEach((el) => elements.push(el));
         }
 
         for (const el of elements) {
-          // Placeholder
-          const currentPlaceholder = el.getAttribute("placeholder");
-          const origPlaceholder = el.getAttribute("data-vi-placeholder");
-          if (locale === "en") {
-            const sourceVi = origPlaceholder || currentPlaceholder;
-            if (sourceVi) {
-              const translated = translateTeacherViString(sourceVi);
-              if (translated && currentPlaceholder !== translated) {
-                if (!origPlaceholder) el.setAttribute("data-vi-placeholder", sourceVi);
-                el.setAttribute("placeholder", translated);
-              }
-            }
-          } else if (locale === "vi" && origPlaceholder) {
-            if (currentPlaceholder !== origPlaceholder) {
-              el.setAttribute("placeholder", origPlaceholder);
-            }
-          }
-
-          // Title tooltip
-          const currentTitle = el.getAttribute("title");
-          const origTitle = el.getAttribute("data-vi-title");
-          if (locale === "en") {
-            const sourceVi = origTitle || currentTitle;
-            if (sourceVi) {
-              const translated = translateTeacherViString(sourceVi);
-              if (translated && currentTitle !== translated) {
-                if (!origTitle) el.setAttribute("data-vi-title", sourceVi);
-                el.setAttribute("title", translated);
-              }
-            }
-          } else if (locale === "vi" && origTitle) {
-            if (currentTitle !== origTitle) {
-              el.setAttribute("title", origTitle);
-            }
-          }
+          translateElementAttr(el, "placeholder", "placeholder");
+          translateElementAttr(el, "title", "title");
+          translateElementAttr(el, "aria-label", "ariaLabel");
+          translateElementAttr(el, "alt", "alt");
         }
 
-        // 2. Process Text Nodes
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        // 2. Process Text Nodes (using root.ownerDocument so same-origin iframes work too)
+        const doc = root.ownerDocument || document;
+        const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
           acceptNode(node) {
             const parent = node.parentElement;
             if (!parent) return NodeFilter.FILTER_REJECT;
@@ -1112,16 +1675,21 @@ export function TeacherDomTranslator() {
           const saved = origTextNodeMap.get(textNode);
 
           if (locale === "en") {
-            // If React updated the textNode to a new Vietnamese string, re-translate it
             const sourceVi = saved && val === saved.en ? saved.vi : val;
             const translated = translateTeacherViString(sourceVi);
             if (translated && val !== translated) {
               origTextNodeMap.set(textNode, { vi: sourceVi, en: translated });
               textNode.nodeValue = translated;
             }
-          } else if (locale === "vi" && saved) {
-            if (val === saved.en && val !== saved.vi) {
+          } else if (locale === "vi") {
+            if (saved && val === saved.en && val !== saved.vi) {
               textNode.nodeValue = saved.vi;
+            } else {
+              const restoredVi = translateTeacherEnToViString(val);
+              if (restoredVi && val !== restoredVi) {
+                origTextNodeMap.set(textNode, { vi: restoredVi, en: val });
+                textNode.nodeValue = restoredVi;
+              }
             }
           }
 
@@ -1132,32 +1700,124 @@ export function TeacherDomTranslator() {
       }
     };
 
-    processNode(document.body);
-
-    const observer = new MutationObserver((mutations) => {
-      if (isApplying) return;
-      for (const m of mutations) {
-        if (m.type === "characterData" && m.target) {
-          const parent = m.target.parentElement;
-          if (parent) processNode(parent);
-        } else if (m.type === "childList") {
-          m.addedNodes.forEach((n) => {
-            if (n.nodeType === Node.ELEMENT_NODE || n.nodeType === Node.TEXT_NODE) {
-              processNode(n.parentElement || n);
-            }
-          });
+    const flushPending = () => {
+      rafId = null;
+      if (pendingNodes.size === 0) return;
+      const nodes = Array.from(pendingNodes);
+      pendingNodes.clear();
+      for (const n of nodes) {
+        if (n.isConnected) {
+          processNode(n);
         }
       }
-    });
+    };
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-    });
+    const scheduleProcess = (node: Node) => {
+      pendingNodes.add(node);
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(flushPending);
+      }
+    };
 
-    return () => observer.disconnect();
-  }, [locale]);
+    const observeSameOriginIframe = (iframe: HTMLIFrameElement) => {
+      const bindIframeDoc = () => {
+        try {
+          const iframeDoc = iframe.contentDocument;
+          if (!iframeDoc || !iframeDoc.body) return;
+          processNode(iframeDoc.body);
+
+          if (observedIframeDocs.has(iframeDoc)) return;
+          observedIframeDocs.add(iframeDoc);
+
+          const iframeObs = new MutationObserver((mutations) => {
+            if (isApplying) return;
+            for (const m of mutations) {
+              if (m.type === "characterData" && m.target) {
+                const parent = m.target.parentElement;
+                if (parent) scheduleProcess(parent);
+              } else if (m.type === "childList") {
+                m.addedNodes.forEach((n) => {
+                  if (n.nodeType === Node.ELEMENT_NODE || n.nodeType === Node.TEXT_NODE) {
+                    scheduleProcess(n.parentElement || n);
+                  }
+                });
+              }
+            }
+          });
+
+          iframeObs.observe(iframeDoc.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+          iframeObservers.push(iframeObs);
+        } catch {
+          // Cross-origin iframe: ignore safely
+        }
+      };
+
+      bindIframeDoc();
+      const onLoad = () => {
+        bindIframeDoc();
+        setTimeout(bindIframeDoc, 250);
+      };
+      iframe.addEventListener("load", onLoad);
+      iframeLoadHandlers.push({ iframe, handler: onLoad });
+    };
+
+    const startObserving = () => {
+      processNode(document.body);
+      document.querySelectorAll("iframe").forEach((el) => observeSameOriginIframe(el as HTMLIFrameElement));
+
+      observer = new MutationObserver((mutations) => {
+        if (isApplying) return;
+        for (const m of mutations) {
+          if (m.type === "characterData" && m.target) {
+            const parent = m.target.parentElement;
+            if (parent) scheduleProcess(parent);
+          } else if (m.type === "childList") {
+            m.addedNodes.forEach((n) => {
+              if (n.nodeType === Node.ELEMENT_NODE) {
+                const el = n as Element;
+                if (el.tagName === "IFRAME") {
+                  observeSameOriginIframe(el as HTMLIFrameElement);
+                } else {
+                  el.querySelectorAll("iframe").forEach((ifr) => observeSameOriginIframe(ifr as HTMLIFrameElement));
+                }
+              }
+              if (n.nodeType === Node.ELEMENT_NODE || n.nodeType === Node.TEXT_NODE) {
+                scheduleProcess(n.parentElement || n);
+              }
+            });
+          }
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+      });
+    };
+
+    // Wait briefly on initial hydration or route change so React finishes hydrating child trees before DOM translation runs
+    const isRouteChangeOrInitial = lastPathnameRef.current !== pathname;
+    lastPathnameRef.current = pathname;
+
+    if (isRouteChangeOrInitial) {
+      initTimer = setTimeout(startObserving, 120);
+    } else {
+      startObserving();
+    }
+
+    return () => {
+      if (initTimer !== null) clearTimeout(initTimer);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      if (observer) observer.disconnect();
+      iframeObservers.forEach((obs) => obs.disconnect());
+      iframeLoadHandlers.forEach(({ iframe, handler }) => iframe.removeEventListener("load", handler));
+    };
+  }, [locale, pathname]);
 
   return null;
 }

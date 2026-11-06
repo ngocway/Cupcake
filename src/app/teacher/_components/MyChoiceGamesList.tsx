@@ -27,7 +27,7 @@ import {
 } from "@/actions/teacher-choice-games";
 import { ChoiceGameShareModal } from "./ChoiceGameShareModal";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
 export interface UnifiedGameItem {
   id: string;
@@ -43,7 +43,7 @@ export function MyChoiceGamesList() {
   const [games, setGames] = useState<UnifiedGameItem[]>([]);
   const [shareGame, setShareGame] = useState<UnifiedGameItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
 
   const loadGames = async (isBackground = false) => {
     if (!isBackground && games.length === 0) setLoading(true);
@@ -232,7 +232,7 @@ export function MyChoiceGamesList() {
                 {/* Card Footer Actions */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
                   <Link
-                    href={playPath} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: game.gameType, gameTitle: game.title, gameId: game.id })}
+                    href={withLangParam(playPath, locale)} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: game.gameType, gameTitle: game.title, gameId: game.id })}
                     target="_blank"
                     className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                     title={t.common.previewTooltip}

@@ -125,6 +125,15 @@ export async function GET(request: NextRequest) {
       total = await prisma.assignment.count({
         where: {
           status: "PUBLIC",
+          lesson: null,
+          materialType: { not: "FLASHCARD" },
+          NOT: [
+            { id: { startsWith: "tiny-vocab-" } },
+            { slug: { startsWith: "vocab45-" } },
+            { title: { startsWith: "Game:" } },
+            { title: { startsWith: "Flashcard (" } },
+            { title: { startsWith: "[BÀI ĐỌC]" } }
+          ],
           deletedAt: null
         }
       });
@@ -132,6 +141,15 @@ export async function GET(request: NextRequest) {
       const publicAssignmentsRaw = await prisma.assignment.findMany({
         where: {
           status: "PUBLIC",
+          lesson: null,
+          materialType: { not: "FLASHCARD" },
+          NOT: [
+            { id: { startsWith: "tiny-vocab-" } },
+            { slug: { startsWith: "vocab45-" } },
+            { title: { startsWith: "Game:" } },
+            { title: { startsWith: "Flashcard (" } },
+            { title: { startsWith: "[BÀI ĐỌC]" } }
+          ],
           deletedAt: null
         },
         include: {

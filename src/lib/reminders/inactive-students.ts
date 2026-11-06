@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma"
-import { sendInactiveReminderEmail } from "@/lib/email"
+import { sendInactiveReminderEmail, formatEnglishClassName, formatEnglishStudentName } from "@/lib/email"
 
 export interface ReminderSettings {
   inactiveDaysThreshold: number // Mặc định 3 ngày
@@ -13,7 +13,7 @@ export const DEFAULT_REMINDER_SETTINGS: ReminderSettings = {
   inactiveDaysThreshold: 3,
   cooldownDays: 7,
   autoSendEnabled: true,
-  motivationQuote: "Mỗi ngày một chút xíu thôi, bé sẽ tự tin nói tiếng Anh hơn mỗi ngày! 🌟",
+  motivationQuote: "Consistency is the secret superpower of every great English learner! ✨",
   senderName: "Dolcake",
 }
 
@@ -280,7 +280,7 @@ export async function getInactiveStudentsRoster(filterClassId?: string): Promise
 
       roster.push({
         studentId: e.studentId,
-        studentName: e.student.name || "bạn nhỏ",
+        studentName: formatEnglishStudentName(e.student.name || undefined),
         studentEmail: e.student.email,
         classId: e.classId,
         className: e.class.name,
@@ -310,7 +310,7 @@ export async function getMonthlyReminderStats(): Promise<ReminderStats> {
   const [monthlySentCount, roster] = await Promise.all([
     prisma.notification.count({
       where: {
-        type: "CLASS_INACTIVE_REMINDER",
+        type: { in: ["CLASS_INACTIVE_REMINDER", "TEACHER_GAME_INACTIVE_REMINDER"] },
         createdAt: { gte: startOfMonth },
       },
     }),
@@ -336,7 +336,7 @@ export async function getMonthlyReminderStats(): Promise<ReminderStats> {
 export async function getEmailHistory(limit = 50) {
   const notifications = await prisma.notification.findMany({
     where: {
-      type: "CLASS_INACTIVE_REMINDER",
+      type: { in: ["CLASS_INACTIVE_REMINDER", "TEACHER_GAME_INACTIVE_REMINDER"] },
     },
     include: {
       user: {
@@ -370,7 +370,7 @@ export async function getEmailHistory(limit = 50) {
   const classMap = new Map(classes.map((c) => [c.id, c]))
 
   return notifications.map((n) => {
-    let className = "Lớp học"
+    let className = n.type === "TEACHER_GAME_INACTIVE_REMINDER" ? "Teacher Studio" : "Lớp học"
     let classId = ""
     if (n.link) {
       const match = n.link.match(/\/student\/classes\/([^\/?#]+)/)
@@ -383,7 +383,7 @@ export async function getEmailHistory(limit = 50) {
     return {
       id: n.id,
       studentId: n.userId,
-      studentName: n.user?.name || "bạn nhỏ",
+      studentName: n.user?.name || (n.type === "TEACHER_GAME_INACTIVE_REMINDER" ? "Teacher" : "Learner"),
       studentEmail: n.user?.email || "",
       title: n.title,
       message: n.message,
@@ -588,7 +588,7 @@ export async function checkAndSendInactiveStudentReminders(
 
     targetsToSend.push({
       studentId: enrollment.studentId,
-      studentName: enrollment.student.name || "bạn nhỏ",
+      studentName: formatEnglishStudentName(enrollment.student.name || undefined),
       studentEmail: enrollment.student.email,
       className: enrollment.class.name,
       classCode: enrollment.class.classCode,
@@ -636,8 +636,8 @@ export async function checkAndSendInactiveStudentReminders(
         emailStatus: emailRes.simulated
           ? "Simulated (Chế độ xem trước)"
           : emailRes.success
-          ? "Đã gửi thành công"
-          : `Thất bại (${emailRes.error})`,
+            ? "Đã gửi thành công"
+            : `Thất bại (${emailRes.error})`,
       }
     })
   )
@@ -647,8 +647,8 @@ export async function checkAndSendInactiveStudentReminders(
     await prisma.notification.createMany({
       data: targetsToSend.map((target) => ({
         userId: target.studentId,
-        title: `🧁 Bé ơi, lớp học "${target.className}" đang đợi bé nè!`,
-        message: `Đã ${target.inactiveDays} ngày rồi bạn chưa ghé thăm lớp học ${target.className}. Vào làm bài ngay để không bị đứt chuỗi học nhé!`,
+        title: `🔥 Don't stop now, ${formatEnglishStudentName(target.studentName)}! Your 45-Day Challenge awaits`,
+        message: `You've been away from ${formatEnglishClassName(target.className, target.classCode)} for ${target.inactiveDays} days. Spend just 5 minutes today to get back on track!`,
         type: "CLASS_INACTIVE_REMINDER",
         link: `/student/classes/${target.classId}`,
         isRead: false,

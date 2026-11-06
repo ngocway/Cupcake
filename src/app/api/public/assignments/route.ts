@@ -16,7 +16,19 @@ export async function GET(request: NextRequest) {
     const limit = 12
     const skip = (page - 1) * limit
 
-    const where: any = { status: 'PUBLIC', deletedAt: null, lesson: null }
+    const where: any = {
+      status: 'PUBLIC',
+      deletedAt: null,
+      lesson: null,
+      materialType: { not: 'FLASHCARD' },
+      NOT: [
+        { id: { startsWith: 'tiny-vocab-' } },
+        { slug: { startsWith: 'vocab45-' } },
+        { title: { startsWith: 'Game:' } },
+        { title: { startsWith: 'Flashcard (' } },
+        { title: { startsWith: '[BÀI ĐỌC]' } }
+      ]
+    }
 
     if (search) {
       where.OR = [

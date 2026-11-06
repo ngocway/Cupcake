@@ -60,9 +60,9 @@ const END_MODE = (typeof window !== "undefined" && window.parent && window.paren
       try {
         window.speechSynthesis.cancel();
         const q = currentQuestion();
-        const textToSpeak = q.question.replace(/-/g, ' trừ ').replace(/\+/g, ' cộng ').replace(/=/g, ' bằng ').replace(/\?/g, '');
+        const isEn = (() => { try { return localStorage.getItem('preferred-locale') === 'en'; } catch (e) { return false; } })(); const textToSpeak = isEn ? q.question.replace(/-/g, ' minus ').replace(/\+/g, ' plus ').replace(/=/g, ' equals ').replace(/\?/g, '') : q.question.replace(/-/g, ' trừ ').replace(/\+/g, ' cộng ').replace(/=/g, ' bằng ').replace(/\?/g, '');
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'vi-VN';
+        utterance.lang = isEn ? 'en-US' : 'vi-VN';
         utterance.rate = 0.95;
         window.speechSynthesis.speak(utterance);
       } catch (e) {}

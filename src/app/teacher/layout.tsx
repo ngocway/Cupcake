@@ -405,16 +405,16 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   if (pathname === '/' || pathname === '/teacher/login' || pathname === '/teacher' || pathname.startsWith('/teacher/games/')) {
     return (
       <>
-        <TeacherDomTranslator />
         {children}
+        <TeacherDomTranslator />
       </>
     )
   }
 
   return (
     <TeacherLayoutWrapper>
-      <TeacherDomTranslator />
       {children}
+      <TeacherDomTranslator />
     </TeacherLayoutWrapper>
   )
 }

@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
 interface GameSaveSuccessModalProps {
   isOpen: boolean;
@@ -40,19 +40,19 @@ export function GameSaveSuccessModal({
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Construct absolute play URL
-  const fullUrl =
+  const rawFullUrl =
     typeof window !== "undefined"
       ? playUrl.startsWith("http")
         ? playUrl
         : `${window.location.origin}${playUrl.startsWith("/") ? "" : "/"}${playUrl}`
-      : playUrl;
+      : playUrl; const fullUrl = withLangParam(rawFullUrl, locale);
 
   const handleClose = () => {
     if (typeof window !== "undefined") {

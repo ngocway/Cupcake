@@ -14,7 +14,7 @@ import {
   CheckCircle2 
 } from "lucide-react";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
 interface MatchGameShareModalProps {
   isOpen: boolean;
@@ -33,12 +33,12 @@ export function MatchGameShareModal({
 }: MatchGameShareModalProps) {
   const [copied, setCopied] = useState(false);
   const downloadCanvasRef = useRef<HTMLCanvasElement>(null);
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale(); const rawBase = gamePath.includes("topicId=") ? gamePath : `${gamePath}${gamePath.includes("?") ? "&" : "?"}topicId=${topicId}`;
 
   const gameUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}${gamePath}?topicId=${topicId}`
-      : `${gamePath}?topicId=${topicId}`;
+      ? withLangParam(`${window.location.origin}${rawBase.startsWith("/") ? "" : "/"}${rawBase}`, locale)
+      : withLangParam(rawBase, locale);
 
   // Close on Escape key
   useEffect(() => {

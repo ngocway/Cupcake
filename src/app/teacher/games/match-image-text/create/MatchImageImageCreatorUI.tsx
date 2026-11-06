@@ -931,24 +931,26 @@ export function MatchImageImageCreatorUI() {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-sky-500 text-white text-[11px] font-black uppercase tracking-wider">
-                Nối Cặp Ảnh - Ảnh
+              <span className={`px-2.5 py-0.5 rounded-full text-white text-[11px] font-black uppercase tracking-wider ${gameMode === "line" ? "bg-violet-500" : "bg-sky-500"}`}>
+                {gameMode === "line" ? "Nối Dây Ảnh - Ảnh" : "Nối Cặp Ảnh - Ảnh"}
               </span>
               <span className="text-xs text-slate-400 font-semibold">• Tạo bài tập ghép 2 hình ảnh</span>
             </div>
             <h1 className="text-xl font-headline font-black text-slate-800 dark:text-white tracking-tight mt-0.5">
-              {topicId ? "Chỉnh sửa Game Nối Cặp Ảnh - Ảnh" : "Tạo mới Game Nối Cặp Ảnh - Ảnh"}
+              {topicId
+                ? (gameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Ảnh" : "Chỉnh sửa Game Nối Cặp Ảnh - Ảnh")
+                : (gameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Ảnh" : "Tạo mới Game Nối Cặp Ảnh - Ảnh")}
             </h1>
           </div>
         </div>
 
         <TeacherGameGuideButton
           game={{
-            id: "image-image",
-            title: "Nối Cặp Ảnh - Ảnh",
-            badge: "Ảnh - Ảnh",
-            badgeBg: "bg-emerald-500 text-white",
-            createHref: "/teacher/games/match-image-text/create?type=image-image",
+            id: gameMode === "line" ? "line-image-image" : "image-image",
+            title: gameMode === "line" ? "Nối Dây Ảnh - Ảnh" : "Nối Cặp Ảnh - Ảnh",
+            badge: gameMode === "line" ? "Nối Dây" : "Ảnh - Ảnh",
+            badgeBg: gameMode === "line" ? "bg-violet-500 text-white" : "bg-emerald-500 text-white",
+            createHref: gameMode === "line" ? "/teacher/games/match-image-text/create?type=image-image&gameMode=line" : "/teacher/games/match-image-text/create?type=image-image",
           }}
         />
       </div>

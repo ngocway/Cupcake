@@ -9,7 +9,6 @@ import { usePathname } from "next/navigation"
 import { useContentStore } from "@/store/useContentStore"
 import { useTranslations } from "next-intl"
 import { TeacherLanguageSelector } from "@/components/teacher/TeacherLanguageSelector"
-import { TeacherLocaleSwitch } from "@/i18n/teacher-locale"
 import { StudentClassHeader } from "./StudentClassHeader"
 import { 
   Gamepad2, 
@@ -258,7 +257,6 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
         )}
         
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {isTeacherSection && <TeacherLocaleSwitch />}
           {session ? (
             <div className="relative" ref={menuRef}>
               <button 

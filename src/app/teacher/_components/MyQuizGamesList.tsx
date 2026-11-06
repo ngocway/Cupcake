@@ -16,7 +16,7 @@ import { getTeacherQuizGamesAction } from "@/actions/candy-quiz-actions";
 import { deleteTeacherMatchGameAction } from "@/actions/teacher-match-games";
 import { MatchGameShareModal } from "./MatchGameShareModal";
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
 export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
   const [topics, setTopics] = useState<any[]>(initialTopics || []);
@@ -24,7 +24,7 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [shareTopic, setShareTopic] = useState<any | null>(null);
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
 
   const fetchGames = async (isBackground = false) => {
     if (!isBackground && topics.length === 0) setLoading(true);
@@ -231,7 +231,7 @@ export function MyQuizGamesList({ initialTopics }: { initialTopics?: any[] }) {
                   }`}
                 >
                   <a
-                    href={playUrl} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: "quiz", gameTitle: topic.name, gameId: topic.id })}
+                    href={withLangParam(playUrl, locale)} onClick={() => trackEvent("teacher_my_game_action", { action: "preview", gameType: "quiz", gameTitle: topic.name, gameId: topic.id })}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`flex-1 py-2 px-3 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer ${

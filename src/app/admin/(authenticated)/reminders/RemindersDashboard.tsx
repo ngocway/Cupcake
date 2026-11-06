@@ -100,7 +100,7 @@ export function RemindersDashboard({
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop")
   const [previewName, setPreviewName] = useState("Minh Khôi")
   const [previewTeacherName, setPreviewTeacherName] = useState("Thầy Ngọc")
-  const [previewClass, setPreviewClass] = useState("45 Ngày Từ Vựng Cơ Bản")
+  const [previewClass, setPreviewClass] = useState("45-Day Vocabulary Challenge")
   const [previewDays, setPreviewDays] = useState(3)
   const [previewTeacherDays, setPreviewTeacherDays] = useState(7)
 
@@ -1076,29 +1076,29 @@ export function RemindersDashboard({
                       DOLCAKE LEARNING
                     </div>
                     <h2 className="text-xl font-black leading-snug">
-                      Bé ơi, lớp học "{previewClass}" đang đợi bé nè! ✨
+                      Just 5 minutes today to get back on track! 🏆
                     </h2>
                   </div>
 
                   <div className="p-6 md:p-8 space-y-5 text-sm leading-relaxed">
                     <p className="font-bold text-slate-900 text-base">
-                      Chào ba mẹ và bé <span className="text-sky-600 text-lg">{previewName}</span>,
+                      Hi <span className="text-sky-600 text-lg">{previewName}</span>, 👋
                     </p>
 
                     <p className="text-slate-600">
-                      Đã{" "}
-                      <span className="bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-md font-bold">
-                        {previewDays} ngày
+                      {""}
+                      <span className="hidden">
+                        </span>You&apos;ve been away from <strong className="text-sky-600">{previewClass}</strong> for <span className="bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-md font-bold">{previewDays} days
                       </span>{" "}
-                      rồi hệ thống Dolcake chưa thấy bé ghé thăm lớp học{" "}
-                      <strong className="text-sky-600">{previewClass}</strong>. Thầy cô và các bạn đang rất nhớ bé đó!
+                      {""}
+                      . Every champion takes a short break—now is the best time to jump back in!
                     </p>
 
                     <div className="bg-gradient-to-b from-green-50 to-emerald-50 border-1.5 border-green-300 rounded-2xl p-5 space-y-3">
                       <p className="font-bold text-green-900 text-sm leading-snug">
-                        🌱 Học tiếng Anh giống như tưới nước cho một mầm cây nhỏ, chỉ cần bé dành{" "}
+                        ⚡ Here is what&apos;s waiting for you in today&apos;s lesson:{" "}
                         <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-extrabold">
-                          5 - 10 phút mỗi ngày
+                          10-Minute Mission
                         </span>
                         :
                       </p>
@@ -1109,7 +1109,7 @@ export function RemindersDashboard({
                             🃏
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-sky-900">Lật các thẻ Flashcard</strong> từ vựng sinh động có âm thanh chuẩn bản xứ.
+                            <strong className="text-sky-900">10-Minute Daily Mission:</strong> Quick, focused exercises designed so you never feel overwhelmed.
                           </div>
                         </div>
 
@@ -1118,7 +1118,7 @@ export function RemindersDashboard({
                             🎮
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-purple-900">Vượt qua các câu đố game vui nhộn</strong> của bài học.
+                            <strong className="text-purple-900">Interactive Practice:</strong> Learn through flashcards, audio stories, and gamified quizzes.
                           </div>
                         </div>
 
@@ -1127,19 +1127,19 @@ export function RemindersDashboard({
                             🔥
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-orange-900">Tích lũy sao</strong> và giữ vững chuỗi học tập cùng cả lớp.
+                            <strong className="text-orange-900">Instant Progress:</strong> Finish today&apos;s unit to unlock your next day in the 45-Day roadmap!
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <p className="text-center font-bold text-slate-900 text-sm">
-                      Ba mẹ hãy mở máy cho bé vào khám phá bài học ngày hôm nay nhé! 🚀
+                      Let&apos;s spend a few minutes completing your next unit today! 🚀
                     </p>
 
                     <div className="text-center pt-1">
                       <div className="inline-block w-full max-w-xs py-3.5 px-6 rounded-full bg-gradient-to-r from-sky-600 to-blue-600 text-white font-extrabold text-sm shadow-xl shadow-blue-500/30">
-                        🚀 Vào Lớp Học Của Bé Ngay
+                        🔥 Resume My 45-Day Challenge
                       </div>
                     </div>
 
@@ -1149,8 +1149,8 @@ export function RemindersDashboard({
                   </div>
 
                   <div className="bg-slate-50 border-t border-slate-100 p-6 text-center text-xs text-slate-500 space-y-1">
-                    <div className="font-semibold text-slate-600">Thương mến,</div>
-                    <div className="font-extrabold text-sky-600 text-sm">Đội ngũ Dolcake & Thầy cô giáo 🧁</div>
+                    <div className="font-semibold text-slate-600">Warm regards,</div>
+                    <div className="font-extrabold text-sky-600 text-sm">The Dolcake Team 🧁</div>
                   </div>
                 </div>
               ) : (
@@ -1162,36 +1162,36 @@ export function RemindersDashboard({
                     </div>
                     <br />
                     <div className="inline-block px-3 py-1 bg-white/20 border border-white/30 rounded-full text-[11px] font-extrabold uppercase tracking-wider mb-2">
-                      DOLCAKE TEACHER STUDIO
+                      DOLCAKE LEARNING
                     </div>
                     <h2 className="text-xl font-black leading-snug">
-                      Thầy/Cô ơi, cùng tạo một Mini-Game bất ngờ cho học sinh tuần này nhé! ✨
+                      Bring extra joy to your classroom this week! 🎉
                     </h2>
                   </div>
 
                   <div className="p-6 md:p-8 space-y-5 text-sm leading-relaxed">
                     <p className="font-bold text-slate-900 text-base">
-                      Kính gửi Thầy/Cô <span className="text-indigo-600 text-lg">{previewTeacherName}</span>, 👋
+                      Hello <span className="text-indigo-600 text-lg">{previewTeacherName}</span>, 👋
                     </p>
 
                     <p className="text-slate-600">
-                      Đã{" "}
-                      <span className="bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-md font-bold">
-                        {previewTeacherDays} ngày
+                      {""}
+                      <span className="hidden">
+                        {""}
                       </span>{" "}
-                      rồi hệ thống Dolcake chưa thấy Thầy/Cô ghé qua góc sáng tạo lớp học. Các bạn nhỏ đang rất ngóng chờ một thử thách mới đầy hứng khởi từ Thầy/Cô đó ạ!
+                      We noticed you haven&apos;t visited <strong>Dolcake</strong> in the past <span className="bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-md font-bold">{previewTeacherDays} days</span>, and we wanted to check in!
                     </p>
 
                     <div className="bg-gradient-to-b from-purple-50 to-indigo-50 border-1.5 border-purple-200 rounded-2xl p-5 space-y-3">
                       <p className="font-bold text-indigo-950 text-sm leading-snug">
-                        💡 Thầy/Cô có biết: Học sinh hào hứng và ghi nhớ từ vựng lâu gấp{" "}
+                        Whether you&apos;re teaching new vocabulary, grammar, or quick math reflexes, our <strong>11 ready-to-play game templates</strong> help your students learn{" "}
                         <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-extrabold">
-                          3 lần
+                          3x faster
                         </span>{" "}
-                        khi được chơi mini-game tương tác?
+                        while having fun together:
                       </p>
                       <p className="text-xs text-indigo-700 font-semibold">
-                        Chỉ mất <strong className="text-indigo-950">3 - 5 phút</strong>, Thầy/Cô có thể tạo ngay 4 tựa game hấp dẫn cho lớp:
+                        {""}
                       </p>
 
                       <div className="space-y-2.5">
@@ -1200,7 +1200,7 @@ export function RemindersDashboard({
                             🍬
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-pink-700">Candy Quiz:</strong> Trả lời trắc nghiệm nhận kẹo ngọt, hiệu ứng rực rỡ, học sinh mê tít.
+                            <strong className="text-pink-700">AI-Powered Creation:</strong> Type a topic or paste a textbook photo to generate a full game instantly.
                           </div>
                         </div>
 
@@ -1209,7 +1209,7 @@ export function RemindersDashboard({
                             🥚
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-amber-800">Đập Trứng Bí Mật (Choice Egg):</strong> Khám phá bí mật sau mỗi quả trứng.
+                            <strong className="text-amber-800">Play Anywhere:</strong> Works smoothly on Smartboards, iPads, and laptops via a simple link or QR code.
                           </div>
                         </div>
 
@@ -1218,7 +1218,7 @@ export function RemindersDashboard({
                             🗺️
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-emerald-700">Truy Tìm Kho Báu (Treasure Hunt):</strong> Vượt chướng ngại vật cùng cả lớp.
+                            <strong className="text-emerald-700">Built-in Native Audio &amp; Illustrations:</strong> Zero prep work needed before class.
                           </div>
                         </div>
 
@@ -1227,30 +1227,30 @@ export function RemindersDashboard({
                             🎯
                           </div>
                           <div className="text-xs text-slate-700">
-                            <strong className="text-blue-700">Bắn Bóng Từ Vựng (Shooter Quiz):</strong> Rèn luyện phản xạ và từ vựng cực vui.
+                            <strong className="text-blue-700">Instant Sharing:</strong> Share directly with students via QR code or link — no student login required.
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <p className="text-center font-bold text-slate-900 text-sm">
-                      Thầy/Cô hãy thử tạo ngay một mini-game vui vẻ cho bài học tuần này nhé! 🚀
+                      Ready to surprise your students with a fun activity today? 🚀
                     </p>
 
                     <div className="text-center pt-1">
                       <div className="inline-block w-full max-w-xs py-3.5 px-6 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-sm shadow-xl shadow-purple-500/30">
-                        🎮 Vào Tạo Mini-Game Ngay (Chỉ 3 Phút)
+                        🎮 Explore Dolcake Teacher Studio
                       </div>
                     </div>
 
                     <p className="text-center text-xs text-slate-400 italic pt-1">
-                      "Mỗi tiết học có mini-game là một ngày vui đến lớp của các con! 🌟"
+                      &quot;5 minutes of prep for you — 45 minutes of excitement for your students! ✨&quot;
                     </p>
                   </div>
 
                   <div className="bg-slate-50 border-t border-slate-100 p-6 text-center text-xs text-slate-500 space-y-1">
-                    <div className="font-semibold text-slate-600">Trân trọng,</div>
-                    <div className="font-extrabold text-purple-600 text-sm">Đội ngũ Sáng tạo & Hỗ trợ Giáo viên Dolcake 🧁</div>
+                    <div className="font-semibold text-slate-600">Warm regards,</div>
+                    <div className="font-extrabold text-purple-600 text-sm">The Dolcake Team 🧁</div>
                   </div>
                 </div>
               )}

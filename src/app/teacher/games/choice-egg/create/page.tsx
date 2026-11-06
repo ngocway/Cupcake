@@ -24,6 +24,7 @@ import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -259,7 +260,17 @@ export default function CreateChoiceEggPage() {
   const [step, setStep] = useState<1 | 2>(1);
 
   // Form States (Step 1)
+  const { locale } = useTeacherLocale();
   const [gameTitle, setGameTitle] = useState("Bài tập Đập Trứng Toán học");
+  useEffect(() => {
+    if (!editId) {
+      setGameTitle((prev) => {
+        if (locale === "en" && prev === "Bài tập Đập Trứng Toán học") return "Math Egg Smash Exercise";
+        if (locale === "vi" && prev === "Math Egg Smash Exercise") return "Bài tập Đập Trứng Toán học";
+        return prev;
+      });
+    }
+  }, [locale, editId]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(["add_1", "sub_1"]);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [endMode, setEndMode] = useState<"finish" | "loop">("finish");

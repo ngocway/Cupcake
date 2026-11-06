@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X, Check, Copy, Link2, Share2, Sparkles } from "lucide-react"; import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
 interface ChoiceGameShareModalProps {
   isOpen: boolean;
@@ -20,11 +20,11 @@ export function ChoiceGameShareModal({
   directPath,
 }: ChoiceGameShareModalProps) {
   const [copied, setCopied] = useState(false);
-  const { t } = useTeacherLocale();
+  const { locale, t } = useTeacherLocale();
 
   if (!isOpen) return null;
 
-  const directLink = `${typeof window !== "undefined" ? window.location.origin : ""}${directPath || `/game/shooter/${gameCode}`}`;
+  const directLink = withLangParam(`${typeof window !== "undefined" ? window.location.origin : ""}${directPath || `/game/shooter/${gameCode}`}`, locale);
 
   const handleCopyLink = () => { trackEvent("teacher_my_game_action", { action: "copy_link", gameTitle, gameId: gameCode });
     navigator.clipboard.writeText(directLink);

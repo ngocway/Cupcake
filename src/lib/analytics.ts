@@ -80,7 +80,7 @@ export function trackEvent(name: EventName, properties?: EventProperties) {
         props: cleanedProps,
       }),
       keepalive: true,
-    }).catch(() => {});
+    }).catch(() => { });
 
     if (process.env.NODE_ENV === "development") {
       console.log(`[Analytics Event] ${name}:`, cleanedProps);

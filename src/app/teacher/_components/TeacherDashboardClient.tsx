@@ -12,6 +12,7 @@ import { QuizGameCards } from "./QuizGameCards";
 import { MyQuizGamesList } from "./MyQuizGamesList";
 import { LoginModal } from "@/components/LoginButton";
 import { trackEvent } from "@/lib/analytics";
+import { TeacherLocaleSwitch, useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface TeacherDashboardClientProps {
   initialTab?: string;
@@ -22,6 +23,7 @@ export function TeacherDashboardClient({
   initialTab = "match",
   isAuthenticated,
 }: TeacherDashboardClientProps) {
+  const { t } = useTeacherLocale();
   const safeInitialTab =
     !isAuthenticated && initialTab.startsWith("my-") ? "match" : initialTab;
 
@@ -32,7 +34,8 @@ export function TeacherDashboardClient({
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string>("/teacher");
 
-  const handleRequireAuth = (targetHref: string, gameId?: string, gameTitle?: string) => { trackEvent("teacher_auth_prompt", { targetUrl: targetHref, gameId: gameId || "", gameTitle: gameTitle || "" });
+  const handleRequireAuth = (targetHref: string, gameId?: string, gameTitle?: string) => {
+    trackEvent("teacher_auth_prompt", { targetUrl: targetHref, gameId: gameId || "", gameTitle: gameTitle || "" });
     if (typeof window !== "undefined") window.dispatchEvent(new Event("hide-global-loader")); setPendingRedirectUrl(targetHref);
     setLoginModalOpen(true);
   };
@@ -63,7 +66,8 @@ export function TeacherDashboardClient({
     }
   }, [isAuthenticated, initialTab]);
 
-  const handleSelectTab = (tab: string) => { trackEvent("teacher_category_click", { tab, isAuthenticated });
+  const handleSelectTab = (tab: string) => {
+    trackEvent("teacher_category_click", { tab, isAuthenticated });
     // Option A: Clicking "Bài tập đã tạo" tabs when not authenticated as Teacher immediately opens Teacher Login modal
     if (tab.startsWith("my-") && !isAuthenticated) {
       handleRequireAuth(`/teacher?tab=${tab}`);
@@ -130,7 +134,18 @@ export function TeacherDashboardClient({
 
         {/* 2. Bài tập Nối cặp đã tạo */}
         {isAuthenticated && visitedTabs.has("my-match-games") && (
-          <div className={activeTab === "my-match-games" ? "block" : "hidden"}>
+          <div className={activeTab === "my-match-games" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.createdMatchTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.createdMatchSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
             <MyMatchGamesList />
           </div>
         )}
@@ -147,7 +162,18 @@ export function TeacherDashboardClient({
 
         {/* 4. Bài tập Toán học đã tạo */}
         {isAuthenticated && visitedTabs.has("my-choice-games") && (
-          <div className={activeTab === "my-choice-games" ? "block" : "hidden"}>
+          <div className={activeTab === "my-choice-games" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.createdMathTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.createdMathSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
             <MyChoiceGamesList />
           </div>
         )}
@@ -164,7 +190,18 @@ export function TeacherDashboardClient({
 
         {/* 6. Bài tập Lật ảnh đã tạo */}
         {isAuthenticated && visitedTabs.has("my-flip-games") && (
-          <div className={activeTab === "my-flip-games" ? "block" : "hidden"}>
+          <div className={activeTab === "my-flip-games" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.createdFlipTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.createdFlipSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
             <MyFlipGamesList />
           </div>
         )}
@@ -181,7 +218,18 @@ export function TeacherDashboardClient({
 
         {/* 8. Bài tập Trắc nghiệm đã tạo */}
         {isAuthenticated && visitedTabs.has("my-quiz-games") && (
-          <div className={activeTab === "my-quiz-games" ? "block" : "hidden"}>
+          <div className={activeTab === "my-quiz-games" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.createdQuizTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.createdQuizSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
             <MyQuizGamesList />
           </div>
         )}

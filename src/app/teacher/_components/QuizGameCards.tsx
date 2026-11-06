@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Play, Plus, Video } from "lucide-react";
 import Link from "next/link";
 import { GameVideoModal, VideoModalGame } from "./GameVideoModal"; import { trackEvent } from "@/lib/analytics";
-import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { useTeacherLocale, TeacherLocaleSwitch } from "@/i18n/teacher-locale";
 
 interface GameCard {
   id: string;
@@ -222,7 +222,7 @@ export function QuizGameCards({ isAuthenticated = true, onRequireAuth }: { isAut
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-300 relative">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
             {t.quizCards.sectionTitle}
@@ -231,6 +231,7 @@ export function QuizGameCards({ isAuthenticated = true, onRequireAuth }: { isAut
             {t.quizCards.sectionSubtitle}
           </p>
         </div>
+        <TeacherLocaleSwitch />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 lg:gap-6">

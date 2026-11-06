@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChoiceShooterGame, ChoiceShooterQuestion } from "@/lib/choice-shooter-storage";
-import { Volume2, VolumeX, X, ArrowLeft, RefreshCw, Play } from "lucide-react";
+import { Volume2, VolumeX, X, ArrowLeft, RefreshCw, Play } from "lucide-react"; import { TeacherLocaleSwitch, TeacherDomTranslator } from "@/i18n/teacher-locale";
 
 interface SciFiNeonShooterGameProps {
   game: ChoiceShooterGame;
@@ -723,7 +723,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
             floatingTexts.push({
               x: width / 2,
               y: height - 120,
-              text: "BỎ LỠ! -5",
+              text: (typeof window !== "undefined" && localStorage.getItem("preferred-locale") === "en") ? "MISS! -5" : "BỎ LỠ! -5",
               color: "#f43f5e",
               alpha: 1,
               scale: 1.8,
@@ -816,7 +816,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
               floatingTexts.push({
                 x: t.x,
                 y: t.y,
-                text: "LỖI! -5",
+                text: (typeof window !== "undefined" && localStorage.getItem("preferred-locale") === "en") ? "WRONG! -5" : "LỖI! -5",
                 color: "#f43f5e",
                 alpha: 1,
                 scale: 1.5,
@@ -1145,7 +1145,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
       `}</style>
 
       {/* Game Canvas Area */}
-      <canvas ref={canvasRef} className="block w-full h-full cursor-none touch-none" />
+      <canvas ref={canvasRef} className="block w-full h-full cursor-none touch-none" /> <TeacherDomTranslator />
 
       {/* UI HUD OVERLAY */}
       {gameState === "playing" && (
@@ -1177,7 +1177,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
             </div>
 
             {/* Controls: Sound Toggle & Exit */}
-            <div className="pointer-events-auto flex items-center gap-2">
+            <div className="pointer-events-auto flex items-center gap-2"> <TeacherLocaleSwitch />
               <button
                 type="button"
                 onClick={toggleMute}
@@ -1212,7 +1212,8 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
       {/* START OVERLAY SCREEN - STYLIZED PLAY BUTTON ONLY */}
       {gameState === "start" && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-auto z-50 p-6">
+
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-auto z-50 p-6"> <div className="absolute top-4 right-4 z-50"><TeacherLocaleSwitch /></div>
           <div className="flex flex-col items-center gap-4 animate-in zoom-in-95 duration-300">
             <button
               type="button"
@@ -1247,7 +1248,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
       {/* VICTORY OVERLAY SCREEN (Finish Mode Completed) */}
       {gameState === "victory" && (
-        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center pointer-events-auto z-50 p-6 animate-in fade-in duration-300">
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center pointer-events-auto z-50 p-6 animate-in fade-in duration-300"> <div className="absolute top-4 right-4 z-50"><TeacherLocaleSwitch /></div>
           <div className="text-center glass-panel p-8 md:p-12 rounded-[2.5rem] border border-cyan-500/40 shadow-[0_0_80px_rgba(0,255,255,0.2)] max-w-lg w-full space-y-6">
             <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-cyan-500 to-emerald-400 text-slate-950 flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(34,211,238,0.6)] text-4xl font-black">
               🏆

@@ -32,6 +32,7 @@ import { saveTeacherChoiceGameAction } from "@/actions/teacher-choice-games";
 import { SciFiNeonShooterGame } from "@/app/_components/SciFiNeonShooterGame";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
+import { useTeacherLocale } from "@/i18n/teacher-locale";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -267,7 +268,17 @@ export default function CreateChoiceShooterPage() {
   const [step, setStep] = useState<1 | 2>(1);
 
   // Form States (Step 1)
+  const { locale } = useTeacherLocale();
   const [gameTitle, setGameTitle] = useState("Bài tập Bắn súng Toán học");
+  useEffect(() => {
+    if (!editId) {
+      setGameTitle((prev) => {
+        if (locale === "en" && prev === "Bài tập Bắn súng Toán học") return "Math Space Shooter Exercise";
+        if (locale === "vi" && prev === "Math Space Shooter Exercise") return "Bài tập Bắn súng Toán học";
+        return prev;
+      });
+    }
+  }, [locale, editId]);
   const [grade, setGrade] = useState("Lớp 2");
   const [selectedTypes, setSelectedTypes] = useState<string[]>(["add_1", "sub_1"]);
   const [questionCount, setQuestionCount] = useState<number>(10);
