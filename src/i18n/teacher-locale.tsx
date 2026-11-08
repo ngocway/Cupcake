@@ -38,6 +38,15 @@ export const TEACHER_DICT = {
       createdFlipSub: "Flip card games list",
       createdQuizTitle: "Created Quizzes",
       createdQuizSub: "Multiple choice games list",
+      libraryTitle: "My Library",
+      libraryMatchTitle: "Matching Library",
+      libraryMatchSub: "Saved matching & flip card sets",
+      libraryMathTitle: "Math Library",
+      libraryMathSub: "Saved math question sets",
+      libraryFlipTitle: "Flip Cards Library",
+      libraryFlipSub: "Saved flip & matching card sets",
+      libraryQuizTitle: "Quiz Library",
+      libraryQuizSub: "Saved multiple choice question sets",
     },
     common: {
       createExercise: "Create Exercise",
@@ -255,6 +264,45 @@ export const TEACHER_DICT = {
       wrongAnswer: "Distractor / Wrong Option",
       timeLimit: "Time Limit",
       seconds: "seconds",
+      importFromMyLibrary: "Pick from My Library",
+    },
+    library: {
+      loading: "Loading your question sets from My Library...",
+      emptyTitle: "No saved question sets in this category yet",
+      emptyDesc: "Every time you create and save a game, its question set is automatically saved here for instant reuse across compatible games!",
+      createGameBtn: "Create Game",
+      viewEditBtn: "Edit",
+      duplicateBtn: "Duplicate",
+      deleteBtn: "Delete",
+      confirmDelete: 'Are you sure you want to remove "{name}" from My Library?',
+      deletedToast: 'Removed "{name}" from My Library!',
+      renamedToast: "Question set renamed successfully!",
+      duplicatedToast: 'Duplicated "{name}"!',
+      savedChangesToast: "Saved question set updates to My Library!",
+      saveToLibraryBtn: "Save to My Library",
+      copySuffix: "Copy",
+      selectGameTitle: "Create a New Game from this Set",
+      selectGameDesc: "Choose any compatible game format below. All cards/questions from this set will be pre-filled automatically!",
+      viewSetTitle: "Question Set Details & Quick Edit",
+      renameLabel: "Question Set Name",
+      saveNameBtn: "Save Name",
+      saveChangesBtn: "Save Changes",
+      editItemHint: "You can edit words/questions directly or remove items below, then click Save Changes.",
+      removeItemTooltip: "Remove this item",
+      minOneItemWarning: "A question set must keep at least 1 item!",
+      compatibleNote: "Compatible with both Matching & Flip Card games",
+      importModalTitle: "Import from My Library",
+      importModalSubtitle: "Select a saved question set to load into your current game",
+      replaceBtn: "Replace Current",
+      appendBtn: "Append to Current",
+      importedToast: 'Imported "{name}" from My Library!',
+      searchPlaceholder: "Search question sets...",
+      allSubTypes: "All Formats",
+      imageTextBadge: "Image - Word",
+      imageImageBadge: "Image - Image",
+      textTextBadge: "Word - Word",
+      quizBadge: "Multiple Choice",
+      choiceBadge: "Math / Fast Choice",
     },
   },
   vi: {
@@ -289,6 +337,15 @@ export const TEACHER_DICT = {
       createdFlipSub: "Danh sách game Lật ảnh",
       createdQuizTitle: "Trắc nghiệm đã tạo",
       createdQuizSub: "Danh sách game Trắc nghiệm",
+      libraryTitle: "Thư viện của tôi",
+      libraryMatchTitle: "Thư viện Nối cặp",
+      libraryMatchSub: "Bộ câu hỏi Nối cặp & Lật thẻ",
+      libraryMathTitle: "Thư viện Toán học",
+      libraryMathSub: "Bộ câu hỏi Toán học đã lưu",
+      libraryFlipTitle: "Thư viện Lật ảnh",
+      libraryFlipSub: "Bộ câu hỏi Lật ảnh & Nối cặp",
+      libraryQuizTitle: "Thư viện Trắc nghiệm",
+      libraryQuizSub: "Bộ câu hỏi Trắc nghiệm đã lưu",
     },
     common: {
       createExercise: "Tạo bài tập",
@@ -506,6 +563,45 @@ export const TEACHER_DICT = {
       wrongAnswer: "Đáp án nhiễu",
       timeLimit: "Thời gian",
       seconds: "giây",
+      importFromMyLibrary: "Chọn từ My Library",
+    },
+    library: {
+      loading: "Đang tải các bộ câu hỏi từ Thư viện của bạn...",
+      emptyTitle: "Chưa có bộ câu hỏi nào trong danh mục này",
+      emptyDesc: "Mỗi khi bạn tạo và lưu một trò chơi mới, bộ câu hỏi sẽ được tự động lưu vào đây để bạn tái sử dụng cho các trò chơi tương thích khác!",
+      createGameBtn: "Tạo Game",
+      viewEditBtn: "Sửa",
+      duplicateBtn: "Nhân bản",
+      deleteBtn: "Xóa",
+      confirmDelete: 'Bạn có chắc muốn xóa bộ câu hỏi "{name}" khỏi Thư viện của tôi?',
+      deletedToast: 'Đã xóa "{name}" khỏi Thư viện!',
+      renamedToast: "Đã đổi tên bộ câu hỏi thành công!",
+      duplicatedToast: 'Đã nhân bản "{name}"!',
+      savedChangesToast: "Đã lưu cập nhật bộ câu hỏi vào My Library!",
+      saveToLibraryBtn: "Lưu vào My Library",
+      copySuffix: "Bản sao",
+      selectGameTitle: "Tạo Trò chơi Mới từ Bộ câu hỏi này",
+      selectGameDesc: "Chọn một dạng trò chơi tương thích bên dưới. Toàn bộ câu hỏi/cặp thẻ sẽ được tự động điền sẵn!",
+      viewSetTitle: "Chi tiết & Chỉnh sửa Bộ câu hỏi",
+      renameLabel: "Tên bộ câu hỏi",
+      saveNameBtn: "Lưu tên mới",
+      saveChangesBtn: "Lưu thay đổi",
+      editItemHint: "Bạn có thể sửa chữ/câu hỏi trực tiếp hoặc xóa bớt các mục bên dưới, sau đó bấm Lưu thay đổi.",
+      removeItemTooltip: "Xóa mục này",
+      minOneItemWarning: "Bộ câu hỏi phải giữ lại ít nhất 1 mục!",
+      compatibleNote: "Tương thích dùng chung cho cả game Nối cặp & Lật ảnh",
+      importModalTitle: "Chọn bộ câu hỏi từ My Library",
+      importModalSubtitle: "Chọn một bộ câu hỏi đã lưu để nạp nhanh vào trò chơi đang tạo",
+      replaceBtn: "Thay thế hiện tại",
+      appendBtn: "Cộng gộp thêm",
+      importedToast: 'Đã nạp bộ câu hỏi "{name}" từ My Library!',
+      searchPlaceholder: "Tìm tên bộ câu hỏi...",
+      allSubTypes: "Tất cả định dạng",
+      imageTextBadge: "Ảnh - Chữ",
+      imageImageBadge: "Ảnh - Ảnh",
+      textTextBadge: "Chữ - Chữ",
+      quizBadge: "Trắc nghiệm 4 đáp án",
+      choiceBadge: "Toán học / Chọn nhanh",
     },
   },
 } as const;
@@ -1393,6 +1489,17 @@ const VI_TO_EN_EXACT: Record<string, string> = {
   "Vui lòng kiểm tra lại chủ đề": "Please check the exercise topic",
   "Lỗi tải dữ liệu bài học": "Failed to load exercise data",
   "Vui lòng thử tải lại trang": "Please try reloading the page",
+  // My Library Studio Edit
+  "Chỉnh sửa Bộ câu hỏi": "Edit Question Set",
+  "Chỉnh sửa Bộ câu hỏi (My Library)": "Edit Question Set (My Library)",
+  "• Chỉnh sửa Bộ câu hỏi Ảnh - Ảnh": "• Edit Image - Image Question Set",
+  "• Chỉnh sửa Bộ câu hỏi Trắc nghiệm": "• Edit Multiple Choice Question Set",
+  "Chỉnh sửa Bộ câu hỏi Toán Học (My Library)": "Edit Math Question Set (My Library)",
+  "Chỉnh sửa tên bộ câu hỏi, phép tính và đáp án để lưu vào My Library": "Edit question set name, math expressions, and answers to save to My Library",
+  "Tên bộ câu hỏi (My Library) *": "Question Set Name (My Library) *",
+  "Lưu vào My Library": "Save to My Library",
+  "LƯU VÀO MY LIBRARY": "SAVE TO MY LIBRARY",
+  "Đã lưu cập nhật bộ câu hỏi vào My Library!": "Saved question set updates to My Library!",
 };
 
 const VI_TO_EN_PATTERNS: Array<[RegExp, string]> = [
@@ -1596,17 +1703,46 @@ export function TeacherDomTranslator() {
     let isApplying = false;
     let rafId: number | null = null;
     let initTimer: ReturnType<typeof setTimeout> | null = null;
+    let hydrationRetryTimer: ReturnType<typeof setTimeout> | null = null;
     let observer: MutationObserver | null = null;
     const iframeObservers: MutationObserver[] = [];
     const iframeLoadHandlers: Array<{ iframe: HTMLIFrameElement; handler: () => void }> = [];
     const observedIframeDocs = new WeakSet<Document>();
     const pendingNodes = new Set<Node>();
+    let reactKeyCache: string | null = null;
+
+    const isElementHydrated = (el: Element | null): boolean => {
+      if (!el) return false;
+      if (el.ownerDocument !== document) return true;
+      if (reactKeyCache && reactKeyCache in el) return true;
+      const keys = Object.keys(el);
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i];
+        if (k.startsWith("__reactProps$") || k.startsWith("__reactFiber$")) {
+          reactKeyCache = k;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const scheduleHydrationRetry = () => {
+      if (hydrationRetryTimer !== null) return;
+      hydrationRetryTimer = setTimeout(() => {
+        hydrationRetryTimer = null;
+        processNode(document.body);
+      }, 100);
+    };
 
     const translateElementAttr = (
       el: Element,
       attrName: "placeholder" | "title" | "aria-label" | "alt",
       recordKey: keyof OrigElementAttrRecord
     ) => {
+      if (!isElementHydrated(el)) {
+        scheduleHydrationRetry();
+        return;
+      }
       const currentVal = el.getAttribute(attrName);
       if (currentVal === null) return;
       let attrRecord = origElementAttrMap.get(el);
@@ -1639,6 +1775,19 @@ export function TeacherDomTranslator() {
       isApplying = true;
 
       try {
+        const doc = root.ownerDocument || document;
+        if (doc === document) {
+          const mainEl = document.querySelector("main");
+          if (mainEl) {
+            const buttonsOrHeadings = mainEl.querySelectorAll("button, h1, h2, input");
+            const lastInteractive = buttonsOrHeadings.length > 0 ? buttonsOrHeadings[buttonsOrHeadings.length - 1] : mainEl;
+            if (!isElementHydrated(lastInteractive)) {
+              scheduleHydrationRetry();
+              return;
+            }
+          }
+        }
+
         // 1. Process Element attributes (placeholder, title, aria-label, alt) using WeakMap
         const elements: Element[] = [];
         if (root.nodeType === Node.ELEMENT_NODE) {
@@ -1655,13 +1804,16 @@ export function TeacherDomTranslator() {
         }
 
         // 2. Process Text Nodes (using root.ownerDocument so same-origin iframes work too)
-        const doc = root.ownerDocument || document;
         const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
           acceptNode(node) {
             const parent = node.parentElement;
             if (!parent) return NodeFilter.FILTER_REJECT;
             const tag = parent.tagName;
             if (tag === "SCRIPT" || tag === "STYLE" || tag === "TEXTAREA" || parent.isContentEditable) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            if (doc === document && !isElementHydrated(parent)) {
+              scheduleHydrationRetry();
               return NodeFilter.FILTER_REJECT;
             }
             return NodeFilter.FILTER_ACCEPT;
@@ -1812,6 +1964,7 @@ export function TeacherDomTranslator() {
 
     return () => {
       if (initTimer !== null) clearTimeout(initTimer);
+      if (hydrationRetryTimer !== null) clearTimeout(hydrationRetryTimer);
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       if (observer) observer.disconnect();
       iframeObservers.forEach((obs) => obs.disconnect());

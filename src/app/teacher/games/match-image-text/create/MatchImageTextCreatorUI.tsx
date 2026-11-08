@@ -36,6 +36,8 @@ import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -78,6 +80,9 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
+  const editLibrarySetId = searchParams?.get("editLibrarySetId") || null;
+  const returnTab = searchParams?.get("returnTab") || "lib-match";
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -85,7 +90,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
   const [subject, setSubject] = useState("english");
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
-  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId || librarySetId || editLibrarySetId));
   const [currentGameMode, setCurrentGameMode] = useState<string>(() => searchParams?.get("gameMode") || "match");
   const maxPairsPerRound = currentGameMode === "train" ? 4 : currentGameMode === "line" ? 5 : 7;
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
@@ -787,12 +792,122 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
     setActiveRoundIndex(0);
   };
 
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+
+    const incomingPairs: CardPair[] = (setItem.items || []).map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      word: it.word || "",
+      imageUrl: it.imageUrl || undefined,
+      audioUrl: it.audioUrl || undefined,
+    }));
+
+    if (incomingPairs.length === 0) return;
+
+    const isSingleEmptyInitial =
+      rounds.length === 1 &&
+      rounds[0].pairs.length === 1 &&
+      !rounds[0].pairs[0].word.trim() &&
+      !rounds[0].pairs[0].imageUrl;
+
+    let updatedRounds: GameRound[] =
+      mode === "replace" || isSingleEmptyInitial
+        ? []
+        : rounds.map((r) => ({ ...r, pairs: [...r.pairs] }));
+
+    let remainingPairs = [...incomingPairs];
+
+    if (updatedRounds.length > 0) {
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = maxPairsPerRound - lastRound.pairs.length;
+      if (spaceLeft > 0) {
+        const toAdd = remainingPairs.slice(0, spaceLeft);
+        lastRound.pairs.push(...toAdd);
+        remainingPairs = remainingPairs.slice(spaceLeft);
+      }
+    }
+
+    while (remainingPairs.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+      const roundIdx = updatedRounds.length;
+      const chunk = remainingPairs.slice(0, maxPairsPerRound);
+      updatedRounds.push({
+        id: `round-lib-${roundIdx}-${Date.now()}`,
+        title: `Vòng ${roundIdx + 1}`,
+        pairs: chunk,
+      });
+      remainingPairs = remainingPairs.slice(maxPairsPerRound);
+    }
+
+    if (updatedRounds.length === 0) {
+      updatedRounds = INITIAL_ROUNDS;
+    }
+
+    setRounds(updatedRounds);
+    setActiveRoundIndex(0);
+  };
+
+  // Pre-load question set when navigated with ?librarySetId=... or ?editLibrarySetId=...
+  useEffect(() => {
+    const targetSetId = editLibrarySetId || librarySetId;
+    if (topicId || !targetSetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        if (editLibrarySetId) {
+          setTitle(res.set.name || "");
+          if (res.set.audioMode) {
+            setAudioMode(res.set.audioMode as AudioMode);
+          }
+          const items = res.set.items || [];
+          if (items.length > 0) {
+            const roundsMap: Record<number, typeof items> = {};
+            items.forEach((item) => {
+              const rIdx = item.roundIndex ?? 0;
+              if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+              roundsMap[rIdx].push(item);
+            });
+            const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+            const loadedRounds: GameRound[] = [];
+            roundIndices.forEach((rIdx, i) => {
+              const roundItems = roundsMap[rIdx];
+              const roundPairs: CardPair[] = roundItems.map((item, idx) => ({
+                id: item.id || `pair-lib-edit-${i}-${idx}`,
+                word: item.word || "",
+                imageUrl: item.imageUrl || undefined,
+                audioUrl: item.audioUrl || undefined,
+              }));
+              loadedRounds.push({
+                id: `round-${i + 1}`,
+                title: `Vòng ${i + 1}`,
+                pairs: roundPairs,
+              });
+            });
+            setRounds(loadedRounds);
+            setActiveRoundIndex(0);
+          }
+        } else {
+          handleImportFromLibrary(res.set, "replace");
+          toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+        }
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, editLibrarySetId, topicId]);
+
   const handleBackClick = (e: React.MouseEvent) => {
     if (isDirty && !isSaving) {
       e.preventDefault();
       setShowExitConfirmModal(true);
     } else {
-      router.push("/teacher");
+      router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
     }
   };
 
@@ -816,7 +931,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
         setValidationModalMessage(`${r.title} phải có ít nhất 2 cặp thẻ để học sinh nối. Vui lòng bấm [+ Thêm 1 cặp]!`);
         return;
       }
-      const effectiveMax = topicId ? Math.max(maxPairsPerRound, 7) : maxPairsPerRound;
+      const effectiveMax = (topicId || editLibrarySetId) ? Math.max(maxPairsPerRound, 7) : maxPairsPerRound;
       if (r.pairs.length > effectiveMax) {
         setActiveRoundIndex(rIdx);
         setValidationModalMessage(
@@ -962,6 +1077,36 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
         })
       );
 
+      if (editLibrarySetId) {
+        const libRes = await updateTeacherLibrarySetAction({
+          setId: editLibrarySetId,
+          name: title.trim(),
+          audioMode,
+          gradeLevel,
+          items: updatedPairs,
+        });
+
+        toast.dismiss(toastId);
+        toast.dismiss();
+
+        if (!libRes.success) {
+          setValidationModalMessage(libRes.error || "Không thể lưu cập nhật vào My Library!");
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("cached_teacher_library_match");
+            sessionStorage.removeItem("cached_teacher_library_flip");
+          } catch (e) {}
+        }
+
+        setIsSavedSuccessfully(true);
+        toast.success("Đã lưu cập nhật bộ câu hỏi vào My Library!");
+        router.push(`/teacher?tab=${returnTab}`);
+        return;
+      }
+
       let generatedThumbnailUrl: string | undefined = undefined;
       try {
         if (thumbnailPreviewRef.current) {
@@ -1052,20 +1197,26 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
           <div>
             <div className="flex items-center gap-2">
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                currentGameMode === "cut-rope"
+                editLibrarySetId
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                  : currentGameMode === "cut-rope"
                   ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border-rose-200 dark:border-rose-800"
                   : currentGameMode === "train"
                   ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-200 dark:border-amber-800"
                   : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800"
               }`}>
-                {currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : currentGameMode === "train" ? "Nối Đoàn Tàu" : "Nối Cặp Ảnh - Chữ"}
+                {editLibrarySetId
+                  ? "📚 MY LIBRARY"
+                  : currentGameMode === "line" ? "Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Cắt Dây Ảnh - Chữ" : currentGameMode === "train" ? "Nối Đoàn Tàu" : "Nối Cặp Ảnh - Chữ"}
               </span>
               <span className="text-xs font-semibold text-slate-400">
-                {topicId ? "Chỉnh sửa bài tập" : "Thiết kế bài tập"}
+                {editLibrarySetId ? "Chỉnh sửa Bộ câu hỏi" : topicId ? "Chỉnh sửa bài tập" : "Thiết kế bài tập"}
               </span>
             </div>
             <h1 className="font-headline font-black text-2xl md:text-3xl text-slate-800 dark:text-white mt-1">
-              {topicId 
+              {editLibrarySetId
+                ? "Chỉnh sửa Bộ câu hỏi (My Library)"
+                : topicId 
                 ? (currentGameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Chỉnh sửa Game Cắt Ảnh - Chữ" : currentGameMode === "train" ? "Chỉnh sửa Game Nối Đoàn Tàu" : "Chỉnh sửa Game Nối Cặp Ảnh - Chữ")
                 : (currentGameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Chữ" : currentGameMode === "cut-rope" ? "Tạo game cắt Ảnh-chữ" : currentGameMode === "train" ? "Tạo mới Game Nối Đoàn Tàu" : "Tạo Game Nối Cặp Ảnh - Chữ")}
             </h1>
@@ -1199,7 +1350,14 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                {!editLibrarySetId && (
+                  <TeacherLibraryPickerButton
+                    compatibleSubTypes={["image-text"]}
+                    onImportSet={handleImportFromLibrary}
+                  />
+                )}
+
                 <button
                   type="button"
                   onClick={() => setShowAutoGenerateModal(true)}
@@ -1519,7 +1677,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
               ) : (
                 <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
               )}
-              <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+              <span>{isSaving ? "Đang lưu..." : editLibrarySetId ? "Lưu vào My Library" : "Lưu bài tập"}</span>
             </button>
           </div>
         </>
@@ -1816,7 +1974,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 type="button"
                 onClick={() => {
                   setShowExitConfirmModal(false);
-                  router.push("/teacher");
+                  router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
                 }}
                 className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs rounded-2xl shadow-lg shadow-rose-500/20 active:scale-95 transition-all cursor-pointer"
               >

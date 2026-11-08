@@ -29,6 +29,7 @@ import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessM
 import { uploadMedia } from "@/actions/upload-actions";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
+import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction } from "@/actions/teacher-library-actions";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -73,6 +74,9 @@ export function MatchTextTextCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
+  const editLibrarySetId = searchParams?.get("editLibrarySetId") || null;
+  const returnTab = searchParams?.get("returnTab") || "lib-match";
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -80,7 +84,7 @@ export function MatchTextTextCreatorUI() {
   const [subject, setSubject] = useState("english");
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
-  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId || librarySetId || editLibrarySetId));
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
@@ -154,6 +158,51 @@ export function MatchTextTextCreatorUI() {
 
     loadTopicDetails();
   }, [topicId]);
+
+  useEffect(() => {
+    const targetSetId = editLibrarySetId || librarySetId;
+    if (topicId || !targetSetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        setTitle(res.set.name || "");
+        const items = res.set.items || [];
+        if (items.length > 0) {
+          const roundsMap: Record<number, typeof items> = {};
+          items.forEach((item) => {
+            const rIdx = item.roundIndex ?? 0;
+            if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+            roundsMap[rIdx].push(item);
+          });
+          const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+          const loadedRounds: GameRound[] = [];
+          roundIndices.forEach((rIdx, i) => {
+            const roundItems = roundsMap[rIdx];
+            const roundPairs: TextCardPair[] = roundItems.map((item, idx) => ({
+              id: item.id || `pair-lib-${i}-${idx}`,
+              wordA: item.word || "",
+              audioUrlA: item.audioUrl || undefined,
+              labelB: item.labelB || "",
+              audioUrlB: item.audioBUrl || undefined,
+            }));
+            loadedRounds.push({
+              id: `round-${i + 1}`,
+              title: `Vòng ${i + 1}`,
+              pairs: roundPairs,
+            });
+          });
+          setRounds(loadedRounds);
+          setActiveRoundIndex(0);
+        }
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, editLibrarySetId, topicId]);
 
   // Track unsaved changes
   const isDirty = Boolean(title.trim() || rounds.some(r => r.pairs.some(p => p.wordA.trim() || p.labelB.trim())));
@@ -418,7 +467,7 @@ export function MatchTextTextCreatorUI() {
       e.preventDefault();
       setShowExitConfirmModal(true);
     } else {
-      router.push("/teacher");
+      router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
     }
   };
 
@@ -494,6 +543,38 @@ export function MatchTextTextCreatorUI() {
           audioBUrl: pair.audioUrlB,
         }))
       );
+
+      if (editLibrarySetId) {
+        const libRes = await updateTeacherLibrarySetAction({
+          setId: editLibrarySetId,
+          name: title.trim(),
+          audioMode,
+          gradeLevel,
+          items: allPairsToSave,
+        });
+
+        toast.dismiss("save-game-toast");
+        toast.dismiss();
+
+        if (!libRes.success) {
+          setValidationModalMessage(libRes.error || "Không thể lưu cập nhật vào My Library!");
+          setIsSaving(false);
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("cached_teacher_library_match");
+            sessionStorage.removeItem("cached_teacher_library_flip");
+          } catch {}
+        }
+
+        setIsSavedSuccessfully(true);
+        setIsSaving(false);
+        toast.success("Đã lưu cập nhật bộ câu hỏi vào My Library!");
+        router.push(`/teacher?tab=${returnTab}`);
+        return;
+      }
 
       let generatedThumbnailUrl: string | undefined = undefined;
       try {
@@ -573,13 +654,13 @@ export function MatchTextTextCreatorUI() {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-sky-500 text-white text-[11px] font-black uppercase tracking-wider">
-                Nối Cặp Chữ - Chữ
+              <span className={`px-2.5 py-0.5 rounded-full text-white text-[11px] font-black uppercase tracking-wider ${editLibrarySetId ? "bg-emerald-500" : "bg-sky-500"}`}>
+                {editLibrarySetId ? "📚 MY LIBRARY" : "Nối Cặp Chữ - Chữ"}
               </span>
               <span className="text-xs text-slate-400 font-semibold">• Tạo bài tập ghép từ vựng, nghĩa & định nghĩa</span>
             </div>
             <h1 className="text-xl font-headline font-black text-slate-800 dark:text-white tracking-tight mt-0.5">
-              {topicId ? "Chỉnh sửa Game Nối Cặp Chữ - Chữ" : "Tạo mới Game Nối Cặp Chữ - Chữ"}
+              {editLibrarySetId ? "Chỉnh sửa Bộ câu hỏi (My Library)" : topicId ? "Chỉnh sửa Game Nối Cặp Chữ - Chữ" : "Tạo mới Game Nối Cặp Chữ - Chữ"}
             </h1>
           </div>
         </div>
@@ -832,7 +913,7 @@ export function MatchTextTextCreatorUI() {
           ) : (
             <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
           )}
-          <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+          <span>{isSaving ? "Đang lưu..." : editLibrarySetId ? "Lưu vào My Library" : "Lưu bài tập"}</span>
         </button>
       </div>
 

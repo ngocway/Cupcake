@@ -53,6 +53,8 @@ import type {
 } from "@/types/candy-quiz";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;
@@ -122,15 +124,13 @@ function SortableOptionItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${
-        isDragging
-          ? "ring-2 ring-amber-500 shadow-xl bg-white dark:bg-slate-800 scale-[1.01]"
-          : ""
-      } ${
-        opt.isCorrect
+      className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${isDragging
+        ? "ring-2 ring-amber-500 shadow-xl bg-white dark:bg-slate-800 scale-[1.01]"
+        : ""
+        } ${opt.isCorrect
           ? "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-400 ring-2 ring-emerald-400/20"
           : "bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
-      }`}
+        }`}
     >
       {/* Option Drag Handle */}
       <button
@@ -147,11 +147,10 @@ function SortableOptionItem({
       <button
         type="button"
         onClick={() => handleSelectCorrectOption(qId, optIdx)}
-        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all cursor-pointer ${
-          opt.isCorrect
-            ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 scale-105"
-            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-amber-100 hover:text-amber-700"
-        }`}
+        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all cursor-pointer ${opt.isCorrect
+          ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 scale-105"
+          : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-amber-100 hover:text-amber-700"
+          }`}
         title={opt.isCorrect ? "Đáp án ĐÚNG" : "Click để chọn làm đáp án ĐÚNG"}
       >
         {opt.isCorrect ? <Check className="w-4 h-4 stroke-[3]" /> : opt.id}
@@ -263,9 +262,8 @@ function SortableQuestionCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white dark:bg-slate-900 rounded-3xl border border-primary/10 shadow-md p-6 flex flex-col justify-between gap-5 relative group hover:border-amber-400/50 transition-all ${
-        isDragging ? "ring-2 ring-amber-500 shadow-2xl scale-[1.02]" : ""
-      }`}
+      className={`bg-white dark:bg-slate-900 rounded-3xl border border-primary/10 shadow-md p-6 flex flex-col justify-between gap-5 relative group hover:border-amber-400/50 transition-all ${isDragging ? "ring-2 ring-amber-500 shadow-2xl scale-[1.02]" : ""
+        }`}
     >
       {/* Card Top: Drag handle, Number & Delete Question */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -452,6 +450,7 @@ export function TreasureHuntCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -553,6 +552,109 @@ export function TreasureHuntCreatorUI() {
 
     loadTopicDetails();
   }, [topicId]);
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+    setBrokenImageIds({});
+
+    const parsedQuestions: Array<{ roundIndex: number; q: QuizQuestion }> = (setItem.items || []).map((item, idx) => {
+      let options: QuizQuestionOption[] = [
+        { id: "A", text: "", isCorrect: true },
+        { id: "B", text: "", isCorrect: false },
+        { id: "C", text: "", isCorrect: false },
+        { id: "D", text: "", isCorrect: false },
+      ];
+      if (item.labelB) {
+        try {
+          const parsed = JSON.parse(item.labelB);
+          if (Array.isArray(parsed.options) && parsed.options.length >= 2) {
+            options = parsed.options.map((opt: any, oIdx: number) => ({
+              id: opt.id || String.fromCharCode(65 + oIdx),
+              text: opt.text || "",
+              isCorrect: Boolean(opt.isCorrect),
+            }));
+          }
+        } catch { }
+      }
+      return {
+        roundIndex: item.roundIndex ?? 0,
+        q: {
+          id: `q-lib-${Date.now()}-${idx}`,
+          question: item.word || "",
+          imageUrl: item.imageUrl || undefined,
+          options,
+        },
+      };
+    });
+
+    if (parsedQuestions.length === 0) return;
+
+    const isCurrentRoundBlank =
+      rounds.length === 1 &&
+      rounds[0].questions.every(
+        (q) => !q.question.trim() && q.options.every((opt) => !opt.text.trim())
+      );
+
+    if (mode === "replace" || isCurrentRoundBlank) {
+      const roundsMap: Record<number, QuizQuestion[]> = {};
+      parsedQuestions.forEach(({ roundIndex, q }) => {
+        if (!roundsMap[roundIndex]) roundsMap[roundIndex] = [];
+        roundsMap[roundIndex].push(q);
+      });
+      const sortedIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+      const newRounds: QuizRound[] = sortedIndices.slice(0, MAX_ROUNDS).map((rIdx, idx) => ({
+        id: `round-lib-${Date.now()}-${idx + 1}`,
+        title: `Vòng ${idx + 1}`,
+        questions: roundsMap[rIdx].slice(0, MAX_QUESTIONS_PER_ROUND),
+      }));
+      if (newRounds.length > 0) {
+        setRounds(newRounds);
+        setActiveRoundIndex(0);
+      }
+    } else {
+      const incoming = parsedQuestions.map((p) => p.q);
+      const updatedRounds = rounds.map((r) => ({ ...r, questions: [...r.questions] }));
+      let remaining = [...incoming];
+
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_QUESTIONS_PER_ROUND - lastRound.questions.length;
+      if (spaceLeft > 0) {
+        lastRound.questions.push(...remaining.slice(0, spaceLeft));
+        remaining = remaining.slice(spaceLeft);
+      }
+
+      while (remaining.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+        const chunk = remaining.slice(0, MAX_QUESTIONS_PER_ROUND);
+        remaining = remaining.slice(MAX_QUESTIONS_PER_ROUND);
+        updatedRounds.push({
+          id: `round-lib-${Date.now()}-${updatedRounds.length + 1}`,
+          title: `Vòng ${updatedRounds.length + 1}`,
+          questions: chunk,
+        });
+      }
+      setRounds(updatedRounds);
+    }
+  };
+
+  useEffect(() => {
+    if (topicId || !librarySetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(librarySetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, topicId]);
 
   // Round Management
   const handleAddRound = () => {
@@ -1233,11 +1335,10 @@ export function TreasureHuntCreatorUI() {
               if (e.target.value.trim()) setTitleError(false);
             }}
             placeholder="VD: English 2D Shapes, Animals Vocabulary..."
-            className={`w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border text-slate-800 dark:text-white font-bold text-base focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal ${
-              titleError
-                ? "border-rose-500 ring-2 ring-rose-500/20 animate-shake"
-                : "border-slate-200 dark:border-slate-700/80 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
-            }`}
+            className={`w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border text-slate-800 dark:text-white font-bold text-base focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal ${titleError
+              ? "border-rose-500 ring-2 ring-rose-500/20 animate-shake"
+              : "border-slate-200 dark:border-slate-700/80 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10"
+              }`}
           />
           {titleError && (
             <p className="text-xs font-bold text-rose-500 mt-1.5 flex items-center gap-1">
@@ -1259,19 +1360,17 @@ export function TreasureHuntCreatorUI() {
                   <button
                     type="button"
                     onClick={() => setActiveRoundIndex(idx)}
-                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/25 scale-100"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${isActive
+                      ? "bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-md shadow-amber-500/25 scale-100"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
                   >
                     <span>{round.title}</span>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        isActive
-                          ? "bg-white/25 text-white"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                      }`}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive
+                        ? "bg-white/25 text-white"
+                        : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                        }`}
                     >
                       {round.questions.length} câu
                     </span>
@@ -1304,18 +1403,25 @@ export function TreasureHuntCreatorUI() {
           )}
         </div>
 
-        {/* BULK UPLOAD BUTTON (Vibrant Amber - Orange Gradient) */}
-        <button
-          type="button"
-          onClick={() => setIsBulkModalOpen(true)}
-          className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-amber-400/30 shrink-0 cursor-pointer"
-          title="Tải câu hỏi hàng loạt cho bài tập này"
-        >
-          <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
-            <FileText className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span>Tải câu hỏi hàng loạt</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <TeacherLibraryPickerButton
+            compatibleSubTypes={["quiz"]}
+            onImportSet={handleImportFromLibrary}
+          />
+
+          {/* BULK UPLOAD BUTTON (Vibrant Amber - Orange Gradient) */}
+          <button
+            type="button"
+            onClick={() => setIsBulkModalOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-amber-400/30 shrink-0 cursor-pointer"
+            title="Tải câu hỏi hàng loạt cho bài tập này"
+          >
+            <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+              <FileText className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span>Tải câu hỏi hàng loạt</span>
+          </button>
+        </div>
       </div>
 
       {/* QUESTIONS GRID SECTION */}
@@ -1461,7 +1567,7 @@ export function TreasureHuntCreatorUI() {
                   type="button"
                   onClick={() => {
                     setBulkText(
-`Câu 1: Which 2D shape usually has exactly three straight sides and three corners?
+                      `Câu 1: Which 2D shape usually has exactly three straight sides and three corners?
 *A. Triangle
 B. Square
 C. Circle
@@ -1614,11 +1720,10 @@ D. Black`
                       executeImageSearch(searchImageModal.query, "CARTOON");
                     }
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    searchImageModal.style === "CARTOON"
-                      ? "bg-amber-500 text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${searchImageModal.style === "CARTOON"
+                    ? "bg-amber-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                    }`}
                 >
                   🎨 Hoạt hình
                 </button>
@@ -1630,11 +1735,10 @@ D. Black`
                       executeImageSearch(searchImageModal.query, "REALISTIC");
                     }
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    searchImageModal.style === "REALISTIC"
-                      ? "bg-amber-500 text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${searchImageModal.style === "REALISTIC"
+                    ? "bg-amber-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                    }`}
                 >
                   📸 Thực tế
                 </button>

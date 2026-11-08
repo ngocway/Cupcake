@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { TEACHER_GAME_CATEGORIES } from "@/constants/teacher-game-categories";
+import { syncSetToTeacherLibrary } from "@/actions/teacher-library-actions";
 import { revalidatePath } from "next/cache";
 
 export interface SaveTeacherChoiceGamePayload {
@@ -117,6 +118,21 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
         })),
       });
     }
+
+    // Auto-sync to Teacher's My Library
+    await syncSetToTeacherLibrary({
+      teacherId: session?.user?.id || null,
+      title: data.title.trim(),
+      subType: "choice",
+      gradeLevel: "kids-2-5",
+      audioMode: "NONE",
+      thumbnailUrl: data.thumbnailUrl || null,
+      items: itemsData.map((item) => ({
+        roundIndex: 0,
+        word: item.word,
+        labelB: item.labelB,
+      })),
+    });
 
     revalidatePath("/teacher");
     revalidatePath("/");

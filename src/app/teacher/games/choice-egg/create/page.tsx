@@ -25,6 +25,8 @@ import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessM
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -255,6 +257,7 @@ export default function CreateChoiceEggPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
+  const librarySetId = searchParams.get("librarySetId");
 
   // Wizard Step: 1 | 2
   const [step, setStep] = useState<1 | 2>(1);
@@ -309,6 +312,65 @@ export default function CreateChoiceEggPage() {
       }
     }
   }, [editId]);
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (setItem.name) {
+      setGameTitle(setItem.name);
+    }
+
+    const importedQuestions: GeneratedQuestion[] = (setItem.items || []).map((item, idx) => {
+      let a = "";
+      let wrong: [string, string, string] = ["", "", ""];
+      let typeId = "custom";
+      if (item.labelB) {
+        try {
+          const parsed = JSON.parse(item.labelB);
+          if (parsed.a !== undefined) a = String(parsed.a);
+          if (Array.isArray(parsed.wrong)) {
+            wrong = [
+              String(parsed.wrong[0] ?? ""),
+              String(parsed.wrong[1] ?? ""),
+              String(parsed.wrong[2] ?? ""),
+            ];
+          }
+          if (parsed.typeId) typeId = parsed.typeId;
+        } catch {}
+      }
+      return {
+        id: `q-lib-${Date.now()}-${idx}`,
+        typeId,
+        q: item.word || "",
+        a,
+        wrong,
+      };
+    });
+
+    if (importedQuestions.length === 0) return;
+
+    const nextQuestions =
+      mode === "replace" || questions.length === 0
+        ? importedQuestions.slice(0, 50)
+        : [...questions, ...importedQuestions].slice(0, 50);
+
+    setQuestions(nextQuestions);
+    setQuestionCount(nextQuestions.length);
+    setStep(2);
+  };
+
+  useEffect(() => {
+    if (editId || !librarySetId) return;
+    let active = true;
+    getTeacherLibrarySetByIdAction(librarySetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, editId]);
 
   const toggleMathType = (typeId: string) => {
     let next: string[];
@@ -474,6 +536,11 @@ export default function CreateChoiceEggPage() {
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+            <TeacherLibraryPickerButton
+              compatibleSubTypes={["choice"]}
+              onImportSet={handleImportFromLibrary}
+            />
+
             <TeacherGameGuideButton
               game={{
                 id: "egg-crack",

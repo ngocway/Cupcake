@@ -35,6 +35,8 @@ import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 export interface ImageCardPair {
   id: string;
@@ -74,6 +76,7 @@ export function FlipImageImageCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
   const gameMode = searchParams?.get("gameMode") || "match";
 
   const [title, setTitle] = useState("");
@@ -168,6 +171,82 @@ export function FlipImageImageCreatorUI() {
     setActiveRoundIndex(0);
     toast.success(`Đã tự động tạo ${generatedPairs.length} cặp ảnh từ AI!`);
   };
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+
+    const incomingPairs: ImageCardPair[] = (setItem.items || []).map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      imageAUrl: it.imageUrl || undefined,
+      labelA: it.word || undefined,
+      imageBUrl: it.imageBUrl || it.imageUrl || undefined,
+      labelB: it.labelB || it.word || undefined,
+    }));
+
+    if (incomingPairs.length === 0) return;
+
+    const isSingleEmptyInitial =
+      rounds.length === 1 &&
+      rounds[0].pairs.length === 1 &&
+      !rounds[0].pairs[0].imageAUrl &&
+      !rounds[0].pairs[0].imageBUrl;
+
+    let updatedRounds: GameRound[] =
+      mode === "replace" || isSingleEmptyInitial
+        ? []
+        : rounds.map((r) => ({ ...r, pairs: [...r.pairs] }));
+
+    let remainingPairs = [...incomingPairs];
+
+    if (updatedRounds.length > 0) {
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_PAIRS_PER_ROUND - lastRound.pairs.length;
+      if (spaceLeft > 0) {
+        const toAdd = remainingPairs.slice(0, spaceLeft);
+        lastRound.pairs.push(...toAdd);
+        remainingPairs = remainingPairs.slice(spaceLeft);
+      }
+    }
+
+    while (remainingPairs.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+      const roundIdx = updatedRounds.length;
+      const chunk = remainingPairs.slice(0, MAX_PAIRS_PER_ROUND);
+      updatedRounds.push({
+        id: `round-lib-${roundIdx}-${Date.now()}`,
+        title: `Vòng ${roundIdx + 1}`,
+        pairs: chunk,
+      });
+      remainingPairs = remainingPairs.slice(MAX_PAIRS_PER_ROUND);
+    }
+
+    if (updatedRounds.length === 0) {
+      updatedRounds = INITIAL_ROUNDS;
+    }
+
+    setRounds(updatedRounds);
+    setActiveRoundIndex(0);
+  };
+
+  // Pre-load question set when navigated with ?librarySetId=...
+  useEffect(() => {
+    if (topicId || !librarySetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(librarySetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, topicId]);
 
   // Load existing topic details when in Edit mode (topicId is present)
   useEffect(() => {
@@ -1051,7 +1130,12 @@ export function FlipImageImageCreatorUI() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              <TeacherLibraryPickerButton
+                compatibleSubTypes={["image-image"]}
+                onImportSet={handleImportFromLibrary}
+              />
+
               {/* Auto Generate by AI Button */}
               <button
                 type="button"

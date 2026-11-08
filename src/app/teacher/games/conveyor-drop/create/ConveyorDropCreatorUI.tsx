@@ -34,6 +34,8 @@ import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessM
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -77,6 +79,7 @@ export function ConveyorDropCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -712,6 +715,81 @@ export function ConveyorDropCreatorUI() {
     setActiveRoundIndex(0);
   };
 
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+
+    const incomingPairs: CardPair[] = (setItem.items || []).map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      word: it.word || it.labelB || "",
+      imageUrl: it.imageUrl || it.imageBUrl || undefined,
+      audioUrl: it.audioUrl || undefined,
+    }));
+
+    if (incomingPairs.length === 0) return;
+
+    const isSingleEmptyInitial =
+      rounds.length === 1 &&
+      rounds[0].pairs.length === 1 &&
+      !rounds[0].pairs[0].word.trim() &&
+      !rounds[0].pairs[0].imageUrl;
+
+    let updatedRounds: GameRound[] =
+      mode === "replace" || isSingleEmptyInitial
+        ? []
+        : rounds.map((r) => ({ ...r, pairs: [...r.pairs] }));
+
+    let remainingPairs = [...incomingPairs];
+
+    if (updatedRounds.length > 0) {
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_PAIRS_PER_ROUND - lastRound.pairs.length;
+      if (spaceLeft > 0) {
+        const toAdd = remainingPairs.slice(0, spaceLeft);
+        lastRound.pairs.push(...toAdd);
+        remainingPairs = remainingPairs.slice(spaceLeft);
+      }
+    }
+
+    while (remainingPairs.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+      const roundIdx = updatedRounds.length;
+      const chunk = remainingPairs.slice(0, MAX_PAIRS_PER_ROUND);
+      updatedRounds.push({
+        id: `round-lib-${roundIdx}-${Date.now()}`,
+        title: `Vòng ${roundIdx + 1}`,
+        pairs: chunk,
+      });
+      remainingPairs = remainingPairs.slice(MAX_PAIRS_PER_ROUND);
+    }
+
+    if (updatedRounds.length === 0) {
+      updatedRounds = INITIAL_ROUNDS;
+    }
+
+    setRounds(updatedRounds);
+    setActiveRoundIndex(0);
+  };
+
+  // Pre-load question set when navigated with ?librarySetId=...
+  useEffect(() => {
+    if (topicId || !librarySetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(librarySetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, topicId]);
+
   const handleBackClick = (e: React.MouseEvent) => {
     if (isDirty && !isSaving) {
       e.preventDefault();
@@ -1086,7 +1164,12 @@ export function ConveyorDropCreatorUI() {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <TeacherLibraryPickerButton
+                  compatibleSubTypes={["image-text", "image-image"]}
+                  onImportSet={handleImportFromLibrary}
+                />
+
                 <button
                   type="button"
                   onClick={() => setShowAutoGenerateModal(true)}

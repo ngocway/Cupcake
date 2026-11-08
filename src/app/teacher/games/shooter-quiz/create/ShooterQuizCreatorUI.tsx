@@ -46,6 +46,8 @@ import type {
   QuizQuestion,
   QuizQuestionOption,
 } from "@/types/candy-quiz";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;
@@ -342,6 +344,7 @@ export function ShooterQuizCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -424,6 +427,108 @@ export function ShooterQuizCreatorUI() {
 
     loadTopicDetails();
   }, [topicId]);
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+
+    const parsedQuestions: Array<{ roundIndex: number; q: QuizQuestion }> = (setItem.items || []).map((item, idx) => {
+      let options: QuizQuestionOption[] = [
+        { id: "A", text: "", isCorrect: true },
+        { id: "B", text: "", isCorrect: false },
+        { id: "C", text: "", isCorrect: false },
+        { id: "D", text: "", isCorrect: false },
+      ];
+      if (item.labelB) {
+        try {
+          const parsed = JSON.parse(item.labelB);
+          if (Array.isArray(parsed.options) && parsed.options.length >= 2) {
+            options = parsed.options.map((opt: any, oIdx: number) => ({
+              id: opt.id || String.fromCharCode(65 + oIdx),
+              text: opt.text || "",
+              isCorrect: Boolean(opt.isCorrect),
+            }));
+          }
+        } catch {}
+      }
+      return {
+        roundIndex: item.roundIndex ?? 0,
+        q: {
+          id: `q-lib-${Date.now()}-${idx}`,
+          question: item.word || "",
+          imageUrl: item.imageUrl || undefined,
+          options,
+        },
+      };
+    });
+
+    if (parsedQuestions.length === 0) return;
+
+    const isCurrentRoundBlank =
+      rounds.length === 1 &&
+      rounds[0].questions.every(
+        (q) => !q.question.trim() && q.options.every((opt) => !opt.text.trim())
+      );
+
+    if (mode === "replace" || isCurrentRoundBlank) {
+      const roundsMap: Record<number, QuizQuestion[]> = {};
+      parsedQuestions.forEach(({ roundIndex, q }) => {
+        if (!roundsMap[roundIndex]) roundsMap[roundIndex] = [];
+        roundsMap[roundIndex].push(q);
+      });
+      const sortedIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+      const newRounds: QuizRound[] = sortedIndices.slice(0, MAX_ROUNDS).map((rIdx, idx) => ({
+        id: `round-lib-${Date.now()}-${idx + 1}`,
+        title: `Vòng ${idx + 1}`,
+        questions: roundsMap[rIdx].slice(0, MAX_QUESTIONS_PER_ROUND),
+      }));
+      if (newRounds.length > 0) {
+        setRounds(newRounds);
+        setActiveRoundIndex(0);
+      }
+    } else {
+      const incoming = parsedQuestions.map((p) => p.q);
+      const updatedRounds = rounds.map((r) => ({ ...r, questions: [...r.questions] }));
+      let remaining = [...incoming];
+
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_QUESTIONS_PER_ROUND - lastRound.questions.length;
+      if (spaceLeft > 0) {
+        lastRound.questions.push(...remaining.slice(0, spaceLeft));
+        remaining = remaining.slice(spaceLeft);
+      }
+
+      while (remaining.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+        const chunk = remaining.slice(0, MAX_QUESTIONS_PER_ROUND);
+        remaining = remaining.slice(MAX_QUESTIONS_PER_ROUND);
+        updatedRounds.push({
+          id: `round-lib-${Date.now()}-${updatedRounds.length + 1}`,
+          title: `Vòng ${updatedRounds.length + 1}`,
+          questions: chunk,
+        });
+      }
+      setRounds(updatedRounds);
+    }
+  };
+
+  useEffect(() => {
+    if (topicId || !librarySetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(librarySetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, topicId]);
 
   // Round Management
   const handleAddRound = () => {
@@ -1020,18 +1125,25 @@ export function ShooterQuizCreatorUI() {
           )}
         </div>
 
-        {/* BULK UPLOAD BUTTON (Vibrant Amber - Orange Gradient) */}
-        <button
-          type="button"
-          onClick={() => setIsBulkModalOpen(true)}
-          className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-amber-400/30 shrink-0 cursor-pointer"
-          title="Tải câu hỏi hàng loạt cho bài tập này"
-        >
-          <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
-            <FileText className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span>Tải câu hỏi hàng loạt</span>
-        </button>
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <TeacherLibraryPickerButton
+            compatibleSubTypes={["quiz"]}
+            onImportSet={handleImportFromLibrary}
+          />
+
+          {/* BULK UPLOAD BUTTON (Vibrant Amber - Orange Gradient) */}
+          <button
+            type="button"
+            onClick={() => setIsBulkModalOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-orange-500/25 hover:shadow-lg hover:shadow-orange-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 border border-amber-400/30 shrink-0 cursor-pointer"
+            title="Tải câu hỏi hàng loạt cho bài tập này"
+          >
+            <div className="w-5 h-5 rounded-lg bg-white/20 flex items-center justify-center">
+              <FileText className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span>Tải câu hỏi hàng loạt</span>
+          </button>
+        </div>
       </div>
 
       {/* QUESTIONS GRID SECTION */}

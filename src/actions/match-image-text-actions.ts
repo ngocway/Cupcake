@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
 import { processTopicAudioInBackground } from "@/lib/server-topic-tts";
+import { syncSetToTeacherLibrary, LibrarySubType } from "@/actions/teacher-library-actions";
 
 export interface SaveMatchImageTextPayload {
   topicId?: string;
@@ -87,6 +88,20 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
       })
     );
 
+    const isImageImage =
+      data.gameType === "image-image" ||
+      data.gameType === "FLIP_IMAGE_IMAGE" ||
+      data.gameType === "flip-image-image" ||
+      sanitizedPairs.some((p) => Boolean(p.imageBUrl));
+    const isTextText =
+      data.gameType === "text-text" ||
+      sanitizedPairs.some((p) => Boolean(p.labelB && !p.imageUrl && !p.imageBUrl));
+    const librarySubType: LibrarySubType = isImageImage
+      ? "image-image"
+      : isTextText
+        ? "text-text"
+        : "image-text";
+
     // If updating an existing topic
     if (data.topicId) {
       // 1. Delete existing items to re-create fresh pair items
@@ -121,6 +136,25 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
           })),
         });
       }
+
+      // Auto-sync to Teacher's My Library
+      await syncSetToTeacherLibrary({
+        teacherId: session?.user?.id || null,
+        title: data.title,
+        subType: librarySubType,
+        gradeLevel: data.gradeLevel || "kids-2-5",
+        audioMode: data.audioMode || "AUTO_TTS",
+        thumbnailUrl: data.thumbnailUrl || null,
+        items: sanitizedPairs.map((pair) => ({
+          roundIndex: pair.roundIndex ?? 0,
+          word: pair.word || "",
+          imageUrl: pair.imageUrl || null,
+          audioUrl: pair.audioUrl || null,
+          imageBUrl: pair.imageBUrl || null,
+          labelB: pair.labelB || null,
+          audioBUrl: pair.audioBUrl || null,
+        })),
+      });
 
       revalidatePath("/teacher");
       revalidatePath("/student/game/flashcard-match");
@@ -194,6 +228,25 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
         })),
       });
     }
+
+    // Auto-sync to Teacher's My Library
+    await syncSetToTeacherLibrary({
+      teacherId: session?.user?.id || null,
+      title: data.title,
+      subType: librarySubType,
+      gradeLevel: data.gradeLevel || "kids-2-5",
+      audioMode: data.audioMode || "AUTO_TTS",
+      thumbnailUrl: data.thumbnailUrl || null,
+      items: sanitizedPairs.map((pair) => ({
+        roundIndex: pair.roundIndex ?? 0,
+        word: pair.word || "",
+        imageUrl: pair.imageUrl || null,
+        audioUrl: pair.audioUrl || null,
+        imageBUrl: pair.imageBUrl || null,
+        labelB: pair.labelB || null,
+        audioBUrl: pair.audioBUrl || null,
+      })),
+    });
 
     revalidatePath("/teacher");
     revalidatePath("/student/game/flashcard-match");

@@ -43,7 +43,7 @@ export type EventName =
   | "island_locked_click"
   | "station_card_clicked"
   | "game_picker_opened"
-  | "game_picker_selected" | "teacher_category_click" | "teacher_video_open" | "teacher_create_click" | "teacher_auth_prompt" | "teacher_auth_converted" | "teacher_my_game_action";
+  | "game_picker_selected" | "teacher_category_click" | "teacher_video_open" | "teacher_create_click" | "teacher_auth_prompt" | "teacher_auth_converted" | "teacher_my_game_action" | "teacher_library_action";
 
 export type EventProperties = Record<
   string,

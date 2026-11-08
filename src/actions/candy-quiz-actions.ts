@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
 
 import { TEACHER_GAME_CATEGORIES } from "@/constants/teacher-game-categories";
+import { syncSetToTeacherLibrary } from "@/actions/teacher-library-actions";
 import type {
   QuizQuestionOption,
   QuizQuestion,
@@ -184,6 +185,21 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
         });
       }
 
+      await syncSetToTeacherLibrary({
+        teacherId: session?.user?.id || null,
+        title: data.title,
+        subType: "quiz",
+        gradeLevel: data.gradeLevel || "kids-2-5",
+        audioMode: "NONE",
+        thumbnailUrl: data.thumbnailUrl || null,
+        items: sanitizedFlatItems.map((item) => ({
+          roundIndex: item.roundIndex,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          labelB: item.labelB,
+        })),
+      });
+
       revalidatePath("/teacher");
       revalidatePath("/");
       return { success: true, id: updatedTopic.id, topicId: updatedTopic.id, slug: updatedTopic.slug };
@@ -236,6 +252,21 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
       });
     }
 
+    await syncSetToTeacherLibrary({
+      teacherId: session?.user?.id || null,
+      title: data.title,
+      subType: "quiz",
+      gradeLevel: data.gradeLevel || "kids-2-5",
+      audioMode: "NONE",
+      thumbnailUrl: data.thumbnailUrl || null,
+      items: sanitizedFlatItems.map((item) => ({
+        roundIndex: item.roundIndex,
+        word: item.word,
+        imageUrl: item.imageUrl,
+        labelB: item.labelB,
+      })),
+    });
+
     revalidatePath("/teacher");
     return { success: true, id: topic.id, topicId: topic.id, slug: topic.slug };
   } catch (error: any) {
@@ -266,6 +297,7 @@ export async function getTeacherQuizGamesAction() {
         { gameMode: { in: TEACHER_GAME_CATEGORIES.choice.gameModes } },
         { gameMode: { in: TEACHER_GAME_CATEGORIES.match.gameModes } },
         { gameMode: { in: TEACHER_GAME_CATEGORIES.flip.gameModes } },
+        { gameMode: { startsWith: "library-" } },
       ],
     };
 

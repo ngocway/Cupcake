@@ -33,6 +33,8 @@ import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessM
 import { uploadMedia } from "@/actions/upload-actions";
 import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
@@ -74,6 +76,9 @@ export function MatchImageImageCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
+  const editLibrarySetId = searchParams?.get("editLibrarySetId") || null;
+  const returnTab = searchParams?.get("returnTab") || "lib-match";
   const gameMode = searchParams?.get("gameMode") || "match";
 
   const [title, setTitle] = useState("");
@@ -82,7 +87,7 @@ export function MatchImageImageCreatorUI() {
   const [subject, setSubject] = useState("english");
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
   const [description, setDescription] = useState("");
-  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId || librarySetId || editLibrarySetId));
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
@@ -680,7 +685,7 @@ export function MatchImageImageCreatorUI() {
       e.preventDefault();
       setShowExitConfirmModal(true);
     } else {
-      router.push("/teacher");
+      router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
     }
   };
 
@@ -766,6 +771,37 @@ export function MatchImageImageCreatorUI() {
           };
         })
       );
+
+      if (editLibrarySetId) {
+        const libRes = await updateTeacherLibrarySetAction({
+          setId: editLibrarySetId,
+          name: title.trim(),
+          gradeLevel,
+          items: allPairsToSave,
+        });
+
+        toast.dismiss("save-game-toast");
+        toast.dismiss();
+
+        if (!libRes.success) {
+          setValidationModalMessage(libRes.error || "Không thể lưu cập nhật vào My Library!");
+          setIsSaving(false);
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("cached_teacher_library_match");
+            sessionStorage.removeItem("cached_teacher_library_flip");
+          } catch (e) {}
+        }
+
+        setIsSavedSuccessfully(true);
+        setIsSaving(false);
+        toast.success("Đã lưu cập nhật bộ câu hỏi vào My Library!");
+        router.push(`/teacher?tab=${returnTab}`);
+        return;
+      }
 
       let generatedThumbnailUrl: string | undefined = undefined;
       try {
@@ -891,6 +927,116 @@ export function MatchImageImageCreatorUI() {
     setActiveRoundIndex(0);
   };
 
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+    setBrokenImages({});
+
+    const incomingPairs: ImageCardPair[] = (setItem.items || []).map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      imageAUrl: it.imageUrl || undefined,
+      labelA: it.word || undefined,
+      imageBUrl: it.imageBUrl || it.imageUrl || undefined,
+      labelB: it.labelB || it.word || undefined,
+    }));
+
+    if (incomingPairs.length === 0) return;
+
+    const isSingleEmptyInitial =
+      rounds.length === 1 &&
+      rounds[0].pairs.length === 1 &&
+      !rounds[0].pairs[0].imageAUrl &&
+      !rounds[0].pairs[0].imageBUrl;
+
+    let updatedRounds: GameRound[] =
+      mode === "replace" || isSingleEmptyInitial
+        ? []
+        : rounds.map((r) => ({ ...r, pairs: [...r.pairs] }));
+
+    let remainingPairs = [...incomingPairs];
+
+    if (updatedRounds.length > 0) {
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_PAIRS_PER_ROUND - lastRound.pairs.length;
+      if (spaceLeft > 0) {
+        const toAdd = remainingPairs.slice(0, spaceLeft);
+        lastRound.pairs.push(...toAdd);
+        remainingPairs = remainingPairs.slice(spaceLeft);
+      }
+    }
+
+    while (remainingPairs.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+      const roundIdx = updatedRounds.length;
+      const chunk = remainingPairs.slice(0, MAX_PAIRS_PER_ROUND);
+      updatedRounds.push({
+        id: `round-lib-${roundIdx}-${Date.now()}`,
+        title: `Vòng ${roundIdx + 1}`,
+        pairs: chunk,
+      });
+      remainingPairs = remainingPairs.slice(MAX_PAIRS_PER_ROUND);
+    }
+
+    if (updatedRounds.length === 0) {
+      updatedRounds = INITIAL_ROUNDS;
+    }
+
+    setRounds(updatedRounds);
+    setActiveRoundIndex(0);
+  };
+
+  // Pre-load question set when navigated with ?librarySetId=... or ?editLibrarySetId=...
+  useEffect(() => {
+    const targetSetId = editLibrarySetId || librarySetId;
+    if (topicId || !targetSetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        if (editLibrarySetId) {
+          setTitle(res.set.name || "");
+          const items = res.set.items || [];
+          if (items.length > 0) {
+            const roundsMap: Record<number, typeof items> = {};
+            items.forEach((item) => {
+              const rIdx = item.roundIndex ?? 0;
+              if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+              roundsMap[rIdx].push(item);
+            });
+            const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+            const loadedRounds: GameRound[] = [];
+            roundIndices.forEach((rIdx, i) => {
+              const roundItems = roundsMap[rIdx];
+              const roundPairs: ImageCardPair[] = roundItems.map((item, idx) => ({
+                id: item.id || `pair-lib-edit-${i}-${idx}`,
+                imageAUrl: item.imageUrl || undefined,
+                labelA: item.word || undefined,
+                imageBUrl: item.imageBUrl || item.imageUrl || undefined,
+                labelB: item.labelB || item.word || undefined,
+              }));
+              loadedRounds.push({
+                id: `round-${i + 1}`,
+                title: `Vòng ${i + 1}`,
+                pairs: roundPairs,
+              });
+            });
+            setRounds(loadedRounds);
+            setActiveRoundIndex(0);
+          }
+        } else {
+          handleImportFromLibrary(res.set, "replace");
+          toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+        }
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, editLibrarySetId, topicId]);
+
   if (isLoadingTopic) {
     return (
       <div className="w-full py-20 flex flex-col items-center justify-center">
@@ -931,13 +1077,17 @@ export function MatchImageImageCreatorUI() {
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className={`px-2.5 py-0.5 rounded-full text-white text-[11px] font-black uppercase tracking-wider ${gameMode === "line" ? "bg-violet-500" : "bg-sky-500"}`}>
-                {gameMode === "line" ? "Nối Dây Ảnh - Ảnh" : "Nối Cặp Ảnh - Ảnh"}
+              <span className={`px-2.5 py-0.5 rounded-full text-white text-[11px] font-black uppercase tracking-wider ${editLibrarySetId ? "bg-emerald-500" : gameMode === "line" ? "bg-violet-500" : "bg-sky-500"}`}>
+                {editLibrarySetId ? "📚 MY LIBRARY" : gameMode === "line" ? "Nối Dây Ảnh - Ảnh" : "Nối Cặp Ảnh - Ảnh"}
               </span>
-              <span className="text-xs text-slate-400 font-semibold">• Tạo bài tập ghép 2 hình ảnh</span>
+              <span className="text-xs text-slate-400 font-semibold">
+                {editLibrarySetId ? "• Chỉnh sửa Bộ câu hỏi Ảnh - Ảnh" : "• Tạo bài tập ghép 2 hình ảnh"}
+              </span>
             </div>
             <h1 className="text-xl font-headline font-black text-slate-800 dark:text-white tracking-tight mt-0.5">
-              {topicId
+              {editLibrarySetId
+                ? "Chỉnh sửa Bộ câu hỏi (My Library)"
+                : topicId
                 ? (gameMode === "line" ? "Chỉnh sửa Game Nối Dây Ảnh - Ảnh" : "Chỉnh sửa Game Nối Cặp Ảnh - Ảnh")
                 : (gameMode === "line" ? "Tạo mới Game Nối Dây Ảnh - Ảnh" : "Tạo mới Game Nối Cặp Ảnh - Ảnh")}
             </h1>
@@ -1028,7 +1178,14 @@ export function MatchImageImageCreatorUI() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+              {!editLibrarySetId && (
+                <TeacherLibraryPickerButton
+                  compatibleSubTypes={["image-image"]}
+                  onImportSet={handleImportFromLibrary}
+                />
+              )}
+
               <button
                 type="button"
                 onClick={() => setShowAutoGenerateModal(true)}
@@ -1367,7 +1524,7 @@ export function MatchImageImageCreatorUI() {
         ) : (
           <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
         )}
-        <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+        <span>{isSaving ? "Đang lưu..." : editLibrarySetId ? "Lưu vào My Library" : "Lưu bài tập"}</span>
       </button>
         </div>
 
@@ -1525,7 +1682,7 @@ export function MatchImageImageCreatorUI() {
                 Ở lại tiếp tục
               </button>
               <button
-                onClick={() => router.push("/teacher")}
+                onClick={() => router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher")}
                 className="flex-1 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition-all"
               >
                 Thoát không lưu

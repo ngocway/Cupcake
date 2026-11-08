@@ -10,6 +10,7 @@ import { FlipGameCards } from "./FlipGameCards";
 import { MyFlipGamesList } from "./MyFlipGamesList";
 import { QuizGameCards } from "./QuizGameCards";
 import { MyQuizGamesList } from "./MyQuizGamesList";
+import { MyLibraryList } from "./MyLibraryList";
 import { LoginModal } from "@/components/LoginButton";
 import { trackEvent } from "@/lib/analytics";
 import { TeacherLocaleSwitch, useTeacherLocale } from "@/i18n/teacher-locale";
@@ -24,8 +25,9 @@ export function TeacherDashboardClient({
   isAuthenticated,
 }: TeacherDashboardClientProps) {
   const { t } = useTeacherLocale();
+  const isProtectedTab = (tab: string) => tab.startsWith("my-") || tab.startsWith("lib-");
   const safeInitialTab =
-    !isAuthenticated && initialTab.startsWith("my-") ? "match" : initialTab;
+    !isAuthenticated && isProtectedTab(initialTab) ? "match" : initialTab;
 
   const [activeTab, setActiveTab] = useState<string>(safeInitialTab);
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
@@ -36,13 +38,14 @@ export function TeacherDashboardClient({
 
   const handleRequireAuth = (targetHref: string, gameId?: string, gameTitle?: string) => {
     trackEvent("teacher_auth_prompt", { targetUrl: targetHref, gameId: gameId || "", gameTitle: gameTitle || "" });
-    if (typeof window !== "undefined") window.dispatchEvent(new Event("hide-global-loader")); setPendingRedirectUrl(targetHref);
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("hide-global-loader"));
+    setPendingRedirectUrl(targetHref);
     setLoginModalOpen(true);
   };
 
-  // If unauthenticated user navigated directly to a "my-*-games" tab or returned with RoleStudentExists error, open Teacher Login modal
+  // If unauthenticated user navigated directly to a protected tab or returned with RoleStudentExists error, open Teacher Login modal
   useEffect(() => {
-    if (!isAuthenticated && initialTab.startsWith("my-")) {
+    if (!isAuthenticated && isProtectedTab(initialTab)) {
       setPendingRedirectUrl(`/teacher?tab=${initialTab}`);
       setLoginModalOpen(true);
     } else if (!isAuthenticated && typeof window !== "undefined") {
@@ -68,8 +71,7 @@ export function TeacherDashboardClient({
 
   const handleSelectTab = (tab: string) => {
     trackEvent("teacher_category_click", { tab, isAuthenticated });
-    // Option A: Clicking "Bài tập đã tạo" tabs when not authenticated as Teacher immediately opens Teacher Login modal
-    if (tab.startsWith("my-") && !isAuthenticated) {
+    if (isProtectedTab(tab) && !isAuthenticated) {
       handleRequireAuth(`/teacher?tab=${tab}`);
       return;
     }
@@ -95,7 +97,7 @@ export function TeacherDashboardClient({
     const handlePopState = () => {
       const url = new URL(window.location.href);
       const tab = url.searchParams.get("tab") || "match";
-      if (tab.startsWith("my-") && !isAuthenticated) {
+      if (isProtectedTab(tab) && !isAuthenticated) {
         handleRequireAuth(`/teacher?tab=${tab}`);
         return;
       }
@@ -234,7 +236,79 @@ export function TeacherDashboardClient({
           </div>
         )}
 
-        {/* 9. Điền ô trống (Placeholder) */}
+        {/* 9. Thư viện Nối cặp (Matching Library) */}
+        {isAuthenticated && visitedTabs.has("lib-match") && (
+          <div className={activeTab === "lib-match" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.libraryMatchTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.libraryMatchSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
+            <MyLibraryList category="match" />
+          </div>
+        )}
+
+        {/* 10. Thư viện Toán học (Math Library) */}
+        {isAuthenticated && visitedTabs.has("lib-choice") && (
+          <div className={activeTab === "lib-choice" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.libraryMathTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.libraryMathSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
+            <MyLibraryList category="choice" />
+          </div>
+        )}
+
+        {/* 11. Thư viện Lật ảnh (Flip Cards Library) */}
+        {isAuthenticated && visitedTabs.has("lib-flip") && (
+          <div className={activeTab === "lib-flip" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.libraryFlipTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.libraryFlipSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
+            <MyLibraryList category="flip" />
+          </div>
+        )}
+
+        {/* 12. Thư viện Trắc nghiệm (Quiz Library) */}
+        {isAuthenticated && visitedTabs.has("lib-quiz") && (
+          <div className={activeTab === "lib-quiz" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.libraryQuizTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.libraryQuizSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
+            <MyLibraryList category="quiz" />
+          </div>
+        )}
+
+        {/* 13. Điền ô trống (Placeholder) */}
         {visitedTabs.has("fill") && (
           <div className={activeTab === "fill" ? "block" : "hidden"}>
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">
@@ -251,7 +325,7 @@ export function TeacherDashboardClient({
           </div>
         )}
 
-        {/* 10. Bài tập Điền ô trống đã tạo (Placeholder) */}
+        {/* 14. Bài tập Điền ô trống đã tạo (Placeholder) */}
         {isAuthenticated && visitedTabs.has("my-fill-games") && (
           <div className={activeTab === "my-fill-games" ? "block" : "hidden"}>
             <div className="w-full h-full min-h-[400px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-primary/10 p-8 flex flex-col items-center justify-center text-center">

@@ -3,15 +3,15 @@
 import { useEffect, useState, useRef, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { 
-  Plus, 
-  Trash2, 
-  Upload, 
-  Search, 
-  Sparkles, 
-  Save, 
-  ArrowLeft, 
-  FileText, 
+import {
+  Plus,
+  Trash2,
+  Upload,
+  Search,
+  Sparkles,
+  Save,
+  ArrowLeft,
+  FileText,
   Image as ImageIcon,
   Check,
   X,
@@ -36,6 +36,8 @@ import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
@@ -79,6 +81,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -97,7 +100,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
       setIsSuccessModalOpen(true);
     }
   }, [searchParams]);
-  
+
   // Multi-Round State
   const [rounds, setRounds] = useState<GameRound[]>(INITIAL_ROUNDS);
   const [activeRoundIndex, setActiveRoundIndex] = useState(0);
@@ -177,6 +180,81 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
     setActiveRoundIndex(0);
     toast.success(`Đã tự động tạo ${generatedPairs.length} cặp thẻ từ AI!`);
   };
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+
+    const incomingPairs: CardPair[] = (setItem.items || []).map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      word: it.word || "",
+      imageUrl: it.imageUrl || undefined,
+      audioUrl: it.audioUrl || undefined,
+    }));
+
+    if (incomingPairs.length === 0) return;
+
+    const isSingleEmptyInitial =
+      rounds.length === 1 &&
+      rounds[0].pairs.length === 1 &&
+      !rounds[0].pairs[0].word.trim() &&
+      !rounds[0].pairs[0].imageUrl;
+
+    let updatedRounds: GameRound[] =
+      mode === "replace" || isSingleEmptyInitial
+        ? []
+        : rounds.map((r) => ({ ...r, pairs: [...r.pairs] }));
+
+    let remainingPairs = [...incomingPairs];
+
+    if (updatedRounds.length > 0) {
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_PAIRS_PER_ROUND - lastRound.pairs.length;
+      if (spaceLeft > 0) {
+        const toAdd = remainingPairs.slice(0, spaceLeft);
+        lastRound.pairs.push(...toAdd);
+        remainingPairs = remainingPairs.slice(spaceLeft);
+      }
+    }
+
+    while (remainingPairs.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+      const roundIdx = updatedRounds.length;
+      const chunk = remainingPairs.slice(0, MAX_PAIRS_PER_ROUND);
+      updatedRounds.push({
+        id: `round-lib-${roundIdx}-${Date.now()}`,
+        title: `Vòng ${roundIdx + 1}`,
+        pairs: chunk,
+      });
+      remainingPairs = remainingPairs.slice(MAX_PAIRS_PER_ROUND);
+    }
+
+    if (updatedRounds.length === 0) {
+      updatedRounds = INITIAL_ROUNDS;
+    }
+
+    setRounds(updatedRounds);
+    setActiveRoundIndex(0);
+  };
+
+  // Pre-load question set when navigated with ?librarySetId=...
+  useEffect(() => {
+    if (topicId || !librarySetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(librarySetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, topicId]);
 
   // Warm-up TTS API & Edge WebSocket connection on component mount
   useEffect(() => {
@@ -584,7 +662,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
     if (!srcPairId) {
       try {
         srcPairId = e.dataTransfer.getData("text/plain");
-      } catch (err) {}
+      } catch (err) { }
     }
 
     if (srcPairId) {
@@ -870,11 +948,11 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
     }
 
     setIsSaving(true);
-    const loadingMessage = 
-      audioMode === "CUSTOM_FILE" 
-        ? "Đang xử lý và tải lên file âm thanh..." 
-        : audioMode === "AUTO_TTS" 
-          ? "Đang xử lý và tạo âm thanh bài tập..." 
+    const loadingMessage =
+      audioMode === "CUSTOM_FILE"
+        ? "Đang xử lý và tải lên file âm thanh..."
+        : audioMode === "AUTO_TTS"
+          ? "Đang xử lý và tạo âm thanh bài tập..."
           : "Đang xử lý và lưu bài tập...";
     const toastId = toast.loading(loadingMessage);
 
@@ -888,12 +966,12 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
               if (pair.imageFile) {
                 try {
                   return await uploadImageFast(pair.imageFile);
-                } catch (e) {}
+                } catch (e) { }
               }
               if (pair.imageUrl && !pair.imageUrl.includes("media.dolcake.com")) {
                 try {
                   return await uploadExternalImageUrlFast(pair.imageUrl);
-                } catch (e) {}
+                } catch (e) { }
               }
               return pair.imageUrl;
             })(),
@@ -982,7 +1060,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
       if (typeof window !== "undefined") {
         try {
           sessionStorage.removeItem("cached_teacher_flip_games");
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const finalTopicId = res.topicId || res.id || currentEffectiveTopicId;
@@ -1006,25 +1084,25 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   return (
     <div className="w-full py-6 space-y-8 animate-in fade-in duration-300">
       {/* Hidden File Inputs */}
-      <input 
-        type="file" 
-        ref={imageInputRef} 
-        onChange={handleImageFileChange} 
-        accept="image/*" 
-        className="hidden" 
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleImageFileChange}
+        accept="image/*"
+        className="hidden"
       />
-      <input 
-        type="file" 
-        ref={audioInputRef} 
-        onChange={handleAudioFileChange} 
-        accept="audio/*" 
-        className="hidden" 
+      <input
+        type="file"
+        ref={audioInputRef}
+        onChange={handleAudioFileChange}
+        accept="audio/*"
+        className="hidden"
       />
 
       {/* Top Header & Breadcrumb */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 rounded-3xl border border-primary/10 shadow-sm">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             type="button"
             onClick={handleBackClick}
             className="w-10 h-10 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 transition-all hover:scale-105 shrink-0 cursor-pointer"
@@ -1103,11 +1181,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                   if (titleError && e.target.value.trim()) setTitleError(false);
                 }}
                 placeholder="Nhập tên bài tập (VD: Bài tập Lật Ảnh-Chữ vựng tiếng Anh)..."
-                className={`w-full px-4 py-3 text-sm font-bold rounded-2xl outline-none transition-all ${
-                  titleError
-                    ? "bg-rose-50/60 dark:bg-rose-950/30 border-2 border-rose-500 text-rose-900 dark:text-rose-200 placeholder:text-rose-300 ring-4 ring-rose-500/15"
-                    : "bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary"
-                }`}
+                className={`w-full px-4 py-3 text-sm font-bold rounded-2xl outline-none transition-all ${titleError
+                  ? "bg-rose-50/60 dark:bg-rose-950/30 border-2 border-rose-500 text-rose-900 dark:text-rose-200 placeholder:text-rose-300 ring-4 ring-rose-500/15"
+                  : "bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                  }`}
               />
               {titleError && (
                 <p className="text-xs font-bold text-rose-500 flex items-center gap-1.5 pt-1 animate-in fade-in slide-in-from-top-1">
@@ -1133,11 +1210,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                 <button
                   type="button"
                   onClick={() => setAudioMode("AUTO_TTS")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    audioMode === "AUTO_TTS"
-                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${audioMode === "AUTO_TTS"
+                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    }`}
                 >
                   <Wand2 className="w-3.5 h-3.5 text-amber-500" />
                   <span>Hệ thống tự đọc</span>
@@ -1145,11 +1221,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                 <button
                   type="button"
                   onClick={() => setAudioMode("CUSTOM_FILE")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    audioMode === "CUSTOM_FILE"
-                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${audioMode === "CUSTOM_FILE"
+                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    }`}
                 >
                   <Volume2 className="w-3.5 h-3.5 text-sky-500" />
                   <span>Tải lên Audio</span>
@@ -1157,18 +1232,22 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                 <button
                   type="button"
                   onClick={() => setAudioMode("NONE")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    audioMode === "NONE"
-                      ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${audioMode === "NONE"
+                    ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    }`}
                 >
                   <VolumeX className="w-3.5 h-3.5 text-slate-400" />
                   <span>Không đọc</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <TeacherLibraryPickerButton
+                  compatibleSubTypes={["image-text"]}
+                  onImportSet={handleImportFromLibrary}
+                />
+
                 <button
                   type="button"
                   onClick={() => setShowAutoGenerateModal(true)}
@@ -1197,16 +1276,14 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                     key={r.id}
                     type="button"
                     onClick={() => setActiveRoundIndex(idx)}
-                    className={`group/tab relative px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                      activeRoundIndex === idx
-                        ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
+                    className={`group/tab relative px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${activeRoundIndex === idx
+                      ? "bg-orange-500 text-white shadow-md shadow-orange-500/30 scale-105"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
                   >
                     <span>{r.title}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      activeRoundIndex === idx ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500"
-                    }`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeRoundIndex === idx ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500"
+                      }`}>
                       {r.pairs.length}/{MAX_PAIRS_PER_ROUND}
                     </span>
 
@@ -1253,7 +1330,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
             {/* Card Pairs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
               {pairs.map((pair, index) => (
-                <div 
+                <div
                   key={pair.id}
                   className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-3 shadow-sm hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
                 >
@@ -1275,15 +1352,14 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                   </div>
 
                   {/* Image Slot / Preview Dropzone */}
-                  <div 
+                  <div
                     onDragOver={e => handleDragOver(e, pair.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={e => handleDropImage(e, pair.id)}
-                    className={`relative aspect-square rounded-[4px] bg-slate-50 dark:bg-slate-900 border-2 border-dashed overflow-hidden flex items-center justify-center transition-all ${
-                      dragActivePairId === pair.id 
-                        ? "border-orange-500 bg-orange-50 dark:bg-orange-950/60 scale-[1.02]" 
-                        : "border-slate-200/80 dark:border-slate-700"
-                    }`}
+                    className={`relative aspect-square rounded-[4px] bg-slate-50 dark:bg-slate-900 border-2 border-dashed overflow-hidden flex items-center justify-center transition-all ${dragActivePairId === pair.id
+                      ? "border-orange-500 bg-orange-50 dark:bg-orange-950/60 scale-[1.02]"
+                      : "border-slate-200/80 dark:border-slate-700"
+                      }`}
                   >
                     {pair.imageUrl && !brokenImageIds[pair.id] ? (
                       <div
@@ -1301,9 +1377,9 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                         title="Kéo thả ảnh sang thẻ khác để di chuyển hoặc tráo đổi vị trí"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={pair.imageUrl} 
-                          alt={pair.word || "Card image"} 
+                        <img
+                          src={pair.imageUrl}
+                          alt={pair.word || "Card image"}
                           onError={() => {
                             setBrokenImageIds((prev) => ({ ...prev, [pair.id]: true }));
                             toast.error(`Thẻ "${pair.word || 'này'}" không tải được ảnh. Vui lòng kiểm tra lại!`);
@@ -1398,11 +1474,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                       value={pair.word}
                       onChange={e => handleUpdateWord(pair.id, e.target.value)}
                       placeholder="Nhập Chữ/Từ..."
-                      className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${
-                        countWords(pair.word) > MAX_TEXT_WORDS
-                          ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
-                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-orange-500/20 focus:border-orange-500"
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${countWords(pair.word) > MAX_TEXT_WORDS
+                        ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
+                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-orange-500/20 focus:border-orange-500"
+                        }`}
                     />
                     {countWords(pair.word) > MAX_TEXT_WORDS && (
                       <p className="text-[10px] font-bold text-rose-500 flex items-center justify-center gap-1 mt-0.5">
@@ -1447,18 +1522,17 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
               ))}
 
               {/* Add New Pair Card in Current Round */}
-              <div 
+              <div
                 onClick={handleAddPair}
-                className={`group border-2 border-dashed border-orange-300 dark:border-orange-800 hover:border-orange-500 bg-orange-50/40 dark:bg-orange-950/20 hover:bg-orange-50 dark:hover:bg-orange-950/40 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all cursor-pointer min-h-[260px] ${
-                  pairs.length >= MAX_PAIRS_PER_ROUND ? "opacity-50 pointer-events-none" : ""
-                }`}
+                className={`group border-2 border-dashed border-orange-300 dark:border-orange-800 hover:border-orange-500 bg-orange-50/40 dark:bg-orange-950/20 hover:bg-orange-50 dark:hover:bg-orange-950/40 rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-2 transition-all cursor-pointer min-h-[260px] ${pairs.length >= MAX_PAIRS_PER_ROUND ? "opacity-50 pointer-events-none" : ""
+                  }`}
               >
                 <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 group-hover:scale-110 transition-transform">
                   <Plus className="w-6 h-6 stroke-[3]" />
                 </div>
                 <span className="font-headline font-black text-sm text-orange-900 dark:text-orange-200">Thêm 1 cặp</span>
                 <span className="text-[11px] font-bold text-orange-600/70 dark:text-orange-400/70">
-                  {pairs.length >= MAX_PAIRS_PER_ROUND 
+                  {pairs.length >= MAX_PAIRS_PER_ROUND
                     ? `Đã đủ ${MAX_PAIRS_PER_ROUND}/8 cặp cho ${currentRound.title}`
                     : `Tạo cặp thứ ${pairs.length + 1} cho ${currentRound.title}`}
                 </span>
@@ -1536,11 +1610,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                   value={pasteContent}
                   onChange={e => setPasteContent(e.target.value)}
                   placeholder={`Elephant, Tiger, Monkey, Dog, Cat, Fish, Lion, Bear, Pig, Cow, Duck, Frog, Sheep, Rabbit, Zebra, Panda...`}
-                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800/80 border rounded-2xl text-sm font-bold focus:ring-4 outline-none transition-all resize-none ${
-                    isOverLimit 
-                      ? "border-rose-400 focus:ring-rose-500/10 focus:border-rose-500" 
-                      : "border-slate-200 dark:border-slate-700 focus:ring-sky-500/10 focus:border-sky-500"
-                  }`}
+                  className={`w-full p-4 bg-slate-50 dark:bg-slate-800/80 border rounded-2xl text-sm font-bold focus:ring-4 outline-none transition-all resize-none ${isOverLimit
+                    ? "border-rose-400 focus:ring-rose-500/10 focus:border-rose-500"
+                    : "border-slate-200 dark:border-slate-700 focus:ring-sky-500/10 focus:border-sky-500"
+                    }`}
                 />
 
                 {/* Real-time word count & limit warning */}
@@ -1617,11 +1690,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                     setImageSearchStyle("CARTOON");
                     executeImageSearch(searchQuery, "CARTOON");
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    imageSearchStyle === "CARTOON"
-                      ? "bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-300 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${imageSearchStyle === "CARTOON"
+                    ? "bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-300 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
+                    }`}
                 >
                   <Wand2 className="w-3.5 h-3.5" />
                   <span>Hoạt hình Cartoon</span>
@@ -1632,11 +1704,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                     setImageSearchStyle("REALISTIC");
                     executeImageSearch(searchQuery, "REALISTIC");
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    imageSearchStyle === "REALISTIC"
-                      ? "bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-300 shadow-sm"
-                      : "text-slate-400 hover:text-slate-600"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${imageSearchStyle === "REALISTIC"
+                    ? "bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-300 shadow-sm"
+                    : "text-slate-400 hover:text-slate-600"
+                    }`}
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
                   <span>Chân thực</span>
@@ -1682,10 +1753,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                       onClick={() => handleSelectSearchImage(imgItem.url)}
                       className="group relative aspect-square rounded-2xl overflow-hidden bg-slate-900 border-2 border-transparent hover:border-sky-500 cursor-pointer shadow-sm hover:shadow-xl transition-all duration-200"
                     >
-                      <img 
-                        src={imgItem.thumb || imgItem.url} 
-                        alt="Search result" 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      <img
+                        src={imgItem.thumb || imgItem.url}
+                        alt="Search result"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                       <div className="absolute inset-0 bg-sky-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <span className="px-3 py-1.5 bg-sky-500 text-white font-black text-xs rounded-full shadow-lg">
@@ -1713,7 +1784,7 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
             <div className="w-14 h-14 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-lg shadow-rose-500/10 shrink-0">
               <AlertCircle className="w-7 h-7 stroke-[2.2]" />
             </div>
-            
+
             <div className="space-y-1.5">
               <h3 className="font-headline font-black text-lg md:text-xl text-slate-800 dark:text-white">
                 Thông báo

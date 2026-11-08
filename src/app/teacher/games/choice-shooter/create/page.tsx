@@ -33,6 +33,8 @@ import { SciFiNeonShooterGame } from "@/app/_components/SciFiNeonShooterGame";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 // ==========================================
 // TYPES & MATH GENERATOR HELPERS
@@ -263,6 +265,9 @@ export default function CreateChoiceShooterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
+  const librarySetId = searchParams.get("librarySetId");
+  const editLibrarySetId = searchParams.get("editLibrarySetId");
+  const returnTab = searchParams.get("returnTab") || "lib-choice";
 
   // Wizard Step: 1 | 2
   const [step, setStep] = useState<1 | 2>(1);
@@ -320,6 +325,68 @@ export default function CreateChoiceShooterPage() {
       }
     }
   }, [editId]);
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (setItem.name) {
+      setGameTitle(setItem.name);
+    }
+
+    const importedQuestions: GeneratedQuestion[] = (setItem.items || []).map((item, idx) => {
+      let a = "";
+      let wrong: [string, string, string] = ["", "", ""];
+      let typeId = "custom";
+      if (item.labelB) {
+        try {
+          const parsed = JSON.parse(item.labelB);
+          if (parsed.a !== undefined) a = String(parsed.a);
+          if (Array.isArray(parsed.wrong)) {
+            wrong = [
+              String(parsed.wrong[0] ?? ""),
+              String(parsed.wrong[1] ?? ""),
+              String(parsed.wrong[2] ?? ""),
+            ];
+          }
+          if (parsed.typeId) typeId = parsed.typeId;
+        } catch {}
+      }
+      return {
+        id: `q-lib-${Date.now()}-${idx}`,
+        typeId,
+        q: item.word || "",
+        a,
+        wrong,
+      };
+    });
+
+    if (importedQuestions.length === 0) return;
+
+    const nextQuestions =
+      mode === "replace" || questions.length === 0
+        ? importedQuestions.slice(0, 50)
+        : [...questions, ...importedQuestions].slice(0, 50);
+
+    setQuestions(nextQuestions);
+    setQuestionCount(nextQuestions.length);
+    setStep(2);
+  };
+
+  useEffect(() => {
+    const targetSetId = editLibrarySetId || librarySetId;
+    if (editId || !targetSetId) return;
+    let active = true;
+    getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        handleImportFromLibrary(res.set, "replace");
+        if (!editLibrarySetId) {
+          toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+        }
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, editLibrarySetId, editId]);
 
   // Auto update title when types change if default
   const toggleMathType = (typeId: string) => {
@@ -397,6 +464,41 @@ export default function CreateChoiceShooterPage() {
 
     setIsSaving(true);
     try {
+      if (editLibrarySetId) {
+        const serializedItems = questions.map((q) => ({
+          roundIndex: 0,
+          word: q.q.trim(),
+          labelB: JSON.stringify({
+            a: q.a.trim(),
+            wrong: q.wrong.map((w) => w.trim()),
+            typeId: q.typeId || "custom",
+            endMode,
+            selectedTypes,
+          }),
+        }));
+
+        const libRes = await updateTeacherLibrarySetAction({
+          setId: editLibrarySetId,
+          name: gameTitle.trim() || "Bộ câu hỏi Toán học",
+          items: serializedItems,
+        });
+
+        if (!libRes.success) {
+          toast.error(libRes.error || "Không thể lưu cập nhật vào My Library!");
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("cached_teacher_library_choice");
+          } catch {}
+        }
+
+        toast.success("Đã lưu cập nhật bộ câu hỏi vào My Library!");
+        router.push(`/teacher?tab=${returnTab}`);
+        return;
+      }
+
       let generatedThumbnailUrl: string | undefined = undefined;
       try {
         if (thumbnailPreviewRef.current) {
@@ -470,22 +572,31 @@ export default function CreateChoiceShooterPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <Link
-              href="/teacher?tab=choice"
+              href={editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher?tab=choice"}
               className="w-10 h-10 rounded-2xl bg-white/80 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all shadow-xs"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div>
               <h1 className="font-headline font-black text-2xl md:text-3xl text-slate-800 dark:text-white tracking-tight">
-                Tạo Game Bắn Súng Toán Học
+                {editLibrarySetId ? "Chỉnh sửa Bộ câu hỏi Toán Học (My Library)" : "Tạo Game Bắn Súng Toán Học"}
               </h1>
               <p className="text-xs font-semibold text-slate-400 mt-0.5">
-                Hệ thống tự động sinh câu hỏi theo các dạng toán được chọn
+                {editLibrarySetId
+                  ? "Chỉnh sửa tên bộ câu hỏi, phép tính và đáp án để lưu vào My Library"
+                  : "Hệ thống tự động sinh câu hỏi theo các dạng toán được chọn"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+            {!editLibrarySetId && (
+              <TeacherLibraryPickerButton
+                compatibleSubTypes={["choice"]}
+                onImportSet={handleImportFromLibrary}
+              />
+            )}
+
             <TeacherGameGuideButton
               game={{
                 id: "shooter",
@@ -834,17 +945,33 @@ export default function CreateChoiceShooterPage() {
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Control Header Bar */}
-            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h2 className="font-headline font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
-                  <span>Bảng Xem Trước {questions.length} Câu Hỏi</span>
-                  <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2.5 py-0.5 rounded-full">
-                    Đã sinh tự động
-                  </span>
-                </h2>
-                <p className="text-xs font-semibold text-slate-400 mt-1">
-                  Bạn có thể bấm icon 🔄 để đổi câu khác hoặc chỉnh sửa trực tiếp chữ/số trước khi hoàn tất
-                </p>
+            <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-xl flex flex-col gap-4">
+              {editLibrarySetId && (
+                <div>
+                  <label className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Tên bộ câu hỏi (My Library) *
+                  </label>
+                  <input
+                    type="text"
+                    value={gameTitle}
+                    onChange={(e) => setGameTitle(e.target.value)}
+                    placeholder="Nhập tên bộ câu hỏi..."
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-headline font-black text-xl text-slate-800 dark:text-white flex items-center gap-2">
+                    <span>Bảng Xem Trước {questions.length} Câu Hỏi</span>
+                    <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-2.5 py-0.5 rounded-full">
+                      {editLibrarySetId ? "📚 My Library" : "Đã sinh tự động"}
+                    </span>
+                  </h2>
+                  <p className="text-xs font-semibold text-slate-400 mt-1">
+                    Bạn có thể bấm icon 🔄 để đổi câu khác hoặc chỉnh sửa trực tiếp chữ/số trước khi hoàn tất
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -982,7 +1109,7 @@ export default function CreateChoiceShooterPage() {
             ) : (
               <Save className="w-5 h-5 group-hover:scale-110 transition-transform stroke-[2.5]" />
             )}
-            <span>{isSaving ? "Đang lưu..." : "Lưu bài tập"}</span>
+            <span>{isSaving ? "Đang lưu..." : editLibrarySetId ? "Lưu vào My Library" : "Lưu bài tập"}</span>
           </button>
         )}
 

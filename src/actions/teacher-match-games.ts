@@ -111,8 +111,9 @@ export async function getTeacherFlipGamesAction() {
     const isAdmin = session.user.role === "ADMIN";
     const flipModes = TEACHER_GAME_CATEGORIES.flip.gameModes;
 
-    // Strict Whitelist Filter for Flip Games
+    // Strict Whitelist Filter for Flip Games (exclude standalone library-* records)
     const flipFilter: any = {
+      NOT: { gameMode: { startsWith: "library-" } },
       OR: [
         { gameMode: { in: flipModes } },
         { game: { name: { contains: "Lật Ảnh" } } },

@@ -60,6 +60,8 @@ import type {
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 import { AutoGenerateCandyQuizModal } from "@/components/games/AutoGenerateCandyQuizModal";
+import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
+import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 const MIN_QUESTIONS_PER_ROUND = 2;
 const MAX_QUESTIONS_PER_ROUND = 20;
@@ -129,15 +131,13 @@ function SortableOptionItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${
-        isDragging
-          ? "ring-2 ring-pink-500 shadow-xl bg-white dark:bg-slate-800 scale-[1.01]"
-          : ""
-      } ${
-        opt.isCorrect
+      className={`flex items-center gap-2 p-2 rounded-2xl border transition-all ${isDragging
+        ? "ring-2 ring-pink-500 shadow-xl bg-white dark:bg-slate-800 scale-[1.01]"
+        : ""
+        } ${opt.isCorrect
           ? "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-400 ring-2 ring-emerald-400/20"
           : "bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700"
-      }`}
+        }`}
     >
       {/* Option Drag Handle */}
       <button
@@ -154,11 +154,10 @@ function SortableOptionItem({
       <button
         type="button"
         onClick={() => handleSelectCorrectOption(qId, optIdx)}
-        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all cursor-pointer ${
-          opt.isCorrect
-            ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 scale-105"
-            : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:bg-slate-300 hover:bg-pink-100 hover:text-pink-600"
-        }`}
+        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-all cursor-pointer ${opt.isCorrect
+          ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 scale-105"
+          : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:bg-slate-300 hover:bg-pink-100 hover:text-pink-600"
+          }`}
         title={opt.isCorrect ? "Đáp án ĐÚNG" : "Click để chọn làm đáp án ĐÚNG"}
       >
         {opt.isCorrect ? <Check className="w-4 h-4 stroke-[3]" /> : opt.id}
@@ -270,9 +269,8 @@ function SortableQuestionCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white dark:bg-slate-900 rounded-3xl border border-primary/10 shadow-md p-6 flex flex-col justify-between gap-5 relative group hover:border-pink-400/50 transition-all ${
-        isDragging ? "ring-2 ring-pink-500 shadow-2xl scale-[1.02]" : ""
-      }`}
+      className={`bg-white dark:bg-slate-900 rounded-3xl border border-primary/10 shadow-md p-6 flex flex-col justify-between gap-5 relative group hover:border-pink-400/50 transition-all ${isDragging ? "ring-2 ring-pink-500 shadow-2xl scale-[1.02]" : ""
+        }`}
     >
       {/* Card Top: Drag handle, Number & Delete Question */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -459,12 +457,15 @@ export function CandyQuizCreatorUI() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const topicId = searchParams?.get("topicId") || null;
+  const librarySetId = searchParams?.get("librarySetId") || null;
+  const editLibrarySetId = searchParams?.get("editLibrarySetId") || null;
+  const returnTab = searchParams?.get("returnTab") || "lib-quiz";
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [gradeLevel, setGradeLevel] = useState("kids-2-5");
-  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId));
+  const [isLoadingTopic, setIsLoadingTopic] = useState(Boolean(topicId || librarySetId || editLibrarySetId));
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(() => searchParams?.get("saved") === "true");
   const [savedTopicId, setSavedTopicId] = useState<string | null>(null);
 
@@ -698,6 +699,115 @@ export function CandyQuizCreatorUI() {
 
     loadTopicDetails();
   }, [topicId]);
+
+  const handleImportFromLibrary = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    if (!title.trim() && setItem.name) {
+      setTitle(setItem.name);
+      setTitleError(false);
+    }
+    setBrokenImageIds({});
+
+    const parsedQuestions: Array<{ roundIndex: number; q: QuizQuestion }> = (setItem.items || []).map((item, idx) => {
+      let options: QuizQuestionOption[] = [
+        { id: "A", text: "", isCorrect: true },
+        { id: "B", text: "", isCorrect: false },
+        { id: "C", text: "", isCorrect: false },
+        { id: "D", text: "", isCorrect: false },
+      ];
+      if (item.labelB) {
+        try {
+          const parsed = JSON.parse(item.labelB);
+          if (Array.isArray(parsed.options) && parsed.options.length >= 2) {
+            options = parsed.options.map((opt: any, oIdx: number) => ({
+              id: opt.id || String.fromCharCode(65 + oIdx),
+              text: opt.text || "",
+              isCorrect: Boolean(opt.isCorrect),
+            }));
+          }
+        } catch { }
+      }
+      return {
+        roundIndex: item.roundIndex ?? 0,
+        q: {
+          id: `q-lib-${Date.now()}-${idx}`,
+          question: item.word || "",
+          imageUrl: item.imageUrl || undefined,
+          options,
+        },
+      };
+    });
+
+    if (parsedQuestions.length === 0) return;
+
+    const isCurrentRoundBlank =
+      rounds.length === 1 &&
+      rounds[0].questions.every(
+        (q) => !q.question.trim() && q.options.every((opt) => !opt.text.trim())
+      );
+
+    if (mode === "replace" || isCurrentRoundBlank) {
+      const roundsMap: Record<number, QuizQuestion[]> = {};
+      parsedQuestions.forEach(({ roundIndex, q }) => {
+        if (!roundsMap[roundIndex]) roundsMap[roundIndex] = [];
+        roundsMap[roundIndex].push(q);
+      });
+      const sortedIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+      const newRounds: QuizRound[] = sortedIndices.slice(0, MAX_ROUNDS).map((rIdx, idx) => ({
+        id: `round-lib-${Date.now()}-${idx + 1}`,
+        title: `Vòng ${idx + 1}`,
+        questions: roundsMap[rIdx].slice(0, MAX_QUESTIONS_PER_ROUND),
+      }));
+      if (newRounds.length > 0) {
+        setRounds(newRounds);
+        setActiveRoundIndex(0);
+      }
+    } else {
+      const incoming = parsedQuestions.map((p) => p.q);
+      const updatedRounds = rounds.map((r) => ({ ...r, questions: [...r.questions] }));
+      let remaining = [...incoming];
+
+      const lastRound = updatedRounds[updatedRounds.length - 1];
+      const spaceLeft = MAX_QUESTIONS_PER_ROUND - lastRound.questions.length;
+      if (spaceLeft > 0) {
+        lastRound.questions.push(...remaining.slice(0, spaceLeft));
+        remaining = remaining.slice(spaceLeft);
+      }
+
+      while (remaining.length > 0 && updatedRounds.length < MAX_ROUNDS) {
+        const chunk = remaining.slice(0, MAX_QUESTIONS_PER_ROUND);
+        remaining = remaining.slice(MAX_QUESTIONS_PER_ROUND);
+        updatedRounds.push({
+          id: `round-lib-${Date.now()}-${updatedRounds.length + 1}`,
+          title: `Vòng ${updatedRounds.length + 1}`,
+          questions: chunk,
+        });
+      }
+      setRounds(updatedRounds);
+    }
+  };
+
+  useEffect(() => {
+    const targetSetId = editLibrarySetId || librarySetId;
+    if (topicId || !targetSetId) return;
+    let active = true;
+    setIsLoadingTopic(true);
+    getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
+      if (!active) return;
+      if (res.success && res.set) {
+        if (editLibrarySetId && res.set.name) {
+          setTitle(res.set.name);
+        }
+        handleImportFromLibrary(res.set, "replace");
+        if (!editLibrarySetId) {
+          toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
+        }
+      }
+      setIsLoadingTopic(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [librarySetId, editLibrarySetId, topicId]);
 
   // Round Management
   const handleAddRound = () => {
@@ -1283,6 +1393,45 @@ export function CandyQuizCreatorUI() {
     // 3. Save to backend
     setIsSaving(true);
     try {
+      if (editLibrarySetId) {
+        const serializedItems = rounds.flatMap((round, rIdx) =>
+          round.questions.map((q) => ({
+            roundIndex: rIdx,
+            word: q.question.trim(),
+            imageUrl: q.imageUrl || null,
+            labelB: JSON.stringify({
+              options: q.options.map((opt) => ({
+                id: opt.id,
+                text: opt.text.trim(),
+                isCorrect: opt.isCorrect,
+              })),
+            }),
+          }))
+        );
+
+        const libRes = await updateTeacherLibrarySetAction({
+          setId: editLibrarySetId,
+          name: title.trim(),
+          gradeLevel,
+          items: serializedItems,
+        });
+
+        if (!libRes.success) {
+          toast.error(libRes.error || "Không thể lưu cập nhật vào My Library!");
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("cached_teacher_library_quiz");
+          } catch {}
+        }
+
+        toast.success("Đã lưu cập nhật bộ câu hỏi vào My Library!");
+        router.push(`/teacher?tab=${returnTab}`);
+        return;
+      }
+
       let generatedThumbnailUrl: string | undefined = undefined;
       try {
         if (thumbnailPreviewRef.current) {
@@ -1343,7 +1492,7 @@ export function CandyQuizCreatorUI() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-5 md:p-6 rounded-3xl border border-primary/10 shadow-sm">
         <div className="flex items-center gap-4">
           <Link
-            href="/teacher?tab=quiz"
+            href={editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher?tab=quiz"}
             className="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all active:scale-95 shrink-0"
             title="Quay lại"
           >
@@ -1352,15 +1501,17 @@ export function CandyQuizCreatorUI() {
 
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-xs">
-                TRẮC NGHIỆM KẸO NGỌT
+              <span className={`px-3 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider text-white shadow-xs ${editLibrarySetId ? "bg-emerald-500" : "bg-gradient-to-r from-pink-500 to-rose-500"}`}>
+                {editLibrarySetId ? "📚 MY LIBRARY" : "TRẮC NGHIỆM KẸO NGỌT"}
               </span>
               <span className="text-xs font-semibold text-slate-400">
-                • Tạo bài tập trắc nghiệm 4 đáp án Xứ sở Kẹo
+                {editLibrarySetId ? "• Chỉnh sửa Bộ câu hỏi Trắc nghiệm" : "• Tạo bài tập trắc nghiệm 4 đáp án Xứ sở Kẹo"}
               </span>
             </div>
             <h1 className="font-headline font-black text-xl sm:text-2xl text-slate-800 dark:text-white tracking-tight">
-              {topicId ? "Chỉnh sửa Game Trắc nghiệm Kẹo Ngọt" : "Tạo mới Game Trắc nghiệm Kẹo Ngọt"}
+              {editLibrarySetId
+                ? "Chỉnh sửa Bộ câu hỏi (My Library)"
+                : topicId ? "Chỉnh sửa Game Trắc nghiệm Kẹo Ngọt" : "Tạo mới Game Trắc nghiệm Kẹo Ngọt"}
             </h1>
           </div>
         </div>
@@ -1392,11 +1543,10 @@ export function CandyQuizCreatorUI() {
               if (e.target.value.trim()) setTitleError(false);
             }}
             placeholder="VD: Thì Hiện Tại Đơn & Tiếp Diễn, Câu hỏi giao tiếp..."
-            className={`w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border text-slate-800 dark:text-white font-bold text-base focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal ${
-              titleError
-                ? "border-rose-500 ring-2 ring-rose-500/20 animate-shake"
-                : "border-slate-200 dark:border-slate-700/80 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10"
-            }`}
+            className={`w-full px-5 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border text-slate-800 dark:text-white font-bold text-base focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal ${titleError
+              ? "border-rose-500 ring-2 ring-rose-500/20 animate-shake"
+              : "border-slate-200 dark:border-slate-700/80 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10"
+              }`}
           />
           {titleError && (
             <p className="text-xs font-bold text-rose-500 mt-1.5 flex items-center gap-1">
@@ -1418,19 +1568,17 @@ export function CandyQuizCreatorUI() {
                   <button
                     type="button"
                     onClick={() => setActiveRoundIndex(idx)}
-                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/25 scale-100"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${isActive
+                      ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md shadow-pink-500/25 scale-100"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      }`}
                   >
                     <span>{round.title}</span>
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        isActive
-                          ? "bg-white/25 text-white"
-                          : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                      }`}
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive
+                        ? "bg-white/25 text-white"
+                        : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                        }`}
                     >
                       {round.questions.length} câu
                     </span>
@@ -1463,7 +1611,14 @@ export function CandyQuizCreatorUI() {
           )}
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          {!editLibrarySetId && (
+            <TeacherLibraryPickerButton
+              compatibleSubTypes={["quiz"]}
+              onImportSet={handleImportFromLibrary}
+            />
+          )}
+
           {/* AI GENERATE BUTTON (Vibrant Purple - Indigo Gradient) */}
           <button
             type="button"
@@ -1585,7 +1740,7 @@ export function CandyQuizCreatorUI() {
           ) : (
             <>
               <Save className="w-5 h-5 stroke-[2.5]" />
-              <span>LƯU BÀI TẬP</span>
+              <span>{editLibrarySetId ? "LƯU VÀO MY LIBRARY" : "LƯU BÀI TẬP"}</span>
             </>
           )}
         </button>
@@ -1635,7 +1790,7 @@ export function CandyQuizCreatorUI() {
                   type="button"
                   onClick={() => {
                     setBulkText(
-`Câu 1: Listen! Someone _____ at the front door right now.
+                      `Câu 1: Listen! Someone _____ at the front door right now.
 *A. is knocking at the front door right now.
 B. has already knocked at the front door.
 C. knocked at the front door yesterday.
@@ -1788,11 +1943,10 @@ D. goes`
                       executeImageSearch(searchImageModal.query, "CARTOON");
                     }
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    searchImageModal.style === "CARTOON"
-                      ? "bg-pink-500 text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${searchImageModal.style === "CARTOON"
+                    ? "bg-pink-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                    }`}
                 >
                   🎨 Hoạt hình
                 </button>
@@ -1804,11 +1958,10 @@ D. goes`
                       executeImageSearch(searchImageModal.query, "REALISTIC");
                     }
                   }}
-                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                    searchImageModal.style === "REALISTIC"
-                      ? "bg-pink-500 text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${searchImageModal.style === "REALISTIC"
+                    ? "bg-pink-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                    }`}
                 >
                   📸 Thực tế
                 </button>
