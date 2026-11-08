@@ -290,6 +290,14 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
       if (typeof window !== "undefined") {
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify(res.sets));
+          if (category === "match") {
+            const flipCompatible = res.sets.filter(
+              (s) => s.subType === "image-text" || s.subType === "image-image"
+            );
+            sessionStorage.setItem("cached_teacher_library_flip", JSON.stringify(flipCompatible));
+          } else if (category === "flip" && !sessionStorage.getItem("cached_teacher_library_match")) {
+            sessionStorage.setItem("cached_teacher_library_match", JSON.stringify(res.sets));
+          }
         } catch {}
       }
     }

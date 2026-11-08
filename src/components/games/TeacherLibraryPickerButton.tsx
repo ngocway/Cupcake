@@ -5,6 +5,8 @@ import { BookOpen, Search, X, Layers, Download, Plus, Loader2 } from "lucide-rea
 import { format } from "date-fns";
 import {
   getTeacherLibrarySetsAction,
+  getTeacherLibrarySetByIdAction,
+  LibraryCategory,
   LibrarySetItem,
   LibrarySubType,
 } from "@/actions/teacher-library-actions";
@@ -35,7 +37,16 @@ export function TeacherLibraryPickerButton({
     let active = true;
     setLoading(true);
 
-    getTeacherLibrarySetsAction("all").then((res) => {
+    const targetCategory: LibraryCategory | "all" =
+      compatibleSubTypes.length === 1 && compatibleSubTypes[0] === "quiz"
+        ? "quiz"
+        : compatibleSubTypes.length === 1 && compatibleSubTypes[0] === "choice"
+        ? "choice"
+        : compatibleSubTypes.every((st) => st === "image-text" || st === "image-image" || st === "text-text")
+        ? "match"
+        : "all";
+
+    getTeacherLibrarySetsAction(targetCategory).then((res) => {
       if (!active) return;
       if (res.success && Array.isArray(res.sets)) {
         const compatible = res.sets.filter((s) =>
@@ -55,10 +66,18 @@ export function TeacherLibraryPickerButton({
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleChoose = (setItem: LibrarySetItem, mode: "replace" | "append") => {
+  const handleChoose = async (setItem: LibrarySetItem, mode: "replace" | "append") => {
+    setIsOpen(false);
+    if (setItem.totalItems > setItem.items.length) {
+      const fullRes = await getTeacherLibrarySetByIdAction(setItem.id);
+      if (fullRes.success && fullRes.set) {
+        onImportSet(fullRes.set, mode);
+        toast.success(t.library.importedToast.replace("{name}", fullRes.set.name));
+        return;
+      }
+    }
     onImportSet(setItem, mode);
     toast.success(t.library.importedToast.replace("{name}", setItem.name));
-    setIsOpen(false);
   };
 
   return (

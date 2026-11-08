@@ -11,6 +11,7 @@ import { MyFlipGamesList } from "./MyFlipGamesList";
 import { QuizGameCards } from "./QuizGameCards";
 import { MyQuizGamesList } from "./MyQuizGamesList";
 import { MyLibraryList } from "./MyLibraryList";
+import { getTeacherLibrarySetsAction } from "@/actions/teacher-library-actions";
 import { LoginModal } from "@/components/LoginButton";
 import { trackEvent } from "@/lib/analytics";
 import { TeacherLocaleSwitch, useTeacherLocale } from "@/i18n/teacher-locale";
@@ -112,6 +113,48 @@ export function TeacherDashboardClient({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
+  }, [isAuthenticated]);
+
+  // Background pre-warm My Library caches so clicking My Library tabs is instant (0ms)
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") return;
+    const timer = setTimeout(() => {
+      try {
+        if (!sessionStorage.getItem("cached_teacher_library_match")) {
+          getTeacherLibrarySetsAction("match").then((res) => {
+            if (res.success && Array.isArray(res.sets)) {
+              try {
+                sessionStorage.setItem("cached_teacher_library_match", JSON.stringify(res.sets));
+                const flipSets = res.sets.filter(
+                  (s) => s.subType === "image-text" || s.subType === "image-image"
+                );
+                sessionStorage.setItem("cached_teacher_library_flip", JSON.stringify(flipSets));
+              } catch {}
+            }
+          });
+        }
+        if (!sessionStorage.getItem("cached_teacher_library_quiz")) {
+          getTeacherLibrarySetsAction("quiz").then((res) => {
+            if (res.success && Array.isArray(res.sets)) {
+              try {
+                sessionStorage.setItem("cached_teacher_library_quiz", JSON.stringify(res.sets));
+              } catch {}
+            }
+          });
+        }
+        if (!sessionStorage.getItem("cached_teacher_library_choice")) {
+          getTeacherLibrarySetsAction("choice").then((res) => {
+            if (res.success && Array.isArray(res.sets)) {
+              try {
+                sessionStorage.setItem("cached_teacher_library_choice", JSON.stringify(res.sets));
+              } catch {}
+            }
+          });
+        }
+      } catch {}
+    }, 600);
+
+    return () => clearTimeout(timer);
   }, [isAuthenticated]);
 
   return (

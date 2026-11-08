@@ -285,18 +285,70 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
     }
 
     const isAdmin = session.user.role === "ADMIN";
-    const whereCondition: any = isAdmin
+    const baseWhere: any = isAdmin
       ? {}
       : { teacherId: session.user.id };
 
+    const quizModes = ["library-quiz", "candy-quiz", "treasure-hunt", "shooter-quiz", "quiz"];
+    const choiceModes = ["library-choice", "choice-shooter", "choice-egg"];
+
+    let categoryWhere: any = {};
+    if (filterCategory === "quiz") {
+      categoryWhere = {
+        OR: [
+          { gameMode: { in: [...quizModes, "library-hidden"] } },
+          { game: { name: { contains: "Trắc nghiệm" } } },
+          { game: { name: { contains: "Kho báu" } } },
+        ],
+      };
+    } else if (filterCategory === "choice") {
+      categoryWhere = {
+        OR: [
+          { gameMode: { in: [...choiceModes, "library-hidden"] } },
+          { gameMode: { startsWith: "choice" } },
+        ],
+      };
+    } else if (filterCategory === "match" || filterCategory === "flip") {
+      categoryWhere = {
+        NOT: [
+          { gameMode: { in: [...quizModes, ...choiceModes] } },
+        ],
+      };
+    }
+
+    const whereCondition: any = {
+      ...baseWhere,
+      ...categoryWhere,
+    };
+
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        gameMode: true,
+        audioMode: true,
+        ageGroup: true,
+        createdAt: true,
+        updatedAt: true,
         game: {
           select: { name: true, level: true },
         },
         items: {
+          take: 4,
           orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            roundIndex: true,
+            word: true,
+            imageUrl: true,
+            imageBUrl: true,
+            labelB: true,
+          },
+        },
+        _count: {
+          select: { items: true },
         },
       },
       orderBy: { updatedAt: "desc" },
@@ -324,7 +376,8 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
 
     for (const t of sortedTopics) {
       if (t.gameMode === "library-hidden") continue;
-      if (!t.items || t.items.length === 0) continue;
+      const totalItemsCount = t._count?.items ?? t.items.length;
+      if (totalItemsCount === 0 || !t.items || t.items.length === 0) continue;
 
       const { category, subType } = classifyTopicSubType(t);
       const isLibRecord = ALL_LIBRARY_GAME_MODES.includes(t.gameMode || "");
@@ -334,7 +387,7 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
         continue;
       }
 
-      const fp = `${subType}::${computeItemsFingerprint(t.items)}`;
+      const fp = `${subType}::${totalItemsCount}::${computeItemsFingerprint(t.items)}`;
 
       // Raw game topics are deduplicated by content fingerprint, while explicit standalone
       // library-* records (including newly duplicated or edited sets) are always included.
@@ -352,19 +405,19 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
         gameMode: t.gameMode || "match",
         audioMode: t.audioMode || "AUTO_TTS",
         gradeLevel: t.ageGroup || "kids-2-5",
-        totalItems: t.items.length,
+        totalItems: totalItemsCount,
         createdAt: t.createdAt.toISOString(),
         updatedAt: t.updatedAt.toISOString(),
-        isLibraryRecord: ALL_LIBRARY_GAME_MODES.includes(t.gameMode || ""),
+        isLibraryRecord: isLibRecord,
         items: t.items.map((item) => ({
           id: item.id,
           roundIndex: item.roundIndex ?? 0,
           word: item.word,
           imageUrl: item.imageUrl,
-          audioUrl: item.audioUrl,
+          audioUrl: null,
           imageBUrl: item.imageBUrl,
           labelB: item.labelB,
-          audioBUrl: item.audioBUrl,
+          audioBUrl: null,
         })),
       });
     }
