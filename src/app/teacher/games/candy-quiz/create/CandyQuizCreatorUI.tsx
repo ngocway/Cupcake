@@ -790,19 +790,39 @@ export function CandyQuizCreatorUI() {
     const targetSetId = editLibrarySetId || librarySetId;
     if (topicId || !targetSetId) return;
     let active = true;
+
+    const applyLoadedSet = (setObj: LibrarySetItem) => {
+      if (editLibrarySetId && setObj.name) {
+        setTitle(setObj.name);
+      }
+      handleImportFromLibrary(setObj, "replace");
+      if (!editLibrarySetId) {
+        toast.success(`Đã nạp bộ câu hỏi "${setObj.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const cachedRaw = sessionStorage.getItem(`cached_library_set_${targetSetId}`);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw) as LibrarySetItem;
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            applyLoadedSet(parsed);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     setIsLoadingTopic(true);
     getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
       if (!active) return;
       if (res.success && res.set) {
-        if (editLibrarySetId && res.set.name) {
-          setTitle(res.set.name);
-        }
-        handleImportFromLibrary(res.set, "replace");
-        if (!editLibrarySetId) {
-          toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
-        }
+        applyLoadedSet(res.set);
+      } else {
+        setIsLoadingTopic(false);
       }
-      setIsLoadingTopic(false);
     });
     return () => {
       active = false;
@@ -1424,6 +1444,7 @@ export function CandyQuizCreatorUI() {
         if (typeof window !== "undefined") {
           try {
             sessionStorage.removeItem("cached_teacher_library_quiz");
+            sessionStorage.removeItem(`cached_library_set_${editLibrarySetId}`);
           } catch {}
         }
 
@@ -1492,7 +1513,7 @@ export function CandyQuizCreatorUI() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-5 md:p-6 rounded-3xl border border-primary/10 shadow-sm">
         <div className="flex items-center gap-4">
           <Link
-            href={editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher?tab=quiz"}
+            href={(editLibrarySetId || librarySetId) ? `/teacher?tab=${returnTab}` : "/teacher?tab=quiz"}
             className="w-11 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all active:scale-95 shrink-0"
             title="Quay lại"
           >

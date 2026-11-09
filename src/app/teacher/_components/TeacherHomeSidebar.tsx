@@ -14,6 +14,7 @@ export type TeacherPortalTab =
   | "my-fill-games"
   | "my-flip-games"
   | "my-quiz-games"
+  | "lib-global"
   | "lib-match"
   | "lib-choice"
   | "lib-flip"
@@ -22,11 +23,17 @@ export type TeacherPortalTab =
 interface TeacherHomeSidebarProps {
   activeTab?: string;
   onSelectTab?: (tab: TeacherPortalTab) => void;
+  libraryCounts?: {
+    match: number | null;
+    quiz: number | null;
+    choice: number | null;
+  };
 }
 
 export function TeacherHomeSidebar({
   activeTab: propActiveTab,
   onSelectTab,
+  libraryCounts,
 }: TeacherHomeSidebarProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -34,11 +41,30 @@ export function TeacherHomeSidebar({
   const { t } = useTeacherLocale();
 
   const rawActiveTab = propActiveTab ?? (searchParams?.get("tab") || "match");
-  const activeTab = (rawActiveTab === "fill" || rawActiveTab === "my-fill-games") ? "match" : rawActiveTab;
+  const activeTab =
+    rawActiveTab === "fill" || rawActiveTab === "my-fill-games"
+      ? "match"
+      : rawActiveTab === "lib-flip"
+      ? "lib-match"
+      : rawActiveTab;
+
+  const isPersonalLibActive =
+    activeTab === "lib-match" || activeTab === "lib-quiz" || activeTab === "lib-choice";
 
   const [isCreateOpen, setIsCreateOpen] = useState(true);
   const [isMyGamesOpen, setIsMyGamesOpen] = useState(true);
   const [isLibraryOpen, setIsLibraryOpen] = useState(true);
+  const [isMyQuestionSetsOpen, setIsMyQuestionSetsOpen] = useState<boolean>(isPersonalLibActive);
+
+  useEffect(() => {
+    if (
+      activeTab === "lib-match" ||
+      activeTab === "lib-quiz" ||
+      activeTab === "lib-choice"
+    ) {
+      setIsMyQuestionSetsOpen(true);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     const savedCreate = localStorage.getItem("teacher_create_menu_open");
@@ -429,6 +455,195 @@ export function TeacherHomeSidebar({
           )}
         </div>
 
+        {/* MENU CẤP 1 - THƯ VIỆN CÂU HỎI (QUESTION LIBRARY) */}
+        <div className="flex flex-col w-full">
+          <button
+            type="button"
+            onClick={toggleLibraryMenu}
+            className="teacher-level1-btn teacher-level1-library group"
+          >
+            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+              <span className="material-symbols-rounded text-xl text-white">library_books</span>
+            </div>
+            <span>{t.sidebar.libraryTitle}</span>
+            <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isLibraryOpen ? "rotate-180" : ""}`}>
+              expand_more
+            </span>
+          </button>
+
+          {/* SUBMENU CẤP 2 - THƯ VIỆN CÂU HỎI */}
+          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isLibraryOpen ? "max-h-[750px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
+            <div className="ml-2.5 pl-2.5 py-1 pr-1 border-l-2 border-emerald-200/70 flex flex-col gap-2">
+              {/* 1. Sách Giáo Khoa Global Success */}
+              <div
+                onClick={() => handleSelectTab("lib-global")}
+                className={`teacher-list-item ${activeTab === "lib-global" ? "active quiz-active" : ""}`}
+                style={
+                  activeTab === "lib-global"
+                    ? { background: "#FFFBEB", borderColor: "#F59E0B" }
+                    : { background: "#FEFCE8" }
+                }
+              >
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <span className="material-symbols-rounded text-[21px]">menu_book</span>
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-headline font-black text-sm text-amber-900 truncate">
+                    {t.sidebar.libraryGlobalTitle}
+                  </span>
+                  <span className="text-[11px] font-semibold text-amber-600/80 truncate">
+                    {t.sidebar.libraryGlobalSub}
+                  </span>
+                </div>
+              </div>
+
+              {/* 2. Bộ câu hỏi của tôi (My Question Sets - Collapsible Parent) */}
+              <div className="flex flex-col">
+                <div
+                  onClick={() => setIsMyQuestionSetsOpen((prev) => !prev)}
+                  className={`teacher-list-item ${isPersonalLibActive ? "active choice-active" : ""}`}
+                  style={
+                    isPersonalLibActive
+                      ? { background: "#F0FDF4", borderColor: "#10B981" }
+                      : undefined
+                  }
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <span className="material-symbols-rounded text-[21px]">folder_special</span>
+                  </div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="font-headline font-black text-sm text-slate-800 truncate">
+                      {t.sidebar.myQuestionSetsTitle}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-400 truncate">
+                      {t.sidebar.myQuestionSetsSub}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsMyQuestionSetsOpen((prev) => !prev);
+                    }}
+                    className="w-6 h-6 rounded-lg hover:bg-emerald-100/80 text-slate-500 flex items-center justify-center shrink-0 transition-colors"
+                  >
+                    <span
+                      className={`material-symbols-rounded text-[20px] transition-transform duration-300 ${
+                        isMyQuestionSetsOpen ? "rotate-180 text-emerald-600" : ""
+                      }`}
+                    >
+                      expand_more
+                    </span>
+                  </button>
+                </div>
+
+                {/* 3 Menu con (Sub-items của Bộ câu hỏi của tôi) */}
+                <div
+                  className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                    isMyQuestionSetsOpen
+                      ? "max-h-[320px] opacity-100 mt-1.5"
+                      : "max-h-0 opacity-0 pointer-events-none"
+                  }`}
+                >
+                  <div className="ml-4 pl-2.5 py-0.5 border-l-2 border-emerald-200/80 flex flex-col gap-1.5">
+                    {/* 2.1. Ghép cặp & Lật thẻ (Matching & Flip) */}
+                    <div
+                      onClick={() => handleSelectTab("lib-match")}
+                      className={`teacher-list-item !py-2 !px-2.5 !rounded-xl ${
+                        activeTab === "lib-match" ? "active" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-rounded text-[19px]">extension</span>
+                      </div>
+                      <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
+                        {t.sidebar.libraryMatchTitle}
+                      </span>
+                      {libraryCounts?.match !== null && libraryCounts?.match !== undefined && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${
+                            activeTab === "lib-match"
+                              ? "bg-sky-500 text-white"
+                              : "bg-sky-100 text-sky-700"
+                          }`}
+                        >
+                          {libraryCounts.match}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 2.2. Trắc nghiệm (Multiple Choice) */}
+                    <div
+                      onClick={() => handleSelectTab("lib-quiz")}
+                      className={`teacher-list-item !py-2 !px-2.5 !rounded-xl ${
+                        activeTab === "lib-quiz" ? "active quiz-active" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-rounded text-[19px]">quiz</span>
+                      </div>
+                      <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
+                        {t.sidebar.libraryQuizTitle}
+                      </span>
+                      {libraryCounts?.quiz !== null && libraryCounts?.quiz !== undefined && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${
+                            activeTab === "lib-quiz"
+                              ? "bg-amber-500 text-white"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {libraryCounts.quiz}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 2.3. Toán học (Math) */}
+                    <div
+                      onClick={() => handleSelectTab("lib-choice")}
+                      className={`teacher-list-item !py-2 !px-2.5 !rounded-xl ${
+                        activeTab === "lib-choice" ? "active choice-active" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                        <span className="material-symbols-rounded text-[19px]">calculate</span>
+                      </div>
+                      <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
+                        {t.sidebar.libraryMathTitle}
+                      </span>
+                      {libraryCounts?.choice !== null && libraryCounts?.choice !== undefined && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold shrink-0 ${
+                            activeTab === "lib-choice"
+                              ? "bg-emerald-500 text-white"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {libraryCounts.choice}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Collapsed state mini-preview icons */}
+          {!isLibraryOpen && (
+            <div
+              onClick={toggleLibraryMenu}
+              className="flex gap-3 px-3 py-2 bg-emerald-50/80 rounded-[14px] border border-emerald-200/60 w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-emerald-100/60 transition-all shadow-xs"
+            >
+              <span className="material-symbols-rounded text-base text-amber-500">menu_book</span>
+              <span className="material-symbols-rounded text-base text-emerald-600">folder_special</span>
+              <span className="material-symbols-rounded text-base text-sky-500">extension</span>
+              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
+              <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
+            </div>
+          )}
+        </div>
+
         {/* MENU CẤP 1 - BÀI TẬP ĐÃ TẠO */}
         <div className="flex flex-col w-full">
           <button
@@ -532,97 +747,6 @@ export function TeacherHomeSidebar({
               <span className="material-symbols-rounded text-base text-sky-500">auto_awesome_motion</span>
               <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
               <span className="material-symbols-rounded text-base text-purple-500">assignment</span>
-              <span className="material-symbols-rounded text-base text-rose-500">style</span>
-              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
-            </div>
-          )}
-        </div>
-
-        {/* MENU CẤP 1 - THƯ VIỆN CỦA TÔI (MY LIBRARY) */}
-        <div className="flex flex-col w-full">
-          <button
-            type="button"
-            onClick={toggleLibraryMenu}
-            className="teacher-level1-btn teacher-level1-library group"
-          >
-            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-rounded text-xl text-white">library_books</span>
-            </div>
-            <span>{t.sidebar.libraryTitle}</span>
-            <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isLibraryOpen ? "rotate-180" : ""}`}>
-              expand_more
-            </span>
-          </button>
-
-          {/* SUBMENU CẤP 2 - THƯ VIỆN CỦA TÔI */}
-          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isLibraryOpen ? "max-h-[600px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
-            <div className="ml-2.5 pl-2.5 py-1 pr-1 border-l-2 border-emerald-200/70 flex flex-col gap-2">
-              {/* Thư viện Nối cặp */}
-              <div
-                onClick={() => handleSelectTab("lib-match")}
-                className={`teacher-list-item ${activeTab === "lib-match" ? "active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">extension</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.libraryMatchTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.libraryMatchSub}</span>
-                </div>
-              </div>
-
-              {/* Thư viện Toán học */}
-              <div
-                onClick={() => handleSelectTab("lib-choice")}
-                className={`teacher-list-item ${activeTab === "lib-choice" ? "active choice-active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">calculate</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.libraryMathTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.libraryMathSub}</span>
-                </div>
-              </div>
-
-              {/* Thư viện Lật ảnh */}
-              <div
-                onClick={() => handleSelectTab("lib-flip")}
-                className={`teacher-list-item ${activeTab === "lib-flip" ? "active flip-active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">style</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.libraryFlipTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.libraryFlipSub}</span>
-                </div>
-              </div>
-
-              {/* Thư viện Trắc nghiệm */}
-              <div
-                onClick={() => handleSelectTab("lib-quiz")}
-                className={`teacher-list-item ${activeTab === "lib-quiz" ? "active quiz-active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">quiz</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.libraryQuizTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.libraryQuizSub}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Collapsed state mini-preview icons */}
-          {!isLibraryOpen && (
-            <div
-              onClick={toggleLibraryMenu}
-              className="flex gap-3 px-3 py-2 bg-emerald-50/80 rounded-[14px] border border-emerald-200/60 w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-emerald-100/60 transition-all shadow-xs"
-            >
-              <span className="material-symbols-rounded text-base text-sky-500">extension</span>
-              <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
               <span className="material-symbols-rounded text-base text-rose-500">style</span>
               <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
             </div>

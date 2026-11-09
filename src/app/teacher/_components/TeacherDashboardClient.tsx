@@ -11,7 +11,11 @@ import { MyFlipGamesList } from "./MyFlipGamesList";
 import { QuizGameCards } from "./QuizGameCards";
 import { MyQuizGamesList } from "./MyQuizGamesList";
 import { MyLibraryList } from "./MyLibraryList";
-import { getTeacherLibrarySetsAction } from "@/actions/teacher-library-actions";
+import { GlobalSuccessLibraryList } from "./GlobalSuccessLibraryList";
+import {
+  getTeacherLibrarySetsAction,
+  getGlobalSuccessLibrarySetsAction,
+} from "@/actions/teacher-library-actions";
 import { LoginModal } from "@/components/LoginButton";
 import { trackEvent } from "@/lib/analytics";
 import { TeacherLocaleSwitch, useTeacherLocale } from "@/i18n/teacher-locale";
@@ -26,9 +30,11 @@ export function TeacherDashboardClient({
   isAuthenticated,
 }: TeacherDashboardClientProps) {
   const { t } = useTeacherLocale();
+  const normalizeTab = (tab: string) => (tab === "lib-flip" ? "lib-match" : tab);
+  const normalizedInitialTab = normalizeTab(initialTab);
   const isProtectedTab = (tab: string) => tab.startsWith("my-") || tab.startsWith("lib-");
   const safeInitialTab =
-    !isAuthenticated && isProtectedTab(initialTab) ? "match" : initialTab;
+    !isAuthenticated && isProtectedTab(normalizedInitialTab) ? "match" : normalizedInitialTab;
 
   const [activeTab, setActiveTab] = useState<string>(safeInitialTab);
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(
@@ -36,6 +42,36 @@ export function TeacherDashboardClient({
   );
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string>("/teacher");
+  const [libraryCounts, setLibraryCounts] = useState<{
+    match: number | null;
+    quiz: number | null;
+    choice: number | null;
+  }>({ match: null, quiz: null, choice: null });
+
+  const refreshLibraryCountsFromStorage = () => {
+    if (typeof window === "undefined") return;
+    try {
+      const parseCount = (key: string): number | null => {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.length : null;
+      };
+      setLibraryCounts({
+        match: parseCount("cached_teacher_library_match"),
+        quiz: parseCount("cached_teacher_library_quiz"),
+        choice: parseCount("cached_teacher_library_choice"),
+      });
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") return;
+    refreshLibraryCountsFromStorage();
+    const handler = () => refreshLibraryCountsFromStorage();
+    window.addEventListener("teacher-library-updated", handler);
+    return () => window.removeEventListener("teacher-library-updated", handler);
+  }, [isAuthenticated]);
 
   const handleRequireAuth = (targetHref: string, gameId?: string, gameTitle?: string) => {
     trackEvent("teacher_auth_prompt", { targetUrl: targetHref, gameId: gameId || "", gameTitle: gameTitle || "" });
@@ -59,18 +95,19 @@ export function TeacherDashboardClient({
 
   // If authentication state updates to true (e.g. after router.refresh()) and pendingRedirectUrl is a /teacher?tab=... URL, sync the activeTab
   useEffect(() => {
-    if (isAuthenticated && initialTab && activeTab !== initialTab) {
-      setActiveTab(initialTab);
+    if (isAuthenticated && normalizedInitialTab && activeTab !== normalizedInitialTab) {
+      setActiveTab(normalizedInitialTab);
       setVisitedTabs((prev) => {
-        if (prev.has(initialTab)) return prev;
+        if (prev.has(normalizedInitialTab)) return prev;
         const next = new Set(prev);
-        next.add(initialTab);
+        next.add(normalizedInitialTab);
         return next;
       });
     }
-  }, [isAuthenticated, initialTab]);
+  }, [isAuthenticated, normalizedInitialTab]);
 
-  const handleSelectTab = (tab: string) => {
+  const handleSelectTab = (rawTab: string) => {
+    const tab = normalizeTab(rawTab);
     trackEvent("teacher_category_click", { tab, isAuthenticated });
     if (isProtectedTab(tab) && !isAuthenticated) {
       handleRequireAuth(`/teacher?tab=${tab}`);
@@ -97,7 +134,7 @@ export function TeacherDashboardClient({
   useEffect(() => {
     const handlePopState = () => {
       const url = new URL(window.location.href);
-      const tab = url.searchParams.get("tab") || "match";
+      const tab = normalizeTab(url.searchParams.get("tab") || "match");
       if (isProtectedTab(tab) && !isAuthenticated) {
         handleRequireAuth(`/teacher?tab=${tab}`);
         return;
@@ -129,6 +166,7 @@ export function TeacherDashboardClient({
                   (s) => s.subType === "image-text" || s.subType === "image-image"
                 );
                 sessionStorage.setItem("cached_teacher_library_flip", JSON.stringify(flipSets));
+                window.dispatchEvent(new CustomEvent("teacher-library-updated"));
               } catch {}
             }
           });
@@ -138,6 +176,7 @@ export function TeacherDashboardClient({
             if (res.success && Array.isArray(res.sets)) {
               try {
                 sessionStorage.setItem("cached_teacher_library_quiz", JSON.stringify(res.sets));
+                window.dispatchEvent(new CustomEvent("teacher-library-updated"));
               } catch {}
             }
           });
@@ -147,6 +186,16 @@ export function TeacherDashboardClient({
             if (res.success && Array.isArray(res.sets)) {
               try {
                 sessionStorage.setItem("cached_teacher_library_choice", JSON.stringify(res.sets));
+                window.dispatchEvent(new CustomEvent("teacher-library-updated"));
+              } catch {}
+            }
+          });
+        }
+        if (!sessionStorage.getItem("cached_global_success_sets")) {
+          getGlobalSuccessLibrarySetsAction().then((res) => {
+            if (res.success && Array.isArray(res.sets)) {
+              try {
+                sessionStorage.setItem("cached_global_success_sets", JSON.stringify(res.sets));
               } catch {}
             }
           });
@@ -163,6 +212,7 @@ export function TeacherDashboardClient({
       <TeacherHomeSidebar
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
+        libraryCounts={isAuthenticated ? libraryCounts : undefined}
       />
 
       {/* Main Workspace with Tab Keep-Alive */}
@@ -276,6 +326,24 @@ export function TeacherDashboardClient({
               <TeacherLocaleSwitch />
             </div>
             <MyQuizGamesList />
+          </div>
+        )}
+
+        {/* 8.5. Sách Giáo Khoa Global Success (Global Success Library) */}
+        {isAuthenticated && visitedTabs.has("lib-global") && (
+          <div className={activeTab === "lib-global" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  📘 {t.sidebar.libraryGlobalTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.libraryGlobalSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
+            <GlobalSuccessLibraryList />
           </div>
         )}
 

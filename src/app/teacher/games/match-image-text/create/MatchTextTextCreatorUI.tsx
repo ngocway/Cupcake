@@ -163,41 +163,61 @@ export function MatchTextTextCreatorUI() {
     const targetSetId = editLibrarySetId || librarySetId;
     if (topicId || !targetSetId) return;
     let active = true;
+
+    const applyLoadedSet = (setObj: LibrarySetItem) => {
+      setTitle(setObj.name || "");
+      const items = setObj.items || [];
+      if (items.length > 0) {
+        const roundsMap: Record<number, typeof items> = {};
+        items.forEach((item) => {
+          const rIdx = item.roundIndex ?? 0;
+          if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+          roundsMap[rIdx].push(item);
+        });
+        const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+        const loadedRounds: GameRound[] = [];
+        roundIndices.forEach((rIdx, i) => {
+          const roundItems = roundsMap[rIdx];
+          const roundPairs: TextCardPair[] = roundItems.map((item, idx) => ({
+            id: item.id || `pair-lib-${i}-${idx}`,
+            wordA: item.word || "",
+            audioUrlA: item.audioUrl || undefined,
+            labelB: item.labelB || "",
+            audioUrlB: item.audioBUrl || undefined,
+          }));
+          loadedRounds.push({
+            id: `round-${i + 1}`,
+            title: `Vòng ${i + 1}`,
+            pairs: roundPairs,
+          });
+        });
+        setRounds(loadedRounds);
+        setActiveRoundIndex(0);
+      }
+      setIsLoadingTopic(false);
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const cachedRaw = sessionStorage.getItem(`cached_library_set_${targetSetId}`);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw) as LibrarySetItem;
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            applyLoadedSet(parsed);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     setIsLoadingTopic(true);
     getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
       if (!active) return;
       if (res.success && res.set) {
-        setTitle(res.set.name || "");
-        const items = res.set.items || [];
-        if (items.length > 0) {
-          const roundsMap: Record<number, typeof items> = {};
-          items.forEach((item) => {
-            const rIdx = item.roundIndex ?? 0;
-            if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
-            roundsMap[rIdx].push(item);
-          });
-          const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
-          const loadedRounds: GameRound[] = [];
-          roundIndices.forEach((rIdx, i) => {
-            const roundItems = roundsMap[rIdx];
-            const roundPairs: TextCardPair[] = roundItems.map((item, idx) => ({
-              id: item.id || `pair-lib-${i}-${idx}`,
-              wordA: item.word || "",
-              audioUrlA: item.audioUrl || undefined,
-              labelB: item.labelB || "",
-              audioUrlB: item.audioBUrl || undefined,
-            }));
-            loadedRounds.push({
-              id: `round-${i + 1}`,
-              title: `Vòng ${i + 1}`,
-              pairs: roundPairs,
-            });
-          });
-          setRounds(loadedRounds);
-          setActiveRoundIndex(0);
-        }
+        applyLoadedSet(res.set);
+      } else {
+        setIsLoadingTopic(false);
       }
-      setIsLoadingTopic(false);
     });
     return () => {
       active = false;
@@ -467,7 +487,7 @@ export function MatchTextTextCreatorUI() {
       e.preventDefault();
       setShowExitConfirmModal(true);
     } else {
-      router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
+      router.push((editLibrarySetId || librarySetId) ? `/teacher?tab=${returnTab}` : "/teacher");
     }
   };
 
@@ -530,6 +550,31 @@ export function MatchTextTextCreatorUI() {
       }
     }
 
+    // Verification 4: Check for duplicate Side A or Side B within the same round (repeating across different rounds is allowed)
+    for (let rIdx = 0; rIdx < rounds.length; rIdx++) {
+      const r = rounds[rIdx];
+      const listA = r.pairs.map((p) => p.wordA.trim().toLowerCase());
+      const dupA = listA.find((w, idx) => w && listA.indexOf(w) !== idx);
+      if (dupA) {
+        setActiveRoundIndex(rIdx);
+        const origA = r.pairs.find((p) => p.wordA.trim().toLowerCase() === dupA)?.wordA.trim();
+        setValidationModalMessage(
+          `Tại Vòng ${rIdx + 1}, Vế A "${origA}" đang bị trùng lặp! Trong cùng 1 vòng vui lòng nhập nội dung khác nhau (bạn có thể lặp lại ở các vòng khác).`
+        );
+        return;
+      }
+      const listB = r.pairs.map((p) => p.labelB.trim().toLowerCase());
+      const dupB = listB.find((w, idx) => w && listB.indexOf(w) !== idx);
+      if (dupB) {
+        setActiveRoundIndex(rIdx);
+        const origB = r.pairs.find((p) => p.labelB.trim().toLowerCase() === dupB)?.labelB.trim();
+        setValidationModalMessage(
+          `Tại Vòng ${rIdx + 1}, Vế B "${origB}" đang bị trùng lặp! Trong cùng 1 vòng vui lòng nhập nội dung khác nhau (bạn có thể lặp lại ở các vòng khác).`
+        );
+        return;
+      }
+    }
+
     setIsSaving(true);
     toast.loading("Đang lưu bài tập Nối Cặp Chữ - Chữ...", { id: "save-game-toast" });
 
@@ -566,6 +611,7 @@ export function MatchTextTextCreatorUI() {
           try {
             sessionStorage.removeItem("cached_teacher_library_match");
             sessionStorage.removeItem("cached_teacher_library_flip");
+            sessionStorage.removeItem(`cached_library_set_${editLibrarySetId}`);
           } catch {}
         }
 
@@ -1043,7 +1089,7 @@ export function MatchTextTextCreatorUI() {
                 Ở lại tiếp tục
               </button>
               <button
-                onClick={() => router.push("/teacher")}
+                onClick={() => router.push((editLibrarySetId || librarySetId) ? `/teacher?tab=${returnTab}` : "/teacher")}
                 className="flex-1 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition-all"
               >
                 Thoát không lưu

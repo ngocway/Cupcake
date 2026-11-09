@@ -872,15 +872,22 @@ export function ConveyorDropCreatorUI() {
       }
     }
 
-    // Verification 4: Check for duplicate words across all rounds
-    const allPairs = rounds.flatMap((r, rIdx) => r.pairs.map(p => ({ ...p, roundIndex: rIdx })));
-    const wordList = allPairs.map(p => p.word.trim().toLowerCase());
-    const duplicateWord = wordList.find((w, idx) => wordList.indexOf(w) !== idx);
-    if (duplicateWord) {
-      const originalWord = allPairs.find(p => p.word.trim().toLowerCase() === duplicateWord)?.word.trim();
-      setValidationModalMessage(`Từ vựng "${originalWord}" đang bị trùng lặp. Vui lòng đổi tên các từ vựng khác nhau!`);
-      return;
+    // Verification 4: Check for duplicate words within the same round (repeating across different rounds is allowed)
+    for (let rIdx = 0; rIdx < rounds.length; rIdx++) {
+      const r = rounds[rIdx];
+      const wordList = r.pairs.map(p => p.word.trim().toLowerCase());
+      const duplicateWord = wordList.find((w, idx) => w && wordList.indexOf(w) !== idx);
+      if (duplicateWord) {
+        setActiveRoundIndex(rIdx);
+        const originalWord = r.pairs.find(p => p.word.trim().toLowerCase() === duplicateWord)?.word.trim();
+        setValidationModalMessage(
+          `Tại Vòng ${rIdx + 1}, từ vựng "${originalWord}" đang bị trùng lặp! Trong cùng 1 vòng vui lòng nhập các từ khác nhau (bạn có thể lặp lại từ ở các vòng khác).`
+        );
+        return;
+      }
     }
+
+    const allPairs = rounds.flatMap((r, rIdx) => r.pairs.map(p => ({ ...p, roundIndex: rIdx })));
 
     setIsSaving(true);
     const loadingMessage = 
@@ -1129,7 +1136,7 @@ export function ConveyorDropCreatorUI() {
                 <button
                   type="button"
                   onClick={() => setAudioMode("AUTO_TTS")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`relative group px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "AUTO_TTS"
                       ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -1137,11 +1144,20 @@ export function ConveyorDropCreatorUI() {
                 >
                   <Wand2 className="w-3.5 h-3.5 text-amber-500" />
                   <span>Hệ thống tự đọc</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-left shadow-xl border border-slate-700/60 opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-150 z-50">
+                    <span className="block text-[11px] font-extrabold text-amber-300 mb-0.5">
+                      Hệ thống tự phát âm (AI)
+                    </span>
+                    <span className="block text-[11px] font-medium text-slate-200 leading-relaxed whitespace-normal">
+                      Tự động đọc to từ/cụm từ tiếng Anh bằng giọng chuẩn khi học sinh lật hoặc ghép thẻ, không cần tải file âm thanh.
+                    </span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAudioMode("CUSTOM_FILE")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`relative group px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "CUSTOM_FILE"
                       ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -1149,11 +1165,20 @@ export function ConveyorDropCreatorUI() {
                 >
                   <Volume2 className="w-3.5 h-3.5 text-sky-500" />
                   <span>Tải lên Audio</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-left shadow-xl border border-slate-700/60 opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-150 z-50">
+                    <span className="block text-[11px] font-extrabold text-sky-300 mb-0.5">
+                      Tự tải file âm thanh
+                    </span>
+                    <span className="block text-[11px] font-medium text-slate-200 leading-relaxed whitespace-normal">
+                      Cho phép bạn tự tải lên file thu âm giọng đọc hoặc âm thanh riêng (MP3/WAV) cho từng thẻ.
+                    </span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAudioMode("NONE")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`relative group px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "NONE"
                       ? "bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -1161,6 +1186,15 @@ export function ConveyorDropCreatorUI() {
                 >
                   <VolumeX className="w-3.5 h-3.5 text-slate-400" />
                   <span>Không đọc</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-left shadow-xl border border-slate-700/60 opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-150 z-50">
+                    <span className="block text-[11px] font-extrabold text-slate-300 mb-0.5">
+                      Tắt giọng đọc thẻ
+                    </span>
+                    <span className="block text-[11px] font-medium text-slate-200 leading-relaxed whitespace-normal">
+                      Thẻ chỉ hiển thị hình ảnh và chữ, không phát giọng đọc từ vựng khi học sinh bấm vào.
+                    </span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+                  </span>
                 </button>
               </div>
 

@@ -842,10 +842,27 @@ async function initGame() {
               });
             });
             const sortedKeys = Array.from(groupMap.keys()).sort((a, b) => a - b);
-            window.WORD_SETS = sortedKeys.map((rKey, idx) => ({
+            const rawRounds = sortedKeys.map(rKey => groupMap.get(rKey));
+            const needsRechunk = rawRounds.some(arr => arr.length > 4);
+            let finalRounds = rawRounds;
+
+            if (needsRechunk) {
+              const flatItems = rawRounds.flat();
+              const chunks = [];
+              for (let i = 0; i < flatItems.length; i += 4) {
+                chunks.push(flatItems.slice(i, i + 4));
+              }
+              if (chunks.length >= 2 && chunks[chunks.length - 1].length === 1) {
+                const popped = chunks[chunks.length - 2].pop();
+                if (popped) chunks[chunks.length - 1].unshift(popped);
+              }
+              finalRounds = chunks;
+            }
+
+            window.WORD_SETS = finalRounds.map((roundItems, idx) => ({
               name: `VÒNG ${idx + 1}`,
               icon: ['🚂', '🌟', '🎯', '🎨', '🎪', '🚀', '🌈'][idx % 7],
-              pairs: groupMap.get(rKey).map(item => [item.word, item.picture, item.audioUrl])
+              pairs: roundItems.map(item => [item.word, item.picture, item.audioUrl])
             }));
           }
         }

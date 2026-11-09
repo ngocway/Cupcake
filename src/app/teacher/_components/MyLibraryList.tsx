@@ -279,27 +279,42 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
   const [isSavingChanges, setIsSavingChanges] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [redirectModal, setRedirectModal] = useState<{
+    title: string;
+    subtitle: string;
+  } | null>(null);
+
+  const cacheSetForInstantStudioLoad = (setObj: LibrarySetItem) => {
+    if (typeof window === "undefined") return;
+    try {
+      sessionStorage.setItem(`cached_library_set_${setObj.id}`, JSON.stringify(setObj));
+    } catch {}
+  };
 
   const cacheKey = `cached_teacher_library_${category}`;
+
+  const syncCacheAndNotify = (updatedSets: LibrarySetItem[]) => {
+    if (typeof window === "undefined") return;
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify(updatedSets));
+      if (category === "match") {
+        const flipCompatible = updatedSets.filter(
+          (s) => s.subType === "image-text" || s.subType === "image-image"
+        );
+        sessionStorage.setItem("cached_teacher_library_flip", JSON.stringify(flipCompatible));
+      } else if (category === "flip" && !sessionStorage.getItem("cached_teacher_library_match")) {
+        sessionStorage.setItem("cached_teacher_library_match", JSON.stringify(updatedSets));
+      }
+      window.dispatchEvent(new CustomEvent("teacher-library-updated"));
+    } catch {}
+  };
 
   const fetchLibrary = async (isBackground = false) => {
     if (!isBackground && sets.length === 0) setLoading(true);
     const res = await getTeacherLibrarySetsAction(category);
     if (res.success && Array.isArray(res.sets)) {
       setSets(res.sets);
-      if (typeof window !== "undefined") {
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(res.sets));
-          if (category === "match") {
-            const flipCompatible = res.sets.filter(
-              (s) => s.subType === "image-text" || s.subType === "image-image"
-            );
-            sessionStorage.setItem("cached_teacher_library_flip", JSON.stringify(flipCompatible));
-          } else if (category === "flip" && !sessionStorage.getItem("cached_teacher_library_match")) {
-            sessionStorage.setItem("cached_teacher_library_match", JSON.stringify(res.sets));
-          }
-        } catch {}
-      }
+      syncCacheAndNotify(res.sets);
     }
     setLoading(false);
   };
@@ -351,9 +366,7 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
       setSelectedSetForView(res.set);
       setEditingName(res.set.name);
       setEditingItems(res.set.items.map((it) => ({ ...it })));
-      try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(updated));
-      } catch {}
+      syncCacheAndNotify(updated);
       return res.set;
     } else {
       toast.error(res.error || "Error");
@@ -375,9 +388,7 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
       toast.success(t.library.duplicatedToast.replace("{name}", setItem.name));
       const updated = [res.set, ...sets];
       setSets(updated);
-      try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(updated));
-      } catch {}
+      syncCacheAndNotify(updated);
     } else {
       toast.error(res.error || "Error");
     }
@@ -414,9 +425,7 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
       toast.success(t.library.deletedToast.replace("{name}", setItem.name));
       const updated = sets.filter((s) => s.id !== setItem.id);
       setSets(updated);
-      try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(updated));
-      } catch {}
+      syncCacheAndNotify(updated);
     } else {
       toast.error(res.error || t.myGames.deleteErrorToast);
     }
@@ -661,6 +670,11 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
                   <button
                     type="button"
                     onClick={() => {
+                      cacheSetForInstantStudioLoad(setItem);
+                      setRedirectModal({
+                        title: isVi ? "Đang mở trang chỉnh sửa..." : "Opening question set editor...",
+                        subtitle: setItem.name,
+                      });
                       trackEvent("teacher_library_action", {
                         action: "edit_set_in_studio",
                         setId: setItem.id,
@@ -746,11 +760,20 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
                   key={gameOpt.id}
                   type="button"
                   onClick={() => {
+                    cacheSetForInstantStudioLoad(selectedSetForGame);
                     const targetUrl = withLangParam(
                       gameOpt.buildHref(selectedSetForGame.id),
                       locale
                     );
+                    const pickedName = selectedSetForGame.name;
+                    const pickedGameTitle = isVi ? gameOpt.titleVi : gameOpt.titleEn;
                     setSelectedSetForGame(null);
+                    setRedirectModal({
+                      title: isVi
+                        ? `Đang mở ${pickedGameTitle}...`
+                        : `Opening ${pickedGameTitle}...`,
+                      subtitle: pickedName,
+                    });
                     router.push(targetUrl);
                   }}
                   className="text-left p-4 rounded-2xl border-2 border-slate-100 hover:border-emerald-400 bg-slate-50/70 hover:bg-emerald-50/40 dark:bg-slate-800/60 dark:border-slate-700 dark:hover:border-emerald-500 transition-all group flex flex-col justify-between gap-3 cursor-pointer"
@@ -968,6 +991,26 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
                 <Gamepad2 className="w-4 h-4" />
                 <span>{t.library.createGameBtn}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: REDIRECT LOADING POPUP */}
+      {redirectModal && (
+        <div className="fixed inset-0 z-[70] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-emerald-200/80 dark:border-slate-700 text-center space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="relative w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
+              <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+              <Sparkles className="w-5 h-5 text-amber-400 absolute -top-1.5 -right-1.5 animate-pulse" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-headline font-black text-lg text-slate-800 dark:text-white">
+                {redirectModal.title}
+              </h3>
+              <p className="text-xs font-semibold text-slate-400">
+                {redirectModal.subtitle}
+              </p>
             </div>
           </div>
         </div>

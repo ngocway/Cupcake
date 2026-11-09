@@ -154,11 +154,14 @@ export async function syncSetToTeacherLibrary(params: {
     const targetLibMode = LIBRARY_GAME_MODES[params.subType] || "library-image-text";
     const incomingFingerprint = computeItemsFingerprint(params.items);
 
-    // Fetch existing library sets of the same subType for this teacher
+    // Fetch existing library sets of the same subType for this teacher OR shared Global Success sets
     const existingLibTopics = await prisma.matchWordTopic.findMany({
       where: {
-        teacherId,
-        gameMode: targetLibMode,
+        OR: [
+          { teacherId, gameMode: targetLibMode },
+          { teacherId: null, gameMode: targetLibMode },
+          { slug: { startsWith: "shared-lib-" } },
+        ],
       },
       include: {
         items: {
@@ -167,7 +170,7 @@ export async function syncSetToTeacherLibrary(params: {
       },
     });
 
-    // Rule 1: Exact content fingerprint match -> already in library, no duplicate needed
+    // Rule 1: Exact content fingerprint match -> already in Personal Library or Global Success Library, no duplicate needed
     for (const libTopic of existingLibTopics) {
       const fp = computeItemsFingerprint(libTopic.items);
       if (fp === incomingFingerprint) {
@@ -175,9 +178,12 @@ export async function syncSetToTeacherLibrary(params: {
       }
     }
 
-    // Rule 2: Same title (case-insensitive) in library -> update existing library set with latest items
+    // Rule 2: Same title (case-insensitive) in this teacher's personal library -> update existing library set with latest items
     const sameNameLib = existingLibTopics.find(
-      (t) => t.name.trim().toLowerCase() === cleanTitle.toLowerCase()
+      (t) =>
+        t.teacherId === teacherId &&
+        !(t.slug || "").startsWith("shared-lib-") &&
+        t.name.trim().toLowerCase() === cleanTitle.toLowerCase()
     );
 
     if (sameNameLib) {
@@ -286,8 +292,16 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
 
     const isAdmin = session.user.role === "ADMIN";
     const baseWhere: any = isAdmin
-      ? {}
-      : { teacherId: session.user.id };
+      ? {
+          NOT: [
+            { slug: { startsWith: "shared-lib-" } },
+            { teacherId: null, gameMode: { in: ALL_LIBRARY_GAME_MODES } },
+          ],
+        }
+      : {
+          teacherId: session.user.id,
+          NOT: { slug: { startsWith: "shared-lib-" } },
+        };
 
     const quizModes = ["library-quiz", "candy-quiz", "treasure-hunt", "shooter-quiz", "quiz"];
     const choiceModes = ["library-choice", "choice-shooter", "choice-egg"];
@@ -317,14 +331,14 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
     }
 
     const whereCondition: any = {
-      ...baseWhere,
-      ...categoryWhere,
+      AND: [baseWhere, categoryWhere],
     };
 
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,
       select: {
         id: true,
+        teacherId: true,
         name: true,
         slug: true,
         gameMode: true,
@@ -354,9 +368,10 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
       orderBy: { updatedAt: "desc" },
     });
 
-    // Collect any raw game topic IDs that have been overridden/edited or hidden in My Library
+    // Collect any raw game topic IDs or shared library IDs that have been overridden/edited or hidden by this teacher
     const overriddenGameTopicIds = new Set<string>();
     for (const t of rawTopics) {
+      if (t.teacherId && t.teacherId !== session.user.id) continue;
       const match = (t.slug || "").match(/^lib-override-([a-z0-9]+)-/i);
       if (match?.[1]) {
         overriddenGameTopicIds.add(match[1]);
@@ -372,6 +387,41 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
     });
 
     const seenFingerprints = new Set<string>();
+
+    // Pre-populate fingerprints of Global Success shared textbook sets so raw games created
+    // directly from Global Success sets do not leak into the personal library
+    const sharedTopicsForDedup = await prisma.matchWordTopic.findMany({
+      where: {
+        OR: [
+          { slug: { startsWith: "shared-lib-" } },
+          { teacherId: null, gameMode: { in: ALL_LIBRARY_GAME_MODES } },
+        ],
+      },
+      select: {
+        gameMode: true,
+        items: {
+          take: 4,
+          orderBy: { createdAt: "asc" },
+          select: {
+            word: true,
+            imageUrl: true,
+            imageBUrl: true,
+            labelB: true,
+          },
+        },
+        _count: {
+          select: { items: true },
+        },
+      },
+    });
+    for (const st of sharedTopicsForDedup) {
+      const { subType: stSub } = classifyTopicSubType(st);
+      const stCount = st._count?.items ?? st.items.length;
+      if (stCount > 0 && st.items.length > 0) {
+        seenFingerprints.add(`${stSub}::${stCount}::${computeItemsFingerprint(st.items)}`);
+      }
+    }
+
     const allSets: LibrarySetItem[] = [];
 
     for (const t of sortedTopics) {
@@ -382,8 +432,8 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
       const { category, subType } = classifyTopicSubType(t);
       const isLibRecord = ALL_LIBRARY_GAME_MODES.includes(t.gameMode || "");
 
-      // Skip raw game topics that have been edited/overridden or hidden in My Library
-      if (!isLibRecord && overriddenGameTopicIds.has(t.id)) {
+      // Skip raw game topics or shared library sets that have been edited/overridden or hidden in My Library
+      if (overriddenGameTopicIds.has(t.id)) {
         continue;
       }
 
@@ -449,6 +499,89 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
   } catch (error: any) {
     console.error("Failed to fetch teacher library sets:", error);
     return { success: false, error: error.message || "Failed to fetch library sets", sets: [] as LibrarySetItem[] };
+  }
+}
+
+/**
+ * Fetch Global Success Textbook Library sets (shared system sets organized by Grade 1-12 & Unit)
+ */
+export async function getGlobalSuccessLibrarySetsAction() {
+  try {
+    const rawTopics = await prisma.matchWordTopic.findMany({
+      where: {
+        OR: [
+          { slug: { startsWith: "shared-lib-" } },
+          { teacherId: null, gameMode: { in: ALL_LIBRARY_GAME_MODES } },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        gameMode: true,
+        audioMode: true,
+        ageGroup: true,
+        createdAt: true,
+        updatedAt: true,
+        game: {
+          select: { name: true, level: true },
+        },
+        items: {
+          take: 4,
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            roundIndex: true,
+            word: true,
+            imageUrl: true,
+            imageBUrl: true,
+            labelB: true,
+          },
+        },
+        _count: {
+          select: { items: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const sets: LibrarySetItem[] = [];
+    for (const t of rawTopics) {
+      if (t.gameMode === "library-hidden") continue;
+      const totalItemsCount = t._count?.items ?? t.items.length;
+      if (totalItemsCount === 0 || !t.items || t.items.length === 0) continue;
+
+      const { category, subType } = classifyTopicSubType(t);
+      sets.push({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        category,
+        subType,
+        gameMode: t.gameMode || "match",
+        audioMode: t.audioMode || "AUTO_TTS",
+        gradeLevel: t.ageGroup || "primary-1-5",
+        totalItems: totalItemsCount,
+        createdAt: t.createdAt.toISOString(),
+        updatedAt: t.updatedAt.toISOString(),
+        isLibraryRecord: true,
+        items: t.items.map((item) => ({
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          audioUrl: null,
+          imageBUrl: item.imageBUrl,
+          labelB: item.labelB,
+          audioBUrl: null,
+        })),
+      });
+    }
+
+    return { success: true, sets };
+  } catch (error: any) {
+    console.error("Failed to fetch Global Success library sets:", error);
+    return { success: false, error: error.message || "Failed to fetch Global Success sets", sets: [] as LibrarySetItem[] };
   }
 }
 
@@ -522,17 +655,58 @@ export async function renameTeacherLibrarySetAction(setId: string, newName: stri
 
     const isAdmin = session.user.role === "ADMIN";
     const topic = await prisma.matchWordTopic.findFirst({
-      where: isAdmin ? { id: setId } : { id: setId, teacherId: session.user.id },
+      where: isAdmin
+        ? { id: setId }
+        : { id: setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
+      include: {
+        game: { select: { name: true } },
+        items: { orderBy: { createdAt: "asc" } },
+      },
     });
 
     if (!topic) {
       return { success: false, error: "Không tìm thấy bộ câu hỏi!" };
     }
 
-    await prisma.matchWordTopic.update({
-      where: { id: topic.id },
-      data: { name: cleanName, updatedAt: new Date() },
-    });
+    if (topic.teacherId === null) {
+      // Shared system library set -> Copy-on-Write personal override for this teacher
+      const { subType } = classifyTopicSubType(topic);
+      const targetLibGameMode = LIBRARY_GAME_MODES[subType];
+      await prisma.$transaction(async (tx) => {
+        const newLibTopic = await tx.matchWordTopic.create({
+          data: {
+            gameId: topic.gameId,
+            teacherId: session.user.id,
+            name: cleanName,
+            slug: `lib-override-${topic.id}-${Date.now().toString(36)}`,
+            ageGroup: topic.ageGroup || "kids-2-5",
+            icon: topic.icon || "📚",
+            thumbnailUrl: topic.thumbnailUrl,
+            audioMode: topic.audioMode || "AUTO_TTS",
+            gameMode: targetLibGameMode,
+          },
+        });
+        if (topic.items.length > 0) {
+          await tx.matchWordItem.createMany({
+            data: topic.items.map((item) => ({
+              topicId: newLibTopic.id,
+              roundIndex: item.roundIndex ?? 0,
+              word: item.word,
+              imageUrl: item.imageUrl || null,
+              audioUrl: item.audioUrl || null,
+              imageBUrl: item.imageBUrl || null,
+              labelB: item.labelB || null,
+              audioBUrl: item.audioBUrl || null,
+            })),
+          });
+        }
+      });
+    } else {
+      await prisma.matchWordTopic.update({
+        where: { id: topic.id },
+        data: { name: cleanName, updatedAt: new Date() },
+      });
+    }
 
     revalidatePath("/teacher");
     return { success: true };
@@ -554,7 +728,9 @@ export async function deleteTeacherLibrarySetAction(setId: string) {
 
     const isAdmin = session.user.role === "ADMIN";
     const topic = await prisma.matchWordTopic.findFirst({
-      where: isAdmin ? { id: setId } : { id: setId, teacherId: session.user.id },
+      where: isAdmin
+        ? { id: setId }
+        : { id: setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
     });
 
     if (!topic) {
@@ -562,8 +738,9 @@ export async function deleteTeacherLibrarySetAction(setId: string) {
     }
 
     const isLibRecord = ALL_LIBRARY_GAME_MODES.includes(topic.gameMode || "");
+    const isSharedRecord = topic.teacherId === null;
 
-    if (isLibRecord) {
+    if (isLibRecord && !isSharedRecord) {
       if ((topic.slug || "").startsWith("lib-override-")) {
         // Keep the override marker as hidden so the original live game stays untouched and hidden from Library
         await prisma.matchWordTopic.update({
@@ -576,12 +753,12 @@ export async function deleteTeacherLibrarySetAction(setId: string) {
         });
       }
     } else {
-      // Never delete a live game from Created Exercises when deleting from My Library!
-      // Instead, record a hidden library override marker for this game topic.
+      // Never delete a live game or a shared textbook set!
+      // Instead, record a hidden library override marker for this teacher.
       await prisma.matchWordTopic.create({
         data: {
           gameId: topic.gameId,
-          teacherId: topic.teacherId || session.user.id,
+          teacherId: session.user.id,
           name: topic.name,
           slug: `lib-override-${topic.id}-${Date.now().toString(36)}`,
           ageGroup: topic.ageGroup || "kids-2-5",
@@ -611,7 +788,9 @@ export async function duplicateTeacherLibrarySetAction(setId: string, copySuffix
 
     const isAdmin = session.user.role === "ADMIN";
     const sourceTopic = await prisma.matchWordTopic.findFirst({
-      where: isAdmin ? { id: setId } : { id: setId, teacherId: session.user.id },
+      where: isAdmin
+        ? { id: setId }
+        : { id: setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
       include: {
         game: { select: { name: true } },
         items: { orderBy: { createdAt: "asc" } },
@@ -749,7 +928,9 @@ export async function updateTeacherLibrarySetAction(payload: {
 
     const isAdmin = session.user.role === "ADMIN";
     const topic = await prisma.matchWordTopic.findFirst({
-      where: isAdmin ? { id: payload.setId } : { id: payload.setId, teacherId: session.user.id },
+      where: isAdmin
+        ? { id: payload.setId }
+        : { id: payload.setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
       include: {
         game: { select: { name: true } },
         items: { orderBy: { createdAt: "asc" } },
@@ -762,7 +943,8 @@ export async function updateTeacherLibrarySetAction(payload: {
 
     const { category, subType } = classifyTopicSubType(topic);
     const targetLibGameMode = LIBRARY_GAME_MODES[subType];
-    const isAlreadyLibRecord = ALL_LIBRARY_GAME_MODES.includes(topic.gameMode || "");
+    const isAlreadyLibRecord =
+      ALL_LIBRARY_GAME_MODES.includes(topic.gameMode || "") && topic.teacherId !== null;
 
     const updatedTopic = await prisma.$transaction(async (tx) => {
       if (isAlreadyLibRecord) {

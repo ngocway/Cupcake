@@ -16,12 +16,20 @@ import {
 import { toast } from "sonner"; import { trackEvent } from "@/lib/analytics";
 import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 
+export interface ShareableGameOption {
+  id: string;
+  labelVi: string;
+  labelEn: string;
+  gamePath: string;
+}
+
 interface MatchGameShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   topicName: string;
   topicId: string;
   gamePath?: string;
+  gameOptions?: ShareableGameOption[];
 }
 
 export function MatchGameShareModal({
@@ -30,10 +38,29 @@ export function MatchGameShareModal({
   topicName,
   topicId,
   gamePath = "/student/game/flashcard-match",
+  gameOptions,
 }: MatchGameShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const [selectedOptionId, setSelectedOptionId] = useState<string>(
+    () => gameOptions?.[0]?.id || ""
+  );
   const downloadCanvasRef = useRef<HTMLCanvasElement>(null);
-  const { locale, t } = useTeacherLocale(); const rawBase = gamePath.includes("topicId=") ? gamePath : `${gamePath}${gamePath.includes("?") ? "&" : "?"}topicId=${topicId}`;
+  const { locale, t } = useTeacherLocale();
+
+  useEffect(() => {
+    if (isOpen && gameOptions && gameOptions.length > 0) {
+      setSelectedOptionId(gameOptions[0].id);
+    }
+  }, [isOpen, topicId, gameOptions]);
+
+  const activeGamePath =
+    (gameOptions &&
+      gameOptions.find((opt) => opt.id === selectedOptionId)?.gamePath) ||
+    gamePath;
+
+  const rawBase = activeGamePath.includes("topicId=")
+    ? activeGamePath
+    : `${activeGamePath}${activeGamePath.includes("?") ? "&" : "?"}topicId=${topicId}`;
 
   const gameUrl =
     typeof window !== "undefined"
@@ -141,7 +168,40 @@ export function MatchGameShareModal({
           </div>
 
           {/* Modal Content */}
-          <div className="p-6 flex flex-col items-center text-center space-y-5">
+          <div className="p-6 flex flex-col items-center text-center space-y-4">
+            {/* Optional Game Mode Switcher (for Global Success instant play) */}
+            {gameOptions && gameOptions.length > 0 && (
+              <div className="w-full space-y-1.5 text-left">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 text-center">
+                  {locale === "vi"
+                    ? "Trò chơi cho học sinh (Bấm để đổi nhanh)"
+                    : "Student Game Format (Click to switch)"}
+                </p>
+                <div className="flex items-center justify-center gap-1.5 flex-wrap bg-slate-50 dark:bg-slate-800/70 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+                  {gameOptions.map((opt) => {
+                    const isSelected = opt.id === selectedOptionId;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedOptionId(opt.id);
+                          setCopied(false);
+                        }}
+                        className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-purple-600 text-white shadow-xs"
+                            : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        {locale === "vi" ? opt.labelVi : opt.labelEn}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* QR Code Container */}
             <div className="bg-white p-4 rounded-3xl border-2 border-purple-100 dark:border-purple-950 shadow-xl shadow-purple-500/5 relative group">
               <QRCodeCanvas

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { BookOpen, Search, X, Layers, Download, Plus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import {
   getTeacherLibrarySetsAction,
+  getGlobalSuccessLibrarySetsAction,
   getTeacherLibrarySetByIdAction,
   LibraryCategory,
   LibrarySetItem,
@@ -27,8 +29,14 @@ export function TeacherLibraryPickerButton({
   className = "",
 }: TeacherLibraryPickerButtonProps) {
   const { t } = useTeacherLocale();
+  const searchParams = useSearchParams();
+  const isFromLibrary = Boolean(
+    searchParams.get("librarySetId") || searchParams.get("editLibrarySetId")
+  );
   const [isOpen, setIsOpen] = useState(false);
+  const [sourceTab, setSourceTab] = useState<"personal" | "global">("personal");
   const [sets, setSets] = useState<LibrarySetItem[]>([]);
+  const [globalSets, setGlobalSets] = useState<LibrarySetItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -46,13 +54,23 @@ export function TeacherLibraryPickerButton({
         ? "match"
         : "all";
 
-    getTeacherLibrarySetsAction(targetCategory).then((res) => {
+    Promise.all([
+      getTeacherLibrarySetsAction(targetCategory),
+      getGlobalSuccessLibrarySetsAction(),
+    ]).then(([personalRes, globalRes]) => {
       if (!active) return;
-      if (res.success && Array.isArray(res.sets)) {
-        const compatible = res.sets.filter((s) =>
-          compatibleSubTypes.includes(s.subType)
-        );
-        setSets(compatible);
+      if (personalRes.success && Array.isArray(personalRes.sets)) {
+        setSets(personalRes.sets.filter((s) => compatibleSubTypes.includes(s.subType)));
+      }
+      if (globalRes.success && Array.isArray(globalRes.sets)) {
+        const compatGlobal = globalRes.sets.filter((s) => compatibleSubTypes.includes(s.subType));
+        setGlobalSets(compatGlobal);
+        if (
+          (!personalRes.sets || personalRes.sets.filter((s) => compatibleSubTypes.includes(s.subType)).length === 0) &&
+          compatGlobal.length > 0
+        ) {
+          setSourceTab("global");
+        }
       }
       setLoading(false);
     });
@@ -62,7 +80,8 @@ export function TeacherLibraryPickerButton({
     };
   }, [isOpen, compatibleSubTypes.join(",")]);
 
-  const filteredSets = sets.filter((s) =>
+  const activeSourceList = sourceTab === "global" ? globalSets : sets;
+  const filteredSets = activeSourceList.filter((s) =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -79,6 +98,10 @@ export function TeacherLibraryPickerButton({
     onImportSet(setItem, mode);
     toast.success(t.library.importedToast.replace("{name}", setItem.name));
   };
+
+  if (isFromLibrary) {
+    return null;
+  }
 
   return (
     <>
@@ -120,6 +143,38 @@ export function TeacherLibraryPickerButton({
                 className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Source Tabs: My Saved Sets vs Global Success Books */}
+            <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setSourceTab("personal")}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  sourceTab === "personal"
+                    ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                <span>👤 {t.library.mySetsTab}</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[10px]">
+                  {sets.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSourceTab("global")}
+                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  sourceTab === "global"
+                    ? "bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                }`}
+              >
+                <span>📘 {t.library.globalSuccessTab}</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-700 text-[10px]">
+                  {globalSets.length}
+                </span>
               </button>
             </div>
 

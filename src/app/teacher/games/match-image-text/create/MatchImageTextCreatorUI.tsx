@@ -854,48 +854,68 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
     const targetSetId = editLibrarySetId || librarySetId;
     if (topicId || !targetSetId) return;
     let active = true;
+
+    const applyLoadedSet = (setObj: LibrarySetItem) => {
+      if (editLibrarySetId) {
+        setTitle(setObj.name || "");
+        if (setObj.audioMode) {
+          setAudioMode(setObj.audioMode as AudioMode);
+        }
+        const items = setObj.items || [];
+        if (items.length > 0) {
+          const roundsMap: Record<number, typeof items> = {};
+          items.forEach((item) => {
+            const rIdx = item.roundIndex ?? 0;
+            if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+            roundsMap[rIdx].push(item);
+          });
+          const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+          const loadedRounds: GameRound[] = [];
+          roundIndices.forEach((rIdx, i) => {
+            const roundItems = roundsMap[rIdx];
+            const roundPairs: CardPair[] = roundItems.map((item, idx) => ({
+              id: item.id || `pair-lib-edit-${i}-${idx}`,
+              word: item.word || "",
+              imageUrl: item.imageUrl || undefined,
+              audioUrl: item.audioUrl || undefined,
+            }));
+            loadedRounds.push({
+              id: `round-${i + 1}`,
+              title: `Vòng ${i + 1}`,
+              pairs: roundPairs,
+            });
+          });
+          setRounds(loadedRounds);
+          setActiveRoundIndex(0);
+        }
+      } else {
+        handleImportFromLibrary(setObj, "replace");
+        toast.success(`Đã nạp bộ câu hỏi "${setObj.name}" từ My Library!`);
+      }
+      setIsLoadingTopic(false);
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const cachedRaw = sessionStorage.getItem(`cached_library_set_${targetSetId}`);
+        if (cachedRaw) {
+          const parsed = JSON.parse(cachedRaw) as LibrarySetItem;
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+            applyLoadedSet(parsed);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     setIsLoadingTopic(true);
     getTeacherLibrarySetByIdAction(targetSetId).then((res) => {
       if (!active) return;
       if (res.success && res.set) {
-        if (editLibrarySetId) {
-          setTitle(res.set.name || "");
-          if (res.set.audioMode) {
-            setAudioMode(res.set.audioMode as AudioMode);
-          }
-          const items = res.set.items || [];
-          if (items.length > 0) {
-            const roundsMap: Record<number, typeof items> = {};
-            items.forEach((item) => {
-              const rIdx = item.roundIndex ?? 0;
-              if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
-              roundsMap[rIdx].push(item);
-            });
-            const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
-            const loadedRounds: GameRound[] = [];
-            roundIndices.forEach((rIdx, i) => {
-              const roundItems = roundsMap[rIdx];
-              const roundPairs: CardPair[] = roundItems.map((item, idx) => ({
-                id: item.id || `pair-lib-edit-${i}-${idx}`,
-                word: item.word || "",
-                imageUrl: item.imageUrl || undefined,
-                audioUrl: item.audioUrl || undefined,
-              }));
-              loadedRounds.push({
-                id: `round-${i + 1}`,
-                title: `Vòng ${i + 1}`,
-                pairs: roundPairs,
-              });
-            });
-            setRounds(loadedRounds);
-            setActiveRoundIndex(0);
-          }
-        } else {
-          handleImportFromLibrary(res.set, "replace");
-          toast.success(`Đã nạp bộ câu hỏi "${res.set.name}" từ My Library!`);
-        }
+        applyLoadedSet(res.set);
+      } else {
+        setIsLoadingTopic(false);
       }
-      setIsLoadingTopic(false);
     });
     return () => {
       active = false;
@@ -907,7 +927,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
       e.preventDefault();
       setShowExitConfirmModal(true);
     } else {
-      router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
+      router.push((editLibrarySetId || librarySetId) ? `/teacher?tab=${returnTab}` : "/teacher");
     }
   };
 
@@ -994,15 +1014,22 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
       }
     }
 
-    // Verification 4: Check for duplicate words across all rounds
-    const allPairs = rounds.flatMap((r, rIdx) => r.pairs.map(p => ({ ...p, roundIndex: rIdx })));
-    const wordList = allPairs.map(p => p.word.trim().toLowerCase());
-    const duplicateWord = wordList.find((w, idx) => wordList.indexOf(w) !== idx);
-    if (duplicateWord) {
-      const originalWord = allPairs.find(p => p.word.trim().toLowerCase() === duplicateWord)?.word.trim();
-      setValidationModalMessage(`Từ vựng "${originalWord}" đang bị trùng lặp. Vui lòng đổi tên các từ vựng khác nhau!`);
-      return;
+    // Verification 4: Check for duplicate words within the same round (repeating across different rounds is allowed)
+    for (let rIdx = 0; rIdx < rounds.length; rIdx++) {
+      const r = rounds[rIdx];
+      const wordList = r.pairs.map(p => p.word.trim().toLowerCase());
+      const duplicateWord = wordList.find((w, idx) => w && wordList.indexOf(w) !== idx);
+      if (duplicateWord) {
+        setActiveRoundIndex(rIdx);
+        const originalWord = r.pairs.find(p => p.word.trim().toLowerCase() === duplicateWord)?.word.trim();
+        setValidationModalMessage(
+          `Tại Vòng ${rIdx + 1}, từ vựng "${originalWord}" đang bị trùng lặp! Trong cùng 1 vòng vui lòng nhập các từ khác nhau (bạn có thể lặp lại từ ở các vòng khác).`
+        );
+        return;
+      }
     }
+
+    const allPairs = rounds.flatMap((r, rIdx) => r.pairs.map(p => ({ ...p, roundIndex: rIdx })));
 
     setIsSaving(true);
     const loadingMessage = 
@@ -1098,6 +1125,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
           try {
             sessionStorage.removeItem("cached_teacher_library_match");
             sessionStorage.removeItem("cached_teacher_library_flip");
+            sessionStorage.removeItem(`cached_library_set_${editLibrarySetId}`);
           } catch (e) {}
         }
 
@@ -1315,7 +1343,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 <button
                   type="button"
                   onClick={() => setAudioMode("AUTO_TTS")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`relative group px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "AUTO_TTS"
                       ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -1323,11 +1351,20 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 >
                   <Wand2 className="w-3.5 h-3.5 text-amber-500" />
                   <span>Hệ thống tự đọc</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-left shadow-xl border border-slate-700/60 opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-150 z-50">
+                    <span className="block text-[11px] font-extrabold text-amber-300 mb-0.5">
+                      Hệ thống tự phát âm (AI)
+                    </span>
+                    <span className="block text-[11px] font-medium text-slate-200 leading-relaxed whitespace-normal">
+                      Tự động đọc to từ/cụm từ tiếng Anh bằng giọng chuẩn khi học sinh lật hoặc ghép thẻ, không cần tải file âm thanh.
+                    </span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAudioMode("CUSTOM_FILE")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`relative group px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "CUSTOM_FILE"
                       ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -1335,11 +1372,20 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 >
                   <Volume2 className="w-3.5 h-3.5 text-sky-500" />
                   <span>Tải lên Audio</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-left shadow-xl border border-slate-700/60 opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-150 z-50">
+                    <span className="block text-[11px] font-extrabold text-sky-300 mb-0.5">
+                      Tự tải file âm thanh
+                    </span>
+                    <span className="block text-[11px] font-medium text-slate-200 leading-relaxed whitespace-normal">
+                      Cho phép bạn tự tải lên file thu âm giọng đọc hoặc âm thanh riêng (MP3/WAV) cho từng thẻ.
+                    </span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setAudioMode("NONE")}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`relative group px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     audioMode === "NONE"
                       ? "bg-white dark:bg-slate-700 text-purple-700 dark:text-purple-300 shadow-sm"
                       : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -1347,6 +1393,15 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 >
                   <VolumeX className="w-3.5 h-3.5 text-slate-400" />
                   <span>Không đọc</span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-64 p-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-950 text-white text-left shadow-xl border border-slate-700/60 opacity-0 scale-95 translate-y-1 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-150 z-50">
+                    <span className="block text-[11px] font-extrabold text-slate-300 mb-0.5">
+                      Tắt giọng đọc thẻ
+                    </span>
+                    <span className="block text-[11px] font-medium text-slate-200 leading-relaxed whitespace-normal">
+                      Thẻ chỉ hiển thị hình ảnh và chữ, không phát giọng đọc từ vựng khi học sinh bấm vào.
+                    </span>
+                    <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900/95 dark:border-t-slate-950" />
+                  </span>
                 </button>
               </div>
 
@@ -1974,7 +2029,7 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                 type="button"
                 onClick={() => {
                   setShowExitConfirmModal(false);
-                  router.push(editLibrarySetId ? `/teacher?tab=${returnTab}` : "/teacher");
+                  router.push((editLibrarySetId || librarySetId) ? `/teacher?tab=${returnTab}` : "/teacher");
                 }}
                 className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-black text-xs rounded-2xl shadow-lg shadow-rose-500/20 active:scale-95 transition-all cursor-pointer"
               >
