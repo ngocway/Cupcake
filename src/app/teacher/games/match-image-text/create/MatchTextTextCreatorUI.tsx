@@ -29,7 +29,7 @@ import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessM
 import { uploadMedia } from "@/actions/upload-actions";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
-import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction } from "@/actions/teacher-library-actions";
+import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction, LibrarySetItem } from "@/actions/teacher-library-actions";
 
 export type AudioMode = "NONE" | "AUTO_TTS" | "CUSTOM_FILE";
 
