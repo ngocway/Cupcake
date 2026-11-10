@@ -191,11 +191,11 @@ export function TeacherDashboardClient({
             }
           });
         }
-        if (!sessionStorage.getItem("cached_global_success_sets")) {
+        if (!sessionStorage.getItem("cached_global_success_sets_v2")) {
           getGlobalSuccessLibrarySetsAction().then((res) => {
             if (res.success && Array.isArray(res.sets)) {
               try {
-                sessionStorage.setItem("cached_global_success_sets", JSON.stringify(res.sets));
+                sessionStorage.setItem("cached_global_success_sets_v2", JSON.stringify(res.sets));
               } catch {}
             }
           });

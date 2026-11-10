@@ -302,7 +302,7 @@ export function parseGlobalSuccessSet(item: LibrarySetItem): ParsedGlobalSet {
   };
 }
 
-const CACHE_KEY = "cached_global_success_sets";
+const CACHE_KEY = "cached_global_success_sets_v2";
 
 export function GlobalSuccessLibraryList() {
   const { t, locale } = useTeacherLocale();
