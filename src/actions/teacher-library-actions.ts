@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
+import { formatLibraryItemCase } from "@/lib/text-case";
 
 export type LibraryCategory = "match" | "choice" | "flip" | "quiz";
 export type LibrarySubType = "image-text" | "image-image" | "text-text" | "quiz" | "choice";
@@ -165,7 +166,7 @@ export async function syncSetToTeacherLibrary(params: {
       },
       include: {
         items: {
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
         },
       },
     });
@@ -351,7 +352,7 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
         },
         items: {
           take: 4,
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
           select: {
             id: true,
             roundIndex: true,
@@ -401,7 +402,7 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
         gameMode: true,
         items: {
           take: 4,
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
           select: {
             word: true,
             imageUrl: true,
@@ -459,16 +460,18 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
         createdAt: t.createdAt.toISOString(),
         updatedAt: t.updatedAt.toISOString(),
         isLibraryRecord: isLibRecord,
-        items: t.items.map((item) => ({
-          id: item.id,
-          roundIndex: item.roundIndex ?? 0,
-          word: item.word,
-          imageUrl: item.imageUrl,
-          audioUrl: null,
-          imageBUrl: item.imageBUrl,
-          labelB: item.labelB,
-          audioBUrl: null,
-        })),
+        items: t.items.map((item) =>
+          formatLibraryItemCase({
+            id: item.id,
+            roundIndex: item.roundIndex ?? 0,
+            word: item.word,
+            imageUrl: item.imageUrl,
+            audioUrl: null,
+            imageBUrl: item.imageBUrl,
+            labelB: item.labelB,
+            audioBUrl: null,
+          })
+        ),
       });
     }
 
@@ -528,7 +531,7 @@ export async function getGlobalSuccessLibrarySetsAction() {
         },
         items: {
           take: 4,
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
           select: {
             id: true,
             roundIndex: true,
@@ -565,16 +568,18 @@ export async function getGlobalSuccessLibrarySetsAction() {
         createdAt: t.createdAt.toISOString(),
         updatedAt: t.updatedAt.toISOString(),
         isLibraryRecord: true,
-        items: t.items.map((item) => ({
-          id: item.id,
-          roundIndex: item.roundIndex ?? 0,
-          word: item.word,
-          imageUrl: item.imageUrl,
-          audioUrl: null,
-          imageBUrl: item.imageBUrl,
-          labelB: item.labelB,
-          audioBUrl: null,
-        })),
+        items: t.items.map((item) =>
+          formatLibraryItemCase({
+            id: item.id,
+            roundIndex: item.roundIndex ?? 0,
+            word: item.word,
+            imageUrl: item.imageUrl,
+            audioUrl: null,
+            imageBUrl: item.imageBUrl,
+            labelB: item.labelB,
+            audioBUrl: null,
+          })
+        ),
       });
     }
 
@@ -594,7 +599,7 @@ export async function getTeacherLibrarySetByIdAction(setId: string) {
       where: { id: setId },
       include: {
         game: { select: { name: true } },
-        items: { orderBy: { createdAt: "asc" } },
+        items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] },
       },
     });
 
@@ -617,16 +622,18 @@ export async function getTeacherLibrarySetByIdAction(setId: string) {
       createdAt: topic.createdAt.toISOString(),
       updatedAt: topic.updatedAt.toISOString(),
       isLibraryRecord: ALL_LIBRARY_GAME_MODES.includes(topic.gameMode || ""),
-      items: topic.items.map((item) => ({
-        id: item.id,
-        roundIndex: item.roundIndex ?? 0,
-        word: item.word,
-        imageUrl: item.imageUrl,
-        audioUrl: item.audioUrl,
-        imageBUrl: item.imageBUrl,
-        labelB: item.labelB,
-        audioBUrl: item.audioBUrl,
-      })),
+      items: topic.items.map((item) =>
+        formatLibraryItemCase({
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          audioUrl: item.audioUrl,
+          imageBUrl: item.imageBUrl,
+          labelB: item.labelB,
+          audioBUrl: item.audioBUrl,
+        })
+      ),
     };
 
     return { success: true, set: setItem };
@@ -660,7 +667,7 @@ export async function renameTeacherLibrarySetAction(setId: string, newName: stri
         : { id: setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
       include: {
         game: { select: { name: true } },
-        items: { orderBy: { createdAt: "asc" } },
+        items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] },
       },
     });
 
@@ -793,7 +800,7 @@ export async function duplicateTeacherLibrarySetAction(setId: string, copySuffix
         : { id: setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
       include: {
         game: { select: { name: true } },
-        items: { orderBy: { createdAt: "asc" } },
+        items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] },
       },
     });
 
@@ -851,7 +858,7 @@ export async function duplicateTeacherLibrarySetAction(setId: string, copySuffix
 
       return tx.matchWordTopic.findUnique({
         where: { id: newTopic.id },
-        include: { items: { orderBy: { createdAt: "asc" } } },
+        include: { items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] } },
       });
     });
 
@@ -872,16 +879,18 @@ export async function duplicateTeacherLibrarySetAction(setId: string, copySuffix
       createdAt: createdTopic.createdAt.toISOString(),
       updatedAt: createdTopic.updatedAt.toISOString(),
       isLibraryRecord: true,
-      items: createdTopic.items.map((item) => ({
-        id: item.id,
-        roundIndex: item.roundIndex ?? 0,
-        word: item.word,
-        imageUrl: item.imageUrl,
-        audioUrl: item.audioUrl,
-        imageBUrl: item.imageBUrl,
-        labelB: item.labelB,
-        audioBUrl: item.audioBUrl,
-      })),
+      items: createdTopic.items.map((item) =>
+        formatLibraryItemCase({
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          audioUrl: item.audioUrl,
+          imageBUrl: item.imageBUrl,
+          labelB: item.labelB,
+          audioBUrl: item.audioBUrl,
+        })
+      ),
     };
 
     revalidatePath("/teacher");
@@ -933,7 +942,7 @@ export async function updateTeacherLibrarySetAction(payload: {
         : { id: payload.setId, OR: [{ teacherId: session.user.id }, { teacherId: null }] },
       include: {
         game: { select: { name: true } },
-        items: { orderBy: { createdAt: "asc" } },
+        items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] },
       },
     });
 
@@ -981,7 +990,7 @@ export async function updateTeacherLibrarySetAction(payload: {
           where: { id: topic.id },
           include: {
             game: { select: { name: true } },
-            items: { orderBy: { createdAt: "asc" } },
+            items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] },
           },
         });
       } else {
@@ -1019,7 +1028,7 @@ export async function updateTeacherLibrarySetAction(payload: {
           where: { id: newLibTopic.id },
           include: {
             game: { select: { name: true } },
-            items: { orderBy: { createdAt: "asc" } },
+            items: { orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }] },
           },
         });
       }
@@ -1042,16 +1051,18 @@ export async function updateTeacherLibrarySetAction(payload: {
       createdAt: updatedTopic.createdAt.toISOString(),
       updatedAt: updatedTopic.updatedAt.toISOString(),
       isLibraryRecord: ALL_LIBRARY_GAME_MODES.includes(updatedTopic.gameMode || ""),
-      items: updatedTopic.items.map((item) => ({
-        id: item.id,
-        roundIndex: item.roundIndex ?? 0,
-        word: item.word,
-        imageUrl: item.imageUrl,
-        audioUrl: item.audioUrl,
-        imageBUrl: item.imageBUrl,
-        labelB: item.labelB,
-        audioBUrl: item.audioBUrl,
-      })),
+      items: updatedTopic.items.map((item) =>
+        formatLibraryItemCase({
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          audioUrl: item.audioUrl,
+          imageBUrl: item.imageBUrl,
+          labelB: item.labelB,
+          audioBUrl: item.audioBUrl,
+        })
+      ),
     };
 
     revalidatePath("/teacher");

@@ -1169,12 +1169,41 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
             </div>
 
             {/* Question Box */}
-            <div className="pointer-events-auto flex-1 max-w-2xl glass-panel rounded-3xl p-4 text-center border-t-4 border-t-cyan-400 relative overflow-hidden flex items-center justify-center min-h-[70px]">
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-cyan-500/10 to-transparent pointer-events-none" />
-              <p className="text-white text-2xl md:text-4xl font-black text-glow tracking-wide flex items-center justify-center font-sci-fi">
-                {typewriterText}
-              </p>
-            </div>
+            {(() => {
+              const currentImg = questions[qIndex]?.imageUrl?.trim();
+              const isImgUrl =
+                Boolean(currentImg) &&
+                (currentImg!.startsWith("/") ||
+                  currentImg!.startsWith("http") ||
+                  currentImg!.startsWith("data:"));
+              return (
+                <div className="pointer-events-auto flex-1 max-w-3xl glass-panel rounded-3xl p-3 md:p-4 text-center border-t-4 border-t-cyan-400 relative overflow-hidden flex items-center justify-center gap-3 md:gap-4 min-h-[70px]">
+                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-cyan-500/10 to-transparent pointer-events-none" />
+                  {currentImg &&
+                    (isImgUrl ? (
+                      <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl bg-white p-1.5 border-2 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.6)] shrink-0 flex items-center justify-center overflow-hidden relative z-10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={currentImg}
+                          alt="Question illustration"
+                          className="w-full h-full object-contain pointer-events-none select-none"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-cyan-950/90 border-2 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.5)] shrink-0 flex items-center justify-center text-3xl md:text-5xl relative z-10">
+                        {currentImg}
+                      </div>
+                    ))}
+                  <p
+                    className={`text-white ${
+                      currentImg ? "text-lg md:text-2xl text-left" : "text-2xl md:text-4xl text-center"
+                    } font-black text-glow tracking-wide flex items-center justify-center font-sci-fi relative z-10`}
+                  >
+                    {typewriterText}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Controls: Sound Toggle & Exit */}
             <div className="pointer-events-auto flex items-center gap-2"> <TeacherLocaleSwitch />

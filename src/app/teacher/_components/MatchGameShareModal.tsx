@@ -44,19 +44,37 @@ export function MatchGameShareModal({
   const [selectedOptionId, setSelectedOptionId] = useState<string>(
     () => gameOptions?.[0]?.id || ""
   );
+  const lastTopicIdRef = useRef<string>("");
   const downloadCanvasRef = useRef<HTMLCanvasElement>(null);
   const { locale, t } = useTeacherLocale();
 
   useEffect(() => {
-    if (isOpen && gameOptions && gameOptions.length > 0) {
-      setSelectedOptionId(gameOptions[0].id);
+    if (isOpen && topicId !== lastTopicIdRef.current) {
+      lastTopicIdRef.current = topicId;
+      if (gameOptions && gameOptions.length > 0) {
+        let initialId = gameOptions[0].id;
+        if (typeof window !== "undefined") {
+          try {
+            const saved = sessionStorage.getItem(`share_modal_opt_${topicId}`);
+            if (saved && gameOptions.some((o) => o.id === saved)) {
+              initialId = saved;
+            }
+          } catch {}
+        }
+        setSelectedOptionId(initialId);
+      }
+    } else if (!isOpen) {
+      lastTopicIdRef.current = "";
     }
-  }, [isOpen, topicId, gameOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, topicId]);
 
-  const activeGamePath =
-    (gameOptions &&
-      gameOptions.find((opt) => opt.id === selectedOptionId)?.gamePath) ||
-    gamePath;
+  const selectedOption =
+    gameOptions && gameOptions.length > 0
+      ? gameOptions.find((opt) => opt.id === selectedOptionId) || gameOptions[0]
+      : undefined;
+
+  const activeGamePath = selectedOption?.gamePath || gamePath;
 
   const rawBase = activeGamePath.includes("topicId=")
     ? activeGamePath
@@ -169,8 +187,8 @@ export function MatchGameShareModal({
 
           {/* Modal Content */}
           <div className="p-6 flex flex-col items-center text-center space-y-4">
-            {/* Optional Game Mode Switcher (for Global Success instant play) */}
-            {gameOptions && gameOptions.length > 0 && (
+            {/* Optional Game Mode Switcher (only shown when > 1 game format available) */}
+            {gameOptions && gameOptions.length > 1 && (
               <div className="w-full space-y-1.5 text-left">
                 <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 text-center">
                   {locale === "vi"
@@ -179,7 +197,7 @@ export function MatchGameShareModal({
                 </p>
                 <div className="flex items-center justify-center gap-1.5 flex-wrap bg-slate-50 dark:bg-slate-800/70 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700">
                   {gameOptions.map((opt) => {
-                    const isSelected = opt.id === selectedOptionId;
+                    const isSelected = (selectedOption?.id || selectedOptionId) === opt.id;
                     return (
                       <button
                         key={opt.id}
@@ -187,10 +205,15 @@ export function MatchGameShareModal({
                         onClick={() => {
                           setSelectedOptionId(opt.id);
                           setCopied(false);
+                          if (typeof window !== "undefined") {
+                            try {
+                              sessionStorage.setItem(`share_modal_opt_${topicId}`, opt.id);
+                            } catch {}
+                          }
                         }}
                         className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
                           isSelected
-                            ? "bg-purple-600 text-white shadow-xs"
+                            ? "bg-purple-600 text-white shadow-xs ring-2 ring-purple-300/60"
                             : "text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"
                         }`}
                       >
@@ -203,7 +226,12 @@ export function MatchGameShareModal({
             )}
 
             {/* QR Code Container */}
-            <div className="bg-white p-4 rounded-3xl border-2 border-purple-100 dark:border-purple-950 shadow-xl shadow-purple-500/5 relative group">
+            <div className="bg-white p-4 rounded-3xl border-2 border-purple-100 dark:border-purple-950 shadow-xl shadow-purple-500/5 relative group flex flex-col items-center gap-2">
+              {selectedOption && gameOptions && gameOptions.length > 1 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-black tracking-wide">
+                  {locale === "vi" ? selectedOption.labelVi : selectedOption.labelEn}
+                </span>
+              )}
               <QRCodeCanvas
                 value={gameUrl}
                 size={210}
@@ -264,15 +292,29 @@ export function MatchGameShareModal({
                 <span>{t.common.downloadQr}</span>
               </button>
 
-              <a
-                href={gameUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-4 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-2xl shadow-md shadow-sky-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackEvent("teacher_my_game_action", {
+                    action: "preview_from_share_modal",
+                    gameTitle: topicName,
+                    gameId: topicId,
+                  });
+                  const previewUrl = `${gameUrl}${gameUrl.includes("?") ? "&" : "?"}preview=1`;
+                  window.open(previewUrl, "_blank", "noopener,noreferrer");
+                }}
+                className="w-full py-2.5 px-3 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-2xl shadow-md shadow-sky-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer truncate"
               >
-                <ExternalLink className="w-4 h-4" />
-                <span>{t.common.openGame}</span>
-              </a>
+                <ExternalLink className="w-4 h-4 shrink-0" />
+                <span className="truncate">
+                  {selectedOption && gameOptions && gameOptions.length > 1
+                    ? `${locale === "vi" ? "Xem" : "Preview"}: ${
+                        locale === "vi" ? selectedOption.labelVi : selectedOption.labelEn
+                      }`
+                    : t.common.openGame}
+                </span>
+              </button>
             </div>
           </div>
         </div>

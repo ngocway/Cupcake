@@ -59,34 +59,10 @@ function getShareableGameOptionsForSubType(subType: LibrarySubType): ShareableGa
         gamePath: "/student/game/train",
       },
       {
-        id: "match-image-text",
-        labelVi: "🧩 Nối Thẻ",
-        labelEn: "🧩 Match Cards",
-        gamePath: "/student/game/flashcard-match",
-      },
-      {
-        id: "line-image-text",
-        labelVi: "🔗 Nối Dây",
-        labelEn: "🔗 Line Match",
-        gamePath: "/student/game/match-text-text",
-      },
-      {
-        id: "cut-rope-image-text",
-        labelVi: "✂️ Cắt Dây",
-        labelEn: "✂️ Cut Rope",
-        gamePath: "/student/game/cut-rope",
-      },
-      {
         id: "conveyor-drop",
         labelVi: "📦 Băng Chuyền",
         labelEn: "📦 Conveyor",
         gamePath: "/student/game/conveyor-drop",
-      },
-      {
-        id: "flip-image-text",
-        labelVi: "🃏 Lật Thẻ",
-        labelEn: "🃏 Flip Cards",
-        gamePath: "/student/game/flip-image-text",
       },
     ];
   }
@@ -302,14 +278,35 @@ export function parseGlobalSuccessSet(item: LibrarySetItem): ParsedGlobalSet {
   };
 }
 
-const CACHE_KEY = "cached_global_success_sets_v2";
+const CACHE_KEY = "cached_global_success_sets_v10";
+const UI_STATE_KEY = "global_success_ui_state_v2";
+let memoryCachedGlobalSets: LibrarySetItem[] | null = null;
+
+function readInitialCachedSets(): LibrarySetItem[] {
+  if (memoryCachedGlobalSets && memoryCachedGlobalSets.length > 0) {
+    return memoryCachedGlobalSets;
+  }
+  if (typeof window === "undefined") return [];
+  try {
+    const raw =
+      localStorage.getItem(CACHE_KEY) || sessionStorage.getItem(CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryCachedGlobalSets = parsed;
+        return parsed;
+      }
+    }
+  } catch {}
+  return [];
+}
 
 export function GlobalSuccessLibraryList() {
   const { t, locale } = useTeacherLocale();
   const router = useRouter();
 
   const [sets, setSets] = useState<LibrarySetItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedUnitKey, setSelectedUnitKey] = useState<string>("all");
   const [subTypeFilter, setSubTypeFilter] = useState<LibrarySubType | "all">("all");
@@ -318,6 +315,8 @@ export function GlobalSuccessLibraryList() {
   const [pickerSet, setPickerSet] = useState<LibrarySetItem | null>(null);
   const [viewingSet, setViewingSet] = useState<LibrarySetItem | null>(null);
   const [sharingSet, setSharingSet] = useState<LibrarySetItem | null>(null);
+  const hasRestoredUiRef = useRef(false);
+  const pendingShareIdRef = useRef<string | null>(null);
   const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
   const [customizingId, setCustomizingId] = useState<string | null>(null);
   const [transitionModal, setTransitionModal] = useState<{
@@ -363,33 +362,59 @@ export function GlobalSuccessLibraryList() {
 
   useEffect(() => {
     let active = true;
-    let hasCached = false;
+    const cached = readInitialCachedSets();
 
-    if (typeof window !== "undefined") {
-      try {
-        const cached = sessionStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setSets(parsed);
-            setLoading(false);
-            hasCached = true;
+    // Hydrate saved Grade/Unit/Filter/Share modal strictly inside useEffect (post-hydration)
+    try {
+      const rawUi = sessionStorage.getItem(UI_STATE_KEY);
+      if (rawUi) {
+        const parsedUi = JSON.parse(rawUi);
+        if (typeof parsedUi.selectedGrade === "number") {
+          setSelectedGrade(parsedUi.selectedGrade);
+        }
+        if (typeof parsedUi.selectedUnitKey === "string") {
+          setSelectedUnitKey(parsedUi.selectedUnitKey);
+        }
+        if (
+          parsedUi.subTypeFilter === "image-text" ||
+          parsedUi.subTypeFilter === "text-text" ||
+          parsedUi.subTypeFilter === "quiz" ||
+          parsedUi.subTypeFilter === "all"
+        ) {
+          setSubTypeFilter(parsedUi.subTypeFilter);
+        }
+        if (typeof parsedUi.sharingSetId === "string" && parsedUi.sharingSetId) {
+          pendingShareIdRef.current = parsedUi.sharingSetId;
+          if (cached.length > 0) {
+            const matched = cached.find((s) => s.id === parsedUi.sharingSetId);
+            if (matched) setSharingSet(matched);
           }
         }
-      } catch {}
-    }
+      }
+    } catch {}
+    hasRestoredUiRef.current = true;
 
-    if (!hasCached) {
+    if (cached.length > 0) {
+      setSets(cached);
+      setLoading(false);
+    } else {
       setLoading(true);
     }
 
     getGlobalSuccessLibrarySetsAction().then((res) => {
       if (!active) return;
       if (res.success && Array.isArray(res.sets)) {
+        memoryCachedGlobalSets = res.sets;
         setSets(res.sets);
+        if (pendingShareIdRef.current) {
+          const matched = res.sets.find((s) => s.id === pendingShareIdRef.current);
+          if (matched) setSharingSet(matched);
+        }
         if (typeof window !== "undefined") {
           try {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify(res.sets));
+            const serialized = JSON.stringify(res.sets);
+            localStorage.setItem(CACHE_KEY, serialized);
+            sessionStorage.setItem(CACHE_KEY, serialized);
           } catch {}
         }
       }
@@ -400,6 +425,24 @@ export function GlobalSuccessLibraryList() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!hasRestoredUiRef.current || typeof window === "undefined") return;
+    if (sharingSet) {
+      pendingShareIdRef.current = sharingSet.id;
+    }
+    try {
+      sessionStorage.setItem(
+        UI_STATE_KEY,
+        JSON.stringify({
+          selectedGrade,
+          selectedUnitKey,
+          subTypeFilter,
+          sharingSetId: sharingSet ? sharingSet.id : pendingShareIdRef.current,
+        })
+      );
+    } catch {}
+  }, [selectedGrade, selectedUnitKey, subTypeFilter, sharingSet]);
 
   const parsedSets = useMemo(() => sets.map(parseGlobalSuccessSet), [sets]);
 
@@ -505,32 +548,199 @@ export function GlobalSuccessLibraryList() {
     return Array.from(map.values()).sort((a, b) => a.unitNumber - b.unitNumber);
   }, [filteredSets]);
 
-  const getSubTypeBadge = (subType: LibrarySubType) => {
+  const getGradePastelTheme = (grade: number, hasData: boolean) => {
+    const palettes: Record<
+      number,
+      {
+        cardCls: string;
+        iconCls: string;
+        titleHover: string;
+        soonBadgeCls: string;
+      }
+    > = {
+      1: {
+        cardCls:
+          "bg-gradient-to-br from-amber-50/95 via-amber-50/60 to-orange-100/65 border-amber-300/90 hover:border-amber-500 dark:from-amber-950/40 dark:via-slate-800/60 dark:to-orange-950/30 dark:border-amber-800/70",
+        iconCls: "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-amber-700 dark:group-hover:text-amber-400",
+        soonBadgeCls: "bg-white/90 text-amber-700 border border-amber-200/80",
+      },
+      2: {
+        cardCls:
+          "bg-gradient-to-br from-sky-50/95 via-sky-50/60 to-blue-100/65 border-sky-200/90 hover:border-sky-400 dark:from-sky-950/40 dark:via-slate-800/60 dark:to-blue-950/30 dark:border-sky-800/70",
+        iconCls: "bg-gradient-to-br from-sky-500 to-blue-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-sky-700 dark:group-hover:text-sky-400",
+        soonBadgeCls: "bg-white/90 text-sky-700 border border-sky-200/80",
+      },
+      3: {
+        cardCls:
+          "bg-gradient-to-br from-emerald-50/95 via-emerald-50/60 to-teal-100/65 border-emerald-300/90 hover:border-emerald-500 dark:from-emerald-950/40 dark:via-slate-800/60 dark:to-teal-950/30 dark:border-emerald-800/70",
+        iconCls: "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-emerald-700 dark:group-hover:text-emerald-400",
+        soonBadgeCls: "bg-white/90 text-emerald-700 border border-emerald-200/80",
+      },
+      4: {
+        cardCls:
+          "bg-gradient-to-br from-indigo-50/95 via-indigo-50/60 to-violet-100/65 border-indigo-200/90 hover:border-indigo-400 dark:from-indigo-950/40 dark:via-slate-800/60 dark:to-violet-950/30 dark:border-indigo-800/70",
+        iconCls: "bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-indigo-700 dark:group-hover:text-indigo-400",
+        soonBadgeCls: "bg-white/90 text-indigo-700 border border-indigo-200/80",
+      },
+      5: {
+        cardCls:
+          "bg-gradient-to-br from-rose-50/95 via-rose-50/60 to-pink-100/65 border-rose-200/90 hover:border-rose-400 dark:from-rose-950/40 dark:via-slate-800/60 dark:to-pink-950/30 dark:border-rose-800/70",
+        iconCls: "bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-rose-700 dark:group-hover:text-rose-400",
+        soonBadgeCls: "bg-white/90 text-rose-700 border border-rose-200/80",
+      },
+      6: {
+        cardCls:
+          "bg-gradient-to-br from-cyan-50/95 via-cyan-50/60 to-sky-100/65 border-cyan-200/90 hover:border-cyan-400 dark:from-cyan-950/40 dark:via-slate-800/60 dark:to-sky-950/30 dark:border-cyan-800/70",
+        iconCls: "bg-gradient-to-br from-cyan-500 to-sky-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-cyan-700 dark:group-hover:text-cyan-400",
+        soonBadgeCls: "bg-white/90 text-cyan-700 border border-cyan-200/80",
+      },
+      7: {
+        cardCls:
+          "bg-gradient-to-br from-purple-50/95 via-purple-50/60 to-fuchsia-100/65 border-purple-200/90 hover:border-purple-400 dark:from-purple-950/40 dark:via-slate-800/60 dark:to-fuchsia-950/30 dark:border-purple-800/70",
+        iconCls: "bg-gradient-to-br from-purple-500 to-fuchsia-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-purple-700 dark:group-hover:text-purple-400",
+        soonBadgeCls: "bg-white/90 text-purple-700 border border-purple-200/80",
+      },
+      8: {
+        cardCls:
+          "bg-gradient-to-br from-teal-50/95 via-teal-50/60 to-emerald-100/65 border-teal-200/90 hover:border-teal-400 dark:from-teal-950/40 dark:via-slate-800/60 dark:to-emerald-950/30 dark:border-teal-800/70",
+        iconCls: "bg-gradient-to-br from-teal-500 to-emerald-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-teal-700 dark:group-hover:text-teal-400",
+        soonBadgeCls: "bg-white/90 text-teal-700 border border-teal-200/80",
+      },
+      9: {
+        cardCls:
+          "bg-gradient-to-br from-orange-50/95 via-orange-50/60 to-amber-100/65 border-orange-200/90 hover:border-orange-400 dark:from-orange-950/40 dark:via-slate-800/60 dark:to-amber-950/30 dark:border-orange-800/70",
+        iconCls: "bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-orange-700 dark:group-hover:text-orange-400",
+        soonBadgeCls: "bg-white/90 text-orange-700 border border-orange-200/80",
+      },
+      10: {
+        cardCls:
+          "bg-gradient-to-br from-blue-50/95 via-blue-50/60 to-indigo-100/65 border-blue-200/90 hover:border-blue-400 dark:from-blue-950/40 dark:via-slate-800/60 dark:to-indigo-950/30 dark:border-blue-800/70",
+        iconCls: "bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-blue-700 dark:group-hover:text-blue-400",
+        soonBadgeCls: "bg-white/90 text-blue-700 border border-blue-200/80",
+      },
+      11: {
+        cardCls:
+          "bg-gradient-to-br from-fuchsia-50/95 via-fuchsia-50/60 to-pink-100/65 border-fuchsia-200/90 hover:border-fuchsia-400 dark:from-fuchsia-950/40 dark:via-slate-800/60 dark:to-pink-950/30 dark:border-fuchsia-800/70",
+        iconCls: "bg-gradient-to-br from-fuchsia-500 to-pink-500 text-white shadow-2xs",
+        titleHover: "group-hover:text-fuchsia-700 dark:group-hover:text-fuchsia-400",
+        soonBadgeCls: "bg-white/90 text-fuchsia-700 border border-fuchsia-200/80",
+      },
+      12: {
+        cardCls:
+          "bg-gradient-to-br from-lime-50/95 via-emerald-50/60 to-teal-100/65 border-emerald-200/90 hover:border-emerald-400 dark:from-emerald-950/40 dark:via-slate-800/60 dark:to-teal-950/30 dark:border-emerald-800/70",
+        iconCls: "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-2xs",
+        titleHover: "group-hover:text-emerald-700 dark:group-hover:text-emerald-400",
+        soonBadgeCls: "bg-white/90 text-emerald-700 border border-emerald-200/80",
+      },
+    };
+    const theme = palettes[grade] || palettes[1];
+    return {
+      ...theme,
+      cardStateCls: hasData
+        ? `${theme.cardCls} shadow-xs hover:shadow-md hover:-translate-y-0.5`
+        : `${theme.cardCls} opacity-90 hover:opacity-100 shadow-2xs hover:shadow-xs`,
+    };
+  };
+
+  const getSubTypeBadge = (subType: LibrarySubType, shortTitle?: string) => {
+    const lowerTitle = (shortTitle || "").toLowerCase();
+    const isConversationOrSentence =
+      subType === "text-text" &&
+      (lowerTitle.includes("conversation") ||
+        lowerTitle.includes("sentence") ||
+        lowerTitle.includes("hội thoại") ||
+        lowerTitle.includes("mẫu câu"));
+
+    if (isConversationOrSentence) {
+      return {
+        label: t.library.textTextBadge,
+        cls: "bg-white/95 text-teal-700 border-teal-200 shadow-2xs",
+        cardBg:
+          "bg-gradient-to-br from-teal-50/95 via-teal-50/55 to-emerald-100/55 dark:from-teal-950/35 dark:via-slate-800/60 dark:to-emerald-950/30 border-teal-200/90 hover:border-teal-400 dark:border-teal-800/70 shadow-xs hover:shadow-md",
+        previewBorder:
+          "border-teal-200/80 dark:border-slate-700 group-hover/card:border-teal-300 shadow-2xs",
+        titleHover: "group-hover/card:text-teal-700 dark:group-hover/card:text-teal-400",
+        dividerBorder: "border-teal-200/60 dark:border-slate-700/70",
+        iconColor: "text-teal-600",
+        pairTextCls: "text-teal-600 dark:text-teal-400",
+      };
+    }
+
     switch (subType) {
       case "image-text":
         return {
           label: t.library.imageTextBadge,
-          cls: "bg-sky-50 text-sky-700 border-sky-200",
+          cls: "bg-white/95 text-sky-700 border-sky-200 shadow-2xs",
+          cardBg:
+            "bg-gradient-to-br from-sky-50/95 via-sky-50/55 to-blue-100/55 dark:from-sky-950/35 dark:via-slate-800/60 dark:to-blue-950/30 border-sky-200/90 hover:border-sky-400 dark:border-sky-800/70 shadow-xs hover:shadow-md",
+          previewBorder:
+            "border-sky-200/80 dark:border-slate-700 group-hover/card:border-sky-300 shadow-2xs",
+          titleHover: "group-hover/card:text-sky-700 dark:group-hover/card:text-sky-400",
+          dividerBorder: "border-sky-200/60 dark:border-slate-700/70",
+          iconColor: "text-sky-500",
+          pairTextCls: "text-sky-600 dark:text-sky-400",
         };
       case "image-image":
         return {
           label: t.library.imageImageBadge,
-          cls: "bg-purple-50 text-purple-700 border-purple-200",
+          cls: "bg-white/95 text-purple-700 border-purple-200 shadow-2xs",
+          cardBg:
+            "bg-gradient-to-br from-purple-50/95 via-purple-50/55 to-fuchsia-100/55 dark:from-purple-950/35 dark:via-slate-800/60 dark:to-fuchsia-950/30 border-purple-200/90 hover:border-purple-400 dark:border-purple-800/70 shadow-xs hover:shadow-md",
+          previewBorder:
+            "border-purple-200/80 dark:border-slate-700 group-hover/card:border-purple-300 shadow-2xs",
+          titleHover: "group-hover/card:text-purple-700 dark:group-hover/card:text-purple-400",
+          dividerBorder: "border-purple-200/60 dark:border-slate-700/70",
+          iconColor: "text-purple-500",
+          pairTextCls: "text-purple-600 dark:text-purple-400",
         };
       case "text-text":
         return {
           label: t.library.textTextBadge,
-          cls: "bg-indigo-50 text-indigo-700 border-indigo-200",
+          cls: "bg-white/95 text-indigo-700 border-indigo-200 shadow-2xs",
+          cardBg:
+            "bg-gradient-to-br from-indigo-50/95 via-indigo-50/55 to-violet-100/55 dark:from-indigo-950/35 dark:via-slate-800/60 dark:to-violet-950/30 border-indigo-200/90 hover:border-indigo-400 dark:border-indigo-800/70 shadow-xs hover:shadow-md",
+          previewBorder:
+            "border-indigo-200/80 dark:border-slate-700 group-hover/card:border-indigo-300 shadow-2xs",
+          titleHover: "group-hover/card:text-indigo-700 dark:group-hover/card:text-indigo-400",
+          dividerBorder: "border-indigo-200/60 dark:border-slate-700/70",
+          iconColor: "text-indigo-500",
+          pairTextCls: "text-indigo-600 dark:text-indigo-400",
         };
       case "quiz":
         return {
           label: t.library.quizBadge,
-          cls: "bg-amber-50 text-amber-700 border-amber-200",
+          cls: "bg-white/95 text-amber-700 border-amber-200 shadow-2xs",
+          cardBg:
+            "bg-gradient-to-br from-amber-50/95 via-amber-50/55 to-orange-100/55 dark:from-amber-950/35 dark:via-slate-800/60 dark:to-orange-950/30 border-amber-200/90 hover:border-amber-400 dark:border-amber-800/70 shadow-xs hover:shadow-md",
+          previewBorder:
+            "border-amber-200/80 dark:border-slate-700 group-hover/card:border-amber-300 shadow-2xs",
+          titleHover: "group-hover/card:text-amber-700 dark:group-hover/card:text-amber-400",
+          dividerBorder: "border-amber-200/60 dark:border-slate-700/70",
+          iconColor: "text-amber-500",
+          pairTextCls: "text-amber-600 dark:text-amber-400",
         };
       case "choice":
         return {
           label: t.library.choiceBadge,
-          cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+          cls: "bg-white/95 text-emerald-700 border-emerald-200 shadow-2xs",
+          cardBg:
+            "bg-gradient-to-br from-emerald-50/95 via-emerald-50/55 to-teal-100/55 dark:from-emerald-950/35 dark:via-slate-800/60 dark:to-teal-950/30 border-emerald-200/90 hover:border-emerald-400 dark:border-emerald-800/70 shadow-xs hover:shadow-md",
+          previewBorder:
+            "border-emerald-200/80 dark:border-slate-700 group-hover/card:border-emerald-300 shadow-2xs",
+          titleHover: "group-hover/card:text-emerald-700 dark:group-hover/card:text-emerald-400",
+          dividerBorder: "border-emerald-200/60 dark:border-slate-700/70",
+          iconColor: "text-emerald-500",
+          pairTextCls: "text-emerald-600 dark:text-emerald-400",
         };
     }
   };
@@ -640,15 +850,6 @@ export function GlobalSuccessLibraryList() {
     setPickerSet(setItem);
   };
 
-  if (loading) {
-    return (
-      <div className="w-full min-h-[360px] bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-amber-500/15 p-8 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin" />
-        <p className="text-sm font-bold text-slate-500">{t.library.loading}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5">
       {/* 1. UNIFIED SINGLE-BAR TOOLBAR: Labeled Step 1 Grade Box ➔ Step 2 Unit Box + Format Pills */}
@@ -744,17 +945,16 @@ export function GlobalSuccessLibraryList() {
                         const count = gradeCounts[grade] || 0;
                         const isSelected = selectedGrade === grade;
                         const hasData = count > 0;
+                        const gradeTheme = getGradePastelTheme(grade, hasData);
                         return (
                           <button
                             key={grade}
                             type="button"
                             onClick={() => handleSelectGrade(grade)}
-                            className={`px-2.5 py-2 rounded-xl font-headline font-black text-xs transition-all flex items-center justify-between gap-1 cursor-pointer border ${
+                            className={`px-2.5 py-2 rounded-[8px] font-headline font-black text-xs transition-all flex items-center justify-between gap-1 cursor-pointer border ${
                               isSelected
                                 ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-xs"
-                                : hasData
-                                ? "bg-amber-50/90 hover:bg-amber-100 text-amber-900 border-amber-200"
-                                : "bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 text-slate-400 border-slate-200/60 dark:border-slate-700"
+                                : `${gradeTheme.cardCls} text-slate-800 dark:text-white`
                             }`}
                           >
                             <span>
@@ -770,10 +970,12 @@ export function GlobalSuccessLibraryList() {
                               >
                                 {count}
                               </span>
+                            ) : loading && sets.length === 0 ? (
+                              <span className="w-6 h-3.5 rounded-full bg-white/70 animate-pulse inline-block" />
                             ) : (
                               <span
                                 className={`text-[9px] font-semibold ${
-                                  isSelected ? "text-amber-100" : "text-slate-400"
+                                  isSelected ? "text-amber-100" : "text-slate-500"
                                 }`}
                               >
                                 {locale === "vi" ? "Sắp có" : "Soon"}
@@ -1000,7 +1202,7 @@ export function GlobalSuccessLibraryList() {
 
       {/* 2. Content Area: Step 1 Grade Onboarding Gate OR Selected Grade Units */}
       {selectedGrade === null ? (
-        <div className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-amber-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[8px] border border-amber-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-xs space-y-6">
           {/* Guided 2-Step Onboarding Banner */}
           <div className="flex flex-col items-center text-center max-w-xl mx-auto space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/90 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[11px] font-extrabold uppercase tracking-wider">
@@ -1047,48 +1249,41 @@ export function GlobalSuccessLibraryList() {
                   {section.grades.map((grade) => {
                     const count = gradeCounts[grade] || 0;
                     const hasData = count > 0;
+                    const gradeTheme = getGradePastelTheme(grade, hasData);
                     return (
                       <button
                         key={grade}
                         type="button"
                         onClick={() => handleSelectGrade(grade)}
-                        className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2.5 cursor-pointer group ${
-                          hasData
-                            ? "bg-gradient-to-br from-amber-50 via-white to-orange-50/70 hover:from-amber-100/80 hover:to-orange-100/60 border-amber-300 hover:border-amber-500 shadow-xs hover:shadow-md"
-                            : "bg-slate-50/70 hover:bg-slate-100/80 dark:bg-slate-800/40 border-slate-200/70 dark:border-slate-700 opacity-75"
-                        }`}
+                        className={`p-3.5 rounded-[8px] border text-left transition-all flex flex-col justify-between gap-2.5 cursor-pointer group ${gradeTheme.cardStateCls}`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                              hasData
-                                ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-2xs"
-                                : "bg-slate-200/80 dark:bg-slate-700 text-slate-400"
-                            }`}
+                            className={`w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0 ${gradeTheme.iconCls}`}
                           >
                             <GraduationCap className="w-4 h-4" />
                           </div>
                           {hasData ? (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-extrabold">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-extrabold shadow-2xs">
                               {count} {locale === "vi" ? "bộ" : "sets"}
                             </span>
+                          ) : loading && sets.length === 0 ? (
+                            <span className="w-11 h-4 rounded-full bg-white/80 border border-white/60 animate-pulse inline-block" />
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700 text-slate-500 text-[10px] font-bold">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold shadow-2xs ${gradeTheme.soonBadgeCls}`}
+                            >
                               {locale === "vi" ? "Sắp có" : "Soon"}
                             </span>
                           )}
                         </div>
                         <div>
                           <div
-                            className={`font-headline font-black text-sm ${
-                              hasData
-                                ? "text-slate-900 dark:text-white group-hover:text-amber-700"
-                                : "text-slate-500"
-                            }`}
+                            className={`font-headline font-black text-sm text-slate-900 dark:text-white transition-colors ${gradeTheme.titleHover}`}
                           >
                             {t.library.gradeLabel} {grade}
                           </div>
-                          <div className="text-[11px] font-semibold text-slate-400">
+                          <div className="text-[11px] font-semibold text-slate-500/85 dark:text-slate-400">
                             Global Success
                           </div>
                         </div>
@@ -1099,6 +1294,11 @@ export function GlobalSuccessLibraryList() {
               </div>
             ))}
           </div>
+        </div>
+      ) : loading && setsForGrade.length === 0 ? (
+        <div className="w-full min-h-[280px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[8px] border border-amber-200/80 dark:border-slate-800 p-8 flex flex-col items-center justify-center gap-3">
+          <Loader2 className="w-9 h-9 text-amber-500 animate-spin" />
+          <p className="text-xs sm:text-sm font-bold text-slate-500">{t.library.loading}</p>
         </div>
       ) : setsForGrade.length === 0 ? (
         <div className="w-full min-h-[300px] bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-slate-200/70 dark:border-slate-800 p-8 flex flex-col items-center justify-center text-center space-y-4">
@@ -1132,7 +1332,7 @@ export function GlobalSuccessLibraryList() {
             {groupedUnits.map((unitGroup) => (
               <div
                 key={unitGroup.unitKey}
-                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-amber-200/70 dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4"
+                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[8px] border border-amber-200/70 dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4"
               >
                 {/* Unit Section Header */}
                 <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -1152,7 +1352,7 @@ export function GlobalSuccessLibraryList() {
                 {/* Cards Grid for this Unit (3 items / row on desktop) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {unitGroup.items.map(({ raw: setItem, shortTitle }) => {
-                    const badge = getSubTypeBadge(setItem.subType);
+                    const badge = getSubTypeBadge(setItem.subType, shortTitle);
                     const previewItems = setItem.items.slice(0, 3);
                     const isPairs =
                       setItem.subType === "image-text" ||
@@ -1162,7 +1362,7 @@ export function GlobalSuccessLibraryList() {
                     return (
                       <div
                         key={setItem.id}
-                        className="bg-slate-50/70 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-700 p-4 hover:border-amber-300 transition-all flex flex-col justify-between gap-3"
+                        className={`rounded-2xl border p-4 hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 ${badge.cardBg}`}
                       >
                         <div
                           onClick={() => handleOpenViewModal(setItem)}
@@ -1172,15 +1372,17 @@ export function GlobalSuccessLibraryList() {
                           {/* Title & Badges */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <h4 className="font-headline font-black text-[15px] text-slate-800 dark:text-white group-hover/card:text-amber-700 dark:group-hover/card:text-amber-400 transition-colors truncate">
+                              <h4
+                                className={`font-headline font-black text-[15px] text-slate-800 dark:text-white transition-colors truncate ${badge.titleHover}`}
+                              >
                                 {shortTitle}
                               </h4>
-                              <p className="text-[11px] font-semibold text-slate-400 truncate">
+                              <p className="text-[11px] font-semibold text-slate-500/85 dark:text-slate-400 truncate">
                                 {setItem.name}
                               </p>
                             </div>
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${badge.cls}`}
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${badge.cls}`}
                             >
                               {badge.label}
                             </span>
@@ -1188,8 +1390,8 @@ export function GlobalSuccessLibraryList() {
 
                           {/* Count Badge & View Button Row */}
                           <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-bold">
-                              <Layers className="w-3 h-3 text-amber-500" />
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold shadow-2xs">
+                              <Layers className={`w-3 h-3 ${badge.iconColor}`} />
                               {setItem.totalItems}{" "}
                               {isPairs ? t.common.pairsCount : t.common.questionsCount}
                             </span>
@@ -1201,7 +1403,7 @@ export function GlobalSuccessLibraryList() {
                                 handleOpenViewModal(setItem);
                               }}
                               disabled={loadingViewId === setItem.id}
-                              className="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-50 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200/80 hover:border-amber-300 dark:border-slate-700 text-slate-700 hover:text-amber-700 dark:text-slate-200 font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                              className="px-2.5 py-1 rounded-lg bg-white/95 hover:bg-white dark:bg-slate-900 dark:hover:bg-slate-800 border border-white/80 hover:border-amber-300 dark:border-slate-700 text-slate-700 hover:text-amber-700 dark:text-slate-200 font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
                             >
                               {loadingViewId === setItem.id ? (
                                 <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
@@ -1217,7 +1419,7 @@ export function GlobalSuccessLibraryList() {
                             {previewItems.map((item, idx) => (
                               <div
                                 key={item.id || idx}
-                                className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700 group-hover/card:border-amber-200 p-2 flex flex-col items-center justify-center text-center gap-1 min-h-[62px] transition-colors"
+                                className={`rounded-[10px] bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center gap-1 min-h-[62px] transition-colors ${badge.previewBorder}`}
                               >
                                 {item.imageUrl ? (
                                   <img
@@ -1227,12 +1429,12 @@ export function GlobalSuccessLibraryList() {
                                   />
                                 ) : null}
                                 {item.word ? (
-                                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 line-clamp-2 break-words leading-tight">
+                                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-tight">
                                     {item.word}
                                   </span>
                                 ) : null}
                                 {setItem.subType === "text-text" && item.labelB ? (
-                                  <span className="text-[10px] font-semibold text-indigo-500 line-clamp-1">
+                                  <span className={`text-[10px] font-semibold line-clamp-1 ${badge.pairTextCls}`}>
                                     ↔ {item.labelB}
                                   </span>
                                 ) : null}
@@ -1242,11 +1444,11 @@ export function GlobalSuccessLibraryList() {
                         </div>
 
                         {/* Footer Actions: Share Game | Create Game */}
-                        <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-700/70 grid grid-cols-2 gap-2">
+                        <div className={`pt-2.5 border-t ${badge.dividerBorder} grid grid-cols-2 gap-2`}>
                           <button
                             type="button"
                             onClick={() => setSharingSet(setItem)}
-                            className="py-2 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 border border-purple-200/80 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                            className="py-2 px-3 rounded-xl bg-white/95 hover:bg-purple-50 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 border border-purple-200/90 dark:border-purple-800 text-purple-700 dark:text-purple-300 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                           >
                             <Share2 className="w-3.5 h-3.5 shrink-0" />
                             <span className="whitespace-nowrap">
@@ -1307,68 +1509,96 @@ export function GlobalSuccessLibraryList() {
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2.5 pr-1">
-              {viewingSet.items.map((item, idx) => {
-                let quizOptions: Array<{ id: string; text: string; isCorrect: boolean }> = [];
-                if (viewingSet.subType === "quiz" && item.labelB) {
-                  try {
-                    const parsed = JSON.parse(item.labelB);
-                    if (Array.isArray(parsed.options)) {
-                      quizOptions = parsed.options;
-                    }
-                  } catch {}
-                }
+              {(() => {
+                const sortedItems = [...viewingSet.items].sort(
+                  (a, b) => (a.roundIndex ?? 0) - (b.roundIndex ?? 0)
+                );
+                const uniqueRounds = new Set(sortedItems.map((it) => it.roundIndex ?? 0));
+                const showRoundHeaders = uniqueRounds.size > 1;
 
-                return (
-                  <div
-                    key={item.id || idx}
-                    className="p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 flex items-center gap-3"
-                  >
-                    <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 font-black text-xs flex items-center justify-center shrink-0">
-                      #{idx + 1}
-                    </span>
-                    {item.imageUrl && (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.word}
-                        className="w-12 h-12 object-contain rounded-xl bg-white border border-slate-200/70 p-1 shrink-0"
-                      />
-                    )}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-sm text-slate-800 dark:text-white">
-                          {item.word}
-                        </span>
-                        {viewingSet.subType === "text-text" && item.labelB && (
-                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                            ↔ {item.labelB}
+                return sortedItems.map((item, idx) => {
+                  const currentRound = item.roundIndex ?? 0;
+                  const prevRound = idx > 0 ? (sortedItems[idx - 1].roundIndex ?? 0) : -1;
+                  const isNewRound = showRoundHeaders && currentRound !== prevRound;
+                  const roundCount = sortedItems.filter(
+                    (it) => (it.roundIndex ?? 0) === currentRound
+                  ).length;
+
+                  let quizOptions: Array<{ id: string; text: string; isCorrect: boolean }> = [];
+                  if (viewingSet.subType === "quiz" && item.labelB) {
+                    try {
+                      const parsed = JSON.parse(item.labelB);
+                      if (Array.isArray(parsed.options)) {
+                        quizOptions = parsed.options;
+                      }
+                    } catch {}
+                  }
+
+                  return (
+                    <div key={item.id || idx} className="space-y-2">
+                      {isNewRound && (
+                        <div className={`flex items-center gap-2 ${idx > 0 ? "pt-2" : "pt-0.5"}`}>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/80 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-[11px] font-black uppercase tracking-wider">
+                            <Layers className="w-3 h-3" />
+                            {locale === "vi" ? `Vòng ${currentRound + 1}` : `Round ${currentRound + 1}`}
                           </span>
-                        )}
-                        <span className="text-[10px] font-semibold text-slate-400 ml-auto">
-                          {locale === "vi" ? `Vòng ${(item.roundIndex ?? 0) + 1}` : `Round ${(item.roundIndex ?? 0) + 1}`}
-                        </span>
-                      </div>
-
-                      {quizOptions.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
-                          {quizOptions.map((opt) => (
-                            <div
-                              key={opt.id}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
-                                opt.isCorrect
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold"
-                                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/60"
-                              }`}
-                            >
-                              <span>{opt.id}.</span>
-                              <span className="truncate">{opt.text}</span>
-                            </div>
-                          ))}
+                          <span className="text-[11px] font-semibold text-slate-400">
+                            ({roundCount}{" "}
+                            {viewingSet.subType === "quiz" ? t.common.questionsCount : t.common.pairsCount})
+                          </span>
+                          <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
                         </div>
                       )}
+
+                      <div className="p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 font-black text-xs flex items-center justify-center shrink-0">
+                          #{idx + 1}
+                        </span>
+                        {item.imageUrl && (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.word}
+                            className="w-12 h-12 object-contain rounded-xl bg-white border border-slate-200/70 p-1 shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-slate-800 dark:text-white">
+                              {item.word}
+                            </span>
+                            {viewingSet.subType === "text-text" && item.labelB && (
+                              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                                ↔ {item.labelB}
+                              </span>
+                            )}
+                            <span className="text-[10px] font-semibold text-slate-400 ml-auto">
+                              {locale === "vi" ? `Vòng ${currentRound + 1}` : `Round ${currentRound + 1}`}
+                            </span>
+                          </div>
+
+                          {quizOptions.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                              {quizOptions.map((opt) => (
+                                <div
+                                  key={opt.id}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
+                                    opt.isCorrect
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold"
+                                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200/60"
+                                  }`}
+                                >
+                                  <span>{opt.id}.</span>
+                                  <span className="truncate">{opt.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
@@ -1391,9 +1621,7 @@ export function GlobalSuccessLibraryList() {
                 <button
                   type="button"
                   onClick={() => {
-                    const target = viewingSet;
-                    setViewingSet(null);
-                    setSharingSet(target);
+                    setSharingSet(viewingSet);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
@@ -1504,7 +1732,10 @@ export function GlobalSuccessLibraryList() {
       {sharingSet && (
         <MatchGameShareModal
           isOpen={Boolean(sharingSet)}
-          onClose={() => setSharingSet(null)}
+          onClose={() => {
+            pendingShareIdRef.current = null;
+            setSharingSet(null);
+          }}
           topicName={sharingSet.name}
           topicId={sharingSet.id}
           gamePath={getShareableGameOptionsForSubType(sharingSet.subType)[0]?.gamePath}

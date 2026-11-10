@@ -108,7 +108,15 @@ export function ForcedLandscapeWrapper({
             {onExit ? (
               <button
                 type="button"
-                onClick={onExit}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.get("preview") === "1" || window.history.length <= 1) {
+                      window.close();
+                    }
+                  }
+                  onExit();
+                }}
                 className="pointer-events-auto inline-flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white text-slate-800 rounded-full text-xs font-black shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 border border-white/60 group cursor-pointer"
                 title="Quay về"
               >
@@ -118,6 +126,23 @@ export function ForcedLandscapeWrapper({
             ) : (
               <Link
                 href={backHref}
+                onClick={(e) => {
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    if (params.get("preview") === "1") {
+                      e.preventDefault();
+                      window.close();
+                      return;
+                    }
+                    if (window.history.length <= 1) {
+                      e.preventDefault();
+                      window.close();
+                      setTimeout(() => {
+                        window.location.href = backHref;
+                      }, 150);
+                    }
+                  }
+                }}
                 className="pointer-events-auto inline-flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white text-slate-800 rounded-full text-xs font-black shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 border border-white/60 group cursor-pointer"
                 title="Quay về"
               >

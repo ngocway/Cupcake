@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { TEACHER_GAME_CATEGORIES } from "@/constants/teacher-game-categories";
 import { syncSetToTeacherLibrary } from "@/actions/teacher-library-actions";
+import { capitalizeFirstLetter, isMidWordBlankQuestion } from "@/lib/text-case";
 import type {
   QuizQuestionOption,
   QuizQuestion,
@@ -22,7 +23,7 @@ export async function getCandyQuizGameDetailsAction(topicId: string) {
       where: { id: topicId },
       include: {
         items: {
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
         },
       },
     });
@@ -67,11 +68,20 @@ export async function getCandyQuizGameDetailsAction(topicId: string) {
           ];
         }
 
+        const formattedQuestion = capitalizeFirstLetter(item.word || "");
+        const keepLowerOptions = isMidWordBlankQuestion(formattedQuestion);
+        const formattedOptions = options.map((opt) => ({
+          ...opt,
+          text: keepLowerOptions
+            ? opt.text || ""
+            : capitalizeFirstLetter(opt.text || ""),
+        }));
+
         return {
           id: item.id || `q-${i}-${idx}`,
-          question: item.word || "",
+          question: formattedQuestion,
           imageUrl: item.imageUrl || undefined,
-          options,
+          options: formattedOptions,
         };
       });
 

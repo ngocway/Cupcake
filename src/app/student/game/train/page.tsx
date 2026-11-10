@@ -20,6 +20,11 @@ function TrainGameContent() {
         setIsLoaded(true);
       }
       if (e.data && e.data.type === "TRAIN_EXIT") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("preview") === "1" || window.history.length <= 1) {
+          window.close();
+          return;
+        }
         router.push("/teacher");
       }
     };
@@ -69,7 +74,14 @@ function TrainGameContent() {
           title="Đoàn Tàu Từ Vựng"
           gameMode="train"
           onStart={() => setIsStarted(true)}
-          onClose={() => router.push("/teacher")}
+          onClose={() => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get("preview") === "1" || window.history.length <= 1) {
+              window.close();
+              return;
+            }
+            router.push("/teacher");
+          }}
         />
       )}
 

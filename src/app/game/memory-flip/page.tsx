@@ -1140,18 +1140,24 @@ function MemoryGameContent() {
                       {/* CARD FRONT */}
                       <div className="card-face-front">
                         {card.cardType === 'IMAGE' && card.imageUrl && !failedImageIds[card.id] ? (
-                          <div className="relative w-full h-full flex items-center justify-center bg-white rounded-[0.75cqw] overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={card.imageUrl.startsWith('http://') && typeof window !== 'undefined' && window.location.protocol === 'https:' ? card.imageUrl.replace('http://', 'https://') : card.imageUrl}
-                              alt={card.name || 'Card image'}
-                              referrerPolicy="no-referrer"
-                              onError={() => {
-                                setFailedImageIds((prev) => ({ ...prev, [card.id]: true }));
-                              }}
-                              className="w-full h-full object-cover pointer-events-none select-none"
-                            />
-                          </div>
+                          card.imageUrl.startsWith('/') || card.imageUrl.startsWith('http') || card.imageUrl.startsWith('data:') ? (
+                            <div className="relative w-full h-full flex items-center justify-center bg-white rounded-[0.75cqw] overflow-hidden p-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={card.imageUrl.startsWith('http://') && typeof window !== 'undefined' && window.location.protocol === 'https:' ? card.imageUrl.replace('http://', 'https://') : card.imageUrl}
+                                alt={card.name || 'Card image'}
+                                referrerPolicy="no-referrer"
+                                onError={() => {
+                                  setFailedImageIds((prev) => ({ ...prev, [card.id]: true }));
+                                }}
+                                className="w-full h-full object-contain pointer-events-none select-none"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-white rounded-[0.75cqw]">
+                              <span className="text-[4.2cqw] leading-none select-none">{card.imageUrl}</span>
+                            </div>
+                          )
                         ) : card.cardType === 'TEXT' || (!card.imageUrl && card.name) || failedImageIds[card.id] ? (
                           <div className={`w-full h-full flex flex-col items-center justify-center p-2 text-center rounded-[0.75cqw] bg-gradient-to-br ${card.bgGradient || 'from-sky-100 to-blue-200'}`}>
                             {failedImageIds[card.id] && (

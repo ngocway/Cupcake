@@ -5,6 +5,10 @@ const withNextIntl = createNextIntlPlugin("./src/i18n.ts");
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.6", "localhost", "127.0.0.1", "teacher.dolcake.com", "teacher.localhost", "dolcake.com", "dolcake.local", "teacher.dolcake.local"],
+  onDemandEntries: {
+    maxInactiveAge: 60 * 60 * 1000,
+    pagesBufferLength: 50,
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = [...(config.externals || []), {

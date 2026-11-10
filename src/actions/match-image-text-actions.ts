@@ -6,6 +6,7 @@ import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
 import { processTopicAudioInBackground } from "@/lib/server-topic-tts";
 import { syncSetToTeacherLibrary, LibrarySubType } from "@/actions/teacher-library-actions";
+import { capitalizeFirstLetter, formatLabelBOrQuizOptions } from "@/lib/text-case";
 
 export interface SaveMatchImageTextPayload {
   topicId?: string;
@@ -51,16 +52,20 @@ export async function getMatchImageTextGameDetailsAction(topicId: string) {
         gradeLevel: topic.ageGroup,
         audioMode: topic.audioMode || "AUTO_TTS",
         gameMode: topic.gameMode || "match",
-        items: topic.items.map((item) => ({
-          id: item.id,
-          roundIndex: item.roundIndex ?? 0,
-          word: item.word,
-          imageUrl: item.imageUrl || undefined,
-          audioUrl: item.audioUrl || undefined,
-          imageBUrl: (item as any).imageBUrl || undefined,
-          labelB: (item as any).labelB || undefined,
-          audioBUrl: (item as any).audioBUrl || undefined,
-        })),
+        items: topic.items.map((item) => {
+          const formattedWord = capitalizeFirstLetter(item.word);
+          const rawLabelB = (item as any).labelB || undefined;
+          return {
+            id: item.id,
+            roundIndex: item.roundIndex ?? 0,
+            word: formattedWord,
+            imageUrl: item.imageUrl || undefined,
+            audioUrl: item.audioUrl || undefined,
+            imageBUrl: (item as any).imageBUrl || undefined,
+            labelB: rawLabelB ? formatLabelBOrQuizOptions(rawLabelB, formattedWord) || undefined : undefined,
+            audioBUrl: (item as any).audioBUrl || undefined,
+          };
+        }),
       },
     };
   } catch (error: any) {

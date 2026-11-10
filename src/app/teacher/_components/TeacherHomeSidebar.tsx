@@ -2,6 +2,22 @@ import { StickySidebarWrapper } from "@/app/_components/StickySidebarWrapper";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useTeacherLocale } from "@/i18n/teacher-locale";
+import {
+  PlusCircle,
+  ChevronDown,
+  Puzzle,
+  Calculator,
+  FileEdit,
+  Lock,
+  Layers,
+  HelpCircle,
+  Library,
+  BookOpen,
+  FolderHeart,
+  FolderOpen,
+  Copy,
+  ClipboardList,
+} from "lucide-react";
 
 export type TeacherPortalTab =
   | "match"
@@ -112,10 +128,10 @@ export function TeacherHomeSidebar({
   return (
     <StickySidebarWrapper>
       <div className="flex flex-col gap-5 w-full select-none text-[#3E3524]">
-        {/* Dynamic Font Loading for Baloo 2 and Material Symbols Rounded */}
+        {/* Dynamic Font Loading for Baloo 2 */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
 
         <style>{`
           .teacher-level1-btn {
@@ -361,12 +377,14 @@ export function TeacherHomeSidebar({
             className="teacher-level1-btn teacher-level1-create group"
           >
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-rounded text-xl text-white">add_circle</span>
+              <PlusCircle className="w-4 h-4 text-white stroke-[2.5]" />
             </div>
             <span>{t.sidebar.createNewTitle}</span>
-            <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isCreateOpen ? "rotate-180" : ""}`}>
-              expand_more
-            </span>
+            <ChevronDown
+              className={`ml-auto w-5 h-5 text-white transition-transform duration-300 shrink-0 ${
+                isCreateOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
           {/* SUBMENU CẤP 2 - TẠO MỚI (GRID 2 CỘT) */}
@@ -379,7 +397,7 @@ export function TeacherHomeSidebar({
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
-                    <span className="material-symbols-rounded">extension</span>
+                    <Puzzle className="w-5 h-5" />
                   </div>
                 </div>
                 <p className="teacher-tile-label">{t.sidebar.match}</p>
@@ -392,7 +410,7 @@ export function TeacherHomeSidebar({
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
-                    <span className="material-symbols-rounded">calculate</span>
+                    <Calculator className="w-5 h-5" />
                   </div>
                 </div>
                 <p className="teacher-tile-label">{t.sidebar.math}</p>
@@ -405,9 +423,9 @@ export function TeacherHomeSidebar({
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
-                    <span className="material-symbols-rounded">edit_note</span>
+                    <FileEdit className="w-5 h-5" />
                   </div>
-                  <span className="material-symbols-rounded text-purple-700/80 text-[18px]">lock</span>
+                  <Lock className="w-4 h-4 text-purple-700/80" />
                 </div>
                 <p className="teacher-tile-label">{t.sidebar.fillInBlanks}</p>
               </div>
@@ -419,7 +437,7 @@ export function TeacherHomeSidebar({
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
-                    <span className="material-symbols-rounded">style</span>
+                    <Layers className="w-5 h-5" />
                   </div>
                 </div>
                 <p className="teacher-tile-label">{t.sidebar.flipCards}</p>
@@ -432,7 +450,7 @@ export function TeacherHomeSidebar({
               >
                 <div className="teacher-tile-top">
                   <div className="teacher-tile-icon">
-                    <span className="material-symbols-rounded">quiz</span>
+                    <HelpCircle className="w-5 h-5" />
                   </div>
                 </div>
                 <p className="teacher-tile-label">{t.sidebar.quiz}</p>
@@ -446,11 +464,11 @@ export function TeacherHomeSidebar({
               onClick={toggleCreateMenu}
               className="flex gap-3 px-3 py-2 bg-emerald-50/80 rounded-[14px] border border-emerald-200/60 w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-emerald-100/60 transition-all shadow-xs"
             >
-              <span className="material-symbols-rounded text-base text-sky-500">extension</span>
-              <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
-              <span className="material-symbols-rounded text-base text-purple-400 opacity-50">lock</span>
-              <span className="material-symbols-rounded text-base text-rose-500">style</span>
-              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
+              <Puzzle className="w-4 h-4 text-sky-500" />
+              <Calculator className="w-4 h-4 text-emerald-500" />
+              <Lock className="w-4 h-4 text-purple-400 opacity-50" />
+              <Layers className="w-4 h-4 text-rose-500" />
+              <HelpCircle className="w-4 h-4 text-amber-500" />
             </div>
           )}
         </div>
@@ -463,12 +481,14 @@ export function TeacherHomeSidebar({
             className="teacher-level1-btn teacher-level1-library group"
           >
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-rounded text-xl text-white">library_books</span>
+              <Library className="w-4 h-4 text-white stroke-[2.5]" />
             </div>
             <span>{t.sidebar.libraryTitle}</span>
-            <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isLibraryOpen ? "rotate-180" : ""}`}>
-              expand_more
-            </span>
+            <ChevronDown
+              className={`ml-auto w-5 h-5 text-white transition-transform duration-300 shrink-0 ${
+                isLibraryOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
           {/* SUBMENU CẤP 2 - THƯ VIỆN CÂU HỎI */}
@@ -485,7 +505,7 @@ export function TeacherHomeSidebar({
                 }
               >
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <span className="material-symbols-rounded text-[21px]">menu_book</span>
+                  <BookOpen className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="font-headline font-black text-sm text-amber-900 truncate">
@@ -509,7 +529,7 @@ export function TeacherHomeSidebar({
                   }
                 >
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <span className="material-symbols-rounded text-[21px]">folder_special</span>
+                    <FolderHeart className="w-5 h-5" />
                   </div>
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="font-headline font-black text-sm text-slate-800 truncate">
@@ -527,13 +547,11 @@ export function TeacherHomeSidebar({
                     }}
                     className="w-6 h-6 rounded-lg hover:bg-emerald-100/80 text-slate-500 flex items-center justify-center shrink-0 transition-colors"
                   >
-                    <span
-                      className={`material-symbols-rounded text-[20px] transition-transform duration-300 ${
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-300 ${
                         isMyQuestionSetsOpen ? "rotate-180 text-emerald-600" : ""
                       }`}
-                    >
-                      expand_more
-                    </span>
+                    />
                   </button>
                 </div>
 
@@ -554,7 +572,7 @@ export function TeacherHomeSidebar({
                       }`}
                     >
                       <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-rounded text-[19px]">extension</span>
+                        <Puzzle className="w-4 h-4" />
                       </div>
                       <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
                         {t.sidebar.libraryMatchTitle}
@@ -580,7 +598,7 @@ export function TeacherHomeSidebar({
                       }`}
                     >
                       <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-rounded text-[19px]">quiz</span>
+                        <HelpCircle className="w-4 h-4" />
                       </div>
                       <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
                         {t.sidebar.libraryQuizTitle}
@@ -606,7 +624,7 @@ export function TeacherHomeSidebar({
                       }`}
                     >
                       <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                        <span className="material-symbols-rounded text-[19px]">calculate</span>
+                        <Calculator className="w-4 h-4" />
                       </div>
                       <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
                         {t.sidebar.libraryMathTitle}
@@ -635,11 +653,11 @@ export function TeacherHomeSidebar({
               onClick={toggleLibraryMenu}
               className="flex gap-3 px-3 py-2 bg-emerald-50/80 rounded-[14px] border border-emerald-200/60 w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-emerald-100/60 transition-all shadow-xs"
             >
-              <span className="material-symbols-rounded text-base text-amber-500">menu_book</span>
-              <span className="material-symbols-rounded text-base text-emerald-600">folder_special</span>
-              <span className="material-symbols-rounded text-base text-sky-500">extension</span>
-              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
-              <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
+              <BookOpen className="w-4 h-4 text-amber-500" />
+              <FolderHeart className="w-4 h-4 text-emerald-600" />
+              <Puzzle className="w-4 h-4 text-sky-500" />
+              <HelpCircle className="w-4 h-4 text-amber-500" />
+              <Calculator className="w-4 h-4 text-emerald-500" />
             </div>
           )}
         </div>
@@ -652,12 +670,14 @@ export function TeacherHomeSidebar({
             className="teacher-level1-btn teacher-level1-mygames group"
           >
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-              <span className="material-symbols-rounded text-xl text-white">folder_open</span>
+              <FolderOpen className="w-4 h-4 text-white stroke-[2.5]" />
             </div>
             <span>{t.sidebar.createdTitle}</span>
-            <span className={`material-symbols-rounded ml-auto text-xl font-normal transition-transform duration-300 ${isMyGamesOpen ? "rotate-180" : ""}`}>
-              expand_more
-            </span>
+            <ChevronDown
+              className={`ml-auto w-5 h-5 text-white transition-transform duration-300 shrink-0 ${
+                isMyGamesOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
 
           {/* SUBMENU CẤP 2 - BÀI TẬP ĐÃ TẠO */}
@@ -669,7 +689,7 @@ export function TeacherHomeSidebar({
                 className={`teacher-list-item ${activeTab === "my-match-games" ? "active" : ""}`}
               >
                 <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">auto_awesome_motion</span>
+                  <Copy className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdMatchTitle}</span>
@@ -683,7 +703,7 @@ export function TeacherHomeSidebar({
                 className={`teacher-list-item ${activeTab === "my-choice-games" ? "active choice-active" : ""}`}
               >
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">calculate</span>
+                  <Calculator className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdMathTitle}</span>
@@ -697,12 +717,12 @@ export function TeacherHomeSidebar({
                 title={t.sidebar.comingSoonTooltip}
               >
                 <div className="w-9 h-9 rounded-xl bg-purple-100/70 text-purple-500 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">assignment</span>
+                  <ClipboardList className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col flex-1">
                   <div className="flex items-center justify-between">
                     <span className="font-headline font-black text-sm text-slate-600">{t.sidebar.createdFillTitle}</span>
-                    <span className="material-symbols-rounded text-purple-600/80 text-[16px]">lock</span>
+                    <Lock className="w-4 h-4 text-purple-600/80" />
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdFillSub}</span>
                 </div>
@@ -714,7 +734,7 @@ export function TeacherHomeSidebar({
                 className={`teacher-list-item ${activeTab === "my-flip-games" ? "active flip-active" : ""}`}
               >
                 <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">style</span>
+                  <Layers className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdFlipTitle}</span>
@@ -728,7 +748,7 @@ export function TeacherHomeSidebar({
                 className={`teacher-list-item ${activeTab === "my-quiz-games" ? "active quiz-active" : ""}`}
               >
                 <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-rounded text-[22px]">quiz</span>
+                  <HelpCircle className="w-5 h-5" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdQuizTitle}</span>
@@ -744,11 +764,11 @@ export function TeacherHomeSidebar({
               onClick={toggleMyGamesMenu}
               className="flex gap-3 px-3 py-2 bg-purple-50/80 rounded-[14px] border border-purple-200/60 w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-purple-100/60 transition-all shadow-xs"
             >
-              <span className="material-symbols-rounded text-base text-sky-500">auto_awesome_motion</span>
-              <span className="material-symbols-rounded text-base text-emerald-500">calculate</span>
-              <span className="material-symbols-rounded text-base text-purple-500">assignment</span>
-              <span className="material-symbols-rounded text-base text-rose-500">style</span>
-              <span className="material-symbols-rounded text-base text-amber-500">quiz</span>
+              <Copy className="w-4 h-4 text-sky-500" />
+              <Calculator className="w-4 h-4 text-emerald-500" />
+              <ClipboardList className="w-4 h-4 text-purple-500" />
+              <Layers className="w-4 h-4 text-rose-500" />
+              <HelpCircle className="w-4 h-4 text-amber-500" />
             </div>
           )}
         </div>

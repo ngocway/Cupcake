@@ -95,12 +95,17 @@ export function TeacherDashboardClient({
 
   // If authentication state updates to true (e.g. after router.refresh()) and pendingRedirectUrl is a /teacher?tab=... URL, sync the activeTab
   useEffect(() => {
-    if (isAuthenticated && normalizedInitialTab && activeTab !== normalizedInitialTab) {
-      setActiveTab(normalizedInitialTab);
+    const urlTab =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("tab")
+        : null;
+    const targetTab = normalizeTab(urlTab || normalizedInitialTab);
+    if (isAuthenticated && targetTab && activeTab !== targetTab) {
+      setActiveTab(targetTab);
       setVisitedTabs((prev) => {
-        if (prev.has(normalizedInitialTab)) return prev;
+        if (prev.has(targetTab)) return prev;
         const next = new Set(prev);
-        next.add(normalizedInitialTab);
+        next.add(targetTab);
         return next;
       });
     }
@@ -152,10 +157,33 @@ export function TeacherDashboardClient({
     return () => window.removeEventListener("popstate", handlePopState);
   }, [isAuthenticated]);
 
-  // Background pre-warm My Library caches so clicking My Library tabs is instant (0ms)
+  // Background pre-warm Global Success & My Library caches so clicking tabs is instant (0ms)
   useEffect(() => {
-    if (!isAuthenticated || typeof window === "undefined") return;
-    const timer = setTimeout(() => {
+    if (typeof window === "undefined") return;
+
+    // 1. Prioritize Global Success sets first and persist in both localStorage & sessionStorage
+    const globalTimer = setTimeout(() => {
+      try {
+        if (
+          !localStorage.getItem("cached_global_success_sets_v4") &&
+          !sessionStorage.getItem("cached_global_success_sets_v4")
+        ) {
+          getGlobalSuccessLibrarySetsAction().then((res) => {
+            if (res.success && Array.isArray(res.sets)) {
+              try {
+                const serialized = JSON.stringify(res.sets);
+                localStorage.setItem("cached_global_success_sets_v4", serialized);
+                sessionStorage.setItem("cached_global_success_sets_v4", serialized);
+              } catch {}
+            }
+          });
+        }
+      } catch {}
+    }, 150);
+
+    // 2. Defer personal My Library pre-warming slightly so it never contends with initial page queries
+    const personalTimer = setTimeout(() => {
+      if (!isAuthenticated) return;
       try {
         if (!sessionStorage.getItem("cached_teacher_library_match")) {
           getTeacherLibrarySetsAction("match").then((res) => {
@@ -191,19 +219,13 @@ export function TeacherDashboardClient({
             }
           });
         }
-        if (!sessionStorage.getItem("cached_global_success_sets_v2")) {
-          getGlobalSuccessLibrarySetsAction().then((res) => {
-            if (res.success && Array.isArray(res.sets)) {
-              try {
-                sessionStorage.setItem("cached_global_success_sets_v2", JSON.stringify(res.sets));
-              } catch {}
-            }
-          });
-        }
       } catch {}
-    }, 600);
+    }, 1800);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(globalTimer);
+      clearTimeout(personalTimer);
+    };
   }, [isAuthenticated]);
 
   return (

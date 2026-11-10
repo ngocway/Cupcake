@@ -142,18 +142,18 @@
             min-width: 680px;
             max-width: 980px;
             height: 100%;
-            max-height: 540px;
+            max-height: 560px;
             background: rgba(255, 255, 255, 0.88);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border-radius: 36px;
+            border-radius: 12px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.14), inset 0 0 35px rgba(255,255,255,0.95), 0 0 30px rgba(255, 118, 156, 0.3);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 36px 48px;
+            padding: 34px 40px;
             overflow: visible;
-            transition: max-width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: max-width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), max-height 0.35s ease;
         }
 
         /* ⚡ FLOATING AMBIENT STARS & SPARKLES INSIDE BOARD ⚡ */
@@ -163,7 +163,7 @@
             pointer-events: none;
             z-index: 3;
             overflow: hidden;
-            border-radius: 36px;
+            border-radius: 12px;
         }
 
         .ambient-star {
@@ -243,7 +243,7 @@
             display: grid;
             grid-auto-flow: column;
             grid-auto-columns: 1fr;
-            align-items: center;
+            align-items: stretch;
             justify-items: center;
             gap: 24px;
             width: 100%;
@@ -254,7 +254,7 @@
         .match-card {
             position: relative;
             background: #ffffff;
-            border-radius: 24px;
+            border-radius: 12px;
             box-shadow: 0 8px 18px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
@@ -263,7 +263,7 @@
             cursor: pointer;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease, max-width 0.3s ease;
             width: 100%;
-            max-width: 180px;
+            max-width: 200px;
             z-index: 10;
         }
 
@@ -285,7 +285,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 16px;
+            border-radius: 8px;
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.3s ease-in;
@@ -325,7 +325,7 @@
             z-index: 50;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(4px);
-            border-radius: 34px;
+            border-radius: 12px;
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
 
@@ -359,13 +359,15 @@
             50% { opacity: 1; }
         }
 
-        /* Word Cards (Pill shape) */
+        /* Word Cards (12px rounded box, auto-expanding height & font size) */
         .card-word {
-            height: 68px;
+            min-height: 68px;
+            height: auto;
             border: 4px dashed #4dabf7;
-            border-radius: 34px;
-            padding: 0 20px;
-            font-size: 1.4rem;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 1.35rem;
+            line-height: 1.28;
             color: #1c7ed6;
             background: rgba(231, 245, 255, 0.9);
             text-align: center;
@@ -373,6 +375,23 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        #rowTop .card-word {
+            padding-top: 12px;
+            padding-bottom: 22px;
+        }
+
+        #rowBottom .card-word {
+            padding-top: 22px;
+            padding-bottom: 12px;
+        }
+
+        .card-word > span {
+            display: block;
+            width: 100%;
         }
 
         /* Card Themes */
@@ -704,7 +723,7 @@
 
             <!-- Animated Flowing Dashed Border Overlay -->
             <svg class="board-border-svg">
-                <rect id="boardBorderRect" class="animated-board-border" x="2" y="2" rx="34" ry="34" />
+                <rect id="boardBorderRect" class="animated-board-border" x="2" y="2" rx="12" ry="12" />
             </svg>
 
             <svg id="wireSvg"></svg>
@@ -867,8 +886,12 @@
         } catch (e) {}
     }
 
+    function isValidImageUrl(str) {
+        return typeof str === 'string' && (str.startsWith('/') || str.startsWith('http') || str.startsWith('data:'));
+    }
+
     function preloadImagesWithTimeout(imageUrls, timeoutMs = 1200) {
-        const promises = imageUrls.filter(Boolean).map(url => {
+        const promises = imageUrls.filter(isValidImageUrl).map(url => {
             return new Promise((resolve) => {
                 const img = new Image();
                 let done = false;
@@ -988,53 +1011,71 @@
         }
     }
 
-    /* ⚡ MINIMUM COMFORTABLE BOARD WIDTH ⚡ */
+    /* ⚡ DYNAMIC BOARD & TEXT SCALING BY CONTENT LENGTH ⚡ */
     function applyDynamicScaling(count) {
+        const wordCards = Array.from(document.querySelectorAll('.card-word'));
+        let maxTextLen = 0;
+        wordCards.forEach(card => {
+            const len = (card.textContent || '').trim().length;
+            if (len > maxTextLen) maxTextLen = len;
+        });
+
         let boardMaxWidth = 860;
-        let cardMaxWidth = 170;
-        let cardWordHeight = 68;
-        let cardFontSize = 1.4;
+        let boardMaxHeight = 540;
+        let cardMaxWidth = 185;
+        let cardMinHeight = 68;
+        let baseFontSize = 1.38;
         let gridGap = 24;
 
         if (count <= 2) {
             boardMaxWidth = 680;
-            cardMaxWidth = 180;
-            cardWordHeight = 72;
-            cardFontSize = 1.45;
-            gridGap = 54;
+            cardMaxWidth = 210;
+            cardMinHeight = 72;
+            baseFontSize = 1.45;
+            gridGap = 48;
         } else if (count === 3) {
             boardMaxWidth = 780;
-            cardMaxWidth = 175;
-            cardWordHeight = 70;
-            cardFontSize = 1.4;
-            gridGap = 36;
+            cardMaxWidth = 200;
+            cardMinHeight = 70;
+            baseFontSize = 1.4;
+            gridGap = 32;
         } else if (count === 4) {
-            boardMaxWidth = 860;
-            cardMaxWidth = 170;
-            cardWordHeight = 68;
-            cardFontSize = 1.4;
-            gridGap = 24;
+            boardMaxWidth = 880;
+            cardMaxWidth = 190;
+            cardMinHeight = 68;
+            baseFontSize = 1.38;
+            gridGap = 22;
         } else if (count === 5) {
-            boardMaxWidth = 920;
-            cardMaxWidth = 158;
-            cardWordHeight = 64;
-            cardFontSize = 1.3;
-            gridGap = 20;
+            boardMaxWidth = 960;
+            cardMaxWidth = 172;
+            cardMinHeight = 64;
+            baseFontSize = 1.28;
+            gridGap = 18;
         } else if (count === 6) {
-            boardMaxWidth = 980;
-            cardMaxWidth = 145;
-            cardWordHeight = 60;
-            cardFontSize = 1.2;
-            gridGap = 16;
-        } else {
             boardMaxWidth = 1040;
-            cardMaxWidth = 135;
-            cardWordHeight = 56;
-            cardFontSize = 1.1;
+            cardMaxWidth = 158;
+            cardMinHeight = 60;
+            baseFontSize = 1.2;
+            gridGap = 14;
+        } else {
+            boardMaxWidth = 1100;
+            cardMaxWidth = 145;
+            cardMinHeight = 58;
+            baseFontSize = 1.12;
             gridGap = 12;
         }
 
+        // Expand board and card width when the round contains longer phrases or sentences
+        if (maxTextLen > 12) {
+            const extraChars = Math.min(maxTextLen - 12, 40);
+            boardMaxWidth = Math.min(1180, Math.round(boardMaxWidth + extraChars * 7.5));
+            cardMaxWidth = Math.min(260, Math.round(cardMaxWidth + extraChars * 1.8));
+            boardMaxHeight = Math.min(620, Math.round(540 + extraChars * 2));
+            gridGap = Math.max(12, gridGap - 4);
+        }
+
         boardCard.style.maxWidth = `${boardMaxWidth}px`;
+        boardCard.style.maxHeight = `${boardMaxHeight}px`;
 
         rowTop.style.gap = `${gridGap}px`;
         rowBottom.style.gap = `${gridGap}px`;
@@ -1042,9 +1083,23 @@
         document.querySelectorAll('.match-card').forEach(card => {
             card.style.maxWidth = `${cardMaxWidth}px`;
         });
-        document.querySelectorAll('.card-word').forEach(card => {
-            card.style.height = `${cardWordHeight}px`;
-            card.style.fontSize = `${cardFontSize}rem`;
+
+        wordCards.forEach(card => {
+            card.style.height = 'auto';
+            card.style.minHeight = `${cardMinHeight}px`;
+
+            const textLen = (card.textContent || '').trim().length;
+            let fontSize = baseFontSize;
+            if (textLen > 36) {
+                fontSize = Math.max(0.92, baseFontSize * 0.72);
+            } else if (textLen > 24) {
+                fontSize = Math.max(1.0, baseFontSize * 0.8);
+            } else if (textLen > 14) {
+                fontSize = Math.max(1.12, baseFontSize * 0.88);
+            } else if (textLen > 9) {
+                fontSize = Math.max(1.22, baseFontSize * 0.94);
+            }
+            card.style.fontSize = `${fontSize.toFixed(2)}rem`;
         });
 
         setTimeout(updateBoardBorderRect, 50);
@@ -1078,10 +1133,11 @@
             dotBottom.dataset.id = item.id;
             dotBottom.dataset.side = 'top';
 
-            if (item.imageUrl) {
+            if (isValidImageUrl(item.imageUrl)) {
                 topCard.className = `match-card card-img theme-${theme.name} card-skeleton`;
                 const img = document.createElement('img');
                 img.alt = item.word || 'Item';
+                img.style.objectFit = 'contain';
                 img.onload = () => {
                     topCard.classList.remove('card-skeleton');
                     img.classList.add('loaded');
@@ -1098,6 +1154,9 @@
                     img.classList.add('loaded');
                 }
                 topCard.appendChild(img);
+            } else if (item.imageUrl) {
+                topCard.className = `match-card card-img theme-${theme.name}`;
+                topCard.innerHTML = `<span style="font-size: 3.4rem; line-height: 1;">${item.imageUrl}</span>`;
             } else {
                 topCard.className = `match-card card-word theme-${theme.name}`;
                 topCard.innerHTML = `<span>${item.word || 'Item'}</span>`;

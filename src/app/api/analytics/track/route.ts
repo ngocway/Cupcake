@@ -5,7 +5,16 @@ import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const rawText = await req.text();
+    if (!rawText || !rawText.trim()) {
+      return NextResponse.json({ ok: true });
+    }
+    let body: any;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json({ ok: true });
+    }
     const { path, event, props } = body || {};
 
     const session = await auth();

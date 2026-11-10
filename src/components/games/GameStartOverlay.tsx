@@ -151,7 +151,15 @@ export function GameStartOverlay({
       {onClose && (
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              const params = new URLSearchParams(window.location.search);
+              if (params.get("preview") === "1" || window.history.length <= 1) {
+                window.close();
+              }
+            }
+            onClose();
+          }}
           className="absolute top-4 left-4 z-20 flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white/90 text-xs font-bold transition-all cursor-pointer backdrop-blur-md border border-white/10"
         >
           <ArrowLeft className="w-4 h-4" />

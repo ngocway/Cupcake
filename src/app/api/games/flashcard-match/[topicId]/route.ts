@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { processTopicAudioInBackground } from "@/lib/server-topic-tts";
 import { isDolcakeMediaUrl, migrateTopicImagesInBackground } from "@/lib/server-image-uploader";
+import { capitalizeFirstLetter, formatLabelBOrQuizOptions } from "@/lib/text-case";
 
 export async function GET(
   request: Request,
@@ -19,15 +20,18 @@ export async function GET(
       where: { id: topicId },
       include: {
         items: {
-          orderBy: { createdAt: "asc" },
+          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
         },
       },
     });
 
     if (matchTopic && matchTopic.items && matchTopic.items.length > 0) {
       const isImageImage = matchTopic.items.some((item) => Boolean(item.imageBUrl));
+      const isSharedGlobalSet =
+        matchTopic.teacherId === null ||
+        (matchTopic.slug || "").startsWith("shared-lib-");
       const hasMissingAudio = matchTopic.items.some((item) => !item.audioUrl && Boolean(item.word && item.word.trim()));
-      if (hasMissingAudio && (matchTopic.audioMode === "AUTO_TTS" || !matchTopic.audioMode)) {
+      if (!isSharedGlobalSet && hasMissingAudio && (matchTopic.audioMode === "AUTO_TTS" || !matchTopic.audioMode)) {
         processTopicAudioInBackground(matchTopic.id).catch(() => {});
       }
 
@@ -40,15 +44,18 @@ export async function GET(
         migrateTopicImagesInBackground(matchTopic.id).catch(() => {});
       }
 
-      const cards = matchTopic.items.map((item) => ({
-        id: item.id,
-        roundIndex: item.roundIndex ?? 0,
-        word: item.word,
-        imageUrl: item.imageUrl || null,
-        audioUrl: item.audioUrl || null,
-        imageBUrl: item.imageBUrl || null,
-        labelB: item.labelB || null,
-      }));
+      const cards = matchTopic.items.map((item) => {
+        const formattedWord = capitalizeFirstLetter(item.word);
+        return {
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: formattedWord,
+          imageUrl: item.imageUrl || null,
+          audioUrl: item.audioUrl || null,
+          imageBUrl: item.imageBUrl || null,
+          labelB: item.labelB ? formatLabelBOrQuizOptions(item.labelB, formattedWord) : null,
+        };
+      });
 
       return NextResponse.json({
         success: true,
@@ -72,7 +79,7 @@ export async function GET(
     if (flashcardTopic && flashcardTopic.flashcards && flashcardTopic.flashcards.length > 0) {
       const cards = flashcardTopic.flashcards.map((f: any) => ({
         id: f.id,
-        word: f.englishText || f.word || "",
+        word: capitalizeFirstLetter(f.englishText || f.word || ""),
         imageUrl: f.imageUrl || null,
         audioWordUrl: f.audioWordUrl || null,
         // Crucial: Use isolated word audio (not full sentence audio) so matching cards only pronounces the word

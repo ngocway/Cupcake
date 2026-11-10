@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { TEACHER_GAME_CATEGORIES } from "@/constants/teacher-game-categories";
+import { capitalizeFirstLetter } from "@/lib/text-case";
 
 export async function getTeacherMatchGamesAction() {
   try {
@@ -87,7 +88,10 @@ export async function getTeacherMatchGamesAction() {
           ...t.game,
           name: isImageImage ? "Trò chơi Nối Cặp Ảnh - Ảnh" : (t.game?.name || "Trò chơi Nối Cặp Ảnh - Chữ"),
         },
-        items: t.items,
+        items: t.items.map((item) => ({
+          ...item,
+          word: capitalizeFirstLetter(item.word),
+        })),
         totalItems: t._count.items,
         isImageImage,
       };
@@ -168,7 +172,10 @@ export async function getTeacherFlipGamesAction() {
           ...t.game,
           name: isImageImage ? "Trò chơi Lật Ảnh-Ảnh" : (t.game?.name || "Trò chơi Lật Ảnh-Chữ"),
         },
-        items: t.items,
+        items: t.items.map((item) => ({
+          ...item,
+          word: capitalizeFirstLetter(item.word),
+        })),
         totalItems: t._count.items,
         isImageImage,
       };

@@ -92,6 +92,7 @@ function ShooterQuizGameRunner() {
                     id: q.id,
                     typeId: "shooter-quiz",
                     q: q.question || "Chọn đáp án chính xác:",
+                    imageUrl: q.imageUrl || undefined,
                     a: correctOpt.text.trim(),
                     wrong: wrongOpts
                       .map((opt) => opt.text.trim())
@@ -133,11 +134,18 @@ function ShooterQuizGameRunner() {
   }, [topicId]);
 
   const handleClose = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/teacher?tab=my-quiz-games");
+    if (typeof window !== "undefined") {
+      const isPreviewTab = new URLSearchParams(window.location.search).get("preview") === "1";
+      if (isPreviewTab) {
+        window.close();
+        return;
+      }
+      if (window.history.length > 1) {
+        router.back();
+        return;
+      }
     }
+    router.push("/teacher?tab=my-quiz-games");
   };
 
   if (loading) {

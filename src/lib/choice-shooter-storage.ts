@@ -2,6 +2,7 @@ export interface ChoiceShooterQuestion {
   id: string;
   typeId: string;
   q: string;
+  imageUrl?: string;
   a: string;
   wrong: string[];
 }

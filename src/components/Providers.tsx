@@ -73,7 +73,7 @@ export function Providers({
     activeLocale === "vi" ? viMessages : enMessages || messages;
 
   return (
-    <SessionProvider session={session}>
+    <SessionProvider session={session} refetchOnWindowFocus={false}>
       <QueryClientProvider client={queryClient}>
         <NextIntlClientProvider
           locale={activeLocale}
