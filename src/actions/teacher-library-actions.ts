@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { auth } from "@/auth";
 import { toSlug } from "@/lib/slugify";
 import { revalidatePath } from "next/cache";
+import { unstable_cache } from "next/cache";
 import { formatLibraryItemCase } from "@/lib/text-case";
 
 export type LibraryCategory = "match" | "choice" | "flip" | "quiz";
@@ -387,41 +388,10 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
 
-    const seenFingerprints = new Set<string>();
-
     // Pre-populate fingerprints of Global Success shared textbook sets so raw games created
     // directly from Global Success sets do not leak into the personal library
-    const sharedTopicsForDedup = await prisma.matchWordTopic.findMany({
-      where: {
-        OR: [
-          { slug: { startsWith: "shared-lib-" } },
-          { teacherId: null, gameMode: { in: ALL_LIBRARY_GAME_MODES } },
-        ],
-      },
-      select: {
-        gameMode: true,
-        items: {
-          take: 4,
-          orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
-          select: {
-            word: true,
-            imageUrl: true,
-            imageBUrl: true,
-            labelB: true,
-          },
-        },
-        _count: {
-          select: { items: true },
-        },
-      },
-    });
-    for (const st of sharedTopicsForDedup) {
-      const { subType: stSub } = classifyTopicSubType(st);
-      const stCount = st._count?.items ?? st.items.length;
-      if (stCount > 0 && st.items.length > 0) {
-        seenFingerprints.add(`${stSub}::${stCount}::${computeItemsFingerprint(st.items)}`);
-      }
-    }
+    const sharedFingerprints = await getCachedSharedFingerprints();
+    const seenFingerprints = new Set<string>(sharedFingerprints);
 
     const allSets: LibrarySetItem[] = [];
 
@@ -505,12 +475,9 @@ export async function getTeacherLibrarySetsAction(filterCategory?: LibraryCatego
   }
 }
 
-/**
- * Fetch Global Success Textbook Library sets (shared system sets organized by Grade 1-12 & Unit)
- */
-export async function getGlobalSuccessLibrarySetsAction() {
-  try {
-    const rawTopics = await prisma.matchWordTopic.findMany({
+const getCachedSharedFingerprints = unstable_cache(
+  async (): Promise<string[]> => {
+    const sharedTopicsForDedup = await prisma.matchWordTopic.findMany({
       where: {
         OR: [
           { slug: { startsWith: "shared-lib-" } },
@@ -518,23 +485,11 @@ export async function getGlobalSuccessLibrarySetsAction() {
         ],
       },
       select: {
-        id: true,
-        name: true,
-        slug: true,
         gameMode: true,
-        audioMode: true,
-        ageGroup: true,
-        createdAt: true,
-        updatedAt: true,
-        game: {
-          select: { name: true, level: true },
-        },
         items: {
           take: 4,
           orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
           select: {
-            id: true,
-            roundIndex: true,
             word: true,
             imageUrl: true,
             imageBUrl: true,
@@ -545,48 +500,295 @@ export async function getGlobalSuccessLibrarySetsAction() {
           select: { items: true },
         },
       },
-      orderBy: { createdAt: "asc" },
     });
-
-    const sets: LibrarySetItem[] = [];
-    for (const t of rawTopics) {
-      if (t.gameMode === "library-hidden") continue;
-      const totalItemsCount = t._count?.items ?? t.items.length;
-      if (totalItemsCount === 0 || !t.items || t.items.length === 0) continue;
-
-      const { category, subType } = classifyTopicSubType(t);
-      sets.push({
-        id: t.id,
-        name: t.name,
-        slug: t.slug,
-        category,
-        subType,
-        gameMode: t.gameMode || "match",
-        audioMode: t.audioMode || "AUTO_TTS",
-        gradeLevel: t.ageGroup || "primary-1-5",
-        totalItems: totalItemsCount,
-        createdAt: t.createdAt.toISOString(),
-        updatedAt: t.updatedAt.toISOString(),
-        isLibraryRecord: true,
-        items: t.items.map((item) =>
-          formatLibraryItemCase({
-            id: item.id,
-            roundIndex: item.roundIndex ?? 0,
-            word: item.word,
-            imageUrl: item.imageUrl,
-            audioUrl: null,
-            imageBUrl: item.imageBUrl,
-            labelB: item.labelB,
-            audioBUrl: null,
-          })
-        ),
-      });
+    const fps: string[] = [];
+    for (const st of sharedTopicsForDedup) {
+      const { subType: stSub } = classifyTopicSubType(st);
+      const stCount = st._count?.items ?? st.items.length;
+      if (stCount > 0 && st.items.length > 0) {
+        fps.push(`${stSub}::${stCount}::${computeItemsFingerprint(st.items)}`);
+      }
     }
+    return fps;
+  },
+  ["global-success-fingerprints-v2"],
+  { revalidate: 3600, tags: ["global-success-counts", "global-success-all"] }
+);
 
+const _fetchAllGlobalSuccessSets = async (): Promise<LibrarySetItem[]> => {
+  const rawTopics = await prisma.matchWordTopic.findMany({
+    where: {
+      OR: [
+        { slug: { startsWith: "shared-lib-" } },
+        { teacherId: null, gameMode: { in: ALL_LIBRARY_GAME_MODES } },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      gameMode: true,
+      audioMode: true,
+      ageGroup: true,
+      createdAt: true,
+      updatedAt: true,
+      game: {
+        select: { name: true, level: true },
+      },
+      items: {
+        take: 4,
+        orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          roundIndex: true,
+          word: true,
+          imageUrl: true,
+          imageBUrl: true,
+          labelB: true,
+        },
+      },
+      _count: {
+        select: { items: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const sets: LibrarySetItem[] = [];
+  for (const t of rawTopics) {
+    if (t.gameMode === "library-hidden") continue;
+    const totalItemsCount = t._count?.items ?? t.items.length;
+    if (totalItemsCount === 0 || !t.items || t.items.length === 0) continue;
+
+    const { category, subType } = classifyTopicSubType(t);
+    sets.push({
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      category,
+      subType,
+      gameMode: t.gameMode || "match",
+      audioMode: t.audioMode || "AUTO_TTS",
+      gradeLevel: t.ageGroup || "primary-1-5",
+      totalItems: totalItemsCount,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+      isLibraryRecord: true,
+      items: t.items.map((item) =>
+        formatLibraryItemCase({
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          audioUrl: null,
+          imageBUrl: item.imageBUrl,
+          labelB: item.labelB,
+          audioBUrl: null,
+        })
+      ),
+    });
+  }
+
+  return sets;
+};
+
+const getCachedAllGlobalSuccessSets = unstable_cache(
+  _fetchAllGlobalSuccessSets,
+  ["global-success-all-sets-v2"],
+  { revalidate: 3600, tags: ["global-success-all"] }
+);
+
+/**
+ * Fetch Global Success Textbook Library sets (shared system sets organized by Grade 1-12 & Unit)
+ */
+export async function getGlobalSuccessLibrarySetsAction() {
+  try {
+    const sets = await getCachedAllGlobalSuccessSets();
     return { success: true, sets };
   } catch (error: any) {
     console.error("Failed to fetch Global Success library sets:", error);
     return { success: false, error: error.message || "Failed to fetch Global Success sets", sets: [] as LibrarySetItem[] };
+  }
+}
+
+/**
+ * Grade-level metadata for the 12-grade grid.
+ * Lightweight query: only counts how many sets exist per grade.
+ * Used to render the grade selection cards instantly (no items fetched).
+ */
+export interface GradeCountItem {
+  grade: number;
+  count: number;
+}
+
+const _fetchGradeCounts = async (): Promise<GradeCountItem[]> => {
+  const rawTopics = await prisma.matchWordTopic.findMany({
+    where: {
+      OR: [
+        { slug: { startsWith: "shared-lib-" } },
+        { teacherId: null, gameMode: { in: ALL_LIBRARY_GAME_MODES } },
+      ],
+    },
+    select: {
+      name: true,
+      gameMode: true,
+      _count: { select: { items: true } },
+    },
+  });
+
+  const gradeMap: Record<number, number> = {};
+  for (const t of rawTopics) {
+    if (t.gameMode === "library-hidden") continue;
+    const itemCount = t._count?.items ?? 0;
+    if (itemCount === 0) continue;
+    const gradeMatch = t.name.match(/Grade\s+(\d+)/i);
+    const grade = gradeMatch ? parseInt(gradeMatch[1], 10) : 3;
+    if (grade < 1 || grade > 12) continue;
+    gradeMap[grade] = (gradeMap[grade] || 0) + 1;
+  }
+
+  const result: GradeCountItem[] = [];
+  for (let g = 1; g <= 12; g++) {
+    result.push({ grade: g, count: gradeMap[g] || 0 });
+  }
+  return result;
+};
+
+const getCachedGradeCounts = unstable_cache(
+  _fetchGradeCounts,
+  ["global-success-grade-counts-v2"],
+  { revalidate: 3600, tags: ["global-success-counts"] }
+);
+
+export async function getGlobalSuccessGradeCountsAction(): Promise<{
+  success: boolean;
+  gradeCounts: GradeCountItem[];
+  error?: string;
+}> {
+  try {
+    const gradeCounts = await getCachedGradeCounts();
+    return { success: true, gradeCounts };
+  } catch (error: any) {
+    console.error("Failed to fetch grade counts:", error);
+    return { success: false, gradeCounts: [], error: error.message };
+  }
+}
+
+/**
+ * Fetch Global Success sets for a SINGLE grade (1-12).
+ * Returns full set data (with 4 preview items) only for that grade.
+ */
+const _fetchSetsByGrade = async (grade: number): Promise<LibrarySetItem[]> => {
+  // Slug pattern: shared-lib-g{grade}-u{unit}-{type}
+  const slugPrefix = `shared-lib-g${grade}-`;
+
+  const rawTopics = await prisma.matchWordTopic.findMany({
+    where: {
+      OR: [
+        { slug: { startsWith: slugPrefix } },
+        {
+          teacherId: null,
+          gameMode: { in: ALL_LIBRARY_GAME_MODES },
+          name: { contains: `Grade ${grade} `, mode: "insensitive" },
+        },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      gameMode: true,
+      audioMode: true,
+      ageGroup: true,
+      createdAt: true,
+      updatedAt: true,
+      game: {
+        select: { name: true, level: true },
+      },
+      items: {
+        take: 4,
+        orderBy: [{ roundIndex: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          roundIndex: true,
+          word: true,
+          imageUrl: true,
+          imageBUrl: true,
+          labelB: true,
+        },
+      },
+      _count: {
+        select: { items: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const sets: LibrarySetItem[] = [];
+  for (const t of rawTopics) {
+    if (t.gameMode === "library-hidden") continue;
+    const totalItemsCount = t._count?.items ?? t.items.length;
+    if (totalItemsCount === 0 || !t.items || t.items.length === 0) continue;
+
+    // Verify this topic actually belongs to the requested grade
+    const gradeMatch = t.name.match(/Grade\s+(\d+)/i);
+    const topicGrade = gradeMatch ? parseInt(gradeMatch[1], 10) : 3;
+    if (topicGrade !== grade) continue;
+
+    const { category, subType } = classifyTopicSubType(t);
+    sets.push({
+      id: t.id,
+      name: t.name,
+      slug: t.slug,
+      category,
+      subType,
+      gameMode: t.gameMode || "match",
+      audioMode: t.audioMode || "AUTO_TTS",
+      gradeLevel: t.ageGroup || "primary-1-5",
+      totalItems: totalItemsCount,
+      createdAt: t.createdAt.toISOString(),
+      updatedAt: t.updatedAt.toISOString(),
+      isLibraryRecord: true,
+      items: t.items.map((item) =>
+        formatLibraryItemCase({
+          id: item.id,
+          roundIndex: item.roundIndex ?? 0,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          audioUrl: null,
+          imageBUrl: item.imageBUrl,
+          labelB: item.labelB,
+          audioBUrl: null,
+        })
+      ),
+    });
+  }
+
+  return sets;
+};
+
+function getCachedSetsByGrade(grade: number) {
+  return unstable_cache(
+    () => _fetchSetsByGrade(grade),
+    [`global-success-grade-v2-${grade}`],
+    { revalidate: 3600, tags: [`global-success-grade-${grade}`, "global-success-all"] }
+  )();
+}
+
+export async function getGlobalSuccessSetsByGradeAction(grade: number): Promise<{
+  success: boolean;
+  sets: LibrarySetItem[];
+  error?: string;
+}> {
+  try {
+    if (grade < 1 || grade > 12) {
+      return { success: false, sets: [], error: "Invalid grade" };
+    }
+    const sets = await getCachedSetsByGrade(grade);
+    return { success: true, sets };
+  } catch (error: any) {
+    console.error(`Failed to fetch Global Success sets for grade ${grade}:`, error);
+    return { success: false, sets: [], error: error.message };
   }
 }
 

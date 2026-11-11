@@ -11,10 +11,13 @@ import { MyFlipGamesList } from "./MyFlipGamesList";
 import { QuizGameCards } from "./QuizGameCards";
 import { MyQuizGamesList } from "./MyQuizGamesList";
 import { MyLibraryList } from "./MyLibraryList";
-import { GlobalSuccessLibraryList } from "./GlobalSuccessLibraryList";
+import {
+  GlobalSuccessLibraryList,
+  GRADE_COUNTS_CACHE_KEY,
+} from "./GlobalSuccessLibraryList";
 import {
   getTeacherLibrarySetsAction,
-  getGlobalSuccessLibrarySetsAction,
+  getGlobalSuccessGradeCountsAction,
 } from "@/actions/teacher-library-actions";
 import { LoginModal } from "@/components/LoginButton";
 import { trackEvent } from "@/lib/analytics";
@@ -161,19 +164,24 @@ export function TeacherDashboardClient({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // 1. Prioritize Global Success sets first and persist in both localStorage & sessionStorage
+    // 1. Pre-warm lightweight Global Success grade counts (~250 bytes) so the 12-grade bookshelf opens at 0ms
     const globalTimer = setTimeout(() => {
       try {
-        if (
-          !localStorage.getItem("cached_global_success_sets_v4") &&
-          !sessionStorage.getItem("cached_global_success_sets_v4")
-        ) {
-          getGlobalSuccessLibrarySetsAction().then((res) => {
-            if (res.success && Array.isArray(res.sets)) {
+        // Clean up legacy full-dataset caches to free storage quota
+        for (let v = 1; v <= 11; v++) {
+          const oldKey = `cached_global_success_sets_v${v}`;
+          localStorage.removeItem(oldKey);
+          sessionStorage.removeItem(oldKey);
+        }
+
+        if (!localStorage.getItem(GRADE_COUNTS_CACHE_KEY)) {
+          getGlobalSuccessGradeCountsAction().then((res) => {
+            if (res.success && Array.isArray(res.gradeCounts)) {
               try {
-                const serialized = JSON.stringify(res.sets);
-                localStorage.setItem("cached_global_success_sets_v4", serialized);
-                sessionStorage.setItem("cached_global_success_sets_v4", serialized);
+                localStorage.setItem(
+                  GRADE_COUNTS_CACHE_KEY,
+                  JSON.stringify(res.gradeCounts)
+                );
               } catch {}
             }
           });

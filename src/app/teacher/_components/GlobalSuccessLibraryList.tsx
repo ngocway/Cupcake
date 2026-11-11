@@ -27,11 +27,13 @@ import {
   ShareableGameOption,
 } from "./MatchGameShareModal";
 import {
-  getGlobalSuccessLibrarySetsAction,
+  getGlobalSuccessGradeCountsAction,
+  getGlobalSuccessSetsByGradeAction,
   getTeacherLibrarySetByIdAction,
   duplicateTeacherLibrarySetAction,
   LibrarySetItem,
   LibrarySubType,
+  GradeCountItem,
 } from "@/actions/teacher-library-actions";
 import { useTeacherLocale, withLangParam } from "@/i18n/teacher-locale";
 import { toast } from "sonner";
@@ -278,22 +280,30 @@ export function parseGlobalSuccessSet(item: LibrarySetItem): ParsedGlobalSet {
   };
 }
 
-const CACHE_KEY = "cached_global_success_sets_v10";
-const UI_STATE_KEY = "global_success_ui_state_v2";
-let memoryCachedGlobalSets: LibrarySetItem[] | null = null;
+const CACHE_KEY_PREFIX = "cached_gs_grade_";
+const CACHE_VERSION = "v2";
+const UI_STATE_KEY = "global_success_ui_state_v3";
+export const GRADE_COUNTS_CACHE_KEY = "cached_gs_grade_counts_v2";
 
-function readInitialCachedSets(): LibrarySetItem[] {
-  if (memoryCachedGlobalSets && memoryCachedGlobalSets.length > 0) {
-    return memoryCachedGlobalSets;
+let memoryCachedGradeData: Record<number, LibrarySetItem[]> = {};
+let memoryCachedGradeCounts: GradeCountItem[] | null = null;
+const inflightGradeRequests: Partial<Record<number, Promise<LibrarySetItem[] | null>>> = {};
+
+function getCacheKeyForGrade(grade: number): string {
+  return `${CACHE_KEY_PREFIX}${grade}_${CACHE_VERSION}`;
+}
+
+function readCachedGradeCounts(): GradeCountItem[] {
+  if (memoryCachedGradeCounts && memoryCachedGradeCounts.length > 0) {
+    return memoryCachedGradeCounts;
   }
   if (typeof window === "undefined") return [];
   try {
-    const raw =
-      localStorage.getItem(CACHE_KEY) || sessionStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(GRADE_COUNTS_CACHE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        memoryCachedGlobalSets = parsed;
+        memoryCachedGradeCounts = parsed;
         return parsed;
       }
     }
@@ -301,12 +311,58 @@ function readInitialCachedSets(): LibrarySetItem[] {
   return [];
 }
 
+function readCachedGradeSets(grade: number): LibrarySetItem[] {
+  if (memoryCachedGradeData[grade] && memoryCachedGradeData[grade].length > 0) {
+    return memoryCachedGradeData[grade];
+  }
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = sessionStorage.getItem(getCacheKeyForGrade(grade));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryCachedGradeData[grade] = parsed;
+        return parsed;
+      }
+    }
+  } catch {}
+  return [];
+}
+
+function fetchGradeSetsDeduped(grade: number): Promise<LibrarySetItem[] | null> {
+  if (inflightGradeRequests[grade]) {
+    return inflightGradeRequests[grade]!;
+  }
+  const req = getGlobalSuccessSetsByGradeAction(grade)
+    .then((res) => {
+      if (res.success && Array.isArray(res.sets)) {
+        memoryCachedGradeData[grade] = res.sets;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem(getCacheKeyForGrade(grade), JSON.stringify(res.sets));
+          } catch {}
+        }
+        return res.sets;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => {
+      delete inflightGradeRequests[grade];
+    });
+
+  inflightGradeRequests[grade] = req;
+  return req;
+}
+
 export function GlobalSuccessLibraryList() {
   const { t, locale } = useTeacherLocale();
   const router = useRouter();
 
   const [sets, setSets] = useState<LibrarySetItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [gradeLoading, setGradeLoading] = useState<boolean>(false);
+  const [gradeCounts, setGradeCounts] = useState<Record<number, number>>({});
+  const [gradeCountsReady, setGradeCountsReady] = useState<boolean>(false);
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedUnitKey, setSelectedUnitKey] = useState<string>("all");
   const [subTypeFilter, setSubTypeFilter] = useState<LibrarySubType | "all">("all");
@@ -362,9 +418,17 @@ export function GlobalSuccessLibraryList() {
 
   useEffect(() => {
     let active = true;
-    const cached = readInitialCachedSets();
 
-    // Hydrate saved Grade/Unit/Filter/Share modal strictly inside useEffect (post-hydration)
+    // 1. Restore grade counts from cache (instant)
+    const cachedCounts = readCachedGradeCounts();
+    if (cachedCounts.length > 0) {
+      const map: Record<number, number> = {};
+      for (const gc of cachedCounts) map[gc.grade] = gc.count;
+      setGradeCounts(map);
+      setGradeCountsReady(true);
+    }
+
+    // 2. Restore UI state (grade/unit/filter)
     try {
       const rawUi = sessionStorage.getItem(UI_STATE_KEY);
       if (rawUi) {
@@ -385,40 +449,26 @@ export function GlobalSuccessLibraryList() {
         }
         if (typeof parsedUi.sharingSetId === "string" && parsedUi.sharingSetId) {
           pendingShareIdRef.current = parsedUi.sharingSetId;
-          if (cached.length > 0) {
-            const matched = cached.find((s) => s.id === parsedUi.sharingSetId);
-            if (matched) setSharingSet(matched);
-          }
         }
       }
     } catch {}
     hasRestoredUiRef.current = true;
 
-    if (cached.length > 0) {
-      setSets(cached);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-
-    getGlobalSuccessLibrarySetsAction().then((res) => {
+    // 3. Fetch fresh grade counts in background (lightweight, server-cached)
+    getGlobalSuccessGradeCountsAction().then((res) => {
       if (!active) return;
-      if (res.success && Array.isArray(res.sets)) {
-        memoryCachedGlobalSets = res.sets;
-        setSets(res.sets);
-        if (pendingShareIdRef.current) {
-          const matched = res.sets.find((s) => s.id === pendingShareIdRef.current);
-          if (matched) setSharingSet(matched);
-        }
-        if (typeof window !== "undefined") {
-          try {
-            const serialized = JSON.stringify(res.sets);
-            localStorage.setItem(CACHE_KEY, serialized);
-            sessionStorage.setItem(CACHE_KEY, serialized);
-          } catch {}
-        }
+      if (res.success && Array.isArray(res.gradeCounts)) {
+        memoryCachedGradeCounts = res.gradeCounts;
+        const map: Record<number, number> = {};
+        for (const gc of res.gradeCounts) map[gc.grade] = gc.count;
+        setGradeCounts(map);
+        setGradeCountsReady(true);
+        try {
+          localStorage.setItem(GRADE_COUNTS_CACHE_KEY, JSON.stringify(res.gradeCounts));
+        } catch {}
+      } else {
+        setGradeCountsReady(true);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -444,16 +494,48 @@ export function GlobalSuccessLibraryList() {
     } catch {}
   }, [selectedGrade, selectedUnitKey, subTypeFilter, sharingSet]);
 
-  const parsedSets = useMemo(() => sets.map(parseGlobalSuccessSet), [sets]);
-
-  // Count how many sets exist per grade
-  const gradeCounts = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const ps of parsedSets) {
-      map[ps.grade] = (map[ps.grade] || 0) + 1;
+  // Lazy-load sets ONLY for the selected Grade (instant from cache/hover-prefetch, refreshed in background)
+  useEffect(() => {
+    if (selectedGrade === null) {
+      setSets([]);
+      setGradeLoading(false);
+      return;
     }
-    return map;
-  }, [parsedSets]);
+
+    let active = true;
+
+    // Try cached / prefetched data first (0ms)
+    const cached = readCachedGradeSets(selectedGrade);
+    if (cached.length > 0) {
+      setSets(cached);
+      setGradeLoading(false);
+      if (pendingShareIdRef.current) {
+        const matched = cached.find((s) => s.id === pendingShareIdRef.current);
+        if (matched) setSharingSet(matched);
+      }
+    } else {
+      setSets([]);
+      setGradeLoading(true);
+    }
+
+    fetchGradeSetsDeduped(selectedGrade).then((freshSets) => {
+      if (!active) return;
+      if (freshSets) {
+        setSets(freshSets);
+        if (pendingShareIdRef.current) {
+          const matched = freshSets.find((s) => s.id === pendingShareIdRef.current);
+          if (matched) setSharingSet(matched);
+        }
+      }
+      setGradeLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedGrade]);
+
+  const parsedSets = useMemo(() => sets.map(parseGlobalSuccessSet), [sets]);
 
   // Sets for currently selected grade
   const setsForGrade = useMemo(
@@ -516,6 +598,12 @@ export function GlobalSuccessLibraryList() {
 
   const hasActiveFilters =
     selectedUnitKey !== "all" || subTypeFilter !== "all";
+
+  const handlePrefetchGrade = (grade: number) => {
+    if (gradeCountsReady && (gradeCounts[grade] || 0) === 0) return;
+    if (readCachedGradeSets(grade).length > 0) return;
+    void fetchGradeSetsDeduped(grade);
+  };
 
   const handleSelectGrade = (grade: number) => {
     setSelectedGrade(grade);
@@ -950,6 +1038,8 @@ export function GlobalSuccessLibraryList() {
                           <button
                             key={grade}
                             type="button"
+                            onMouseEnter={() => handlePrefetchGrade(grade)}
+                            onFocus={() => handlePrefetchGrade(grade)}
                             onClick={() => handleSelectGrade(grade)}
                             className={`px-2.5 py-2 rounded-[8px] font-headline font-black text-xs transition-all flex items-center justify-between gap-1 cursor-pointer border ${
                               isSelected
@@ -970,7 +1060,7 @@ export function GlobalSuccessLibraryList() {
                               >
                                 {count}
                               </span>
-                            ) : loading && sets.length === 0 ? (
+                            ) : !gradeCountsReady ? (
                               <span className="w-6 h-3.5 rounded-full bg-white/70 animate-pulse inline-block" />
                             ) : (
                               <span
@@ -1254,6 +1344,8 @@ export function GlobalSuccessLibraryList() {
                       <button
                         key={grade}
                         type="button"
+                        onMouseEnter={() => handlePrefetchGrade(grade)}
+                        onFocus={() => handlePrefetchGrade(grade)}
                         onClick={() => handleSelectGrade(grade)}
                         className={`p-3.5 rounded-[8px] border text-left transition-all flex flex-col justify-between gap-2.5 cursor-pointer group ${gradeTheme.cardStateCls}`}
                       >
@@ -1267,7 +1359,7 @@ export function GlobalSuccessLibraryList() {
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-extrabold shadow-2xs">
                               {count} {locale === "vi" ? "bộ" : "sets"}
                             </span>
-                          ) : loading && sets.length === 0 ? (
+                          ) : !gradeCountsReady ? (
                             <span className="w-11 h-4 rounded-full bg-white/80 border border-white/60 animate-pulse inline-block" />
                           ) : (
                             <span
@@ -1295,7 +1387,7 @@ export function GlobalSuccessLibraryList() {
             ))}
           </div>
         </div>
-      ) : loading && setsForGrade.length === 0 ? (
+      ) : gradeLoading && setsForGrade.length === 0 ? (
         <div className="w-full min-h-[280px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[8px] border border-amber-200/80 dark:border-slate-800 p-8 flex flex-col items-center justify-center gap-3">
           <Loader2 className="w-9 h-9 text-amber-500 animate-spin" />
           <p className="text-xs sm:text-sm font-bold text-slate-500">{t.library.loading}</p>
