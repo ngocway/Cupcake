@@ -49,3 +49,6 @@ scratch/
 /models.json
 /scratch-query.js
 backups/
+
+# Exclude local source images migrated to Cloudflare R2
+public/Global Success/
