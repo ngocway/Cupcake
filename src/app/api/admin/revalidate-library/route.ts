@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 // Secret key to prevent unauthorized cache busting
 const REVALIDATE_SECRET = process.env.REVALIDATE_SECRET || "dolcake-revalidate-2026";
@@ -29,13 +29,16 @@ export async function GET(request: Request) {
     "global-success-grade-12",
   ];
 
-  for (const tag of tags) {
-    revalidateTag(tag);
-  }
+  // Revalidate all global success cache tags
+  tags.forEach((tag) => revalidateTag(tag, "max"));
+
+  // Also revalidate the teacher page path to clear page-level cache
+  revalidatePath("/teacher", "page");
+  revalidatePath("/teacher/lib-global", "page");
 
   return NextResponse.json({
     success: true,
-    message: `Revalidated ${tags.length} cache tags`,
+    message: `Revalidated ${tags.length} cache tags + teacher paths`,
     tags,
     timestamp: new Date().toISOString(),
   });
