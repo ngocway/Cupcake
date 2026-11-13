@@ -97,9 +97,9 @@ function HomeShellContent({ children, hideHeader, initialSession }: { children?:
               role: (session.user as any).role ?? null,
               email: session.user.email ?? null,
             } : null}
-            search={searchParams.get("search") || ""}
-            setSearch={setSearch}
-            isPendingSearch={isPending}
+            search={isTeacherPage ? "" : (searchParams.get("search") || "")}
+            setSearch={isTeacherPage ? undefined : setSearch}
+            isPendingSearch={isTeacherPage ? false : isPending}
           />
           <MobileContentTypeMenu />
         </>

@@ -242,6 +242,60 @@ function stopTrainChug() {
 
 // Phát âm từ tiếng Anh (ưu tiên audioUrl từ giáo viên, fallback SpeechSynthesis)
 let currentAudio = null;
+let preferredFemaleVoice = null;
+
+function getFemaleVoice() {
+  if (preferredFemaleVoice) return preferredFemaleVoice;
+  if (!('speechSynthesis' in window)) return null;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+
+  // 1. Ưu tiên các giọng nữ tiếng Anh tự nhiên chất lượng cao
+  const priorityNames = [
+    'jenny',      // Microsoft Jenny (Natural / Neural) - rất mượt và tự nhiên
+    'google us',  // Google US English (thường là giọng nữ mượt)
+    'zira',       // Microsoft Zira (giọng nữ chuẩn của Windows)
+    'samantha',   // macOS / iOS female
+    'karen',      // Australian / English female
+    'victoria',   // UK female
+    'aria',       // Microsoft Aria
+    'ava',        // Apple Ava
+    'allison',    // Apple Allison
+    'susan'       // Apple Susan
+  ];
+
+  for (const prio of priorityNames) {
+    const matched = voices.find(v => 
+      v.lang && v.lang.toLowerCase().startsWith('en') && v.name.toLowerCase().includes(prio)
+    );
+    if (matched) {
+      preferredFemaleVoice = matched;
+      return matched;
+    }
+  }
+
+  // 2. Tìm bất kỳ voice tiếng Anh nào có từ "female" trong tên
+  const anyFemale = voices.find(v => 
+    v.lang && v.lang.toLowerCase().startsWith('en') && v.name.toLowerCase().includes('female')
+  );
+  if (anyFemale) {
+    preferredFemaleVoice = anyFemale;
+    return anyFemale;
+  }
+
+  // 3. Fallback: lấy giọng tiếng Anh en-US bất kỳ nếu không tìm thấy tên nữ rõ ràng
+  const anyEnUS = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  return anyEnUS || null;
+}
+
+// Lắng nghe sự kiện voiceschanged vì trên Chrome getVoices() có thể bất đồng bộ lần đầu
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    preferredFemaleVoice = null;
+    getFemaleVoice();
+  };
+}
 
 function speakWord(word, audioUrl) {
   if (audioUrl) {
@@ -273,6 +327,12 @@ function speakWithSynthesis(word) {
     utterance.lang = 'en-US';
     utterance.rate = 0.82;
     utterance.pitch = 1.05;
+
+    const femaleVoice = getFemaleVoice();
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   } catch (e) {}
 }

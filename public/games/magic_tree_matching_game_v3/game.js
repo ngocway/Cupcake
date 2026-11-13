@@ -211,6 +211,48 @@ function playRoundFanfareSound() {
 }
 
 // --- Voice Pronunciation (Custom Audio & TTS) ---
+let preferredFemaleVoice = null;
+
+function getFemaleVoice() {
+  if (preferredFemaleVoice) return preferredFemaleVoice;
+  if (!('speechSynthesis' in window)) return null;
+
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+
+  const priorityNames = [
+    'jenny', 'google us', 'zira', 'samantha', 'karen', 'victoria', 'aria', 'ava', 'allison', 'susan'
+  ];
+
+  for (const prio of priorityNames) {
+    const matched = voices.find(v => 
+      v.lang && v.lang.toLowerCase().startsWith('en') && v.name.toLowerCase().includes(prio)
+    );
+    if (matched) {
+      preferredFemaleVoice = matched;
+      return matched;
+    }
+  }
+
+  const anyFemale = voices.find(v => 
+    v.lang && v.lang.toLowerCase().startsWith('en') && v.name.toLowerCase().includes('female')
+  );
+  if (anyFemale) {
+    preferredFemaleVoice = anyFemale;
+    return anyFemale;
+  }
+
+  const anyEnUS = voices.find(v => v.lang === 'en-US') || voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+  return anyEnUS || null;
+}
+
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    preferredFemaleVoice = null;
+    getFemaleVoice();
+  };
+}
+
 function speak(text) {
   if (!soundOn || !('speechSynthesis' in window)) return;
   try {
@@ -219,6 +261,12 @@ function speak(text) {
     utterance.lang = 'en-US';
     utterance.rate = 0.92;
     utterance.pitch = 1.1;
+
+    const femaleVoice = getFemaleVoice();
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   } catch (e) {}
 }

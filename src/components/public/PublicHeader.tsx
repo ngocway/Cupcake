@@ -233,7 +233,25 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
       </div>
 
       <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-        {setSearch && (
+        {isTeacherSection ? (
+          <a
+            href="https://www.facebook.com/groups/2201402037139591"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={currentLocale === "vi" ? "Tham gia nhóm Facebook" : "Join Facebook Group"}
+            title={currentLocale === "vi" ? "Tham gia nhóm Facebook" : "Join Facebook Group"}
+            className="inline-flex items-center gap-2 sm:gap-2.5 px-3 sm:pl-2.5 sm:pr-4 py-1.5 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-full text-xs sm:text-[13px] font-bold transition-all duration-300 hover:scale-105 border border-[#1877F2]/80 shadow-sm hover:shadow-md hover:shadow-[#1877F2]/25 active:scale-95 group"
+          >
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/20 text-white group-hover:scale-110 transition-transform duration-300 shrink-0">
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+              </svg>
+            </span>
+            <span className="hidden sm:inline font-headline tracking-tight">
+              {currentLocale === "vi" ? "Tham gia nhóm Facebook" : "Join Facebook Group"}
+            </span>
+          </a>
+        ) : setSearch ? (
           <div className="relative hidden xl:block group">
             {isPendingSearch ? (
               <div className="absolute left-5 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-10">
@@ -254,7 +272,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
               type="text" 
             />
           </div>
-        )}
+        ) : null}
         
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {session ? (
