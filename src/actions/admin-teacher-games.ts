@@ -932,3 +932,439 @@ export async function getAdminTeacherBehaviorAnalyticsAction(
     return emptyResult;
   }
 }
+
+// =========================================================================
+// GLOBAL SUCCESS GAMES SHARE & PREVIEW ANALYTICS FOR ADMIN
+// =========================================================================
+
+export type GlobalSuccessActionType = "preview" | "copy_link" | "download_qr";
+
+export interface GlobalSuccessEventLogItem {
+  id: string;
+  action: GlobalSuccessActionType;
+  actionLabel: string;
+  actionColor: string;
+  gameFormat: string;
+  gameFormatLabel: string;
+  formatIcon: string;
+  grade: string;
+  gradeNumber: number;
+  unit: string;
+  unitTitle: string;
+  setCategory: string;
+  fullTitle: string;
+  gameId: string;
+  userName: string;
+  userEmail: string | null;
+  isGuest: boolean;
+  device: "Mobile" | "Tablet" | "Desktop";
+  createdAt: string;
+}
+
+export interface GlobalSuccessFormatStat {
+  formatId: string;
+  formatLabel: string;
+  icon: string;
+  previewCount: number;
+  copyCount: number;
+  downloadQrCount: number;
+  totalActions: number;
+}
+
+export interface GlobalSuccessGradeStat {
+  grade: string;
+  gradeNumber: number;
+  previewCount: number;
+  copyCount: number;
+  downloadQrCount: number;
+  totalActions: number;
+}
+
+export interface GlobalSuccessTopUnitItem {
+  key: string;
+  grade: string;
+  gradeNumber: number;
+  unit: string;
+  unitTitle: string;
+  setCategory: string;
+  previewCount: number;
+  copyCount: number;
+  downloadQrCount: number;
+  totalActions: number;
+  topFormatId: string;
+  topFormatLabel: string;
+  lastActiveAt: string;
+}
+
+export interface AdminGlobalSuccessAnalytics {
+  totals: {
+    totalPreviews: number;
+    totalCopyLinks: number;
+    totalDownloadQrs: number;
+    totalActions: number;
+    uniqueTeachers: number;
+    topGrade: string;
+    topFormat: string;
+    lastActiveAt?: string;
+  };
+  byFormat: GlobalSuccessFormatStat[];
+  byGrade: GlobalSuccessGradeStat[];
+  topUnits: GlobalSuccessTopUnitItem[];
+  recentEvents: GlobalSuccessEventLogItem[];
+}
+
+function parseGlobalSuccessTitle(rawTitle: string) {
+  const regex = /Grade\s*(\d+)\s*-\s*Unit\s*(\d+|[^\s:]+)(?::\s*([^(\n]+))?(?:\s*\(([^)]+)\))?/i;
+  const m = rawTitle.match(regex);
+  if (m) {
+    const gradeNum = parseInt(m[1], 10) || 0;
+    const grade = `Grade ${gradeNum}`;
+    const unit = `Unit ${m[2]}`;
+    const unitTitle = (m[3] || "").trim();
+    const setCategory = (m[4] || "").trim() || "Chung";
+    return {
+      isGlobalSuccess: true,
+      grade,
+      gradeNumber: gradeNum,
+      unit,
+      unitTitle,
+      setCategory,
+    };
+  }
+
+  const gMatch = rawTitle.match(/Grade\s*(\d+)/i);
+  if (gMatch) {
+    const gradeNum = parseInt(gMatch[1], 10) || 0;
+    return {
+      isGlobalSuccess: true,
+      grade: `Grade ${gradeNum}`,
+      gradeNumber: gradeNum,
+      unit: "Khác",
+      unitTitle: rawTitle,
+      setCategory: "Chung",
+    };
+  }
+
+  return {
+    isGlobalSuccess: false,
+    grade: "Khác",
+    gradeNumber: 99,
+    unit: "",
+    unitTitle: rawTitle,
+    setCategory: "",
+  };
+}
+
+function getFormatMeta(formatId: string, subType?: string): { label: string; icon: string } {
+  if (formatId === "train-vocab") return { label: "🚂 Đoàn Tàu (Train)", icon: "train" };
+  if (formatId === "conveyor-drop") return { label: "📦 Băng Chuyền (Conveyor)", icon: "conveyor_belt" };
+  if (formatId === "candy-quiz") return { label: "🍬 Kẹo Ngọt (Candy Quiz)", icon: "cookie" };
+  if (formatId === "treasure-hunt") return { label: "🏴‍☠️ Kho Báu (Treasure)", icon: "diamond" };
+  if (formatId === "shooter-quiz") return { label: "🚀 Bắn Súng (Shooter)", icon: "rocket_launch" };
+  if (formatId === "match-text-text") return { label: "🔤 Nối Chữ - Chữ (Pairs)", icon: "extension" };
+  if (formatId === "flip-image-text") return { label: "🃏 Lật Thẻ (Memory Flip)", icon: "style" };
+
+  if (subType === "image-text") return { label: "🚂 Đoàn Tàu (Mặc định)", icon: "train" };
+  if (subType === "quiz") return { label: "🍬 Kẹo Ngọt (Mặc định)", icon: "cookie" };
+  if (subType === "text-text") return { label: "🔤 Nối Chữ - Chữ (Mặc định)", icon: "extension" };
+
+  return { label: "🎮 Game Trực Tuyến", icon: "sports_esports" };
+}
+
+export async function getAdminGlobalSuccessAnalyticsAction(): Promise<AdminGlobalSuccessAnalytics> {
+  const emptyResult: AdminGlobalSuccessAnalytics = {
+    totals: {
+      totalPreviews: 0,
+      totalCopyLinks: 0,
+      totalDownloadQrs: 0,
+      totalActions: 0,
+      uniqueTeachers: 0,
+      topGrade: "Chưa có",
+      topFormat: "Chưa có",
+    },
+    byFormat: [],
+    byGrade: Array.from({ length: 12 }, (_, i) => ({
+      grade: `Grade ${i + 1}`,
+      gradeNumber: i + 1,
+      previewCount: 0,
+      copyCount: 0,
+      downloadQrCount: 0,
+      totalActions: 0,
+    })),
+    topUnits: [],
+    recentEvents: [],
+  };
+
+  try {
+    const logs = await prisma.pageViewLog.findMany({
+      where: {
+        path: { startsWith: "/__event__/class/global/teacher_my_game_action" },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 3000,
+    });
+
+    if (!logs || logs.length === 0) {
+      return emptyResult;
+    }
+
+    const userIds = Array.from(
+      new Set(logs.map((l) => l.userId).filter((id): id is string => Boolean(id)))
+    );
+
+    const users =
+      userIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    // Maps for aggregation
+    const formatStatsMap = new Map<string, GlobalSuccessFormatStat>();
+    const gradeStatsMap = new Map<number, GlobalSuccessGradeStat>();
+    for (let i = 1; i <= 12; i++) {
+      gradeStatsMap.set(i, {
+        grade: `Grade ${i}`,
+        gradeNumber: i,
+        previewCount: 0,
+        copyCount: 0,
+        downloadQrCount: 0,
+        totalActions: 0,
+      });
+    }
+
+    const unitStatsMap = new Map<
+      string,
+      {
+        grade: string;
+        gradeNumber: number;
+        unit: string;
+        unitTitle: string;
+        setCategory: string;
+        previewCount: number;
+        copyCount: number;
+        downloadQrCount: number;
+        totalActions: number;
+        formatCounts: Record<string, number>;
+        lastActiveAt: string;
+      }
+    >();
+
+    const uniqueTeachersSet = new Set<string>();
+    let totalPreviews = 0;
+    let totalCopyLinks = 0;
+    let totalDownloadQrs = 0;
+    const recentEvents: GlobalSuccessEventLogItem[] = [];
+
+    for (const log of logs) {
+      const [, queryStr] = log.path.split("?");
+      if (!queryStr) continue;
+
+      const params = new URLSearchParams(queryStr);
+      const rawAction = params.get("action") || "";
+      const gameTitle = params.get("gameTitle") || "";
+      const gameId = params.get("gameId") || "";
+      const isGlobalSuccessParam = params.get("isGlobalSuccess") === "true";
+      const rawFormat = params.get("gameFormat") || "default";
+      const subType = params.get("subType") || "";
+
+      // Only process the 3 relevant share modal actions
+      let actionType: GlobalSuccessActionType | null = null;
+      let actionLabel = "";
+      let actionColor = "";
+
+      if (rawAction === "preview_from_share_modal" || rawAction === "preview") {
+        actionType = "preview";
+        actionLabel = "👁️ Xem thử Game";
+        actionColor = "bg-sky-500/15 text-sky-400 border-sky-500/30";
+      } else if (rawAction === "copy_link") {
+        actionType = "copy_link";
+        actionLabel = "🔗 Sao chép link";
+        actionColor = "bg-purple-500/15 text-purple-400 border-purple-500/30";
+      } else if (rawAction === "download_qr") {
+        actionType = "download_qr";
+        actionLabel = "📲 Tải mã QR";
+        actionColor = "bg-amber-500/15 text-amber-400 border-amber-500/30";
+      } else {
+        continue;
+      }
+
+      // Check if it is a Global Success game
+      const parsed = parseGlobalSuccessTitle(gameTitle);
+      if (!isGlobalSuccessParam && !parsed.isGlobalSuccess) {
+        continue;
+      }
+
+      // Record unique teacher
+      uniqueTeachersSet.add(log.userId || log.ipHash || log.id);
+
+      // Increment totals
+      if (actionType === "preview") totalPreviews++;
+      else if (actionType === "copy_link") totalCopyLinks++;
+      else if (actionType === "download_qr") totalDownloadQrs++;
+
+      // Format metadata
+      const formatMeta = getFormatMeta(rawFormat, subType);
+
+      // Update Format Stats
+      const fmtKey = rawFormat === "default" ? (subType === "quiz" ? "candy-quiz" : "train-vocab") : rawFormat;
+      let fEntry = formatStatsMap.get(fmtKey);
+      if (!fEntry) {
+        fEntry = {
+          formatId: fmtKey,
+          formatLabel: formatMeta.label,
+          icon: formatMeta.icon,
+          previewCount: 0,
+          copyCount: 0,
+          downloadQrCount: 0,
+          totalActions: 0,
+        };
+        formatStatsMap.set(fmtKey, fEntry);
+      }
+      fEntry.totalActions++;
+      if (actionType === "preview") fEntry.previewCount++;
+      else if (actionType === "copy_link") fEntry.copyCount++;
+      else if (actionType === "download_qr") fEntry.downloadQrCount++;
+
+      // Update Grade Stats (1 to 12)
+      if (parsed.gradeNumber >= 1 && parsed.gradeNumber <= 12) {
+        const gEntry = gradeStatsMap.get(parsed.gradeNumber);
+        if (gEntry) {
+          gEntry.totalActions++;
+          if (actionType === "preview") gEntry.previewCount++;
+          else if (actionType === "copy_link") gEntry.copyCount++;
+          else if (actionType === "download_qr") gEntry.downloadQrCount++;
+        }
+      }
+
+      // Update Unit Stats
+      const unitKey = `${parsed.grade} - ${parsed.unit || "Chung"}`;
+      let uEntry = unitStatsMap.get(unitKey);
+      if (!uEntry) {
+        uEntry = {
+          grade: parsed.grade,
+          gradeNumber: parsed.gradeNumber,
+          unit: parsed.unit,
+          unitTitle: parsed.unitTitle,
+          setCategory: parsed.setCategory,
+          previewCount: 0,
+          copyCount: 0,
+          downloadQrCount: 0,
+          totalActions: 0,
+          formatCounts: {},
+          lastActiveAt: log.createdAt.toISOString(),
+        };
+        unitStatsMap.set(unitKey, uEntry);
+      }
+      uEntry.totalActions++;
+      if (actionType === "preview") uEntry.previewCount++;
+      else if (actionType === "copy_link") uEntry.copyCount++;
+      else if (actionType === "download_qr") uEntry.downloadQrCount++;
+      uEntry.formatCounts[fmtKey] = (uEntry.formatCounts[fmtKey] || 0) + 1;
+
+      // Device detection
+      const ua = log.userAgent || "";
+      const device: "Mobile" | "Tablet" | "Desktop" =
+        ua.includes("iPad") || ua.includes("Tablet")
+          ? "Tablet"
+          : ua.includes("Mobile") || ua.includes("Android") || ua.includes("iPhone")
+            ? "Mobile"
+            : "Desktop";
+
+      const userObj = log.userId ? userMap.get(log.userId) : undefined;
+
+      // Add to recent event stream (up to 80 events)
+      if (recentEvents.length < 80) {
+        recentEvents.push({
+          id: log.id,
+          action: actionType,
+          actionLabel,
+          actionColor,
+          gameFormat: fmtKey,
+          gameFormatLabel: formatMeta.label,
+          formatIcon: formatMeta.icon,
+          grade: parsed.grade,
+          gradeNumber: parsed.gradeNumber,
+          unit: parsed.unit,
+          unitTitle: parsed.unitTitle,
+          setCategory: parsed.setCategory,
+          fullTitle: gameTitle,
+          gameId,
+          userName: userObj?.name || (log.userId ? "Giáo viên" : "Khách chưa đăng nhập"),
+          userEmail: userObj?.email || null,
+          isGuest: !log.userId,
+          device,
+          createdAt: log.createdAt.toISOString(),
+        });
+      }
+    }
+
+    // Top Units array
+    const topUnits: GlobalSuccessTopUnitItem[] = Array.from(unitStatsMap.entries())
+      .map(([key, item]) => {
+        let topFmt = "train-vocab";
+        let maxFmtCount = 0;
+        for (const [fId, count] of Object.entries(item.formatCounts)) {
+          if (count > maxFmtCount) {
+            maxFmtCount = count;
+            topFmt = fId;
+          }
+        }
+        return {
+          key,
+          grade: item.grade,
+          gradeNumber: item.gradeNumber,
+          unit: item.unit,
+          unitTitle: item.unitTitle,
+          setCategory: item.setCategory,
+          previewCount: item.previewCount,
+          copyCount: item.copyCount,
+          downloadQrCount: item.downloadQrCount,
+          totalActions: item.totalActions,
+          topFormatId: topFmt,
+          topFormatLabel: getFormatMeta(topFmt).label,
+          lastActiveAt: item.lastActiveAt,
+        };
+      })
+      .sort((a, b) => b.totalActions - a.totalActions)
+      .slice(0, 40);
+
+    // Formats array sorted by popularity
+    const byFormat = Array.from(formatStatsMap.values()).sort(
+      (a, b) => b.totalActions - a.totalActions
+    );
+
+    // Grades array
+    const byGrade = Array.from(gradeStatsMap.values()).sort(
+      (a, b) => a.gradeNumber - b.gradeNumber
+    );
+
+    // Top Grade & Format
+    const sortedGrades = [...byGrade].sort((a, b) => b.totalActions - a.totalActions);
+    const topGrade = sortedGrades[0]?.totalActions > 0 ? sortedGrades[0].grade : "Chưa có";
+    const topFormat = byFormat[0]?.totalActions > 0 ? byFormat[0].formatLabel : "Chưa có";
+
+    return {
+      totals: {
+        totalPreviews,
+        totalCopyLinks,
+        totalDownloadQrs,
+        totalActions: totalPreviews + totalCopyLinks + totalDownloadQrs,
+        uniqueTeachers: uniqueTeachersSet.size,
+        topGrade,
+        topFormat,
+        lastActiveAt: recentEvents[0]?.createdAt,
+      },
+      byFormat,
+      byGrade,
+      topUnits,
+      recentEvents,
+    };
+  } catch (err) {
+    console.error("Failed to fetch Global Success analytics:", err);
+    return emptyResult;
+  }
+}

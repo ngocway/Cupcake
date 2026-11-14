@@ -248,7 +248,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
   ];
 }
 
-function getEditStudioHref(setItem: LibrarySetItem, category: LibraryCategory): string {
+function getEditStudioHref(setItem: LibrarySetItem, category: LibraryCategory | "all"): string {
   const returnTab = `lib-${category}`;
   if (setItem.subType === "image-image") {
     return `/teacher/games/match-image-text/create?type=image-image&editLibrarySetId=${setItem.id}&returnTab=${returnTab}`;
@@ -262,7 +262,7 @@ function getEditStudioHref(setItem: LibrarySetItem, category: LibraryCategory): 
   return `/teacher/games/match-image-text/create?type=${setItem.subType}&editLibrarySetId=${setItem.id}&returnTab=${returnTab}`;
 }
 
-export function MyLibraryList({ category }: { category: LibraryCategory }) {
+export function MyLibraryList({ category }: { category: LibraryCategory | "all" }) {
   const router = useRouter();
   const { locale, isVi, t } = useTeacherLocale();
   const [sets, setSets] = useState<LibrarySetItem[]>([]);
@@ -433,7 +433,11 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
 
   const filteredSets = sets.filter((s) => {
     const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchSub = subTypeFilter === "all" || s.subType === subTypeFilter;
+    const matchSub =
+      subTypeFilter === "all" ||
+      s.subType === subTypeFilter ||
+      (subTypeFilter === "match" &&
+        (s.subType === "image-text" || s.subType === "image-image" || s.subType === "text-text"));
     return matchSearch && matchSub;
   });
 
@@ -504,7 +508,54 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {showSubTypeFilter && (
+          {category === "all" ? (
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setSubTypeFilter("all")}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                  subTypeFilter === "all"
+                    ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {t.library.allSubTypes}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubTypeFilter("match")}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                  subTypeFilter === "match"
+                    ? "bg-sky-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {t.sidebar.libraryMatchTitle}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubTypeFilter("quiz")}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                  subTypeFilter === "quiz"
+                    ? "bg-amber-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {t.sidebar.libraryQuizTitle}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubTypeFilter("choice")}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                  subTypeFilter === "choice"
+                    ? "bg-emerald-500 text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {t.sidebar.libraryMathTitle}
+              </button>
+            </div>
+          ) : showSubTypeFilter ? (
             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
               <button
                 type="button"
@@ -540,7 +591,7 @@ export function MyLibraryList({ category }: { category: LibraryCategory }) {
                 {t.library.imageImageBadge}
               </button>
             </div>
-          )}
+          ) : null}
 
           {(category === "match" || category === "flip") && (
             <div className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/70 text-amber-700 dark:text-amber-300 text-[11px] font-bold">

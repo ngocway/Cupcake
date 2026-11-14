@@ -1,6 +1,7 @@
 import {
   getAdminTeacherGamesAction,
   getAdminTeacherBehaviorAnalyticsAction,
+  getAdminGlobalSuccessAnalyticsAction,
 } from "@/actions/admin-teacher-games";
 import { TeacherGamesClient } from "./TeacherGamesClient";
 
@@ -11,8 +12,11 @@ export const metadata = {
 };
 
 export default async function AdminTeacherGamesPage() {
-  const res = await getAdminTeacherGamesAction();
-  const games = res.success && res.games ? res.games : [];
+  const [gamesRes, globalSuccessAnalytics] = await Promise.all([
+    getAdminTeacherGamesAction(),
+    getAdminGlobalSuccessAnalyticsAction(),
+  ]);
+  const games = gamesRes.success && gamesRes.games ? gamesRes.games : [];
   const analytics = await getAdminTeacherBehaviorAnalyticsAction(games);
 
   return (
@@ -23,15 +27,19 @@ export default async function AdminTeacherGamesPage() {
           <span className="material-symbols-outlined text-blue-500 text-4xl">
             joystick
           </span>
-          Game giáo viên tạo & Phân tích Hành vi
+          Game giáo viên tạo &amp; Phân tích Hành vi
         </h1>
         <p className="text-neutral-400 mt-2">
-          Theo dõi các bài tập do giáo viên thiết kế và phân tích phễu hành vi khám phá, xem video, bấm tạo bài trên cổng /teacher.
+          Theo dõi các bài tập do giáo viên thiết kế, game Global Success được preview/chia sẻ và phân tích phễu hành vi trên cổng /teacher.
         </p>
       </div>
 
       {/* Main Content */}
-      <TeacherGamesClient initialGames={games} analytics={analytics} />
+      <TeacherGamesClient
+        initialGames={games}
+        analytics={analytics}
+        globalSuccessAnalytics={globalSuccessAnalytics}
+      />
     </div>
   );
 }

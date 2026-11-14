@@ -1832,6 +1832,9 @@ export function GlobalSuccessLibraryList() {
           topicId={sharingSet.id}
           gamePath={getShareableGameOptionsForSubType(sharingSet.subType)[0]?.gamePath}
           gameOptions={getShareableGameOptionsForSubType(sharingSet.subType)}
+          isGlobalSuccess={true}
+          gradeLevel={sharingSet.gradeLevel}
+          subType={sharingSet.subType}
         />
       )}
 

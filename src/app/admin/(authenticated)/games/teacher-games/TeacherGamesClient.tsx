@@ -7,13 +7,16 @@ import {
   toggleTeacherGamePublishAction,
   type AdminTeacherGameItem,
   type AdminTeacherBehaviorAnalytics,
+  type AdminGlobalSuccessAnalytics,
 } from "@/actions/admin-teacher-games";
 import { TeacherAvatar } from "@/components/shared/TeacherAvatar";
 import { TeacherBehaviorAnalyticsTab } from "./TeacherBehaviorAnalyticsTab";
+import { AdminGlobalSuccessAnalyticsTab } from "./AdminGlobalSuccessAnalyticsTab";
 
 interface TeacherGamesClientProps {
   initialGames: AdminTeacherGameItem[];
   analytics?: AdminTeacherBehaviorAnalytics;
+  globalSuccessAnalytics?: AdminGlobalSuccessAnalytics;
 }
 
 type TabKey = "all" | "candy" | "shooter" | "egg" | "treasure" | "flip" | "match";
@@ -35,8 +38,12 @@ const TABS: TabConfig[] = [
   { key: "match", label: "Nối cặp", icon: "extension" },
 ];
 
-export function TeacherGamesClient({ initialGames, analytics }: TeacherGamesClientProps) {
-  const [viewMode, setViewMode] = useState<"games" | "analytics">("games");
+export function TeacherGamesClient({
+  initialGames,
+  analytics,
+  globalSuccessAnalytics,
+}: TeacherGamesClientProps) {
+  const [viewMode, setViewMode] = useState<"games" | "analytics" | "global-success">("games");
   const [games, setGames] = useState<AdminTeacherGameItem[]>(initialGames);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -155,7 +162,7 @@ export function TeacherGamesClient({ initialGames, analytics }: TeacherGamesClie
 
   return (
     <div className="space-y-6">
-      {/* Top Mode Switcher: Games List vs Teacher Behavior Analytics */}
+      {/* Top Mode Switcher: Games List vs Teacher Behavior Analytics vs Global Success Games */}
       <div className="flex flex-wrap items-center gap-3 p-1.5 bg-neutral-900/90 border border-neutral-800 rounded-2xl w-fit">
         <button
           type="button"
@@ -187,9 +194,29 @@ export function TeacherGamesClient({ initialGames, analytics }: TeacherGamesClie
             </span>
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={() => setViewMode("global-success")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+            viewMode === "global-success"
+              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/25"
+              : "text-neutral-400 hover:text-white"
+          }`}
+        >
+          <span className="material-symbols-outlined text-lg">menu_book</span>
+          <span>Global Success Games</span>
+          {globalSuccessAnalytics && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/20 text-white font-black">
+              {globalSuccessAnalytics.totals.totalActions} tương tác
+            </span>
+          )}
+        </button>
       </div>
 
-      {viewMode === "analytics" && analytics ? (
+      {viewMode === "global-success" ? (
+        <AdminGlobalSuccessAnalyticsTab analytics={globalSuccessAnalytics} />
+      ) : viewMode === "analytics" && analytics ? (
         <TeacherBehaviorAnalyticsTab analytics={analytics} />
       ) : (
         <>

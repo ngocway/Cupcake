@@ -77,7 +77,7 @@ export function InstructionsBlock({
   togglePlacement = "top-row",
   forceLanguage,
 }: InstructionsBlockProps) {
-  const [mounted, setMounted] = useState(() => typeof window !== 'undefined');
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);

@@ -17,6 +17,7 @@ import {
   FolderOpen,
   Copy,
   ClipboardList,
+  LayoutGrid,
 } from "lucide-react";
 
 export type TeacherPortalTab =
@@ -25,12 +26,14 @@ export type TeacherPortalTab =
   | "fill"
   | "flip"
   | "quiz"
+  | "my-games"
   | "my-match-games"
   | "my-choice-games"
   | "my-fill-games"
   | "my-flip-games"
   | "my-quiz-games"
   | "lib-global"
+  | "lib-all"
   | "lib-match"
   | "lib-choice"
   | "lib-flip"
@@ -65,15 +68,22 @@ export function TeacherHomeSidebar({
       : rawActiveTab;
 
   const isPersonalLibActive =
-    activeTab === "lib-match" || activeTab === "lib-quiz" || activeTab === "lib-choice";
+    activeTab === "lib-all" || activeTab === "lib-match" || activeTab === "lib-quiz" || activeTab === "lib-choice";
+
+  const isMyGamesActive =
+    activeTab === "my-games" ||
+    activeTab === "my-match-games" ||
+    activeTab === "my-choice-games" ||
+    activeTab === "my-flip-games" ||
+    activeTab === "my-quiz-games";
 
   const [isCreateOpen, setIsCreateOpen] = useState(true);
-  const [isMyGamesOpen, setIsMyGamesOpen] = useState(true);
   const [isLibraryOpen, setIsLibraryOpen] = useState(true);
   const [isMyQuestionSetsOpen, setIsMyQuestionSetsOpen] = useState<boolean>(isPersonalLibActive);
 
   useEffect(() => {
     if (
+      activeTab === "lib-all" ||
       activeTab === "lib-match" ||
       activeTab === "lib-quiz" ||
       activeTab === "lib-choice"
@@ -87,10 +97,6 @@ export function TeacherHomeSidebar({
     if (savedCreate !== null) {
       setIsCreateOpen(savedCreate === "true");
     }
-    const savedMyGames = localStorage.getItem("teacher_mygames_menu_open");
-    if (savedMyGames !== null) {
-      setIsMyGamesOpen(savedMyGames === "true");
-    }
     const savedLib = localStorage.getItem("teacher_library_menu_open");
     if (savedLib !== null) {
       setIsLibraryOpen(savedLib === "true");
@@ -101,12 +107,6 @@ export function TeacherHomeSidebar({
     const next = !isCreateOpen;
     setIsCreateOpen(next);
     localStorage.setItem("teacher_create_menu_open", String(next));
-  };
-
-  const toggleMyGamesMenu = () => {
-    const next = !isMyGamesOpen;
-    setIsMyGamesOpen(next);
-    localStorage.setItem("teacher_mygames_menu_open", String(next));
   };
 
   const toggleLibraryMenu = () => {
@@ -559,11 +559,26 @@ export function TeacherHomeSidebar({
                 <div
                   className={`transition-all duration-300 ease-in-out overflow-hidden ${
                     isMyQuestionSetsOpen
-                      ? "max-h-[320px] opacity-100 mt-1.5"
+                      ? "max-h-[400px] opacity-100 mt-1.5"
                       : "max-h-0 opacity-0 pointer-events-none"
                   }`}
                 >
                   <div className="ml-4 pl-2.5 py-0.5 border-l-2 border-emerald-200/80 flex flex-col gap-1.5">
+                    {/* 2.0. Tất cả (All Sets) */}
+                    <div
+                      onClick={() => handleSelectTab("lib-all")}
+                      className={`teacher-list-item !py-2 !px-2.5 !rounded-xl ${
+                        activeTab === "lib-all" ? "active choice-active" : ""
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                        <LayoutGrid className="w-4 h-4" />
+                      </div>
+                      <span className="font-headline font-bold text-[13px] text-slate-800 truncate flex-1">
+                        {t.sidebar.libraryAllTitle}
+                      </span>
+                    </div>
+
                     {/* 2.1. Ghép cặp & Lật thẻ (Matching & Flip) */}
                     <div
                       onClick={() => handleSelectTab("lib-match")}
@@ -662,115 +677,22 @@ export function TeacherHomeSidebar({
           )}
         </div>
 
-        {/* MENU CẤP 1 - BÀI TẬP ĐÃ TẠO */}
+        {/* MENU CẤP 1 - GAME CỦA TÔI (MY GAMES) */}
         <div className="flex flex-col w-full">
           <button
             type="button"
-            onClick={toggleMyGamesMenu}
-            className="teacher-level1-btn teacher-level1-mygames group"
+            onClick={() => handleSelectTab("my-games")}
+            className={`teacher-level1-btn teacher-level1-mygames group transition-all duration-300 ${
+              isMyGamesActive
+                ? "ring-4 ring-purple-300/70 shadow-lg scale-[1.02] border-white/50"
+                : "opacity-95 hover:opacity-100"
+            }`}
           >
-            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <FolderOpen className="w-4 h-4 text-white stroke-[2.5]" />
             </div>
-            <span>{t.sidebar.createdTitle}</span>
-            <ChevronDown
-              className={`ml-auto w-5 h-5 text-white transition-transform duration-300 shrink-0 ${
-                isMyGamesOpen ? "rotate-180" : ""
-              }`}
-            />
+            <span className="flex-1 text-left">{t.sidebar.createdTitle}</span>
           </button>
-
-          {/* SUBMENU CẤP 2 - BÀI TẬP ĐÃ TẠO */}
-          <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isMyGamesOpen ? "max-h-[600px] opacity-100 mt-2.5" : "max-h-0 opacity-0 pointer-events-none"}`}>
-            <div className="ml-2.5 pl-2.5 py-1 pr-1 border-l-2 border-purple-200/60 flex flex-col gap-2">
-              {/* Nối cặp đã tạo */}
-              <div
-                onClick={() => handleSelectTab("my-match-games")}
-                className={`teacher-list-item ${activeTab === "my-match-games" ? "active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
-                  <Copy className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdMatchTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdMatchSub}</span>
-                </div>
-              </div>
-
-              {/* Toán học đã tạo */}
-              <div
-                onClick={() => handleSelectTab("my-choice-games")}
-                className={`teacher-list-item ${activeTab === "my-choice-games" ? "active choice-active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-                  <Calculator className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdMathTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdMathSub}</span>
-                </div>
-              </div>
-
-              {/* Điền ô trống đã tạo (Tạm khóa) */}
-              <div
-                className="teacher-list-item opacity-50 cursor-not-allowed pointer-events-none relative select-none grayscale-[30%]"
-                title={t.sidebar.comingSoonTooltip}
-              >
-                <div className="w-9 h-9 rounded-xl bg-purple-100/70 text-purple-500 flex items-center justify-center shrink-0">
-                  <ClipboardList className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-headline font-black text-sm text-slate-600">{t.sidebar.createdFillTitle}</span>
-                    <Lock className="w-4 h-4 text-purple-600/80" />
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdFillSub}</span>
-                </div>
-              </div>
-
-              {/* Lật ảnh đã tạo */}
-              <div
-                onClick={() => handleSelectTab("my-flip-games")}
-                className={`teacher-list-item ${activeTab === "my-flip-games" ? "active flip-active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdFlipTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdFlipSub}</span>
-                </div>
-              </div>
-
-              {/* Trắc nghiệm đã tạo */}
-              <div
-                onClick={() => handleSelectTab("my-quiz-games")}
-                className={`teacher-list-item ${activeTab === "my-quiz-games" ? "active quiz-active" : ""}`}
-              >
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                  <HelpCircle className="w-5 h-5" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-headline font-black text-sm text-slate-800">{t.sidebar.createdQuizTitle}</span>
-                  <span className="text-[11px] font-semibold text-slate-400">{t.sidebar.createdQuizSub}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Collapsed state mini-preview icons */}
-          {!isMyGamesOpen && (
-            <div
-              onClick={toggleMyGamesMenu}
-              className="flex gap-3 px-3 py-2 bg-purple-50/80 rounded-[14px] border border-purple-200/60 w-full items-center justify-center animate-in fade-in duration-300 mt-1 cursor-pointer hover:bg-purple-100/60 transition-all shadow-xs"
-            >
-              <Copy className="w-4 h-4 text-sky-500" />
-              <Calculator className="w-4 h-4 text-emerald-500" />
-              <ClipboardList className="w-4 h-4 text-purple-500" />
-              <Layers className="w-4 h-4 text-rose-500" />
-              <HelpCircle className="w-4 h-4 text-amber-500" />
-            </div>
-          )}
         </div>
       </div>
     </StickySidebarWrapper>

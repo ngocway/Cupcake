@@ -30,6 +30,9 @@ interface MatchGameShareModalProps {
   topicId: string;
   gamePath?: string;
   gameOptions?: ShareableGameOption[];
+  isGlobalSuccess?: boolean;
+  gradeLevel?: string;
+  subType?: string;
 }
 
 export function MatchGameShareModal({
@@ -39,6 +42,9 @@ export function MatchGameShareModal({
   topicId,
   gamePath = "/student/game/flashcard-match",
   gameOptions,
+  isGlobalSuccess,
+  gradeLevel,
+  subType,
 }: MatchGameShareModalProps) {
   const [copied, setCopied] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState<string>(
@@ -96,7 +102,17 @@ export function MatchGameShareModal({
   }, [isOpen, onClose]);
 
   // Copy link handler
-  const handleCopyLink = () => { trackEvent("teacher_my_game_action", { action: "copy_link", gameTitle: topicName, gameId: topicId });
+  const handleCopyLink = () => {
+    trackEvent("teacher_my_game_action", {
+      action: "copy_link",
+      gameTitle: topicName,
+      gameId: topicId,
+      gameFormat: selectedOption?.id || "default",
+      gameFormatLabel: selectedOption ? (locale === "vi" ? selectedOption.labelVi : selectedOption.labelEn) : "",
+      isGlobalSuccess: Boolean(isGlobalSuccess || topicName.startsWith("Grade ")),
+      gradeLevel: gradeLevel || "",
+      subType: subType || "",
+    });
     if (navigator.clipboard) {
       navigator.clipboard.writeText(gameUrl);
       setCopied(true);
@@ -106,7 +122,17 @@ export function MatchGameShareModal({
   };
 
   // Download QR image
-  const handleDownloadQR = useCallback(() => { trackEvent("teacher_my_game_action", { action: "download_qr", gameTitle: topicName, gameId: topicId });
+  const handleDownloadQR = useCallback(() => {
+    trackEvent("teacher_my_game_action", {
+      action: "download_qr",
+      gameTitle: topicName,
+      gameId: topicId,
+      gameFormat: selectedOption?.id || "default",
+      gameFormatLabel: selectedOption ? (locale === "vi" ? selectedOption.labelVi : selectedOption.labelEn) : "",
+      isGlobalSuccess: Boolean(isGlobalSuccess || topicName.startsWith("Grade ")),
+      gradeLevel: gradeLevel || "",
+      subType: subType || "",
+    });
     const canvas = downloadCanvasRef.current;
     if (!canvas) return;
 
@@ -300,6 +326,11 @@ export function MatchGameShareModal({
                     action: "preview_from_share_modal",
                     gameTitle: topicName,
                     gameId: topicId,
+                    gameFormat: selectedOption?.id || "default",
+                    gameFormatLabel: selectedOption ? (locale === "vi" ? selectedOption.labelVi : selectedOption.labelEn) : "",
+                    isGlobalSuccess: Boolean(isGlobalSuccess || topicName.startsWith("Grade ")),
+                    gradeLevel: gradeLevel || "",
+                    subType: subType || "",
                   });
                   const previewUrl = `${gameUrl}${gameUrl.includes("?") ? "&" : "?"}preview=1`;
                   window.open(previewUrl, "_blank", "noopener,noreferrer");

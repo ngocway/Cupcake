@@ -3,13 +3,10 @@
 import { useState, useEffect } from "react";
 import { TeacherHomeSidebar } from "./TeacherHomeSidebar";
 import { MatchGameCards } from "./MatchGameCards";
-import { MyMatchGamesList } from "./MyMatchGamesList";
 import { ChoiceGameCards } from "./ChoiceGameCards";
-import { MyChoiceGamesList } from "./MyChoiceGamesList";
 import { FlipGameCards } from "./FlipGameCards";
-import { MyFlipGamesList } from "./MyFlipGamesList";
 import { QuizGameCards } from "./QuizGameCards";
-import { MyQuizGamesList } from "./MyQuizGamesList";
+import { MyGamesManager } from "./MyGamesManager";
 import { MyLibraryList } from "./MyLibraryList";
 import {
   GlobalSuccessLibraryList,
@@ -257,23 +254,39 @@ export function TeacherDashboardClient({
           </div>
         )}
 
-        {/* 2. Bài tập Nối cặp đã tạo */}
-        {isAuthenticated && visitedTabs.has("my-match-games") && (
-          <div className={activeTab === "my-match-games" ? "block space-y-6" : "hidden"}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
-                  {t.sidebar.createdMatchTitle}
-                </h2>
-                <p className="text-xs font-semibold text-slate-400 mt-1">
-                  {t.sidebar.createdMatchSub}
-                </p>
-              </div>
-              <TeacherLocaleSwitch />
+        {/* 2. Game của tôi (My Games Manager) */}
+        {isAuthenticated &&
+          (visitedTabs.has("my-games") ||
+            visitedTabs.has("my-match-games") ||
+            visitedTabs.has("my-choice-games") ||
+            visitedTabs.has("my-flip-games") ||
+            visitedTabs.has("my-quiz-games")) && (
+            <div
+              className={
+                activeTab === "my-games" ||
+                activeTab === "my-match-games" ||
+                activeTab === "my-choice-games" ||
+                activeTab === "my-flip-games" ||
+                activeTab === "my-quiz-games"
+                  ? "block"
+                  : "hidden"
+              }
+            >
+              <MyGamesManager
+                initialSubTab={
+                  activeTab === "my-match-games"
+                    ? "match"
+                    : activeTab === "my-choice-games"
+                    ? "choice"
+                    : activeTab === "my-flip-games"
+                    ? "flip"
+                    : activeTab === "my-quiz-games"
+                    ? "quiz"
+                    : "all"
+                }
+              />
             </div>
-            <MyMatchGamesList />
-          </div>
-        )}
+          )}
 
         {/* 3. Toán học (Choice Cards) */}
         {visitedTabs.has("choice") && (
@@ -282,24 +295,6 @@ export function TeacherDashboardClient({
               isAuthenticated={isAuthenticated}
               onRequireAuth={handleRequireAuth}
             />
-          </div>
-        )}
-
-        {/* 4. Bài tập Toán học đã tạo */}
-        {isAuthenticated && visitedTabs.has("my-choice-games") && (
-          <div className={activeTab === "my-choice-games" ? "block space-y-6" : "hidden"}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
-                  {t.sidebar.createdMathTitle}
-                </h2>
-                <p className="text-xs font-semibold text-slate-400 mt-1">
-                  {t.sidebar.createdMathSub}
-                </p>
-              </div>
-              <TeacherLocaleSwitch />
-            </div>
-            <MyChoiceGamesList />
           </div>
         )}
 
@@ -313,24 +308,6 @@ export function TeacherDashboardClient({
           </div>
         )}
 
-        {/* 6. Bài tập Lật ảnh đã tạo */}
-        {isAuthenticated && visitedTabs.has("my-flip-games") && (
-          <div className={activeTab === "my-flip-games" ? "block space-y-6" : "hidden"}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
-                  {t.sidebar.createdFlipTitle}
-                </h2>
-                <p className="text-xs font-semibold text-slate-400 mt-1">
-                  {t.sidebar.createdFlipSub}
-                </p>
-              </div>
-              <TeacherLocaleSwitch />
-            </div>
-            <MyFlipGamesList />
-          </div>
-        )}
-
         {/* 7. Trắc nghiệm (Quiz Cards) */}
         {visitedTabs.has("quiz") && (
           <div className={activeTab === "quiz" ? "block" : "hidden"}>
@@ -338,24 +315,6 @@ export function TeacherDashboardClient({
               isAuthenticated={isAuthenticated}
               onRequireAuth={handleRequireAuth}
             />
-          </div>
-        )}
-
-        {/* 8. Bài tập Trắc nghiệm đã tạo */}
-        {isAuthenticated && visitedTabs.has("my-quiz-games") && (
-          <div className={activeTab === "my-quiz-games" ? "block space-y-6" : "hidden"}>
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
-                  {t.sidebar.createdQuizTitle}
-                </h2>
-                <p className="text-xs font-semibold text-slate-400 mt-1">
-                  {t.sidebar.createdQuizSub}
-                </p>
-              </div>
-              <TeacherLocaleSwitch />
-            </div>
-            <MyQuizGamesList />
           </div>
         )}
 
@@ -374,6 +333,24 @@ export function TeacherDashboardClient({
               <TeacherLocaleSwitch />
             </div>
             <GlobalSuccessLibraryList />
+          </div>
+        )}
+
+        {/* 8.8. Thư viện Tất cả (All Sets Library) */}
+        {isAuthenticated && visitedTabs.has("lib-all") && (
+          <div className={activeTab === "lib-all" ? "block space-y-6" : "hidden"}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="font-headline font-black text-2xl text-slate-800 dark:text-white tracking-tight">
+                  {t.sidebar.libraryAllTitle}
+                </h2>
+                <p className="text-xs font-semibold text-slate-400 mt-1">
+                  {t.sidebar.libraryAllSub}
+                </p>
+              </div>
+              <TeacherLocaleSwitch />
+            </div>
+            <MyLibraryList category="all" />
           </div>
         )}
 
