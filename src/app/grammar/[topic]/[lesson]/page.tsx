@@ -331,6 +331,32 @@ export default async function GrammarLessonPage({ params, searchParams }: Props)
                   View all {topicCfg.label} exercises
                   <ExternalLink className="w-4 h-4" />
                 </Link>
+
+                {/* 45 Days Grammar Course Internal Link Promotion */}
+                <div className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-slate-800 dark:via-indigo-950/30 dark:to-slate-800 border border-indigo-100 dark:border-indigo-900/50 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-lg">🎯</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                      Lộ trình 45 Ngày
+                    </span>
+                    <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                      Miễn phí
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm leading-snug mb-1">
+                    Làm chủ Ngữ pháp từ Mất gốc đến B1
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mb-3">
+                    268 bài tập tương tác Spaced Repetition theo lộ trình khoa học mỗi ngày.
+                  </p>
+                  <Link
+                    href="/classes/master-english-grammar-45-days"
+                    className="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.01]"
+                  >
+                    <span>Khám phá khóa học 45 ngày</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
             </div>
           )}

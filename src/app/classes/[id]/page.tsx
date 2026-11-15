@@ -1,7 +1,12 @@
 import React from 'react';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { PUBLIC_CLASSES_DATA } from '@/lib/public-classes-data';
+import { 
+  PUBLIC_CLASSES_DATA, 
+  resolveClassId, 
+  getClassSlug, 
+  getPublicClass,
+  CourseUnit 
+} from '@/lib/public-classes-data';
 import { ClassDetailClient } from './ClassDetailClient';
 import prisma from '@/lib/prisma';
 
@@ -11,16 +16,126 @@ export async function generateMetadata({
   params: Promise<{ id: string }> 
 }): Promise<Metadata> {
   const { id } = await params;
-  const classData = PUBLIC_CLASSES_DATA[id];
+  const resolvedId = resolveClassId(id);
+  const classData = getPublicClass(resolvedId);
+
+  if (resolvedId === 'cmuvbigbg0001vta43ikcsjbk') {
+    const title = 'Khóa Học 45 Ngày Làm Chủ Ngữ Pháp Tiếng Anh Từ Mất Gốc Đến B1 | Dolcake';
+    const description = 'Lộ trình 45 ngày củng cố toàn diện ngữ pháp tiếng Anh từ căn bản đến B1. 268 bài tập tương tác, phương pháp lặp lại ngắt quãng Spaced Repetition, giải thích chi tiết có phát âm và chấm điểm tức thì.';
+    const url = 'https://dolcake.com/classes/master-english-grammar-45-days';
+    const imageUrl = 'https://dolcake.com/assests/Classes/thumbnails/class-thumb-grammar-45-days.png';
+
+    return {
+      title: {
+        absolute: title,
+      },
+      description,
+      keywords: [
+        'ngữ pháp tiếng anh',
+        'học ngữ pháp tiếng anh 45 ngày',
+        'ngữ pháp tiếng anh mất gốc',
+        'bài tập ngữ pháp tiếng anh',
+        'ngữ pháp b1 tiếng anh',
+        'luyện thi ngữ pháp',
+        'dolcake grammar',
+        'spaced repetition tiếng anh',
+        'khóa học ngữ pháp miễn phí',
+        'tự học tiếng anh giao tiếp',
+      ],
+      alternates: {
+        canonical: url,
+      },
+      openGraph: {
+        title: 'Khóa Học 45 Ngày Làm Chủ Ngữ Pháp Tiếng Anh Từ Mất Gốc Đến B1',
+        description,
+        url,
+        siteName: 'Dolcake',
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: 'Lớp 45 Ngày Làm Chủ Ngữ Pháp Tiếng Anh Dolcake',
+          },
+        ],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
+      },
+    };
+  }
+
+  if (resolvedId === 'tiny-vocab-wonders') {
+    const title = '45 Ngày Khám Phá Từ Vựng Tiếng Anh Đầu Đời Cho Bé (Tiny Vocab) | Dolcake';
+    const description = 'Hành trình 45 ngày xây dựng 180+ từ vựng tiếng Anh đầu đời cho bé Mầm non & Lớp 1. Flashcard âm thanh chuẩn bản xứ, hình ảnh minh họa sinh động và trò chơi tương tác ghi nhớ sâu.';
+    const url = 'https://dolcake.com/classes/tiny-vocab-45-days';
+    const imageUrl = 'https://dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png';
+
+    return {
+      title: {
+        absolute: title,
+      },
+      description,
+      keywords: [
+        'từ vựng tiếng anh cho bé',
+        'tiếng anh mầm non',
+        'học từ vựng tiếng anh lớp 1',
+        'flashcard tiếng anh cho trẻ em',
+        '45 ngày từ vựng cho bé',
+        'tiny vocab wonders',
+        'dolcake',
+        'học tiếng anh qua trò chơi cho bé',
+        'tiếng anh trẻ em tương tác',
+      ],
+      alternates: {
+        canonical: url,
+      },
+      openGraph: {
+        title: '45 Ngày Khám Phá Từ Vựng Tiếng Anh Đầu Đời Cho Bé (Tiny Vocab)',
+        description,
+        url,
+        siteName: 'Dolcake',
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: 'Tiny Vocab Wonders - 45 Ngày Khám Phá Từ Vựng Cho Bé',
+          },
+        ],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
+      },
+    };
+  }
 
   if (classData) {
+    const slug = getClassSlug(resolvedId);
+    const url = `https://dolcake.com/classes/${slug}`;
+    const imageUrl = classData.thumbnail?.startsWith('http')
+      ? classData.thumbnail
+      : `https://dolcake.com${classData.thumbnail}`;
+
     return {
       title: `${classData.title} – Lớp học Dolcake`,
       description: classData.heroDescription,
+      alternates: {
+        canonical: url,
+      },
       openGraph: {
         title: `${classData.title} – Dolcake`,
         description: classData.heroDescription,
-        images: [classData.thumbnail],
+        url,
+        images: [imageUrl],
       },
     };
   }
@@ -37,15 +152,16 @@ export default async function ClassDetailPage({
   params: Promise<{ id: string }> 
 }) {
   const { id } = await params;
+  const resolvedId = resolveClassId(id);
 
   // 1. Check in static public classes data
-  let classData = PUBLIC_CLASSES_DATA[id];
+  let classData = getPublicClass(resolvedId);
 
   // 1b. If found, enrich dynamically with database data (thumbnail, live enrollments, lessons)
   if (classData) {
     try {
       const dbClass = await prisma.class.findUnique({
-        where: { id },
+        where: { id: resolvedId },
         include: {
           teacher: {
             select: { name: true, image: true, email: true }
@@ -88,7 +204,7 @@ export default async function ClassDetailPage({
   if (!classData) {
     try {
       const dbClass = await prisma.class.findUnique({
-        where: { id },
+        where: { id: resolvedId },
         include: {
           teacher: {
             select: { name: true, image: true, email: true }
@@ -303,5 +419,224 @@ export default async function ClassDetailPage({
     classData = PUBLIC_CLASSES_DATA['english-adventure-club'];
   }
 
-  return <ClassDetailClient classData={classData} />;
+  // Determine SEO metadata specifics
+  const canonicalSlug = getClassSlug(resolvedId);
+  const canonicalUrl = `https://dolcake.com/classes/${canonicalSlug}`;
+
+  let seoHeading = classData.vi?.title || classData.title;
+  let seoDescription = classData.vi?.heroDescription || classData.heroDescription;
+  let educationalLevel = 'Beginner to Intermediate';
+  let workload = '45 Days';
+
+  const faqList: { q: string; a: string }[] = [];
+
+  if (resolvedId === 'cmuvbigbg0001vta43ikcsjbk') {
+    seoHeading = 'Khóa Học 45 Ngày Làm Chủ Ngữ Pháp Tiếng Anh Từ Mất Gốc Đến B1';
+    seoDescription = 'Lộ trình 45 ngày củng cố toàn diện ngữ pháp tiếng Anh từ căn bản đến B1. 268 bài tập tương tác, phương pháp lặp lại ngắt quãng Spaced Repetition, giải thích chi tiết có phát âm và chấm điểm tức thì.';
+    educationalLevel = 'Beginner to Intermediate (A1 - B1)';
+    workload = 'PT45D (15-20 phút/ngày)';
+
+    faqList.push(
+      {
+        q: 'Khóa học 45 Ngày Làm Chủ Ngữ Pháp Tiếng Anh trên Dolcake có mất phí không?',
+        a: 'Khóa học hoàn toàn miễn phí. Người học được trải nghiệm đầy đủ 45 ngày lộ trình, lý thuyết song ngữ trực quan và 268 bài tập tương tác có chấm điểm tức thì trên Dolcake.'
+      },
+      {
+        q: 'Người mất gốc tiếng Anh có theo học được khóa học này không?',
+        a: 'Khóa học được thiết kế đặc biệt từ con số 0 đến B1. Từng ngày học đi từ cấu trúc căn bản nhất (thì hiện tại đơn, danh từ, đại từ) đến các chủ điểm nâng cao (câu bị động, câu điều kiện, mệnh đề quan hệ) kèm giải thích chi tiết bằng tiếng Việt.'
+      },
+      {
+        q: 'Phương pháp Spaced Repetition (Lặp lại ngắt quãng) trong khóa học hoạt động như thế nào?',
+        a: 'Hệ thống tự động ghi nhớ những câu ngữ pháp bạn làm chưa chuẩn và lên lịch ôn tập ngắt quãng theo chu kỳ khoa học, giúp bạn khắc sâu kiến thức vào trí nhớ dài hạn mà không cần học vẹt.'
+      },
+      {
+        q: 'Mỗi ngày cần dành bao nhiêu thời gian để hoàn thành bài học?',
+        a: 'Chỉ cần 15 đến 20 phút mỗi ngày để đọc hiểu tóm tắt lý thuyết và hoàn thành bộ câu hỏi thực hành trắc nghiệm, kéo thả và sắp xếp câu sinh động.'
+      }
+    );
+  } else if (resolvedId === 'tiny-vocab-wonders') {
+    seoHeading = '45 Ngày Khám Phá Từ Vựng Tiếng Anh Đầu Đời Cho Bé (Tiny Vocab Wonders)';
+    seoDescription = 'Hành trình 45 ngày xây dựng 180+ từ vựng tiếng Anh đầu đời cho bé Mầm non & Lớp 1. Flashcard âm thanh chuẩn bản xứ, hình ảnh minh họa sinh động và trò chơi tương tác ghi nhớ sâu.';
+    educationalLevel = 'Preschool & Primary (Mầm non - Lớp 1)';
+    workload = 'PT45D (5-10 phút/ngày)';
+
+    faqList.push(
+      {
+        q: 'Khóa học Tiny Vocab Wonders (45 Ngày) phù hợp cho lứa tuổi nào?',
+        a: 'Khóa học được thiết kế tối ưu cho trẻ Mầm non (3-5 tuổi) và học sinh Lớp 1-2 mới bắt đầu tiếp cận tiếng Anh.'
+      },
+      {
+        q: 'Bé chưa biết đọc chữ có thể tham gia học được không?',
+        a: 'Hoàn toàn được. Mỗi từ vựng đều đi kèm flashcard hình ảnh minh họa vẽ tay dễ thương, phát âm bản xứ chuẩn Mỹ rõ ràng và minigame kéo thả giúp bé nhận diện từ vựng qua thị giác và thính giác tự nhiên.'
+      },
+      {
+        q: 'Khóa học từ vựng cho bé này có mất phí không?',
+        a: 'Khóa học 45 ngày từ vựng cho bé hoàn toàn miễn phí trên nền tảng giáo dục Dolcake.'
+      },
+      {
+        q: 'Sau 45 ngày bé sẽ đạt được kết quả gì?',
+        a: 'Bé sẽ tích lũy vốn từ hơn 180 từ vựng cốt lõi theo 45 chủ đề quen thuộc (động vật, màu sắc, hoa quả, đồ chơi, gia đình...), hình thành phản xạ nghe nói tiếng Anh chuẩn và sự tự tin yêu thích ngôn ngữ.'
+      }
+    );
+  } else {
+    faqList.push(
+      {
+        q: `Lớp học ${classData.title} trên Dolcake học theo hình thức nào?`,
+        a: 'Lớp học diễn ra trực tuyến 100% trên nền tảng Dolcake với các bài tập tương tác, flashcard âm thanh và minigame sinh động.'
+      },
+      {
+        q: 'Lớp học có yêu cầu trả phí không?',
+        a: 'Hiện tại các lớp học công khai trên Dolcake đều mở quyền truy cập miễn phí cho học viên tham gia học tập và trải nghiệm.'
+      }
+    );
+  }
+
+  // Prepare JSON-LD schemas
+  const courseJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: seoHeading,
+    description: seoDescription,
+    provider: {
+      '@type': 'Organization',
+      name: 'Dolcake',
+      sameAs: 'https://dolcake.com',
+    },
+    url: canonicalUrl,
+    courseCode: classData.joinCode || resolvedId,
+    educationalLevel,
+    inLanguage: ['vi', 'en'],
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'VND',
+      category: 'Free',
+      availability: 'https://schema.org/InStock',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: (classData.rating || 5.0).toFixed(1),
+      bestRating: '5',
+      ratingCount: classData.reviewsCount || 40,
+    },
+    hasCourseInstance: {
+      '@type': 'CourseInstance',
+      courseMode: 'Online',
+      courseWorkload: workload,
+    },
+  };
+
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqList.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  };
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Trang chủ',
+        item: 'https://dolcake.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Lớp học',
+        item: 'https://dolcake.com#classes',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: seoHeading,
+        item: canonicalUrl,
+      },
+    ],
+  };
+
+  const syllabusUnits: CourseUnit[] = classData.vi?.units || classData.units || [];
+
+  return (
+    <>
+      {/* Schema.org Rich Snippets JSON-LD for Google Rich Results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+
+      {/* Semantic SSR Content for Search Engine Crawlers */}
+      <section className="sr-only" aria-label="Nội dung chương trình đào tạo">
+        <h1>{seoHeading}</h1>
+        <p>{seoDescription}</p>
+
+        {classData.vi?.whatYouLearn && (
+          <div>
+            <h2>Bạn sẽ học được gì?</h2>
+            <ul>
+              {classData.vi.whatYouLearn.map((item, idx) => (
+                <li key={idx}>
+                  <strong>{item.title}</strong>: {item.description}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {syllabusUnits.length > 0 && (
+          <div>
+            <h2>Lộ trình khóa học chi tiết</h2>
+            <ol>
+              {syllabusUnits.map((u, uIdx) => (
+                <li key={u.id || uIdx}>
+                  <h3>{u.title}</h3>
+                  {u.lessons && u.lessons.length > 0 && (
+                    <ul>
+                      {u.lessons.map((l, lIdx) => (
+                        <li key={l.id || lIdx}>
+                          {l.title} ({l.type})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {faqList.length > 0 && (
+          <div>
+            <h2>Câu hỏi thường gặp</h2>
+            {faqList.map((faq, fIdx) => (
+              <article key={fIdx}>
+                <h3>{faq.q}</h3>
+                <p>{faq.a}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Interactive Client View */}
+      <ClassDetailClient classData={classData} />
+    </>
+  );
 }

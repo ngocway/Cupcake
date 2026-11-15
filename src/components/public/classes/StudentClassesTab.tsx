@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { cancelJoinRequest } from '@/app/student/classes/actions';
+import { getClassSlug } from '@/lib/public-classes-data';
 import {
   Hourglass,
   GraduationCap,
@@ -495,7 +496,7 @@ interface PublicClassCardProps {
 function PublicClassCard({ cls, isLoggedIn, priority, onPreview }: PublicClassCardProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
-  const classUrl = `/classes/${cls.id}`;
+  const classUrl = `/classes/${getClassSlug(cls.id)}`;
 
   const handleNavigate = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -963,7 +964,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
                     Close
                   </button>
                   <Link
-                    href={`/student/login?callbackUrl=/classes/${selectedClassDetail.id}`}
+                    href={`/student/login?callbackUrl=/classes/${getClassSlug(selectedClassDetail.id)}`}
                     className={`flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r ${selectedClassDetail.btnGradient} text-white font-black text-sm shadow-lg text-center flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95`}
                   >
                     <LogIn className="w-4 h-4" />
@@ -1413,7 +1414,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
                   Close
                 </button>
                 <Link
-                  href={`/classes/${selectedClassDetail.id}`}
+                  href={`/classes/${getClassSlug(selectedClassDetail.id)}`}
                   className={`flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r ${selectedClassDetail.btnGradient} text-white font-black text-sm shadow-lg text-center flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95`}
                 >
                   <Sparkles className="w-4 h-4" />

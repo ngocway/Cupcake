@@ -95,6 +95,26 @@ export type PublicClassDetail = {
   reviews: ReviewItem[];
 };
 
+export const CLASS_SLUG_MAP: Record<string, string> = {
+  'master-english-grammar-45-days': 'cmuvbigbg0001vta43ikcsjbk',
+  'tiny-vocab-45-days': 'tiny-vocab-wonders',
+};
+
+export const CLASS_REVERSE_SLUG_MAP: Record<string, string> = {
+  'cmuvbigbg0001vta43ikcsjbk': 'master-english-grammar-45-days',
+  'tiny-vocab-wonders': 'tiny-vocab-45-days',
+};
+
+export function resolveClassId(slugOrId: string): string {
+  if (!slugOrId) return slugOrId;
+  return CLASS_SLUG_MAP[slugOrId] || slugOrId;
+}
+
+export function getClassSlug(idOrSlug: string): string {
+  if (!idOrSlug) return idOrSlug;
+  return CLASS_REVERSE_SLUG_MAP[idOrSlug] || idOrSlug;
+}
+
 export const CLASS_DETAIL_UI_LABELS = {
   en: {
     breadcrumbHome: 'Home',
@@ -1645,3 +1665,14 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
 };
 
 export const PUBLIC_CLASSES_LIST: PublicClassDetail[] = Object.values(PUBLIC_CLASSES_DATA);
+
+// Canonical alias indexing for SEO slugs
+PUBLIC_CLASSES_DATA['master-english-grammar-45-days'] = PUBLIC_CLASSES_DATA['cmuvbigbg0001vta43ikcsjbk'];
+PUBLIC_CLASSES_DATA['tiny-vocab-45-days'] = PUBLIC_CLASSES_DATA['tiny-vocab-wonders'];
+
+export function getPublicClass(slugOrId: string): PublicClassDetail | undefined {
+  if (!slugOrId) return undefined;
+  const resolvedId = resolveClassId(slugOrId);
+  return PUBLIC_CLASSES_DATA[resolvedId] || PUBLIC_CLASSES_DATA[slugOrId];
+}
+

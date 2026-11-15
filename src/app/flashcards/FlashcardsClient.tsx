@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getFlashcardsByTopic } from "@/actions/flashcards-actions"
 import { setNativeLanguagePreference } from "@/actions/user-preferences-actions"
@@ -1374,6 +1375,37 @@ export function FlashcardsClient({
           <h1 className="text-4xl md:text-6xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-none">
             English <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-primary bg-clip-text text-transparent">Flashcards</span> Hub
           </h1>
+        </div>
+
+        {/* Tiny Vocab Wonders (45 Days) Course Banner */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 p-0.5 shadow-lg shadow-orange-500/10 hover:shadow-xl hover:shadow-orange-500/20 transition-all">
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-[23px] px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-2xl shrink-0 shadow-md shadow-orange-400/30">
+                👶
+              </div>
+              <div>
+                <div className="flex items-center justify-center sm:justify-start gap-2 mb-0.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                    Khóa học 45 Ngày Từ Vựng Cho Bé
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
+                    Mầm non & Tiểu học
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Tiny Vocab Wonders: 180+ từ vựng đầu đời qua flashcard &amp; câu chuyện cổ tích
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/classes/tiny-vocab-45-days"
+              className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 transition-all hover:scale-105 active:scale-95"
+            >
+              <span>Khám phá lớp 45 ngày</span>
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
 
         {/* Selection Area (Category & Topic on the same page) */}

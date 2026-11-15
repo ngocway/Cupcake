@@ -149,6 +149,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: "https://dolcake.com", lastModified: latestUpdate, changeFrequency: "daily", priority: 1 },
     { url: "https://dolcake.com/teacher", lastModified: latestUpdate, changeFrequency: "weekly", priority: 0.9 },
+    { url: "https://dolcake.com/classes/master-english-grammar-45-days", lastModified: latestUpdate, changeFrequency: "weekly", priority: 0.9 },
+    { url: "https://dolcake.com/classes/tiny-vocab-45-days", lastModified: latestUpdate, changeFrequency: "weekly", priority: 0.9 },
     { url: "https://dolcake.com/guides/global-success", lastModified: latestUpdate, changeFrequency: "monthly", priority: 0.8 },
     { url: "https://dolcake.com/flashcards", lastModified: latestUpdate, changeFrequency: "weekly", priority: 0.7 },
     ...grammarUrls,
